@@ -1,22 +1,34 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import { app } from '../lib/stores.svelte';
 
   const MAX = 120;
-  let altData: number[] = $state([]);
-  let spdData: number[] = $state([]);
-  let batData: number[] = $state([]);
-  let curData: number[] = $state([]);
+  let altData: number[] = [];
+  let spdData: number[] = [];
+  let batData: number[] = [];
+  let curData: number[] = [];
 
   $effect(() => {
     if (!app.drone.connected) return;
-    altData.push(app.drone.alt_rel);
-    spdData.push(app.drone.gs);
-    batData.push(app.drone.voltage);
-    curData.push(app.drone.current);
-    if (altData.length > MAX) altData.shift();
-    if (spdData.length > MAX) spdData.shift();
-    if (batData.length > MAX) batData.shift();
-    if (curData.length > MAX) curData.shift();
+    const alt = app.drone.alt_rel;
+    const spd = app.drone.gs;
+    const bat = app.drone.voltage;
+    const cur = app.drone.current;
+    untrack(() => {
+      altData.push(alt); spdData.push(spd); batData.push(bat); curData.push(cur);
+      if (altData.length > MAX) altData.shift();
+      if (spdData.length > MAX) spdData.shift();
+      if (batData.length > MAX) batData.shift();
+      if (curData.length > MAX) curData.shift();
+    });
+    if (app.chartsOpen) {
+      untrack(() => {
+        draw(cAlt, altData, '#4fc3f7');
+        draw(cSpd, spdData, '#69f0ae');
+        draw(cBat, batData, '#ffa726');
+        draw(cCur, curData, '#ff5252');
+      });
+    }
   });
 
   function draw(canvas: HTMLCanvasElement | null, data: number[], color: string) {
@@ -43,18 +55,15 @@
     ctx.fillText(data[data.length - 1].toFixed(1), w - 45, 12);
   }
 
-  let cAlt: HTMLCanvasElement; let cSpd: HTMLCanvasElement; let cBat: HTMLCanvasElement; let cCur: HTMLCanvasElement;
-
-  $effect(() => {
-    if (!app.chartsOpen) return;
-    draw(cAlt, altData, '#4fc3f7');
-    draw(cSpd, spdData, '#69f0ae');
-    draw(cBat, batData, '#ffa726');
-    draw(cCur, curData, '#ff5252');
-  });
+  let cAlt: HTMLCanvasElement;
+  let cSpd: HTMLCanvasElement;
+  let cBat: HTMLCanvasElement;
+  let cCur: HTMLCanvasElement;
 </script>
 
 <div class="panel" style="margin:0 10px 10px">
+  <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
   <h2 style="cursor:pointer" onclick={() => app.chartsOpen = !app.chartsOpen}>
     实时图表 <span class="toggle">{app.chartsOpen ? '▼' : '▶'}</span>
   </h2>
