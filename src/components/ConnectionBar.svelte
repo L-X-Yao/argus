@@ -4,24 +4,13 @@
 
   let port = $state('tcp:localhost:5770');
   let baud = $state(57600);
-  let busy = $state(false);
-
   function toggle() {
-    if (busy) return;
     if (app.drone.connected) {
       sendDisconnect();
-      busy = true;
-      setTimeout(() => busy = false, 1000);
     } else {
       sendConnect(port, baud);
-      busy = true;
-      setTimeout(() => busy = false, 3000);
     }
   }
-
-  let label = $derived(
-    busy ? '...' : (app.drone.connected ? '断开' : '连接')
-  );
 </script>
 
 <div class="conn-bar">
@@ -33,8 +22,8 @@
     <option value={57600}>57600</option>
     <option value={115200}>115200</option>
   </select>
-  <button class:connected={app.drone.connected} onclick={toggle} disabled={busy}>
-    {label}
+  <button class:connected={app.drone.connected} onclick={toggle}>
+    {app.drone.connected ? '断开' : '连接'}
   </button>
 </div>
 
