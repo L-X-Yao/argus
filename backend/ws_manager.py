@@ -1,0 +1,78 @@
+from __future__ import annotations
+import asyncio
+import json
+from fastapi import WebSocket, WebSocketDisconnect
+
+from .drone_link import DroneLink
+from . import commands
+
+
+class WSManager:
+    def __init__(self, link: DroneLink):
+        self.link = link
+        self._clients: set[WebSocket] = set()
+
+    async def handle_client(self, ws: WebSocket) -> None:
+        await ws.accept()
+        self._clients.add(ws)
+        try:
+            recv_task = asyncio.create_task(self._receive_loop(ws))
+            push_task = asyncio.create_task(self._push_loop(ws))
+            done, pending = await asyncio.wait(
+                [recv_task, push_task],
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+            for t in pending:
+                t.cancel()
+        except (WebSocketDisconnect, Exception):
+            pass
+        finally:
+            self._clients.discard(ws)
+
+    async def _receive_loop(self, ws: WebSocket) -> None:
+        while True:
+            try:
+                raw = await ws.receive_text()
+            except WebSocketDisconnect:
+                return
+            try:
+                msg = json.loads(raw)
+            except json.JSONDecodeError:
+                continue
+            msg_type = msg.get('type', '')
+            if msg_type == 'connect':
+                port = msg.get('port', 'tcp:localhost:5770')
+                baud = msg.get('baud', 57600)
+                ok = self.link.connect(port, baud)
+                await ws.send_text(json.dumps({
+                    'type': 'connect_result', 'ok': ok,
+                    'error': '' if ok else '无法连接',
+                }))
+            elif msg_type == 'disconnect':
+                self.link.disconnect()
+                await ws.send_text(json.dumps({
+                    'type': 'connect_result', 'ok': True, 'error': '',
+                }))
+            elif msg_type == 'command':
+                cmd = msg.get('cmd', '')
+                param = msg.get('param')
+                result = commands.execute(cmd, param, self.link, data=msg)
+                if result:
+                    await ws.send_text(json.dumps({'type': 'cmd_result', **result}))
+
+    async def _push_loop(self, ws: WebSocket) -> None:
+        event_cursor = len(self.link.events)
+        while True:
+            state = self.link.get_state()
+            await ws.send_text(json.dumps(state))
+            events = self.link.events
+            if len(events) > event_cursor:
+                for ev in events[event_cursor:]:
+                    await ws.send_text(json.dumps({
+                        'type': 'event',
+                        'time': ev['time'],
+                        'text': ev['text'],
+                    }))
+                event_cursor = len(events)
+            interval = 0.2 if self.link.connected else 1.0
+            await asyncio.sleep(interval)
