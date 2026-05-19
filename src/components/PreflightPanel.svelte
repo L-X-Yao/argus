@@ -20,6 +20,8 @@
       { name: '电池电量', ok: d.remaining > 30 || d.remaining < 0, detail: d.remaining >= 0 ? `${d.remaining}%` : '---', critical: true },
       { name: '起飞点', ok: d.home_lat !== 0, detail: d.home_lat !== 0 ? `${d.home_lat.toFixed(5)}, ${d.home_lon.toFixed(5)}` : '未设置', critical: true },
       { name: '链路状态', ok: d.connected && d.link_age >= 0 && d.link_age < 2, detail: d.connected ? `延迟 ${d.link_age.toFixed(1)}s` : '未连接', critical: true },
+      { name: '导航滤波', ok: !(d.ekf_flags & 0x480) && Math.max(d.ekf_vel, d.ekf_pos_h, d.ekf_pos_v, d.ekf_compass) < 1.0,
+        detail: (d.ekf_flags & 0x480) ? '异常' : Math.max(d.ekf_vel, d.ekf_pos_h, d.ekf_pos_v, d.ekf_compass) < 0.5 ? '正常' : '警告', critical: true },
       { name: '机型识别', ok: d.vtype !== '', detail: d.vtype || '未识别', critical: false },
       { name: '未解锁', ok: !d.armed, detail: d.armed ? '已解锁 — 注意安全' : '已锁定', critical: false },
     ];

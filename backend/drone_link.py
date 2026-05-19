@@ -223,7 +223,7 @@ class DroneLink:
             'alt_rel': round(self.alt_rel, 1),
             'alt_msl': round(self.alt_msl, 1),
             'gs': round(self.gs, 1),
-            'vz': round(self.vz, 1),
+            'vz': round(-self.vz, 1),
             'hdg': round(self.hdg, 0),
             'dist_home': round(self.dist_home, 0),
             'flight_time': int(time.time() - self.armed_time) if self.armed and self.armed_time else 0,

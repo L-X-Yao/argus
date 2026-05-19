@@ -459,6 +459,6 @@
 </div>
 
 <style>
-  .map-btn { display:inline-flex; align-items:center; gap:3px; padding:4px 10px; background:rgba(15,15,15,0.9); border:1px solid hsl(var(--border)); border-radius:6px; cursor:pointer; font-size:12px; font-weight:600; color:hsl(var(--muted-foreground)); backdrop-filter:blur(4px); transition:all 0.15s; }
+  .map-btn { display:inline-flex; align-items:center; gap:3px; padding:4px 10px; background:hsl(var(--card) / 0.92); border:1px solid hsl(var(--border)); border-radius:6px; cursor:pointer; font-size:12px; font-weight:600; color:hsl(var(--muted-foreground)); backdrop-filter:blur(4px); transition:all 0.15s; }
   .map-btn:hover { color:hsl(var(--primary)); border-color:hsl(var(--primary)); }
 </style>

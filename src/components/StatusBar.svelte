@@ -156,6 +156,9 @@
   <div class="flex items-center gap-2 text-xs">
     {#if app.drone.connected}
       <Badge variant={modeVariant} class="text-xs font-bold">{app.drone.mode}</Badge>
+      {#if app.drone.armed}
+        <Badge variant="destructive" class="text-[10px] font-bold animate-pulse">已解锁</Badge>
+      {/if}
 
       <span class="{linkColor}" title="链路 {app.drone.link_age >= 0 ? app.drone.link_age.toFixed(1) + 's' : ''}">
         {#if app.drone.link_age >= 0 && app.drone.link_age < 3}
@@ -189,7 +192,7 @@
                   fill="{app.drone.remaining < 20 ? '#ef4444' : app.drone.remaining < 40 ? '#eab308' : '#22c55e'}"/>
           {/if}
         </svg>
-        {app.drone.voltage.toFixed(1)}V{app.drone.remaining >= 0 ? ' ' + app.drone.remaining + '%' : ''}
+        {app.drone.voltage.toFixed(1)}V{app.drone.remaining >= 0 ? ' ' + app.drone.remaining + '%' : ''}{app.drone.current > 0.1 ? ' ' + app.drone.current.toFixed(1) + 'A' : ''}
       </span>
 
       {#if app.drone.fw_version}

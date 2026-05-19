@@ -34,15 +34,16 @@
 
   <div class="text-[11px] text-muted-foreground font-semibold mt-2 tracking-wide uppercase">载荷</div>
   <div class="flex gap-1.5">
-    <Button size="sm" class="flex-1 bg-orange-700 hover:bg-orange-800 text-white font-bold" onclick={() => sendCommand('drop')} title="执行载荷投放">投放</Button>
+    <Button size="sm" class="flex-1 bg-orange-700 hover:bg-orange-800 text-white font-bold"
+            onclick={() => { if (confirm('确认执行载荷投放？')) sendCommand('drop'); }} title="执行载荷投放">投放</Button>
     <Button size="sm" variant="secondary" class="flex-1" onclick={() => sendCommand('drop_stop')} title="停止投放">停止</Button>
   </div>
 
   <div class="text-[11px] text-muted-foreground font-semibold mt-2 tracking-wide uppercase">任务</div>
   <div class="flex flex-col gap-1">
-    <Button variant="outline" size="sm" class="w-full" onclick={() => sendCommand('mission_start')}>开始任务</Button>
+    <Button variant="outline" size="sm" class="w-full" onclick={() => { if (confirm('确认开始自动任务？\n飞机将按航线自主飞行。')) sendCommand('mission_start'); }}>开始任务</Button>
     <Button variant="outline" size="sm" class="w-full" onclick={() => sendCommand('mission_download')}>下载任务</Button>
-    <Button variant="outline" size="sm" class="w-full" onclick={() => sendCommand('mission_clear')}>清除任务</Button>
+    <Button variant="outline" size="sm" class="w-full" onclick={() => { if (confirm('确认清除飞控上的任务？\n此操作不可撤销。')) sendCommand('mission_clear'); }}>清除任务</Button>
   </div>
 
   <div class="text-[11px] text-muted-foreground font-semibold mt-2 tracking-wide uppercase">起飞</div>

@@ -17,6 +17,11 @@
   </div>
   <div class="w-px h-6 bg-border"></div>
   <div class="flex flex-col items-center px-2.5 min-w-[40px]">
+    <span class="text-base font-bold text-foreground leading-tight tabular-nums">{d.alt_msl.toFixed(0)}<span class="text-[10px] text-muted-foreground ml-0.5">m</span></span>
+    <span class="text-[9px] text-muted-foreground uppercase tracking-wider">MSL</span>
+  </div>
+  <div class="w-px h-6 bg-border"></div>
+  <div class="flex flex-col items-center px-2.5 min-w-[40px]">
     <span class="text-base font-bold text-foreground leading-tight tabular-nums">{d.gs.toFixed(1)}<span class="text-[10px] text-muted-foreground ml-0.5">m/s</span></span>
     <span class="text-[9px] text-muted-foreground uppercase tracking-wider">HS</span>
   </div>

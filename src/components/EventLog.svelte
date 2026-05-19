@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { app } from '../lib/stores.svelte';
+  import { app, clearEvents } from '../lib/stores.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
 
   let logEl: HTMLDivElement;
@@ -61,6 +61,7 @@
   <div class="flex items-center justify-between mb-1.5">
     <h2 class="text-[11px] font-semibold text-primary uppercase tracking-wider">事件日志</h2>
     <div class="flex items-center gap-1.5">
+      <Button variant="ghost" size="xs" onclick={() => clearEvents()} disabled={app.events.length === 0}>清空</Button>
       <Button variant="outline" size="xs" onclick={exportLog}>导出</Button>
       <input bind:value={filter} placeholder="筛选..."
              class="w-20 h-5 px-1.5 text-[11px] bg-input border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/50" />

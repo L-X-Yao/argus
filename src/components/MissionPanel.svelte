@@ -321,7 +321,7 @@
     <Button variant="secondary" size="xs" onclick={importKml}>导入</Button>
     <Button variant="secondary" size="xs" onclick={reverseRoute}>反转</Button>
     <Button variant="secondary" size="xs" onclick={() => showCircleGen = !showCircleGen}>圆形</Button>
-    <Button variant="ghost" size="xs" onclick={clearWaypoints}>清除</Button>
+    <Button variant="ghost" size="xs" onclick={() => { if (app.waypoints.length === 0 || confirm(`确认清除全部 ${app.waypoints.length} 个航点？`)) clearWaypoints(); }}>清除</Button>
   </div>
   {#if showCircleGen}
     <div class="flex gap-1 items-center mt-1.5 p-1.5 bg-muted rounded-lg flex-wrap">
