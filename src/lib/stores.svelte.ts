@@ -24,6 +24,11 @@ class AppState {
   fencePolygon: { lat: number; lon: number }[] = $state([]);
   drawingFence: boolean = $state(false);
   showFence: boolean = $state(false);
+  showParams: boolean = $state(false);
+  showRc: boolean = $state(false);
+  showVibe: boolean = $state(false);
+  showServo: boolean = $state(false);
+  showSettings: boolean = $state(false);
 }
 
 export const app = new AppState();

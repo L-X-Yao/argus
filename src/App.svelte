@@ -23,12 +23,7 @@
   import RcPanel from './components/RcPanel.svelte';
   import VibrationPanel from './components/VibrationPanel.svelte';
   import ServoPanel from './components/ServoPanel.svelte';
-
-  let showSettings = $state(false);
-  let showParams = $state(false);
-  let showRc = $state(false);
-  let showVibe = $state(false);
-  let showServo = $state(false);
+  import DiagToolbar from './components/DiagToolbar.svelte';
 
   onMount(() => {
     loadSettings();
@@ -40,9 +35,7 @@
   $effect(() => {
     const d = app.drone;
     checkAlerts(d.connected, d.armed, d.remaining, d.link_age);
-    if (d.flight_summary && !app.summaryShown) {
-      app.summaryShown = true;
-    }
+    if (d.flight_summary && !app.summaryShown) app.summaryShown = true;
   });
 
   function onKey(e: KeyboardEvent) {
@@ -55,11 +48,11 @@
     else if (k === 'l') { app.darkTheme = !app.darkTheme; saveSettings(); }
     else if (k === 'm') app.mapExpanded = !app.mapExpanded;
     else if (k === 'c') app.chartsOpen = !app.chartsOpen;
-    else if (k === 'p') showParams = !showParams;
-    else if (k === 'i') showRc = !showRc;
-    else if (k === 'v' && !e.ctrlKey) showVibe = !showVibe;
-    else if (k === 'o') showServo = !showServo;
-    else if (k === 's' && e.ctrlKey) { e.preventDefault(); showSettings = !showSettings; }
+    else if (k === 'p') app.showParams = !app.showParams;
+    else if (k === 'i') app.showRc = !app.showRc;
+    else if (k === 'v' && !e.ctrlKey) app.showVibe = !app.showVibe;
+    else if (k === 'o') app.showServo = !app.showServo;
+    else if (k === 's' && e.ctrlKey) { e.preventDefault(); app.showSettings = !app.showSettings; }
     else if (k === 'f' && !e.ctrlKey) {
       if (document.fullscreenElement) document.exitFullscreen();
       else document.documentElement.requestFullscreen().catch(() => {});
@@ -75,7 +68,7 @@
 </script>
 
 <div class="app" class:light={!app.darkTheme} class:map-expanded={app.mapExpanded}>
-  <StatusBar {toggleTheme} onSettings={() => showSettings = !showSettings} />
+  <StatusBar {toggleTheme} onSettings={() => app.showSettings = !app.showSettings} />
   <ConnectionBar />
   {#if !app.mapExpanded}
     <div class="main-row">
@@ -88,24 +81,13 @@
     <MissionPanel />
   </div>
   <MissionProgress />
-  {#if app.showSurvey}
-    <SurveyPanel />
-  {/if}
-  {#if app.showFence}
-    <FencePanel />
-  {/if}
-  {#if showParams}
-    <ParamPanel />
-  {/if}
-  {#if showRc}
-    <RcPanel />
-  {/if}
-  {#if showVibe}
-    <VibrationPanel />
-  {/if}
-  {#if showServo}
-    <ServoPanel />
-  {/if}
+  <DiagToolbar />
+  {#if app.showSurvey}<SurveyPanel />{/if}
+  {#if app.showFence}<FencePanel />{/if}
+  {#if app.showParams}<ParamPanel />{/if}
+  {#if app.showRc}<RcPanel />{/if}
+  {#if app.showVibe}<VibrationPanel />{/if}
+  {#if app.showServo}<ServoPanel />{/if}
   {#if !app.mapExpanded}
     {#if app.drone.connected && !app.drone.armed}
       <PreflightPanel />
@@ -120,11 +102,10 @@
   {#if app.summaryShown && app.drone.flight_summary}
     <FlightSummary summary={app.drone.flight_summary} onclose={() => { app.summaryShown = false; sendCommand('clear_summary'); }} />
   {/if}
-  {#if showSettings}
-    <SettingsPanel onclose={() => showSettings = false} />
+  {#if app.showSettings}
+    <SettingsPanel onclose={() => app.showSettings = false} />
   {/if}
 </div>
-<div class="shortcut-bar"><kbd>Space</kbd> 悬停 <kbd>R</kbd> 返航 <kbd>A</kbd> 解锁 <kbd>D</kbd> 锁定 <kbd>G</kbd> 引导 <kbd>M</kbd> 展开 <kbd>C</kbd> 图表 <kbd>P</kbd> 参数 <kbd>Esc</kbd> 取消 <kbd>1-9</kbd> 模式</div>
 
 <style>
   :global(body) { margin:0; padding:0; font-family:'Segoe UI',Consolas,monospace; background:var(--bg-body); color:var(--text-main); }
@@ -134,9 +115,5 @@
   .main-row { display:flex; gap:10px; padding:10px; flex-shrink:0; }
   .map-row { display:flex; gap:10px; padding:0 10px 10px; flex:1; min-height:200px; }
   .map-expanded .map-row { flex:1; height:calc(100vh - 100px); }
-  .shortcut-bar { position:fixed; bottom:8px; left:50%; transform:translateX(-50%); background:rgba(30,30,30,0.85); border:1px solid #444; border-radius:6px; padding:3px 12px; font-size:11px; color:#666; z-index:999; }
-  .shortcut-bar kbd { background:#333; border:1px solid #555; border-radius:3px; padding:0 4px; color:#aaa; margin:0 2px; }
-  .light .shortcut-bar { background:rgba(255,255,255,0.9); border-color:#ccc; }
-  .light .shortcut-bar kbd { background:#e0e0e0; border-color:#bbb; color:#333; }
   @media(max-width:800px) { .main-row { flex-direction:column; } .map-row { flex-direction:column; } }
 </style>

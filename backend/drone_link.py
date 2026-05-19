@@ -90,6 +90,7 @@ class DroneLink:
         self._dl_total = 0
         self._dl_items: list[dict | None] = []
         self._dl_messages: list[dict] = []
+        self._ws_queue: list[dict] = []
         self.rc_channels: list[int] = [0] * 16
         self.rc_rssi = 0
         self.vibe_x = self.vibe_y = self.vibe_z = 0.0
@@ -100,6 +101,11 @@ class DroneLink:
         if self.force_plane is not None:
             return self.force_plane
         return self.vtype_raw in (1, 19, 20, 21, 22, 23, 24, 25)
+
+    def queue_ws(self, msg: dict) -> None:
+        self._ws_queue.append(msg)
+        if len(self._ws_queue) > 2000:
+            self._ws_queue = self._ws_queue[-1000:]
 
     def add_event(self, text: str) -> None:
         self.events.append({'time': time.strftime('%H:%M:%S'), 'text': text})

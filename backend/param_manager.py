@@ -18,7 +18,7 @@ class ParamManager:
         self.received_count = 0
         self.fetching = False
         self._fetch_start = 0.0
-        self._messages: list[dict] = []
+        self._messages: list[dict] = []  # kept for backward compat with ws_manager cursor
 
     def request_all(self) -> None:
         self.params.clear()
