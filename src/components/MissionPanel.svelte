@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { app, pushUndo, deleteWaypoint, clearWaypoints, saveSettings, saveWaypoints, generateCircle } from '../lib/stores.svelte';
+  import { app, pushUndo, deleteWaypoint, clearWaypoints, saveSettings, saveWaypoints, generateCircle, addToast } from '../lib/stores.svelte';
   import { sendCommand } from '../lib/ws';
   import { toGcj } from '../lib/gcj02';
   import Button from '$lib/components/ui/button/button.svelte';
@@ -92,7 +92,7 @@
           pushUndo();
           app.waypoints = d.waypoints || [];
           if (d.alt) app.defaultAlt = d.alt;
-        } catch (err) { alert('加载失败'); }
+        } catch (err) { addToast('任务加载失败', 'error'); }
       };
       reader.readAsText(file);
     };
@@ -142,7 +142,7 @@
           if (!coords.length) throw new Error('无坐标');
           pushUndo();
           app.waypoints = coords;
-        } catch (err: any) { alert('KML导入失败: ' + err.message); }
+        } catch (err: any) { addToast('KML导入失败: ' + err.message, 'error'); }
       };
       reader.readAsText(file);
     };
