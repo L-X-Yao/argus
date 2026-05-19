@@ -32,6 +32,7 @@ export interface DroneState {
   home_lon: number;
   parse_errors: number;
   flight_summary: FlightSummary | null;
+  log_active: boolean;
 }
 
 export interface FlightSummary {
@@ -76,5 +77,5 @@ export const defaultState: DroneState = {
   vtype: '', vtype_raw: 0, mode_btns: [],
   link_age: -1, bat_time: -1,
   home_lat: 0, home_lon: 0, parse_errors: 0,
-  flight_summary: null,
+  flight_summary: null, log_active: false,
 };

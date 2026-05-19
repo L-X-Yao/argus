@@ -69,6 +69,20 @@ async def api_ports():
         return {'ports': sorted(glob.glob('/dev/ttyUSB*') + glob.glob('/dev/ttyACM*')) or ['/dev/ttyUSB0']}
 
 
+@app.get('/api/log')
+async def api_log():
+    link: DroneLink = app.state.link
+    path = link.get_log_path()
+    if path:
+        import os
+        return FileResponse(
+            path,
+            media_type='text/csv',
+            filename=os.path.basename(path),
+        )
+    return Response(status_code=404, content='无活动日志')
+
+
 @app.get('/api/tile/{style}/{z}/{x}/{y}')
 async def api_tile(style: str, z: int, x: int, y: int):
     global _tile_count

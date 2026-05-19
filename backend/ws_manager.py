@@ -66,6 +66,8 @@ class WSManager:
             state = self.link.get_state()
             await ws.send_text(json.dumps(state))
             events = self.link.events
+            if event_cursor > len(events):
+                event_cursor = 0
             if len(events) > event_cursor:
                 for ev in events[event_cursor:]:
                     await ws.send_text(json.dumps({

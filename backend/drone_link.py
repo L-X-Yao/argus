@@ -44,6 +44,11 @@ class DroneLink:
         self.sq = 0
         self._parse_errors = 0
         self._raw_sysid = 1
+        self._logfile = None
+        self._last_log_time = 0.0
+        self._last_port = ''
+        self._last_baud = 57600
+        self._reconnect_enabled = True
 
         self.connected = False
         self.frame_count = 0
@@ -113,13 +118,19 @@ class DroneLink:
         self.home_lat = self.home_lon = 0.0
         self.dist_home = 0.0
         self.armed_time = 0.0
+        self.last_frame_time = 0.0
         self.start_time = time.time()
+        self._last_port = port
+        self._last_baud = baudrate
+        self._reconnect_enabled = True
+        self._start_log()
         self._thread = threading.Thread(target=self._loop, daemon=True)
         self._thread.start()
         return True
 
     def disconnect(self) -> None:
         self._running = False
+        self._reconnect_enabled = False
         if self._thread:
             self._thread.join(timeout=3)
         try:
@@ -133,7 +144,32 @@ class DroneLink:
         self.force_plane = None
         self._prev_pos = None
         self._mission_pending = False
+        self._stop_log()
         self.add_event('已断开')
+
+    def reconnect(self) -> bool:
+        self._running = False
+        if self._thread:
+            self._thread.join(timeout=3)
+        try:
+            if self._ser:
+                self._ser.close()
+        except Exception:
+            pass
+        self._ser = None
+        self.connected = False
+        self._buf = b''
+        try:
+            self._ser = self._open_port(self._last_port, self._last_baud)
+        except Exception as e:
+            self.add_event('重连失败: %s' % e)
+            return False
+        self._running = True
+        self.sq = 0
+        self.add_event('已重连')
+        self._thread = threading.Thread(target=self._loop, daemon=True)
+        self._thread.start()
+        return True
 
     def get_state(self) -> dict:
         md = PLANE_MODES if self.is_plane() else COPTER_MODES
@@ -172,7 +208,53 @@ class DroneLink:
             'home_lon': round(self.home_lon, 7),
             'parse_errors': self._parse_errors,
             'flight_summary': self.flight_summary,
+            'log_active': self._logfile is not None,
         }
+
+    def _start_log(self) -> None:
+        log_dir = Path(__file__).resolve().parent.parent / 'logs'
+        log_dir.mkdir(exist_ok=True)
+        logname = str(log_dir / time.strftime('pllink_%Y%m%d_%H%M%S.csv'))
+        self._logfile = open(logname, 'w')
+        self._logfile.write('time,roll,pitch,yaw,lat,lon,alt_rel,alt_msl,gs,vz,voltage,current,remaining,mode,mode_name,armed,gps_fix,sats,wp,hdg,dist,bat_time\n')
+        self._last_log_time = 0.0
+        self.add_event('日志: %s' % logname)
+
+    def _stop_log(self) -> None:
+        try:
+            if self._logfile:
+                self._logfile.close()
+        except Exception:
+            pass
+        self._logfile = None
+
+    def get_log_path(self) -> str | None:
+        if self._logfile:
+            self._logfile.flush()
+            return self._logfile.name
+        return None
+
+    def _write_log_line(self) -> None:
+        now = time.time()
+        if not self._logfile or now - self._last_log_time < 0.25:
+            return
+        self._last_log_time = now
+        md = PLANE_MODES if self.is_plane() else COPTER_MODES
+        t = now - self.start_time
+        try:
+            self._logfile.write(
+                '%.2f,%.2f,%.2f,%.1f,%.7f,%.7f,%.1f,%.1f,%.1f,%.1f,%.2f,%.2f,%d,%d,%s,%d,%d,%d,%d,%.0f,%.0f,%d\n'
+                % (t, self.roll, self.pitch, self.yaw, self.lat, self.lon,
+                   self.alt_rel, self.alt_msl, self.gs, self.vz,
+                   self.voltage, self.current, self.remaining,
+                   self.mode, md.get(self.mode, '?'), self.armed,
+                   self.gps_fix, self.gps_sats, self.wp_seq, self.hdg,
+                   self.dist_home,
+                   self.bat_time_remaining if self.bat_time_remaining > 0 else -1)
+            )
+            self._logfile.flush()
+        except Exception:
+            pass
 
     def _open_port(self, port: str, baudrate: int):
         if port.startswith('tcp:'):
@@ -198,6 +280,25 @@ class DroneLink:
                 last_hb = now
                 if not self.connected and self.frame_count < 3:
                     cmd_module.request_streams(self)
+            if self.connected and self.last_frame_time > 0 and now - self.last_frame_time > 5:
+                self.add_event('链路丢失')
+                self.connected = False
+                if self._reconnect_enabled and self._last_port:
+                    self.add_event('自动重连...')
+                    try:
+                        if self._ser:
+                            self._ser.close()
+                    except Exception:
+                        pass
+                    self._buf = b''
+                    try:
+                        self._ser = self._open_port(self._last_port, self._last_baud)
+                        self.sq = 0
+                        self.add_event('已重连')
+                    except Exception:
+                        self.add_event('重连失败, 3秒后重试')
+                        time.sleep(3)
+                    continue
             try:
                 data = self._ser.read(1024)
                 if data:
@@ -224,6 +325,7 @@ class DroneLink:
                     self._buf = self._buf[consumed:]
                 else:
                     break
+            self._write_log_line()
             time.sleep(0.02)
 
     def _process(self, payload: bytes) -> None:

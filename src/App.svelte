@@ -12,6 +12,9 @@
   import MissionPanel from './components/MissionPanel.svelte';
   import FlightSummary from './components/FlightSummary.svelte';
   import ChartPanel from './components/ChartPanel.svelte';
+  import SettingsPanel from './components/SettingsPanel.svelte';
+
+  let showSettings = $state(false);
 
   onMount(() => {
     loadSettings();
@@ -38,6 +41,7 @@
     else if (k === 'l') { app.darkTheme = !app.darkTheme; saveSettings(); }
     else if (k === 'm') app.mapExpanded = !app.mapExpanded;
     else if (k === 'c') app.chartsOpen = !app.chartsOpen;
+    else if (k === 's' && e.ctrlKey) { e.preventDefault(); showSettings = !showSettings; }
     else if (k >= '1' && k <= '9') {
       const btns = app.drone.mode_btns;
       const idx = parseInt(k) - 1;
@@ -49,7 +53,7 @@
 </script>
 
 <div class="app" class:light={!app.darkTheme} class:map-expanded={app.mapExpanded}>
-  <StatusBar {toggleTheme} />
+  <StatusBar {toggleTheme} onSettings={() => showSettings = !showSettings} />
   <ConnectionBar />
   {#if !app.mapExpanded}
     <div class="main-row">
@@ -68,8 +72,11 @@
   {#if app.summaryShown && app.drone.flight_summary}
     <FlightSummary summary={app.drone.flight_summary} onclose={() => { app.summaryShown = false; sendCommand('clear_summary'); }} />
   {/if}
+  {#if showSettings}
+    <SettingsPanel onclose={() => showSettings = false} />
+  {/if}
 </div>
-<div class="shortcut-bar"><kbd>Space</kbd> 悬停 <kbd>R</kbd> 返航 <kbd>A</kbd> 解锁 <kbd>D</kbd> 锁定 <kbd>C</kbd> 图表 <kbd>L</kbd> 主题 <kbd>M</kbd> 展开 <kbd>1-9</kbd> 模式</div>
+<div class="shortcut-bar"><kbd>Space</kbd> 悬停 <kbd>R</kbd> 返航 <kbd>A</kbd> 解锁 <kbd>D</kbd> 锁定 <kbd>C</kbd> 图表 <kbd>L</kbd> 主题 <kbd>M</kbd> 展开 <kbd>Ctrl+S</kbd> 设置 <kbd>1-9</kbd> 模式</div>
 
 <style>
   :global(body) { margin:0; padding:0; font-family:'Segoe UI',Consolas,monospace; background:var(--bg-body); color:var(--text-main); }
