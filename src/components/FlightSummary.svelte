@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { FlightSummary } from '../lib/types';
   import Button from '$lib/components/ui/button/button.svelte';
+  import { X } from '@lucide/svelte';
 
   let { summary, onclose }: { summary: FlightSummary; onclose: () => void } = $props();
 
@@ -19,7 +20,10 @@
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div class="bg-card border-2 border-primary rounded-xl p-6 min-w-[320px] shadow-2xl" onclick={(e) => e.stopPropagation()}>
-    <h3 class="text-lg font-bold text-primary mb-4">飞行摘要</h3>
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-lg font-bold text-primary">飞行摘要</h3>
+      <Button variant="ghost" size="icon-xs" onclick={onclose}><X size={16} /></Button>
+    </div>
     <div class="flex justify-between py-2 border-b border-border">
       <span class="text-muted-foreground">飞行时间</span>
       <span class="font-bold text-base">{fmtTime(summary.duration)}</span>

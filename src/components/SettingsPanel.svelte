@@ -1,6 +1,7 @@
 <script lang="ts">
   import { app, saveSettings } from '../lib/stores.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
+  import { X } from '@lucide/svelte';
 
   let { onclose }: { onclose: () => void } = $props();
 </script>
@@ -11,7 +12,10 @@
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div class="bg-card border-2 border-primary rounded-xl p-6 min-w-[340px] shadow-2xl" onclick={(e) => e.stopPropagation()}>
-    <h3 class="text-lg font-bold text-primary mb-4">设置</h3>
+    <div class="flex items-center justify-between mb-4">
+      <h3 class="text-lg font-bold text-primary">设置</h3>
+      <Button variant="ghost" size="icon-xs" onclick={onclose}><X size={16} /></Button>
+    </div>
 
     <div class="flex justify-between items-center py-2.5 border-b border-border">
       <label for="s-alt" class="text-sm text-muted-foreground">默认高度 (m)</label>
