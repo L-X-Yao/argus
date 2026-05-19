@@ -18,6 +18,9 @@ class AppState {
   toasts: Toast[] = $state([]);
   guidedMode: boolean = $state(false);
   replayPos: { lat: number; lon: number; yaw: number } | null = $state(null);
+  surveyPolygon: { lat: number; lon: number }[] = $state([]);
+  drawingPolygon: boolean = $state(false);
+  showSurvey: boolean = $state(false);
 }
 
 export const app = new AppState();

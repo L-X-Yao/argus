@@ -33,6 +33,8 @@
   let replayMarker: any = null;
   let replayTrail: [number, number][] = [];
   let replayTrailLine: any = null;
+  let surveyPolyLayer: any = null;
+  let surveyVertMarkers: any[] = [];
 
   const SAT_URL = '/api/tile/6/{z}/{x}/{y}';
   const LABEL_URL = '/api/tile/8/{z}/{x}/{y}';
@@ -61,6 +63,11 @@
     const ll = e.latlng;
     if (measuring) {
       addMeasurePoint(ll);
+      return;
+    }
+    if (app.drawingPolygon) {
+      const [wlat, wlon] = toWgsFromGcj(ll.lat, ll.lng);
+      app.surveyPolygon = [...app.surveyPolygon, { lat: wlat, lon: wlon }];
       return;
     }
     if (app.guidedMode && app.drone.connected && app.drone.armed) {
@@ -157,6 +164,7 @@
     if (e.key === 'Escape') {
       if (measuring) clearMeasure();
       if (app.guidedMode) app.guidedMode = false;
+      if (app.drawingPolygon) { app.drawingPolygon = false; app.surveyPolygon = []; }
       if (wpPopup) { map.closePopup(wpPopup); wpPopup = null; }
     }
     if (e.key === 'g' && (e.target as HTMLElement).tagName !== 'INPUT') {
@@ -326,6 +334,29 @@
     if (follow) map.setView([glat, glon], map.getZoom());
   });
 
+  // Survey polygon rendering
+  $effect(() => {
+    if (!map) return;
+    surveyVertMarkers.forEach(m => map.removeLayer(m));
+    surveyVertMarkers = [];
+    if (surveyPolyLayer) { map.removeLayer(surveyPolyLayer); surveyPolyLayer = null; }
+    if (app.surveyPolygon.length === 0) return;
+    const gcjPts = app.surveyPolygon.map(p => toGcj(p.lat, p.lon));
+    if (gcjPts.length >= 3) {
+      surveyPolyLayer = L.polygon(gcjPts, {
+        color: '#ab47bc', fillColor: '#ab47bc', fillOpacity: 0.12, weight: 2, dashArray: '6,4',
+      }).addTo(map);
+    } else if (gcjPts.length >= 2) {
+      surveyPolyLayer = L.polyline(gcjPts, { color: '#ab47bc', weight: 2, dashArray: '6,4' }).addTo(map);
+    }
+    gcjPts.forEach((pt, i) => {
+      const cm = L.circleMarker(pt, {
+        radius: 5, color: '#ab47bc', fillColor: i === 0 ? '#fff' : '#ab47bc', fillOpacity: 1, weight: 2,
+      }).addTo(map);
+      surveyVertMarkers.push(cm);
+    });
+  });
+
   function fmtTime(s: number): string {
     const m = Math.floor(s / 60), sec = s % 60;
     return `${m}:${sec < 10 ? '0' : ''}${sec}`;
@@ -342,6 +373,10 @@
         {app.guidedMode ? '引导中' : '引导'}
       </button>
     {/if}
+    <button class="map-btn survey-btn" class:active={app.showSurvey || app.drawingPolygon}
+            onclick={() => app.showSurvey = !app.showSurvey}>
+      测绘
+    </button>
     {#if trail.length > 10}
       <button class="map-btn" onclick={exportTrack}>导出轨迹</button>
     {/if}
@@ -381,6 +416,7 @@
   .map-btn:hover { color:#4fc3f7; border-color:#4fc3f7; }
   .map-btn.active { color:#ff5252; border-color:#ff5252; }
   .map-btn.guided.active { color:#ffa726; border-color:#ffa726; }
+  .map-btn.survey-btn.active { color:#ab47bc; border-color:#ab47bc; }
   .coord-bar { position:absolute; bottom:6px; left:10px; z-index:1000; background:rgba(30,30,30,0.85); color:#aaa; padding:2px 8px; border-radius:3px; font-size:11px; font-family:monospace; }
   .hud { position:absolute; bottom:6px; right:10px; z-index:1000; display:flex; gap:8px; }
   .hud-item { background:rgba(10,10,10,0.85); border:1px solid #333; border-radius:4px; padding:4px 8px; text-align:center; }

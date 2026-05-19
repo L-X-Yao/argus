@@ -17,6 +17,7 @@
   import PreflightPanel from './components/PreflightPanel.svelte';
   import MissionProgress from './components/MissionProgress.svelte';
   import ReplayPanel from './components/ReplayPanel.svelte';
+  import SurveyPanel from './components/SurveyPanel.svelte';
 
   let showSettings = $state(false);
 
@@ -74,6 +75,9 @@
     <MissionPanel />
   </div>
   <MissionProgress />
+  {#if app.showSurvey}
+    <SurveyPanel />
+  {/if}
   {#if !app.mapExpanded}
     {#if app.drone.connected && !app.drone.armed}
       <PreflightPanel />
