@@ -5,6 +5,8 @@
   import type { Param } from '../lib/types';
   import Button from '$lib/components/ui/button/button.svelte';
   import Badge from '$lib/components/ui/badge/badge.svelte';
+  import { Battery, ShieldAlert, Sliders, Navigation, Radio, ToggleLeft, Cpu, FileText, List } from '@lucide/svelte';
+  import type { Component } from 'svelte';
 
   const DESC: Record<string, string> = {
     BATT_CAPACITY: '电池容量 (mAh)', BATT_MONITOR: '电池监测类型',
@@ -27,16 +29,16 @@
     FLTMODE4: '模式开关4', FLTMODE5: '模式开关5', FLTMODE6: '模式开关6',
   };
 
-  const CATS: { key: string; label: string; match: (n: string) => boolean }[] = [
-    { key: 'battery', label: '电池', match: n => n.startsWith('BATT') || n === 'FS_BATT_ENABLE' || n === 'FS_BATT_MAH' || n === 'FS_BATT_VOLTAGE' },
-    { key: 'failsafe', label: '保护', match: n => n.startsWith('FS_') },
-    { key: 'pid', label: 'PID', match: n => n.startsWith('ATC_RAT_') },
-    { key: 'nav', label: '导航', match: n => n.startsWith('WPNAV') || n.startsWith('RTL') },
-    { key: 'rc', label: '遥控', match: n => /^RC\d/.test(n) },
-    { key: 'modes', label: '模式', match: n => n.startsWith('FLTMODE') },
-    { key: 'sensor', label: '传感器', match: n => n.startsWith('INS_') },
-    { key: 'log', label: '日志', match: n => n.startsWith('LOG_') },
-    { key: 'all', label: '全部', match: () => true },
+  const CATS: { key: string; label: string; icon: Component; match: (n: string) => boolean }[] = [
+    { key: 'battery', label: '电池', icon: Battery, match: n => n.startsWith('BATT') || n === 'FS_BATT_ENABLE' || n === 'FS_BATT_MAH' || n === 'FS_BATT_VOLTAGE' },
+    { key: 'failsafe', label: '保护', icon: ShieldAlert, match: n => n.startsWith('FS_') },
+    { key: 'pid', label: 'PID', icon: Sliders, match: n => n.startsWith('ATC_RAT_') },
+    { key: 'nav', label: '导航', icon: Navigation, match: n => n.startsWith('WPNAV') || n.startsWith('RTL') },
+    { key: 'rc', label: '遥控', icon: Radio, match: n => /^RC\d/.test(n) },
+    { key: 'modes', label: '模式', icon: ToggleLeft, match: n => n.startsWith('FLTMODE') },
+    { key: 'sensor', label: '传感器', icon: Cpu, match: n => n.startsWith('INS_') },
+    { key: 'log', label: '日志', icon: FileText, match: n => n.startsWith('LOG_') },
+    { key: 'all', label: '全部', icon: List, match: () => true },
   ];
 
   let category = $state('all');
@@ -109,11 +111,13 @@
   {#if paramState.list.length > 0}
     <div class="flex flex-wrap gap-1 mb-2">
       {#each CATS as cat}
-        <button class="px-2.5 py-1 text-[11px] rounded-md border transition-all cursor-pointer
+        <button class="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] rounded-md border transition-all cursor-pointer
           {category === cat.key
             ? 'bg-primary text-primary-foreground border-primary'
             : 'bg-card text-muted-foreground border-border hover:text-foreground hover:bg-muted'}"
-                onclick={() => category = cat.key}>{cat.label}</button>
+                onclick={() => category = cat.key}>
+          <cat.icon size={11} />{cat.label}
+        </button>
       {/each}
     </div>
 
