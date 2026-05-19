@@ -156,8 +156,16 @@
         {ekfLabel}
       </Badge>
 
-      <span class="{battColor} font-bold tabular-nums">
-        {app.drone.voltage.toFixed(1)}V {app.drone.remaining >= 0 ? app.drone.remaining + '%' : ''}
+      <span class="{battColor} font-bold tabular-nums flex items-center gap-1" title="{app.drone.voltage.toFixed(2)}V | {app.drone.current.toFixed(1)}A">
+        <svg width="22" height="12" viewBox="0 0 22 12" class="shrink-0">
+          <rect x="0.5" y="0.5" width="18" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1"/>
+          <rect x="19" y="3" width="2.5" height="6" rx="1" fill="currentColor" opacity="0.5"/>
+          {#if app.drone.remaining >= 0}
+            <rect x="2" y="2" width="{Math.max(0, Math.min(15, app.drone.remaining / 100 * 15))}" height="8" rx="1"
+                  fill="{app.drone.remaining < 20 ? '#ef4444' : app.drone.remaining < 40 ? '#eab308' : '#22c55e'}"/>
+          {/if}
+        </svg>
+        {app.drone.voltage.toFixed(1)}V{app.drone.remaining >= 0 ? ' ' + app.drone.remaining + '%' : ''}
       </span>
 
       {#if app.drone.fw_version}
