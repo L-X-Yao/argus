@@ -4,18 +4,19 @@
   import { API_BASE } from '../lib/backend';
   import Button from '$lib/components/ui/button/button.svelte';
   import Badge from '$lib/components/ui/badge/badge.svelte';
-  import { X } from '@lucide/svelte';
+  import { X, Compass, Move3d, RotateCw, AlignHorizontalSpaceAround, Thermometer } from '@lucide/svelte';
+  import type { Component } from 'svelte';
 
   let { onclose }: { onclose: () => void } = $props();
 
   type CalType = 'compass' | 'accel' | 'gyro' | 'level' | 'baro';
 
-  const calTypes: { id: CalType; label: string; cmd: string }[] = [
-    { id: 'compass', label: '罗盘', cmd: 'cal_compass' },
-    { id: 'accel', label: '加速度计', cmd: 'cal_accel' },
-    { id: 'gyro', label: '陀螺仪', cmd: 'cal_gyro' },
-    { id: 'level', label: '水平', cmd: 'cal_level' },
-    { id: 'baro', label: '气压计', cmd: 'cal_baro' },
+  const calTypes: { id: CalType; label: string; cmd: string; icon: Component }[] = [
+    { id: 'compass', label: '罗盘', cmd: 'cal_compass', icon: Compass },
+    { id: 'accel', label: '加速度计', cmd: 'cal_accel', icon: Move3d },
+    { id: 'gyro', label: '陀螺仪', cmd: 'cal_gyro', icon: RotateCw },
+    { id: 'level', label: '水平', cmd: 'cal_level', icon: AlignHorizontalSpaceAround },
+    { id: 'baro', label: '气压计', cmd: 'cal_baro', icon: Thermometer },
   ];
 
   /* ── Accel orientation definitions ── */
@@ -218,13 +219,13 @@
       <div class="flex flex-wrap gap-1.5 mb-4">
         {#each calTypes as ct (ct.id)}
           <button
-            class="px-3 py-1.5 text-xs font-semibold rounded-md transition-all
+            class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-md transition-all
               {selected === ct.id
                 ? 'bg-primary text-primary-foreground shadow-sm'
                 : 'bg-secondary text-secondary-foreground hover:bg-muted'}"
             onclick={() => { selected = ct.id; }}
           >
-            {ct.label}
+            <ct.icon size={13} />{ct.label}
           </button>
         {/each}
       </div>
