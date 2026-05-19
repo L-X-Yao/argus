@@ -64,6 +64,19 @@
     if (view === 'monitor') app.chartsOpen = true;
   });
 
+  $effect(() => {
+    const d = app.drone;
+    if (d.connected) {
+      const parts = [d.mode];
+      if (d.armed) parts.push('已解锁');
+      parts.push(`${d.voltage.toFixed(1)}V`);
+      if (d.gps_fix) parts.push(d.gps_fix);
+      document.title = `PL-Link — ${parts.join(' | ')}`;
+    } else {
+      document.title = 'PL-Link 地面站';
+    }
+  });
+
   function onKey(e: KeyboardEvent) {
     if ((e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'SELECT') return;
     const k = e.key.toLowerCase();
