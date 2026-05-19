@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { connectWs, sendCommand } from './lib/ws';
   import { app, loadSettings, saveSettings } from './lib/stores.svelte';
-  import { checkAlerts } from './lib/audio';
+  import { checkAlerts, beep, speak } from './lib/audio';
   import StatusBar from './components/StatusBar.svelte';
   import ControlPanel from './components/ControlPanel.svelte';
   import MapView from './components/MapView.svelte';
@@ -62,6 +62,16 @@
 
   $effect(() => {
     if (view === 'monitor') app.chartsOpen = true;
+  });
+
+  let prevWsConnected = true;
+  $effect(() => {
+    const ws = app.wsConnected;
+    if (!ws && prevWsConnected) {
+      beep(150, 1000, 2, 300);
+      speak('服务连接中断');
+    }
+    prevWsConnected = ws;
   });
 
   $effect(() => {
