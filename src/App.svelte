@@ -159,7 +159,7 @@
   .view-tabs button.active { color:var(--text-accent); border-bottom-color:var(--text-accent); }
 
   .fly-view { flex:1; display:flex; flex-direction:column; overflow:hidden; }
-  .map-full { flex:1; position:relative; min-height:0; }
+  .map-full { flex:1; position:relative; min-height:0; display:flex; flex-direction:column; }
   .fly-preflight { position:absolute; bottom:40px; right:10px; z-index:1001; width:400px; max-height:220px; overflow:auto; background:rgba(10,10,10,0.92); border:1px solid #444; border-radius:8px; pointer-events:auto; }
   .fly-preflight :global(.panel) { margin:0; background:transparent; }
   .fly-events { position:absolute; bottom:0; left:0; right:0; z-index:1001; pointer-events:auto; }
