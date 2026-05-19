@@ -66,11 +66,12 @@
     if (!editName) return;
     const val = parseFloat(editValue);
     if (isNaN(val)) { addToast('无效数值', 'error'); return; }
-    sendCommand('param_set', undefined, { name: editName, value: val });
-    modified.add(editName);
+    const name = editName;
+    sendCommand('param_set', undefined, { name, value: val });
+    modified.add(name);
     modified = new Set(modified);
     editName = null;
-    addToast(`${editName} 已发送`, 'info', 2000);
+    addToast(`${name} = ${val} 已发送`, 'info', 2000);
   }
 
   function onKeydown(e: KeyboardEvent) {
