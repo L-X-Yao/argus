@@ -51,6 +51,5 @@
       </Button>
     </div>
 
-    <Button variant="secondary" class="w-full mt-4" onclick={onclose}>关闭</Button>
   </div>
 </div>
