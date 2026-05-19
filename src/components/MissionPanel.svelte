@@ -174,6 +174,12 @@
     return `${m}:${s.toString().padStart(2, '0')}`;
   }
 
+  function fmtSegDist(i: number): string {
+    if (i < 1 || i >= app.waypoints.length) return '';
+    const d = segDist(app.waypoints[i - 1], app.waypoints[i]);
+    return d < 1000 ? d.toFixed(0) + 'm' : (d / 1000).toFixed(1) + 'km';
+  }
+
   function segDist(a: any, b: any): number {
     const dlat = (b.lat - a.lat) * 111320;
     const dlon = (b.lon - a.lon) * 111320 * Math.cos(a.lat * Math.PI / 180);
@@ -254,15 +260,23 @@
     {#each app.waypoints as wp, i}
       <div class="wp-item" class:active-wp={app.drone.wp === i + 2}>
         <span class="wp-num">{i + 1}</span>
-        <button class="wp-type" style="background:{typeColor(wp.type || 'wp')}" onclick={() => cycleType(i)}>
+        <button class="wp-type" style="background:{typeColor(wp.type || 'wp')}" onclick={() => cycleType(i)}
+                title="点击切换: 航点/盘旋圈/盘旋秒">
           {typeLabel(wp.type || 'wp')}
         </button>
-        {#if wp.drop}
-          <span class="drop-badge">投</span>
+        <button class="wp-drop" class:active={wp.drop} onclick={() => toggleDrop(i)} title="投放开关">
+          {wp.drop ? '投' : '·'}
+        </button>
+        {#if (wp.type === 'loiter_turns' || wp.type === 'loiter_time')}
+          <input type="number" class="wp-loiter" value={wp.loiter_param}
+                 onchange={(e) => { app.waypoints[i].loiter_param = parseFloat((e.target as HTMLInputElement).value) || 0; saveWaypoints(); }}
+                 title={wp.type === 'loiter_turns' ? '盘旋圈数' : '盘旋秒数'} />
         {/if}
-        <span class="wp-coords">{wp.lat.toFixed(5)}, {wp.lon.toFixed(5)}</span>
+        <span class="wp-coords">{wp.lat.toFixed(5)},{wp.lon.toFixed(5)}
+          {#if i > 0}<span class="seg-dist">{fmtSegDist(i)}</span>{/if}
+        </span>
         <input type="number" class="wp-alt" value={wp.alt} onchange={(e) => setAlt(i, (e.target as HTMLInputElement).value)} title="高度(m)" />
-        <input type="number" class="wp-spd" value={wp.speed || ''} placeholder="默认"
+        <input type="number" class="wp-spd" value={wp.speed || ''} placeholder="—"
                onchange={(e) => setSpeed(i, (e.target as HTMLInputElement).value)} title="速度(m/s)" />
         <button class="wp-mv" onclick={() => moveWp(i, -1)}>&uarr;</button>
         <button class="wp-mv" onclick={() => moveWp(i, 1)}>&darr;</button>
@@ -321,7 +335,10 @@
   .live-wp { font-size:11px; color:#ffa726; font-weight:normal; }
   .wp-num { width:22px; text-align:center; color:var(--text-dim); font-weight:bold; }
   .wp-type { padding:1px 4px; border-radius:3px; cursor:pointer; font-size:9px; font-weight:bold; border:none; color:white; background:#1565c0; white-space:nowrap; }
-  .drop-badge { font-size:9px; color:#e65100; font-weight:bold; }
+  .wp-drop { width:18px; height:18px; border-radius:3px; border:1px solid #555; background:none; color:#666; cursor:pointer; font-size:10px; font-weight:bold; padding:0; line-height:18px; text-align:center; flex-shrink:0; }
+  .wp-drop.active { background:#e65100; color:white; border-color:#e65100; }
+  .wp-loiter { width:30px; background:var(--bg-input); color:#ab47bc; border:1px solid var(--border-light); padding:2px 2px; border-radius:3px; font-size:10px; text-align:right; }
+  .seg-dist { color:#546e7a; font-size:9px; margin-left:2px; }
   .wp-coords { flex:1; color:var(--text-dim); font-size:10px; overflow:hidden; white-space:nowrap; }
   .wp-alt { width:36px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-light); padding:2px 3px; border-radius:3px; font-size:11px; text-align:right; }
   .wp-spd { width:36px; background:var(--bg-input); color:#69f0ae; border:1px solid var(--border-light); padding:2px 3px; border-radius:3px; font-size:11px; text-align:right; }
