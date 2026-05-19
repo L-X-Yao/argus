@@ -155,6 +155,13 @@
         <MapView />
         {#if app.drone.connected}
           <TelemetryOverlay />
+        {:else}
+          <div class="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[1001]
+                      bg-card/90 backdrop-blur border border-border rounded-xl shadow-lg px-6 py-4 text-center pointer-events-none">
+            <p class="text-sm font-semibold text-foreground">未连接飞控</p>
+            <p class="text-xs text-muted-foreground mt-1">在顶部输入连接地址后点击"连接"</p>
+            <p class="text-[11px] text-muted-foreground mt-0.5">按 <kbd class="px-1 py-px bg-muted border border-border rounded text-[10px] font-mono">?</kbd> 查看快捷键</p>
+          </div>
         {/if}
         {#if showVideo && app.drone.connected}
           <VideoOverlay onclose={() => showVideo = false} />
