@@ -59,6 +59,7 @@
 
   async function armAndFly() {
     if (!app.waypoints.length) return;
+    if (!confirm(`确认上传任务并自动起飞到 ${app.defaultAlt}m？\n将执行：上传→解锁→起飞→开始任务`)) return;
     uploadMission();
     await new Promise(r => setTimeout(r, 1000));
     sendCommand('arm');

@@ -29,7 +29,7 @@
       <Button variant="destructive" size="xs" onclick={rtl}>返航</Button>
       <Button size="xs" class="bg-amber-600 hover:bg-amber-700 text-white" onclick={pause}>悬停</Button>
       {#if !app.drone.armed}
-        <Button size="xs" class="bg-orange-700 hover:bg-orange-800 text-white" onclick={() => sendCommand('arm')}>解锁</Button>
+        <Button size="xs" class="bg-orange-700 hover:bg-orange-800 text-white" onclick={() => { if (confirm('确认解锁电机？')) sendCommand('arm'); }}>解锁</Button>
       {:else}
         <Button size="xs" class="bg-green-700 hover:bg-green-800 text-white" onclick={() => sendCommand('disarm')}>锁定</Button>
       {/if}
@@ -39,11 +39,8 @@
     </div>
     <div class="flex gap-1">
       {#each app.drone.mode_btns.slice(0, 4) as [id, name]}
-        <button class="px-2 py-1 text-[11px] rounded border cursor-pointer transition-colors
-          {app.drone.mode_id === id
-            ? 'text-primary border-primary bg-primary/10'
-            : 'text-muted-foreground border-border hover:text-primary hover:border-primary'}"
-                onclick={() => sendCommand('mode', id)}>{name}</button>
+        <Button variant={app.drone.mode_id === id ? 'default' : 'outline'} size="xs"
+                onclick={() => sendCommand('mode', id)}>{name}</Button>
       {/each}
     </div>
   </div>
