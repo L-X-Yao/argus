@@ -13,6 +13,8 @@
   let trailLine: any = null;
   let follow = $state(true);
   let isSat = $state(true);
+  let measuring = $state(false);
+  let mouseCoord = $state('');
   let prevLat = 0;
   let prevLon = 0;
   let wpMarkers: any[] = [];
@@ -20,6 +22,10 @@
   let geoCircle: any = null;
   let satLayer: any = null;
   let vecLayer: any = null;
+  let activeWpMarker: any = null;
+  let measurePts: any[] = [];
+  let measureLine: any = null;
+  let measureLabel: any = null;
 
   const SAT_URL = '/api/tile/6/{z}/{x}/{y}';
   const LABEL_URL = '/api/tile/8/{z}/{x}/{y}';
@@ -32,11 +38,22 @@
     labelLayer = L.tileLayer(LABEL_URL, { maxZoom: 18 }).addTo(map);
     vecLayer = L.tileLayer(VEC_URL, { maxZoom: 18 });
     map.on('click', onMapClick);
+    map.on('mousemove', onMouseMove);
     setTimeout(() => map.invalidateSize(), 100);
   });
 
+  function onMouseMove(e: any) {
+    const ll = e.latlng;
+    const [wlat, wlon] = toWgsFromGcj(ll.lat, ll.lng);
+    mouseCoord = `${wlat.toFixed(6)}, ${wlon.toFixed(6)}`;
+  }
+
   function onMapClick(e: any) {
     const ll = e.latlng;
+    if (measuring) {
+      addMeasurePoint(ll);
+      return;
+    }
     const [wlat, wlon] = toWgsFromGcj(ll.lat, ll.lng);
     addWaypoint({ lat: wlat, lon: wlon, alt: app.defaultAlt, drop: false, delay: 0 });
   }
@@ -44,6 +61,70 @@
   function toWgsFromGcj(glat: number, glon: number): [number, number] {
     const g = toGcj(glat, glon);
     return [glat * 2 - g[0], glon * 2 - g[1]];
+  }
+
+  function addMeasurePoint(ll: any) {
+    const cm = L.circleMarker([ll.lat, ll.lng], { radius: 4, color: '#ff5252', fillColor: '#ff5252', fillOpacity: 1 }).addTo(map);
+    measurePts.push({ marker: cm, ll });
+    if (measurePts.length >= 2) {
+      const a = measurePts[measurePts.length - 2].ll;
+      const b = measurePts[measurePts.length - 1].ll;
+      const dist = map.distance(a, b);
+      let total = 0;
+      for (let i = 1; i < measurePts.length; i++) {
+        total += map.distance(measurePts[i - 1].ll, measurePts[i].ll);
+      }
+      const pts = measurePts.map((p: any) => [p.ll.lat, p.ll.lng]);
+      if (measureLine) map.removeLayer(measureLine);
+      measureLine = L.polyline(pts, { color: '#ff5252', weight: 2, dashArray: '4,4' }).addTo(map);
+      if (measureLabel) map.removeLayer(measureLabel);
+      const mid = L.latLng((a.lat + b.lat) / 2, (a.lng + b.lng) / 2);
+      const txt = total < 1000 ? `${total.toFixed(0)}m` : `${(total / 1000).toFixed(2)}km`;
+      measureLabel = L.marker(mid, {
+        icon: L.divIcon({
+          className: '',
+          html: `<div style="background:rgba(30,30,30,0.9);color:#ff5252;padding:2px 6px;border-radius:3px;font-size:11px;font-weight:bold;white-space:nowrap">${txt}</div>`,
+          iconAnchor: [0, 0],
+        }),
+      }).addTo(map);
+    }
+  }
+
+  function clearMeasure() {
+    measuring = false;
+    measurePts.forEach((p: any) => map.removeLayer(p.marker));
+    measurePts = [];
+    if (measureLine) { map.removeLayer(measureLine); measureLine = null; }
+    if (measureLabel) { map.removeLayer(measureLabel); measureLabel = null; }
+  }
+
+  function toggleMeasure() {
+    if (measuring) {
+      clearMeasure();
+    } else {
+      clearMeasure();
+      measuring = true;
+    }
+  }
+
+  function exportTrack() {
+    if (!trail.length) return;
+    const coords = trail.map(([glat, glon]) => {
+      const [wlat, wlon] = toWgsFromGcj(glat, glon);
+      return `${wlon},${wlat},0`;
+    }).join('\n');
+    const kml = `<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>飞行轨迹</name>
+<Style id="track"><LineStyle><color>ff4fc3f7</color><width>2</width></LineStyle></Style>
+<Placemark><name>轨迹</name><styleUrl>#track</styleUrl>
+<LineString><coordinates>${coords}</coordinates></LineString>
+</Placemark></Document></kml>`;
+    const blob = new Blob([kml], { type: 'application/vnd.google-earth.kml+xml' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = '轨迹_' + new Date().toISOString().slice(0, 10) + '.kml';
+    a.click();
+    URL.revokeObjectURL(a.href);
   }
 
   function toggleMapType() {
@@ -102,6 +183,23 @@
     if (follow) map.setView([glat, glon], map.getZoom());
   });
 
+  // Active waypoint indicator
+  $effect(() => {
+    if (!map) return;
+    if (activeWpMarker) { map.removeLayer(activeWpMarker); activeWpMarker = null; }
+    const seq = app.drone.wp;
+    if (seq >= 2 && app.waypoints.length > 0) {
+      const wpIdx = seq - 2;
+      if (wpIdx >= 0 && wpIdx < app.waypoints.length) {
+        const wp = app.waypoints[wpIdx];
+        const [glat, glon] = toGcj(wp.lat, wp.lon);
+        activeWpMarker = L.circleMarker([glat, glon], {
+          radius: 16, color: '#ffa726', fillColor: 'transparent', weight: 3, dashArray: '4,4',
+        }).addTo(map);
+      }
+    }
+  });
+
   $effect(() => {
     if (!map) return;
     wpMarkers.forEach(m => map.removeLayer(m));
@@ -134,21 +232,58 @@
       geoCircle = L.circle([hlat, hlon], { radius: app.geoRadius, color: '#f44336', fill: false, dashArray: '8,4', weight: 1 }).addTo(map);
     }
   });
+
+  function fmtTime(s: number): string {
+    const m = Math.floor(s / 60), sec = s % 60;
+    return `${m}:${sec < 10 ? '0' : ''}${sec}`;
+  }
 </script>
 
 <div class="map-container">
   <div bind:this={mapEl} class="map"></div>
-  <button class="map-btn" style="top:10px;left:10px" onclick={toggleMapType}>{isSat ? '卫星' : '地图'}</button>
-  <button class="map-btn" style="top:10px;right:10px" class:active={follow} onclick={() => follow = !follow}>{follow ? '跟随' : '自由'}</button>
-  <button class="map-btn" style="top:10px;right:70px" onclick={toggleExpand}>{app.mapExpanded ? '收起' : '展开'}</button>
-  <button class="map-btn" style="top:10px;right:130px" onclick={centerHome}>起飞点</button>
-  <button class="map-btn" style="top:10px;right:200px" onclick={fitRoute}>全览</button>
+  <div class="map-btns-left">
+    <button class="map-btn" onclick={toggleMapType}>{isSat ? '卫星' : '地图'}</button>
+    <button class="map-btn" class:active={measuring} onclick={toggleMeasure}>{measuring ? '取消测距' : '测距'}</button>
+    {#if trail.length > 10}
+      <button class="map-btn" onclick={exportTrack}>导出轨迹</button>
+    {/if}
+  </div>
+  <div class="map-btns-right">
+    <button class="map-btn" class:active={follow} onclick={() => follow = !follow}>{follow ? '跟随' : '自由'}</button>
+    <button class="map-btn" onclick={toggleExpand}>{app.mapExpanded ? '收起' : '展开'}</button>
+    <button class="map-btn" onclick={centerHome}>起飞点</button>
+    <button class="map-btn" onclick={fitRoute}>全览</button>
+  </div>
+  <div class="coord-bar">{mouseCoord || '---'}</div>
+
+  {#if app.mapExpanded && app.drone.connected}
+    <div class="hud">
+      <div class="hud-item"><span class="hud-label">高度</span><span class="hud-value">{app.drone.alt_rel.toFixed(1)}m</span></div>
+      <div class="hud-item"><span class="hud-label">速度</span><span class="hud-value">{app.drone.gs.toFixed(1)}m/s</span></div>
+      <div class="hud-item"><span class="hud-label">距离</span><span class="hud-value">{app.drone.dist_home.toFixed(0)}m</span></div>
+      <div class="hud-item"><span class="hud-label">电池</span><span class="hud-value">{app.drone.voltage.toFixed(1)}V {app.drone.remaining >= 0 ? app.drone.remaining + '%' : ''}</span></div>
+      <div class="hud-item"><span class="hud-label">航向</span><span class="hud-value">{app.drone.hdg.toFixed(0)}&deg;</span></div>
+      {#if app.drone.flight_time > 0}
+        <div class="hud-item"><span class="hud-label">时间</span><span class="hud-value">{fmtTime(app.drone.flight_time)}</span></div>
+      {/if}
+      {#if app.drone.wp > 0}
+        <div class="hud-item"><span class="hud-label">航点</span><span class="hud-value">#{app.drone.wp}</span></div>
+      {/if}
+    </div>
+  {/if}
 </div>
 
 <style>
   .map-container { position:relative; flex:1; min-width:0; }
   .map { height:100%; border-radius:6px; border:1px solid var(--border); }
-  .map-btn { position:absolute; z-index:1000; padding:4px 10px; background:rgba(30,30,30,0.9); border:1px solid #555; border-radius:4px; cursor:pointer; font-size:12px; font-weight:bold; color:#aaa; }
+  .map-btns-left { position:absolute; top:10px; left:10px; z-index:1000; display:flex; gap:4px; }
+  .map-btns-right { position:absolute; top:10px; right:10px; z-index:1000; display:flex; gap:4px; }
+  .map-btn { padding:4px 10px; background:rgba(30,30,30,0.9); border:1px solid #555; border-radius:4px; cursor:pointer; font-size:12px; font-weight:bold; color:#aaa; }
   .map-btn:hover { color:#4fc3f7; border-color:#4fc3f7; }
-  .map-btn.active { color:#4fc3f7; border-color:#4fc3f7; }
+  .map-btn.active { color:#ff5252; border-color:#ff5252; }
+  .coord-bar { position:absolute; bottom:6px; left:10px; z-index:1000; background:rgba(30,30,30,0.85); color:#aaa; padding:2px 8px; border-radius:3px; font-size:11px; font-family:monospace; }
+  .hud { position:absolute; bottom:6px; right:10px; z-index:1000; display:flex; gap:8px; }
+  .hud-item { background:rgba(10,10,10,0.85); border:1px solid #333; border-radius:4px; padding:4px 8px; text-align:center; }
+  .hud-label { display:block; font-size:9px; color:#666; text-transform:uppercase; }
+  .hud-value { display:block; font-size:14px; font-weight:bold; color:#4fc3f7; }
 </style>

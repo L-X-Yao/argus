@@ -123,6 +123,75 @@
     }
     return d < 1000 ? d.toFixed(0) + 'm' : (d / 1000).toFixed(1) + 'km';
   }
+
+  function segDist(a: any, b: any): number {
+    const dlat = (b.lat - a.lat) * 111320;
+    const dlon = (b.lon - a.lon) * 111320 * Math.cos(a.lat * Math.PI / 180);
+    return Math.sqrt(dlat * dlat + dlon * dlon);
+  }
+
+  let profileCanvas: HTMLCanvasElement;
+
+  $effect(() => {
+    if (!profileCanvas || app.waypoints.length < 2) return;
+    const wps = app.waypoints;
+    const ctx = profileCanvas.getContext('2d')!;
+    const w = profileCanvas.width = profileCanvas.parentElement!.clientWidth;
+    const h = profileCanvas.height;
+    ctx.clearRect(0, 0, w, h);
+
+    const dists: number[] = [0];
+    for (let i = 1; i < wps.length; i++) {
+      dists.push(dists[i - 1] + segDist(wps[i - 1], wps[i]));
+    }
+    const totalD = dists[dists.length - 1] || 1;
+    const alts = wps.map(wp => wp.alt);
+    let mn = Math.min(...alts), mx = Math.max(...alts);
+    if (mx === mn) { mx += 5; mn = Math.max(0, mn - 5); }
+    const pad = (mx - mn) * 0.1;
+    mn -= pad; mx += pad;
+
+    ctx.fillStyle = 'rgba(21,101,192,0.15)';
+    ctx.beginPath();
+    ctx.moveTo(0, h);
+    for (let i = 0; i < wps.length; i++) {
+      const x = (dists[i] / totalD) * w;
+      const y = (1 - (alts[i] - mn) / (mx - mn)) * (h - 16) + 8;
+      if (i === 0) ctx.lineTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.lineTo(w, h);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = '#1565c0';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    for (let i = 0; i < wps.length; i++) {
+      const x = (dists[i] / totalD) * w;
+      const y = (1 - (alts[i] - mn) / (mx - mn)) * (h - 16) + 8;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    ctx.fillStyle = '#aaa';
+    ctx.font = '9px monospace';
+    for (let i = 0; i < wps.length; i++) {
+      const x = (dists[i] / totalD) * w;
+      const y = (1 - (alts[i] - mn) / (mx - mn)) * (h - 16) + 8;
+      ctx.fillStyle = wps[i].drop ? '#e65100' : '#1565c0';
+      ctx.beginPath();
+      ctx.arc(x, y, 3, 0, Math.PI * 2);
+      ctx.fill();
+      if (i === 0 || i === wps.length - 1 || wps.length <= 6) {
+        ctx.fillStyle = '#888';
+        ctx.fillText(`${alts[i].toFixed(0)}m`, x + 4, y - 4);
+      }
+    }
+
+    ctx.fillStyle = '#555';
+    ctx.fillText(`${mn.toFixed(0)}m`, 2, h - 2);
+    ctx.fillText(`${mx.toFixed(0)}m`, 2, 10);
+  });
 </script>
 
 <div class="panel wp-panel">
@@ -146,6 +215,9 @@
   </div>
   {#if app.waypoints.length > 0}
     <div class="wp-stats">总距离: {totalDist()} | {app.waypoints.filter(w => w.drop).length} 投放</div>
+  {/if}
+  {#if app.waypoints.length >= 2}
+    <div class="profile"><canvas bind:this={profileCanvas} height="50"></canvas></div>
   {/if}
   <div class="toolbar">
     <label for="def-alt">高度:</label>
@@ -189,4 +261,6 @@
   .btn-sm.warn { background:#37474f; }
   .btn-upload { padding:4px 10px; border-radius:3px; border:none; cursor:pointer; font-size:12px; color:white; background:#e65100; font-weight:bold; }
   .btn-fly { padding:4px 10px; border-radius:3px; border:none; cursor:pointer; font-size:12px; color:white; background:#2e7d32; font-weight:bold; }
+  .profile { margin-top:6px; }
+  .profile canvas { width:100%; background:var(--bg-card); border-radius:4px; }
 </style>
