@@ -24,17 +24,17 @@
     id: AccelStep;
     label: string;
     hint: string;
-    /** keywords from ArduPilot STATUSTEXT for this orientation */
+    img: string;
     keywords: string[];
   }
 
   const accelOrients: OrientDef[] = [
-    { id: 'level',     label: '水平',     hint: '将飞机水平放置',       keywords: ['level', 'Level', '水平'] },
-    { id: 'nose_up',   label: '机头朝上', hint: '将飞机机头朝上竖立',   keywords: ['nose up', 'Nose Up', 'UP', '机头朝上', 'nose-up'] },
-    { id: 'nose_down', label: '机头朝下', hint: '将飞机机头朝下竖立',   keywords: ['nose down', 'Nose Down', 'DOWN', '机头朝下', 'nose-down'] },
-    { id: 'left',      label: '左侧朝下', hint: '将飞机左侧朝下放置',   keywords: ['left', 'Left', '左侧'] },
-    { id: 'right',     label: '右侧朝下', hint: '将飞机右侧朝下放置',   keywords: ['right', 'Right', '右侧'] },
-    { id: 'back',      label: '倒置',     hint: '将飞机翻转倒置放置',   keywords: ['back', 'Back', 'inverted', '倒置', '翻转'] },
+    { id: 'level',     label: '水平',     hint: '将飞机水平放置',       img: '/images/cal/VehicleDown.png',       keywords: ['level', 'Level', '水平'] },
+    { id: 'nose_up',   label: '机头朝上', hint: '将飞机机头朝上竖立',   img: '/images/cal/VehicleTailDown.png',   keywords: ['nose up', 'Nose Up', 'UP', '机头朝上', 'nose-up'] },
+    { id: 'nose_down', label: '机头朝下', hint: '将飞机机头朝下竖立',   img: '/images/cal/VehicleNoseDown.png',   keywords: ['nose down', 'Nose Down', 'DOWN', '机头朝下', 'nose-down'] },
+    { id: 'left',      label: '左侧朝下', hint: '将飞机左侧朝下放置',   img: '/images/cal/VehicleLeft.png',       keywords: ['left', 'Left', '左侧'] },
+    { id: 'right',     label: '右侧朝下', hint: '将飞机右侧朝下放置',   img: '/images/cal/VehicleRight.png',      keywords: ['right', 'Right', '右侧'] },
+    { id: 'back',      label: '倒置',     hint: '将飞机翻转倒置放置',   img: '/images/cal/VehicleUpsideDown.png', keywords: ['back', 'Back', 'inverted', '倒置', '翻转'] },
   ];
 
   let selected = $state<CalType>('compass');
@@ -247,68 +247,15 @@
           <div class="grid grid-cols-3 gap-2 mb-3">
             {#each accelOrients as orient (orient.id)}
               {@const st = accelSteps[orient.id]}
-              {@const c = st === 'done' ? '#22c55e' : st === 'active' ? '#3b82f6' : '#6b7280'}
-              {@const c2 = st === 'done' ? '#16a34a' : st === 'active' ? '#2563eb' : '#4b5563'}
               <div class="flex flex-col items-center p-2 rounded-lg border-2 transition-all
                 {st === 'done'   ? 'border-green-500/60 bg-green-500/5' :
                  st === 'active' ? 'border-primary/60 bg-primary/5 cal-active-border' :
                                    'border-border/50 bg-muted/20'}">
-                <div class="w-[60px] h-[60px] flex items-center justify-center mb-1.5">
-                  <svg viewBox="0 0 60 60" class="w-full h-full">
-                    <line x1="5" y1="54" x2="55" y2="54" stroke="#6b7280" stroke-width="0.8" stroke-dasharray="3,3" opacity="0.3"/>
-                    {#if orient.id === 'level'}
-                      <!-- Side view: flat on ground -->
-                      <rect x="15" y="30" width="30" height="6" rx="2" fill={c} opacity="0.85"/>
-                      <circle cx="15" cy="33" r="3.5" fill={c2} opacity="0.5"/>
-                      <circle cx="45" cy="33" r="3.5" fill={c2} opacity="0.5"/>
-                      <polygon points="45,30 49,33 45,36" fill={c} opacity="0.5"/>
-                      <text x="30" y="26" text-anchor="middle" fill={c} font-size="7" font-weight="bold" opacity="0.6">▼ 机头</text>
-                    {:else if orient.id === 'nose_up'}
-                      <!-- Side view: tilted 45° nose up, tail touching ground -->
-                      <g transform="rotate(-40, 38, 48)">
-                        <rect x="14" y="45" width="30" height="6" rx="2" fill={c} opacity="0.85"/>
-                        <circle cx="14" cy="48" r="3.5" fill={c2} opacity="0.5"/>
-                        <circle cx="44" cy="48" r="3.5" fill={c2} opacity="0.5"/>
-                        <polygon points="44,45 48,48 44,51" fill={c} opacity="0.5"/>
-                      </g>
-                      <polygon points="30,8 27,14 33,14" fill={c} opacity="0.6"/>
-                    {:else if orient.id === 'nose_down'}
-                      <!-- Side view: tilted 45° nose down, nose touching ground -->
-                      <g transform="rotate(40, 22, 48)">
-                        <rect x="16" y="45" width="30" height="6" rx="2" fill={c} opacity="0.85"/>
-                        <circle cx="16" cy="48" r="3.5" fill={c2} opacity="0.5"/>
-                        <circle cx="46" cy="48" r="3.5" fill={c2} opacity="0.5"/>
-                        <polygon points="46,45 50,48 46,51" fill={c} opacity="0.5"/>
-                      </g>
-                      <polygon points="30,52 27,46 33,46" fill={c} opacity="0.6"/>
-                    {:else if orient.id === 'left'}
-                      <!-- Front view: tilted 45° left side down -->
-                      <g transform="rotate(40, 30, 48)">
-                        <rect x="15" y="45" width="30" height="6" rx="2" fill={c} opacity="0.85"/>
-                        <circle cx="15" cy="48" r="3.5" fill={c2} opacity="0.5"/>
-                        <circle cx="45" cy="48" r="3.5" fill={c2} opacity="0.5"/>
-                      </g>
-                      <polygon points="8,48 14,45 14,51" fill={c} opacity="0.6"/>
-                      <text x="30" y="16" text-anchor="middle" fill={c} font-size="6" opacity="0.5">正视图</text>
-                    {:else if orient.id === 'right'}
-                      <!-- Front view: tilted 45° right side down -->
-                      <g transform="rotate(-40, 30, 48)">
-                        <rect x="15" y="45" width="30" height="6" rx="2" fill={c} opacity="0.85"/>
-                        <circle cx="15" cy="48" r="3.5" fill={c2} opacity="0.5"/>
-                        <circle cx="45" cy="48" r="3.5" fill={c2} opacity="0.5"/>
-                      </g>
-                      <polygon points="52,48 46,45 46,51" fill={c} opacity="0.6"/>
-                      <text x="30" y="16" text-anchor="middle" fill={c} font-size="6" opacity="0.5">正视图</text>
-                    {:else if orient.id === 'back'}
-                      <!-- Side view: flipped upside down -->
-                      <rect x="15" y="28" width="30" height="6" rx="2" fill={c} opacity="0.85"/>
-                      <circle cx="15" cy="31" r="3.5" fill={c2} opacity="0.5"/>
-                      <circle cx="45" cy="31" r="3.5" fill={c2} opacity="0.5"/>
-                      <path d="M24,20 A8,8 0 1,1 36,20" fill="none" stroke={c} stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
-                      <polygon points="36,20 33,16 38,17" fill={c} opacity="0.6"/>
-                      <text x="30" y="44" text-anchor="middle" fill={c} font-size="6" opacity="0.5">翻转</text>
-                    {/if}
-                  </svg>
+                <div class="w-20 h-16 flex items-center justify-center mb-1 rounded-md overflow-hidden
+                  {st === 'done' ? 'bg-green-900/30 ring-1 ring-green-500/40' : st === 'active' ? 'bg-primary/10 ring-1 ring-primary/40' : 'bg-muted/20'}">
+                  <img src={orient.img} alt={orient.label}
+                       class="w-full h-full object-contain transition-all
+                         {st === 'done' ? '' : st === 'active' ? '' : 'opacity-40 grayscale'}" />
                 </div>
 
                 <!-- Label + status icon -->
