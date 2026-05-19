@@ -63,6 +63,15 @@
     app.drone.remaining < 40 ? 'text-warning' : 'text-success'
   );
 
+  const EMERGENCY_MODES = ['返航', '着陆', '智能RTL', '刹车', 'QRTL', 'QLAND', '自降'];
+  const MANUAL_MODES = ['手动', '增稳', '特技', '训练', '运动', '翻转', '抛飞'];
+  let modeVariant = $derived.by((): 'default' | 'secondary' | 'destructive' => {
+    const m = app.drone.mode;
+    if (EMERGENCY_MODES.some(e => m.includes(e))) return 'destructive';
+    if (MANUAL_MODES.some(e => m.includes(e))) return 'secondary';
+    return 'default';
+  });
+
   let gpsOk = $derived(
     app.drone.gps_fix === '3D' || app.drone.gps_fix === 'RTK固定' || app.drone.gps_fix === 'RTK浮动' || app.drone.gps_fix === '差分'
   );
@@ -143,7 +152,7 @@
 
   <div class="flex items-center gap-2 text-xs">
     {#if app.drone.connected}
-      <Badge variant="default" class="text-xs font-bold">{app.drone.mode}</Badge>
+      <Badge variant={modeVariant} class="text-xs font-bold">{app.drone.mode}</Badge>
 
       <span class="{linkColor}" title="链路 {app.drone.link_age >= 0 ? app.drone.link_age.toFixed(1) + 's' : ''}">
         {#if app.drone.link_age >= 0 && app.drone.link_age < 3}
