@@ -27,6 +27,7 @@
 
   type View = 'fly' | 'plan' | 'monitor' | 'params';
   let view = $state<View>('fly');
+  let flyEventsOpen = $state(false);
 
   onMount(() => {
     loadSettings();
@@ -87,11 +88,22 @@
           <TelemetryOverlay />
         {/if}
         <MissionProgress />
+        {#if app.drone.connected && !app.drone.armed}
+          <div class="fly-preflight">
+            <PreflightPanel />
+          </div>
+        {/if}
+        <div class="fly-events" class:expanded={flyEventsOpen}>
+          <!-- svelte-ignore a11y_click_events_have_key_events -->
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div class="fly-events-toggle" onclick={() => flyEventsOpen = !flyEventsOpen}>
+            事件 ({app.events.length}) {flyEventsOpen ? '▼' : '▲'}
+          </div>
+          {#if flyEventsOpen}
+            <EventLog />
+          {/if}
+        </div>
       </div>
-      {#if app.drone.connected && !app.drone.armed}
-        <PreflightPanel />
-      {/if}
-      <EventLog />
     </div>
 
   {:else if view === 'plan'}
@@ -149,6 +161,13 @@
 
   .fly-view { flex:1; display:flex; flex-direction:column; overflow:hidden; }
   .map-full { flex:1; position:relative; min-height:0; }
+  .fly-preflight { position:absolute; bottom:40px; right:10px; z-index:1001; width:400px; max-height:220px; overflow:auto; background:rgba(10,10,10,0.92); border:1px solid #444; border-radius:8px; pointer-events:auto; }
+  .fly-preflight :global(.panel) { margin:0; background:transparent; }
+  .fly-events { position:absolute; bottom:0; left:0; right:0; z-index:1001; pointer-events:auto; }
+  .fly-events-toggle { background:rgba(20,20,20,0.9); color:var(--text-dim); text-align:center; padding:3px 0; font-size:11px; cursor:pointer; border-top:1px solid #444; }
+  .fly-events-toggle:hover { color:var(--text-accent); }
+  .fly-events.expanded { max-height:200px; }
+  .fly-events.expanded :global(.panel) { margin:0; border-radius:0; max-height:170px; overflow:auto; }
 
   .plan-view { flex:1; display:flex; flex-direction:column; overflow:auto; }
   .plan-map-row { display:flex; gap:10px; padding:0 10px 10px; flex:1; min-height:300px; }
