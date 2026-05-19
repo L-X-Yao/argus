@@ -1,5 +1,6 @@
 <script lang="ts">
   import { app } from '../lib/stores.svelte';
+  import Button from '$lib/components/ui/button/button.svelte';
 
   let logEl: HTMLDivElement;
   let filter = $state('');
@@ -10,13 +11,13 @@
 
   function severity(text: string): string {
     if (text.includes('!!!') || text.includes('失控') || text.includes('碰撞') || text.includes('紧急'))
-      return 'crit';
+      return 'bg-destructive/15 text-destructive';
     if (text.includes('失败') || text.includes('异常') || text.includes('丢失') || text.includes('极低'))
-      return 'err';
+      return 'bg-destructive/8 text-red-300';
     if (text.includes('警告') || text.includes('低电') || text.includes('未校准') || text.includes('链路'))
-      return 'warn';
+      return 'text-warning';
     if (text.includes('成功') || text.includes('就绪') || text.includes('已连接') || text.includes('已解锁'))
-      return 'ok';
+      return 'text-success';
     return '';
   }
 
@@ -38,36 +39,22 @@
   });
 </script>
 
-<div class="panel">
-  <h2>
-    事件日志
-    <span class="actions">
-      <button class="export-btn" onclick={exportLog} title="导出日志">导出</button>
-      <input class="filter" placeholder="筛选..." bind:value={filter} />
-    </span>
-  </h2>
-  <div bind:this={logEl} class="log">
+<div class="bg-card border-t border-border p-2">
+  <div class="flex items-center justify-between mb-1.5">
+    <h2 class="text-[11px] font-semibold text-primary uppercase tracking-wider">事件日志</h2>
+    <div class="flex items-center gap-1.5">
+      <Button variant="outline" size="xs" onclick={exportLog}>导出</Button>
+      <input bind:value={filter} placeholder="筛选..."
+             class="w-20 h-5 px-1.5 text-[11px] bg-input border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/50" />
+    </div>
+  </div>
+  <div bind:this={logEl} class="bg-background rounded-lg p-2 h-24 overflow-y-auto text-xs font-mono">
     {#each filtered as ev}
-      <div class="line {severity(ev.text)}"><span class="time">{ev.time}</span> {ev.text}</div>
+      <div class="py-0.5 px-1 border-b border-border/50 rounded {severity(ev.text)}">
+        <span class="text-muted-foreground">{ev.time}</span> {ev.text}
+      </div>
     {:else}
-      <div class="empty">暂无事件</div>
+      <div class="text-muted-foreground text-center py-3">暂无事件</div>
     {/each}
   </div>
 </div>
-
-<style>
-  .panel { background:var(--bg-panel); border-radius:8px; padding:10px 15px; margin:0 10px 10px; }
-  h2 { font-size:14px; color:var(--text-accent); margin:0 0 6px; text-transform:uppercase; letter-spacing:1px; display:flex; align-items:center; justify-content:space-between; }
-  .actions { display:flex; align-items:center; gap:6px; }
-  .export-btn { padding:1px 6px; background:none; border:1px solid var(--border-light); color:var(--text-dim); border-radius:3px; cursor:pointer; font-size:10px; }
-  .export-btn:hover { color:var(--text-accent); border-color:var(--text-accent); }
-  .filter { width:80px; padding:2px 5px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-light); border-radius:3px; font-size:11px; }
-  .log { background:var(--bg-log); border-radius:6px; padding:8px; height:100px; overflow-y:auto; font-size:12px; font-family:Consolas,monospace; }
-  .line { padding:2px 4px; border-bottom:1px solid #222; border-radius:2px; }
-  .line.crit { background:rgba(211,47,47,0.15); color:#ff5252; }
-  .line.err { background:rgba(211,47,47,0.08); color:#ef9a9a; }
-  .line.warn { color:#ffa726; }
-  .line.ok { color:#69f0ae; }
-  .time { color:#666; }
-  .empty { color:var(--text-dim); }
-</style>

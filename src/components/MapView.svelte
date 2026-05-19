@@ -437,7 +437,7 @@
 
 <style>
   .map-container { position:relative; flex:1; min-width:0; }
-  .map { height:100%; border-radius:6px; border:1px solid var(--border); }
+  .map { height:100%; border-radius:6px; border:1px solid var(--border-color); }
   .map-btns-left { position:absolute; top:10px; left:10px; z-index:1000; display:flex; gap:4px; }
   .map-btns-right { position:absolute; top:10px; right:10px; z-index:1000; display:flex; gap:4px; }
   .map-btn { padding:4px 10px; background:rgba(30,30,30,0.9); border:1px solid #555; border-radius:4px; cursor:pointer; font-size:12px; font-weight:bold; color:#aaa; }

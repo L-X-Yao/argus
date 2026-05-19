@@ -28,42 +28,28 @@
   let passCount = $derived(checks.filter(c => c.ok).length);
 </script>
 
-<div class="panel preflight">
-  <h2>
-    预飞检查
-    <span class="summary" class:ready={allCriticalOk}>
+<div class="p-3">
+  <div class="flex items-center justify-between mb-2">
+    <h2 class="text-xs font-semibold text-primary uppercase tracking-wider">预飞检查</h2>
+    <span class="text-[11px] font-medium {allCriticalOk ? 'text-success' : 'text-muted-foreground'}">
       {passCount}/{checks.length} {allCriticalOk ? '就绪' : '未就绪'}
     </span>
-  </h2>
-  <div class="checks">
+  </div>
+  <div class="grid grid-cols-2 gap-x-3 gap-y-1 max-sm:grid-cols-1">
     {#each checks as c}
-      <div class="check-row">
-        <span class="indicator" class:ok={c.ok} class:fail={!c.ok} class:crit={c.critical && !c.ok}>
+      <div class="flex items-center gap-1.5 py-0.5">
+        <span class="w-4.5 h-4.5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0
+          {c.ok ? 'bg-green-700 text-white' : c.critical ? 'bg-destructive text-white' : 'bg-muted text-muted-foreground'}">
           {c.ok ? '✓' : '✕'}
         </span>
-        <span class="check-name">{c.name}</span>
-        <span class="check-detail">{c.detail}</span>
+        <span class="text-xs font-semibold whitespace-nowrap">{c.name}</span>
+        <span class="text-[11px] text-muted-foreground truncate">{c.detail}</span>
       </div>
     {/each}
   </div>
   {#if allCriticalOk}
-    <div class="ready-banner">所有关键项通过 — 可以飞行</div>
+    <div class="mt-2 py-1.5 bg-green-900/40 text-success text-center rounded-lg text-xs font-bold border border-green-700/30">
+      所有关键项通过 — 可以飞行
+    </div>
   {/if}
 </div>
-
-<style>
-  .panel { background:var(--bg-panel); border-radius:8px; padding:10px 15px; margin:0 10px 10px; }
-  h2 { font-size:14px; color:var(--text-accent); margin:0 0 8px; text-transform:uppercase; letter-spacing:1px; display:flex; align-items:center; justify-content:space-between; }
-  .summary { font-size:12px; font-weight:normal; color:var(--text-dim); }
-  .summary.ready { color:#69f0ae; }
-  .checks { display:grid; grid-template-columns:1fr 1fr; gap:3px 12px; }
-  .check-row { display:flex; align-items:center; gap:6px; padding:3px 0; }
-  .indicator { width:18px; height:18px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:bold; flex-shrink:0; }
-  .indicator.ok { background:#2e7d32; color:white; }
-  .indicator.fail { background:#37474f; color:#888; }
-  .indicator.crit { background:#d32f2f; color:white; }
-  .check-name { font-size:12px; font-weight:bold; white-space:nowrap; }
-  .check-detail { font-size:11px; color:var(--text-dim); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .ready-banner { margin-top:8px; padding:6px; background:#1b5e20; color:#69f0ae; text-align:center; border-radius:4px; font-size:13px; font-weight:bold; }
-  @media(max-width:600px) { .checks { grid-template-columns:1fr; } }
-</style>

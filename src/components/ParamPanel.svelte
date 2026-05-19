@@ -3,6 +3,8 @@
   import { sendCommand } from '../lib/ws';
   import { addToast } from '../lib/stores.svelte';
   import type { Param } from '../lib/types';
+  import Button from '$lib/components/ui/button/button.svelte';
+  import Badge from '$lib/components/ui/badge/badge.svelte';
 
   const DESC: Record<string, string> = {
     BATT_CAPACITY: '电池容量 (mAh)', BATT_MONITOR: '电池监测类型',
@@ -55,11 +57,7 @@
 
   let progress = $derived(paramState.total > 0 ? Math.round(paramState.received / paramState.total * 100) : 0);
 
-  function startEdit(p: Param) {
-    editName = p.name;
-    editValue = fmtValue(p.value);
-  }
-
+  function startEdit(p: Param) { editName = p.name; editValue = fmtValue(p.value); }
   function cancelEdit() { editName = null; }
 
   function submitEdit() {
@@ -84,100 +82,68 @@
     return v.toFixed(4);
   }
 
-  function requestAll() {
-    sendCommand('param_request_all');
-  }
-
-  function saveParams() {
-    sendCommand('param_save');
-    addToast('参数文件已保存', 'success');
-  }
+  function requestAll() { sendCommand('param_request_all'); }
+  function saveParams() { sendCommand('param_save'); addToast('参数文件已保存', 'success'); }
 </script>
 
-<div class="param-panel">
-  <div class="header">
-    <h2>参数管理</h2>
-    <div class="actions">
-      <button class="btn-fetch" onclick={requestAll} disabled={paramState.fetching}>
+<div class="bg-card border border-border rounded-xl p-4">
+  <div class="flex items-center justify-between flex-wrap gap-2 mb-3">
+    <h2 class="text-sm font-semibold text-primary uppercase tracking-wider">参数管理</h2>
+    <div class="flex items-center gap-2">
+      <Button variant="default" size="sm" onclick={requestAll} disabled={paramState.fetching}>
         {paramState.fetching ? `读取中 ${progress}%` : '读取参数'}
-      </button>
+      </Button>
       {#if paramState.list.length > 0}
-        <button class="btn-sm" onclick={saveParams}>保存文件</button>
-        <span class="count">{paramState.list.length} 个参数</span>
+        <Button variant="secondary" size="sm" onclick={saveParams}>保存文件</Button>
+        <Badge variant="outline" class="text-[10px] font-mono">{paramState.list.length} 参数</Badge>
       {/if}
     </div>
   </div>
 
   {#if paramState.fetching}
-    <div class="progress-bar">
-      <div class="progress-fill" style="width:{progress}%"></div>
+    <div class="h-1 bg-muted rounded-full mb-3 overflow-hidden">
+      <div class="h-full bg-primary rounded-full transition-all duration-300" style="width:{progress}%"></div>
     </div>
   {/if}
 
   {#if paramState.list.length > 0}
-    <div class="tabs">
+    <div class="flex flex-wrap gap-1 mb-2">
       {#each CATS as cat}
-        <button class="tab" class:active={category === cat.key}
+        <button class="px-2.5 py-1 text-[11px] rounded-md border transition-all cursor-pointer
+          {category === cat.key
+            ? 'bg-primary text-primary-foreground border-primary'
+            : 'bg-card text-muted-foreground border-border hover:text-foreground hover:bg-muted'}"
                 onclick={() => category = cat.key}>{cat.label}</button>
       {/each}
     </div>
 
-    <div class="search-row">
-      <input type="text" placeholder="搜索参数名或说明..." bind:value={search} />
-      <span class="match-count">{filtered.length} 项</span>
+    <div class="flex items-center gap-2 mb-2">
+      <input type="text" placeholder="搜索参数名或说明..." bind:value={search}
+             class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50" />
+      <span class="text-[11px] text-muted-foreground whitespace-nowrap">{filtered.length} 项</span>
     </div>
 
-    <div class="param-list">
+    <div class="max-h-[400px] overflow-y-auto rounded-lg border border-border">
       {#each filtered as p (p.name)}
-        <div class="param-row" class:modified={modified.has(p.name)}>
-          <div class="param-name">{p.name}</div>
-          <div class="param-desc">{DESC[p.name] || ''}</div>
+        <div class="flex items-center gap-2 px-2 py-1.5 text-xs border-b border-border/50 hover:bg-muted/50 transition-colors
+              {modified.has(p.name) ? 'bg-warning/5' : ''}">
+          <div class="w-40 shrink-0 font-bold font-mono text-[11px]">{p.name}</div>
+          <div class="flex-1 text-muted-foreground text-[11px] truncate min-w-0">{DESC[p.name] || ''}</div>
           {#if editName === p.name}
-            <input class="param-input" type="text" bind:value={editValue}
-                   onkeydown={onKeydown}
-                   autofocus />
-            <button class="btn-write" onclick={submitEdit}>写入</button>
-            <button class="btn-cancel" onclick={cancelEdit}>取消</button>
+            <input type="text" bind:value={editValue} onkeydown={onKeydown}
+                   class="w-20 h-6 px-1 text-right font-mono text-xs bg-input border-2 border-primary rounded text-foreground focus:outline-none" />
+            <Button variant="default" size="xs" onclick={submitEdit}>写入</Button>
+            <Button variant="ghost" size="xs" onclick={cancelEdit}>取消</Button>
           {:else}
             <!-- svelte-ignore a11y_click_events_have_key_events -->
             <!-- svelte-ignore a11y_no_static_element_interactions -->
-            <div class="param-value" onclick={() => startEdit(p)}>{fmtValue(p.value)}</div>
+            <div class="w-24 text-right font-mono cursor-pointer px-1 py-0.5 rounded hover:bg-input transition-colors"
+                 onclick={() => startEdit(p)}>{fmtValue(p.value)}</div>
           {/if}
         </div>
       {/each}
     </div>
   {:else if !paramState.fetching}
-    <div class="empty">连接飞控后点击"读取参数"</div>
+    <div class="text-center py-8 text-muted-foreground text-sm">连接飞控后点击"读取参数"</div>
   {/if}
 </div>
-
-<style>
-  .param-panel { background:var(--bg-panel); border-radius:8px; padding:10px 15px; margin:0 10px 10px; }
-  .header { display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; }
-  h2 { font-size:14px; color:var(--text-accent); margin:0; text-transform:uppercase; letter-spacing:1px; }
-  .actions { display:flex; align-items:center; gap:6px; }
-  .btn-fetch { padding:6px 14px; background:#1565c0; color:white; border:none; border-radius:4px; cursor:pointer; font-size:12px; font-weight:bold; }
-  .btn-fetch:disabled { opacity:0.6; cursor:default; }
-  .btn-sm { padding:4px 8px; background:#546e7a; color:white; border:none; border-radius:3px; cursor:pointer; font-size:11px; }
-  .count { font-size:11px; color:var(--text-dim); }
-  .progress-bar { height:4px; background:#333; border-radius:2px; margin:8px 0; overflow:hidden; }
-  .progress-fill { height:100%; background:#4fc3f7; transition:width 0.3s; }
-  .tabs { display:flex; gap:2px; margin:8px 0; flex-wrap:wrap; }
-  .tab { padding:4px 10px; background:var(--bg-card); border:1px solid var(--border); border-radius:3px; cursor:pointer; font-size:11px; color:var(--text-dim); }
-  .tab.active { background:#1565c0; color:white; border-color:#1565c0; }
-  .search-row { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
-  .search-row input { flex:1; padding:5px 8px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border); border-radius:4px; font-size:12px; }
-  .match-count { font-size:11px; color:var(--text-dim); white-space:nowrap; }
-  .param-list { max-height:400px; overflow-y:auto; }
-  .param-row { display:flex; align-items:center; gap:6px; padding:4px 6px; border-bottom:1px solid var(--border); font-size:12px; }
-  .param-row:hover { background:var(--bg-card); }
-  .param-row.modified { background:rgba(255,152,0,0.08); }
-  .param-name { width:160px; flex-shrink:0; font-weight:bold; font-family:monospace; font-size:11px; }
-  .param-desc { flex:1; color:var(--text-dim); font-size:11px; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .param-value { width:90px; text-align:right; font-family:monospace; cursor:pointer; padding:2px 4px; border-radius:3px; }
-  .param-value:hover { background:var(--bg-input); }
-  .param-input { width:80px; padding:2px 4px; background:var(--bg-input); color:var(--text-main); border:1px solid #4fc3f7; border-radius:3px; font-family:monospace; font-size:12px; text-align:right; }
-  .btn-write { padding:2px 6px; background:#2e7d32; color:white; border:none; border-radius:3px; cursor:pointer; font-size:10px; }
-  .btn-cancel { padding:2px 6px; background:#546e7a; color:white; border:none; border-radius:3px; cursor:pointer; font-size:10px; }
-  .empty { text-align:center; padding:20px; color:var(--text-dim); font-size:13px; }
-</style>

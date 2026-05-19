@@ -4,8 +4,6 @@
   import { app, loadSettings, saveSettings } from './lib/stores.svelte';
   import { checkAlerts } from './lib/audio';
   import StatusBar from './components/StatusBar.svelte';
-  // ConnectionBar merged into StatusBar
-  import TelemetryPanel from './components/TelemetryPanel.svelte';
   import ControlPanel from './components/ControlPanel.svelte';
   import MapView from './components/MapView.svelte';
   import EventLog from './components/EventLog.svelte';
@@ -34,6 +32,14 @@
     connectWs();
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
+  });
+
+  $effect(() => {
+    if (app.darkTheme) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
   });
 
   $effect(() => {
@@ -68,34 +74,50 @@
   }
 
   function toggleTheme() { app.darkTheme = !app.darkTheme; saveSettings(); }
+
+  const tabs: { id: View; label: string }[] = [
+    { id: 'fly', label: '飞行' },
+    { id: 'plan', label: '规划' },
+    { id: 'monitor', label: '监控' },
+    { id: 'params', label: '参数' },
+  ];
 </script>
 
-<div class="app" class:light={!app.darkTheme}>
+<div class="flex flex-col h-screen overflow-hidden">
   <StatusBar {toggleTheme} onSettings={() => app.showSettings = !app.showSettings} />
-  <nav class="view-tabs">
-    <button class:active={view === 'fly'} onclick={() => view = 'fly'}>飞行</button>
-    <button class:active={view === 'plan'} onclick={() => view = 'plan'}>规划</button>
-    <button class:active={view === 'monitor'} onclick={() => view = 'monitor'}>监控</button>
-    <button class:active={view === 'params'} onclick={() => view = 'params'}>参数</button>
+
+  <nav class="flex items-center gap-1 px-3 py-1 bg-card border-b border-border shrink-0">
+    {#each tabs as tab}
+      <button
+        class="px-4 py-1.5 text-xs font-semibold tracking-wide uppercase rounded-md transition-all
+          {view === tab.id
+            ? 'bg-primary text-primary-foreground shadow-sm'
+            : 'text-muted-foreground hover:text-foreground hover:bg-muted'}"
+        onclick={() => view = tab.id}
+      >
+        {tab.label}
+      </button>
+    {/each}
   </nav>
 
   {#if view === 'fly'}
-    <div class="fly-view">
-      <div class="map-full">
+    <div class="flex-1 flex flex-col overflow-hidden">
+      <div class="flex-1 relative min-h-0 flex flex-col">
         <MapView />
         {#if app.drone.connected}
           <TelemetryOverlay />
         {/if}
         <MissionProgress />
         {#if app.drone.connected && !app.drone.armed}
-          <div class="fly-preflight">
+          <div class="absolute bottom-12 right-3 z-[1001] w-[400px] max-h-56 overflow-auto bg-popover/95 backdrop-blur border border-border rounded-xl shadow-lg">
             <PreflightPanel />
           </div>
         {/if}
-        <div class="fly-events" class:expanded={flyEventsOpen}>
+        <div class="absolute bottom-0 left-0 right-0 z-[1001]" class:max-h-52={flyEventsOpen}>
           <!-- svelte-ignore a11y_click_events_have_key_events -->
           <!-- svelte-ignore a11y_no_static_element_interactions -->
-          <div class="fly-events-toggle" onclick={() => flyEventsOpen = !flyEventsOpen}>
+          <div class="bg-card/90 backdrop-blur text-muted-foreground text-center py-1 text-[11px] cursor-pointer border-t border-border hover:text-primary transition-colors"
+               onclick={() => flyEventsOpen = !flyEventsOpen}>
             事件 ({app.events.length}) {flyEventsOpen ? '▼' : '▲'}
           </div>
           {#if flyEventsOpen}
@@ -106,8 +128,8 @@
     </div>
 
   {:else if view === 'plan'}
-    <div class="plan-view">
-      <div class="plan-map-row">
+    <div class="flex-1 flex flex-col overflow-auto">
+      <div class="flex gap-2 p-2 flex-1 min-h-72">
         <MapView />
         <MissionPanel />
       </div>
@@ -116,20 +138,18 @@
     </div>
 
   {:else if view === 'monitor'}
-    <div class="monitor-view">
-      <div class="monitor-grid">
+    <div class="flex-1 overflow-auto p-3 flex flex-col gap-3">
+      <div class="grid grid-cols-2 gap-3 max-md:grid-cols-1">
         <RcPanel />
         <ServoPanel />
         <VibrationPanel />
         <ChartPanel />
       </div>
-      <div class="monitor-bottom">
-        <ControlPanel />
-      </div>
+      <ControlPanel />
     </div>
 
   {:else if view === 'params'}
-    <div class="params-view">
+    <div class="flex-1 overflow-auto p-3">
       <ParamPanel />
     </div>
   {/if}
@@ -146,40 +166,3 @@
     <SettingsPanel onclose={() => app.showSettings = false} />
   {/if}
 </div>
-
-<style>
-  :global(body) { margin:0; padding:0; font-family:'Segoe UI',Consolas,monospace; background:var(--bg-body); color:var(--text-main); }
-  :global(:root) { --bg-body:#121212; --bg-panel:#1e1e1e; --bg-card:#252525; --bg-input:#2d2d2d; --bg-log:#1a1a1a; --text-main:#e0e0e0; --text-dim:#888; --text-accent:#4fc3f7; --border:#333; --border-light:#555; }
-  .light { --bg-body:#f0f0f0; --bg-panel:#fff; --bg-card:#f5f5f5; --bg-input:#e8e8e8; --bg-log:#fafafa; --text-main:#212121; --text-dim:#757575; --text-accent:#1565c0; --border:#ddd; --border-light:#bbb; }
-  .app { display:flex; flex-direction:column; height:100vh; overflow:hidden; }
-
-  .view-tabs { display:flex; gap:2px; padding:2px 10px; background:var(--bg-panel); border-bottom:1px solid var(--border); flex-shrink:0; }
-  .view-tabs button { padding:5px 18px; border:none; background:none; color:var(--text-dim); font-size:13px; font-weight:bold; cursor:pointer; border-bottom:2px solid transparent; border-radius:0; }
-  .view-tabs button:hover { color:var(--text-main); }
-  .view-tabs button.active { color:var(--text-accent); border-bottom-color:var(--text-accent); }
-
-  .fly-view { flex:1; display:flex; flex-direction:column; overflow:hidden; }
-  .map-full { flex:1; position:relative; min-height:0; display:flex; flex-direction:column; }
-  .fly-preflight { position:absolute; bottom:40px; right:10px; z-index:1001; width:400px; max-height:220px; overflow:auto; background:rgba(10,10,10,0.92); border:1px solid #444; border-radius:8px; pointer-events:auto; }
-  .fly-preflight :global(.panel) { margin:0; background:transparent; }
-  .fly-events { position:absolute; bottom:0; left:0; right:0; z-index:1001; pointer-events:auto; }
-  .fly-events-toggle { background:rgba(20,20,20,0.9); color:var(--text-dim); text-align:center; padding:3px 0; font-size:11px; cursor:pointer; border-top:1px solid #444; }
-  .fly-events-toggle:hover { color:var(--text-accent); }
-  .fly-events.expanded { max-height:200px; }
-  .fly-events.expanded :global(.panel) { margin:0; border-radius:0; max-height:170px; overflow:auto; }
-
-  .plan-view { flex:1; display:flex; flex-direction:column; overflow:auto; }
-  .plan-map-row { display:flex; gap:10px; padding:0 10px 10px; flex:1; min-height:300px; }
-
-  .monitor-view { flex:1; overflow:auto; padding:10px; display:flex; flex-direction:column; gap:10px; }
-  .monitor-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
-  .monitor-bottom { display:flex; gap:10px; }
-
-  .params-view { flex:1; overflow:auto; padding:10px; }
-
-  @media(max-width:800px) {
-    .monitor-top { flex-direction:column; }
-    .monitor-grid { grid-template-columns:1fr; }
-    .plan-map-row { flex-direction:column; }
-  }
-</style>

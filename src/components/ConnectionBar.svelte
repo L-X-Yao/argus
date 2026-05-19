@@ -93,13 +93,13 @@
 </div>
 
 <style>
-  .conn-bar { background:var(--bg-panel); padding:8px 20px; display:flex; gap:10px; align-items:center; border-bottom:1px solid var(--border); }
+  .conn-bar { background:var(--bg-panel); padding:8px 20px; display:flex; gap:10px; align-items:center; border-bottom:1px solid var(--border-color); }
   label { font-size:13px; color:var(--text-dim); }
   input, select { background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-light); padding:5px 8px; border-radius:3px; font-size:13px; }
   .port-wrap { position:relative; }
   .port-input { width:180px; }
   .port-dropdown { position:absolute; top:100%; left:0; right:0; background:var(--bg-panel); border:1px solid var(--border-light); border-radius:0 0 4px 4px; z-index:100; max-height:160px; overflow-y:auto; }
-  .port-opt { display:block; width:100%; text-align:left; padding:5px 8px; background:none; border:none; border-bottom:1px solid var(--border); color:var(--text-main); cursor:pointer; font-size:12px; font-family:monospace; }
+  .port-opt { display:block; width:100%; text-align:left; padding:5px 8px; background:none; border:none; border-bottom:1px solid var(--border-color); color:var(--text-main); cursor:pointer; font-size:12px; font-family:monospace; }
   .port-opt:hover { background:var(--bg-card); color:var(--text-accent); }
   button { padding:5px 15px; border-radius:3px; border:none; cursor:pointer; font-size:13px; background:#4caf50; color:white; }
   button.connected { background:#f44336; }

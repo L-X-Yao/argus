@@ -61,27 +61,31 @@
   let cCur: HTMLCanvasElement;
 </script>
 
-<div class="panel" style="margin:0 10px 10px">
+<div class="bg-card border border-border rounded-xl p-4">
   <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
   <!-- svelte-ignore a11y_click_events_have_key_events -->
-  <h2 style="cursor:pointer" onclick={() => app.chartsOpen = !app.chartsOpen}>
-    实时图表 <span class="toggle">{app.chartsOpen ? '▼' : '▶'}</span>
+  <h2 class="text-sm font-semibold text-primary uppercase tracking-wider cursor-pointer select-none"
+      onclick={() => app.chartsOpen = !app.chartsOpen}>
+    实时图表 <span class="text-[10px] text-muted-foreground">{app.chartsOpen ? '▼' : '▶'}</span>
   </h2>
   {#if app.chartsOpen}
-    <div class="charts">
-      <div><div class="label">高度 (m)</div><canvas bind:this={cAlt} height="80"></canvas></div>
-      <div><div class="label">速度 (m/s)</div><canvas bind:this={cSpd} height="80"></canvas></div>
-      <div><div class="label">电压 (V)</div><canvas bind:this={cBat} height="80"></canvas></div>
-      <div><div class="label">电流 (A)</div><canvas bind:this={cCur} height="80"></canvas></div>
+    <div class="grid grid-cols-2 gap-2 mt-2">
+      <div>
+        <div class="text-[11px] text-muted-foreground mb-0.5">高度 (m)</div>
+        <canvas bind:this={cAlt} height="80" class="w-full bg-background rounded-lg"></canvas>
+      </div>
+      <div>
+        <div class="text-[11px] text-muted-foreground mb-0.5">速度 (m/s)</div>
+        <canvas bind:this={cSpd} height="80" class="w-full bg-background rounded-lg"></canvas>
+      </div>
+      <div>
+        <div class="text-[11px] text-muted-foreground mb-0.5">电压 (V)</div>
+        <canvas bind:this={cBat} height="80" class="w-full bg-background rounded-lg"></canvas>
+      </div>
+      <div>
+        <div class="text-[11px] text-muted-foreground mb-0.5">电流 (A)</div>
+        <canvas bind:this={cCur} height="80" class="w-full bg-background rounded-lg"></canvas>
+      </div>
     </div>
   {/if}
 </div>
-
-<style>
-  .panel { background:var(--bg-panel); border-radius:8px; padding:10px 15px; }
-  h2 { font-size:14px; color:var(--text-accent); margin:0; text-transform:uppercase; letter-spacing:1px; }
-  .toggle { font-size:10px; }
-  .charts { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px; }
-  .label { font-size:11px; color:var(--text-dim); }
-  canvas { width:100%; background:var(--bg-card); border-radius:4px; }
-</style>

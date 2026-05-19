@@ -37,9 +37,9 @@
 </div>
 
 <style>
-  .diag-toolbar { display:flex; align-items:center; gap:4px; padding:4px 10px; background:var(--bg-panel); border-bottom:1px solid var(--border); }
+  .diag-toolbar { display:flex; align-items:center; gap:4px; padding:4px 10px; background:var(--bg-panel); border-bottom:1px solid var(--border-color); }
   .label { font-size:11px; color:var(--text-dim); margin-right:4px; }
-  .diag-btn { padding:3px 10px; background:var(--bg-card); border:1px solid var(--border); border-radius:4px; cursor:pointer; font-size:11px; color:var(--text-dim); font-weight:bold; }
+  .diag-btn { padding:3px 10px; background:var(--bg-card); border:1px solid var(--border-color); border-radius:4px; cursor:pointer; font-size:11px; color:var(--text-dim); font-weight:bold; }
   .diag-btn:hover { border-color:var(--text-accent); color:var(--text-accent); }
   .diag-btn.active { background:#1565c0; color:white; border-color:#1565c0; }
 </style>

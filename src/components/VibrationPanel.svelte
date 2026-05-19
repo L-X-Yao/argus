@@ -1,6 +1,7 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import { app } from '../lib/stores.svelte';
+  import Badge from '$lib/components/ui/badge/badge.svelte';
 
   const MAX = 60;
   let xData: number[] = [];
@@ -68,44 +69,35 @@
     if (v < 60) return '差';
     return '危';
   }
-  function vibeColor(v: number): string {
-    if (v < 15) return '#69f0ae';
-    if (v < 30) return '#ffa726';
-    if (v < 60) return '#ff5252';
-    return '#d32f2f';
+  function vibeBadgeVariant(v: number): 'default' | 'secondary' | 'destructive' | 'outline' {
+    if (v < 15) return 'default';
+    if (v < 30) return 'secondary';
+    return 'destructive';
   }
 
   let d = $derived(app.drone);
 </script>
 
-<div class="vibe-panel">
-  <h2>振动监控</h2>
-  <div class="vibe-row">
-    <span class="axis" style="color:#ff5252">X: {d.vibe[0]?.toFixed(1)}</span>
-    <span class="axis" style="color:#69f0ae">Y: {d.vibe[1]?.toFixed(1)}</span>
-    <span class="axis" style="color:#4fc3f7">Z: {d.vibe[2]?.toFixed(1)}</span>
-    <span class="level" style="color:{vibeColor(Math.max(...d.vibe))}">
+<div class="bg-card border border-border rounded-xl p-4">
+  <h2 class="text-sm font-semibold text-primary uppercase tracking-wider mb-2">振动监控</h2>
+  <div class="flex items-center gap-3 text-xs font-mono mb-2">
+    <span class="text-red-400">X: {d.vibe[0]?.toFixed(1)}</span>
+    <span class="text-green-400">Y: {d.vibe[1]?.toFixed(1)}</span>
+    <span class="text-sky-400">Z: {d.vibe[2]?.toFixed(1)}</span>
+    <Badge variant={vibeBadgeVariant(Math.max(...d.vibe))} class="text-[10px]">
       {vibeLevel(Math.max(...d.vibe))}
-    </span>
+    </Badge>
     {#if d.vibe_clip[0] + d.vibe_clip[1] + d.vibe_clip[2] > 0}
-      <span class="clip">裁剪: {d.vibe_clip[0]}/{d.vibe_clip[1]}/{d.vibe_clip[2]}</span>
+      <span class="text-destructive text-[10px]">裁剪: {d.vibe_clip[0]}/{d.vibe_clip[1]}/{d.vibe_clip[2]}</span>
     {/if}
   </div>
-  <div class="chart"><canvas bind:this={canvas} height="80"></canvas></div>
-  <div class="legend">
-    <span style="color:#666;font-size:9px">红线=30 (阈值) │ </span>
-    <span style="color:#ff5252;font-size:9px">━ X</span>
-    <span style="color:#69f0ae;font-size:9px"> ━ Y</span>
-    <span style="color:#4fc3f7;font-size:9px"> ━ Z</span>
+  <div class="w-full">
+    <canvas bind:this={canvas} height="80" class="w-full bg-background rounded-lg"></canvas>
+  </div>
+  <div class="text-center mt-1 text-[9px] text-muted-foreground">
+    红线=30 (阈值) │
+    <span class="text-red-400">━ X</span>
+    <span class="text-green-400"> ━ Y</span>
+    <span class="text-sky-400"> ━ Z</span>
   </div>
 </div>
-
-<style>
-  .vibe-panel { background:var(--bg-panel); border-radius:8px; padding:10px 15px; margin:0 10px 10px; }
-  h2 { font-size:14px; color:var(--text-accent); margin:0 0 6px; text-transform:uppercase; letter-spacing:1px; }
-  .vibe-row { display:flex; gap:10px; align-items:center; font-size:12px; font-family:monospace; margin-bottom:6px; }
-  .level { font-weight:bold; font-size:14px; }
-  .clip { color:#f44336; font-size:10px; }
-  .chart canvas { width:100%; background:var(--bg-card); border-radius:4px; }
-  .legend { text-align:center; margin-top:2px; }
-</style>

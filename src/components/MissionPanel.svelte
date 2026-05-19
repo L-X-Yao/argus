@@ -330,7 +330,7 @@
   .count { font-size:12px; color:var(--text-dim); font-weight:normal; }
   .wp-panel { width:280px; flex-shrink:0; overflow:hidden; display:flex; flex-direction:column; }
   .wp-list { flex:1; overflow-y:auto; max-height:300px; }
-  .wp-item { display:flex; align-items:center; gap:4px; padding:4px 0; border-bottom:1px solid var(--border); font-size:12px; }
+  .wp-item { display:flex; align-items:center; gap:4px; padding:4px 0; border-bottom:1px solid var(--border-color); font-size:12px; }
   .wp-item.active-wp { background:rgba(255,167,38,0.1); border-left:3px solid #ffa726; padding-left:2px; }
   .live-wp { font-size:11px; color:#ffa726; font-weight:normal; }
   .wp-num { width:22px; text-align:center; color:var(--text-dim); font-weight:bold; }

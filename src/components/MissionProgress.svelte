@@ -43,34 +43,24 @@
 </script>
 
 {#if isAutoMode && d.armed && wpCount > 0}
-  <div class="progress-bar-wrap">
-    <div class="progress-header">
+  <div class="absolute top-2 left-1/2 -translate-x-1/2 z-[1001] w-80 bg-card/90 backdrop-blur border border-border rounded-xl px-4 py-2 shadow-lg">
+    <div class="flex justify-between text-xs text-muted-foreground mb-1">
       <span>任务进度 #{d.wp}</span>
       <span>{currentWpIdx}/{wpCount} 航点</span>
     </div>
-    <div class="progress-track">
-      <div class="progress-fill" style="width:{progress}%"></div>
+    <div class="relative h-2 bg-muted rounded-full overflow-visible">
+      <div class="h-full bg-gradient-to-r from-blue-600 to-sky-400 rounded-full transition-all duration-500"
+           style="width:{progress}%"></div>
       {#each Array(wpCount) as _, i}
-        <div class="wp-tick" style="left:{((i + 1) / wpCount) * 100}%"
-             class:done={i < currentWpIdx}
-             class:active={i === currentWpIdx}></div>
+        <div class="absolute top-[-2px] w-1 h-3 rounded-sm -translate-x-1/2 transition-colors
+          {i < currentWpIdx ? 'bg-sky-400' : i === currentWpIdx ? 'bg-warning w-1.5' : 'bg-muted-foreground/30'}"
+             style="left:{((i + 1) / wpCount) * 100}%"></div>
       {/each}
     </div>
-    <div class="progress-footer">
+    <div class="flex justify-between text-[11px] text-muted-foreground mt-1">
       <span>剩余 {fmtDist(remainingDist)}</span>
       <span>预计 {fmtEta(eta)}</span>
       <span>{d.gs.toFixed(1)} m/s</span>
     </div>
   </div>
 {/if}
-
-<style>
-  .progress-bar-wrap { background:var(--bg-panel); border-radius:8px; padding:8px 15px; margin:0 10px 10px; }
-  .progress-header { display:flex; justify-content:space-between; font-size:12px; color:var(--text-dim); margin-bottom:4px; }
-  .progress-track { position:relative; height:8px; background:#333; border-radius:4px; overflow:visible; }
-  .progress-fill { height:100%; background:linear-gradient(90deg, #1565c0, #4fc3f7); border-radius:4px; transition:width 0.5s; }
-  .wp-tick { position:absolute; top:-2px; width:4px; height:12px; background:#555; border-radius:2px; transform:translateX(-50%); }
-  .wp-tick.done { background:#4fc3f7; }
-  .wp-tick.active { background:#ffa726; width:6px; }
-  .progress-footer { display:flex; justify-content:space-between; font-size:11px; color:var(--text-dim); margin-top:4px; }
-</style>

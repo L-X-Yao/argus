@@ -1,16 +1,30 @@
 <script lang="ts">
   import { app, dismissToast } from '../lib/stores.svelte';
+
+  function toastClass(level: string): string {
+    if (level === 'success') return 'bg-green-700 text-white';
+    if (level === 'warn') return 'bg-amber-600 text-white';
+    if (level === 'error') return 'bg-red-700 text-white';
+    return 'bg-primary text-primary-foreground';
+  }
+
+  function toastIcon(level: string): string {
+    if (level === 'success') return '✓';
+    if (level === 'warn') return '⚠';
+    if (level === 'error') return '✕';
+    return 'ℹ';
+  }
 </script>
 
 {#if app.toasts.length > 0}
-  <div class="toast-container">
+  <div class="fixed top-16 right-5 z-[10000] flex flex-col gap-1.5 pointer-events-none">
     {#each app.toasts as t (t.id)}
       <!-- svelte-ignore a11y_click_events_have_key_events -->
       <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <div class="toast {t.level}" onclick={() => dismissToast(t.id)}>
-        <span class="icon">
-          {#if t.level === 'success'}✓{:else if t.level === 'warn'}⚠{:else if t.level === 'error'}✕{:else}ℹ{/if}
-        </span>
+      <div class="pointer-events-auto flex items-center gap-2 px-4 py-2 rounded-lg text-sm cursor-pointer
+                  max-w-[350px] shadow-lg animate-in slide-in-from-right {toastClass(t.level)}"
+           onclick={() => dismissToast(t.id)}>
+        <span class="text-base shrink-0">{toastIcon(t.level)}</span>
         {t.text}
       </div>
     {/each}
@@ -18,12 +32,9 @@
 {/if}
 
 <style>
-  .toast-container { position:fixed; top:60px; right:20px; z-index:10000; display:flex; flex-direction:column; gap:6px; pointer-events:none; }
-  .toast { pointer-events:auto; padding:8px 16px; border-radius:6px; font-size:13px; cursor:pointer; animation:slideIn 0.3s ease; display:flex; align-items:center; gap:8px; max-width:350px; box-shadow:0 4px 12px rgba(0,0,0,0.4); }
-  .icon { font-size:16px; flex-shrink:0; }
-  .info { background:#1565c0; color:white; }
-  .warn { background:#f57f17; color:white; }
-  .error { background:#d32f2f; color:white; }
-  .success { background:#2e7d32; color:white; }
-  @keyframes slideIn { from { opacity:0; transform:translateX(40px); } to { opacity:1; transform:translateX(0); } }
+  @keyframes slide-in-from-right {
+    from { opacity: 0; transform: translateX(40px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  .animate-in { animation: slide-in-from-right 0.3s ease; }
 </style>
