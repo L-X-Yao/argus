@@ -37,6 +37,7 @@
   let showLogPanel = $state(false);
   let showVideo = $state(false);
   let showCalibration = $state(false);
+  let showShortcuts = $state(false);
 
   onMount(() => {
     loadSettings();
@@ -76,6 +77,8 @@
       if (document.fullscreenElement) document.exitFullscreen();
       else document.documentElement.requestFullscreen().catch(() => {});
     }
+    else if (k === 'escape') { showShortcuts = false; }
+    else if (k === '?' || (k === '/' && e.shiftKey)) { showShortcuts = !showShortcuts; }
     else if (k === 's' && e.ctrlKey) { e.preventDefault(); app.showSettings = !app.showSettings; }
     else if (k >= '1' && k <= '9') {
       const btns = app.drone.mode_btns;
@@ -221,5 +224,40 @@
   {/if}
   {#if showCalibration}
     <CalibrationPanel onclose={() => showCalibration = false} />
+  {/if}
+  {#if showShortcuts}
+    <!-- svelte-ignore a11y_no_static_element_interactions -->
+    <!-- svelte-ignore a11y_click_events_have_key_events -->
+    <div class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+         onclick={() => showShortcuts = false}>
+      <div class="bg-card border border-border rounded-xl shadow-2xl p-5 w-[380px]" onclick={(e) => e.stopPropagation()}>
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-semibold text-primary uppercase tracking-wider">键盘快捷键</h2>
+          <Button variant="ghost" size="icon-xs" onclick={() => showShortcuts = false}>
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+          </Button>
+        </div>
+        <div class="space-y-1 text-xs">
+          {#each [
+            ['Space', '悬停/刹车'],
+            ['R', '返航 (需确认)'],
+            ['A', '解锁 (需确认)'],
+            ['D', '锁定'],
+            ['1-9', '切换飞行模式'],
+            ['M', '地图展开/收起'],
+            ['F', '全屏切换'],
+            ['L', '深色/浅色主题'],
+            ['Ctrl+S', '设置'],
+            ['?', '显示/隐藏此面板'],
+            ['Esc', '关闭弹窗'],
+          ] as [key, desc]}
+            <div class="flex items-center gap-3 py-1 border-b border-border/50">
+              <kbd class="min-w-[60px] px-2 py-0.5 bg-muted border border-border rounded text-[11px] font-mono font-bold text-center">{key}</kbd>
+              <span class="text-muted-foreground">{desc}</span>
+            </div>
+          {/each}
+        </div>
+      </div>
+    </div>
   {/if}
 </div>
