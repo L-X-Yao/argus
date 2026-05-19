@@ -202,6 +202,11 @@
     {:else}
       <span class="text-muted-foreground">未连接</span>
     {/if}
+    {#if !app.wsConnected}
+      <span class="text-destructive text-[10px] font-bold animate-pulse" title="与后端服务器的连接已断开，正在重连...">
+        服务断开
+      </span>
+    {/if}
 
     <Button variant="ghost" size="icon-xs" onclick={() => { app.audioMuted = !app.audioMuted; saveSettings(); }}
             class={app.audioMuted ? 'opacity-40' : ''} title={app.audioMuted ? '取消静音' : '静音'}>
