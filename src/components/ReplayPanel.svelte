@@ -1,7 +1,7 @@
 <script lang="ts">
   import { app } from '../lib/stores.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
-  import { X } from '@lucide/svelte';
+  import { X, Play, Pause } from '@lucide/svelte';
 
   interface LogRow {
     t: number; roll: number; pitch: number; yaw: number;
@@ -123,7 +123,7 @@
     </div>
     <div class="flex items-center gap-2">
       <Button variant="default" size="icon-sm" class="rounded-full shrink-0" onclick={togglePlay}>
-        {playing ? '⏸' : '▶'}
+        {#if playing}<Pause size={14} />{:else}<Play size={14} />{/if}
       </Button>
       <input type="range" class="flex-1 h-1 accent-primary" min="0" max={rows.length - 1} value={cursor} oninput={seek} />
       <span class="text-xs text-muted-foreground font-mono min-w-[40px]">{fmtTime(current?.t || 0)}</span>

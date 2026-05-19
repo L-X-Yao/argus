@@ -26,6 +26,7 @@
   import LogPanel from './components/LogPanel.svelte';
   import VideoOverlay from './components/VideoOverlay.svelte';
   import CalibrationPanel from './components/CalibrationPanel.svelte';
+  import { ChevronUp, ChevronDown } from '@lucide/svelte';
 
   type View = 'fly' | 'plan' | 'monitor' | 'params';
   let view = $state<View>('fly');
@@ -175,9 +176,9 @@
         <div class="absolute bottom-0 left-0 right-0 z-[1001]" class:max-h-52={flyEventsOpen}>
           <!-- svelte-ignore a11y_click_events_have_key_events -->
           <!-- svelte-ignore a11y_no_static_element_interactions -->
-          <div class="bg-card/90 backdrop-blur text-muted-foreground text-center py-1 text-[11px] cursor-pointer border-t border-border hover:text-primary transition-colors"
+          <div class="bg-card/90 backdrop-blur text-muted-foreground flex items-center justify-center gap-1 py-1 text-[11px] cursor-pointer border-t border-border hover:text-primary transition-colors"
                onclick={() => flyEventsOpen = !flyEventsOpen}>
-            事件 ({app.events.length}) {flyEventsOpen ? '▼' : '▲'}
+            事件 ({app.events.length}) {#if flyEventsOpen}<ChevronDown size={12} />{:else}<ChevronUp size={12} />{/if}
           </div>
           {#if flyEventsOpen}
             <EventLog />
