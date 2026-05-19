@@ -4,6 +4,7 @@
   import { API_BASE } from '../lib/backend';
   import Button from '$lib/components/ui/button/button.svelte';
   import Badge from '$lib/components/ui/badge/badge.svelte';
+  import { X } from '@lucide/svelte';
 
   let { onclose }: { onclose: () => void } = $props();
 
@@ -208,8 +209,7 @@
     <!-- Header -->
     <div class="flex items-center justify-between px-4 py-3 border-b border-border">
       <h2 class="text-sm font-semibold text-primary uppercase tracking-wider">传感器校准</h2>
-      <button class="text-muted-foreground hover:text-foreground text-lg leading-none px-1"
-              onclick={onclose}>&times;</button>
+      <Button variant="ghost" size="icon-xs" onclick={onclose}><X size={16} /></Button>
     </div>
 
     <div class="flex-1 min-h-0 overflow-y-auto p-4">

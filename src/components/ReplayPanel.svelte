@@ -1,6 +1,7 @@
 <script lang="ts">
   import { app } from '../lib/stores.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
+  import { X } from '@lucide/svelte';
 
   interface LogRow {
     t: number; roll: number; pitch: number; yaw: number;
@@ -118,7 +119,7 @@
     <div class="flex items-center gap-2 mb-2">
       <span class="text-xs font-bold text-primary flex-1 truncate">{fileName}</span>
       <span class="text-[11px] text-muted-foreground">{rows.length} 帧 | {fmtTime(duration)}</span>
-      <button class="text-destructive text-lg leading-none bg-transparent border-none cursor-pointer px-1" onclick={close}>&times;</button>
+      <button class="text-destructive leading-none bg-transparent border-none cursor-pointer px-0.5" onclick={close}><X size={14} /></button>
     </div>
     <div class="flex items-center gap-2">
       <Button variant="default" size="icon-sm" class="rounded-full shrink-0" onclick={togglePlay}>

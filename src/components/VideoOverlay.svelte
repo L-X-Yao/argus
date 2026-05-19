@@ -1,5 +1,6 @@
 <script lang="ts">
   import { apiUrl } from '../lib/backend';
+  import { X } from '@lucide/svelte';
 
   let { onclose }: { onclose: () => void } = $props();
 
@@ -97,10 +98,10 @@
           {sizeMap[s].label}
         </button>
       {/each}
-      <button
-        class="ml-1 text-muted-foreground hover:text-foreground text-sm leading-none px-1"
-        onclick={handleClose}
-      >&times;</button>
+      <button class="ml-1 text-muted-foreground hover:text-foreground leading-none px-0.5"
+              onclick={handleClose}>
+        <X size={14} />
+      </button>
     </div>
   </div>
 
