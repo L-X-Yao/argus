@@ -88,6 +88,7 @@ export function loadSettings() {
     if (s.radius) app.geoRadius = s.radius;
     if (s.dark !== undefined) app.darkTheme = s.dark;
     if (s.muted !== undefined) app.audioMuted = s.muted;
+    if (s.voice !== undefined) app.voiceEnabled = s.voice;
   } catch {}
   try {
     const wps = JSON.parse(localStorage.getItem('pllink_v3_waypoints') || '[]');
@@ -102,6 +103,7 @@ export function saveSettings() {
       radius: app.geoRadius,
       dark: app.darkTheme,
       muted: app.audioMuted,
+      voice: app.voiceEnabled,
     }));
   } catch {}
 }

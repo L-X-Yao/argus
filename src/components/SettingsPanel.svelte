@@ -1,7 +1,7 @@
 <script lang="ts">
   import { app, saveSettings } from '../lib/stores.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
-  import { X } from '@lucide/svelte';
+  import { X, Volume2, VolumeOff, Mic, MicOff, Sun, Moon } from '@lucide/svelte';
 
   let { onclose }: { onclose: () => void } = $props();
 </script>
@@ -31,23 +31,23 @@
     </div>
     <div class="flex justify-between items-center py-2.5 border-b border-border">
       <label class="text-sm text-muted-foreground">声音提示</label>
-      <Button variant={app.audioMuted ? 'secondary' : 'default'} size="sm"
+      <Button variant={app.audioMuted ? 'secondary' : 'default'} size="sm" class="gap-1"
               onclick={() => { app.audioMuted = !app.audioMuted; saveSettings(); }}>
-        {app.audioMuted ? '已关闭' : '已开启'}
+        {#if app.audioMuted}<VolumeOff size={14} />已关闭{:else}<Volume2 size={14} />已开启{/if}
       </Button>
     </div>
     <div class="flex justify-between items-center py-2.5 border-b border-border">
       <label class="text-sm text-muted-foreground">语音播报</label>
-      <Button variant={app.voiceEnabled ? 'default' : 'secondary'} size="sm"
-              onclick={() => { app.voiceEnabled = !app.voiceEnabled; }}>
-        {app.voiceEnabled ? '已开启' : '已关闭'}
+      <Button variant={app.voiceEnabled ? 'default' : 'secondary'} size="sm" class="gap-1"
+              onclick={() => { app.voiceEnabled = !app.voiceEnabled; saveSettings(); }}>
+        {#if app.voiceEnabled}<Mic size={14} />已开启{:else}<MicOff size={14} />已关闭{/if}
       </Button>
     </div>
     <div class="flex justify-between items-center py-2.5 border-b border-border">
       <label class="text-sm text-muted-foreground">深色主题</label>
-      <Button variant={app.darkTheme ? 'default' : 'secondary'} size="sm"
+      <Button variant={app.darkTheme ? 'default' : 'secondary'} size="sm" class="gap-1"
               onclick={() => { app.darkTheme = !app.darkTheme; saveSettings(); }}>
-        {app.darkTheme ? '深色' : '浅色'}
+        {#if app.darkTheme}<Moon size={14} />深色{:else}<Sun size={14} />浅色{/if}
       </Button>
     </div>
 
