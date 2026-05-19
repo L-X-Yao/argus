@@ -35,6 +35,8 @@
   let replayTrailLine: any = null;
   let surveyPolyLayer: any = null;
   let surveyVertMarkers: any[] = [];
+  let fencePolyLayer: any = null;
+  let fenceVertMarkers: any[] = [];
 
   const SAT_URL = '/api/tile/6/{z}/{x}/{y}';
   const LABEL_URL = '/api/tile/8/{z}/{x}/{y}';
@@ -68,6 +70,11 @@
     if (app.drawingPolygon) {
       const [wlat, wlon] = toWgsFromGcj(ll.lat, ll.lng);
       app.surveyPolygon = [...app.surveyPolygon, { lat: wlat, lon: wlon }];
+      return;
+    }
+    if (app.drawingFence) {
+      const [wlat, wlon] = toWgsFromGcj(ll.lat, ll.lng);
+      app.fencePolygon = [...app.fencePolygon, { lat: wlat, lon: wlon }];
       return;
     }
     if (app.guidedMode && app.drone.connected && app.drone.armed) {
@@ -165,6 +172,7 @@
       if (measuring) clearMeasure();
       if (app.guidedMode) app.guidedMode = false;
       if (app.drawingPolygon) { app.drawingPolygon = false; app.surveyPolygon = []; }
+      if (app.drawingFence) { app.drawingFence = false; app.fencePolygon = []; }
       if (wpPopup) { map.closePopup(wpPopup); wpPopup = null; }
     }
     if (e.key === 'g' && (e.target as HTMLElement).tagName !== 'INPUT') {
@@ -357,6 +365,29 @@
     });
   });
 
+  // Fence polygon rendering
+  $effect(() => {
+    if (!map) return;
+    fenceVertMarkers.forEach(m => map.removeLayer(m));
+    fenceVertMarkers = [];
+    if (fencePolyLayer) { map.removeLayer(fencePolyLayer); fencePolyLayer = null; }
+    if (app.fencePolygon.length === 0) return;
+    const gcjPts = app.fencePolygon.map(p => toGcj(p.lat, p.lon));
+    if (gcjPts.length >= 3) {
+      fencePolyLayer = L.polygon(gcjPts, {
+        color: '#f44336', fillColor: '#f44336', fillOpacity: 0.06, weight: 2,
+      }).addTo(map);
+    } else if (gcjPts.length >= 2) {
+      fencePolyLayer = L.polyline(gcjPts, { color: '#f44336', weight: 2 }).addTo(map);
+    }
+    gcjPts.forEach((pt, i) => {
+      const cm = L.circleMarker(pt, {
+        radius: 5, color: '#f44336', fillColor: i === 0 ? '#fff' : '#f44336', fillOpacity: 1, weight: 2,
+      }).addTo(map);
+      fenceVertMarkers.push(cm);
+    });
+  });
+
   function fmtTime(s: number): string {
     const m = Math.floor(s / 60), sec = s % 60;
     return `${m}:${sec < 10 ? '0' : ''}${sec}`;
@@ -376,6 +407,10 @@
     <button class="map-btn survey-btn" class:active={app.showSurvey || app.drawingPolygon}
             onclick={() => app.showSurvey = !app.showSurvey}>
       测绘
+    </button>
+    <button class="map-btn fence-btn" class:active={app.showFence || app.drawingFence}
+            onclick={() => app.showFence = !app.showFence}>
+      围栏
     </button>
     {#if trail.length > 10}
       <button class="map-btn" onclick={exportTrack}>导出轨迹</button>
@@ -417,6 +452,7 @@
   .map-btn.active { color:#ff5252; border-color:#ff5252; }
   .map-btn.guided.active { color:#ffa726; border-color:#ffa726; }
   .map-btn.survey-btn.active { color:#ab47bc; border-color:#ab47bc; }
+  .map-btn.fence-btn.active { color:#f44336; border-color:#f44336; }
   .coord-bar { position:absolute; bottom:6px; left:10px; z-index:1000; background:rgba(30,30,30,0.85); color:#aaa; padding:2px 8px; border-radius:3px; font-size:11px; font-family:monospace; }
   .hud { position:absolute; bottom:6px; right:10px; z-index:1000; display:flex; gap:8px; }
   .hud-item { background:rgba(10,10,10,0.85); border:1px solid #333; border-radius:4px; padding:4px 8px; text-align:center; }

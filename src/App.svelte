@@ -18,6 +18,7 @@
   import MissionProgress from './components/MissionProgress.svelte';
   import ReplayPanel from './components/ReplayPanel.svelte';
   import SurveyPanel from './components/SurveyPanel.svelte';
+  import FencePanel from './components/FencePanel.svelte';
 
   let showSettings = $state(false);
 
@@ -77,6 +78,9 @@
   <MissionProgress />
   {#if app.showSurvey}
     <SurveyPanel />
+  {/if}
+  {#if app.showFence}
+    <FencePanel />
   {/if}
   {#if !app.mapExpanded}
     {#if app.drone.connected && !app.drone.armed}

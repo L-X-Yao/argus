@@ -21,6 +21,9 @@ class AppState {
   surveyPolygon: { lat: number; lon: number }[] = $state([]);
   drawingPolygon: boolean = $state(false);
   showSurvey: boolean = $state(false);
+  fencePolygon: { lat: number; lon: number }[] = $state([]);
+  drawingFence: boolean = $state(false);
+  showFence: boolean = $state(false);
 }
 
 export const app = new AppState();
