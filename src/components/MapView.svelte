@@ -431,7 +431,7 @@
   <div class="coord-bar">{mouseCoord || '---'}</div>
   <MapControls />
 
-  {#if app.mapExpanded && app.drone.connected}
+  {#if app.drone.connected && app.mapExpanded}
     <HudOverlay />
   {/if}
 </div>
