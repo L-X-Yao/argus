@@ -83,6 +83,13 @@ class DroneLink:
         self._seq_to_wp: dict[int, int] = {}
         self.flight_summary = None
         self.param_mgr = ParamManager(self)
+        self.fw_version = ''
+        self.fw_git = ''
+        self.board_id = 0
+        self._dl_pending = False
+        self._dl_total = 0
+        self._dl_items: list[dict | None] = []
+        self._dl_messages: list[dict] = []
 
     def is_plane(self) -> bool:
         if self.force_plane is not None:
@@ -211,6 +218,9 @@ class DroneLink:
             'parse_errors': self._parse_errors,
             'flight_summary': self.flight_summary,
             'log_active': self._logfile is not None,
+            'fw_version': self.fw_version,
+            'fw_git': self.fw_git,
+            'board_id': self.board_id,
             **self.param_mgr.get_status(),
         }
 

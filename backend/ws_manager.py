@@ -63,6 +63,7 @@ class WSManager:
     async def _push_loop(self, ws: WebSocket) -> None:
         event_cursor = len(self.link.events)
         param_cursor = len(self.link.param_mgr._messages)
+        dl_cursor = len(self.link._dl_messages)
         while True:
             state = self.link.get_state()
             await ws.send_text(json.dumps(state))
@@ -77,6 +78,13 @@ class WSManager:
                         'text': ev['text'],
                     }))
                 event_cursor = len(events)
+            dlmsg = self.link._dl_messages
+            if dl_cursor > len(dlmsg):
+                dl_cursor = 0
+            if len(dlmsg) > dl_cursor:
+                for msg in dlmsg[dl_cursor:]:
+                    await ws.send_text(json.dumps(msg))
+                dl_cursor = len(dlmsg)
             pmsg = self.link.param_mgr._messages
             if param_cursor > len(pmsg):
                 param_cursor = 0

@@ -74,6 +74,13 @@ def execute(cmd: str, param, link: DroneLink, data: dict | None = None) -> dict 
         link.send(bm(84, p, link.sq, 5))
     elif cmd == 'clear_summary':
         link.flight_summary = None
+    elif cmd == 'mission_download':
+        link._dl_pending = True
+        link._dl_total = 0
+        link._dl_items = []
+        link.add_event('任务: 正在下载...')
+        from pllink_proto import bm
+        link.send(bm(43, struct.pack('<BBB', link.sysid, 1, 0), link.sq, 132))
     elif cmd == 'param_request_all':
         link.param_mgr.request_all()
     elif cmd == 'param_set':
@@ -169,3 +176,4 @@ def request_streams(link: DroneLink) -> None:
                               511, link.sysid, 1, 0)
         link.send(bm(76, payload, link.sq, 152))
         time.sleep(0.01)
+    _send_cmd(link, 512, p1=148.0)

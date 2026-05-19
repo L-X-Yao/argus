@@ -33,6 +33,9 @@ export interface DroneState {
   parse_errors: number;
   flight_summary: FlightSummary | null;
   log_active: boolean;
+  fw_version: string;
+  fw_git: string;
+  board_id: number;
   param_count: number;
   param_total: number;
   param_fetching: boolean;
@@ -94,5 +97,6 @@ export const defaultState: DroneState = {
   link_age: -1, bat_time: -1,
   home_lat: 0, home_lon: 0, parse_errors: 0,
   flight_summary: null, log_active: false,
+  fw_version: '', fw_git: '', board_id: 0,
   param_count: 0, param_total: -1, param_fetching: false,
 };

@@ -449,3 +449,92 @@ class TestParams:
                 await asyncio.sleep(0.5)
                 await ws.close()
         asyncio.get_event_loop().run_until_complete(run())
+
+
+class TestFirmwareVersion:
+    def test_firmware_version_in_state(self, ws_url, sim_port):
+        async def run():
+            await asyncio.sleep(1)
+            ws = await ws_connect(ws_url)
+            try:
+                await ensure_connected(ws, ws_url, sim_port, timeout=20)
+                state = await recv_until(
+                    ws, lambda m: (m.get('type') == 'state' and
+                                   m.get('fw_version', '') != ''),
+                    timeout=15,
+                )
+                assert state['fw_version'] == 'v4.5.7'
+                assert len(state['fw_git']) > 0
+                assert state['board_id'] == 56
+            finally:
+                await ws.send(json.dumps({'type': 'disconnect'}))
+                await asyncio.sleep(0.5)
+                await ws.close()
+        asyncio.get_event_loop().run_until_complete(run())
+
+
+class TestMissionDownload:
+    def test_upload_then_download(self, ws_url, sim_port):
+        async def run():
+            await asyncio.sleep(2)
+            ws = await ws_connect(ws_url)
+            try:
+                await ensure_connected(ws, ws_url, sim_port, timeout=20)
+                await asyncio.sleep(1)
+                waypoints = [
+                    {'lat': 34.259, 'lon': 108.943, 'alt': 50, 'drop': False, 'delay': 0},
+                    {'lat': 34.260, 'lon': 108.944, 'alt': 60, 'drop': False, 'delay': 0},
+                ]
+                await ws.send(json.dumps({
+                    'type': 'command', 'cmd': 'mission_upload',
+                    'waypoints': waypoints, 'takeoff_alt': 30,
+                }))
+                await recv_until(
+                    ws, lambda m: m.get('type') == 'event' and '任务确认' in m.get('text', '') and '成功' in m.get('text', ''),
+                    timeout=15,
+                )
+                await asyncio.sleep(0.5)
+                await ws.send(json.dumps({
+                    'type': 'command', 'cmd': 'mission_download',
+                }))
+                dl = await recv_until(
+                    ws, lambda m: m.get('type') == 'mission_downloaded',
+                    timeout=15,
+                )
+                assert len(dl['waypoints']) == 2
+                assert abs(dl['waypoints'][0]['lat'] - 34.259) < 0.001
+                assert abs(dl['waypoints'][1]['alt'] - 60) < 1
+            finally:
+                await ws.send(json.dumps({'type': 'disconnect'}))
+                await asyncio.sleep(0.5)
+                await ws.close()
+        asyncio.get_event_loop().run_until_complete(run())
+
+    def test_download_empty_mission(self, ws_url, sim_port):
+        async def run():
+            await asyncio.sleep(1)
+            ws = await ws_connect(ws_url)
+            try:
+                await ensure_connected(ws, ws_url, sim_port, timeout=20)
+                await asyncio.sleep(0.5)
+                await ws.send(json.dumps({
+                    'type': 'command', 'cmd': 'mission_clear',
+                }))
+                await recv_until(
+                    ws, lambda m: m.get('type') == 'event' and '清除' in m.get('text', ''),
+                    timeout=10,
+                )
+                await asyncio.sleep(0.5)
+                await ws.send(json.dumps({
+                    'type': 'command', 'cmd': 'mission_download',
+                }))
+                event = await recv_until(
+                    ws, lambda m: m.get('type') == 'event' and '无任务' in m.get('text', ''),
+                    timeout=10,
+                )
+                assert '无任务' in event['text']
+            finally:
+                await ws.send(json.dumps({'type': 'disconnect'}))
+                await asyncio.sleep(0.5)
+                await ws.close()
+        asyncio.get_event_loop().run_until_complete(run())

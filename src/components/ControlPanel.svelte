@@ -26,6 +26,7 @@
 
   <div class="section-label">任务</div>
   <button class="btn" style="background:#1565c0" onclick={() => sendCommand('mission_start')}>开始任务</button>
+  <button class="btn" style="background:#1565c0" onclick={() => sendCommand('mission_download')}>下载任务</button>
   <button class="btn" style="background:#1565c0" onclick={() => sendCommand('mission_clear')}>清除任务</button>
 
   <div class="section-label">起飞</div>

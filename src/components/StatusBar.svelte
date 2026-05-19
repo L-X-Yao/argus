@@ -19,6 +19,9 @@
   <div class="right">
     <span class="dot" class:on={app.drone.connected} class:off={!app.drone.connected}></span>
     <span>{app.drone.connected ? '已连接' : '未连接'}</span>
+    {#if app.drone.fw_version}
+      <span class="dim">| {app.drone.fw_version}</span>
+    {/if}
     {#if app.drone.connected}
       <span class="link-icon {linkClass}" title="链路延迟 {app.drone.link_age.toFixed(1)}s">
         {#if app.drone.link_age < 1}●{:else if app.drone.link_age < 3}◐{:else}○{/if}

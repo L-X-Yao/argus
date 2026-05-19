@@ -119,6 +119,15 @@ export function generateCircle(centerLat: number, centerLon: number, radius: num
   saveWaypoints();
 }
 
+export function loadDownloadedMission(wps: Waypoint[]) {
+  pushUndo();
+  app.waypoints = wps.map(w => ({
+    lat: w.lat, lon: w.lon, alt: w.alt,
+    drop: w.drop || false, delay: w.delay || 0,
+  }));
+  saveWaypoints();
+}
+
 let _toastId = 0;
 export function addToast(text: string, level: 'info' | 'warn' | 'error' | 'success' = 'info', duration = 4000) {
   const id = ++_toastId;

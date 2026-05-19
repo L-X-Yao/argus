@@ -159,6 +159,70 @@ def handle_param_value(p: bytes, pl: int, link: DroneLink) -> None:
     link.param_mgr.handle_param_value(p, pl)
 
 
+def handle_autopilot_version(p: bytes, pl: int, link: DroneLink) -> None:
+    if pl < 36:
+        return
+    fw_ver = struct.unpack_from('<I', p, 8)[0]
+    major = (fw_ver >> 24) & 0xFF
+    minor = (fw_ver >> 16) & 0xFF
+    patch = (fw_ver >> 8) & 0xFF
+    board = struct.unpack_from('<I', p, 20)[0]
+    git_bytes = bytes(p[24:32])
+    git = ''.join('%02x' % b for b in git_bytes if b != 0)[:8]
+    link.fw_version = 'v%d.%d.%d' % (major, minor, patch)
+    link.fw_git = git
+    link.board_id = board
+    link.add_event('固件: %s (%s)' % (link.fw_version, link.fw_git))
+
+
+def handle_mission_count(p: bytes, pl: int, link: DroneLink) -> None:
+    if pl < 3 or not link._dl_pending:
+        return
+    count = struct.unpack_from('<H', p, 0)[0]
+    link._dl_total = count
+    link._dl_items = [None] * count
+    if count > 0:
+        _request_dl_item(link, 0)
+        link.add_event('任务下载: 共 %d 项' % count)
+    else:
+        link._dl_pending = False
+        link.add_event('任务下载: 飞控无任务')
+
+
+def handle_mission_item_int(p: bytes, pl: int, link: DroneLink) -> None:
+    if pl < 37 or not link._dl_pending:
+        return
+    p1 = struct.unpack_from('<f', p, 0)[0]
+    lat = struct.unpack_from('<i', p, 16)[0] / 1e7
+    lon = struct.unpack_from('<i', p, 20)[0] / 1e7
+    alt = struct.unpack_from('<f', p, 24)[0]
+    seq = struct.unpack_from('<H', p, 28)[0]
+    cmd = struct.unpack_from('<H', p, 30)[0]
+    if seq < link._dl_total:
+        link._dl_items[seq] = {'seq': seq, 'cmd': cmd, 'lat': lat, 'lon': lon, 'alt': alt, 'p1': p1}
+    if seq + 1 < link._dl_total:
+        _request_dl_item(link, seq + 1)
+    else:
+        link._dl_pending = False
+        items = [i for i in link._dl_items if i is not None]
+        wps = []
+        for item in items:
+            if item['cmd'] == 16 and item['seq'] > 0:
+                wps.append({'lat': item['lat'], 'lon': item['lon'], 'alt': item['alt'],
+                            'drop': False, 'delay': item['p1']})
+            elif item['cmd'] == 181 and wps:
+                wps[-1]['drop'] = True
+        link._dl_messages.append({'type': 'mission_downloaded', 'waypoints': wps})
+        link.add_event('任务下载完成: %d 航点' % len(wps))
+        from pllink_proto import bm
+        link.send(bm(47, struct.pack('<BBB', link.sysid, 1, 0), link.sq, 153))
+
+
+def _request_dl_item(link: DroneLink, seq: int) -> None:
+    from pllink_proto import bm
+    link.send(bm(51, struct.pack('<HBBB', seq, link.sysid, 1, 0), link.sq, 196))
+
+
 def handle_mission_request(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 2 or not link._mission_pending:
         return
@@ -189,6 +253,9 @@ def init_handlers() -> None:
     mavlink_dispatch.register(77, handle_command_ack)
     mavlink_dispatch.register(253, handle_statustext)
     mavlink_dispatch.register(22, handle_param_value)
+    mavlink_dispatch.register(148, handle_autopilot_version)
+    mavlink_dispatch.register(44, handle_mission_count)
+    mavlink_dispatch.register(73, handle_mission_item_int)
     mavlink_dispatch.register(40, handle_mission_request)
     mavlink_dispatch.register(51, handle_mission_request)
     mavlink_dispatch.register(47, handle_mission_ack)
