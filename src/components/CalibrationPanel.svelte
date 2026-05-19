@@ -1,6 +1,7 @@
 <script lang="ts">
   import { app } from '../lib/stores.svelte';
   import { sendCommand } from '../lib/ws';
+  import { API_BASE } from '../lib/backend';
   import Button from '$lib/components/ui/button/button.svelte';
   import Badge from '$lib/components/ui/badge/badge.svelte';
 
@@ -29,12 +30,12 @@
   }
 
   const accelOrients: OrientDef[] = [
-    { id: 'level',     label: '水平',     hint: '将飞机水平放置',       img: '/images/cal/VehicleDown.png',       keywords: ['level', 'Level', '水平'] },
-    { id: 'nose_up',   label: '机头朝上', hint: '将飞机机头朝上竖立',   img: '/images/cal/VehicleTailDown.png',   keywords: ['nose up', 'Nose Up', 'UP', '机头朝上', 'nose-up'] },
-    { id: 'nose_down', label: '机头朝下', hint: '将飞机机头朝下竖立',   img: '/images/cal/VehicleNoseDown.png',   keywords: ['nose down', 'Nose Down', 'DOWN', '机头朝下', 'nose-down'] },
-    { id: 'left',      label: '左侧朝下', hint: '将飞机左侧朝下放置',   img: '/images/cal/VehicleLeft.png',       keywords: ['left', 'Left', '左侧'] },
-    { id: 'right',     label: '右侧朝下', hint: '将飞机右侧朝下放置',   img: '/images/cal/VehicleRight.png',      keywords: ['right', 'Right', '右侧'] },
-    { id: 'back',      label: '倒置',     hint: '将飞机翻转倒置放置',   img: '/images/cal/VehicleUpsideDown.png', keywords: ['back', 'Back', 'inverted', '倒置', '翻转'] },
+    { id: 'level',     label: '水平',     hint: '将飞机水平放置',       img: `${API_BASE}/images/cal/VehicleDown.png`,       keywords: ['level', 'Level', '水平'] },
+    { id: 'nose_up',   label: '机头朝上', hint: '将飞机机头朝上竖立',   img: `${API_BASE}/images/cal/VehicleTailDown.png`,   keywords: ['nose up', 'Nose Up', 'UP', '机头朝上', 'nose-up'] },
+    { id: 'nose_down', label: '机头朝下', hint: '将飞机机头朝下竖立',   img: `${API_BASE}/images/cal/VehicleNoseDown.png`,   keywords: ['nose down', 'Nose Down', 'DOWN', '机头朝下', 'nose-down'] },
+    { id: 'left',      label: '左侧朝下', hint: '将飞机左侧朝下放置',   img: `${API_BASE}/images/cal/VehicleLeft.png`,       keywords: ['left', 'Left', '左侧'] },
+    { id: 'right',     label: '右侧朝下', hint: '将飞机右侧朝下放置',   img: `${API_BASE}/images/cal/VehicleRight.png`,      keywords: ['right', 'Right', '右侧'] },
+    { id: 'back',      label: '倒置',     hint: '将飞机翻转倒置放置',   img: `${API_BASE}/images/cal/VehicleUpsideDown.png`, keywords: ['back', 'Back', 'inverted', '倒置', '翻转'] },
   ];
 
   let selected = $state<CalType>('compass');
