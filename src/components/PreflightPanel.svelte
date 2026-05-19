@@ -1,5 +1,6 @@
 <script lang="ts">
   import { app } from '../lib/stores.svelte';
+  import { Check, X as XIcon } from '@lucide/svelte';
 
   let d = $derived(app.drone);
 
@@ -38,9 +39,9 @@
   <div class="grid grid-cols-2 gap-x-3 gap-y-1 max-sm:grid-cols-1">
     {#each checks as c}
       <div class="flex items-center gap-1.5 py-0.5">
-        <span class="w-4.5 h-4.5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0
+        <span class="w-4.5 h-4.5 rounded-full flex items-center justify-center shrink-0
           {c.ok ? 'bg-green-700 text-white' : c.critical ? 'bg-destructive text-white' : 'bg-muted text-muted-foreground'}">
-          {c.ok ? '✓' : '✕'}
+          {#if c.ok}<Check size={11} strokeWidth={3} />{:else}<XIcon size={11} strokeWidth={3} />{/if}
         </span>
         <span class="text-xs font-semibold whitespace-nowrap">{c.name}</span>
         <span class="text-[11px] text-muted-foreground truncate">{c.detail}</span>
