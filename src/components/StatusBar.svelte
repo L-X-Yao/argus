@@ -5,7 +5,7 @@
   import { apiUrl } from '../lib/backend';
   import Button from '$lib/components/ui/button/button.svelte';
   import Badge from '$lib/components/ui/badge/badge.svelte';
-  import { Volume2, VolumeOff, Sun, Moon, Settings, Wifi, WifiOff, Signal } from '@lucide/svelte';
+  import { Volume2, VolumeOff, Sun, Moon, Settings, Wifi, WifiOff, Signal, Satellite } from '@lucide/svelte';
 
   let { toggleTheme, onSettings }: { toggleTheme: () => void; onSettings: () => void } = $props();
 
@@ -62,6 +62,16 @@
     app.drone.remaining < 20 ? 'text-destructive' :
     app.drone.remaining < 40 ? 'text-warning' : 'text-success'
   );
+
+  let gpsOk = $derived(
+    app.drone.gps_fix === '3D' || app.drone.gps_fix === 'RTK固定' || app.drone.gps_fix === 'RTK浮动' || app.drone.gps_fix === '差分'
+  );
+  let gpsVariant = $derived.by((): 'default' | 'secondary' | 'destructive' => {
+    if (app.drone.gps_fix === 'RTK固定') return 'default';
+    if (gpsOk && app.drone.gps_sats >= 10) return 'default';
+    if (gpsOk) return 'secondary';
+    return 'destructive';
+  });
 
   const EKF_CONST_POS = 128;
   const EKF_UNINITIALIZED = 1024;
@@ -143,7 +153,9 @@
         {/if}
       </span>
 
-      <Badge variant="outline" class="font-mono text-[11px]">GPS {app.drone.gps_fix} {app.drone.gps_sats}</Badge>
+      <Badge variant={gpsVariant} class="font-mono text-[11px] gap-0.5">
+        <Satellite size={11} />{app.drone.gps_fix} {app.drone.gps_sats}星
+      </Badge>
 
       <Badge variant={ekfVariant} class="text-[11px]" title={ekfTooltip}>
         {#if ekfLevel === 'green'}
