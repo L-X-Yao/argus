@@ -13,7 +13,9 @@
 
 <div class="bg-card border border-border rounded-xl p-4">
   <h2 class="text-sm font-semibold text-primary uppercase tracking-wider mb-3">舵机输出</h2>
-  {#if app.drone.servo.length > 0}
+  {#if !app.drone.connected}
+    <div class="text-muted-foreground text-xs text-center py-4">连接后显示舵机输出数据</div>
+  {:else if app.drone.servo.length > 0}
     <div class="grid grid-cols-2 gap-x-3 gap-y-1">
       {#each app.drone.servo as val, i}
         {#if i < 16 && val > 0}

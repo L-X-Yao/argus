@@ -80,24 +80,28 @@
 
 <div class="bg-card border border-border rounded-xl p-4">
   <h2 class="text-sm font-semibold text-primary uppercase tracking-wider mb-2">振动监控</h2>
-  <div class="flex items-center gap-3 text-xs font-mono mb-2">
-    <span class="text-red-400">X: {d.vibe[0]?.toFixed(1)}</span>
-    <span class="text-green-400">Y: {d.vibe[1]?.toFixed(1)}</span>
-    <span class="text-sky-400">Z: {d.vibe[2]?.toFixed(1)}</span>
-    <Badge variant={vibeBadgeVariant(Math.max(...d.vibe))} class="text-[10px]">
-      {vibeLevel(Math.max(...d.vibe))}
-    </Badge>
-    {#if d.vibe_clip[0] + d.vibe_clip[1] + d.vibe_clip[2] > 0}
-      <span class="text-destructive text-[10px]">裁剪: {d.vibe_clip[0]}/{d.vibe_clip[1]}/{d.vibe_clip[2]}</span>
-    {/if}
-  </div>
-  <div class="w-full">
-    <canvas bind:this={canvas} height="80" class="w-full bg-background rounded-lg"></canvas>
-  </div>
-  <div class="text-center mt-1 text-[9px] text-muted-foreground">
-    红线=30 (阈值) │
-    <span class="text-red-400">━ X</span>
-    <span class="text-green-400"> ━ Y</span>
-    <span class="text-sky-400"> ━ Z</span>
-  </div>
+  {#if !app.drone.connected}
+    <div class="text-muted-foreground text-xs text-center py-8">连接后显示振动数据曲线</div>
+  {:else}
+    <div class="flex items-center gap-3 text-xs font-mono mb-2">
+      <span class="text-red-400">X: {d.vibe[0]?.toFixed(1)}</span>
+      <span class="text-green-400">Y: {d.vibe[1]?.toFixed(1)}</span>
+      <span class="text-sky-400">Z: {d.vibe[2]?.toFixed(1)}</span>
+      <Badge variant={vibeBadgeVariant(Math.max(...d.vibe))} class="text-[10px]">
+        {vibeLevel(Math.max(...d.vibe))}
+      </Badge>
+      {#if d.vibe_clip[0] + d.vibe_clip[1] + d.vibe_clip[2] > 0}
+        <span class="text-destructive text-[10px]">裁剪: {d.vibe_clip[0]}/{d.vibe_clip[1]}/{d.vibe_clip[2]}</span>
+      {/if}
+    </div>
+    <div class="w-full">
+      <canvas bind:this={canvas} height="80" class="w-full bg-background rounded-lg"></canvas>
+    </div>
+    <div class="text-center mt-1 text-[9px] text-muted-foreground">
+      红线=30 (阈值) │
+      <span class="text-red-400">━ X</span>
+      <span class="text-green-400"> ━ Y</span>
+      <span class="text-sky-400"> ━ Z</span>
+    </div>
+  {/if}
 </div>

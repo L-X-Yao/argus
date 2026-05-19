@@ -20,7 +20,9 @@
     <h2 class="text-sm font-semibold text-primary uppercase tracking-wider">遥控通道</h2>
     <Badge variant="outline" class="text-[10px] font-mono">RSSI: {app.drone.rc_rssi}</Badge>
   </div>
-  {#if app.drone.rc.length > 0}
+  {#if !app.drone.connected}
+    <div class="text-muted-foreground text-xs text-center py-4">连接后显示遥控通道数据</div>
+  {:else if app.drone.rc.length > 0}
     <div class="grid grid-cols-2 gap-x-3 gap-y-1">
       {#each app.drone.rc as val, i}
         {#if i < 16}

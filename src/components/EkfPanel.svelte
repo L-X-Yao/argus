@@ -76,9 +76,14 @@
 <div class="bg-card border border-border rounded-xl p-4">
   <div class="flex items-center gap-2 mb-3">
     <h2 class="text-sm font-semibold text-primary uppercase tracking-wider">导航滤波器</h2>
-    <Badge variant={health.variant} class="text-[10px]">{health.label}</Badge>
+    {#if app.drone.connected}
+      <Badge variant={health.variant} class="text-[10px]">{health.label}</Badge>
+    {/if}
   </div>
 
+  {#if !app.drone.connected}
+    <div class="text-muted-foreground text-xs text-center py-4">连接后显示导航滤波器状态</div>
+  {:else}
   <div class="space-y-2 mb-3">
     {#each variances as v}
       {@const val = d[v.key]}
@@ -126,4 +131,5 @@
     <span class="text-yellow-500"> &#9632;</span>&lt;1.0 警告
     <span class="text-red-500"> &#9632;</span>&ge;1.0 异常
   </div>
+  {/if}
 </div>
