@@ -2,6 +2,7 @@
   import { app, pushUndo, deleteWaypoint, clearWaypoints, saveSettings, saveWaypoints, generateCircle } from '../lib/stores.svelte';
   import { sendCommand } from '../lib/ws';
   import { toGcj } from '../lib/gcj02';
+  import Button from '$lib/components/ui/button/button.svelte';
 
   let showCircleGen = $state(false);
   let circleRadius = $state(50);
@@ -309,17 +310,17 @@
     <input id="def-alt" type="number" bind:value={app.defaultAlt} min="5" max="200" step="5" onchange={saveSettings}
            class="w-12 h-6 px-1 bg-input border border-border rounded text-xs text-foreground" />
     <span class="text-[11px] text-muted-foreground">m</span>
-    <button class="mp-btn" onclick={applyAltAll}>全部</button>
-    <button class="mp-btn !bg-orange-700 !font-bold" onclick={uploadMission}>上传</button>
+    <Button variant="outline" size="xs" onclick={applyAltAll}>全部</Button>
+    <Button size="xs" class="bg-orange-700 hover:bg-orange-800 text-white font-bold" onclick={uploadMission}>上传</Button>
   </div>
   <div class="flex gap-1 mt-1.5 items-center flex-wrap">
-    <button class="mp-btn" onclick={saveMission}>保存</button>
-    <button class="mp-btn" onclick={loadMission}>加载</button>
-    <button class="mp-btn" onclick={exportKml}>导出</button>
-    <button class="mp-btn" onclick={importKml}>导入</button>
-    <button class="mp-btn" onclick={reverseRoute}>反转</button>
-    <button class="mp-btn" onclick={() => showCircleGen = !showCircleGen}>圆形</button>
-    <button class="mp-btn !bg-muted" onclick={clearWaypoints}>清除</button>
+    <Button variant="secondary" size="xs" onclick={saveMission}>保存</Button>
+    <Button variant="secondary" size="xs" onclick={loadMission}>加载</Button>
+    <Button variant="secondary" size="xs" onclick={exportKml}>导出</Button>
+    <Button variant="secondary" size="xs" onclick={importKml}>导入</Button>
+    <Button variant="secondary" size="xs" onclick={reverseRoute}>反转</Button>
+    <Button variant="secondary" size="xs" onclick={() => showCircleGen = !showCircleGen}>圆形</Button>
+    <Button variant="ghost" size="xs" onclick={clearWaypoints}>清除</Button>
   </div>
   {#if showCircleGen}
     <div class="flex gap-1 items-center mt-1.5 p-1.5 bg-muted rounded-lg flex-wrap">
@@ -330,12 +331,7 @@
       <label for="cc" class="text-[11px] text-muted-foreground">点数:</label>
       <input id="cc" type="number" bind:value={circleCount} min="4" max="72" step="1"
              class="w-12 h-6 px-1 bg-input border border-border rounded text-xs text-foreground" />
-      <button class="mp-btn !bg-primary" onclick={genCircle}>生成</button>
+      <Button size="xs" onclick={genCircle}>生成</Button>
     </div>
   {/if}
 </div>
-
-<style>
-  .mp-btn { padding:3px 7px; border-radius:4px; border:none; cursor:pointer; font-size:11px; color:white; background:hsl(var(--secondary)); transition:opacity 0.15s; }
-  .mp-btn:hover { opacity:0.85; }
-</style>
