@@ -2,12 +2,13 @@
   import { app, addToast } from '../lib/stores.svelte';
   import { sendCommand } from '../lib/ws';
   import Button from '$lib/components/ui/button/button.svelte';
+  import Badge from '$lib/components/ui/badge/badge.svelte';
 
   let drawingFence = $state(false);
 
-  function startDraw() { app.fencePolygon = []; drawingFence = true; app.drawingFence = true; }
+  function startDraw() { app.fencePolygon = []; app.fenceUploaded = false; drawingFence = true; app.drawingFence = true; }
   function finishDraw() { drawingFence = false; app.drawingFence = false; }
-  function clearFence() { app.fencePolygon = []; app.drawingFence = false; drawingFence = false; }
+  function clearFence() { app.fencePolygon = []; app.fenceUploaded = false; app.drawingFence = false; drawingFence = false; }
 
   function fmtArea(): string {
     if (app.fencePolygon.length < 3) return '---';
@@ -50,6 +51,7 @@
           const pts = JSON.parse(ev.target.result);
           if (Array.isArray(pts) && pts.length >= 3) {
             app.fencePolygon = pts;
+            app.fenceUploaded = false;
             addToast(`已加载围栏 (${pts.length} 顶点)`, 'success');
           }
         } catch { addToast('加载失败', 'error'); }
@@ -86,7 +88,16 @@
 </script>
 
 <div class="bg-card border border-border rounded-xl p-3 mx-2 mb-2">
-  <h2 class="text-sm font-semibold text-destructive uppercase tracking-wider mb-2">电子围栏</h2>
+  <div class="flex items-center gap-2 mb-2">
+    <h2 class="text-sm font-semibold text-destructive uppercase tracking-wider">电子围栏</h2>
+    {#if app.fencePolygon.length >= 3}
+      {#if app.fenceUploaded}
+        <Badge variant="default" class="text-[10px]">已上传</Badge>
+      {:else}
+        <Badge variant="outline" class="text-[10px]">未上传</Badge>
+      {/if}
+    {/if}
+  </div>
   {#if app.fencePolygon.length < 3 && !drawingFence}
     <div class="flex gap-2">
       <button class="flex-1 py-2.5 bg-transparent border-2 border-dashed border-destructive/50 rounded-lg cursor-pointer

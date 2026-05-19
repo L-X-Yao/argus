@@ -63,6 +63,32 @@
     app.drone.remaining < 40 ? 'text-warning' : 'text-success'
   );
 
+  const EKF_CONST_POS = 128;
+  const EKF_UNINITIALIZED = 1024;
+
+  let ekfLevel = $derived.by(() => {
+    const f = app.drone.ekf_flags;
+    if ((f & EKF_CONST_POS) || (f & EKF_UNINITIALIZED)) return 'red';
+    const vars = [app.drone.ekf_vel, app.drone.ekf_pos_h, app.drone.ekf_pos_v, app.drone.ekf_compass];
+    if (vars.some(v => v > 0.8)) return 'yellow';
+    if (vars.every(v => v < 0.5)) return 'green';
+    return 'yellow';
+  });
+
+  let ekfVariant = $derived(
+    ekfLevel === 'red' ? 'destructive' as const :
+    ekfLevel === 'yellow' ? 'secondary' as const : 'default' as const
+  );
+
+  let ekfLabel = $derived(
+    ekfLevel === 'red' ? '导航异常' :
+    ekfLevel === 'yellow' ? '导航警告' : '导航'
+  );
+
+  let ekfTooltip = $derived(
+    `速度: ${app.drone.ekf_vel.toFixed(3)}\n水平: ${app.drone.ekf_pos_h.toFixed(3)}\n垂直: ${app.drone.ekf_pos_v.toFixed(3)}\n罗盘: ${app.drone.ekf_compass.toFixed(3)}\n标志: 0x${app.drone.ekf_flags.toString(16).toUpperCase()}`
+  );
+
   function downloadLog() { window.open(apiUrl('/api/log'), '_blank'); }
 </script>
 
@@ -118,6 +144,17 @@
       </span>
 
       <Badge variant="outline" class="font-mono text-[11px]">GPS {app.drone.gps_fix} {app.drone.gps_sats}</Badge>
+
+      <Badge variant={ekfVariant} class="text-[11px]" title={ekfTooltip}>
+        {#if ekfLevel === 'green'}
+          <span class="inline-block w-1.5 h-1.5 rounded-full bg-green-400 mr-0.5"></span>
+        {:else if ekfLevel === 'yellow'}
+          <span class="inline-block w-1.5 h-1.5 rounded-full bg-yellow-400 mr-0.5"></span>
+        {:else}
+          <span class="inline-block w-1.5 h-1.5 rounded-full bg-red-400 mr-0.5 animate-pulse"></span>
+        {/if}
+        {ekfLabel}
+      </Badge>
 
       <span class="{battColor} font-bold tabular-nums">
         {app.drone.voltage.toFixed(1)}V {app.drone.remaining >= 0 ? app.drone.remaining + '%' : ''}

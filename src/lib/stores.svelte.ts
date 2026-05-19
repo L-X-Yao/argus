@@ -24,6 +24,7 @@ class AppState {
   fencePolygon: { lat: number; lon: number }[] = $state([]);
   drawingFence: boolean = $state(false);
   showFence: boolean = $state(false);
+  fenceUploaded: boolean = $state(false);
   showParams: boolean = $state(false);
   showRc: boolean = $state(false);
   showVibe: boolean = $state(false);

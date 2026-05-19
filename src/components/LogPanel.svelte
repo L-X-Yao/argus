@@ -55,11 +55,14 @@
       {#if logState.downloading}
         <div class="mb-3 p-3 bg-muted/50 rounded-lg">
           <div class="flex items-center justify-between mb-2">
-            <span class="text-xs text-foreground">正在下载日志 #{logState.downloadId}...</span>
+            <span class="text-xs text-foreground">
+              下载中... {logState.progress > 0 ? logState.progress + '%' : ''}{logState.downloadSpeed ? ' | ' + logState.downloadSpeed : ''}
+            </span>
             <Button variant="destructive" size="xs" onclick={cancel}>取消</Button>
           </div>
           <div class="h-1.5 bg-muted rounded-full overflow-hidden">
-            <div class="h-full bg-primary rounded-full transition-all duration-300 animate-pulse" style="width:50%"></div>
+            <div class="h-full bg-primary rounded-full transition-all duration-300"
+                 style="width:{logState.progress > 0 ? logState.progress : 5}%"></div>
           </div>
         </div>
       {/if}

@@ -1,7 +1,7 @@
 import type { WSMessage, DroneState, DroneEvent } from './types';
-import { updateState, addEvent, setWsConnected, addToast, loadDownloadedMission } from './stores.svelte';
+import { app, updateState, addEvent, setWsConnected, addToast, loadDownloadedMission } from './stores.svelte';
 import { handleParamBatch, handleParamsComplete } from './paramStore.svelte';
-import { setLogList, completeDownload } from './logStore.svelte';
+import { setLogList, completeDownload, updateDownloadProgress } from './logStore.svelte';
 import { getWsUrl } from './backend';
 
 let socket: WebSocket | null = null;
@@ -30,8 +30,11 @@ export function connectWs(): void {
           addToast('飞控已解锁', 'warn', 5000);
         else if (ev.text.includes('已锁定') && !ev.text.includes('发送'))
           addToast('飞控已锁定', 'success', 4000);
-        else if (ev.text.includes('任务确认') || ev.text.includes('围栏确认'))
+        else if (ev.text.includes('任务确认') || ev.text.includes('围栏确认')) {
           addToast(ev.text, ev.text.includes('成功') ? 'success' : 'error');
+          if (ev.text.includes('围栏确认') && ev.text.includes('成功'))
+            app.fenceUploaded = true;
+        }
         else if (ev.text.includes('已连接'))
           addToast(ev.text, 'success');
         else if (ev.text.includes('已断开'))
@@ -48,6 +51,9 @@ export function connectWs(): void {
       else if (msg.type === 'log_list') {
         setLogList(msg.logs);
         addToast('获取到 ' + msg.logs.length + ' 条机载日志', 'success');
+      }
+      else if (msg.type === 'log_progress') {
+        updateDownloadProgress(msg.received, msg.total);
       }
       else if (msg.type === 'log_complete') {
         completeDownload(msg.id, msg.data, msg.size);

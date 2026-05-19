@@ -319,6 +319,16 @@ def handle_log_data(p: bytes, pl: int, link: DroneLink) -> None:
     if end <= link._log_download_size:
         link._log_download_data[ofs:end] = data
     link._log_download_ofs = end
+    if not hasattr(link, '_log_progress_counter'):
+        link._log_progress_counter = 0
+    link._log_progress_counter += 1
+    if link._log_progress_counter >= 10 and end < link._log_download_size:
+        link._log_progress_counter = 0
+        link._log_messages.append({
+            'type': 'log_progress',
+            'received': end,
+            'total': link._log_download_size,
+        })
     if end >= link._log_download_size:
         import base64
         b64 = base64.b64encode(bytes(link._log_download_data)).decode('ascii')

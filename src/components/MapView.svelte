@@ -381,13 +381,20 @@
     fenceVertMarkers = [];
     if (fencePolyLayer) { map.removeLayer(fencePolyLayer); fencePolyLayer = null; }
     if (app.fencePolygon.length === 0) return;
+    const uploaded = app.fenceUploaded;
     const gcjPts = app.fencePolygon.map(p => toGcj(p.lat, p.lon));
     if (gcjPts.length >= 3) {
       fencePolyLayer = L.polygon(gcjPts, {
-        color: '#f44336', fillColor: '#f44336', fillOpacity: 0.06, weight: 2,
+        color: '#f44336', fillColor: '#f44336',
+        fillOpacity: uploaded ? 0.15 : 0.06,
+        weight: uploaded ? 2.5 : 2,
+        dashArray: uploaded ? undefined : '6,4',
       }).addTo(map);
     } else if (gcjPts.length >= 2) {
-      fencePolyLayer = L.polyline(gcjPts, { color: '#f44336', weight: 2 }).addTo(map);
+      fencePolyLayer = L.polyline(gcjPts, {
+        color: '#f44336', weight: 2,
+        dashArray: uploaded ? undefined : '6,4',
+      }).addTo(map);
     }
     gcjPts.forEach((pt, i) => {
       const cm = L.circleMarker(pt, {
