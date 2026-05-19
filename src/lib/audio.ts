@@ -34,8 +34,10 @@ export function speak(text: string) {
 }
 
 let prevArmed = false;
+let prevConnected = false;
 let prevBatLow = false;
 let linkLostBeepT = 0;
+let linkLostSpoken = false;
 
 export function checkAlerts(connected: boolean, armed: boolean, remaining: number, linkAge: number) {
   if (armed && !prevArmed) {
@@ -48,6 +50,12 @@ export function checkAlerts(connected: boolean, armed: boolean, remaining: numbe
   }
   prevArmed = armed;
 
+  if (!connected && prevConnected) {
+    beep(200, 1000, 3, 200);
+    speak('飞控连接已断开');
+  }
+  prevConnected = connected;
+
   const batLow = remaining >= 0 && remaining < 20;
   if (batLow && !prevBatLow) {
     beep(300, 500, 3, 200);
@@ -58,5 +66,7 @@ export function checkAlerts(connected: boolean, armed: boolean, remaining: numbe
   if (connected && linkAge > 3 && Date.now() - linkLostBeepT > 5000) {
     beep(200, 800, 1);
     linkLostBeepT = Date.now();
+    if (!linkLostSpoken) { speak('链路延迟过高'); linkLostSpoken = true; }
   }
+  if (connected && linkAge >= 0 && linkAge < 2) linkLostSpoken = false;
 }
