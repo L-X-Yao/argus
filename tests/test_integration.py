@@ -538,3 +538,147 @@ class TestMissionDownload:
                 await asyncio.sleep(0.5)
                 await ws.close()
         asyncio.get_event_loop().run_until_complete(run())
+
+
+class TestDataStreams:
+    def test_rc_channels_in_state(self, ws_url, sim_port):
+        async def run():
+            await asyncio.sleep(1)
+            ws = await ws_connect(ws_url)
+            try:
+                await ensure_connected(ws, ws_url, sim_port, timeout=20)
+                state = await recv_until(
+                    ws, lambda m: (m.get('type') == 'state' and
+                                   len(m.get('rc', [])) >= 4 and
+                                   m['rc'][0] > 0),
+                    timeout=15,
+                )
+                assert len(state['rc']) >= 8
+                assert 1000 <= state['rc'][0] <= 2000
+                assert 'rc_rssi' in state
+            finally:
+                await ws.send(json.dumps({'type': 'disconnect'}))
+                await asyncio.sleep(0.5)
+                await ws.close()
+        asyncio.get_event_loop().run_until_complete(run())
+
+    def test_vibration_in_state(self, ws_url, sim_port):
+        async def run():
+            await asyncio.sleep(1)
+            ws = await ws_connect(ws_url)
+            try:
+                await ensure_connected(ws, ws_url, sim_port, timeout=20)
+                state = await recv_until(
+                    ws, lambda m: (m.get('type') == 'state' and
+                                   len(m.get('vibe', [])) == 3 and
+                                   m['vibe'][0] > 0),
+                    timeout=15,
+                )
+                assert state['vibe'][0] > 0
+                assert state['vibe'][1] > 0
+                assert state['vibe'][2] > 0
+                assert len(state['vibe_clip']) == 3
+            finally:
+                await ws.send(json.dumps({'type': 'disconnect'}))
+                await asyncio.sleep(0.5)
+                await ws.close()
+        asyncio.get_event_loop().run_until_complete(run())
+
+    def test_servo_output_in_state(self, ws_url, sim_port):
+        async def run():
+            await asyncio.sleep(1)
+            ws = await ws_connect(ws_url)
+            try:
+                await ensure_connected(ws, ws_url, sim_port, timeout=20)
+                state = await recv_until(
+                    ws, lambda m: (m.get('type') == 'state' and
+                                   len(m.get('servo', [])) >= 4 and
+                                   m['servo'][0] > 0),
+                    timeout=15,
+                )
+                assert len(state['servo']) >= 8
+            finally:
+                await ws.send(json.dumps({'type': 'disconnect'}))
+                await asyncio.sleep(0.5)
+                await ws.close()
+        asyncio.get_event_loop().run_until_complete(run())
+
+
+class TestMissionAdvanced:
+    def test_upload_with_speed_roundtrip(self, ws_url, sim_port):
+        async def run():
+            await asyncio.sleep(2)
+            ws = await ws_connect(ws_url)
+            try:
+                await ensure_connected(ws, ws_url, sim_port, timeout=20)
+                await asyncio.sleep(1)
+                waypoints = [
+                    {'lat': 34.259, 'lon': 108.943, 'alt': 50, 'drop': False,
+                     'delay': 0, 'speed': 8.0, 'type': 'wp', 'loiter_param': 0},
+                    {'lat': 34.260, 'lon': 108.944, 'alt': 60, 'drop': False,
+                     'delay': 0, 'speed': 0, 'type': 'wp', 'loiter_param': 0},
+                ]
+                await ws.send(json.dumps({
+                    'type': 'command', 'cmd': 'mission_upload',
+                    'waypoints': waypoints, 'takeoff_alt': 30,
+                }))
+                await recv_until(
+                    ws, lambda m: m.get('type') == 'event' and '任务确认' in m.get('text', '') and '成功' in m.get('text', ''),
+                    timeout=15,
+                )
+                await asyncio.sleep(0.5)
+                await ws.send(json.dumps({
+                    'type': 'command', 'cmd': 'mission_download',
+                }))
+                dl = await recv_until(
+                    ws, lambda m: m.get('type') == 'mission_downloaded',
+                    timeout=15,
+                )
+                assert len(dl['waypoints']) == 2
+                assert abs(dl['waypoints'][0]['speed'] - 8.0) < 0.1
+                assert dl['waypoints'][1]['speed'] == 0
+            finally:
+                await ws.send(json.dumps({'type': 'disconnect'}))
+                await asyncio.sleep(0.5)
+                await ws.close()
+        asyncio.get_event_loop().run_until_complete(run())
+
+    def test_upload_with_loiter_roundtrip(self, ws_url, sim_port):
+        async def run():
+            await asyncio.sleep(2)
+            ws = await ws_connect(ws_url)
+            try:
+                await ensure_connected(ws, ws_url, sim_port, timeout=20)
+                await asyncio.sleep(1)
+                waypoints = [
+                    {'lat': 34.259, 'lon': 108.943, 'alt': 50, 'drop': False,
+                     'delay': 0, 'speed': 0, 'type': 'loiter_turns', 'loiter_param': 3},
+                    {'lat': 34.260, 'lon': 108.944, 'alt': 60, 'drop': False,
+                     'delay': 0, 'speed': 0, 'type': 'loiter_time', 'loiter_param': 15},
+                ]
+                await ws.send(json.dumps({
+                    'type': 'command', 'cmd': 'mission_upload',
+                    'waypoints': waypoints, 'takeoff_alt': 30,
+                }))
+                await recv_until(
+                    ws, lambda m: m.get('type') == 'event' and '任务确认' in m.get('text', '') and '成功' in m.get('text', ''),
+                    timeout=15,
+                )
+                await asyncio.sleep(0.5)
+                await ws.send(json.dumps({
+                    'type': 'command', 'cmd': 'mission_download',
+                }))
+                dl = await recv_until(
+                    ws, lambda m: m.get('type') == 'mission_downloaded',
+                    timeout=15,
+                )
+                assert len(dl['waypoints']) == 2
+                assert dl['waypoints'][0]['type'] == 'loiter_turns'
+                assert abs(dl['waypoints'][0]['loiter_param'] - 3) < 0.1
+                assert dl['waypoints'][1]['type'] == 'loiter_time'
+                assert abs(dl['waypoints'][1]['loiter_param'] - 15) < 0.1
+            finally:
+                await ws.send(json.dumps({'type': 'disconnect'}))
+                await asyncio.sleep(0.5)
+                await ws.close()
+        asyncio.get_event_loop().run_until_complete(run())
