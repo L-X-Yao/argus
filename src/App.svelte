@@ -16,6 +16,7 @@
   import ToastContainer from './components/ToastContainer.svelte';
   import PreflightPanel from './components/PreflightPanel.svelte';
   import MissionProgress from './components/MissionProgress.svelte';
+  import ReplayPanel from './components/ReplayPanel.svelte';
 
   let showSettings = $state(false);
 
@@ -75,6 +76,9 @@
     {/if}
     <EventLog />
     <ChartPanel />
+    {#if !app.drone.connected}
+      <ReplayPanel onposition={(lat, lon, yaw) => app.replayPos = { lat, lon, yaw }} />
+    {/if}
   {/if}
   <ToastContainer />
   {#if app.summaryShown && app.drone.flight_summary}

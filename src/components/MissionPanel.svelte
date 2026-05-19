@@ -1,10 +1,24 @@
 <script lang="ts">
-  import { app, pushUndo, deleteWaypoint, clearWaypoints, saveSettings } from '../lib/stores.svelte';
+  import { app, pushUndo, deleteWaypoint, clearWaypoints, saveSettings, saveWaypoints, generateCircle } from '../lib/stores.svelte';
   import { sendCommand } from '../lib/ws';
   import { toGcj } from '../lib/gcj02';
 
-  function toggleDrop(i: number) { pushUndo(); app.waypoints[i].drop = !app.waypoints[i].drop; }
-  function setAlt(i: number, v: string) { app.waypoints[i].alt = parseFloat(v) || 30; saveSettings(); }
+  let showCircleGen = $state(false);
+  let circleRadius = $state(50);
+  let circleCount = $state(12);
+
+  function genCircle() {
+    const center = app.drone.lat !== 0
+      ? { lat: app.drone.lat, lon: app.drone.lon }
+      : app.waypoints.length > 0
+        ? { lat: app.waypoints[app.waypoints.length - 1].lat, lon: app.waypoints[app.waypoints.length - 1].lon }
+        : { lat: 34.258, lon: 108.942 };
+    generateCircle(center.lat, center.lon, circleRadius, circleCount, app.defaultAlt);
+    showCircleGen = false;
+  }
+
+  function toggleDrop(i: number) { pushUndo(); app.waypoints[i].drop = !app.waypoints[i].drop; saveWaypoints(); }
+  function setAlt(i: number, v: string) { app.waypoints[i].alt = parseFloat(v) || 30; saveWaypoints(); saveSettings(); }
   function applyAltAll() { pushUndo(); app.waypoints.forEach(w => w.alt = app.defaultAlt); }
   function reverseRoute() { if (!app.waypoints.length) return; pushUndo(); app.waypoints.reverse(); }
   function moveWp(i: number, dir: number) {
@@ -237,8 +251,19 @@
     <button class="btn-sm" onclick={exportKml}>导出</button>
     <button class="btn-sm" onclick={importKml}>导入</button>
     <button class="btn-sm" onclick={reverseRoute}>反转</button>
+    <button class="btn-sm" onclick={() => showCircleGen = !showCircleGen}>圆形</button>
     <button class="btn-sm warn" onclick={clearWaypoints}>清除</button>
   </div>
+  {#if showCircleGen}
+    <div class="circle-gen">
+      <label for="cr">半径:</label>
+      <input id="cr" type="number" bind:value={circleRadius} min="10" max="2000" step="10" />
+      <label>m</label>
+      <label for="cc">点数:</label>
+      <input id="cc" type="number" bind:value={circleCount} min="4" max="72" step="1" />
+      <button class="btn-sm" style="background:#1565c0" onclick={genCircle}>生成</button>
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -269,4 +294,7 @@
   .btn-fly { padding:4px 10px; border-radius:3px; border:none; cursor:pointer; font-size:12px; color:white; background:#2e7d32; font-weight:bold; }
   .profile { margin-top:6px; }
   .profile canvas { width:100%; background:var(--bg-card); border-radius:4px; }
+  .circle-gen { display:flex; gap:4px; align-items:center; margin-top:6px; padding:6px; background:var(--bg-card); border-radius:4px; flex-wrap:wrap; }
+  .circle-gen input { width:50px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-light); padding:3px 4px; border-radius:3px; font-size:12px; }
+  .circle-gen label { font-size:11px; color:var(--text-dim); }
 </style>

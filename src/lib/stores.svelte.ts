@@ -17,6 +17,7 @@ class AppState {
   summaryShown: boolean = $state(false);
   toasts: Toast[] = $state([]);
   guidedMode: boolean = $state(false);
+  replayPos: { lat: number; lon: number; yaw: number } | null = $state(null);
 }
 
 export const app = new AppState();
@@ -53,16 +54,19 @@ export function undo() {
 export function addWaypoint(wp: Waypoint) {
   pushUndo();
   app.waypoints.push(wp);
+  saveWaypoints();
 }
 
 export function deleteWaypoint(i: number) {
   pushUndo();
   app.waypoints.splice(i, 1);
+  saveWaypoints();
 }
 
 export function clearWaypoints() {
   pushUndo();
   app.waypoints = [];
+  saveWaypoints();
 }
 
 export function loadSettings() {
@@ -72,6 +76,10 @@ export function loadSettings() {
     if (s.radius) app.geoRadius = s.radius;
     if (s.dark !== undefined) app.darkTheme = s.dark;
     if (s.muted !== undefined) app.audioMuted = s.muted;
+  } catch {}
+  try {
+    const wps = JSON.parse(localStorage.getItem('pllink_v3_waypoints') || '[]');
+    if (Array.isArray(wps) && wps.length > 0) app.waypoints = wps;
   } catch {}
 }
 
@@ -84,6 +92,25 @@ export function saveSettings() {
       muted: app.audioMuted,
     }));
   } catch {}
+}
+
+export function saveWaypoints() {
+  try {
+    localStorage.setItem('pllink_v3_waypoints', JSON.stringify(app.waypoints));
+  } catch {}
+}
+
+export function generateCircle(centerLat: number, centerLon: number, radius: number, count: number, alt: number) {
+  pushUndo();
+  const pts: Waypoint[] = [];
+  for (let i = 0; i < count; i++) {
+    const angle = (i / count) * 2 * Math.PI;
+    const dlat = radius * Math.cos(angle) / 111320;
+    const dlon = radius * Math.sin(angle) / (111320 * Math.cos(centerLat * Math.PI / 180));
+    pts.push({ lat: centerLat + dlat, lon: centerLon + dlon, alt, drop: false, delay: 0 });
+  }
+  app.waypoints = [...app.waypoints, ...pts];
+  saveWaypoints();
 }
 
 let _toastId = 0;

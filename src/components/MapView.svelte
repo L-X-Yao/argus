@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { app, addWaypoint, addToast } from '../lib/stores.svelte';
+  import { app, addWaypoint, addToast, saveWaypoints } from '../lib/stores.svelte';
   import { sendCommand } from '../lib/ws';
   import { toGcj } from '../lib/gcj02';
   import MapControls from './MapControls.svelte';
@@ -30,6 +30,9 @@
   let measureLine: any = null;
   let measureLabel: any = null;
   let wpPopup: any = null;
+  let replayMarker: any = null;
+  let replayTrail: [number, number][] = [];
+  let replayTrailLine: any = null;
 
   const SAT_URL = '/api/tile/6/{z}/{x}/{y}';
   const LABEL_URL = '/api/tile/8/{z}/{x}/{y}';
@@ -266,6 +269,7 @@
         const [wlat, wlon] = toWgsFromGcj(ll.lat, ll.lng);
         app.waypoints[i].lat = wlat;
         app.waypoints[i].lon = wlon;
+        saveWaypoints();
       });
       m.on('click', (e: any) => {
         e.originalEvent?.stopPropagation();
@@ -290,6 +294,36 @@
       const [hlat, hlon] = toGcj(app.drone.home_lat, app.drone.home_lon);
       geoCircle = L.circle([hlat, hlon], { radius: app.geoRadius, color: '#f44336', fill: false, dashArray: '8,4', weight: 1 }).addTo(map);
     }
+  });
+
+  // Replay position rendering
+  $effect(() => {
+    if (!map) return;
+    const rp = app.replayPos;
+    if (!rp) {
+      if (replayMarker) { map.removeLayer(replayMarker); replayMarker = null; }
+      if (replayTrailLine) { map.removeLayer(replayTrailLine); replayTrailLine = null; }
+      replayTrail = [];
+      return;
+    }
+    const [glat, glon] = toGcj(rp.lat, rp.lon);
+    if (!replayMarker) {
+      const icon = L.divIcon({
+        className: '',
+        html: `<div class="drone-arrow" style="transform:rotate(${rp.yaw}deg)"><svg viewBox="-12 -12 24 24" width="28" height="28"><polygon points="0,-10 -7,8 0,4 7,8" fill="#ffa726" stroke="white" stroke-width="1"/></svg></div>`,
+        iconSize: [28, 28], iconAnchor: [14, 14],
+      });
+      replayMarker = L.marker([glat, glon], { icon, zIndexOffset: 900 }).addTo(map);
+    } else {
+      replayMarker.setLatLng([glat, glon]);
+      const el = replayMarker.getElement();
+      if (el) { const a = el.querySelector('.drone-arrow'); if (a) a.style.transform = `rotate(${rp.yaw}deg)`; }
+    }
+    replayTrail.push([glat, glon]);
+    if (replayTrail.length > 3000) replayTrail.splice(0, replayTrail.length - 2000);
+    if (replayTrailLine) map.removeLayer(replayTrailLine);
+    replayTrailLine = L.polyline(replayTrail, { color: '#ffa726', weight: 2, opacity: 0.6 }).addTo(map);
+    if (follow) map.setView([glat, glon], map.getZoom());
   });
 
   function fmtTime(s: number): string {
