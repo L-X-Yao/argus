@@ -14,6 +14,7 @@ from .constants import COPTER_MODES, PLANE_MODES, COPTER_BTNS, PLANE_BTNS, FIX_N
 from . import mavlink_dispatch
 from .mavlink_handlers import init_handlers
 from . import commands as cmd_module
+from .param_manager import ParamManager
 
 
 class TcpWrapper:
@@ -81,6 +82,7 @@ class DroneLink:
         self._mission_pending = False
         self._seq_to_wp: dict[int, int] = {}
         self.flight_summary = None
+        self.param_mgr = ParamManager(self)
 
     def is_plane(self) -> bool:
         if self.force_plane is not None:
@@ -209,6 +211,7 @@ class DroneLink:
             'parse_errors': self._parse_errors,
             'flight_summary': self.flight_summary,
             'log_active': self._logfile is not None,
+            **self.param_mgr.get_status(),
         }
 
     def _start_log(self) -> None:

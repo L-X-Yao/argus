@@ -364,3 +364,88 @@ class TestMission:
                 await asyncio.sleep(0.5)
                 await ws.close()
         asyncio.get_event_loop().run_until_complete(run())
+
+
+class TestParams:
+    def test_param_request_all(self, ws_url, sim_port):
+        async def run():
+            await asyncio.sleep(1)
+            ws = await ws_connect(ws_url)
+            try:
+                await ensure_connected(ws, ws_url, sim_port, timeout=20)
+                await asyncio.sleep(0.5)
+                await ws.send(json.dumps({
+                    'type': 'command', 'cmd': 'param_request_all',
+                }))
+                batch = await recv_until(
+                    ws, lambda m: m.get('type') == 'param_batch',
+                    timeout=15,
+                )
+                assert 'params' in batch
+                assert len(batch['params']) > 0
+                p0 = batch['params'][0]
+                assert 'name' in p0
+                assert 'value' in p0
+                assert p0['total'] > 10
+            finally:
+                await ws.send(json.dumps({'type': 'disconnect'}))
+                await asyncio.sleep(0.5)
+                await ws.close()
+        asyncio.get_event_loop().run_until_complete(run())
+
+    def test_param_set(self, ws_url, sim_port):
+        async def run():
+            await asyncio.sleep(1)
+            ws = await ws_connect(ws_url)
+            try:
+                await ensure_connected(ws, ws_url, sim_port, timeout=20)
+                await asyncio.sleep(0.5)
+                await ws.send(json.dumps({
+                    'type': 'command', 'cmd': 'param_request_all',
+                }))
+                await recv_until(
+                    ws, lambda m: m.get('type') == 'params_complete',
+                    timeout=15,
+                )
+                await ws.send(json.dumps({
+                    'type': 'command', 'cmd': 'param_set',
+                    'name': 'BATT_CAPACITY', 'value': 9999,
+                }))
+                batch = await recv_until(
+                    ws, lambda m: (m.get('type') == 'param_batch' and
+                                   any(p.get('name') == 'BATT_CAPACITY' and
+                                       abs(p.get('value', 0) - 9999) < 1
+                                       for p in m.get('params', []))),
+                    timeout=10,
+                )
+                updated = [p for p in batch['params']
+                           if p['name'] == 'BATT_CAPACITY'][0]
+                assert abs(updated['value'] - 9999) < 1
+            finally:
+                await ws.send(json.dumps({'type': 'disconnect'}))
+                await asyncio.sleep(0.5)
+                await ws.close()
+        asyncio.get_event_loop().run_until_complete(run())
+
+    def test_param_state_in_telemetry(self, ws_url, sim_port):
+        async def run():
+            await asyncio.sleep(1)
+            ws = await ws_connect(ws_url)
+            try:
+                await ensure_connected(ws, ws_url, sim_port, timeout=20)
+                await asyncio.sleep(0.5)
+                await ws.send(json.dumps({
+                    'type': 'command', 'cmd': 'param_request_all',
+                }))
+                state = await recv_until(
+                    ws, lambda m: (m.get('type') == 'state' and
+                                   m.get('param_total', -1) > 0),
+                    timeout=15,
+                )
+                assert state['param_total'] > 10
+                assert state['param_count'] >= 0
+            finally:
+                await ws.send(json.dumps({'type': 'disconnect'}))
+                await asyncio.sleep(0.5)
+                await ws.close()
+        asyncio.get_event_loop().run_until_complete(run())

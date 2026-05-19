@@ -155,6 +155,10 @@ def handle_statustext(p: bytes, pl: int, link: DroneLink) -> None:
         link.add_event('飞控: %s' % text)
 
 
+def handle_param_value(p: bytes, pl: int, link: DroneLink) -> None:
+    link.param_mgr.handle_param_value(p, pl)
+
+
 def handle_mission_request(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 2 or not link._mission_pending:
         return
@@ -184,6 +188,7 @@ def init_handlers() -> None:
     mavlink_dispatch.register(46, handle_mission_item_reached)
     mavlink_dispatch.register(77, handle_command_ack)
     mavlink_dispatch.register(253, handle_statustext)
+    mavlink_dispatch.register(22, handle_param_value)
     mavlink_dispatch.register(40, handle_mission_request)
     mavlink_dispatch.register(51, handle_mission_request)
     mavlink_dispatch.register(47, handle_mission_ack)

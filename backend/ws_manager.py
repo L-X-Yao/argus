@@ -62,6 +62,7 @@ class WSManager:
 
     async def _push_loop(self, ws: WebSocket) -> None:
         event_cursor = len(self.link.events)
+        param_cursor = len(self.link.param_mgr._messages)
         while True:
             state = self.link.get_state()
             await ws.send_text(json.dumps(state))
@@ -76,5 +77,19 @@ class WSManager:
                         'text': ev['text'],
                     }))
                 event_cursor = len(events)
+            pmsg = self.link.param_mgr._messages
+            if param_cursor > len(pmsg):
+                param_cursor = 0
+            if len(pmsg) > param_cursor:
+                batch = pmsg[param_cursor:]
+                pvals = [m for m in batch if m['type'] == 'param_value']
+                others = [m for m in batch if m['type'] != 'param_value']
+                if pvals:
+                    await ws.send_text(json.dumps({
+                        'type': 'param_batch', 'params': pvals,
+                    }))
+                for msg in others:
+                    await ws.send_text(json.dumps(msg))
+                param_cursor = len(pmsg)
             interval = 0.2 if self.link.connected else 1.0
             await asyncio.sleep(interval)

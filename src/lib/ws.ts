@@ -1,5 +1,6 @@
 import type { WSMessage, DroneState, DroneEvent } from './types';
 import { updateState, addEvent, setWsConnected, addToast } from './stores.svelte';
+import { handleParamBatch, handleParamsComplete } from './paramStore.svelte';
 
 let socket: WebSocket | null = null;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -42,6 +43,8 @@ export function connectWs(): void {
         else if (ev.text.includes('低电量') || ev.text.includes('电量极低'))
           addToast(ev.text, 'error', 8000);
       }
+      else if (msg.type === 'param_batch') handleParamBatch(msg.params);
+      else if (msg.type === 'params_complete') handleParamsComplete();
     } catch {}
   };
 

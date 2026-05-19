@@ -19,8 +19,10 @@
   import ReplayPanel from './components/ReplayPanel.svelte';
   import SurveyPanel from './components/SurveyPanel.svelte';
   import FencePanel from './components/FencePanel.svelte';
+  import ParamPanel from './components/ParamPanel.svelte';
 
   let showSettings = $state(false);
+  let showParams = $state(false);
 
   onMount(() => {
     loadSettings();
@@ -47,6 +49,7 @@
     else if (k === 'l') { app.darkTheme = !app.darkTheme; saveSettings(); }
     else if (k === 'm') app.mapExpanded = !app.mapExpanded;
     else if (k === 'c') app.chartsOpen = !app.chartsOpen;
+    else if (k === 'p') showParams = !showParams;
     else if (k === 's' && e.ctrlKey) { e.preventDefault(); showSettings = !showSettings; }
     else if (k === 'f' && !e.ctrlKey) {
       if (document.fullscreenElement) document.exitFullscreen();
@@ -82,6 +85,9 @@
   {#if app.showFence}
     <FencePanel />
   {/if}
+  {#if showParams}
+    <ParamPanel />
+  {/if}
   {#if !app.mapExpanded}
     {#if app.drone.connected && !app.drone.armed}
       <PreflightPanel />
@@ -100,7 +106,7 @@
     <SettingsPanel onclose={() => showSettings = false} />
   {/if}
 </div>
-<div class="shortcut-bar"><kbd>Space</kbd> 悬停 <kbd>R</kbd> 返航 <kbd>A</kbd> 解锁 <kbd>D</kbd> 锁定 <kbd>G</kbd> 引导 <kbd>M</kbd> 展开 <kbd>C</kbd> 图表 <kbd>Esc</kbd> 取消 <kbd>1-9</kbd> 模式</div>
+<div class="shortcut-bar"><kbd>Space</kbd> 悬停 <kbd>R</kbd> 返航 <kbd>A</kbd> 解锁 <kbd>D</kbd> 锁定 <kbd>G</kbd> 引导 <kbd>M</kbd> 展开 <kbd>C</kbd> 图表 <kbd>P</kbd> 参数 <kbd>Esc</kbd> 取消 <kbd>1-9</kbd> 模式</div>
 
 <style>
   :global(body) { margin:0; padding:0; font-family:'Segoe UI',Consolas,monospace; background:var(--bg-body); color:var(--text-main); }

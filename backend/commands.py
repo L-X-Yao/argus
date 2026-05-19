@@ -74,6 +74,21 @@ def execute(cmd: str, param, link: DroneLink, data: dict | None = None) -> dict 
         link.send(bm(84, p, link.sq, 5))
     elif cmd == 'clear_summary':
         link.flight_summary = None
+    elif cmd == 'param_request_all':
+        link.param_mgr.request_all()
+    elif cmd == 'param_set':
+        name = data.get('name', '')
+        value = float(data.get('value', 0))
+        if name:
+            link.param_mgr.set_param(name, value)
+    elif cmd == 'param_save':
+        path = link.param_mgr.save_to_file()
+        return {'ok': True, 'path': path}
+    elif cmd == 'param_load':
+        path = data.get('path', '')
+        if path:
+            changed = link.param_mgr.load_from_file(path)
+            return {'ok': True, 'changed': changed}
     return None
 
 
