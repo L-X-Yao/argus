@@ -92,7 +92,7 @@
   function downloadLog() { window.open(apiUrl('/api/log'), '_blank'); }
 </script>
 
-<header class="flex items-center justify-between gap-3 px-3 py-1.5 bg-card border-b-2 border-border shrink-0">
+<header class="flex items-center justify-between gap-3 px-3 py-1.5 bg-card border-b-2 border-border shrink-0 min-w-0 overflow-x-auto scrollbar-hide">
   <div class="flex items-center gap-2">
     <span class="text-sm font-bold text-primary tracking-wider">PL-Link</span>
 

@@ -97,7 +97,7 @@
 <div class="flex flex-col h-screen overflow-hidden">
   <StatusBar {toggleTheme} onSettings={() => app.showSettings = !app.showSettings} />
 
-  <nav class="flex items-center gap-1 px-3 py-1 bg-card border-b border-border shrink-0">
+  <nav class="flex items-center gap-1 px-3 py-1 bg-card border-b border-border shrink-0 overflow-x-auto scrollbar-hide">
     {#each tabs as tab}
       <button
         class="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold tracking-wide uppercase rounded-md transition-all
@@ -112,7 +112,7 @@
     {/each}
 
     {#if app.drone.connected}
-      <div class="ml-auto flex items-center gap-1.5">
+      <div class="ml-auto flex items-center gap-1.5 shrink-0">
         <Button size="sm" class="bg-red-600 hover:bg-red-700 text-white font-bold gap-1"
                 onclick={() => { if (confirm('切换到返航模式？')) sendCommand('rtl'); }}>
           <CornerDownLeft size={13} />返航
