@@ -9,17 +9,35 @@
     filter ? app.events.filter(e => e.text.includes(filter) || e.time.includes(filter)) : app.events
   );
 
-  function severity(text: string): string {
+  type SevLevel = 'critical' | 'error' | 'warn' | 'ok' | 'info';
+
+  function severity(text: string): SevLevel {
     if (text.includes('!!!') || text.includes('失控') || text.includes('碰撞') || text.includes('紧急'))
-      return 'bg-destructive/15 text-destructive';
+      return 'critical';
     if (text.includes('失败') || text.includes('异常') || text.includes('丢失') || text.includes('极低'))
-      return 'bg-destructive/8 text-red-300';
+      return 'error';
     if (text.includes('警告') || text.includes('低电') || text.includes('未校准') || text.includes('链路'))
-      return 'text-warning';
+      return 'warn';
     if (text.includes('成功') || text.includes('就绪') || text.includes('已连接') || text.includes('已解锁'))
-      return 'text-success';
-    return '';
+      return 'ok';
+    return 'info';
   }
+
+  const sevStyle: Record<SevLevel, string> = {
+    critical: 'bg-destructive/15 text-destructive',
+    error: 'bg-destructive/8 text-red-300',
+    warn: 'text-warning',
+    ok: 'text-success',
+    info: '',
+  };
+
+  const sevDot: Record<SevLevel, string> = {
+    critical: 'bg-red-500',
+    error: 'bg-red-400',
+    warn: 'bg-yellow-500',
+    ok: 'bg-green-500',
+    info: 'bg-muted-foreground/30',
+  };
 
   function exportLog() {
     if (!app.events.length) return;
@@ -50,8 +68,11 @@
   </div>
   <div bind:this={logEl} class="bg-background rounded-lg p-2 h-24 overflow-y-auto text-xs font-mono">
     {#each filtered as ev}
-      <div class="py-0.5 px-1 border-b border-border/50 rounded {severity(ev.text)}">
-        <span class="text-muted-foreground">{ev.time}</span> {ev.text}
+      {@const sev = severity(ev.text)}
+      <div class="flex items-start gap-1.5 py-0.5 px-1 border-b border-border/50 rounded {sevStyle[sev]}">
+        <span class="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 {sevDot[sev]}"></span>
+        <span class="text-muted-foreground shrink-0">{ev.time}</span>
+        <span class="min-w-0">{ev.text}</span>
       </div>
     {:else}
       <div class="text-muted-foreground text-center py-3">暂无事件</div>
