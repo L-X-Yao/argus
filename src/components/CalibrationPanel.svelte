@@ -247,121 +247,68 @@
           <div class="grid grid-cols-3 gap-2 mb-3">
             {#each accelOrients as orient (orient.id)}
               {@const st = accelSteps[orient.id]}
+              {@const c = st === 'done' ? '#22c55e' : st === 'active' ? '#3b82f6' : '#6b7280'}
+              {@const c2 = st === 'done' ? '#16a34a' : st === 'active' ? '#2563eb' : '#4b5563'}
               <div class="flex flex-col items-center p-2 rounded-lg border-2 transition-all
                 {st === 'done'   ? 'border-green-500/60 bg-green-500/5' :
                  st === 'active' ? 'border-primary/60 bg-primary/5 cal-active-border' :
                                    'border-border/50 bg-muted/20'}">
-
-                <!-- SVG illustration -->
                 <div class="w-[60px] h-[60px] flex items-center justify-center mb-1.5">
-                  {#if orient.id === 'level'}
-                    <!-- Top-down view, flat -->
-                    <svg viewBox="0 0 60 60" class="w-full h-full">
-                      <rect x="22" y="22" width="16" height="16" rx="2"
-                            fill="{st === 'done' ? '#22c55e' : st === 'active' ? 'hsl(211,100%,50%)' : '#6b7280'}" opacity="0.8"/>
-                      <line x1="22" y1="22" x2="10" y2="10" stroke="{st === 'done' ? '#22c55e' : st === 'active' ? 'hsl(211,100%,50%)' : '#6b7280'}" stroke-width="2" stroke-linecap="round"/>
-                      <line x1="38" y1="22" x2="50" y2="10" stroke="{st === 'done' ? '#22c55e' : st === 'active' ? 'hsl(211,100%,50%)' : '#6b7280'}" stroke-width="2" stroke-linecap="round"/>
-                      <line x1="22" y1="38" x2="10" y2="50" stroke="{st === 'done' ? '#22c55e' : st === 'active' ? 'hsl(211,100%,50%)' : '#6b7280'}" stroke-width="2" stroke-linecap="round"/>
-                      <line x1="38" y1="38" x2="50" y2="50" stroke="{st === 'done' ? '#22c55e' : st === 'active' ? 'hsl(211,100%,50%)' : '#6b7280'}" stroke-width="2" stroke-linecap="round"/>
-                      <circle cx="10" cy="10" r="5" fill="{st === 'done' ? '#22c55e' : st === 'active' ? 'hsl(211,100%,50%)' : '#6b7280'}" opacity="0.6"/>
-                      <circle cx="50" cy="10" r="5" fill="{st === 'done' ? '#22c55e' : st === 'active' ? 'hsl(211,100%,50%)' : '#6b7280'}" opacity="0.6"/>
-                      <circle cx="10" cy="50" r="5" fill="{st === 'done' ? '#22c55e' : st === 'active' ? 'hsl(211,100%,50%)' : '#6b7280'}" opacity="0.6"/>
-                      <circle cx="50" cy="50" r="5" fill="{st === 'done' ? '#22c55e' : st === 'active' ? 'hsl(211,100%,50%)' : '#6b7280'}" opacity="0.6"/>
-                      <!-- Arrow indicating front -->
-                      <polygon points="30,16 27,22 33,22" fill="{st === 'done' ? '#22c55e' : st === 'active' ? 'hsl(211,100%,50%)' : '#6b7280'}" opacity="0.9"/>
-                    </svg>
-
-                  {:else if orient.id === 'nose_up'}
-                    <!-- Side view, tilted back (nose pointing up) -->
-                    <svg viewBox="0 0 60 60" class="w-full h-full">
-                      <g transform="rotate(-80, 30, 40)">
-                        <rect x="18" y="34" width="24" height="10" rx="2"
-                              fill="{st === 'done' ? '#22c55e' : st === 'active' ? 'hsl(211,100%,50%)' : '#6b7280'}" opacity="0.8"/>
-                        <line x1="18" y1="39" x2="8" y2="39" stroke="{st === 'done' ? '#22c55e' : st === 'active' ? 'hsl(211,100%,50%)' : '#6b7280'}" stroke-width="2" stroke-linecap="round"/>
-                        <line x1="42" y1="39" x2="52" y2="39" stroke="{st === 'done' ? '#22c55e' : st === 'active' ? 'hsl(211,100%,50%)' : '#6b7280'}" stroke-width="2" stroke-linecap="round"/>
-                        <circle cx="8" cy="39" r="4" fill="{st === 'done' ? '#22c55e' : st === 'active' ? 'hsl(211,100%,50%)' : '#6b7280'}" opacity="0.6"/>
-                        <circle cx="52" cy="39" r="4" fill="{st === 'done' ? '#22c55e' : st === 'active' ? 'hsl(211,100%,50%)' : '#6b7280'}" opacity="0.6"/>
-                        <polygon points="42,34 42,44 50,39" fill="{st === 'done' ? '#22c55e' : st === 'active' ? 'hsl(211,100%,50%)' : '#6b7280'}" opacity="0.5"/>
+                  <svg viewBox="0 0 60 60" class="w-full h-full">
+                    <line x1="5" y1="54" x2="55" y2="54" stroke="#6b7280" stroke-width="0.8" stroke-dasharray="3,3" opacity="0.3"/>
+                    {#if orient.id === 'level'}
+                      <!-- Side view: flat on ground -->
+                      <rect x="15" y="30" width="30" height="6" rx="2" fill={c} opacity="0.85"/>
+                      <circle cx="15" cy="33" r="3.5" fill={c2} opacity="0.5"/>
+                      <circle cx="45" cy="33" r="3.5" fill={c2} opacity="0.5"/>
+                      <polygon points="45,30 49,33 45,36" fill={c} opacity="0.5"/>
+                      <text x="30" y="26" text-anchor="middle" fill={c} font-size="7" font-weight="bold" opacity="0.6">▼ 机头</text>
+                    {:else if orient.id === 'nose_up'}
+                      <!-- Side view: tilted 45° nose up, tail touching ground -->
+                      <g transform="rotate(-40, 38, 48)">
+                        <rect x="14" y="45" width="30" height="6" rx="2" fill={c} opacity="0.85"/>
+                        <circle cx="14" cy="48" r="3.5" fill={c2} opacity="0.5"/>
+                        <circle cx="44" cy="48" r="3.5" fill={c2} opacity="0.5"/>
+                        <polygon points="44,45 48,48 44,51" fill={c} opacity="0.5"/>
                       </g>
-                      <!-- Ground line -->
-                      <line x1="5" y1="55" x2="55" y2="55" stroke="#6b7280" stroke-width="1" stroke-dasharray="3,3" opacity="0.4"/>
-                      <!-- Up arrow -->
-                      <polygon points="30,5 27,11 33,11" fill="{st === 'done' ? '#22c55e' : st === 'active' ? 'hsl(211,100%,50%)' : '#9ca3af'}" opacity="0.7"/>
-                      <line x1="30" y1="11" x2="30" y2="18" stroke="{st === 'done' ? '#22c55e' : st === 'active' ? 'hsl(211,100%,50%)' : '#9ca3af'}" stroke-width="1.5" opacity="0.7"/>
-                    </svg>
-
-                  {:else if orient.id === 'nose_down'}
-                    <!-- Side view, tilted forward (nose pointing down) -->
-                    <svg viewBox="0 0 60 60" class="w-full h-full">
-                      <g transform="rotate(80, 30, 20)">
-                        <rect x="18" y="14" width="24" height="10" rx="2"
-                              fill="{st === 'done' ? '#22c55e' : st === 'active' ? 'hsl(211,100%,50%)' : '#6b7280'}" opacity="0.8"/>
-                        <line x1="18" y1="19" x2="8" y2="19" stroke="{st === 'done' ? '#22c55e' : st === 'active' ? 'hsl(211,100%,50%)' : '#6b7280'}" stroke-width="2" stroke-linecap="round"/>
-                        <line x1="42" y1="19" x2="52" y2="19" stroke="{st === 'done' ? '#22c55e' : st === 'active' ? 'hsl(211,100%,50%)' : '#6b7280'}" stroke-width="2" stroke-linecap="round"/>
-                        <circle cx="8" cy="19" r="4" fill="{st === 'done' ? '#22c55e' : st === 'active' ? 'hsl(211,100%,50%)' : '#6b7280'}" opacity="0.6"/>
-                        <circle cx="52" cy="19" r="4" fill="{st === 'done' ? '#22c55e' : st === 'active' ? 'hsl(211,100%,50%)' : '#6b7280'}" opacity="0.6"/>
-                        <polygon points="42,14 42,24 50,19" fill="{st === 'done' ? '#22c55e' : st === 'active' ? 'hsl(211,100%,50%)' : '#6b7280'}" opacity="0.5"/>
+                      <polygon points="30,8 27,14 33,14" fill={c} opacity="0.6"/>
+                    {:else if orient.id === 'nose_down'}
+                      <!-- Side view: tilted 45° nose down, nose touching ground -->
+                      <g transform="rotate(40, 22, 48)">
+                        <rect x="16" y="45" width="30" height="6" rx="2" fill={c} opacity="0.85"/>
+                        <circle cx="16" cy="48" r="3.5" fill={c2} opacity="0.5"/>
+                        <circle cx="46" cy="48" r="3.5" fill={c2} opacity="0.5"/>
+                        <polygon points="46,45 50,48 46,51" fill={c} opacity="0.5"/>
                       </g>
-                      <!-- Ground line -->
-                      <line x1="5" y1="55" x2="55" y2="55" stroke="#6b7280" stroke-width="1" stroke-dasharray="3,3" opacity="0.4"/>
-                      <!-- Down arrow -->
-                      <polygon points="30,55 27,49 33,49" fill="{st === 'done' ? '#22c55e' : st === 'active' ? 'hsl(211,100%,50%)' : '#9ca3af'}" opacity="0.7"/>
-                      <line x1="30" y1="42" x2="30" y2="49" stroke="{st === 'done' ? '#22c55e' : st === 'active' ? 'hsl(211,100%,50%)' : '#9ca3af'}" stroke-width="1.5" opacity="0.7"/>
-                    </svg>
-
-                  {:else if orient.id === 'left'}
-                    <!-- Front view, tilted left -->
-                    <svg viewBox="0 0 60 60" class="w-full h-full">
-                      <g transform="rotate(80, 30, 30)">
-                        <rect x="22" y="24" width="16" height="12" rx="2"
-                              fill="{st === 'done' ? '#22c55e' : st === 'active' ? 'hsl(211,100%,50%)' : '#6b7280'}" opacity="0.8"/>
-                        <line x1="22" y1="30" x2="8" y2="30" stroke="{st === 'done' ? '#22c55e' : st === 'active' ? 'hsl(211,100%,50%)' : '#6b7280'}" stroke-width="2" stroke-linecap="round"/>
-                        <line x1="38" y1="30" x2="52" y2="30" stroke="{st === 'done' ? '#22c55e' : st === 'active' ? 'hsl(211,100%,50%)' : '#6b7280'}" stroke-width="2" stroke-linecap="round"/>
-                        <circle cx="8" cy="30" r="4" fill="{st === 'done' ? '#22c55e' : st === 'active' ? 'hsl(211,100%,50%)' : '#6b7280'}" opacity="0.6"/>
-                        <circle cx="52" cy="30" r="4" fill="{st === 'done' ? '#22c55e' : st === 'active' ? 'hsl(211,100%,50%)' : '#6b7280'}" opacity="0.6"/>
+                      <polygon points="30,52 27,46 33,46" fill={c} opacity="0.6"/>
+                    {:else if orient.id === 'left'}
+                      <!-- Front view: tilted 45° left side down -->
+                      <g transform="rotate(40, 30, 48)">
+                        <rect x="15" y="45" width="30" height="6" rx="2" fill={c} opacity="0.85"/>
+                        <circle cx="15" cy="48" r="3.5" fill={c2} opacity="0.5"/>
+                        <circle cx="45" cy="48" r="3.5" fill={c2} opacity="0.5"/>
                       </g>
-                      <!-- Ground line -->
-                      <line x1="5" y1="55" x2="55" y2="55" stroke="#6b7280" stroke-width="1" stroke-dasharray="3,3" opacity="0.4"/>
-                      <!-- Left arrow -->
-                      <polygon points="5,50 11,47 11,53" fill="{st === 'done' ? '#22c55e' : st === 'active' ? 'hsl(211,100%,50%)' : '#9ca3af'}" opacity="0.7"/>
-                    </svg>
-
-                  {:else if orient.id === 'right'}
-                    <!-- Front view, tilted right -->
-                    <svg viewBox="0 0 60 60" class="w-full h-full">
-                      <g transform="rotate(-80, 30, 30)">
-                        <rect x="22" y="24" width="16" height="12" rx="2"
-                              fill="{st === 'done' ? '#22c55e' : st === 'active' ? 'hsl(211,100%,50%)' : '#6b7280'}" opacity="0.8"/>
-                        <line x1="22" y1="30" x2="8" y2="30" stroke="{st === 'done' ? '#22c55e' : st === 'active' ? 'hsl(211,100%,50%)' : '#6b7280'}" stroke-width="2" stroke-linecap="round"/>
-                        <line x1="38" y1="30" x2="52" y2="30" stroke="{st === 'done' ? '#22c55e' : st === 'active' ? 'hsl(211,100%,50%)' : '#6b7280'}" stroke-width="2" stroke-linecap="round"/>
-                        <circle cx="8" cy="30" r="4" fill="{st === 'done' ? '#22c55e' : st === 'active' ? 'hsl(211,100%,50%)' : '#6b7280'}" opacity="0.6"/>
-                        <circle cx="52" cy="30" r="4" fill="{st === 'done' ? '#22c55e' : st === 'active' ? 'hsl(211,100%,50%)' : '#6b7280'}" opacity="0.6"/>
+                      <polygon points="8,48 14,45 14,51" fill={c} opacity="0.6"/>
+                      <text x="30" y="16" text-anchor="middle" fill={c} font-size="6" opacity="0.5">正视图</text>
+                    {:else if orient.id === 'right'}
+                      <!-- Front view: tilted 45° right side down -->
+                      <g transform="rotate(-40, 30, 48)">
+                        <rect x="15" y="45" width="30" height="6" rx="2" fill={c} opacity="0.85"/>
+                        <circle cx="15" cy="48" r="3.5" fill={c2} opacity="0.5"/>
+                        <circle cx="45" cy="48" r="3.5" fill={c2} opacity="0.5"/>
                       </g>
-                      <!-- Ground line -->
-                      <line x1="5" y1="55" x2="55" y2="55" stroke="#6b7280" stroke-width="1" stroke-dasharray="3,3" opacity="0.4"/>
-                      <!-- Right arrow -->
-                      <polygon points="55,50 49,47 49,53" fill="{st === 'done' ? '#22c55e' : st === 'active' ? 'hsl(211,100%,50%)' : '#9ca3af'}" opacity="0.7"/>
-                    </svg>
-
-                  {:else if orient.id === 'back'}
-                    <!-- Top-down view, upside down (X marks inversion) -->
-                    <svg viewBox="0 0 60 60" class="w-full h-full">
-                      <rect x="22" y="22" width="16" height="16" rx="2"
-                            fill="{st === 'done' ? '#22c55e' : st === 'active' ? 'hsl(211,100%,50%)' : '#6b7280'}" opacity="0.8"/>
-                      <line x1="22" y1="22" x2="10" y2="10" stroke="{st === 'done' ? '#22c55e' : st === 'active' ? 'hsl(211,100%,50%)' : '#6b7280'}" stroke-width="2" stroke-linecap="round"/>
-                      <line x1="38" y1="22" x2="50" y2="10" stroke="{st === 'done' ? '#22c55e' : st === 'active' ? 'hsl(211,100%,50%)' : '#6b7280'}" stroke-width="2" stroke-linecap="round"/>
-                      <line x1="22" y1="38" x2="10" y2="50" stroke="{st === 'done' ? '#22c55e' : st === 'active' ? 'hsl(211,100%,50%)' : '#6b7280'}" stroke-width="2" stroke-linecap="round"/>
-                      <line x1="38" y1="38" x2="50" y2="50" stroke="{st === 'done' ? '#22c55e' : st === 'active' ? 'hsl(211,100%,50%)' : '#6b7280'}" stroke-width="2" stroke-linecap="round"/>
-                      <circle cx="10" cy="10" r="5" fill="{st === 'done' ? '#22c55e' : st === 'active' ? 'hsl(211,100%,50%)' : '#6b7280'}" opacity="0.6"/>
-                      <circle cx="50" cy="10" r="5" fill="{st === 'done' ? '#22c55e' : st === 'active' ? 'hsl(211,100%,50%)' : '#6b7280'}" opacity="0.6"/>
-                      <circle cx="10" cy="50" r="5" fill="{st === 'done' ? '#22c55e' : st === 'active' ? 'hsl(211,100%,50%)' : '#6b7280'}" opacity="0.6"/>
-                      <circle cx="50" cy="50" r="5" fill="{st === 'done' ? '#22c55e' : st === 'active' ? 'hsl(211,100%,50%)' : '#6b7280'}" opacity="0.6"/>
-                      <!-- Flip symbol: circular arrow -->
-                      <path d="M24,30 A6,6 0 1,1 30,24" fill="none"
-                            stroke="{st === 'done' ? '#fff' : st === 'active' ? '#fff' : '#d1d5db'}" stroke-width="1.5" stroke-linecap="round"/>
-                      <polygon points="30,24 28,28 33,26" fill="{st === 'done' ? '#fff' : st === 'active' ? '#fff' : '#d1d5db'}"/>
-                    </svg>
-                  {/if}
+                      <polygon points="52,48 46,45 46,51" fill={c} opacity="0.6"/>
+                      <text x="30" y="16" text-anchor="middle" fill={c} font-size="6" opacity="0.5">正视图</text>
+                    {:else if orient.id === 'back'}
+                      <!-- Side view: flipped upside down -->
+                      <rect x="15" y="28" width="30" height="6" rx="2" fill={c} opacity="0.85"/>
+                      <circle cx="15" cy="31" r="3.5" fill={c2} opacity="0.5"/>
+                      <circle cx="45" cy="31" r="3.5" fill={c2} opacity="0.5"/>
+                      <path d="M24,20 A8,8 0 1,1 36,20" fill="none" stroke={c} stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+                      <polygon points="36,20 33,16 38,17" fill={c} opacity="0.6"/>
+                      <text x="30" y="44" text-anchor="middle" fill={c} font-size="6" opacity="0.5">翻转</text>
+                    {/if}
+                  </svg>
                 </div>
 
                 <!-- Label + status icon -->
