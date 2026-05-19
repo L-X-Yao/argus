@@ -6,7 +6,7 @@
 
   function rtl() { if (confirm('切换到返航模式？')) sendCommand('rtl'); }
   function pause() { sendCommand('mode', app.drone.vtype === '固定翼' ? 19 : 5); }
-  function forceDisarm() { if (confirm('强制锁定？')) sendCommand('force_disarm'); }
+  function forceDisarm() { if (confirm('强制锁定 — 电机立即停转！\n仅在已着陆时使用。继续？')) sendCommand('force_disarm'); }
 
   function fmtTime(s: number): string {
     const m = Math.floor(s / 60), sec = s % 60;
