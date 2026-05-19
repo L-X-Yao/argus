@@ -26,6 +26,7 @@
   type View = 'fly' | 'plan' | 'monitor' | 'params';
   let view = $state<View>('fly');
   let flyEventsOpen = $state(false);
+  let controlsOpen = $state(false);
 
   onMount(() => {
     loadSettings();
@@ -101,11 +102,34 @@
   </nav>
 
   {#if view === 'fly'}
-    <div class="flex-1 flex flex-col overflow-hidden">
-      <div class="flex-1 relative min-h-0 flex flex-col">
+    <div class="flex-1 flex overflow-hidden">
+      {#if app.drone.connected && controlsOpen}
+        <div class="shrink-0 border-r border-border bg-card z-[1002] overflow-y-auto">
+          <ControlPanel />
+        </div>
+      {/if}
+      <div class="flex-1 relative min-h-0 flex flex-col min-w-0">
         <MapView />
         {#if app.drone.connected}
           <TelemetryOverlay />
+          <div class="absolute top-2 left-14 z-[1001] flex gap-1.5">
+            <button class="px-3 py-2 rounded-lg bg-red-600/90 backdrop-blur text-white text-sm font-bold shadow-lg
+                           hover:bg-red-700 active:scale-95 transition-all border border-red-500/50"
+                    onclick={() => { if (confirm('切换到返航模式？')) sendCommand('rtl'); }}>
+              返航
+            </button>
+            <button class="px-3 py-2 rounded-lg bg-amber-600/90 backdrop-blur text-white text-sm font-bold shadow-lg
+                           hover:bg-amber-700 active:scale-95 transition-all border border-amber-500/50"
+                    onclick={() => sendCommand('mode', app.drone.vtype === '固定翼' ? 19 : 5)}>
+              悬停
+            </button>
+            <button class="px-3 py-2 rounded-lg bg-card/90 backdrop-blur text-foreground text-xs font-semibold shadow-lg
+                           hover:bg-muted active:scale-95 transition-all border border-border
+                           {controlsOpen ? '!bg-primary/90 !text-primary-foreground !border-primary/50' : ''}"
+                    onclick={() => controlsOpen = !controlsOpen}>
+              {controlsOpen ? '收起操控' : '操控面板'}
+            </button>
+          </div>
         {/if}
         <MissionProgress />
         {#if app.drone.connected && !app.drone.armed}
@@ -138,14 +162,13 @@
     </div>
 
   {:else if view === 'monitor'}
-    <div class="flex-1 overflow-auto p-3 flex flex-col gap-3">
-      <div class="grid grid-cols-2 gap-3 max-md:grid-cols-1">
+    <div class="flex-1 overflow-auto p-3">
+      <div class="grid grid-cols-2 gap-3 max-md:grid-cols-1 h-full">
         <RcPanel />
         <ServoPanel />
         <VibrationPanel />
         <ChartPanel />
       </div>
-      <ControlPanel />
     </div>
 
   {:else if view === 'params'}
