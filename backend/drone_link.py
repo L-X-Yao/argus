@@ -94,6 +94,7 @@ class DroneLink:
         self.rc_rssi = 0
         self.vibe_x = self.vibe_y = self.vibe_z = 0.0
         self.vibe_clip0 = self.vibe_clip1 = self.vibe_clip2 = 0
+        self.servo_out: list[int] = [0] * 16
 
     def is_plane(self) -> bool:
         if self.force_plane is not None:
@@ -229,6 +230,7 @@ class DroneLink:
             'rc_rssi': self.rc_rssi,
             'vibe': [round(self.vibe_x, 1), round(self.vibe_y, 1), round(self.vibe_z, 1)],
             'vibe_clip': [self.vibe_clip0, self.vibe_clip1, self.vibe_clip2],
+            'servo': self.servo_out,
             **self.param_mgr.get_status(),
         }
 

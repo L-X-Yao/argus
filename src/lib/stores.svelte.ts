@@ -113,7 +113,7 @@ export function generateCircle(centerLat: number, centerLon: number, radius: num
     const angle = (i / count) * 2 * Math.PI;
     const dlat = radius * Math.cos(angle) / 111320;
     const dlon = radius * Math.sin(angle) / (111320 * Math.cos(centerLat * Math.PI / 180));
-    pts.push({ lat: centerLat + dlat, lon: centerLon + dlon, alt, drop: false, delay: 0, speed: 0 });
+    pts.push({ lat: centerLat + dlat, lon: centerLon + dlon, alt, drop: false, delay: 0, speed: 0, type: 'wp' as const, loiter_param: 0 });
   }
   app.waypoints = [...app.waypoints, ...pts];
   saveWaypoints();
@@ -124,6 +124,7 @@ export function loadDownloadedMission(wps: Waypoint[]) {
   app.waypoints = wps.map(w => ({
     lat: w.lat, lon: w.lon, alt: w.alt,
     drop: w.drop || false, delay: w.delay || 0, speed: w.speed || 0,
+    type: w.type || 'wp', loiter_param: w.loiter_param || 0,
   }));
   saveWaypoints();
 }

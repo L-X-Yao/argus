@@ -155,6 +155,16 @@ def handle_statustext(p: bytes, pl: int, link: DroneLink) -> None:
         link.add_event('飞控: %s' % text)
 
 
+def handle_servo_output(p: bytes, pl: int, link: DroneLink) -> None:
+    if pl < 21:
+        return
+    link.servo_out = [struct.unpack_from('<H', p, 4 + i * 2)[0] for i in range(8)]
+    if pl >= 37:
+        link.servo_out += [struct.unpack_from('<H', p, 21 + i * 2)[0] for i in range(8)]
+    else:
+        link.servo_out += [0] * 8
+
+
 def handle_rc_channels(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 42:
         return
@@ -229,9 +239,12 @@ def handle_mission_item_int(p: bytes, pl: int, link: DroneLink) -> None:
         for item in items:
             if item['cmd'] == 178:
                 pending_speed = item.get('p2', 0)
-            elif item['cmd'] == 16 and item['seq'] > 0:
+            elif item['cmd'] in (16, 18, 19) and item['seq'] > 0:
+                wtype = 'loiter_turns' if item['cmd'] == 18 else ('loiter_time' if item['cmd'] == 19 else 'wp')
                 wps.append({'lat': item['lat'], 'lon': item['lon'], 'alt': item['alt'],
-                            'drop': False, 'delay': item['p1'], 'speed': pending_speed})
+                            'drop': False, 'delay': item['p1'] if item['cmd'] == 16 else 0,
+                            'speed': pending_speed, 'type': wtype,
+                            'loiter_param': item['p1'] if item['cmd'] in (18, 19) else 0})
                 pending_speed = 0.0
             elif item['cmd'] == 181 and wps:
                 wps[-1]['drop'] = True
@@ -275,6 +288,7 @@ def init_handlers() -> None:
     mavlink_dispatch.register(46, handle_mission_item_reached)
     mavlink_dispatch.register(77, handle_command_ack)
     mavlink_dispatch.register(253, handle_statustext)
+    mavlink_dispatch.register(36, handle_servo_output)
     mavlink_dispatch.register(65, handle_rc_channels)
     mavlink_dispatch.register(241, handle_vibration)
     mavlink_dispatch.register(22, handle_param_value)

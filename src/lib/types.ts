@@ -40,6 +40,7 @@ export interface DroneState {
   rc_rssi: number;
   vibe: number[];
   vibe_clip: number[];
+  servo: number[];
   param_count: number;
   param_total: number;
   param_fetching: boolean;
@@ -72,6 +73,8 @@ export interface Waypoint {
   drop: boolean;
   delay: number;
   speed: number;
+  type: 'wp' | 'loiter_turns' | 'loiter_time';
+  loiter_param: number;
 }
 
 export interface Toast {
@@ -103,6 +106,6 @@ export const defaultState: DroneState = {
   home_lat: 0, home_lon: 0, parse_errors: 0,
   flight_summary: null, log_active: false,
   fw_version: '', fw_git: '', board_id: 0,
-  rc: [], rc_rssi: 0, vibe: [0, 0, 0], vibe_clip: [0, 0, 0],
+  rc: [], rc_rssi: 0, vibe: [0, 0, 0], vibe_clip: [0, 0, 0], servo: [],
   param_count: 0, param_total: -1, param_fetching: false,
 };

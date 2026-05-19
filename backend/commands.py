@@ -109,8 +109,18 @@ def _upload_mission(link: DroneLink, waypoints: list, takeoff_alt: float) -> Non
         if spd > 0:
             items.append({'seq': seq, 'cmd': 178, 'lat': 0, 'lon': 0, 'alt': 0, 'p1': 1, 'p2': spd})
             seq += 1
-        items.append({'seq': seq, 'cmd': 16, 'lat': wp['lat'], 'lon': wp['lon'],
-                      'alt': float(wp.get('alt', takeoff_alt)), 'p1': float(wp.get('delay', 0)), 'p2': 0})
+        wtype = wp.get('type', 'wp')
+        if wtype == 'loiter_turns':
+            nav_cmd = 18
+            p1_val = float(wp.get('loiter_param', 3))
+        elif wtype == 'loiter_time':
+            nav_cmd = 19
+            p1_val = float(wp.get('loiter_param', 10))
+        else:
+            nav_cmd = 16
+            p1_val = float(wp.get('delay', 0))
+        items.append({'seq': seq, 'cmd': nav_cmd, 'lat': wp['lat'], 'lon': wp['lon'],
+                      'alt': float(wp.get('alt', takeoff_alt)), 'p1': p1_val, 'p2': 0})
         seq += 1
         if wp.get('drop'):
             items.append({'seq': seq, 'cmd': 181, 'lat': 0, 'lon': 0, 'alt': 0, 'p1': 0, 'p2': 0})
@@ -175,7 +185,7 @@ def request_streams(link: DroneLink) -> None:
     streams = [
         (30, 250000), (33, 250000), (24, 250000),
         (1, 1000000), (42, 1000000),
-        (65, 500000), (241, 1000000),
+        (36, 500000), (65, 500000), (241, 1000000),
     ]
     for mid, interval in streams:
         payload = struct.pack('<fffffffHBBB',

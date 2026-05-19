@@ -85,7 +85,7 @@
       return;
     }
     const [wlat, wlon] = toWgsFromGcj(ll.lat, ll.lng);
-    addWaypoint({ lat: wlat, lon: wlon, alt: app.defaultAlt, drop: false, delay: 0, speed: 0 });
+    addWaypoint({ lat: wlat, lon: wlon, alt: app.defaultAlt, drop: false, delay: 0, speed: 0, type: 'wp', loiter_param: 0 });
   }
 
   function onRightClick(e: any) {

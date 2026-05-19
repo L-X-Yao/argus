@@ -89,7 +89,7 @@ export function generateSurveyGrid(polygon: Point[], config: SurveyConfig): Wayp
     const pts = reverse ? [line[1], line[0]] : [line[0], line[1]];
     for (const [x, y] of pts) {
       const geo = toGeo(x, y, origin);
-      waypoints.push({ lat: geo.lat, lon: geo.lon, alt: config.alt, drop: false, delay: 0, speed: 0 });
+      waypoints.push({ lat: geo.lat, lon: geo.lon, alt: config.alt, drop: false, delay: 0, speed: 0, type: 'wp' as const, loiter_param: 0 });
     }
     reverse = !reverse;
   }

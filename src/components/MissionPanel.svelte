@@ -20,6 +20,25 @@
   function toggleDrop(i: number) { pushUndo(); app.waypoints[i].drop = !app.waypoints[i].drop; saveWaypoints(); }
   function setAlt(i: number, v: string) { app.waypoints[i].alt = parseFloat(v) || 30; saveWaypoints(); saveSettings(); }
   function setSpeed(i: number, v: string) { app.waypoints[i].speed = parseFloat(v) || 0; saveWaypoints(); }
+  function cycleType(i: number) {
+    pushUndo();
+    const types: ('wp' | 'loiter_turns' | 'loiter_time')[] = ['wp', 'loiter_turns', 'loiter_time'];
+    const cur = types.indexOf(app.waypoints[i].type || 'wp');
+    app.waypoints[i].type = types[(cur + 1) % types.length];
+    if (app.waypoints[i].type === 'loiter_turns' && !app.waypoints[i].loiter_param) app.waypoints[i].loiter_param = 3;
+    if (app.waypoints[i].type === 'loiter_time' && !app.waypoints[i].loiter_param) app.waypoints[i].loiter_param = 10;
+    saveWaypoints();
+  }
+  function typeLabel(t: string): string {
+    if (t === 'loiter_turns') return '盘旋圈';
+    if (t === 'loiter_time') return '盘旋秒';
+    return '航点';
+  }
+  function typeColor(t: string): string {
+    if (t === 'loiter_turns') return '#ab47bc';
+    if (t === 'loiter_time') return '#7e57c2';
+    return '#1565c0';
+  }
   function applyAltAll() { pushUndo(); app.waypoints.forEach(w => w.alt = app.defaultAlt); }
   function reverseRoute() { if (!app.waypoints.length) return; pushUndo(); app.waypoints.reverse(); }
   function moveWp(i: number, dir: number) {
@@ -139,6 +158,22 @@
     return d < 1000 ? d.toFixed(0) + 'm' : (d / 1000).toFixed(1) + 'km';
   }
 
+  function estimateTime(): string {
+    if (app.waypoints.length < 2) return '--';
+    const defaultSpeed = 5;
+    let totalSec = 0;
+    for (let i = 1; i < app.waypoints.length; i++) {
+      const d = segDist(app.waypoints[i - 1], app.waypoints[i]);
+      const spd = app.waypoints[i].speed > 0 ? app.waypoints[i].speed : defaultSpeed;
+      totalSec += d / spd;
+      if (app.waypoints[i].type === 'loiter_time') totalSec += app.waypoints[i].loiter_param || 0;
+      if (app.waypoints[i].type === 'loiter_turns') totalSec += (app.waypoints[i].loiter_param || 0) * 20;
+      totalSec += app.waypoints[i].delay || 0;
+    }
+    const m = Math.floor(totalSec / 60), s = Math.round(totalSec % 60);
+    return `${m}:${s.toString().padStart(2, '0')}`;
+  }
+
   function segDist(a: any, b: any): number {
     const dlat = (b.lat - a.lat) * 111320;
     const dlon = (b.lon - a.lon) * 111320 * Math.cos(a.lat * Math.PI / 180);
@@ -219,9 +254,12 @@
     {#each app.waypoints as wp, i}
       <div class="wp-item" class:active-wp={app.drone.wp === i + 2}>
         <span class="wp-num">{i + 1}</span>
-        <button class="wp-type" class:drop={wp.drop} onclick={() => toggleDrop(i)}>
-          {wp.drop ? '投放' : '航点'}
+        <button class="wp-type" style="background:{typeColor(wp.type || 'wp')}" onclick={() => cycleType(i)}>
+          {typeLabel(wp.type || 'wp')}
         </button>
+        {#if wp.drop}
+          <span class="drop-badge">投</span>
+        {/if}
         <span class="wp-coords">{wp.lat.toFixed(5)}, {wp.lon.toFixed(5)}</span>
         <input type="number" class="wp-alt" value={wp.alt} onchange={(e) => setAlt(i, (e.target as HTMLInputElement).value)} title="高度(m)" />
         <input type="number" class="wp-spd" value={wp.speed || ''} placeholder="默认"
@@ -235,7 +273,10 @@
     {/each}
   </div>
   {#if app.waypoints.length > 0}
-    <div class="wp-stats">总距离: {totalDist()} | {app.waypoints.filter(w => w.drop).length} 投放</div>
+    <div class="wp-stats">
+      距离: {totalDist()} | {app.waypoints.filter(w => w.drop).length} 投放
+      | ETA: {estimateTime()}
+    </div>
   {/if}
   {#if app.waypoints.length >= 2}
     <div class="profile"><canvas bind:this={profileCanvas} height="50"></canvas></div>
@@ -279,8 +320,8 @@
   .wp-item.active-wp { background:rgba(255,167,38,0.1); border-left:3px solid #ffa726; padding-left:2px; }
   .live-wp { font-size:11px; color:#ffa726; font-weight:normal; }
   .wp-num { width:22px; text-align:center; color:var(--text-dim); font-weight:bold; }
-  .wp-type { padding:1px 6px; border-radius:3px; cursor:pointer; font-size:10px; font-weight:bold; border:none; color:white; background:#1565c0; }
-  .wp-type.drop { background:#e65100; }
+  .wp-type { padding:1px 4px; border-radius:3px; cursor:pointer; font-size:9px; font-weight:bold; border:none; color:white; background:#1565c0; white-space:nowrap; }
+  .drop-badge { font-size:9px; color:#e65100; font-weight:bold; }
   .wp-coords { flex:1; color:var(--text-dim); font-size:10px; overflow:hidden; white-space:nowrap; }
   .wp-alt { width:36px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-light); padding:2px 3px; border-radius:3px; font-size:11px; text-align:right; }
   .wp-spd { width:36px; background:var(--bg-input); color:#69f0ae; border:1px solid var(--border-light); padding:2px 3px; border-radius:3px; font-size:11px; text-align:right; }
