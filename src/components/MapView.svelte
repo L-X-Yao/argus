@@ -424,7 +424,7 @@
   </div>
   <div class="map-btns-right">
     <button class="map-btn" class:active={follow} onclick={() => follow = !follow}>{follow ? '跟随' : '自由'}</button>
-    <button class="map-btn" onclick={toggleExpand}>{app.mapExpanded ? '收起' : '展开'}</button>
+    <button class="map-btn" class:active={app.mapExpanded} onclick={toggleExpand}>HUD</button>
     <button class="map-btn" onclick={centerHome}>起飞点</button>
     <button class="map-btn" onclick={fitRoute}>全览</button>
   </div>
