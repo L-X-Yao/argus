@@ -1,5 +1,5 @@
 import type { WSMessage, DroneState, DroneEvent } from './types';
-import { updateState, addEvent, setWsConnected } from './stores.svelte';
+import { updateState, addEvent, setWsConnected, addToast } from './stores.svelte';
 
 let socket: WebSocket | null = null;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -24,7 +24,24 @@ export function connectWs(): void {
     try {
       const msg: WSMessage = JSON.parse(ev.data);
       if (msg.type === 'state') updateState(msg as DroneState);
-      else if (msg.type === 'event') addEvent(msg as DroneEvent);
+      else if (msg.type === 'event') {
+        const ev = msg as DroneEvent;
+        addEvent(ev);
+        if (ev.text.includes('失控') || ev.text.includes('碰撞') || ev.text.includes('紧急'))
+          addToast(ev.text, 'error', 8000);
+        else if (ev.text.includes('已解锁'))
+          addToast('飞控已解锁', 'warn', 5000);
+        else if (ev.text.includes('已锁定') && !ev.text.includes('发送'))
+          addToast('飞控已锁定', 'success', 4000);
+        else if (ev.text.includes('任务确认'))
+          addToast(ev.text, ev.text.includes('成功') ? 'success' : 'error');
+        else if (ev.text.includes('已连接'))
+          addToast(ev.text, 'success');
+        else if (ev.text.includes('已断开'))
+          addToast('已断开连接', 'info');
+        else if (ev.text.includes('低电量') || ev.text.includes('电量极低'))
+          addToast(ev.text, 'error', 8000);
+      }
     } catch {}
   };
 

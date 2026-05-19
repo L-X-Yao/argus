@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { app, addWaypoint } from '../lib/stores.svelte';
+  import { app, addWaypoint, addToast } from '../lib/stores.svelte';
+  import { sendCommand } from '../lib/ws';
   import { toGcj } from '../lib/gcj02';
 
   declare const L: any;
@@ -38,6 +39,7 @@
     labelLayer = L.tileLayer(LABEL_URL, { maxZoom: 18 }).addTo(map);
     vecLayer = L.tileLayer(VEC_URL, { maxZoom: 18 });
     map.on('click', onMapClick);
+    map.on('contextmenu', onRightClick);
     map.on('mousemove', onMouseMove);
     setTimeout(() => map.invalidateSize(), 100);
   });
@@ -54,8 +56,25 @@
       addMeasurePoint(ll);
       return;
     }
+    if (app.guidedMode && app.drone.connected && app.drone.armed) {
+      const [wlat, wlon] = toWgsFromGcj(ll.lat, ll.lng);
+      sendCommand('guided_goto', undefined, { lat: wlat, lon: wlon, alt: app.defaultAlt });
+      addToast(`引导飞往 ${wlat.toFixed(5)}, ${wlon.toFixed(5)}`, 'info');
+      return;
+    }
     const [wlat, wlon] = toWgsFromGcj(ll.lat, ll.lng);
     addWaypoint({ lat: wlat, lon: wlon, alt: app.defaultAlt, drop: false, delay: 0 });
+  }
+
+  function onRightClick(e: any) {
+    e.originalEvent.preventDefault();
+    if (!app.drone.connected || !app.drone.armed) return;
+    const ll = e.latlng;
+    const [wlat, wlon] = toWgsFromGcj(ll.lat, ll.lng);
+    if (confirm(`引导飞往此点？\n${wlat.toFixed(5)}, ${wlon.toFixed(5)}\n高度: ${app.defaultAlt}m`)) {
+      sendCommand('guided_goto', undefined, { lat: wlat, lon: wlon, alt: app.defaultAlt });
+      addToast(`引导飞往 ${wlat.toFixed(5)}, ${wlon.toFixed(5)}`, 'info');
+    }
   }
 
   function toWgsFromGcj(glat: number, glon: number): [number, number] {
@@ -244,6 +263,11 @@
   <div class="map-btns-left">
     <button class="map-btn" onclick={toggleMapType}>{isSat ? '卫星' : '地图'}</button>
     <button class="map-btn" class:active={measuring} onclick={toggleMeasure}>{measuring ? '取消测距' : '测距'}</button>
+    {#if app.drone.connected && app.drone.armed}
+      <button class="map-btn guided" class:active={app.guidedMode} onclick={() => app.guidedMode = !app.guidedMode}>
+        {app.guidedMode ? '引导中' : '引导'}
+      </button>
+    {/if}
     {#if trail.length > 10}
       <button class="map-btn" onclick={exportTrack}>导出轨迹</button>
     {/if}
@@ -281,6 +305,7 @@
   .map-btn { padding:4px 10px; background:rgba(30,30,30,0.9); border:1px solid #555; border-radius:4px; cursor:pointer; font-size:12px; font-weight:bold; color:#aaa; }
   .map-btn:hover { color:#4fc3f7; border-color:#4fc3f7; }
   .map-btn.active { color:#ff5252; border-color:#ff5252; }
+  .map-btn.guided.active { color:#ffa726; border-color:#ffa726; }
   .coord-bar { position:absolute; bottom:6px; left:10px; z-index:1000; background:rgba(30,30,30,0.85); color:#aaa; padding:2px 8px; border-radius:3px; font-size:11px; font-family:monospace; }
   .hud { position:absolute; bottom:6px; right:10px; z-index:1000; display:flex; gap:8px; }
   .hud-item { background:rgba(10,10,10,0.85); border:1px solid #333; border-radius:4px; padding:4px 8px; text-align:center; }

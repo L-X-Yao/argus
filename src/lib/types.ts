@@ -63,6 +63,12 @@ export interface Waypoint {
   delay: number;
 }
 
+export interface Toast {
+  id: number;
+  text: string;
+  level: 'info' | 'warn' | 'error' | 'success';
+}
+
 export type WSMessage = DroneState | DroneEvent | ConnectResult;
 
 export const defaultState: DroneState = {

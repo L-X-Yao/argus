@@ -13,6 +13,9 @@
   import FlightSummary from './components/FlightSummary.svelte';
   import ChartPanel from './components/ChartPanel.svelte';
   import SettingsPanel from './components/SettingsPanel.svelte';
+  import ToastContainer from './components/ToastContainer.svelte';
+  import PreflightPanel from './components/PreflightPanel.svelte';
+  import MissionProgress from './components/MissionProgress.svelte';
 
   let showSettings = $state(false);
 
@@ -65,10 +68,15 @@
     <MapView />
     <MissionPanel />
   </div>
+  <MissionProgress />
   {#if !app.mapExpanded}
+    {#if app.drone.connected && !app.drone.armed}
+      <PreflightPanel />
+    {/if}
     <EventLog />
     <ChartPanel />
   {/if}
+  <ToastContainer />
   {#if app.summaryShown && app.drone.flight_summary}
     <FlightSummary summary={app.drone.flight_summary} onclose={() => { app.summaryShown = false; sendCommand('clear_summary'); }} />
   {/if}
