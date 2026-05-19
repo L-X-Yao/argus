@@ -93,6 +93,12 @@ class DroneLink:
         self._dl_items: list[dict | None] = []
         self._dl_messages: list[dict] = []
         self._ws_queue: list[dict] = []
+        self._log_list: list[dict] = []
+        self._log_download_id = -1
+        self._log_download_data = bytearray()
+        self._log_download_size = 0
+        self._log_download_ofs = 0
+        self._log_messages: list[dict] = []
         self.rc_channels: list[int] = [0] * 16
         self.rc_rssi = 0
         self.vibe_x = self.vibe_y = self.vibe_z = 0.0

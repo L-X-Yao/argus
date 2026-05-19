@@ -67,6 +67,7 @@ class WSManager:
         event_cursor = len(self.link.events)
         param_cursor = len(self.link.param_mgr._messages)
         dl_cursor = len(self.link._dl_messages)
+        log_cursor = len(self.link._log_messages)
         try:
             while True:
                 state = self.link.get_state()
@@ -89,6 +90,13 @@ class WSManager:
                     for msg in dlmsg[dl_cursor:]:
                         await ws.send_text(json.dumps(msg))
                     dl_cursor = len(dlmsg)
+                logmsg = self.link._log_messages
+                if log_cursor > len(logmsg):
+                    log_cursor = 0
+                if len(logmsg) > log_cursor:
+                    for msg in logmsg[log_cursor:]:
+                        await ws.send_text(json.dumps(msg))
+                    log_cursor = len(logmsg)
                 pmsg = self.link.param_mgr._messages
                 if param_cursor > len(pmsg):
                     param_cursor = 0

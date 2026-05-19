@@ -1,6 +1,7 @@
 import type { WSMessage, DroneState, DroneEvent } from './types';
 import { updateState, addEvent, setWsConnected, addToast, loadDownloadedMission } from './stores.svelte';
 import { handleParamBatch, handleParamsComplete } from './paramStore.svelte';
+import { setLogList, completeDownload } from './logStore.svelte';
 
 let socket: WebSocket | null = null;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -48,6 +49,14 @@ export function connectWs(): void {
       else if (msg.type === 'mission_downloaded') {
         loadDownloadedMission(msg.waypoints);
         addToast('已下载 ' + msg.waypoints.length + ' 个航点', 'success');
+      }
+      else if (msg.type === 'log_list') {
+        setLogList(msg.logs);
+        addToast('获取到 ' + msg.logs.length + ' 条机载日志', 'success');
+      }
+      else if (msg.type === 'log_complete') {
+        completeDownload(msg.id, msg.data, msg.size);
+        addToast('日志 #' + msg.id + ' 下载完成', 'success');
       }
     } catch {}
   };

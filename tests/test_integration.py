@@ -540,6 +540,92 @@ class TestMissionDownload:
         asyncio.get_event_loop().run_until_complete(run())
 
 
+class TestOnboardLog:
+    def test_log_list(self, ws_url, sim_port):
+        async def run():
+            await asyncio.sleep(1)
+            ws = await ws_connect(ws_url)
+            try:
+                await ensure_connected(ws, ws_url, sim_port, timeout=20)
+                await asyncio.sleep(0.5)
+                await ws.send(json.dumps({
+                    'type': 'command', 'cmd': 'log_list',
+                }))
+                msg = await recv_until(
+                    ws, lambda m: m.get('type') == 'log_list',
+                    timeout=15,
+                )
+                assert 'logs' in msg
+                assert len(msg['logs']) == 3
+                assert msg['logs'][0]['id'] == 1
+                assert msg['logs'][0]['size'] > 0
+            finally:
+                await ws.send(json.dumps({'type': 'disconnect'}))
+                await asyncio.sleep(0.5)
+                await ws.close()
+        asyncio.get_event_loop().run_until_complete(run())
+
+    def test_log_download(self, ws_url, sim_port):
+        async def run():
+            await asyncio.sleep(1)
+            ws = await ws_connect(ws_url)
+            try:
+                await ensure_connected(ws, ws_url, sim_port, timeout=20)
+                await asyncio.sleep(0.5)
+                await ws.send(json.dumps({
+                    'type': 'command', 'cmd': 'log_list',
+                }))
+                await recv_until(
+                    ws, lambda m: m.get('type') == 'log_list',
+                    timeout=15,
+                )
+                await ws.send(json.dumps({
+                    'type': 'command', 'cmd': 'log_download', 'id': 3,
+                }))
+                msg = await recv_until(
+                    ws, lambda m: m.get('type') == 'log_complete',
+                    timeout=20,
+                )
+                assert msg['id'] == 3
+                assert msg['size'] == 900
+                import base64
+                data = base64.b64decode(msg['data'])
+                assert len(data) == 900
+            finally:
+                await ws.send(json.dumps({'type': 'disconnect'}))
+                await asyncio.sleep(0.5)
+                await ws.close()
+        asyncio.get_event_loop().run_until_complete(run())
+
+    def test_log_cancel(self, ws_url, sim_port):
+        async def run():
+            await asyncio.sleep(1)
+            ws = await ws_connect(ws_url)
+            try:
+                await ensure_connected(ws, ws_url, sim_port, timeout=20)
+                await asyncio.sleep(0.5)
+                await ws.send(json.dumps({
+                    'type': 'command', 'cmd': 'log_list',
+                }))
+                await recv_until(
+                    ws, lambda m: m.get('type') == 'log_list',
+                    timeout=15,
+                )
+                await ws.send(json.dumps({
+                    'type': 'command', 'cmd': 'log_cancel',
+                }))
+                event = await recv_until(
+                    ws, lambda m: m.get('type') == 'event' and '取消' in m.get('text', ''),
+                    timeout=10,
+                )
+                assert '取消' in event['text']
+            finally:
+                await ws.send(json.dumps({'type': 'disconnect'}))
+                await asyncio.sleep(0.5)
+                await ws.close()
+        asyncio.get_event_loop().run_until_complete(run())
+
+
 class TestDataStreams:
     def test_rc_channels_in_state(self, ws_url, sim_port):
         async def run():

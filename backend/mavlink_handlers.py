@@ -298,6 +298,45 @@ def handle_mission_ack(p: bytes, pl: int, link: DroneLink) -> None:
         link.add_event('任务确认: %s' % ('成功' if mtype == 0 else '失败(%d)' % mtype))
 
 
+def handle_log_entry(p: bytes, pl: int, link: DroneLink) -> None:
+    if pl < 14:
+        return
+    time_utc, size, log_id, num_logs, last_log_num = struct.unpack_from('<IIHHH', p, 0)
+    link._log_list.append({'id': log_id, 'size': size, 'time_utc': time_utc})
+    if log_id == last_log_num:
+        link._log_messages.append({'type': 'log_list', 'logs': list(link._log_list)})
+        link.add_event('日志: 获取到 %d 条' % len(link._log_list))
+
+
+def handle_log_data(p: bytes, pl: int, link: DroneLink) -> None:
+    if pl < 7:
+        return
+    ofs, log_id, count = struct.unpack_from('<IHB', p, 0)
+    if log_id != link._log_download_id:
+        return
+    data = p[7:7 + count]
+    end = ofs + count
+    if end <= link._log_download_size:
+        link._log_download_data[ofs:end] = data
+    link._log_download_ofs = end
+    if end >= link._log_download_size:
+        import base64
+        b64 = base64.b64encode(bytes(link._log_download_data)).decode('ascii')
+        link._log_messages.append({
+            'type': 'log_complete',
+            'id': log_id,
+            'data': b64,
+            'size': link._log_download_size,
+        })
+        link.add_event('日志: #%d 下载完成 (%d KB)' % (log_id, link._log_download_size // 1024))
+        link._log_download_id = -1
+    else:
+        from pllink_proto import bm
+        remaining = link._log_download_size - end
+        chunk = min(90 * 50, remaining)
+        link.send(bm(119, struct.pack('<IIHBB', end, chunk, log_id, link.sysid, 1), link.sq, 116))
+
+
 def init_handlers() -> None:
     mavlink_dispatch.register(0, handle_heartbeat)
     mavlink_dispatch.register(30, handle_attitude)
@@ -320,3 +359,5 @@ def init_handlers() -> None:
     mavlink_dispatch.register(40, handle_mission_request)
     mavlink_dispatch.register(51, handle_mission_request)
     mavlink_dispatch.register(47, handle_mission_ack)
+    mavlink_dispatch.register(118, handle_log_entry)
+    mavlink_dispatch.register(120, handle_log_data)

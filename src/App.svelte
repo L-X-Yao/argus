@@ -23,11 +23,13 @@
   import ServoPanel from './components/ServoPanel.svelte';
   import EkfPanel from './components/EkfPanel.svelte';
   import TelemetryOverlay from './components/TelemetryOverlay.svelte';
+  import LogPanel from './components/LogPanel.svelte';
 
   type View = 'fly' | 'plan' | 'monitor' | 'params';
   let view = $state<View>('fly');
   let flyEventsOpen = $state(false);
   let controlsOpen = $state(false);
+  let showLogPanel = $state(false);
 
   onMount(() => {
     loadSettings();
@@ -113,6 +115,11 @@
                 onclick={() => sendCommand('mode', app.drone.vtype === '固定翼' ? 19 : 5)}>
           悬停
         </button>
+        <button class="px-2.5 py-1 rounded-md text-xs font-semibold transition-all
+                       bg-secondary text-secondary-foreground hover:bg-muted"
+                onclick={() => showLogPanel = true}>
+          机载日志
+        </button>
         {#if view === 'fly'}
           <button class="px-2.5 py-1 rounded-md text-xs font-semibold transition-all
                          {controlsOpen
@@ -197,5 +204,8 @@
   {/if}
   {#if app.showSettings}
     <SettingsPanel onclose={() => app.showSettings = false} />
+  {/if}
+  {#if showLogPanel}
+    <LogPanel onclose={() => showLogPanel = false} />
   {/if}
 </div>

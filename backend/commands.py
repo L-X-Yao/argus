@@ -110,6 +110,29 @@ def execute(cmd: str, param, link: DroneLink, data: dict | None = None) -> dict 
         if path:
             changed = link.param_mgr.load_from_file(path)
             return {'ok': True, 'changed': changed}
+    elif cmd == 'log_list':
+        from pllink_proto import bm
+        link._log_list = []
+        link.send(bm(117, struct.pack('<HHBB', 0, 0xFFFF, link.sysid, 1), link.sq, 128))
+        link.add_event('日志: 正在获取列表...')
+    elif cmd == 'log_download':
+        log_id = int(data.get('id', 0))
+        log_entry = next((l for l in link._log_list if l['id'] == log_id), None)
+        if not log_entry:
+            return {'ok': False, 'error': '日志不存在'}
+        link._log_download_id = log_id
+        link._log_download_size = log_entry['size']
+        link._log_download_data = bytearray(log_entry['size'])
+        link._log_download_ofs = 0
+        link.add_event('日志: 下载 #%d (%d KB)...' % (log_id, log_entry['size'] // 1024))
+        from pllink_proto import bm
+        chunk = min(90 * 50, log_entry['size'])
+        link.send(bm(119, struct.pack('<IIHBB', 0, chunk, log_id, link.sysid, 1), link.sq, 116))
+    elif cmd == 'log_cancel':
+        from pllink_proto import bm
+        link.send(bm(126, struct.pack('<BB', link.sysid, 1), link.sq, 203))
+        link._log_download_id = -1
+        link.add_event('日志: 下载取消')
     return None
 
 
