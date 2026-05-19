@@ -41,6 +41,11 @@ export interface DroneState {
   vibe: number[];
   vibe_clip: number[];
   servo: number[];
+  ekf_vel: number;
+  ekf_pos_h: number;
+  ekf_pos_v: number;
+  ekf_compass: number;
+  ekf_flags: number;
   param_count: number;
   param_total: number;
   param_fetching: boolean;
@@ -107,5 +112,6 @@ export const defaultState: DroneState = {
   flight_summary: null, log_active: false,
   fw_version: '', fw_git: '', board_id: 0,
   rc: [], rc_rssi: 0, vibe: [0, 0, 0], vibe_clip: [0, 0, 0], servo: [],
+  ekf_vel: 0, ekf_pos_h: 0, ekf_pos_v: 0, ekf_compass: 0, ekf_flags: 0,
   param_count: 0, param_total: -1, param_fetching: false,
 };

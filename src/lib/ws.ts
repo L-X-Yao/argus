@@ -34,7 +34,7 @@ export function connectWs(): void {
           addToast('飞控已解锁', 'warn', 5000);
         else if (ev.text.includes('已锁定') && !ev.text.includes('发送'))
           addToast('飞控已锁定', 'success', 4000);
-        else if (ev.text.includes('任务确认'))
+        else if (ev.text.includes('任务确认') || ev.text.includes('围栏确认'))
           addToast(ev.text, ev.text.includes('成功') ? 'success' : 'error');
         else if (ev.text.includes('已连接'))
           addToast(ev.text, 'success');

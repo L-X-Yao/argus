@@ -21,6 +21,7 @@
   import RcPanel from './components/RcPanel.svelte';
   import VibrationPanel from './components/VibrationPanel.svelte';
   import ServoPanel from './components/ServoPanel.svelte';
+  import EkfPanel from './components/EkfPanel.svelte';
   import TelemetryOverlay from './components/TelemetryOverlay.svelte';
 
   type View = 'fly' | 'plan' | 'monitor' | 'params';
@@ -169,11 +170,14 @@
 
   {:else if view === 'monitor'}
     <div class="flex-1 overflow-auto p-3">
-      <div class="grid grid-cols-2 gap-3 max-md:grid-cols-1 h-full">
+      <div class="grid grid-cols-3 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
         <RcPanel />
         <ServoPanel />
         <VibrationPanel />
-        <ChartPanel />
+        <EkfPanel />
+        <div class="max-lg:col-span-2 max-md:col-span-1 col-span-2">
+          <ChartPanel />
+        </div>
       </div>
     </div>
 

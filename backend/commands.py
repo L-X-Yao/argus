@@ -56,6 +56,20 @@ def execute(cmd: str, param, link: DroneLink, data: dict | None = None) -> dict 
             if abs(wp.get('lat', 0)) < 0.001:
                 return {'ok': False, 'error': '坐标无效'}
         _upload_mission(link, wps, takeoff_alt)
+    elif cmd == 'fence_upload':
+        polygon = data.get('polygon', [])
+        if len(polygon) < 3:
+            return {'ok': False, 'error': '围栏至少需要 3 个顶点'}
+        items = []
+        for i, pt in enumerate(polygon):
+            items.append({
+                'seq': i, 'cmd': 5001, 'lat': pt['lat'], 'lon': pt['lon'],
+                'alt': 0, 'p1': len(polygon), 'p2': 0,
+            })
+        link._fence_items = items
+        link._fence_pending = True
+        _send_fence_count(link, len(items))
+        link.add_event('围栏: %d 顶点上传中' % len(polygon))
     elif cmd == 'set_vtype':
         v = data.get('vtype', 'auto')
         link.force_plane = True if v == 'plane' else (False if v == 'copter' else None)
@@ -160,6 +174,24 @@ def _send_mission_count(link: DroneLink, count: int) -> None:
     link.send(bm(44, struct.pack('<HBB', count, link.sysid, 1) + bytes([0]), link.sq, 221))
 
 
+def _send_fence_count(link: DroneLink, count: int) -> None:
+    from pllink_proto import bm
+    link.send(bm(44, struct.pack('<HBB', count, link.sysid, 1) + bytes([1]), link.sq, 221))
+
+
+def send_fence_item_int(link: DroneLink, item: dict) -> None:
+    from pllink_proto import bm
+    lat7 = int(item.get('lat', 0) * 1e7)
+    lon7 = int(item.get('lon', 0) * 1e7)
+    p = struct.pack('<ffffiifHHBBBBBB',
+                    float(item.get('p1', 0)), float(item.get('p2', 0)), 0.0, 0.0,
+                    lat7, lon7, float(item.get('alt', 0)),
+                    item['seq'], item['cmd'],
+                    link.sysid, 1, 3,
+                    0, 1, 1)
+    link.send(bm(73, p, link.sq, 38))
+
+
 def send_mission_item_int(link: DroneLink, wp: dict) -> None:
     from pllink_proto import bm
     frame = 3 if wp['cmd'] in (16, 19, 21, 22) else 2
@@ -186,6 +218,7 @@ def request_streams(link: DroneLink) -> None:
         (30, 250000), (33, 250000), (24, 250000),
         (1, 1000000), (42, 1000000),
         (36, 500000), (65, 500000), (241, 1000000),
+        (74, 1000000),
     ]
     for mid, interval in streams:
         payload = struct.pack('<fffffffHBBB',

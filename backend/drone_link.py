@@ -81,6 +81,8 @@ class DroneLink:
         self._mission_items: list[dict] = []
         self._mission_pending = False
         self._seq_to_wp: dict[int, int] = {}
+        self._fence_items: list[dict] = []
+        self._fence_pending = False
         self.flight_summary = None
         self.param_mgr = ParamManager(self)
         self.fw_version = ''
@@ -95,6 +97,12 @@ class DroneLink:
         self.rc_rssi = 0
         self.vibe_x = self.vibe_y = self.vibe_z = 0.0
         self.vibe_clip0 = self.vibe_clip1 = self.vibe_clip2 = 0
+        self.ekf_vel_var = 0.0
+        self.ekf_pos_h_var = 0.0
+        self.ekf_pos_v_var = 0.0
+        self.ekf_compass_var = 0.0
+        self.ekf_terrain_var = 0.0
+        self.ekf_flags = 0
         self.servo_out: list[int] = [0] * 16
 
     def is_plane(self) -> bool:
@@ -237,6 +245,11 @@ class DroneLink:
             'vibe': [round(self.vibe_x, 1), round(self.vibe_y, 1), round(self.vibe_z, 1)],
             'vibe_clip': [self.vibe_clip0, self.vibe_clip1, self.vibe_clip2],
             'servo': self.servo_out,
+            'ekf_vel': round(self.ekf_vel_var, 4),
+            'ekf_pos_h': round(self.ekf_pos_h_var, 4),
+            'ekf_pos_v': round(self.ekf_pos_v_var, 4),
+            'ekf_compass': round(self.ekf_compass_var, 4),
+            'ekf_flags': self.ekf_flags,
             **self.param_mgr.get_status(),
         }
 

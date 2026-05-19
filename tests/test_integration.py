@@ -604,6 +604,59 @@ class TestDataStreams:
         asyncio.get_event_loop().run_until_complete(run())
 
 
+class TestFenceUpload:
+    def test_fence_upload(self, ws_url, sim_port):
+        async def run():
+            await asyncio.sleep(2)
+            ws = await ws_connect(ws_url)
+            try:
+                await ensure_connected(ws, ws_url, sim_port, timeout=20)
+                await asyncio.sleep(1)
+                polygon = [
+                    {'lat': 34.258, 'lon': 108.942},
+                    {'lat': 34.259, 'lon': 108.943},
+                    {'lat': 34.259, 'lon': 108.941},
+                    {'lat': 34.257, 'lon': 108.941},
+                ]
+                await ws.send(json.dumps({
+                    'type': 'command', 'cmd': 'fence_upload',
+                    'polygon': polygon,
+                }))
+                ack = await recv_until(
+                    ws, lambda m: m.get('type') == 'event' and '围栏确认' in m.get('text', ''),
+                    timeout=15,
+                )
+                assert '成功' in ack['text']
+            finally:
+                await ws.send(json.dumps({'type': 'disconnect'}))
+                await asyncio.sleep(0.5)
+                await ws.close()
+        asyncio.get_event_loop().run_until_complete(run())
+
+    def test_fence_upload_too_few_points(self, ws_url, sim_port):
+        async def run():
+            await asyncio.sleep(1)
+            ws = await ws_connect(ws_url)
+            try:
+                await ensure_connected(ws, ws_url, sim_port, timeout=20)
+                await asyncio.sleep(0.5)
+                await ws.send(json.dumps({
+                    'type': 'command', 'cmd': 'fence_upload',
+                    'polygon': [{'lat': 34.258, 'lon': 108.942}],
+                }))
+                result = await recv_until(
+                    ws, lambda m: m.get('type') == 'cmd_result',
+                    timeout=10,
+                )
+                assert result.get('ok') is False
+                assert '3' in result.get('error', '')
+            finally:
+                await ws.send(json.dumps({'type': 'disconnect'}))
+                await asyncio.sleep(0.5)
+                await ws.close()
+        asyncio.get_event_loop().run_until_complete(run())
+
+
 class TestMissionAdvanced:
     def test_upload_with_speed_roundtrip(self, ws_url, sim_port):
         async def run():

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { app, addToast } from '../lib/stores.svelte';
+  import { sendCommand } from '../lib/ws';
   import Button from '$lib/components/ui/button/button.svelte';
 
   let drawingFence = $state(false);
@@ -58,6 +59,12 @@
     input.click();
   }
 
+  function uploadFence() {
+    if (app.fencePolygon.length < 3) { addToast('围栏至少需要 3 个顶点', 'error'); return; }
+    sendCommand('fence_upload', undefined, { polygon: app.fencePolygon });
+    addToast('围栏上传中...', 'info');
+  }
+
   function exportKml() {
     if (app.fencePolygon.length < 3) return;
     const coords = [...app.fencePolygon, app.fencePolygon[0]]
@@ -99,6 +106,7 @@
   {:else}
     <div class="text-xs text-muted-foreground mb-2">{app.fencePolygon.length} 顶点 | {fmtArea()}</div>
     <div class="flex flex-wrap gap-1">
+      <Button variant="default" size="xs" onclick={uploadFence}>上传围栏</Button>
       <Button variant="outline" size="xs" onclick={startDraw}>重新绘制</Button>
       <Button variant="outline" size="xs" onclick={saveFence}>保存</Button>
       <Button variant="outline" size="xs" onclick={loadFence}>加载</Button>

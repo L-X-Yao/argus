@@ -183,6 +183,18 @@ def handle_vibration(p: bytes, pl: int, link: DroneLink) -> None:
     link.vibe_clip2 = struct.unpack_from('<I', p, 28)[0]
 
 
+def handle_ekf_status(p: bytes, pl: int, link: DroneLink) -> None:
+    if pl < 22:
+        return
+    vel, pos_h, pos_v, comp, terr, flags = struct.unpack_from('<fffffH', p)
+    link.ekf_vel_var = vel
+    link.ekf_pos_h_var = pos_h
+    link.ekf_pos_v_var = pos_v
+    link.ekf_compass_var = comp
+    link.ekf_terrain_var = terr
+    link.ekf_flags = flags
+
+
 def handle_param_value(p: bytes, pl: int, link: DroneLink) -> None:
     link.param_mgr.handle_param_value(p, pl)
 
@@ -260,19 +272,28 @@ def _request_dl_item(link: DroneLink, seq: int) -> None:
 
 
 def handle_mission_request(p: bytes, pl: int, link: DroneLink) -> None:
-    if pl < 2 or not link._mission_pending:
+    if pl < 2:
         return
-    from . import commands as cmd_mod
     seq = p[0] | (p[1] << 8)
-    if seq < len(link._mission_items):
-        cmd_mod.send_mission_item_int(link, link._mission_items[seq])
+    mission_type = p[4] if pl >= 5 else 0
+    from . import commands as cmd_mod
+    if mission_type == 1 and link._fence_pending:
+        if seq < len(link._fence_items):
+            cmd_mod.send_fence_item_int(link, link._fence_items[seq])
+    elif link._mission_pending:
+        if seq < len(link._mission_items):
+            cmd_mod.send_mission_item_int(link, link._mission_items[seq])
 
 
 def handle_mission_ack(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 3:
         return
-    if link._mission_pending:
-        mtype = p[2]
+    mtype = p[2]
+    mission_type = p[3] if pl >= 4 else 0
+    if mission_type == 1 and link._fence_pending:
+        link._fence_pending = False
+        link.add_event('围栏确认: %s' % ('成功' if mtype == 0 else '失败(%d)' % mtype))
+    elif link._mission_pending:
         link._mission_pending = False
         link.add_event('任务确认: %s' % ('成功' if mtype == 0 else '失败(%d)' % mtype))
 
@@ -291,6 +312,7 @@ def init_handlers() -> None:
     mavlink_dispatch.register(36, handle_servo_output)
     mavlink_dispatch.register(65, handle_rc_channels)
     mavlink_dispatch.register(241, handle_vibration)
+    mavlink_dispatch.register(74, handle_ekf_status)
     mavlink_dispatch.register(22, handle_param_value)
     mavlink_dispatch.register(148, handle_autopilot_version)
     mavlink_dispatch.register(44, handle_mission_count)
