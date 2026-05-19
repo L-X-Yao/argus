@@ -1,6 +1,7 @@
 <script lang="ts">
   import { apiUrl } from '../lib/backend';
   import { X } from '@lucide/svelte';
+  import Button from '$lib/components/ui/button/button.svelte';
 
   let { onclose }: { onclose: () => void } = $props();
 
@@ -139,21 +140,9 @@
       onkeydown={(e) => { if (e.key === 'Enter') startStream(); }}
     />
     {#if streaming}
-      <button
-        class="h-7 px-3 rounded-md bg-destructive/80 text-destructive-foreground text-xs font-semibold
-               hover:bg-destructive transition-all shrink-0"
-        onclick={stopStream}
-      >
-        断开
-      </button>
+      <Button variant="destructive" size="sm" onclick={stopStream}>断开</Button>
     {:else}
-      <button
-        class="h-7 px-3 rounded-md bg-primary text-primary-foreground text-xs font-semibold
-               hover:bg-primary/80 transition-all shrink-0"
-        onclick={startStream}
-      >
-        连接
-      </button>
+      <Button size="sm" onclick={startStream}>连接</Button>
     {/if}
   </div>
 

@@ -132,11 +132,14 @@
             </div>
           {/if}
         </div>
-        <select bind:value={baud}
-                class="h-7 px-1 text-xs bg-input border border-border rounded-md text-foreground cursor-pointer">
-          <option value={57600}>57600</option>
-          <option value={115200}>115200</option>
-        </select>
+        {#if !port.startsWith('tcp:')}
+          <select bind:value={baud}
+                  class="h-7 px-1 text-xs bg-input border border-border rounded-md text-foreground cursor-pointer"
+                  title="串口波特率">
+            <option value={57600}>57600</option>
+            <option value={115200}>115200</option>
+          </select>
+        {/if}
       {/if}
       <Button
         variant={app.drone.connected ? 'destructive' : 'default'}
