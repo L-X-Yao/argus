@@ -86,7 +86,7 @@
   function saveParams() { sendCommand('param_save'); addToast('参数文件已保存', 'success'); }
 </script>
 
-<div class="bg-card border border-border rounded-xl p-4">
+<div class="bg-card border border-border rounded-xl p-4 flex flex-col h-full">
   <div class="flex items-center justify-between flex-wrap gap-2 mb-3">
     <h2 class="text-sm font-semibold text-primary uppercase tracking-wider">参数管理</h2>
     <div class="flex items-center gap-2">
@@ -123,7 +123,7 @@
       <span class="text-[11px] text-muted-foreground whitespace-nowrap">{filtered.length} 项</span>
     </div>
 
-    <div class="max-h-[400px] overflow-y-auto rounded-lg border border-border">
+    <div class="flex-1 min-h-0 overflow-y-auto rounded-lg border border-border">
       {#each filtered as p (p.name)}
         <div class="flex items-center gap-2 px-2 py-1.5 text-xs border-b border-border/50 hover:bg-muted/50 transition-colors
               {modified.has(p.name) ? 'bg-warning/5' : ''}">

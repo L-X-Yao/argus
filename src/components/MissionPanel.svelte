@@ -311,7 +311,6 @@
     <span class="text-[11px] text-muted-foreground">m</span>
     <button class="mp-btn" onclick={applyAltAll}>全部</button>
     <button class="mp-btn !bg-orange-700 !font-bold" onclick={uploadMission}>上传</button>
-    <button class="mp-btn !bg-green-700 !font-bold" onclick={armAndFly}>解锁+起飞</button>
   </div>
   <div class="flex gap-1 mt-1.5 items-center flex-wrap">
     <button class="mp-btn" onclick={saveMission}>保存</button>

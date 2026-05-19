@@ -4,6 +4,7 @@
   import { sendConnect, sendDisconnect, sendCommand } from '../lib/ws';
   import Button from '$lib/components/ui/button/button.svelte';
   import Badge from '$lib/components/ui/badge/badge.svelte';
+  import { Volume2, VolumeOff, Sun, Moon, Settings, Wifi, WifiOff, Signal } from '@lucide/svelte';
 
   let { toggleTheme, onSettings }: { toggleTheme: () => void; onSettings: () => void } = $props();
 
@@ -107,8 +108,12 @@
     {#if app.drone.connected}
       <Badge variant="default" class="text-xs font-bold">{app.drone.mode}</Badge>
 
-      <span class="{linkColor} text-base leading-none" title="链路 {app.drone.link_age >= 0 ? app.drone.link_age.toFixed(1) + 's' : ''}">
-        {#if app.drone.link_age < 1}●{:else if app.drone.link_age < 3}◐{:else}○{/if}
+      <span class="{linkColor}" title="链路 {app.drone.link_age >= 0 ? app.drone.link_age.toFixed(1) + 's' : ''}">
+        {#if app.drone.link_age >= 0 && app.drone.link_age < 3}
+          <Signal size={14} />
+        {:else}
+          <WifiOff size={14} />
+        {/if}
       </span>
 
       <Badge variant="outline" class="font-mono text-[11px]">GPS {app.drone.gps_fix} {app.drone.gps_sats}</Badge>
@@ -128,13 +133,15 @@
       <span class="text-muted-foreground">未连接</span>
     {/if}
 
-    <Button variant="ghost" size="xs" onclick={() => { app.audioMuted = !app.audioMuted; saveSettings(); }}
-            class={app.audioMuted ? 'opacity-40' : ''}>
-      {app.audioMuted ? '🔇' : '🔊'}
+    <Button variant="ghost" size="icon-xs" onclick={() => { app.audioMuted = !app.audioMuted; saveSettings(); }}
+            class={app.audioMuted ? 'opacity-40' : ''} title={app.audioMuted ? '取消静音' : '静音'}>
+      {#if app.audioMuted}<VolumeOff size={14} />{:else}<Volume2 size={14} />{/if}
     </Button>
-    <Button variant="ghost" size="xs" onclick={toggleTheme}>
-      {app.darkTheme ? '☀' : '🌙'}
+    <Button variant="ghost" size="icon-xs" onclick={toggleTheme} title={app.darkTheme ? '浅色主题' : '深色主题'}>
+      {#if app.darkTheme}<Sun size={14} />{:else}<Moon size={14} />{/if}
     </Button>
-    <Button variant="ghost" size="xs" onclick={onSettings}>⚙</Button>
+    <Button variant="ghost" size="icon-xs" onclick={onSettings} title="设置">
+      <Settings size={14} />
+    </Button>
   </div>
 </header>

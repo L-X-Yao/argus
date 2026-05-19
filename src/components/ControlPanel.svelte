@@ -8,15 +8,8 @@
   function pause() { sendCommand('mode', app.drone.vtype === '固定翼' ? 19 : 5); }
 </script>
 
-<div class="bg-card border border-border rounded-xl p-4 w-48 shrink-0 flex flex-col gap-2">
-  <Button variant="destructive" size="lg" class="w-full text-lg font-bold bg-red-600 hover:bg-red-700" onclick={rtl}>
-    !! 返航 !!
-  </Button>
-  <Button size="lg" class="w-full font-bold bg-amber-600 hover:bg-amber-700 text-white" onclick={pause}>
-    悬停
-  </Button>
-
-  <div class="flex gap-1.5 mt-1">
+<div class="bg-card border-r border-border p-3 w-44 shrink-0 flex flex-col gap-2">
+  <div class="flex gap-1.5">
     <Button size="sm" class="flex-1 bg-orange-700 hover:bg-orange-800 text-white" onclick={() => sendCommand('arm')}>解锁</Button>
     <Button size="sm" class="flex-1 bg-green-700 hover:bg-green-800 text-white" onclick={() => sendCommand('disarm')}>锁定</Button>
   </div>

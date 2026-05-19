@@ -21,14 +21,12 @@
       if (batData.length > MAX) batData.shift();
       if (curData.length > MAX) curData.shift();
     });
-    if (app.chartsOpen) {
-      untrack(() => {
-        draw(cAlt, altData, '#4fc3f7');
-        draw(cSpd, spdData, '#69f0ae');
-        draw(cBat, batData, '#ffa726');
-        draw(cCur, curData, '#ff5252');
-      });
-    }
+    untrack(() => {
+      draw(cAlt, altData, '#4fc3f7');
+      draw(cSpd, spdData, '#69f0ae');
+      draw(cBat, batData, '#ffa726');
+      draw(cCur, curData, '#ff5252');
+    });
   });
 
   function draw(canvas: HTMLCanvasElement | null, data: number[], color: string) {
@@ -62,14 +60,8 @@
 </script>
 
 <div class="bg-card border border-border rounded-xl p-4">
-  <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-  <!-- svelte-ignore a11y_click_events_have_key_events -->
-  <h2 class="text-sm font-semibold text-primary uppercase tracking-wider cursor-pointer select-none"
-      onclick={() => app.chartsOpen = !app.chartsOpen}>
-    实时图表 <span class="text-[10px] text-muted-foreground">{app.chartsOpen ? '▼' : '▶'}</span>
-  </h2>
-  {#if app.chartsOpen}
-    <div class="grid grid-cols-2 gap-2 mt-2">
+  <h2 class="text-sm font-semibold text-primary uppercase tracking-wider mb-2">实时图表</h2>
+  <div class="grid grid-cols-2 gap-2">
       <div>
         <div class="text-[11px] text-muted-foreground mb-0.5">高度 (m)</div>
         <canvas bind:this={cAlt} height="80" class="w-full bg-background rounded-lg"></canvas>
@@ -87,5 +79,4 @@
         <canvas bind:this={cCur} height="80" class="w-full bg-background rounded-lg"></canvas>
       </div>
     </div>
-  {/if}
 </div>

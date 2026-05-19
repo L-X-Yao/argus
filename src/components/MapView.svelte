@@ -8,6 +8,8 @@
 
   declare const L: any;
 
+  let { showHud = true }: { showHud?: boolean } = $props();
+
   let mapEl: HTMLDivElement;
   let map: any = null;
   let droneMarker: any = null;
@@ -430,7 +432,7 @@
   <div class="absolute bottom-1.5 left-2.5 z-[1000] bg-card/85 backdrop-blur text-muted-foreground px-2 py-0.5 rounded text-[11px] font-mono">{mouseCoord || '---'}</div>
   <MapControls />
 
-  {#if app.drone.connected}
+  {#if showHud && app.drone.connected}
     <HudOverlay />
   {/if}
 </div>

@@ -99,6 +99,30 @@
         {tab.label}
       </button>
     {/each}
+
+    {#if app.drone.connected}
+      <div class="ml-auto flex items-center gap-1.5">
+        <button class="px-3 py-1 rounded-md bg-red-600 text-white text-xs font-bold
+                       hover:bg-red-700 active:scale-95 transition-all"
+                onclick={() => { if (confirm('切换到返航模式？')) sendCommand('rtl'); }}>
+          返航
+        </button>
+        <button class="px-3 py-1 rounded-md bg-amber-600 text-white text-xs font-bold
+                       hover:bg-amber-700 active:scale-95 transition-all"
+                onclick={() => sendCommand('mode', app.drone.vtype === '固定翼' ? 19 : 5)}>
+          悬停
+        </button>
+        {#if view === 'fly'}
+          <button class="px-2.5 py-1 rounded-md text-xs font-semibold transition-all
+                         {controlsOpen
+                           ? 'bg-primary text-primary-foreground'
+                           : 'bg-secondary text-secondary-foreground hover:bg-muted'}"
+                  onclick={() => controlsOpen = !controlsOpen}>
+            {controlsOpen ? '收起' : '操控'}
+          </button>
+        {/if}
+      </div>
+    {/if}
   </nav>
 
   {#if view === 'fly'}
@@ -112,24 +136,6 @@
         <MapView />
         {#if app.drone.connected}
           <TelemetryOverlay />
-          <div class="absolute top-2 left-14 z-[1001] flex gap-1.5">
-            <button class="px-3 py-2 rounded-lg bg-red-600/90 backdrop-blur text-white text-sm font-bold shadow-lg
-                           hover:bg-red-700 active:scale-95 transition-all border border-red-500/50"
-                    onclick={() => { if (confirm('切换到返航模式？')) sendCommand('rtl'); }}>
-              返航
-            </button>
-            <button class="px-3 py-2 rounded-lg bg-amber-600/90 backdrop-blur text-white text-sm font-bold shadow-lg
-                           hover:bg-amber-700 active:scale-95 transition-all border border-amber-500/50"
-                    onclick={() => sendCommand('mode', app.drone.vtype === '固定翼' ? 19 : 5)}>
-              悬停
-            </button>
-            <button class="px-3 py-2 rounded-lg bg-card/90 backdrop-blur text-foreground text-xs font-semibold shadow-lg
-                           hover:bg-muted active:scale-95 transition-all border border-border
-                           {controlsOpen ? '!bg-primary/90 !text-primary-foreground !border-primary/50' : ''}"
-                    onclick={() => controlsOpen = !controlsOpen}>
-              {controlsOpen ? '收起操控' : '操控面板'}
-            </button>
-          </div>
         {/if}
         <MissionProgress />
         {#if app.drone.connected && !app.drone.armed}
@@ -154,7 +160,7 @@
   {:else if view === 'plan'}
     <div class="flex-1 flex flex-col overflow-auto">
       <div class="flex gap-2 p-2 flex-1 min-h-72">
-        <MapView />
+        <MapView showHud={false} />
         <MissionPanel />
       </div>
       {#if app.showSurvey}<SurveyPanel />{/if}
@@ -172,7 +178,7 @@
     </div>
 
   {:else if view === 'params'}
-    <div class="flex-1 overflow-auto p-3">
+    <div class="flex-1 flex flex-col overflow-hidden p-3">
       <ParamPanel />
     </div>
   {/if}
