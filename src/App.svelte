@@ -117,26 +117,30 @@
     {#if app.drone.connected}
       <div class="ml-auto flex items-center gap-1.5 shrink-0">
         <Button size="sm" class="bg-red-600 hover:bg-red-700 text-white font-bold gap-1"
-                onclick={() => { if (confirm('切换到返航模式？')) sendCommand('rtl'); }}>
+                onclick={() => { if (confirm('切换到返航模式？')) sendCommand('rtl'); }}
+                title="返航模式 (快捷键 R)">
           <CornerDownLeft size={13} />返航
         </Button>
         <Button size="sm" class="bg-amber-600 hover:bg-amber-700 text-white font-bold gap-1"
-                onclick={() => sendCommand('mode', app.drone.vtype === '固定翼' ? 19 : 5)}>
+                onclick={() => sendCommand('mode', app.drone.vtype === '固定翼' ? 19 : 5)}
+                title="悬停/刹车 (快捷键 Space)">
           <Pause size={13} />悬停
         </Button>
-        <Button variant="secondary" size="sm" class="gap-1" onclick={() => showLogPanel = true}>
+        <Button variant="secondary" size="sm" class="gap-1" onclick={() => showLogPanel = true}
+                title="查看/下载机载飞行日志">
           <HardDrive size={13} />日志
         </Button>
-        <Button variant="secondary" size="sm" class="gap-1" onclick={() => showCalibration = true}>
+        <Button variant="secondary" size="sm" class="gap-1" onclick={() => showCalibration = true}
+                title="传感器校准 (罗盘/加速度计/陀螺仪)">
           <Wrench size={13} />校准
         </Button>
         {#if view === 'fly'}
           <Button variant={showVideo ? 'default' : 'secondary'} size="sm" class="gap-1"
-                  onclick={() => showVideo = !showVideo}>
+                  onclick={() => showVideo = !showVideo} title="RTSP视频画面">
             <Video size={13} />视频
           </Button>
           <Button variant={controlsOpen ? 'default' : 'secondary'} size="sm" class="gap-1"
-                  onclick={() => controlsOpen = !controlsOpen}>
+                  onclick={() => controlsOpen = !controlsOpen} title="解锁/模式/任务控制面板">
             {#if controlsOpen}<PanelLeftClose size={13} />收起{:else}<SlidersHorizontal size={13} />操控{/if}
           </Button>
         {/if}

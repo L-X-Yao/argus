@@ -16,11 +16,11 @@
       <span class="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span>
       <span class="text-[11px] font-bold text-orange-400">已解锁</span>
     </div>
-    <Button size="sm" class="w-full bg-green-700 hover:bg-green-800 text-white font-bold" onclick={disarm}>锁定电机</Button>
+    <Button size="sm" class="w-full bg-green-700 hover:bg-green-800 text-white font-bold" onclick={disarm} title="锁定电机 (快捷键 D)">锁定电机</Button>
   {:else}
-    <Button size="sm" class="w-full bg-orange-700 hover:bg-orange-800 text-white font-bold" onclick={arm}>解锁电机</Button>
+    <Button size="sm" class="w-full bg-orange-700 hover:bg-orange-800 text-white font-bold" onclick={arm} title="解锁电机 (快捷键 A，需确认)">解锁电机</Button>
   {/if}
-  <Button variant="destructive" size="xs" class="w-full" onclick={forceDisarm}>强制锁定</Button>
+  <Button variant="destructive" size="xs" class="w-full" onclick={forceDisarm} title="紧急停机 — 电机立即停转">强制锁定</Button>
 
   <div class="text-[11px] text-muted-foreground font-semibold mt-2 tracking-wide uppercase">模式</div>
   <div class="flex flex-col gap-1">
@@ -34,8 +34,8 @@
 
   <div class="text-[11px] text-muted-foreground font-semibold mt-2 tracking-wide uppercase">载荷</div>
   <div class="flex gap-1.5">
-    <Button size="sm" class="flex-1 bg-orange-700 hover:bg-orange-800 text-white font-bold" onclick={() => sendCommand('drop')}>投放</Button>
-    <Button size="sm" variant="secondary" class="flex-1" onclick={() => sendCommand('drop_stop')}>停止</Button>
+    <Button size="sm" class="flex-1 bg-orange-700 hover:bg-orange-800 text-white font-bold" onclick={() => sendCommand('drop')} title="执行载荷投放">投放</Button>
+    <Button size="sm" variant="secondary" class="flex-1" onclick={() => sendCommand('drop_stop')} title="停止投放">停止</Button>
   </div>
 
   <div class="text-[11px] text-muted-foreground font-semibold mt-2 tracking-wide uppercase">任务</div>
