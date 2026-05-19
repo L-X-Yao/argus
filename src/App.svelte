@@ -24,12 +24,16 @@
   import EkfPanel from './components/EkfPanel.svelte';
   import TelemetryOverlay from './components/TelemetryOverlay.svelte';
   import LogPanel from './components/LogPanel.svelte';
+  import VideoOverlay from './components/VideoOverlay.svelte';
+  import CalibrationPanel from './components/CalibrationPanel.svelte';
 
   type View = 'fly' | 'plan' | 'monitor' | 'params';
   let view = $state<View>('fly');
   let flyEventsOpen = $state(false);
   let controlsOpen = $state(false);
   let showLogPanel = $state(false);
+  let showVideo = $state(false);
+  let showCalibration = $state(false);
 
   onMount(() => {
     loadSettings();
@@ -120,6 +124,20 @@
                 onclick={() => showLogPanel = true}>
           机载日志
         </button>
+        <button class="px-2.5 py-1 rounded-md text-xs font-semibold transition-all
+                       bg-secondary text-secondary-foreground hover:bg-muted"
+                onclick={() => showCalibration = true}>
+          校准
+        </button>
+        {#if view === 'fly'}
+          <button class="px-2.5 py-1 rounded-md text-xs font-semibold transition-all
+                         {showVideo
+                           ? 'bg-primary text-primary-foreground'
+                           : 'bg-secondary text-secondary-foreground hover:bg-muted'}"
+                  onclick={() => showVideo = !showVideo}>
+            视频
+          </button>
+        {/if}
         {#if view === 'fly'}
           <button class="px-2.5 py-1 rounded-md text-xs font-semibold transition-all
                          {controlsOpen
@@ -144,6 +162,9 @@
         <MapView />
         {#if app.drone.connected}
           <TelemetryOverlay />
+        {/if}
+        {#if showVideo && app.drone.connected}
+          <VideoOverlay onclose={() => showVideo = false} />
         {/if}
         <MissionProgress />
         {#if app.drone.connected && !app.drone.armed}
@@ -207,5 +228,8 @@
   {/if}
   {#if showLogPanel}
     <LogPanel onclose={() => showLogPanel = false} />
+  {/if}
+  {#if showCalibration}
+    <CalibrationPanel onclose={() => showCalibration = false} />
   {/if}
 </div>

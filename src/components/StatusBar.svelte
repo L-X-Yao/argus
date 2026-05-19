@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { app, saveSettings } from '../lib/stores.svelte';
   import { sendConnect, sendDisconnect, sendCommand } from '../lib/ws';
+  import { apiUrl } from '../lib/backend';
   import Button from '$lib/components/ui/button/button.svelte';
   import Badge from '$lib/components/ui/badge/badge.svelte';
   import { Volume2, VolumeOff, Sun, Moon, Settings, Wifi, WifiOff, Signal } from '@lucide/svelte';
@@ -28,7 +29,7 @@
 
   async function fetchPorts() {
     try {
-      const r = await fetch('/api/ports');
+      const r = await fetch(apiUrl('/api/ports'));
       const data = await r.json();
       (data.ports || []).forEach((p: string) => { if (!portHistory.includes(p)) portHistory.push(p); });
     } catch {}
@@ -62,7 +63,7 @@
     app.drone.remaining < 40 ? 'text-warning' : 'text-success'
   );
 
-  function downloadLog() { window.open('/api/log', '_blank'); }
+  function downloadLog() { window.open(apiUrl('/api/log'), '_blank'); }
 </script>
 
 <header class="flex items-center justify-between gap-3 px-3 py-1.5 bg-card border-b-2 border-border shrink-0">

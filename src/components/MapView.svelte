@@ -3,6 +3,7 @@
   import { app, addWaypoint, addToast, saveWaypoints } from '../lib/stores.svelte';
   import { sendCommand } from '../lib/ws';
   import { toGcj } from '../lib/gcj02';
+  import { API_BASE } from '../lib/backend';
   import MapControls from './MapControls.svelte';
   import HudOverlay from './HudOverlay.svelte';
 
@@ -41,9 +42,9 @@
   let fencePolyLayer: any = null;
   let fenceVertMarkers: any[] = [];
 
-  const SAT_URL = '/api/tile/6/{z}/{x}/{y}';
-  const LABEL_URL = '/api/tile/8/{z}/{x}/{y}';
-  const VEC_URL = '/api/tile/7/{z}/{x}/{y}';
+  const SAT_URL = `${API_BASE}/api/tile/6/{z}/{x}/{y}`;
+  const LABEL_URL = `${API_BASE}/api/tile/8/{z}/{x}/{y}`;
+  const VEC_URL = `${API_BASE}/api/tile/7/{z}/{x}/{y}`;
   let labelLayer: any = null;
 
   onMount(() => {

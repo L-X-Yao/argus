@@ -12,6 +12,7 @@ from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from .drone_link import DroneLink
+from .video import router as video_router
 from .ws_manager import WSManager
 
 V3_DIR = Path(__file__).resolve().parent.parent
@@ -43,6 +44,8 @@ app.add_middleware(
     allow_methods=['*'],
     allow_headers=['*'],
 )
+
+app.include_router(video_router)
 
 
 @app.get('/health')

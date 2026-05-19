@@ -6,3 +6,7 @@ __pycache__/
 test-results/
 playwright-report/
 .svelte-kit/
+src-tauri/target/
+src-tauri/binaries/
+src-tauri/gen/
+build/

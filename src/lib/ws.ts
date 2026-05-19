@@ -2,15 +2,10 @@ import type { WSMessage, DroneState, DroneEvent } from './types';
 import { updateState, addEvent, setWsConnected, addToast, loadDownloadedMission } from './stores.svelte';
 import { handleParamBatch, handleParamsComplete } from './paramStore.svelte';
 import { setLogList, completeDownload } from './logStore.svelte';
+import { getWsUrl } from './backend';
 
 let socket: WebSocket | null = null;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
-
-function getWsUrl(): string {
-  const loc = window.location;
-  const proto = loc.protocol === 'https:' ? 'wss:' : 'ws:';
-  return `${proto}//${loc.host}/ws`;
-}
 
 export function connectWs(): void {
   if (socket && socket.readyState <= 1) return;

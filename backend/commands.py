@@ -86,6 +86,24 @@ def execute(cmd: str, param, link: DroneLink, data: dict | None = None) -> dict 
                         0, lat7, lon7, alt, 0, 0, 0, 0, 0, 0, 0, 0,
                         0x0FF8, link.sysid, 1, 6)
         link.send(bm(84, p, link.sq, 5))
+    elif cmd == 'cal_compass':
+        link.add_event('校准: 开始罗盘校准...')
+        _send_cmd(link, 241, p2=1)
+    elif cmd == 'cal_accel':
+        link.add_event('校准: 开始加速度计校准...')
+        _send_cmd(link, 241, p5=1)
+    elif cmd == 'cal_gyro':
+        link.add_event('校准: 开始陀螺仪校准 (请保持静止)...')
+        _send_cmd(link, 241, p1=1)
+    elif cmd == 'cal_level':
+        link.add_event('校准: 开始水平校准 (请放平飞机)...')
+        _send_cmd(link, 241, p5=4)
+    elif cmd == 'cal_baro':
+        link.add_event('校准: 开始气压计校准...')
+        _send_cmd(link, 241, p3=1)
+    elif cmd == 'cal_cancel':
+        link.add_event('校准: 取消')
+        _send_cmd(link, 241)
     elif cmd == 'clear_summary':
         link.flight_summary = None
     elif cmd == 'mission_download':

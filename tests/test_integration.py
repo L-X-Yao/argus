@@ -821,3 +821,68 @@ class TestMissionAdvanced:
                 await asyncio.sleep(0.5)
                 await ws.close()
         asyncio.get_event_loop().run_until_complete(run())
+
+
+class TestCalibration:
+    def test_gyro_calibration(self, ws_url, sim_port):
+        async def run():
+            await asyncio.sleep(1)
+            ws = await ws_connect(ws_url)
+            try:
+                await ensure_connected(ws, ws_url, sim_port, timeout=20)
+                await asyncio.sleep(0.5)
+                await ws.send(json.dumps({
+                    'type': 'command', 'cmd': 'cal_gyro',
+                }))
+                event = await recv_until(
+                    ws, lambda m: m.get('type') == 'event' and '校准' in m.get('text', ''),
+                    timeout=10,
+                )
+                assert '校准' in event['text']
+            finally:
+                await ws.send(json.dumps({'type': 'disconnect'}))
+                await asyncio.sleep(0.5)
+                await ws.close()
+        asyncio.get_event_loop().run_until_complete(run())
+
+    def test_compass_calibration(self, ws_url, sim_port):
+        async def run():
+            await asyncio.sleep(1)
+            ws = await ws_connect(ws_url)
+            try:
+                await ensure_connected(ws, ws_url, sim_port, timeout=20)
+                await asyncio.sleep(0.5)
+                await ws.send(json.dumps({
+                    'type': 'command', 'cmd': 'cal_compass',
+                }))
+                event = await recv_until(
+                    ws, lambda m: m.get('type') == 'event' and '罗盘' in m.get('text', ''),
+                    timeout=10,
+                )
+                assert '罗盘' in event['text']
+            finally:
+                await ws.send(json.dumps({'type': 'disconnect'}))
+                await asyncio.sleep(0.5)
+                await ws.close()
+        asyncio.get_event_loop().run_until_complete(run())
+
+    def test_cal_cancel(self, ws_url, sim_port):
+        async def run():
+            await asyncio.sleep(1)
+            ws = await ws_connect(ws_url)
+            try:
+                await ensure_connected(ws, ws_url, sim_port, timeout=20)
+                await asyncio.sleep(0.5)
+                await ws.send(json.dumps({
+                    'type': 'command', 'cmd': 'cal_cancel',
+                }))
+                event = await recv_until(
+                    ws, lambda m: m.get('type') == 'event' and '取消' in m.get('text', ''),
+                    timeout=10,
+                )
+                assert '取消' in event['text']
+            finally:
+                await ws.send(json.dumps({'type': 'disconnect'}))
+                await asyncio.sleep(0.5)
+                await ws.close()
+        asyncio.get_event_loop().run_until_complete(run())
