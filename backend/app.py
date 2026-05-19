@@ -133,6 +133,8 @@ async def api_tile_cache_clear():
 
 if DIST_DIR.exists():
     app.mount('/assets', StaticFiles(directory=str(DIST_DIR / 'assets')), name='assets')
+    if (DIST_DIR / 'images').exists():
+        app.mount('/images', StaticFiles(directory=str(DIST_DIR / 'images')), name='images')
 
     @app.get('/')
     async def index():
