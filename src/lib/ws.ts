@@ -41,6 +41,8 @@ export function connectWs(): void {
           addToast('已断开连接', 'info');
         else if (ev.text.includes('低电量') || ev.text.includes('电量极低'))
           addToast(ev.text, 'error', 8000);
+        else if (ev.text.includes('指令应答') && ev.text.includes('失败'))
+          addToast(ev.text, 'error', 5000);
       }
       else if (msg.type === 'param_batch') handleParamBatch(msg.params);
       else if (msg.type === 'params_complete') handleParamsComplete();

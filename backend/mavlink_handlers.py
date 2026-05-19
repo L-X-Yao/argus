@@ -140,10 +140,23 @@ def handle_mission_item_reached(p: bytes, pl: int, link: DroneLink) -> None:
     link.add_event('航点 %d 已到达' % seq)
 
 
+_CMD_NAMES = {
+    22: '起飞', 176: '模式', 181: '继电器', 241: '校准', 300: '任务开始',
+    400: '解锁/锁定', 410: '引导',
+}
+_ACK_RESULTS = {0: '成功', 1: '暂时拒绝', 2: '拒绝', 3: '不支持', 4: '进行中', 5: '已取消'}
+
 def handle_command_ack(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 3:
         return
-    link.add_event('指令应答: %s' % ('成功' if p[2] == 0 else '失败(%d)' % p[2]))
+    import struct
+    cmd_id = struct.unpack_from('<H', p, 0)[0]
+    result = p[2]
+    cmd_name = _CMD_NAMES.get(cmd_id, str(cmd_id))
+    result_text = _ACK_RESULTS.get(result, '未知(%d)' % result)
+    if result == 4:
+        return
+    link.add_event('指令应答: %s — %s' % (cmd_name, result_text))
 
 
 def handle_statustext(p: bytes, pl: int, link: DroneLink) -> None:
