@@ -64,8 +64,8 @@
     if ((e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'SELECT') return;
     const k = e.key.toLowerCase();
     if (k === ' ') { e.preventDefault(); sendCommand('mode', app.drone.vtype === '固定翼' ? 19 : 5); }
-    else if (k === 'r') sendCommand('rtl');
-    else if (k === 'a') sendCommand('arm');
+    else if (k === 'r') { if (confirm('切换到返航模式？')) sendCommand('rtl'); }
+    else if (k === 'a') { if (confirm('确认解锁电机？')) sendCommand('arm'); }
     else if (k === 'd') sendCommand('disarm');
     else if (k === 'l') { app.darkTheme = !app.darkTheme; saveSettings(); }
     else if (k === 'm') app.mapExpanded = !app.mapExpanded;
