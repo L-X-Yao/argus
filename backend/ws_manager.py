@@ -24,80 +24,86 @@ class WSManager:
             )
             for t in pending:
                 t.cancel()
-        except (WebSocketDisconnect, Exception):
+            for t in done:
+                if t.exception() is not None:
+                    pass
+        except Exception:
             pass
         finally:
             self._clients.discard(ws)
 
     async def _receive_loop(self, ws: WebSocket) -> None:
-        while True:
-            try:
+        try:
+            while True:
                 raw = await ws.receive_text()
-            except WebSocketDisconnect:
-                return
-            try:
-                msg = json.loads(raw)
-            except json.JSONDecodeError:
-                continue
-            msg_type = msg.get('type', '')
-            if msg_type == 'connect':
-                port = msg.get('port', 'tcp:localhost:5770')
-                baud = msg.get('baud', 57600)
-                ok = self.link.connect(port, baud)
-                await ws.send_text(json.dumps({
-                    'type': 'connect_result', 'ok': ok,
-                    'error': '' if ok else '无法连接',
-                }))
-            elif msg_type == 'disconnect':
-                self.link.disconnect()
-                await ws.send_text(json.dumps({
-                    'type': 'connect_result', 'ok': True, 'error': '',
-                }))
-            elif msg_type == 'command':
-                cmd = msg.get('cmd', '')
-                param = msg.get('param')
-                result = commands.execute(cmd, param, self.link, data=msg)
-                if result:
-                    await ws.send_text(json.dumps({'type': 'cmd_result', **result}))
+                try:
+                    msg = json.loads(raw)
+                except json.JSONDecodeError:
+                    continue
+                msg_type = msg.get('type', '')
+                if msg_type == 'connect':
+                    port = msg.get('port', 'tcp:localhost:5770')
+                    baud = msg.get('baud', 57600)
+                    ok = self.link.connect(port, baud)
+                    await ws.send_text(json.dumps({
+                        'type': 'connect_result', 'ok': ok,
+                        'error': '' if ok else '无法连接',
+                    }))
+                elif msg_type == 'disconnect':
+                    self.link.disconnect()
+                    await ws.send_text(json.dumps({
+                        'type': 'connect_result', 'ok': True, 'error': '',
+                    }))
+                elif msg_type == 'command':
+                    cmd = msg.get('cmd', '')
+                    param = msg.get('param')
+                    result = commands.execute(cmd, param, self.link, data=msg)
+                    if result:
+                        await ws.send_text(json.dumps({'type': 'cmd_result', **result}))
+        except (WebSocketDisconnect, Exception):
+            return
 
     async def _push_loop(self, ws: WebSocket) -> None:
         event_cursor = len(self.link.events)
         param_cursor = len(self.link.param_mgr._messages)
         dl_cursor = len(self.link._dl_messages)
-        while True:
-            state = self.link.get_state()
-            await ws.send_text(json.dumps(state))
-            events = self.link.events
-            if event_cursor > len(events):
-                event_cursor = 0
-            if len(events) > event_cursor:
-                for ev in events[event_cursor:]:
-                    await ws.send_text(json.dumps({
-                        'type': 'event',
-                        'time': ev['time'],
-                        'text': ev['text'],
-                    }))
-                event_cursor = len(events)
-            dlmsg = self.link._dl_messages
-            if dl_cursor > len(dlmsg):
-                dl_cursor = 0
-            if len(dlmsg) > dl_cursor:
-                for msg in dlmsg[dl_cursor:]:
-                    await ws.send_text(json.dumps(msg))
-                dl_cursor = len(dlmsg)
-            pmsg = self.link.param_mgr._messages
-            if param_cursor > len(pmsg):
-                param_cursor = 0
-            if len(pmsg) > param_cursor:
-                batch = pmsg[param_cursor:]
-                pvals = [m for m in batch if m['type'] == 'param_value']
-                others = [m for m in batch if m['type'] != 'param_value']
-                if pvals:
-                    await ws.send_text(json.dumps({
-                        'type': 'param_batch', 'params': pvals,
-                    }))
-                for msg in others:
-                    await ws.send_text(json.dumps(msg))
-                param_cursor = len(pmsg)
-            interval = 0.2 if self.link.connected else 1.0
-            await asyncio.sleep(interval)
+        try:
+            while True:
+                state = self.link.get_state()
+                await ws.send_text(json.dumps(state))
+                events = self.link.events
+                if event_cursor > len(events):
+                    event_cursor = 0
+                if len(events) > event_cursor:
+                    for ev in events[event_cursor:]:
+                        await ws.send_text(json.dumps({
+                            'type': 'event',
+                            'time': ev['time'],
+                            'text': ev['text'],
+                        }))
+                    event_cursor = len(events)
+                dlmsg = self.link._dl_messages
+                if dl_cursor > len(dlmsg):
+                    dl_cursor = 0
+                if len(dlmsg) > dl_cursor:
+                    for msg in dlmsg[dl_cursor:]:
+                        await ws.send_text(json.dumps(msg))
+                    dl_cursor = len(dlmsg)
+                pmsg = self.link.param_mgr._messages
+                if param_cursor > len(pmsg):
+                    param_cursor = 0
+                if len(pmsg) > param_cursor:
+                    batch = pmsg[param_cursor:]
+                    pvals = [m for m in batch if m['type'] == 'param_value']
+                    others = [m for m in batch if m['type'] != 'param_value']
+                    if pvals:
+                        await ws.send_text(json.dumps({
+                            'type': 'param_batch', 'params': pvals,
+                        }))
+                    for msg in others:
+                        await ws.send_text(json.dumps(msg))
+                    param_cursor = len(pmsg)
+                interval = 0.2 if self.link.connected else 1.0
+                await asyncio.sleep(interval)
+        except (WebSocketDisconnect, Exception):
+            return
