@@ -79,6 +79,8 @@ function scheduleReconnect(): void {
 export function sendMessage(msg: Record<string, unknown>): void {
   if (socket && socket.readyState === WebSocket.OPEN) {
     socket.send(JSON.stringify(msg));
+  } else if (msg.type === 'command') {
+    addToast('指令未发送 — 服务未连接', 'error');
   }
 }
 
