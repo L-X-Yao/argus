@@ -4,7 +4,7 @@
   import { app, loadSettings, saveSettings } from './lib/stores.svelte';
   import { checkAlerts } from './lib/audio';
   import StatusBar from './components/StatusBar.svelte';
-  import ConnectionBar from './components/ConnectionBar.svelte';
+  // ConnectionBar merged into StatusBar
   import TelemetryPanel from './components/TelemetryPanel.svelte';
   import ControlPanel from './components/ControlPanel.svelte';
   import MapView from './components/MapView.svelte';
@@ -72,7 +72,6 @@
 
 <div class="app" class:light={!app.darkTheme}>
   <StatusBar {toggleTheme} onSettings={() => app.showSettings = !app.showSettings} />
-  <ConnectionBar />
   <nav class="view-tabs">
     <button class:active={view === 'fly'} onclick={() => view = 'fly'}>飞行</button>
     <button class:active={view === 'plan'} onclick={() => view = 'plan'}>规划</button>
