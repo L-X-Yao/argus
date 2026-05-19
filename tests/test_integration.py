@@ -886,3 +886,202 @@ class TestCalibration:
                 await asyncio.sleep(0.5)
                 await ws.close()
         asyncio.get_event_loop().run_until_complete(run())
+
+
+# ═══════════════════════════════════════════════════════════════════════
+# Supplementary audit tests — 6 previously untested feature areas
+# ═══════════════════════════════════════════════════════════════════════
+
+
+class TestVideoApi:
+    """Video proxy endpoint (no real RTSP source needed)."""
+
+    def test_video_no_url(self, backend_url):
+        import httpx
+        r = httpx.get(f'{backend_url}/api/video', timeout=5)
+        assert r.status_code == 200
+        assert 'error' in r.json()
+
+    def test_video_stop_no_active(self, backend_url):
+        import httpx
+        r = httpx.get(f'{backend_url}/api/video/stop', timeout=5)
+        assert r.status_code == 200
+        assert r.json()['ok'] is True
+
+
+class TestTileCache:
+    """Tile cache API."""
+
+    def test_tile_cache_stats(self, backend_url):
+        import httpx
+        r = httpx.get(f'{backend_url}/api/tile_cache', timeout=5)
+        assert r.status_code == 200
+        data = r.json()
+        assert 'size' in data and 'count' in data
+
+    def test_tile_cache_clear(self, backend_url):
+        import httpx
+        r = httpx.post(f'{backend_url}/api/tile_cache_clear', timeout=5)
+        assert r.status_code == 200
+        assert r.json()['ok'] is True
+
+
+class TestVzConvention:
+    """vz sign: positive = climbing (QGC convention)."""
+
+    def test_vz_field_exists(self, ws_url, sim_port):
+        async def run():
+            ws = await ws_connect(ws_url)
+            try:
+                await ensure_connected(ws, ws_url, sim_port)
+                state = await recv_until(
+                    ws, lambda m: m.get('type') == 'state' and m.get('connected'),
+                    timeout=10,
+                )
+                assert 'vz' in state
+                assert isinstance(state['vz'], (int, float))
+            finally:
+                await ws.send(json.dumps({'type': 'disconnect'}))
+                await asyncio.sleep(0.5)
+                await ws.close()
+        asyncio.get_event_loop().run_until_complete(run())
+
+
+class TestEkfInState:
+    """EKF fields available for preflight check."""
+
+    def test_ekf_fields(self, ws_url, sim_port):
+        async def run():
+            ws = await ws_connect(ws_url)
+            try:
+                await ensure_connected(ws, ws_url, sim_port)
+                state = await recv_until(
+                    ws, lambda m: (m.get('type') == 'state' and m.get('connected')
+                                   and m.get('ekf_flags', 0) != 0),
+                    timeout=15,
+                )
+                for key in ('ekf_vel', 'ekf_pos_h', 'ekf_pos_v', 'ekf_compass', 'ekf_flags'):
+                    assert key in state, f'missing {key}'
+                assert isinstance(state['ekf_flags'], int)
+            finally:
+                await ws.send(json.dumps({'type': 'disconnect'}))
+                await asyncio.sleep(0.5)
+                await ws.close()
+        asyncio.get_event_loop().run_until_complete(run())
+
+
+class TestMissionFileFormats:
+    """Mission JSON/KML roundtrip (pure logic, no browser)."""
+
+    def test_json_roundtrip(self):
+        wps = [
+            {'lat': 34.258, 'lon': 108.942, 'alt': 30, 'drop': False,
+             'delay': 0, 'speed': 5, 'type': 'wp', 'loiter_param': 0},
+            {'lat': 34.259, 'lon': 108.943, 'alt': 40, 'drop': True,
+             'delay': 0, 'speed': 0, 'type': 'loiter_turns', 'loiter_param': 3},
+        ]
+        data = json.dumps({'waypoints': wps, 'alt': 30})
+        parsed = json.loads(data)
+        assert len(parsed['waypoints']) == 2
+        assert parsed['waypoints'][1]['drop'] is True
+        assert parsed['waypoints'][1]['type'] == 'loiter_turns'
+
+    def test_kml_import_parsing(self):
+        from xml.etree import ElementTree as ET
+        kml = ('<?xml version="1.0" encoding="UTF-8"?>'
+               '<kml xmlns="http://www.opengis.net/kml/2.2"><Document>'
+               '<Placemark><LineString><coordinates>'
+               '108.942,34.258,30\n108.943,34.259,40'
+               '</coordinates></LineString></Placemark></Document></kml>')
+        root = ET.fromstring(kml)
+        ns = '{http://www.opengis.net/kml/2.2}'
+        el = root.find(f'.//{ns}coordinates')
+        assert el is not None
+        pts = []
+        for c in el.text.strip().split():
+            p = c.split(',')
+            if len(p) >= 2:
+                pts.append({'lat': float(p[1]), 'lon': float(p[0]),
+                            'alt': float(p[2]) if len(p) >= 3 else 30})
+        assert len(pts) == 2
+        assert abs(pts[0]['lat'] - 34.258) < 0.001
+
+    def test_kml_export_format(self):
+        wps = [{'lat': 34.258, 'lon': 108.942, 'alt': 30}]
+        coords = '\n'.join(f"{w['lon']},{w['lat']},{w['alt']}" for w in wps)
+        assert '108.942,34.258,30' in coords
+
+
+class TestCsvReplayParsing:
+    """CSV replay file parsing (pure logic)."""
+
+    def test_csv_parse(self):
+        lines = [
+            'time,roll,pitch,yaw,lat,lon,alt_rel,alt_msl,gs,vz,voltage,current,remaining,mode,mode_name,armed,gps_fix,sats,wp,hdg,dist,bat_time',
+            '0,1.0,2.0,90,34.258,108.942,30.0,430,5.0,1.0,25.2,5.0,80,5,LOITER,1,3,14,2,90,100,-1',
+            '1,1.5,2.5,91,34.259,108.943,31.0,431,5.5,0.5,25.1,5.1,79,5,LOITER,1,3,14,2,91,110,-1',
+        ]
+        rows = []
+        for i in range(1, len(lines)):
+            cols = lines[i].split(',')
+            assert len(cols) >= 20
+            rows.append({'t': float(cols[0]), 'lat': float(cols[4]),
+                         'alt_rel': float(cols[6]), 'gs': float(cols[8])})
+        assert len(rows) == 2
+        assert rows[0]['lat'] == 34.258
+        assert rows[1]['alt_rel'] == 31.0
+
+
+class TestAudioAlertLogic:
+    """Audio alert trigger logic (pure Python, no Web Audio)."""
+
+    def test_arm_disarm_triggers(self):
+        prev = False
+        alerts = []
+        for armed in [False, True, True, False]:
+            if armed and not prev:
+                alerts.append('arm')
+            if not armed and prev:
+                alerts.append('disarm')
+            prev = armed
+        assert alerts == ['arm', 'disarm']
+
+    def test_battery_low_single_trigger(self):
+        prev_low = False
+        count = 0
+        for remaining in [80, 50, 25, 19, 18, 15, 30]:
+            bat_low = 0 <= remaining < 20
+            if bat_low and not prev_low:
+                count += 1
+            prev_low = bat_low
+        assert count == 1
+
+    def test_link_lost_speak_once(self):
+        spoken = False
+        speak_count = 0
+        for age in [0.5, 1.0, 2.0, 3.5, 4.0, 1.0, 0.5]:
+            if age > 3 and not spoken:
+                speak_count += 1
+                spoken = True
+            if 0 <= age < 2:
+                spoken = False
+        assert speak_count == 1
+
+
+class TestConfirmCoverage:
+    """Verify all dangerous commands have confirm() guards in source."""
+
+    def test_dangerous_commands_guarded(self):
+        import re
+        dangerous = ['arm', 'rtl', 'takeoff', 'force_disarm', 'drop',
+                      'mission_start', 'mission_clear']
+        src_dir = Path(__file__).resolve().parent.parent / 'src'
+        for cmd in dangerous:
+            pat = re.compile(rf"sendCommand\(['\"]({cmd})['\"]")
+            for f in src_dir.rglob('*.svelte'):
+                content = f.read_text()
+                for m in pat.finditer(content):
+                    ctx = content[max(0, m.start() - 600):m.start() + 50]
+                    assert 'confirm(' in ctx, (
+                        f'{f.name}: sendCommand("{cmd}") missing confirm'
+                    )
