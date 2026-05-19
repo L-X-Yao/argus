@@ -26,7 +26,8 @@
   import LogPanel from './components/LogPanel.svelte';
   import VideoOverlay from './components/VideoOverlay.svelte';
   import CalibrationPanel from './components/CalibrationPanel.svelte';
-  import { ChevronUp, ChevronDown } from '@lucide/svelte';
+  import { ChevronUp, ChevronDown, CornerDownLeft, Pause, HardDrive, Wrench, Video, SlidersHorizontal, PanelLeftClose } from '@lucide/svelte';
+  import Button from '$lib/components/ui/button/button.svelte';
 
   type View = 'fly' | 'plan' | 'monitor' | 'params';
   let view = $state<View>('fly');
@@ -110,43 +111,29 @@
 
     {#if app.drone.connected}
       <div class="ml-auto flex items-center gap-1.5">
-        <button class="px-3 py-1 rounded-md bg-red-600 text-white text-xs font-bold
-                       hover:bg-red-700 active:scale-95 transition-all"
+        <Button size="sm" class="bg-red-600 hover:bg-red-700 text-white font-bold gap-1"
                 onclick={() => { if (confirm('切换到返航模式？')) sendCommand('rtl'); }}>
-          返航
-        </button>
-        <button class="px-3 py-1 rounded-md bg-amber-600 text-white text-xs font-bold
-                       hover:bg-amber-700 active:scale-95 transition-all"
+          <CornerDownLeft size={13} />返航
+        </Button>
+        <Button size="sm" class="bg-amber-600 hover:bg-amber-700 text-white font-bold gap-1"
                 onclick={() => sendCommand('mode', app.drone.vtype === '固定翼' ? 19 : 5)}>
-          悬停
-        </button>
-        <button class="px-2.5 py-1 rounded-md text-xs font-semibold transition-all
-                       bg-secondary text-secondary-foreground hover:bg-muted"
-                onclick={() => showLogPanel = true}>
-          机载日志
-        </button>
-        <button class="px-2.5 py-1 rounded-md text-xs font-semibold transition-all
-                       bg-secondary text-secondary-foreground hover:bg-muted"
-                onclick={() => showCalibration = true}>
-          校准
-        </button>
+          <Pause size={13} />悬停
+        </Button>
+        <Button variant="secondary" size="sm" class="gap-1" onclick={() => showLogPanel = true}>
+          <HardDrive size={13} />日志
+        </Button>
+        <Button variant="secondary" size="sm" class="gap-1" onclick={() => showCalibration = true}>
+          <Wrench size={13} />校准
+        </Button>
         {#if view === 'fly'}
-          <button class="px-2.5 py-1 rounded-md text-xs font-semibold transition-all
-                         {showVideo
-                           ? 'bg-primary text-primary-foreground'
-                           : 'bg-secondary text-secondary-foreground hover:bg-muted'}"
+          <Button variant={showVideo ? 'default' : 'secondary'} size="sm" class="gap-1"
                   onclick={() => showVideo = !showVideo}>
-            视频
-          </button>
-        {/if}
-        {#if view === 'fly'}
-          <button class="px-2.5 py-1 rounded-md text-xs font-semibold transition-all
-                         {controlsOpen
-                           ? 'bg-primary text-primary-foreground'
-                           : 'bg-secondary text-secondary-foreground hover:bg-muted'}"
+            <Video size={13} />视频
+          </Button>
+          <Button variant={controlsOpen ? 'default' : 'secondary'} size="sm" class="gap-1"
                   onclick={() => controlsOpen = !controlsOpen}>
-            {controlsOpen ? '收起' : '操控'}
-          </button>
+            {#if controlsOpen}<PanelLeftClose size={13} />收起{:else}<SlidersHorizontal size={13} />操控{/if}
+          </Button>
         {/if}
       </div>
     {/if}
