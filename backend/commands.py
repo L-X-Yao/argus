@@ -105,6 +105,10 @@ def _upload_mission(link: DroneLink, waypoints: list, takeoff_alt: float) -> Non
     items.append({'seq': 1, 'cmd': 22, 'lat': 0, 'lon': 0, 'alt': takeoff_alt, 'p1': 0, 'p2': 0})
     seq = 2
     for wp in waypoints:
+        spd = float(wp.get('speed', 0))
+        if spd > 0:
+            items.append({'seq': seq, 'cmd': 178, 'lat': 0, 'lon': 0, 'alt': 0, 'p1': 1, 'p2': spd})
+            seq += 1
         items.append({'seq': seq, 'cmd': 16, 'lat': wp['lat'], 'lon': wp['lon'],
                       'alt': float(wp.get('alt', takeoff_alt)), 'p1': float(wp.get('delay', 0)), 'p2': 0})
         seq += 1
@@ -116,6 +120,8 @@ def _upload_mission(link: DroneLink, waypoints: list, takeoff_alt: float) -> Non
     link._seq_to_wp = {}
     s2 = 2
     for i, wp in enumerate(waypoints):
+        if float(wp.get('speed', 0)) > 0:
+            s2 += 1
         link._seq_to_wp[s2] = i
         s2 += 1
         if wp.get('drop'):
@@ -169,6 +175,7 @@ def request_streams(link: DroneLink) -> None:
     streams = [
         (30, 250000), (33, 250000), (24, 250000),
         (1, 1000000), (42, 1000000),
+        (65, 500000), (241, 1000000),
     ]
     for mid, interval in streams:
         payload = struct.pack('<fffffffHBBB',

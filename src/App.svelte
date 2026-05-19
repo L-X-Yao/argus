@@ -20,9 +20,13 @@
   import SurveyPanel from './components/SurveyPanel.svelte';
   import FencePanel from './components/FencePanel.svelte';
   import ParamPanel from './components/ParamPanel.svelte';
+  import RcPanel from './components/RcPanel.svelte';
+  import VibrationPanel from './components/VibrationPanel.svelte';
 
   let showSettings = $state(false);
   let showParams = $state(false);
+  let showRc = $state(false);
+  let showVibe = $state(false);
 
   onMount(() => {
     loadSettings();
@@ -50,6 +54,8 @@
     else if (k === 'm') app.mapExpanded = !app.mapExpanded;
     else if (k === 'c') app.chartsOpen = !app.chartsOpen;
     else if (k === 'p') showParams = !showParams;
+    else if (k === 'i') showRc = !showRc;
+    else if (k === 'v' && !e.ctrlKey) showVibe = !showVibe;
     else if (k === 's' && e.ctrlKey) { e.preventDefault(); showSettings = !showSettings; }
     else if (k === 'f' && !e.ctrlKey) {
       if (document.fullscreenElement) document.exitFullscreen();
@@ -87,6 +93,12 @@
   {/if}
   {#if showParams}
     <ParamPanel />
+  {/if}
+  {#if showRc}
+    <RcPanel />
+  {/if}
+  {#if showVibe}
+    <VibrationPanel />
   {/if}
   {#if !app.mapExpanded}
     {#if app.drone.connected && !app.drone.armed}

@@ -19,6 +19,7 @@
 
   function toggleDrop(i: number) { pushUndo(); app.waypoints[i].drop = !app.waypoints[i].drop; saveWaypoints(); }
   function setAlt(i: number, v: string) { app.waypoints[i].alt = parseFloat(v) || 30; saveWaypoints(); saveSettings(); }
+  function setSpeed(i: number, v: string) { app.waypoints[i].speed = parseFloat(v) || 0; saveWaypoints(); }
   function applyAltAll() { pushUndo(); app.waypoints.forEach(w => w.alt = app.defaultAlt); }
   function reverseRoute() { if (!app.waypoints.length) return; pushUndo(); app.waypoints.reverse(); }
   function moveWp(i: number, dir: number) {
@@ -222,7 +223,9 @@
           {wp.drop ? '投放' : '航点'}
         </button>
         <span class="wp-coords">{wp.lat.toFixed(5)}, {wp.lon.toFixed(5)}</span>
-        <input type="number" class="wp-alt" value={wp.alt} onchange={(e) => setAlt(i, (e.target as HTMLInputElement).value)} />
+        <input type="number" class="wp-alt" value={wp.alt} onchange={(e) => setAlt(i, (e.target as HTMLInputElement).value)} title="高度(m)" />
+        <input type="number" class="wp-spd" value={wp.speed || ''} placeholder="默认"
+               onchange={(e) => setSpeed(i, (e.target as HTMLInputElement).value)} title="速度(m/s)" />
         <button class="wp-mv" onclick={() => moveWp(i, -1)}>&uarr;</button>
         <button class="wp-mv" onclick={() => moveWp(i, 1)}>&darr;</button>
         <button class="wp-del" onclick={() => deleteWaypoint(i)}>&times;</button>
@@ -279,7 +282,8 @@
   .wp-type { padding:1px 6px; border-radius:3px; cursor:pointer; font-size:10px; font-weight:bold; border:none; color:white; background:#1565c0; }
   .wp-type.drop { background:#e65100; }
   .wp-coords { flex:1; color:var(--text-dim); font-size:10px; overflow:hidden; white-space:nowrap; }
-  .wp-alt { width:40px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-light); padding:2px 3px; border-radius:3px; font-size:11px; text-align:right; }
+  .wp-alt { width:36px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-light); padding:2px 3px; border-radius:3px; font-size:11px; text-align:right; }
+  .wp-spd { width:36px; background:var(--bg-input); color:#69f0ae; border:1px solid var(--border-light); padding:2px 3px; border-radius:3px; font-size:11px; text-align:right; }
   .wp-mv { background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:12px; padding:0 1px; }
   .wp-del { background:none; border:none; color:#f44336; cursor:pointer; font-size:16px; padding:0 2px; line-height:1; }
   .empty { color:var(--text-dim); font-size:12px; padding:8px 0; }

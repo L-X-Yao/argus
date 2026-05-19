@@ -155,6 +155,24 @@ def handle_statustext(p: bytes, pl: int, link: DroneLink) -> None:
         link.add_event('飞控: %s' % text)
 
 
+def handle_rc_channels(p: bytes, pl: int, link: DroneLink) -> None:
+    if pl < 42:
+        return
+    link.rc_channels = [struct.unpack_from('<H', p, 5 + i * 2)[0] for i in range(16)]
+    link.rc_rssi = p[41]
+
+
+def handle_vibration(p: bytes, pl: int, link: DroneLink) -> None:
+    if pl < 32:
+        return
+    link.vibe_x = struct.unpack_from('<f', p, 8)[0]
+    link.vibe_y = struct.unpack_from('<f', p, 12)[0]
+    link.vibe_z = struct.unpack_from('<f', p, 16)[0]
+    link.vibe_clip0 = struct.unpack_from('<I', p, 20)[0]
+    link.vibe_clip1 = struct.unpack_from('<I', p, 24)[0]
+    link.vibe_clip2 = struct.unpack_from('<I', p, 28)[0]
+
+
 def handle_param_value(p: bytes, pl: int, link: DroneLink) -> None:
     link.param_mgr.handle_param_value(p, pl)
 
@@ -193,23 +211,28 @@ def handle_mission_item_int(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 37 or not link._dl_pending:
         return
     p1 = struct.unpack_from('<f', p, 0)[0]
+    p2 = struct.unpack_from('<f', p, 4)[0]
     lat = struct.unpack_from('<i', p, 16)[0] / 1e7
     lon = struct.unpack_from('<i', p, 20)[0] / 1e7
     alt = struct.unpack_from('<f', p, 24)[0]
     seq = struct.unpack_from('<H', p, 28)[0]
     cmd = struct.unpack_from('<H', p, 30)[0]
     if seq < link._dl_total:
-        link._dl_items[seq] = {'seq': seq, 'cmd': cmd, 'lat': lat, 'lon': lon, 'alt': alt, 'p1': p1}
+        link._dl_items[seq] = {'seq': seq, 'cmd': cmd, 'lat': lat, 'lon': lon, 'alt': alt, 'p1': p1, 'p2': p2}
     if seq + 1 < link._dl_total:
         _request_dl_item(link, seq + 1)
     else:
         link._dl_pending = False
         items = [i for i in link._dl_items if i is not None]
         wps = []
+        pending_speed = 0.0
         for item in items:
-            if item['cmd'] == 16 and item['seq'] > 0:
+            if item['cmd'] == 178:
+                pending_speed = item.get('p2', 0)
+            elif item['cmd'] == 16 and item['seq'] > 0:
                 wps.append({'lat': item['lat'], 'lon': item['lon'], 'alt': item['alt'],
-                            'drop': False, 'delay': item['p1']})
+                            'drop': False, 'delay': item['p1'], 'speed': pending_speed})
+                pending_speed = 0.0
             elif item['cmd'] == 181 and wps:
                 wps[-1]['drop'] = True
         link._dl_messages.append({'type': 'mission_downloaded', 'waypoints': wps})
@@ -252,6 +275,8 @@ def init_handlers() -> None:
     mavlink_dispatch.register(46, handle_mission_item_reached)
     mavlink_dispatch.register(77, handle_command_ack)
     mavlink_dispatch.register(253, handle_statustext)
+    mavlink_dispatch.register(65, handle_rc_channels)
+    mavlink_dispatch.register(241, handle_vibration)
     mavlink_dispatch.register(22, handle_param_value)
     mavlink_dispatch.register(148, handle_autopilot_version)
     mavlink_dispatch.register(44, handle_mission_count)

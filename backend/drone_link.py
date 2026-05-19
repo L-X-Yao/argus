@@ -90,6 +90,10 @@ class DroneLink:
         self._dl_total = 0
         self._dl_items: list[dict | None] = []
         self._dl_messages: list[dict] = []
+        self.rc_channels: list[int] = [0] * 16
+        self.rc_rssi = 0
+        self.vibe_x = self.vibe_y = self.vibe_z = 0.0
+        self.vibe_clip0 = self.vibe_clip1 = self.vibe_clip2 = 0
 
     def is_plane(self) -> bool:
         if self.force_plane is not None:
@@ -221,6 +225,10 @@ class DroneLink:
             'fw_version': self.fw_version,
             'fw_git': self.fw_git,
             'board_id': self.board_id,
+            'rc': self.rc_channels,
+            'rc_rssi': self.rc_rssi,
+            'vibe': [round(self.vibe_x, 1), round(self.vibe_y, 1), round(self.vibe_z, 1)],
+            'vibe_clip': [self.vibe_clip0, self.vibe_clip1, self.vibe_clip2],
             **self.param_mgr.get_status(),
         }
 
