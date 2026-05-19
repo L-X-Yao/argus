@@ -26,7 +26,8 @@
   import LogPanel from './components/LogPanel.svelte';
   import VideoOverlay from './components/VideoOverlay.svelte';
   import CalibrationPanel from './components/CalibrationPanel.svelte';
-  import { ChevronUp, ChevronDown, CornerDownLeft, Pause, HardDrive, Wrench, Video, SlidersHorizontal, PanelLeftClose } from '@lucide/svelte';
+  import { ChevronUp, ChevronDown, CornerDownLeft, Pause, HardDrive, Wrench, Video, SlidersHorizontal, PanelLeftClose, Plane, MapPinned, Activity, Settings2 } from '@lucide/svelte';
+  import type { Component } from 'svelte';
   import Button from '$lib/components/ui/button/button.svelte';
 
   type View = 'fly' | 'plan' | 'monitor' | 'params';
@@ -85,11 +86,11 @@
 
   function toggleTheme() { app.darkTheme = !app.darkTheme; saveSettings(); }
 
-  const tabs: { id: View; label: string }[] = [
-    { id: 'fly', label: '飞行' },
-    { id: 'plan', label: '规划' },
-    { id: 'monitor', label: '监控' },
-    { id: 'params', label: '参数' },
+  const tabs: { id: View; label: string; icon: Component }[] = [
+    { id: 'fly', label: '飞行', icon: Plane },
+    { id: 'plan', label: '规划', icon: MapPinned },
+    { id: 'monitor', label: '监控', icon: Activity },
+    { id: 'params', label: '参数', icon: Settings2 },
   ];
 </script>
 
@@ -99,12 +100,13 @@
   <nav class="flex items-center gap-1 px-3 py-1 bg-card border-b border-border shrink-0">
     {#each tabs as tab}
       <button
-        class="px-4 py-1.5 text-xs font-semibold tracking-wide uppercase rounded-md transition-all
+        class="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold tracking-wide uppercase rounded-md transition-all
           {view === tab.id
             ? 'bg-primary text-primary-foreground shadow-sm'
             : 'text-muted-foreground hover:text-foreground hover:bg-muted'}"
         onclick={() => view = tab.id}
       >
+        <tab.icon size={14} />
         {tab.label}
       </button>
     {/each}
