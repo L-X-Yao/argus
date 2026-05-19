@@ -6,6 +6,7 @@
   import { API_BASE } from '../lib/backend';
   import MapControls from './MapControls.svelte';
   import HudOverlay from './HudOverlay.svelte';
+  import { Layers, Ruler, Navigation, Grid3x3, ShieldAlert, Download, Crosshair, Home, Maximize2 } from '@lucide/svelte';
 
   declare const L: any;
 
@@ -413,29 +414,41 @@
 <div class="relative flex-1 min-w-0">
   <div bind:this={mapEl} class="h-full rounded-lg border border-border"></div>
   <div class="absolute top-2.5 left-2.5 z-[1000] flex gap-1">
-    <button class="map-btn" onclick={toggleMapType}>{isSat ? '卫星' : '地图'}</button>
-    <button class="map-btn {measuring ? '!text-destructive !border-destructive' : ''}" onclick={toggleMeasure}>{measuring ? '取消测距' : '测距'}</button>
+    <button class="map-btn" onclick={toggleMapType} title={isSat ? '切换到街道地图' : '切换到卫星地图'}>
+      <Layers size={13} />{isSat ? '卫星' : '地图'}
+    </button>
+    <button class="map-btn {measuring ? '!text-destructive !border-destructive' : ''}" onclick={toggleMeasure} title="测量距离">
+      <Ruler size={13} />{measuring ? '取消' : '测距'}
+    </button>
     {#if app.drone.connected && app.drone.armed}
-      <button class="map-btn {app.guidedMode ? '!text-warning !border-warning' : ''}" onclick={() => app.guidedMode = !app.guidedMode}>
-        {app.guidedMode ? '引导中' : '引导'}
+      <button class="map-btn {app.guidedMode ? '!text-warning !border-warning' : ''}" onclick={() => app.guidedMode = !app.guidedMode} title="点击地图飞往指定位置">
+        <Navigation size={13} />{app.guidedMode ? '引导中' : '引导'}
       </button>
     {/if}
     <button class="map-btn {app.showSurvey || app.drawingPolygon ? '!text-purple-400 !border-purple-400' : ''}"
-            onclick={() => app.showSurvey = !app.showSurvey}>
-      测绘
+            onclick={() => app.showSurvey = !app.showSurvey} title="测绘航线规划">
+      <Grid3x3 size={13} />测绘
     </button>
     <button class="map-btn {app.showFence || app.drawingFence ? '!text-destructive !border-destructive' : ''}"
-            onclick={() => app.showFence = !app.showFence}>
-      围栏
+            onclick={() => app.showFence = !app.showFence} title="电子围栏">
+      <ShieldAlert size={13} />围栏
     </button>
     {#if trail.length > 10}
-      <button class="map-btn" onclick={exportTrack}>导出轨迹</button>
+      <button class="map-btn" onclick={exportTrack} title="导出飞行轨迹KML">
+        <Download size={13} />轨迹
+      </button>
     {/if}
   </div>
   <div class="absolute top-2.5 right-2.5 z-[1000] flex gap-1">
-    <button class="map-btn {follow ? '!text-destructive !border-destructive' : ''}" onclick={() => follow = !follow}>{follow ? '跟随' : '自由'}</button>
-    <button class="map-btn" onclick={centerHome}>起飞点</button>
-    <button class="map-btn" onclick={fitRoute}>全览</button>
+    <button class="map-btn {follow ? '!text-destructive !border-destructive' : ''}" onclick={() => follow = !follow} title={follow ? '停止跟随' : '跟随飞机'}>
+      <Crosshair size={13} />{follow ? '跟随' : '自由'}
+    </button>
+    <button class="map-btn" onclick={centerHome} title="定位到起飞点">
+      <Home size={13} />起飞点
+    </button>
+    <button class="map-btn" onclick={fitRoute} title="全览航线">
+      <Maximize2 size={13} />全览
+    </button>
   </div>
   <div class="absolute bottom-1.5 left-2.5 z-[1000] bg-card/85 backdrop-blur text-muted-foreground px-2 py-0.5 rounded text-[11px] font-mono">{mouseCoord || '---'}</div>
   <MapControls />
@@ -446,6 +459,6 @@
 </div>
 
 <style>
-  .map-btn { padding:4px 10px; background:rgba(15,15,15,0.9); border:1px solid hsl(var(--border)); border-radius:6px; cursor:pointer; font-size:12px; font-weight:600; color:hsl(var(--muted-foreground)); backdrop-filter:blur(4px); transition:all 0.15s; }
+  .map-btn { display:inline-flex; align-items:center; gap:3px; padding:4px 10px; background:rgba(15,15,15,0.9); border:1px solid hsl(var(--border)); border-radius:6px; cursor:pointer; font-size:12px; font-weight:600; color:hsl(var(--muted-foreground)); backdrop-filter:blur(4px); transition:all 0.15s; }
   .map-btn:hover { color:hsl(var(--primary)); border-color:hsl(var(--primary)); }
 </style>
