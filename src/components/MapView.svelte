@@ -235,7 +235,12 @@
 
     if (app.drone.home_lat !== 0 && !homeMarker) {
       const [hlat, hlon] = toGcj(app.drone.home_lat, app.drone.home_lon);
-      homeMarker = L.circleMarker([hlat, hlon], { radius: 8, color: '#ff9800', fillColor: '#ff9800', fillOpacity: 0.5 }).addTo(map);
+      const homeIcon = L.divIcon({
+        className: '',
+        html: '<div style="width:26px;height:26px;border-radius:50%;background:#4caf50;color:white;text-align:center;line-height:26px;font-size:14px;font-weight:bold;border:2px solid white;box-shadow:0 0 6px rgba(0,0,0,0.5)">H</div>',
+        iconSize: [26, 26], iconAnchor: [13, 13],
+      });
+      homeMarker = L.marker([hlat, hlon], { icon: homeIcon, zIndexOffset: 500 }).addTo(map);
     }
 
     if (Math.abs(lat - prevLat) > 0.000001 || Math.abs(lon - prevLon) > 0.000001) {
