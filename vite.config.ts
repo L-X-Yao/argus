@@ -10,6 +10,9 @@ export default defineConfig({
         target: 'ws://localhost:8100',
         ws: true,
       },
+      '/api': {
+        target: 'http://localhost:8100',
+      },
       '/health': {
         target: 'http://localhost:8100',
       },
