@@ -46,6 +46,10 @@
     else if (k === 'm') app.mapExpanded = !app.mapExpanded;
     else if (k === 'c') app.chartsOpen = !app.chartsOpen;
     else if (k === 's' && e.ctrlKey) { e.preventDefault(); showSettings = !showSettings; }
+    else if (k === 'f' && !e.ctrlKey) {
+      if (document.fullscreenElement) document.exitFullscreen();
+      else document.documentElement.requestFullscreen().catch(() => {});
+    }
     else if (k >= '1' && k <= '9') {
       const btns = app.drone.mode_btns;
       const idx = parseInt(k) - 1;

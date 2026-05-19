@@ -80,14 +80,17 @@
     </div>
     <div class="card">
       <div class="label">电池</div>
-      <div class="value">{d.voltage.toFixed(1)} V</div>
+      <div class="value" style="color:{batColor(d.remaining)}">{d.voltage.toFixed(1)} V</div>
       <div class="unit">{d.current.toFixed(1)} A | {d.remaining >= 0 ? d.remaining + '%' : '---'}</div>
       <div class="bat-bar"><div class="bat-fill" style="width:{Math.max(0,d.remaining)}%;background:{batColor(d.remaining)}"></div></div>
+      {#if d.bat_time > 0}
+        <div class="unit" style="color:#ff9800;margin-top:2px">剩余约 {Math.floor(d.bat_time / 60)}分{d.bat_time % 60}秒</div>
+      {/if}
     </div>
     <div class="card">
-      <div class="label">航点</div>
-      <div class="value">#{d.wp}</div>
-      <div class="unit">机型: {d.vtype || '---'}</div>
+      <div class="label">航点 / 机型</div>
+      <div class="value">#{d.wp} <span style="font-size:14px;color:var(--text-dim)">{d.vtype || '---'}</span></div>
+      <div class="unit">链路 {d.link_age >= 0 ? d.link_age.toFixed(1) + 's' : '---'} | 帧 {d.frames}</div>
     </div>
   </div>
 

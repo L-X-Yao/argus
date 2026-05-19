@@ -49,14 +49,22 @@
     showHistory = false;
   }
 
+  let connecting = $state(false);
+
   function toggle() {
     if (app.drone.connected) {
       sendDisconnect();
     } else {
+      connecting = true;
       savePortHistory();
       sendConnect(port, baud);
+      setTimeout(() => connecting = false, 5000);
     }
   }
+
+  $effect(() => {
+    if (app.drone.connected) connecting = false;
+  });
 </script>
 
 <div class="conn-bar">
@@ -79,8 +87,8 @@
     <option value={57600}>57600</option>
     <option value={115200}>115200</option>
   </select>
-  <button class:connected={app.drone.connected} onclick={toggle}>
-    {app.drone.connected ? '断开' : '连接'}
+  <button class:connected={app.drone.connected} class:connecting disabled={connecting && !app.drone.connected} onclick={toggle}>
+    {app.drone.connected ? '断开' : connecting ? '连接中...' : '连接'}
   </button>
 </div>
 
@@ -96,5 +104,7 @@
   button { padding:5px 15px; border-radius:3px; border:none; cursor:pointer; font-size:13px; background:#4caf50; color:white; }
   button.connected { background:#f44336; }
   button:disabled { opacity:0.6; cursor:wait; }
+  button.connecting { background:#f57f17; animation:pulse 1s infinite; }
   input:disabled, select:disabled { opacity:0.5; }
+  @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.6; } }
 </style>
