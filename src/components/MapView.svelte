@@ -4,6 +4,7 @@
   import { sendCommand } from '../lib/ws';
   import { toGcj } from '../lib/gcj02';
   import MapControls from './MapControls.svelte';
+  import HudOverlay from './HudOverlay.svelte';
 
   declare const L: any;
 
@@ -426,19 +427,7 @@
   <MapControls />
 
   {#if app.mapExpanded && app.drone.connected}
-    <div class="hud">
-      <div class="hud-item"><span class="hud-label">高度</span><span class="hud-value">{app.drone.alt_rel.toFixed(1)}m</span></div>
-      <div class="hud-item"><span class="hud-label">速度</span><span class="hud-value">{app.drone.gs.toFixed(1)}m/s</span></div>
-      <div class="hud-item"><span class="hud-label">距离</span><span class="hud-value">{app.drone.dist_home.toFixed(0)}m</span></div>
-      <div class="hud-item"><span class="hud-label">电池</span><span class="hud-value">{app.drone.voltage.toFixed(1)}V {app.drone.remaining >= 0 ? app.drone.remaining + '%' : ''}</span></div>
-      <div class="hud-item"><span class="hud-label">航向</span><span class="hud-value">{app.drone.hdg.toFixed(0)}&deg;</span></div>
-      {#if app.drone.flight_time > 0}
-        <div class="hud-item"><span class="hud-label">时间</span><span class="hud-value">{fmtTime(app.drone.flight_time)}</span></div>
-      {/if}
-      {#if app.drone.wp > 0}
-        <div class="hud-item"><span class="hud-label">航点</span><span class="hud-value">#{app.drone.wp}</span></div>
-      {/if}
-    </div>
+    <HudOverlay />
   {/if}
 </div>
 
@@ -454,8 +443,4 @@
   .map-btn.survey-btn.active { color:#ab47bc; border-color:#ab47bc; }
   .map-btn.fence-btn.active { color:#f44336; border-color:#f44336; }
   .coord-bar { position:absolute; bottom:6px; left:10px; z-index:1000; background:rgba(30,30,30,0.85); color:#aaa; padding:2px 8px; border-radius:3px; font-size:11px; font-family:monospace; }
-  .hud { position:absolute; bottom:6px; right:10px; z-index:1000; display:flex; gap:8px; }
-  .hud-item { background:rgba(10,10,10,0.85); border:1px solid #333; border-radius:4px; padding:4px 8px; text-align:center; }
-  .hud-label { display:block; font-size:9px; color:#666; text-transform:uppercase; }
-  .hud-value { display:block; font-size:14px; font-weight:bold; color:#4fc3f7; }
 </style>
