@@ -250,113 +250,93 @@
   });
 </script>
 
-<div class="panel wp-panel">
-  <h2>航点 <span class="count">({app.waypoints.length})</span>
+<div class="bg-card border border-border rounded-xl p-3 w-72 shrink-0 overflow-hidden flex flex-col">
+  <div class="flex items-center gap-2 mb-2">
+    <h2 class="text-sm font-semibold text-primary uppercase tracking-wider">航点</h2>
+    <span class="text-xs text-muted-foreground">({app.waypoints.length})</span>
     {#if app.drone.connected && app.drone.wp > 0}
-      <span class="live-wp">目标 #{app.drone.wp}</span>
+      <span class="text-[11px] text-warning ml-auto">目标 #{app.drone.wp}</span>
     {/if}
-  </h2>
-  <div class="wp-list">
+  </div>
+  <div class="flex-1 overflow-y-auto max-h-72 rounded-lg border border-border/50">
     {#each app.waypoints as wp, i}
-      <div class="wp-item" class:active-wp={app.drone.wp === i + 2}>
-        <span class="wp-num">{i + 1}</span>
-        <button class="wp-type" style="background:{typeColor(wp.type || 'wp')}" onclick={() => cycleType(i)}
+      <div class="flex items-center gap-1 px-1 py-1 border-b border-border/30 text-xs hover:bg-muted/50 transition-colors
+        {app.drone.wp === i + 2 ? 'bg-warning/10 border-l-2 border-l-warning pl-0.5' : ''}">
+        <span class="w-5 text-center text-muted-foreground font-bold text-[11px]">{i + 1}</span>
+        <button class="px-1 py-px rounded text-[9px] font-bold border-none text-white cursor-pointer whitespace-nowrap"
+                style="background:{typeColor(wp.type || 'wp')}" onclick={() => cycleType(i)}
                 title="点击切换: 航点/盘旋圈/盘旋秒">
           {typeLabel(wp.type || 'wp')}
         </button>
-        <button class="wp-drop" class:active={wp.drop} onclick={() => toggleDrop(i)} title="投放开关">
+        <button class="w-4.5 h-4.5 rounded border shrink-0 text-[10px] font-bold p-0 leading-[18px] text-center cursor-pointer
+          {wp.drop ? 'bg-orange-700 text-white border-orange-700' : 'bg-transparent text-muted-foreground border-border'}"
+                onclick={() => toggleDrop(i)} title="投放开关">
           {wp.drop ? '投' : '·'}
         </button>
         {#if (wp.type === 'loiter_turns' || wp.type === 'loiter_time')}
-          <input type="number" class="wp-loiter" value={wp.loiter_param}
+          <input type="number" class="w-7 bg-input text-purple-400 border border-border px-0.5 rounded text-[10px] text-right"
+                 value={wp.loiter_param}
                  onchange={(e) => { app.waypoints[i].loiter_param = parseFloat((e.target as HTMLInputElement).value) || 0; saveWaypoints(); }}
                  title={wp.type === 'loiter_turns' ? '盘旋圈数' : '盘旋秒数'} />
         {/if}
-        <span class="wp-coords">{wp.lat.toFixed(5)},{wp.lon.toFixed(5)}
-          {#if i > 0}<span class="seg-dist">{fmtSegDist(i)}</span>{/if}
+        <span class="flex-1 text-muted-foreground text-[10px] overflow-hidden whitespace-nowrap">{wp.lat.toFixed(5)},{wp.lon.toFixed(5)}
+          {#if i > 0}<span class="text-muted-foreground/60 text-[9px] ml-0.5">{fmtSegDist(i)}</span>{/if}
         </span>
-        <input type="number" class="wp-alt" value={wp.alt} onchange={(e) => setAlt(i, (e.target as HTMLInputElement).value)} title="高度(m)" />
-        <input type="number" class="wp-spd" value={wp.speed || ''} placeholder="—"
+        <input type="number" class="w-9 bg-input text-foreground border border-border px-0.5 rounded text-[11px] text-right"
+               value={wp.alt} onchange={(e) => setAlt(i, (e.target as HTMLInputElement).value)} title="高度(m)" />
+        <input type="number" class="w-9 bg-input text-success border border-border px-0.5 rounded text-[11px] text-right"
+               value={wp.speed || ''} placeholder="—"
                onchange={(e) => setSpeed(i, (e.target as HTMLInputElement).value)} title="速度(m/s)" />
-        <button class="wp-mv" onclick={() => moveWp(i, -1)}>&uarr;</button>
-        <button class="wp-mv" onclick={() => moveWp(i, 1)}>&darr;</button>
-        <button class="wp-del" onclick={() => deleteWaypoint(i)}>&times;</button>
+        <button class="bg-transparent border-none text-muted-foreground cursor-pointer text-xs px-px" onclick={() => moveWp(i, -1)}>&uarr;</button>
+        <button class="bg-transparent border-none text-muted-foreground cursor-pointer text-xs px-px" onclick={() => moveWp(i, 1)}>&darr;</button>
+        <button class="bg-transparent border-none text-destructive cursor-pointer text-base px-0.5 leading-none" onclick={() => deleteWaypoint(i)}>&times;</button>
       </div>
     {:else}
-      <div class="empty">点击地图添加航点</div>
+      <div class="text-muted-foreground text-xs py-4 text-center">点击地图添加航点</div>
     {/each}
   </div>
   {#if app.waypoints.length > 0}
-    <div class="wp-stats">
+    <div class="text-xs text-warning mt-1.5">
       距离: {totalDist()} | {app.waypoints.filter(w => w.drop).length} 投放
       | ETA: {estimateTime()}
     </div>
   {/if}
   {#if app.waypoints.length >= 2}
-    <div class="profile"><canvas bind:this={profileCanvas} height="50"></canvas></div>
+    <div class="mt-1.5"><canvas bind:this={profileCanvas} height="50" class="w-full bg-background rounded-lg"></canvas></div>
   {/if}
-  <div class="toolbar">
-    <label for="def-alt">高度:</label>
-    <input id="def-alt" type="number" bind:value={app.defaultAlt} min="5" max="200" step="5" onchange={saveSettings} />
-    <label>m</label>
-    <button class="btn-sm" onclick={applyAltAll}>全部</button>
-    <button class="btn-upload" onclick={uploadMission}>上传</button>
-    <button class="btn-fly" onclick={armAndFly}>解锁+起飞</button>
+  <div class="flex gap-1 mt-1.5 items-center flex-wrap">
+    <label for="def-alt" class="text-[11px] text-muted-foreground">高度:</label>
+    <input id="def-alt" type="number" bind:value={app.defaultAlt} min="5" max="200" step="5" onchange={saveSettings}
+           class="w-12 h-6 px-1 bg-input border border-border rounded text-xs text-foreground" />
+    <span class="text-[11px] text-muted-foreground">m</span>
+    <button class="mp-btn" onclick={applyAltAll}>全部</button>
+    <button class="mp-btn !bg-orange-700 !font-bold" onclick={uploadMission}>上传</button>
+    <button class="mp-btn !bg-green-700 !font-bold" onclick={armAndFly}>解锁+起飞</button>
   </div>
-  <div class="toolbar">
-    <button class="btn-sm" onclick={saveMission}>保存</button>
-    <button class="btn-sm" onclick={loadMission}>加载</button>
-    <button class="btn-sm" onclick={exportKml}>导出</button>
-    <button class="btn-sm" onclick={importKml}>导入</button>
-    <button class="btn-sm" onclick={reverseRoute}>反转</button>
-    <button class="btn-sm" onclick={() => showCircleGen = !showCircleGen}>圆形</button>
-    <button class="btn-sm warn" onclick={clearWaypoints}>清除</button>
+  <div class="flex gap-1 mt-1.5 items-center flex-wrap">
+    <button class="mp-btn" onclick={saveMission}>保存</button>
+    <button class="mp-btn" onclick={loadMission}>加载</button>
+    <button class="mp-btn" onclick={exportKml}>导出</button>
+    <button class="mp-btn" onclick={importKml}>导入</button>
+    <button class="mp-btn" onclick={reverseRoute}>反转</button>
+    <button class="mp-btn" onclick={() => showCircleGen = !showCircleGen}>圆形</button>
+    <button class="mp-btn !bg-muted" onclick={clearWaypoints}>清除</button>
   </div>
   {#if showCircleGen}
-    <div class="circle-gen">
-      <label for="cr">半径:</label>
-      <input id="cr" type="number" bind:value={circleRadius} min="10" max="2000" step="10" />
-      <label>m</label>
-      <label for="cc">点数:</label>
-      <input id="cc" type="number" bind:value={circleCount} min="4" max="72" step="1" />
-      <button class="btn-sm" style="background:#1565c0" onclick={genCircle}>生成</button>
+    <div class="flex gap-1 items-center mt-1.5 p-1.5 bg-muted rounded-lg flex-wrap">
+      <label for="cr" class="text-[11px] text-muted-foreground">半径:</label>
+      <input id="cr" type="number" bind:value={circleRadius} min="10" max="2000" step="10"
+             class="w-12 h-6 px-1 bg-input border border-border rounded text-xs text-foreground" />
+      <span class="text-[11px] text-muted-foreground">m</span>
+      <label for="cc" class="text-[11px] text-muted-foreground">点数:</label>
+      <input id="cc" type="number" bind:value={circleCount} min="4" max="72" step="1"
+             class="w-12 h-6 px-1 bg-input border border-border rounded text-xs text-foreground" />
+      <button class="mp-btn !bg-primary" onclick={genCircle}>生成</button>
     </div>
   {/if}
 </div>
 
 <style>
-  .panel { background:var(--bg-panel); border-radius:8px; padding:15px; }
-  h2 { font-size:14px; color:var(--text-accent); margin:0 0 8px; text-transform:uppercase; letter-spacing:1px; }
-  .count { font-size:12px; color:var(--text-dim); font-weight:normal; }
-  .wp-panel { width:280px; flex-shrink:0; overflow:hidden; display:flex; flex-direction:column; }
-  .wp-list { flex:1; overflow-y:auto; max-height:300px; }
-  .wp-item { display:flex; align-items:center; gap:4px; padding:4px 0; border-bottom:1px solid var(--border-color); font-size:12px; }
-  .wp-item.active-wp { background:rgba(255,167,38,0.1); border-left:3px solid #ffa726; padding-left:2px; }
-  .live-wp { font-size:11px; color:#ffa726; font-weight:normal; }
-  .wp-num { width:22px; text-align:center; color:var(--text-dim); font-weight:bold; }
-  .wp-type { padding:1px 4px; border-radius:3px; cursor:pointer; font-size:9px; font-weight:bold; border:none; color:white; background:#1565c0; white-space:nowrap; }
-  .wp-drop { width:18px; height:18px; border-radius:3px; border:1px solid #555; background:none; color:#666; cursor:pointer; font-size:10px; font-weight:bold; padding:0; line-height:18px; text-align:center; flex-shrink:0; }
-  .wp-drop.active { background:#e65100; color:white; border-color:#e65100; }
-  .wp-loiter { width:30px; background:var(--bg-input); color:#ab47bc; border:1px solid var(--border-light); padding:2px 2px; border-radius:3px; font-size:10px; text-align:right; }
-  .seg-dist { color:#546e7a; font-size:9px; margin-left:2px; }
-  .wp-coords { flex:1; color:var(--text-dim); font-size:10px; overflow:hidden; white-space:nowrap; }
-  .wp-alt { width:36px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-light); padding:2px 3px; border-radius:3px; font-size:11px; text-align:right; }
-  .wp-spd { width:36px; background:var(--bg-input); color:#69f0ae; border:1px solid var(--border-light); padding:2px 3px; border-radius:3px; font-size:11px; text-align:right; }
-  .wp-mv { background:none; border:none; color:var(--text-dim); cursor:pointer; font-size:12px; padding:0 1px; }
-  .wp-del { background:none; border:none; color:#f44336; cursor:pointer; font-size:16px; padding:0 2px; line-height:1; }
-  .empty { color:var(--text-dim); font-size:12px; padding:8px 0; }
-  .wp-stats { font-size:12px; color:#ffa726; margin:6px 0; }
-  .toolbar { display:flex; gap:4px; margin-top:6px; align-items:center; flex-wrap:wrap; }
-  .toolbar label { font-size:11px; color:var(--text-dim); }
-  .toolbar input[type=number] { width:50px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-light); padding:3px 4px; border-radius:3px; font-size:12px; }
-  .btn-sm { padding:4px 8px; border-radius:3px; border:none; cursor:pointer; font-size:11px; color:white; background:#546e7a; }
-  .btn-sm:hover { background:#607d8b; }
-  .btn-sm.warn { background:#37474f; }
-  .btn-upload { padding:4px 10px; border-radius:3px; border:none; cursor:pointer; font-size:12px; color:white; background:#e65100; font-weight:bold; }
-  .btn-fly { padding:4px 10px; border-radius:3px; border:none; cursor:pointer; font-size:12px; color:white; background:#2e7d32; font-weight:bold; }
-  .profile { margin-top:6px; }
-  .profile canvas { width:100%; background:var(--bg-card); border-radius:4px; }
-  .circle-gen { display:flex; gap:4px; align-items:center; margin-top:6px; padding:6px; background:var(--bg-card); border-radius:4px; flex-wrap:wrap; }
-  .circle-gen input { width:50px; background:var(--bg-input); color:var(--text-main); border:1px solid var(--border-light); padding:3px 4px; border-radius:3px; font-size:12px; }
-  .circle-gen label { font-size:11px; color:var(--text-dim); }
+  .mp-btn { padding:3px 7px; border-radius:4px; border:none; cursor:pointer; font-size:11px; color:white; background:hsl(var(--secondary)); transition:opacity 0.15s; }
+  .mp-btn:hover { opacity:0.85; }
 </style>

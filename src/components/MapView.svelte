@@ -400,21 +400,21 @@
   }
 </script>
 
-<div class="map-container">
-  <div bind:this={mapEl} class="map"></div>
-  <div class="map-btns-left">
+<div class="relative flex-1 min-w-0">
+  <div bind:this={mapEl} class="h-full rounded-lg border border-border"></div>
+  <div class="absolute top-2.5 left-2.5 z-[1000] flex gap-1">
     <button class="map-btn" onclick={toggleMapType}>{isSat ? '卫星' : '地图'}</button>
-    <button class="map-btn" class:active={measuring} onclick={toggleMeasure}>{measuring ? '取消测距' : '测距'}</button>
+    <button class="map-btn {measuring ? '!text-destructive !border-destructive' : ''}" onclick={toggleMeasure}>{measuring ? '取消测距' : '测距'}</button>
     {#if app.drone.connected && app.drone.armed}
-      <button class="map-btn guided" class:active={app.guidedMode} onclick={() => app.guidedMode = !app.guidedMode}>
+      <button class="map-btn {app.guidedMode ? '!text-warning !border-warning' : ''}" onclick={() => app.guidedMode = !app.guidedMode}>
         {app.guidedMode ? '引导中' : '引导'}
       </button>
     {/if}
-    <button class="map-btn survey-btn" class:active={app.showSurvey || app.drawingPolygon}
+    <button class="map-btn {app.showSurvey || app.drawingPolygon ? '!text-purple-400 !border-purple-400' : ''}"
             onclick={() => app.showSurvey = !app.showSurvey}>
       测绘
     </button>
-    <button class="map-btn fence-btn" class:active={app.showFence || app.drawingFence}
+    <button class="map-btn {app.showFence || app.drawingFence ? '!text-destructive !border-destructive' : ''}"
             onclick={() => app.showFence = !app.showFence}>
       围栏
     </button>
@@ -422,12 +422,12 @@
       <button class="map-btn" onclick={exportTrack}>导出轨迹</button>
     {/if}
   </div>
-  <div class="map-btns-right">
-    <button class="map-btn" class:active={follow} onclick={() => follow = !follow}>{follow ? '跟随' : '自由'}</button>
+  <div class="absolute top-2.5 right-2.5 z-[1000] flex gap-1">
+    <button class="map-btn {follow ? '!text-destructive !border-destructive' : ''}" onclick={() => follow = !follow}>{follow ? '跟随' : '自由'}</button>
     <button class="map-btn" onclick={centerHome}>起飞点</button>
     <button class="map-btn" onclick={fitRoute}>全览</button>
   </div>
-  <div class="coord-bar">{mouseCoord || '---'}</div>
+  <div class="absolute bottom-1.5 left-2.5 z-[1000] bg-card/85 backdrop-blur text-muted-foreground px-2 py-0.5 rounded text-[11px] font-mono">{mouseCoord || '---'}</div>
   <MapControls />
 
   {#if app.drone.connected}
@@ -436,15 +436,6 @@
 </div>
 
 <style>
-  .map-container { position:relative; flex:1; min-width:0; }
-  .map { height:100%; border-radius:6px; border:1px solid var(--border-color); }
-  .map-btns-left { position:absolute; top:10px; left:10px; z-index:1000; display:flex; gap:4px; }
-  .map-btns-right { position:absolute; top:10px; right:10px; z-index:1000; display:flex; gap:4px; }
-  .map-btn { padding:4px 10px; background:rgba(30,30,30,0.9); border:1px solid #555; border-radius:4px; cursor:pointer; font-size:12px; font-weight:bold; color:#aaa; }
-  .map-btn:hover { color:#4fc3f7; border-color:#4fc3f7; }
-  .map-btn.active { color:#ff5252; border-color:#ff5252; }
-  .map-btn.guided.active { color:#ffa726; border-color:#ffa726; }
-  .map-btn.survey-btn.active { color:#ab47bc; border-color:#ab47bc; }
-  .map-btn.fence-btn.active { color:#f44336; border-color:#f44336; }
-  .coord-bar { position:absolute; bottom:6px; left:10px; z-index:1000; background:rgba(30,30,30,0.85); color:#aaa; padding:2px 8px; border-radius:3px; font-size:11px; font-family:monospace; }
+  .map-btn { padding:4px 10px; background:rgba(15,15,15,0.9); border:1px solid hsl(var(--border)); border-radius:6px; cursor:pointer; font-size:12px; font-weight:600; color:hsl(var(--muted-foreground)); backdrop-filter:blur(4px); transition:all 0.15s; }
+  .map-btn:hover { color:hsl(var(--primary)); border-color:hsl(var(--primary)); }
 </style>

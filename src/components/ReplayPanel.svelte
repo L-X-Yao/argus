@@ -1,5 +1,6 @@
 <script lang="ts">
   import { app } from '../lib/stores.svelte';
+  import Button from '$lib/components/ui/button/button.svelte';
 
   interface LogRow {
     t: number; roll: number; pitch: number; yaw: number;
@@ -32,9 +33,7 @@
       if (!file) return;
       fileName = file.name;
       const reader = new FileReader();
-      reader.onload = (ev: any) => {
-        parseCSV(ev.target.result as string);
-      };
+      reader.onload = (ev: any) => { parseCSV(ev.target.result as string); };
       reader.readAsText(file);
     };
     input.click();
@@ -48,28 +47,16 @@
       const cols = lines[i].split(',');
       if (cols.length < 20) continue;
       parsed.push({
-        t: parseFloat(cols[0]),
-        roll: parseFloat(cols[1]),
-        pitch: parseFloat(cols[2]),
-        yaw: parseFloat(cols[3]),
-        lat: parseFloat(cols[4]),
-        lon: parseFloat(cols[5]),
-        alt_rel: parseFloat(cols[6]),
-        alt_msl: parseFloat(cols[7]),
-        gs: parseFloat(cols[8]),
-        vz: parseFloat(cols[9]),
-        voltage: parseFloat(cols[10]),
-        current: parseFloat(cols[11]),
-        remaining: parseInt(cols[12]),
-        mode: parseInt(cols[13]),
-        mode_name: cols[14] || '',
-        armed: parseInt(cols[15]),
-        gps_fix: parseInt(cols[16]),
-        sats: parseInt(cols[17]),
-        wp: parseInt(cols[18]),
-        hdg: parseFloat(cols[19]),
-        dist: parseFloat(cols[20]) || 0,
-        bat_time: parseInt(cols[21]) || -1,
+        t: parseFloat(cols[0]), roll: parseFloat(cols[1]), pitch: parseFloat(cols[2]),
+        yaw: parseFloat(cols[3]), lat: parseFloat(cols[4]), lon: parseFloat(cols[5]),
+        alt_rel: parseFloat(cols[6]), alt_msl: parseFloat(cols[7]),
+        gs: parseFloat(cols[8]), vz: parseFloat(cols[9]),
+        voltage: parseFloat(cols[10]), current: parseFloat(cols[11]),
+        remaining: parseInt(cols[12]), mode: parseInt(cols[13]),
+        mode_name: cols[14] || '', armed: parseInt(cols[15]),
+        gps_fix: parseInt(cols[16]), sats: parseInt(cols[17]),
+        wp: parseInt(cols[18]), hdg: parseFloat(cols[19]),
+        dist: parseFloat(cols[20]) || 0, bat_time: parseInt(cols[21]) || -1,
       });
     }
     rows = parsed;
@@ -83,54 +70,35 @@
     playing = !playing;
     if (playing) {
       timer = setInterval(() => {
-        if (cursor < rows.length - 1) {
-          cursor++;
-          emitPosition();
-        } else {
-          playing = false;
-          if (timer) { clearInterval(timer); timer = null; }
-        }
+        if (cursor < rows.length - 1) { cursor++; emitPosition(); }
+        else { playing = false; if (timer) { clearInterval(timer); timer = null; } }
       }, 250 / speed);
     } else {
       if (timer) { clearInterval(timer); timer = null; }
     }
   }
 
-  function seek(e: Event) {
-    const val = parseInt((e.target as HTMLInputElement).value);
-    cursor = val;
-    emitPosition();
-  }
+  function seek(e: Event) { cursor = parseInt((e.target as HTMLInputElement).value); emitPosition(); }
 
   function setSpeed(s: number) {
     speed = s;
     if (playing && timer) {
       clearInterval(timer);
       timer = setInterval(() => {
-        if (cursor < rows.length - 1) {
-          cursor++;
-          emitPosition();
-        } else {
-          playing = false;
-          if (timer) { clearInterval(timer); timer = null; }
-        }
+        if (cursor < rows.length - 1) { cursor++; emitPosition(); }
+        else { playing = false; if (timer) { clearInterval(timer); timer = null; } }
       }, 250 / speed);
     }
   }
 
   function emitPosition() {
     const r = rows[cursor];
-    if (r && Math.abs(r.lat) > 0.001) {
-      onposition(r.lat, r.lon, r.yaw);
-    }
+    if (r && Math.abs(r.lat) > 0.001) onposition(r.lat, r.lon, r.yaw);
   }
 
   function close() {
     if (timer) { clearInterval(timer); timer = null; }
-    rows = [];
-    cursor = 0;
-    playing = false;
-    fileName = '';
+    rows = []; cursor = 0; playing = false; fileName = '';
   }
 
   function fmtTime(s: number): string {
@@ -139,27 +107,35 @@
   }
 </script>
 
-<div class="replay-panel">
+<div class="bg-card border border-border rounded-xl p-3 mx-2 mb-2">
   {#if rows.length === 0}
-    <button class="load-btn" onclick={loadFile}>加载飞行日志 (.csv)</button>
+    <button class="w-full py-2.5 bg-transparent border-2 border-dashed border-border rounded-lg cursor-pointer
+                    text-sm font-bold text-muted-foreground hover:border-primary hover:text-primary transition-colors"
+            onclick={loadFile}>
+      加载飞行日志 (.csv)
+    </button>
   {:else}
-    <div class="replay-header">
-      <span class="fn">{fileName}</span>
-      <span class="info">{rows.length} 帧 | {fmtTime(duration)}</span>
-      <button class="close-btn" onclick={close}>&times;</button>
+    <div class="flex items-center gap-2 mb-2">
+      <span class="text-xs font-bold text-primary flex-1 truncate">{fileName}</span>
+      <span class="text-[11px] text-muted-foreground">{rows.length} 帧 | {fmtTime(duration)}</span>
+      <button class="text-destructive text-lg leading-none bg-transparent border-none cursor-pointer px-1" onclick={close}>&times;</button>
     </div>
-    <div class="replay-controls">
-      <button class="play-btn" onclick={togglePlay}>{playing ? '⏸' : '▶'}</button>
-      <input type="range" class="seek" min="0" max={rows.length - 1} value={cursor} oninput={seek} />
-      <span class="time">{fmtTime(current?.t || 0)}</span>
+    <div class="flex items-center gap-2">
+      <Button variant="default" size="icon-sm" class="rounded-full shrink-0" onclick={togglePlay}>
+        {playing ? '⏸' : '▶'}
+      </Button>
+      <input type="range" class="flex-1 h-1 accent-primary" min="0" max={rows.length - 1} value={cursor} oninput={seek} />
+      <span class="text-xs text-muted-foreground font-mono min-w-[40px]">{fmtTime(current?.t || 0)}</span>
     </div>
-    <div class="speed-btns">
+    <div class="flex gap-1 mt-1.5">
       {#each [0.5, 1, 2, 4, 8] as s}
-        <button class="spd" class:active={speed === s} onclick={() => setSpeed(s)}>{s}x</button>
+        <button class="px-2 py-0.5 text-[10px] rounded border cursor-pointer transition-colors
+          {speed === s ? 'text-primary border-primary' : 'text-muted-foreground border-border hover:text-foreground'}"
+                onclick={() => setSpeed(s)}>{s}x</button>
       {/each}
     </div>
     {#if current}
-      <div class="replay-data">
+      <div class="flex gap-3 mt-1.5 text-[11px] text-muted-foreground">
         <span>高度 {current.alt_rel.toFixed(1)}m</span>
         <span>速度 {current.gs.toFixed(1)}m/s</span>
         <span>电压 {current.voltage.toFixed(1)}V</span>
@@ -168,21 +144,3 @@
     {/if}
   {/if}
 </div>
-
-<style>
-  .replay-panel { background:var(--bg-panel); border-radius:8px; padding:10px 15px; margin:0 10px 10px; }
-  .load-btn { width:100%; padding:10px; background:#37474f; color:var(--text-main); border:1px dashed var(--border-light); border-radius:6px; cursor:pointer; font-size:13px; }
-  .load-btn:hover { border-color:var(--text-accent); color:var(--text-accent); }
-  .replay-header { display:flex; align-items:center; gap:8px; margin-bottom:6px; }
-  .fn { font-size:12px; font-weight:bold; color:var(--text-accent); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-  .info { font-size:11px; color:var(--text-dim); }
-  .close-btn { background:none; border:none; color:#f44336; cursor:pointer; font-size:18px; padding:0 4px; }
-  .replay-controls { display:flex; align-items:center; gap:8px; }
-  .play-btn { width:32px; height:32px; border-radius:50%; border:none; background:#1565c0; color:white; cursor:pointer; font-size:14px; flex-shrink:0; }
-  .seek { flex:1; height:4px; accent-color:#4fc3f7; }
-  .time { font-size:12px; color:var(--text-dim); font-family:monospace; min-width:40px; }
-  .speed-btns { display:flex; gap:3px; margin-top:4px; }
-  .spd { padding:2px 8px; border:1px solid var(--border-light); border-radius:3px; background:transparent; color:var(--text-dim); cursor:pointer; font-size:10px; }
-  .spd.active { color:#4fc3f7; border-color:#4fc3f7; }
-  .replay-data { display:flex; gap:10px; margin-top:6px; font-size:11px; color:var(--text-dim); }
-</style>

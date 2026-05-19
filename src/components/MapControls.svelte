@@ -1,6 +1,8 @@
 <script lang="ts">
   import { app } from '../lib/stores.svelte';
   import { sendCommand } from '../lib/ws';
+  import Button from '$lib/components/ui/button/button.svelte';
+  import Badge from '$lib/components/ui/badge/badge.svelte';
 
   function rtl() { if (confirm('切换到返航模式？')) sendCommand('rtl'); }
   function pause() { sendCommand('mode', app.drone.vtype === '固定翼' ? 19 : 5); }
@@ -13,52 +15,36 @@
 </script>
 
 {#if app.mapExpanded && app.drone.connected}
-  <div class="mc">
-    <div class="mc-status">
-      <span class="mc-mode">{app.drone.mode}</span>
-      <span class="mc-armed" class:armed={app.drone.armed}>{app.drone.armed ? '解锁' : '锁定'}</span>
+  <div class="absolute bottom-9 left-2.5 z-[1000] bg-card/95 backdrop-blur border border-border rounded-xl p-2 flex flex-col gap-1.5 min-w-[220px] shadow-lg">
+    <div class="flex items-center gap-2">
+      <span class="text-base font-bold text-primary">{app.drone.mode}</span>
+      <Badge variant={app.drone.armed ? 'destructive' : 'default'} class="text-[10px]">
+        {app.drone.armed ? '解锁' : '锁定'}
+      </Badge>
       {#if app.drone.flight_time > 0}
-        <span class="mc-timer">{fmtTime(app.drone.flight_time)}</span>
+        <span class="text-sm text-warning ml-auto font-mono">{fmtTime(app.drone.flight_time)}</span>
       {/if}
     </div>
-    <div class="mc-btns">
-      <button class="mc-btn rtl" onclick={rtl}>返航</button>
-      <button class="mc-btn pause" onclick={pause}>悬停</button>
+    <div class="flex gap-1">
+      <Button variant="destructive" size="xs" onclick={rtl}>返航</Button>
+      <Button size="xs" class="bg-amber-600 hover:bg-amber-700 text-white" onclick={pause}>悬停</Button>
       {#if !app.drone.armed}
-        <button class="mc-btn arm" onclick={() => sendCommand('arm')}>解锁</button>
+        <Button size="xs" class="bg-orange-700 hover:bg-orange-800 text-white" onclick={() => sendCommand('arm')}>解锁</Button>
       {:else}
-        <button class="mc-btn disarm" onclick={() => sendCommand('disarm')}>锁定</button>
+        <Button size="xs" class="bg-green-700 hover:bg-green-800 text-white" onclick={() => sendCommand('disarm')}>锁定</Button>
       {/if}
       {#if app.drone.armed}
-        <button class="mc-btn force" onclick={forceDisarm}>强制</button>
+        <Button variant="destructive" size="xs" onclick={forceDisarm}>强制</Button>
       {/if}
     </div>
-    <div class="mc-modes">
+    <div class="flex gap-1">
       {#each app.drone.mode_btns.slice(0, 4) as [id, name]}
-        <button class="mc-mode-btn" class:active={app.drone.mode_id === id}
+        <button class="px-2 py-1 text-[11px] rounded border cursor-pointer transition-colors
+          {app.drone.mode_id === id
+            ? 'text-primary border-primary bg-primary/10'
+            : 'text-muted-foreground border-border hover:text-primary hover:border-primary'}"
                 onclick={() => sendCommand('mode', id)}>{name}</button>
       {/each}
     </div>
   </div>
 {/if}
-
-<style>
-  .mc { position:absolute; bottom:36px; left:10px; z-index:1000; background:rgba(15,15,15,0.92); border:1px solid #444; border-radius:8px; padding:8px 12px; display:flex; flex-direction:column; gap:6px; min-width:220px; }
-  .mc-status { display:flex; align-items:center; gap:8px; }
-  .mc-mode { font-size:16px; font-weight:bold; color:#4fc3f7; }
-  .mc-armed { padding:2px 8px; border-radius:10px; font-size:11px; font-weight:bold; background:#2e7d32; color:white; }
-  .mc-armed.armed { background:#d32f2f; }
-  .mc-timer { font-size:13px; color:#ffa726; margin-left:auto; }
-  .mc-btns { display:flex; gap:4px; }
-  .mc-btn { padding:6px 12px; border:none; border-radius:4px; cursor:pointer; font-size:12px; font-weight:bold; color:white; }
-  .mc-btn.rtl { background:#d32f2f; }
-  .mc-btn.rtl:hover { background:#b71c1c; }
-  .mc-btn.pause { background:#f57f17; }
-  .mc-btn.arm { background:#e65100; }
-  .mc-btn.disarm { background:#558b2f; }
-  .mc-btn.force { background:#880e4f; font-size:10px; }
-  .mc-modes { display:flex; gap:3px; }
-  .mc-mode-btn { padding:4px 8px; border:1px solid #555; border-radius:3px; cursor:pointer; font-size:11px; color:#aaa; background:transparent; }
-  .mc-mode-btn:hover { color:#4fc3f7; border-color:#4fc3f7; }
-  .mc-mode-btn.active { color:#4fc3f7; border-color:#4fc3f7; background:rgba(79,195,247,0.1); }
-</style>

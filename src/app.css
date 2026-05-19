@@ -96,20 +96,6 @@
   }
 }
 
-/* Legacy CSS variables for unmigrated components (MapView, MissionPanel, etc.) */
-:root {
-  --bg-body: hsl(var(--background));
-  --bg-panel: hsl(var(--card));
-  --bg-card: hsl(var(--muted));
-  --bg-input: hsl(var(--input));
-  --bg-log: hsl(var(--background));
-  --text-main: hsl(var(--foreground));
-  --text-dim: hsl(var(--muted-foreground));
-  --text-accent: hsl(var(--primary));
-  --border-color: hsl(var(--border));
-  --border-light: hsl(var(--border));
-}
-
 @theme inline {
   --color-background: hsl(var(--background));
   --color-foreground: hsl(var(--foreground));

@@ -1,24 +1,12 @@
 <script lang="ts">
   import { app, addToast } from '../lib/stores.svelte';
+  import Button from '$lib/components/ui/button/button.svelte';
 
   let drawingFence = $state(false);
 
-  function startDraw() {
-    app.fencePolygon = [];
-    drawingFence = true;
-    app.drawingFence = true;
-  }
-
-  function finishDraw() {
-    drawingFence = false;
-    app.drawingFence = false;
-  }
-
-  function clearFence() {
-    app.fencePolygon = [];
-    app.drawingFence = false;
-    drawingFence = false;
-  }
+  function startDraw() { app.fencePolygon = []; drawingFence = true; app.drawingFence = true; }
+  function finishDraw() { drawingFence = false; app.drawingFence = false; }
+  function clearFence() { app.fencePolygon = []; app.drawingFence = false; drawingFence = false; }
 
   function fmtArea(): string {
     if (app.fencePolygon.length < 3) return '---';
@@ -90,47 +78,32 @@
   }
 </script>
 
-<div class="fence-panel">
-  <h2>电子围栏</h2>
+<div class="bg-card border border-border rounded-xl p-3 mx-2 mb-2">
+  <h2 class="text-sm font-semibold text-destructive uppercase tracking-wider mb-2">电子围栏</h2>
   {#if app.fencePolygon.length < 3 && !drawingFence}
-    <div class="actions">
-      <button class="draw-btn" onclick={startDraw}>绘制围栏</button>
-      <button class="btn-sm" onclick={loadFence}>加载</button>
+    <div class="flex gap-2">
+      <button class="flex-1 py-2.5 bg-transparent border-2 border-dashed border-destructive/50 rounded-lg cursor-pointer
+                      text-sm font-bold text-destructive hover:bg-destructive/5 transition-colors"
+              onclick={startDraw}>绘制围栏</button>
+      <Button variant="outline" size="sm" onclick={loadFence}>加载</Button>
     </div>
-    <div class="hint">在地图上点击添加围栏顶点（至少 3 个）</div>
+    <div class="text-[11px] text-muted-foreground mt-1 text-center">在地图上点击添加围栏顶点（至少 3 个）</div>
   {:else if drawingFence}
-    <div class="drawing-info">
+    <div class="flex items-center gap-2 text-sm">
       <span>已添加 {app.fencePolygon.length} 个顶点</span>
       {#if app.fencePolygon.length >= 3}
-        <button class="btn-sm done" onclick={finishDraw}>完成</button>
+        <Button variant="default" size="xs" onclick={finishDraw}>完成</Button>
       {/if}
-      <button class="btn-sm" onclick={clearFence}>取消</button>
+      <Button variant="ghost" size="xs" onclick={clearFence}>取消</Button>
     </div>
   {:else}
-    <div class="fence-info">
-      <span>{app.fencePolygon.length} 顶点 | {fmtArea()}</span>
-    </div>
-    <div class="toolbar">
-      <button class="btn-sm" onclick={startDraw}>重新绘制</button>
-      <button class="btn-sm" onclick={saveFence}>保存</button>
-      <button class="btn-sm" onclick={loadFence}>加载</button>
-      <button class="btn-sm" onclick={exportKml}>KML</button>
-      <button class="btn-sm warn" onclick={clearFence}>清除</button>
+    <div class="text-xs text-muted-foreground mb-2">{app.fencePolygon.length} 顶点 | {fmtArea()}</div>
+    <div class="flex flex-wrap gap-1">
+      <Button variant="outline" size="xs" onclick={startDraw}>重新绘制</Button>
+      <Button variant="outline" size="xs" onclick={saveFence}>保存</Button>
+      <Button variant="outline" size="xs" onclick={loadFence}>加载</Button>
+      <Button variant="outline" size="xs" onclick={exportKml}>KML</Button>
+      <Button variant="ghost" size="xs" onclick={clearFence}>清除</Button>
     </div>
   {/if}
 </div>
-
-<style>
-  .fence-panel { background:var(--bg-panel); border-radius:8px; padding:10px 15px; margin:0 10px 10px; }
-  h2 { font-size:14px; color:#f44336; margin:0 0 8px; text-transform:uppercase; letter-spacing:1px; }
-  .actions { display:flex; gap:6px; }
-  .draw-btn { flex:1; padding:10px; background:transparent; border:2px dashed #f44336; border-radius:6px; cursor:pointer; color:#f44336; font-size:13px; font-weight:bold; }
-  .draw-btn:hover { background:rgba(244,67,54,0.08); }
-  .hint { font-size:11px; color:var(--text-dim); margin-top:4px; text-align:center; }
-  .drawing-info { display:flex; align-items:center; gap:8px; font-size:13px; }
-  .fence-info { font-size:12px; color:var(--text-dim); margin-bottom:6px; }
-  .toolbar { display:flex; gap:4px; flex-wrap:wrap; }
-  .btn-sm { padding:4px 8px; border-radius:3px; border:none; cursor:pointer; font-size:11px; color:white; background:#546e7a; }
-  .btn-sm.done { background:#2e7d32; }
-  .btn-sm.warn { background:#37474f; }
-</style>
