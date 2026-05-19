@@ -135,6 +135,8 @@ if DIST_DIR.exists():
     app.mount('/assets', StaticFiles(directory=str(DIST_DIR / 'assets')), name='assets')
     if (DIST_DIR / 'images').exists():
         app.mount('/images', StaticFiles(directory=str(DIST_DIR / 'images')), name='images')
+    if (DIST_DIR / 'lib').exists():
+        app.mount('/lib', StaticFiles(directory=str(DIST_DIR / 'lib')), name='lib')
 
     @app.get('/')
     async def index():
