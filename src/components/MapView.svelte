@@ -3,6 +3,7 @@
   import { app, addWaypoint, addToast } from '../lib/stores.svelte';
   import { sendCommand } from '../lib/ws';
   import { toGcj } from '../lib/gcj02';
+  import MapControls from './MapControls.svelte';
 
   declare const L: any;
 
@@ -24,9 +25,11 @@
   let satLayer: any = null;
   let vecLayer: any = null;
   let activeWpMarker: any = null;
+  let velocityLine: any = null;
   let measurePts: any[] = [];
   let measureLine: any = null;
   let measureLabel: any = null;
+  let wpPopup: any = null;
 
   const SAT_URL = '/api/tile/6/{z}/{x}/{y}';
   const LABEL_URL = '/api/tile/8/{z}/{x}/{y}';
@@ -41,6 +44,7 @@
     map.on('click', onMapClick);
     map.on('contextmenu', onRightClick);
     map.on('mousemove', onMouseMove);
+    window.addEventListener('keydown', onKeyDown);
     setTimeout(() => map.invalidateSize(), 100);
   });
 
@@ -146,6 +150,17 @@
     URL.revokeObjectURL(a.href);
   }
 
+  function onKeyDown(e: KeyboardEvent) {
+    if (e.key === 'Escape') {
+      if (measuring) clearMeasure();
+      if (app.guidedMode) app.guidedMode = false;
+      if (wpPopup) { map.closePopup(wpPopup); wpPopup = null; }
+    }
+    if (e.key === 'g' && (e.target as HTMLElement).tagName !== 'INPUT') {
+      if (app.drone.connected && app.drone.armed) app.guidedMode = !app.guidedMode;
+    }
+  }
+
   function toggleMapType() {
     isSat = !isSat;
     if (isSat) {
@@ -185,6 +200,17 @@
       droneMarker.setLatLng([glat, glon]);
       const el = droneMarker.getElement();
       if (el) { const a = el.querySelector('.drone-arrow'); if (a) a.style.transform = `rotate(${app.drone.yaw}deg)`; }
+    }
+
+    if (velocityLine) { map.removeLayer(velocityLine); velocityLine = null; }
+    if (app.drone.gs > 0.5) {
+      const hdgRad = app.drone.hdg * Math.PI / 180;
+      const scale = Math.min(app.drone.gs * 8, 200);
+      const endLat = glat + Math.cos(hdgRad) * scale / 111320;
+      const endLon = glon + Math.sin(hdgRad) * scale / (111320 * Math.cos(glat * Math.PI / 180));
+      velocityLine = L.polyline([[glat, glon], [endLat, endLon]], {
+        color: '#69f0ae', weight: 2, opacity: 0.6, dashArray: '4,6',
+      }).addTo(map);
     }
 
     if (app.drone.home_lat !== 0 && !homeMarker) {
@@ -241,6 +267,20 @@
         app.waypoints[i].lat = wlat;
         app.waypoints[i].lon = wlon;
       });
+      m.on('click', (e: any) => {
+        e.originalEvent?.stopPropagation();
+        const content = `<div style="font-size:12px;min-width:140px">
+          <b>航点 ${i + 1}</b> ${wp.drop ? '<span style="color:#e65100">投放</span>' : ''}<br>
+          <span style="color:#888">${wp.lat.toFixed(6)}, ${wp.lon.toFixed(6)}</span><br>
+          高度: <b>${wp.alt}m</b>
+          ${wp.delay ? '<br>延迟: ' + wp.delay + 's' : ''}
+        </div>`;
+        if (wpPopup) map.closePopup(wpPopup);
+        wpPopup = L.popup({ closeButton: true, className: 'wp-popup' })
+          .setLatLng([glat, glon])
+          .setContent(content)
+          .openOn(map);
+      });
       wpMarkers.push(m);
     });
     if (pts.length > 1) wpLine = L.polyline(pts, { color: '#1565c0', weight: 2, dashArray: '6,4' }).addTo(map);
@@ -279,6 +319,7 @@
     <button class="map-btn" onclick={fitRoute}>全览</button>
   </div>
   <div class="coord-bar">{mouseCoord || '---'}</div>
+  <MapControls />
 
   {#if app.mapExpanded && app.drone.connected}
     <div class="hud">

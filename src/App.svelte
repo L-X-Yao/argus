@@ -84,7 +84,7 @@
     <SettingsPanel onclose={() => showSettings = false} />
   {/if}
 </div>
-<div class="shortcut-bar"><kbd>Space</kbd> 悬停 <kbd>R</kbd> 返航 <kbd>A</kbd> 解锁 <kbd>D</kbd> 锁定 <kbd>C</kbd> 图表 <kbd>L</kbd> 主题 <kbd>M</kbd> 展开 <kbd>Ctrl+S</kbd> 设置 <kbd>1-9</kbd> 模式</div>
+<div class="shortcut-bar"><kbd>Space</kbd> 悬停 <kbd>R</kbd> 返航 <kbd>A</kbd> 解锁 <kbd>D</kbd> 锁定 <kbd>G</kbd> 引导 <kbd>M</kbd> 展开 <kbd>C</kbd> 图表 <kbd>Esc</kbd> 取消 <kbd>1-9</kbd> 模式</div>
 
 <style>
   :global(body) { margin:0; padding:0; font-family:'Segoe UI',Consolas,monospace; background:var(--bg-body); color:var(--text-main); }

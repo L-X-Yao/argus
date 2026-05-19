@@ -195,10 +195,14 @@
 </script>
 
 <div class="panel wp-panel">
-  <h2>航点 <span class="count">({app.waypoints.length})</span></h2>
+  <h2>航点 <span class="count">({app.waypoints.length})</span>
+    {#if app.drone.connected && app.drone.wp > 0}
+      <span class="live-wp">目标 #{app.drone.wp}</span>
+    {/if}
+  </h2>
   <div class="wp-list">
     {#each app.waypoints as wp, i}
-      <div class="wp-item">
+      <div class="wp-item" class:active-wp={app.drone.wp === i + 2}>
         <span class="wp-num">{i + 1}</span>
         <button class="wp-type" class:drop={wp.drop} onclick={() => toggleDrop(i)}>
           {wp.drop ? '投放' : '航点'}
@@ -244,6 +248,8 @@
   .wp-panel { width:280px; flex-shrink:0; overflow:hidden; display:flex; flex-direction:column; }
   .wp-list { flex:1; overflow-y:auto; max-height:300px; }
   .wp-item { display:flex; align-items:center; gap:4px; padding:4px 0; border-bottom:1px solid var(--border); font-size:12px; }
+  .wp-item.active-wp { background:rgba(255,167,38,0.1); border-left:3px solid #ffa726; padding-left:2px; }
+  .live-wp { font-size:11px; color:#ffa726; font-weight:normal; }
   .wp-num { width:22px; text-align:center; color:var(--text-dim); font-weight:bold; }
   .wp-type { padding:1px 6px; border-radius:3px; cursor:pointer; font-size:10px; font-weight:bold; border:none; color:white; background:#1565c0; }
   .wp-type.drop { background:#e65100; }
