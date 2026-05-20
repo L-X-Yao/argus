@@ -89,7 +89,10 @@
       if (d.armed) parts.push('已解锁');
       parts.push(`${d.voltage.toFixed(1)}V`);
       if (d.gps_fix) parts.push(d.gps_fix);
-      document.title = `PL-Link — ${parts.join(' | ')}`;
+      let warn = '';
+      if ((d.remaining >= 0 && d.remaining < 10) || (d.ekf_flags & 0x480)) warn = '[!!] ';
+      else if ((d.remaining >= 0 && d.remaining < 20) || d.link_age > 3) warn = '[!] ';
+      document.title = `${warn}PL-Link — ${parts.join(' | ')}`;
     } else {
       document.title = 'PL-Link 地面站';
     }
