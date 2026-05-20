@@ -84,6 +84,7 @@ class DroneLink:
 
         self._protocol = 'auto'
         self.locale = 'zh'
+        self._vehicles: dict[int, dict] = {}
         self.connected = False
         self.frame_count = 0
         self.last_frame_time = 0.0
@@ -324,6 +325,9 @@ class DroneLink:
             'wind_speed': round(self.wind_speed, 1),
             'terrain_alt': round(self.terrain_alt, 1),
             **self.param_mgr.get_status(),
+            'vehicles': [v for v in self._vehicles.values()
+                         if v.get('lat', 0) != 0 and v['sysid'] != self.sysid
+                         and time.time() - v.get('t', 0) < 10],
         }
 
     def _start_log(self) -> None:
@@ -486,4 +490,20 @@ class DroneLink:
         mid = payload[7] | (payload[8] << 8) | (payload[9] << 16)
         p = payload[10:10 + payload[1]]
         pl = payload[1]
+        sid = self._raw_sysid
+        if mid == 33 and pl >= 20:
+            lat = struct.unpack_from('<i', p, 4)[0] / 1e7
+            lon = struct.unpack_from('<i', p, 8)[0] / 1e7
+            alt = struct.unpack_from('<i', p, 16)[0] / 1000.0
+            hdg = struct.unpack_from('<H', p, 26)[0] / 100.0 if pl >= 28 else 0
+            v = self._vehicles.get(sid, {})
+            v.update({'sysid': sid, 'lat': round(lat, 7), 'lon': round(lon, 7),
+                      'alt': round(alt, 1), 'hdg': round(hdg, 0), 't': time.time()})
+            self._vehicles[sid] = v
+        if mid == 0 and pl >= 7:
+            v = self._vehicles.get(sid, {'sysid': sid, 'lat': 0, 'lon': 0, 'alt': 0, 'hdg': 0, 't': 0})
+            v['armed'] = bool(p[6] & 0x80)
+            v['mode'] = p[0] | (p[1] << 8) | (p[2] << 16) | (p[3] << 24)
+            v['vtype'] = p[4]
+            self._vehicles[sid] = v
         mavlink_dispatch.dispatch(mid, p, pl, self)

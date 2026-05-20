@@ -52,6 +52,7 @@ export interface DroneState {
   param_count: number;
   param_total: number;
   param_fetching: boolean;
+  vehicles: { sysid: number; lat: number; lon: number; alt: number; hdg: number; armed?: boolean; mode?: number; vtype?: number }[];
 }
 
 export interface FlightSummary {
@@ -155,4 +156,5 @@ export const defaultState: DroneState = {
   ekf_vel: 0, ekf_pos_h: 0, ekf_pos_v: 0, ekf_compass: 0, ekf_flags: 0,
   wind_dir: 0, wind_speed: 0, terrain_alt: -1,
   param_count: 0, param_total: -1, param_fetching: false,
+  vehicles: [],
 };

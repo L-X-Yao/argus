@@ -105,8 +105,38 @@
     }).addTo(map);
   });
 
+  let otherMarkers: Map<number, any> = new Map();
+
+  $effect(() => {
+    const vehicles = app.drone.vehicles || [];
+    const activeSids = new Set(vehicles.map(v => v.sysid));
+    for (const [sid, m] of otherMarkers) {
+      if (!activeSids.has(sid)) { map.removeLayer(m); otherMarkers.delete(sid); }
+    }
+    for (const v of vehicles) {
+      if (Math.abs(v.lat) < 0.001) continue;
+      const [glat, glon] = coord(v.lat, v.lon);
+      const existing = otherMarkers.get(v.sysid);
+      if (existing) {
+        existing.setLatLng([glat, glon]);
+        const el = existing.getElement();
+        if (el) { const a = el.querySelector('.drone-arrow'); if (a) a.style.transform = `rotate(${v.hdg}deg)`; }
+      } else {
+        const color = v.armed ? '#ef4444' : '#888';
+        const icon = L.divIcon({
+          className: 'drone-icon',
+          html: `<div class="drone-arrow" style="transform:rotate(${v.hdg}deg)"><svg viewBox="-12 -12 24 24" width="22" height="22"><polygon points="0,-8 -5,6 0,3 5,6" fill="${color}" stroke="white" stroke-width="0.8"/></svg><div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);font-size:9px;color:${color};font-weight:bold;white-space:nowrap">V${v.sysid}</div></div>`,
+          iconSize: [22, 22], iconAnchor: [11, 11],
+        });
+        const m = L.marker([glat, glon], { icon, zIndexOffset: 800 }).addTo(map);
+        otherMarkers.set(v.sysid, m);
+      }
+    }
+  });
+
   onDestroy(() => {
     [droneMarker, homeMarker, trailLine, velocityLine, homeLine, rangeRing]
       .filter(Boolean).forEach(l => map.removeLayer(l));
+    otherMarkers.forEach(m => map.removeLayer(m));
   });
 </script>
