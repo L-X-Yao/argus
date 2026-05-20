@@ -178,5 +178,5 @@
 </svg>
 
 <style>
-  .pfd { position: absolute; left: 8px; top: 50%; transform: translateY(-50%); z-index: 1001; width: 270px; pointer-events: none; }
+  .pfd { position: absolute; left: 8px; bottom: 30px; z-index: 1001; width: 220px; pointer-events: none; }
 </style>
