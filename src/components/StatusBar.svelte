@@ -5,7 +5,7 @@
   import { apiUrl } from '../lib/backend';
   import Button from '$lib/components/ui/button/button.svelte';
   import Badge from '$lib/components/ui/badge/badge.svelte';
-  import { Volume2, VolumeOff, Sun, Moon, Settings, Wifi, WifiOff, Signal, Satellite } from '@lucide/svelte';
+  import { Volume2, VolumeOff, Sun, Moon, Settings, Satellite } from '@lucide/svelte';
 
   let { toggleTheme, onSettings }: { toggleTheme: () => void; onSettings: () => void } = $props();
 
@@ -52,11 +52,25 @@
 
   $effect(() => { if (app.drone.connected) connecting = false; });
 
-  let linkColor = $derived(
-    !app.drone.connected || app.drone.link_age < 0 ? 'text-muted-foreground' :
-    app.drone.link_age < 1 ? 'text-success' :
-    app.drone.link_age < 3 ? 'text-warning' : 'text-destructive'
+  let linkBars = $derived(
+    !app.drone.connected || app.drone.link_age < 0 ? 0 :
+    app.drone.link_age < 0.5 ? 4 :
+    app.drone.link_age < 1 ? 3 :
+    app.drone.link_age < 2 ? 2 :
+    app.drone.link_age < 3 ? 1 : 0
   );
+  let barColor = $derived(linkBars >= 3 ? '#22c55e' : linkBars >= 2 ? '#eab308' : linkBars >= 1 ? '#ef4444' : '#666');
+
+  let prevFrames = $state(0);
+  let msgRate = $state(0);
+  $effect(() => {
+    const timer = setInterval(() => {
+      const f = app.drone.frames;
+      msgRate = Math.round((f - prevFrames) / 2);
+      prevFrames = f;
+    }, 2000);
+    return () => clearInterval(timer);
+  });
 
   let battColor = $derived(
     app.drone.remaining < 20 ? 'text-destructive' :
@@ -161,11 +175,15 @@
         <Badge variant="destructive" class="text-[10px] font-bold animate-pulse">已解锁</Badge>
       {/if}
 
-      <span class="{linkColor}" title="链路 {app.drone.link_age >= 0 ? app.drone.link_age.toFixed(1) + 's' : ''}">
-        {#if app.drone.link_age >= 0 && app.drone.link_age < 3}
-          <Signal size={14} />
-        {:else}
-          <WifiOff size={14} />
+      <span class="flex items-center gap-0.5" title="链路 {app.drone.link_age >= 0 ? app.drone.link_age.toFixed(1) + 's' : '---'} · {msgRate} Hz">
+        <svg width="16" height="12" viewBox="0 0 16 12" class="shrink-0">
+          <rect x="0" y="9" width="3" height="3" rx="0.5" fill={linkBars >= 1 ? barColor : '#555'} />
+          <rect x="4.5" y="6" width="3" height="6" rx="0.5" fill={linkBars >= 2 ? barColor : '#555'} />
+          <rect x="9" y="3" width="3" height="9" rx="0.5" fill={linkBars >= 3 ? barColor : '#555'} />
+          <rect x="13" y="0" width="3" height="12" rx="0.5" fill={linkBars >= 4 ? barColor : '#555'} />
+        </svg>
+        {#if app.drone.connected && msgRate > 0}
+          <span class="text-[10px] font-mono tabular-nums" style="color:{barColor}">{msgRate}</span>
         {/if}
       </span>
 
