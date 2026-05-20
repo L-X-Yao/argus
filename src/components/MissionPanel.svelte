@@ -34,10 +34,10 @@
     if (app.waypoints[i].type === 'loiter_time' && !app.waypoints[i].loiter_param) app.waypoints[i].loiter_param = 10;
     saveWaypoints();
   }
-  function typeLabel(t: string): string {
-    if (t === 'loiter_turns') return '盘旋圈';
-    if (t === 'loiter_time') return '盘旋秒';
-    return '航点';
+  function typeLabel(tp: string): string {
+    if (tp === 'loiter_turns') return t('wp.loiterTurns');
+    if (tp === 'loiter_time') return t('wp.loiterTime');
+    return t('wp.waypoint');
   }
   function typeColor(t: string): string {
     if (t === 'loiter_turns') return '#ab47bc';
@@ -65,18 +65,18 @@
     if (!app.waypoints.length) return;
     if (!await showConfirm(`确认上传任务并自动起飞到 ${app.defaultAlt}m？\n将执行：上传→解锁→起飞→开始任务`, true)) return;
     uploadMission();
-    addToast('上传任务中...', 'info', 2000);
+    addToast(t('toast.uploading'), 'info', 2000);
     await new Promise(r => setTimeout(r, 1500));
     sendCommand('arm');
-    addToast('解锁中...', 'info', 2000);
+    addToast(t('toast.arming'), 'info', 2000);
     await new Promise(r => setTimeout(r, 2500));
-    if (!app.drone.armed) { addToast('解锁失败 — 请检查预飞条件', 'error'); return; }
+    if (!app.drone.armed) { addToast(t('toast.armFail'), 'error'); return; }
     sendCommand('takeoff', undefined, { alt: app.defaultAlt });
-    addToast(`起飞到 ${app.defaultAlt}m...`, 'info', 3000);
+    addToast(`${t('ctrl.takeoff')} ${app.defaultAlt}m...`, 'info', 3000);
     await new Promise(r => setTimeout(r, 3000));
-    if (app.drone.alt_rel < 1) { addToast('起飞失败 — 高度未上升', 'error'); return; }
+    if (app.drone.alt_rel < 1) { addToast(t('toast.takeoffFail'), 'error'); return; }
     sendCommand('mission_start');
-    addToast('开始执行任务', 'success');
+    addToast(t('toast.missionStart'), 'success');
   }
 
   function saveMission() {
@@ -103,7 +103,7 @@
           app.waypoints = d.waypoints || [];
           if (d.alt) app.defaultAlt = d.alt;
           fitAfterLoad();
-        } catch (err) { addToast('任务加载失败', 'error'); }
+        } catch (err) { addToast(t('toast.loadFail'), 'error'); }
       };
       reader.readAsText(file);
     };

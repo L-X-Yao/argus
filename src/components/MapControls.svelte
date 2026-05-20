@@ -1,12 +1,13 @@
 <script lang="ts">
   import { app, showSlide } from '../lib/stores.svelte';
   import { sendCommand } from '../lib/ws';
+  import { t } from '../lib/i18n.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
   import Badge from '$lib/components/ui/badge/badge.svelte';
 
-  function rtl() { showSlide('滑动切换返航', 'red', () => sendCommand('rtl')); }
+  function rtl() { showSlide(t('slide.rtl'), 'red', () => sendCommand('rtl')); }
   function pause() { sendCommand('mode', app.drone.vtype === '固定翼' ? 19 : 5); }
-  function forceDisarm() { showSlide('滑动强制锁定', 'red', () => sendCommand('force_disarm')); }
+  function forceDisarm() { showSlide(t('slide.forceDisarm'), 'red', () => sendCommand('force_disarm')); }
 
   function fmtTime(s: number): string {
     const m = Math.floor(s / 60), sec = s % 60;
@@ -19,22 +20,22 @@
     <div class="flex items-center gap-2">
       <span class="text-base font-bold text-primary">{app.drone.mode}</span>
       <Badge variant={app.drone.armed ? 'destructive' : 'default'} class="text-[10px]">
-        {app.drone.armed ? '解锁' : '锁定'}
+        {app.drone.armed ? t('status.armed') : t('ctrl.disarm')}
       </Badge>
       {#if app.drone.flight_time > 0}
         <span class="text-sm text-warning ml-auto font-mono">{fmtTime(app.drone.flight_time)}</span>
       {/if}
     </div>
     <div class="flex gap-1">
-      <Button variant="destructive" size="xs" onclick={rtl}>返航</Button>
-      <Button size="xs" class="bg-amber-600 hover:bg-amber-700 text-white" onclick={pause}>悬停</Button>
+      <Button variant="destructive" size="xs" onclick={rtl}>{t('ctrl.rtl')}</Button>
+      <Button size="xs" class="bg-amber-600 hover:bg-amber-700 text-white" onclick={pause}>{t('ctrl.pause')}</Button>
       {#if !app.drone.armed}
-        <Button size="xs" class="bg-orange-700 hover:bg-orange-800 text-white" onclick={() => showSlide('滑动解锁电机', 'orange', () => sendCommand('arm'))}>解锁</Button>
+        <Button size="xs" class="bg-orange-700 hover:bg-orange-800 text-white" onclick={() => showSlide(t('slide.arm'), 'orange', () => sendCommand('arm'))}>{t('ctrl.arm')}</Button>
       {:else}
-        <Button size="xs" class="bg-green-700 hover:bg-green-800 text-white" onclick={() => sendCommand('disarm')}>锁定</Button>
+        <Button size="xs" class="bg-green-700 hover:bg-green-800 text-white" onclick={() => sendCommand('disarm')}>{t('ctrl.disarm')}</Button>
       {/if}
       {#if app.drone.armed}
-        <Button variant="destructive" size="xs" onclick={forceDisarm}>强制</Button>
+        <Button variant="destructive" size="xs" onclick={forceDisarm}>{t('ctrl.forceDisarm')}</Button>
       {/if}
     </div>
     <div class="flex gap-1">

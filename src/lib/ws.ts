@@ -3,7 +3,7 @@ import { app, updateState, addEvent, setWsConnected, addToast, loadDownloadedMis
 import { handleParamBatch, handleParamsComplete } from './paramStore.svelte';
 import { setLogList, completeDownload, updateDownloadProgress } from './logStore.svelte';
 import { getWsUrl } from './backend';
-import { onLocaleChange, getLocale } from './i18n.svelte';
+import { onLocaleChange, getLocale, t } from './i18n.svelte';
 
 let socket: WebSocket | null = null;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -32,9 +32,9 @@ export function connectWs(): void {
           if (msg.text.includes('失控') || msg.text.includes('碰撞') || msg.text.includes('紧急'))
             addToast(msg.text, 'error', 8000);
           else if (msg.text.includes('已解锁'))
-            addToast('飞控已解锁', 'warn', 5000);
+            addToast(t('toast.armed'), 'warn', 5000);
           else if (msg.text.includes('已锁定') && !msg.text.includes('发送'))
-            addToast('飞控已锁定', 'success', 4000);
+            addToast(t('toast.disarmed'), 'success', 4000);
           else if (msg.text.includes('任务确认') || msg.text.includes('围栏确认')) {
             addToast(msg.text, msg.text.includes('成功') ? 'success' : 'error');
             if (msg.text.includes('围栏确认') && msg.text.includes('成功'))
@@ -43,7 +43,7 @@ export function connectWs(): void {
           else if (msg.text.includes('已连接'))
             addToast(msg.text, 'success');
           else if (msg.text.includes('已断开'))
-            addToast('已断开连接', 'info');
+            addToast(t('toast.disconnected'), 'info');
           else if (msg.text.includes('低电量') || msg.text.includes('电量极低'))
             addToast(msg.text, 'error', 8000);
           else if (msg.text.includes('指令应答') && msg.text.includes('失败'))
@@ -57,18 +57,18 @@ export function connectWs(): void {
           break;
         case 'mission_downloaded':
           loadDownloadedMission(msg.waypoints);
-          addToast('已下载 ' + msg.waypoints.length + ' 个航点', 'success');
+          addToast(t('toast.missionDown').replace('{n}', String(msg.waypoints.length)), 'success');
           break;
         case 'log_list':
           setLogList(msg.logs);
-          addToast('获取到 ' + msg.logs.length + ' 条机载日志', 'success');
+          addToast(t('toast.logList').replace('{n}', String(msg.logs.length)), 'success');
           break;
         case 'log_progress':
           updateDownloadProgress(msg.received, msg.total);
           break;
         case 'log_complete':
           completeDownload(msg.id, msg.data, msg.size);
-          addToast('日志 #' + msg.id + ' 下载完成', 'success');
+          addToast(t('toast.logDone').replace('{n}', String(msg.id)), 'success');
           break;
       }
     } catch {}
@@ -92,7 +92,7 @@ export function sendMessage(msg: Record<string, unknown>): void {
   if (socket && socket.readyState === WebSocket.OPEN) {
     socket.send(JSON.stringify(msg));
   } else if (msg.type === 'command') {
-    addToast('指令未发送 — 服务未连接', 'error');
+    addToast(t('toast.cmdNotSent'), 'error');
   }
 }
 

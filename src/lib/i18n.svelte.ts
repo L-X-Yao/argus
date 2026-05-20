@@ -120,6 +120,21 @@ const zh: Record<string, string> = {
   'toast.invalidValue': '无效数值',
   'toast.outOfRange': '超出范围',
   'confirm.guidedGoto': '引导飞往此点？',
+  'toast.armed': '飞控已解锁',
+  'toast.disarmed': '飞控已锁定',
+  'toast.disconnected': '已断开连接',
+  'toast.missionDown': '已下载 {n} 个航点',
+  'toast.logList': '获取到 {n} 条机载日志',
+  'toast.logDone': '日志 #{n} 下载完成',
+  'toast.uploading': '上传任务中...',
+  'toast.arming': '解锁中...',
+  'toast.armFail': '解锁失败 — 请检查预飞条件',
+  'toast.takeoffFail': '起飞失败 — 高度未上升',
+  'toast.missionStart': '开始执行任务',
+  'toast.loadFail': '任务加载失败',
+  'wp.loiterTurns': '盘旋圈',
+  'wp.loiterTime': '盘旋秒',
+  'wp.waypoint': '航点',
 };
 
 const en: Record<string, string> = {
@@ -236,6 +251,21 @@ const en: Record<string, string> = {
   'toast.invalidValue': 'Invalid value',
   'toast.outOfRange': 'Out of range',
   'confirm.guidedGoto': 'Fly to this point?',
+  'toast.armed': 'Vehicle ARMED',
+  'toast.disarmed': 'Vehicle disarmed',
+  'toast.disconnected': 'Disconnected',
+  'toast.missionDown': 'Downloaded {n} waypoints',
+  'toast.logList': 'Found {n} onboard logs',
+  'toast.logDone': 'Log #{n} download complete',
+  'toast.uploading': 'Uploading mission...',
+  'toast.arming': 'Arming...',
+  'toast.armFail': 'Arm failed — check preflight',
+  'toast.takeoffFail': 'Takeoff failed — altitude not rising',
+  'toast.missionStart': 'Mission started',
+  'toast.loadFail': 'Mission load failed',
+  'wp.loiterTurns': 'Loiter Turns',
+  'wp.loiterTime': 'Loiter Time',
+  'wp.waypoint': 'Waypoint',
 };
 
 const dicts: Record<Locale, Record<string, string>> = { zh, en };
