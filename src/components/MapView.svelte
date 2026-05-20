@@ -221,7 +221,7 @@
 
     if (!droneMarker) {
       const icon = L.divIcon({
-        className: '',
+        className: 'drone-icon',
         html: `<div class="drone-arrow" style="transform:rotate(${app.drone.yaw}deg)"><svg viewBox="-12 -12 24 24" width="28" height="28"><polygon points="0,-10 -7,8 0,4 7,8" fill="#4fc3f7" stroke="white" stroke-width="1"/></svg></div>`,
         iconSize: [28, 28], iconAnchor: [14, 14],
       });
@@ -530,4 +530,8 @@
 <style>
   .map-btn { display:inline-flex; align-items:center; gap:3px; padding:4px 10px; background:hsl(var(--card) / 0.92); border:1px solid hsl(var(--border)); border-radius:6px; cursor:pointer; font-size:12px; font-weight:600; color:hsl(var(--muted-foreground)); backdrop-filter:blur(4px); transition:all 0.15s; }
   .map-btn:hover { color:hsl(var(--primary)); border-color:hsl(var(--primary)); }
+  :global(.drone-icon) { transition: transform 200ms linear !important; background: none !important; border: none !important; }
+  :global(.drone-arrow) { transition: transform 150ms ease-out; }
+  :global(.dark .leaflet-tile-pane) { filter: brightness(0.7) saturate(0.8); }
+  :global(.dark .leaflet-control-zoom a) { background: hsl(var(--card)); color: hsl(var(--foreground)); border-color: hsl(var(--border)); }
 </style>
