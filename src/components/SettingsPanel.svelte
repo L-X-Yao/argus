@@ -2,8 +2,9 @@
   import { app, saveSettings } from '../lib/stores.svelte';
   import { t, i18nState, setLocale } from '../lib/i18n.svelte';
   import type { Locale } from '../lib/i18n.svelte';
+  import { gamepad, startGamepad, stopGamepad } from '../lib/gamepad.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
-  import { X, Volume2, VolumeOff, Mic, MicOff, Sun, Moon, Plane, ShieldAlert, Gauge, Globe } from '@lucide/svelte';
+  import { X, Volume2, VolumeOff, Mic, MicOff, Sun, Moon, Plane, ShieldAlert, Gauge, Globe, Gamepad2 } from '@lucide/svelte';
 
   let { onclose }: { onclose: () => void } = $props();
   const VERSION = '3.0.0';
@@ -91,6 +92,18 @@
                     onclick={() => { app.darkTheme = !app.darkTheme; saveSettings(); }}>
               {#if app.darkTheme}<Moon size={13} />深色{:else}<Sun size={13} />浅色{/if}
             </Button>
+          </div>
+          <div class="flex justify-between items-center py-2 border-b border-border/50">
+            <label class="text-sm text-muted-foreground"><Gamepad2 size={13} class="inline mr-1" />手柄 / Gamepad</label>
+            <div class="flex items-center gap-1.5">
+              {#if gamepad.connected}
+                <span class="text-[10px] text-success">{gamepad.name}</span>
+              {/if}
+              <Button variant={gamepad.enabled ? 'default' : 'secondary'} size="sm" class="h-7 text-xs px-2.5"
+                      onclick={() => { if (gamepad.enabled) stopGamepad(); else startGamepad(); }}>
+                {gamepad.enabled ? 'ON' : 'OFF'}
+              </Button>
+            </div>
           </div>
           <div class="flex justify-between items-center py-2 border-b border-border/50">
             <label class="text-sm text-muted-foreground">地图区域 / Map</label>

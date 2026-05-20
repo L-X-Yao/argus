@@ -151,6 +151,14 @@ def execute(cmd: str, param, link: DroneLink, data: dict | None = None) -> dict 
         link.send(bm(126, struct.pack('<BB', link.sysid, 1), link.sq, 203))
         link._log_download_id = -1
         link.add_event('日志: 下载取消')
+    elif cmd == 'rc_override':
+        channels = data.get('channels', [])
+        if len(channels) >= 8:
+            from pllink_proto import bm
+            p = struct.pack('<BB', link.sysid, 1)
+            for i in range(8):
+                p += struct.pack('<H', max(0, min(65535, int(channels[i]))))
+            link.send(bm(70, p, link.sq, 124))
     return None
 
 
