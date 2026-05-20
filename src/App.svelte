@@ -258,7 +258,7 @@
           <div class="backdrop-blur flex items-center justify-center gap-1 py-1 text-[11px] cursor-pointer border-t hover:text-primary transition-colors
             {hasUrgentEvent ? 'bg-destructive/15 border-destructive/40 text-destructive animate-pulse' : 'bg-card/90 border-border text-muted-foreground'}"
                onclick={() => { flyEventsOpen = !flyEventsOpen; if (flyEventsOpen) seenEventCount = app.events.length; }}>
-            事件 ({app.events.length})
+            {t('event.title')} ({app.events.length})
             {#if unseenEvents > 0 && !flyEventsOpen}
               <span class="px-1.5 py-px rounded-full text-[10px] font-bold {hasUrgentEvent ? 'bg-destructive text-white' : 'bg-primary text-primary-foreground'}">{unseenEvents}</span>
             {/if}

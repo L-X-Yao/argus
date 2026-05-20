@@ -269,7 +269,7 @@
     <h2 class="text-sm font-semibold text-primary uppercase tracking-wider">{t('wp.title')}</h2>
     <span class="text-xs text-muted-foreground">({app.waypoints.length})</span>
     {#if app.drone.connected && app.drone.wp > 0}
-      <span class="text-[11px] text-warning ml-auto">目标 #{app.drone.wp}</span>
+      <span class="text-[11px] text-warning ml-auto">WP #{app.drone.wp}</span>
     {/if}
   </div>
   <div class="flex-1 overflow-y-auto max-h-72 rounded-lg border border-border/50">
@@ -313,8 +313,8 @@
   {#if app.waypoints.length > 0}
     <div class="text-xs text-warning mt-1.5 leading-relaxed">
       距离 {totalDist()} · 时间 {estimateTime()} · 航点 {app.waypoints.length}
-      {#if app.waypoints.filter(w => w.drop).length > 0}· 投放 {app.waypoints.filter(w => w.drop).length}{/if}
-      · 高度 {Math.min(...app.waypoints.map(w => w.alt))}-{Math.max(...app.waypoints.map(w => w.alt))}m
+      {#if app.waypoints.filter(w => w.drop).length > 0}· {t('ctrl.drop')} {app.waypoints.filter(w => w.drop).length}{/if}
+      · {t('telem.alt')} {Math.min(...app.waypoints.map(w => w.alt))}-{Math.max(...app.waypoints.map(w => w.alt))}m
     </div>
   {/if}
   {#if app.waypoints.length >= 2}
