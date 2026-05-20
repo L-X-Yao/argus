@@ -44,7 +44,8 @@ class WSManager:
                 if msg_type == 'connect':
                     port = msg.get('port', 'tcp:localhost:5770')
                     baud = msg.get('baud', 57600)
-                    ok = self.link.connect(port, baud)
+                    protocol = msg.get('protocol', 'auto')
+                    ok = self.link.connect(port, baud, protocol=protocol)
                     await ws.send_text(json.dumps({
                         'type': 'connect_result', 'ok': ok,
                         'error': '' if ok else '无法连接',

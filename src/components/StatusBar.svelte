@@ -11,6 +11,7 @@
 
   let port = $state('tcp:localhost:5770');
   let baud = $state(57600);
+  let protocol = $state('auto');
   let portHistory: string[] = $state([]);
   let showHistory = $state(false);
   let connecting = $state(false);
@@ -47,7 +48,7 @@
 
   function toggle() {
     if (app.drone.connected) { sendDisconnect(); }
-    else { connecting = true; savePortHistory(); sendConnect(port, baud); setTimeout(() => connecting = false, 5000); }
+    else { connecting = true; savePortHistory(); sendConnect(port, baud, protocol); setTimeout(() => connecting = false, 5000); }
   }
 
   $effect(() => { if (app.drone.connected) connecting = false; });
@@ -138,7 +139,7 @@
     <div class="flex items-center gap-1.5">
       {#if !app.drone.connected}
         <div class="relative">
-          <input bind:value={port} placeholder="tcp:ip:port"
+          <input bind:value={port} placeholder="tcp:ip:port / udp:port"
                  class="w-40 h-7 px-2 text-xs font-mono bg-input border border-border rounded-md text-foreground
                         placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 port-input"
                  onfocus={() => showHistory = true}
@@ -152,7 +153,7 @@
             </div>
           {/if}
         </div>
-        {#if !port.startsWith('tcp:')}
+        {#if !port.startsWith('tcp:') && !port.startsWith('udp:')}
           <select bind:value={baud}
                   class="h-7 px-1 text-xs bg-input border border-border rounded-md text-foreground cursor-pointer"
                   title="串口波特率">
@@ -160,6 +161,13 @@
             <option value={115200}>115200</option>
           </select>
         {/if}
+        <select bind:value={protocol}
+                class="h-7 px-1 text-xs bg-input border border-border rounded-md text-foreground cursor-pointer"
+                title="通信协议">
+          <option value="auto">自动</option>
+          <option value="standard">标准</option>
+          <option value="pllink">PL-Link</option>
+        </select>
       {/if}
       <Button
         variant={app.drone.connected ? 'destructive' : 'default'}

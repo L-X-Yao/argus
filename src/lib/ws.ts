@@ -93,8 +93,8 @@ export function sendMessage(msg: Record<string, unknown>): void {
   }
 }
 
-export function sendConnect(port: string, baud: number): void {
-  sendMessage({ type: 'connect', port, baud });
+export function sendConnect(port: string, baud: number, protocol: string = 'auto'): void {
+  sendMessage({ type: 'connect', port, baud, protocol });
 }
 
 export function sendDisconnect(): void {

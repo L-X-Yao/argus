@@ -148,7 +148,88 @@ class TestCommandAck:
     def test_failure(self):
         from backend.mavlink_handlers import handle_command_ack
         link = make_link()
-        # command_ack: bytes[0:2]=cmd(H), byte[2]=result
-        p = struct.pack('<HB', 400, 4)
+        p = struct.pack('<HB', 400, 2)
         handle_command_ack(p, len(p), link)
-        assert '失败' in link.events[0]['text']
+        assert '拒绝' in link.events[0]['text']
+
+
+class TestMavlinkFrameParser:
+    def test_parse_valid_frame(self):
+        link = make_link()
+        link._protocol = 'standard'
+        payload = struct.pack('<IBBBBB', 5, 2, 3, 0, 0, 3)
+        header = bytes([len(payload), 0, 0, 1, 255, 1, 0, 0, 0])
+        frame = b'\xfd' + header + payload + b'\x00\x00'
+        link._buf = frame
+        result, consumed = link._parse_mavlink_frame()
+        assert result is not None
+        assert consumed == len(frame)
+        assert result[0] == 0xFD
+
+    def test_parse_incomplete(self):
+        link = make_link()
+        link._buf = b'\xfd\x09\x00'
+        result, consumed = link._parse_mavlink_frame()
+        assert result is None
+        assert consumed == 0
+
+    def test_skip_garbage(self):
+        link = make_link()
+        link._buf = b'\x00\x00\x00\xfd\x09' + b'\x00' * 20
+        result, consumed = link._parse_mavlink_frame()
+        assert result is None
+        assert consumed == 3
+
+    def test_no_magic(self):
+        link = make_link()
+        link._buf = b'\x00\x01\x02\x03'
+        result, consumed = link._parse_mavlink_frame()
+        assert result is None
+        assert consumed == 4
+
+    def test_auto_detect_pllink(self):
+        link = make_link()
+        link._protocol = 'auto'
+        link._buf = b'\x50\x4c\x05\x00'
+        link._next_frame()
+        assert link._protocol == 'pllink'
+
+    def test_auto_detect_mavlink(self):
+        link = make_link()
+        link._protocol = 'auto'
+        link._buf = b'\xfd\x09\x00\x00\x01\x01\x01\x00\x00\x00'
+        link._next_frame()
+        assert link._protocol == 'standard'
+
+
+class TestVehicleTypes:
+    def test_copter(self):
+        link = make_link()
+        link.vtype_raw = 2
+        _, btns, vn = link._get_vehicle_info()
+        assert vn == '多旋翼'
+
+    def test_plane(self):
+        link = make_link()
+        link.vtype_raw = 1
+        _, btns, vn = link._get_vehicle_info()
+        assert vn == '固定翼'
+
+    def test_rover(self):
+        link = make_link()
+        link.vtype_raw = 10
+        _, btns, vn = link._get_vehicle_info()
+        assert vn == '地面车'
+
+    def test_sub(self):
+        link = make_link()
+        link.vtype_raw = 12
+        _, btns, vn = link._get_vehicle_info()
+        assert vn == '水下机器人'
+
+    def test_force_plane(self):
+        link = make_link()
+        link.vtype_raw = 2
+        link.force_plane = True
+        _, _, vn = link._get_vehicle_info()
+        assert vn == '固定翼'

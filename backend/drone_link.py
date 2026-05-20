@@ -10,7 +10,8 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 from pllink_proto import ple, pld, bm
 
-from .constants import COPTER_MODES, PLANE_MODES, COPTER_BTNS, PLANE_BTNS, FIX_NAMES
+from .constants import (COPTER_MODES, PLANE_MODES, ROVER_MODES, SUB_MODES,
+                        COPTER_BTNS, PLANE_BTNS, ROVER_BTNS, SUB_BTNS, FIX_NAMES)
 from . import mavlink_dispatch
 from .mavlink_handlers import init_handlers
 from . import commands as cmd_module
@@ -34,6 +35,34 @@ class TcpWrapper:
         self._sock.close()
 
 
+class UdpWrapper:
+    def __init__(self, port: int, host: str = ''):
+        self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self._sock.settimeout(0.1)
+        self._sock.bind((host or '', port))
+        self._remote = None
+
+    def read(self, n: int) -> bytes:
+        try:
+            data, addr = self._sock.recvfrom(n)
+            if not self._remote:
+                self._remote = addr
+            return data
+        except (socket.timeout, OSError):
+            return b''
+
+    def write(self, data: bytes) -> None:
+        if self._remote:
+            try:
+                self._sock.sendto(data, self._remote)
+            except OSError:
+                pass
+
+    def close(self) -> None:
+        self._sock.close()
+
+
 class DroneLink:
     def __init__(self):
         init_handlers()
@@ -51,6 +80,7 @@ class DroneLink:
         self._last_baud = 57600
         self._reconnect_enabled = True
 
+        self._protocol = 'auto'
         self.connected = False
         self.frame_count = 0
         self.last_frame_time = 0.0
@@ -133,15 +163,21 @@ class DroneLink:
         with self._lock:
             if self._ser:
                 try:
-                    self._ser.write(ple(frame, self.sq & 0xFF))
+                    if self._protocol in ('pllink', 'auto'):
+                        self._ser.write(ple(frame, self.sq & 0xFF))
+                    else:
+                        self._ser.write(frame)
                     self.sq += 1
                 except Exception:
                     pass
 
-    def connect(self, port: str, baudrate: int = 57600) -> bool:
+    def connect(self, port: str, baudrate: int = 57600, protocol: str = 'auto') -> bool:
+        self._protocol = 'standard' if port.startswith('udp:') else protocol
         try:
             self._ser = self._open_port(port, baudrate)
-            if port.startswith('tcp:'):
+            if port.startswith('udp:'):
+                self.add_event('UDP %s' % port[4:])
+            elif port.startswith('tcp:'):
                 self.add_event('TCP %s' % port[4:])
         except Exception as e:
             self.add_event('连接失败: %s' % e)
@@ -208,9 +244,24 @@ class DroneLink:
         self._thread.start()
         return True
 
+    def _get_vehicle_info(self) -> tuple[dict, list, str]:
+        vt = self.vtype_raw
+        if self.force_plane is True:
+            return PLANE_MODES, PLANE_BTNS, '固定翼'
+        if self.force_plane is False:
+            return COPTER_MODES, COPTER_BTNS, '多旋翼'
+        if vt in (1, 19, 20, 21, 22, 23, 24, 25):
+            return PLANE_MODES, PLANE_BTNS, '固定翼'
+        if vt == 10:
+            return ROVER_MODES, ROVER_BTNS, '地面车'
+        if vt == 12:
+            return SUB_MODES, SUB_BTNS, '水下机器人'
+        if vt > 0:
+            return COPTER_MODES, COPTER_BTNS, '多旋翼'
+        return COPTER_MODES, COPTER_BTNS, ''
+
     def get_state(self) -> dict:
-        md = PLANE_MODES if self.is_plane() else COPTER_MODES
-        vn = '固定翼' if self.is_plane() else ('多旋翼' if self.vtype_raw > 0 else '')
+        md, btns, vn = self._get_vehicle_info()
         return {
             'type': 'state',
             'connected': self.connected,
@@ -238,7 +289,7 @@ class DroneLink:
             'wp': self.wp_seq,
             'vtype': vn,
             'vtype_raw': self.vtype_raw,
-            'mode_btns': PLANE_BTNS if self.is_plane() else COPTER_BTNS,
+            'mode_btns': btns,
             'link_age': round(time.time() - self.last_frame_time, 1) if self.connected and self.last_frame_time > 0 else -1,
             'bat_time': self.bat_time_remaining if self.bat_time_remaining > 0 else -1,
             'home_lat': round(self.home_lat, 7),
@@ -311,7 +362,14 @@ class DroneLink:
             pass
 
     def _open_port(self, port: str, baudrate: int):
-        if port.startswith('tcp:'):
+        if port.startswith('udp:'):
+            parts = port[4:].split(':')
+            if len(parts) == 2:
+                host, udp_port = parts[0], int(parts[1])
+            else:
+                host, udp_port = '', int(parts[0])
+            return UdpWrapper(udp_port, host)
+        elif port.startswith('tcp:'):
             parts = port[4:].split(':')
             host, tcp_port = parts[0], int(parts[1])
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -324,6 +382,34 @@ class DroneLink:
             s = serial.Serial(port, baudrate, timeout=0.1)
             s.reset_input_buffer()
             return s
+
+    def _parse_mavlink_frame(self):
+        buf = self._buf
+        idx = buf.find(b'\xfd')
+        if idx < 0:
+            return None, max(1, len(buf))
+        if idx > 0:
+            return None, idx
+        if len(buf) < 12:
+            return None, 0
+        payload_len = buf[1]
+        has_sig = bool(buf[2] & 0x01)
+        frame_len = 12 + payload_len + (13 if has_sig else 0)
+        if len(buf) < frame_len:
+            return None, 0
+        return bytes(buf[:frame_len]), frame_len
+
+    def _next_frame(self):
+        if self._protocol == 'auto' and len(self._buf) >= 2:
+            if self._buf[0] == 0x50 and self._buf[1] == 0x4C:
+                self._protocol = 'pllink'
+                self.add_event('协议: PL-Link')
+            else:
+                self._protocol = 'standard'
+                self.add_event('协议: 标准')
+        if self._protocol == 'pllink':
+            return pld(self._buf)
+        return self._parse_mavlink_frame()
 
     def _loop(self) -> None:
         last_hb = 0.0
@@ -361,7 +447,7 @@ class DroneLink:
                 time.sleep(0.1)
                 continue
             while len(self._buf) >= 7:
-                payload, consumed = pld(self._buf)
+                payload, consumed = self._next_frame()
                 if payload:
                     self._buf = self._buf[consumed:]
                     self.frame_count += 1
