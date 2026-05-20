@@ -50,12 +50,25 @@
     } catch {}
   }
 
+  let connectTimeout = $state(false);
+
   function toggle() {
     if (app.drone.connected) { sendDisconnect(); }
-    else { connecting = true; savePortHistory(); sendConnect(port, baud, protocol); setTimeout(() => connecting = false, 5000); }
+    else {
+      connecting = true;
+      connectTimeout = false;
+      savePortHistory();
+      sendConnect(port, baud, protocol);
+      setTimeout(() => {
+        if (connecting && !app.drone.connected) {
+          connectTimeout = true;
+          connecting = false;
+        }
+      }, 8000);
+    }
   }
 
-  $effect(() => { if (app.drone.connected) connecting = false; });
+  $effect(() => { if (app.drone.connected) { connecting = false; connectTimeout = false; } });
 
   let linkBars = $derived(
     !app.drone.connected || app.drone.link_age < 0 ? 0 :
@@ -243,7 +256,11 @@
         <Button variant="outline" size="xs" onclick={downloadLog} class="text-success border-success/50">{t('status.log')}</Button>
       {/if}
     {:else}
-      <span class="text-muted-foreground">{t('conn.disconnected')}</span>
+      {#if connectTimeout}
+        <span class="text-destructive text-[11px] font-bold">{t('conn.timeout')}</span>
+      {:else}
+        <span class="text-muted-foreground">{t('conn.disconnected')}</span>
+      {/if}
     {/if}
     {#if !app.wsConnected}
       <span class="text-destructive text-[10px] font-bold animate-pulse" title="与后端服务器的连接已断开，正在重连...">
