@@ -42,6 +42,7 @@
   let surveyVertMarkers: any[] = [];
   let fencePolyLayer: any = null;
   let fenceVertMarkers: any[] = [];
+  let rangeRing: any = null;
 
   const SAT_URL = `${API_BASE}/api/tile/6/{z}/{x}/{y}`;
   const LABEL_URL = `${API_BASE}/api/tile/8/{z}/{x}/{y}`;
@@ -320,6 +321,25 @@
       const [hlat, hlon] = toGcj(app.drone.home_lat, app.drone.home_lon);
       geoCircle = L.circle([hlat, hlon], { radius: app.geoRadius, color: '#f44336', fill: false, dashArray: '8,4', weight: 1 }).addTo(map);
     }
+  });
+
+  // RTL range ring — shows safe operating radius based on remaining battery
+  $effect(() => {
+    if (!map) return;
+    if (rangeRing) { map.removeLayer(rangeRing); rangeRing = null; }
+    const d = app.drone;
+    if (!d.connected || !d.armed || d.home_lat === 0 || d.bat_time <= 0) return;
+    const speed = Math.max(d.gs, 3);
+    const safeSeconds = Math.max(0, d.bat_time - 60);
+    const radius = safeSeconds * speed * 0.5;
+    if (radius < 10) return;
+    const [hlat, hlon] = toGcj(d.home_lat, d.home_lon);
+    const ratio = d.dist_home / Math.max(radius, 1);
+    const color = ratio > 0.9 ? '#ef4444' : ratio > 0.7 ? '#eab308' : '#22c55e';
+    rangeRing = L.circle([hlat, hlon], {
+      radius, color, fill: true, fillColor: color, fillOpacity: 0.06,
+      dashArray: '8,6', weight: 1.5,
+    }).addTo(map);
   });
 
   // Replay position rendering
