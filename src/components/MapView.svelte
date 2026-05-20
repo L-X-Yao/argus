@@ -535,6 +535,12 @@
     app.focusWp = -1;
   });
 
+  $effect(() => {
+    if (!map || app.fitRouteFlag <= 0 || app.waypoints.length < 2) return;
+    const pts = app.waypoints.map(w => toGcj(w.lat, w.lon));
+    map.fitBounds(L.latLngBounds(pts), { padding: [40, 40] });
+  });
+
   function fmtTime(s: number): string {
     const m = Math.floor(s / 60), sec = s % 60;
     return `${m}:${sec < 10 ? '0' : ''}${sec}`;

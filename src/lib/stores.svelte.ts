@@ -19,6 +19,7 @@ class AppState {
   toasts: Toast[] = $state([]);
   guidedMode: boolean = $state(false);
   focusWp: number = $state(-1);
+  fitRouteFlag: number = $state(0);
   replayPos: { lat: number; lon: number; yaw: number } | null = $state(null);
   surveyPolygon: { lat: number; lon: number }[] = $state([]);
   drawingPolygon: boolean = $state(false);
@@ -139,6 +140,7 @@ export function loadDownloadedMission(wps: Waypoint[]) {
     type: w.type || 'wp', loiter_param: w.loiter_param || 0,
   }));
   saveWaypoints();
+  requestAnimationFrame(() => app.fitRouteFlag++);
 }
 
 // Confirm dialog
