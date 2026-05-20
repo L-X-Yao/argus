@@ -1,5 +1,6 @@
 <script lang="ts">
   import { app } from '../lib/stores.svelte';
+  import { t, i18nState } from '../lib/i18n.svelte';
 
   let d = $derived(app.drone);
 
@@ -49,15 +50,11 @@
     return (Math.atan2(dlon, dlat) * 180 / Math.PI + 360) % 360;
   });
 
+  const CARD_ZH = ['北', '东北', '东', '东南', '南', '西南', '西', '西北'];
+  const CARD_EN = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
   function cardinal(h: number): string {
-    if (h < 22.5 || h >= 337.5) return '北';
-    if (h < 67.5) return '东北';
-    if (h < 112.5) return '东';
-    if (h < 157.5) return '东南';
-    if (h < 202.5) return '南';
-    if (h < 247.5) return '西南';
-    if (h < 292.5) return '西';
-    return '西北';
+    const idx = Math.round(h / 45) % 8;
+    return (i18nState.locale === 'en' ? CARD_EN : CARD_ZH)[idx];
   }
 </script>
 
@@ -85,7 +82,7 @@
   <rect x="3" y={TC - 11} width="46" height="22" rx="2" fill="rgba(0,0,0,0.92)" stroke="#4caf50" stroke-width="1.5" />
   <text x="26" y={TC + 5} text-anchor="middle" fill="#4caf50" font-size="13" font-weight="bold" font-family="monospace">{d.gs.toFixed(1)}</text>
   <polygon points="50,{TC - 4} 55,{TC} 50,{TC + 4}" fill="#4caf50" />
-  <text x="26" y={TT - 1} text-anchor="middle" fill="#555" font-size="7">速度 m/s</text>
+  <text x="26" y={TT - 1} text-anchor="middle" fill="#555" font-size="7">{t('telem.speed')} m/s</text>
 
   <!-- AHI Background -->
   <circle cx={CX} cy={CY} r={AHI_R + 1} fill="rgba(0,0,0,0.5)" stroke="#444" stroke-width="0.5" />
@@ -176,7 +173,7 @@
   <rect x="249" y={TC - 11} width="48" height="22" rx="2" fill="rgba(0,0,0,0.92)" stroke="#42a5f5" stroke-width="1.5" />
   <text x="273" y={TC + 5} text-anchor="middle" fill="#42a5f5" font-size="13" font-weight="bold" font-family="monospace">{d.alt_rel.toFixed(1)}</text>
   <polygon points="249,{TC - 4} 244,{TC} 249,{TC + 4}" fill="#42a5f5" />
-  <text x="273" y={TT - 1} text-anchor="middle" fill="#555" font-size="7">高度 m</text>
+  <text x="273" y={TT - 1} text-anchor="middle" fill="#555" font-size="7">{t('telem.alt')} m</text>
 
   <!-- VS Indicator -->
   <rect x="230" y={CY - VSH / 2} width="8" height={VSH} rx="1.5" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.12)" stroke-width="0.5" />
