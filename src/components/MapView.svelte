@@ -56,6 +56,7 @@
     satLayer = L.tileLayer(SAT_URL, { maxZoom: 18 }).addTo(map);
     labelLayer = L.tileLayer(LABEL_URL, { maxZoom: 18 }).addTo(map);
     vecLayer = L.tileLayer(VEC_URL, { maxZoom: 18 });
+    L.control.scale({ metric: true, imperial: false, position: 'bottomright' }).addTo(map);
     map.on('click', onMapClick);
     map.on('contextmenu', onRightClick);
     map.on('mousemove', onMouseMove);
@@ -225,6 +226,17 @@
         iconSize: [28, 28], iconAnchor: [14, 14],
       });
       droneMarker = L.marker([glat, glon], { icon, zIndexOffset: 1000 }).addTo(map);
+      droneMarker.on('click', () => {
+        const d = app.drone;
+        const content = `<div style="font-size:12px;min-width:160px">
+          <b>${d.mode}</b> ${d.armed ? '<span style="color:#f44336">已解锁</span>' : '已锁定'}<br>
+          <span style="color:#888">${d.lat.toFixed(6)}, ${d.lon.toFixed(6)}</span><br>
+          高度: <b>${d.alt_rel.toFixed(1)}m</b> (海拔 ${d.alt_msl.toFixed(0)}m)<br>
+          速度: <b>${d.gs.toFixed(1)} m/s</b> 航向 ${d.hdg.toFixed(0)}°<br>
+          距起飞点: <b>${d.dist_home.toFixed(0)}m</b>
+        </div>`;
+        L.popup({ closeButton: true }).setLatLng([glat, glon]).setContent(content).openOn(map);
+      });
     } else {
       droneMarker.setLatLng([glat, glon]);
       const el = droneMarker.getElement();
@@ -312,11 +324,18 @@
       });
       m.on('click', (e: any) => {
         e.originalEvent?.stopPropagation();
+        let segInfo = '';
+        if (i > 0) {
+          const prev = app.waypoints[i - 1];
+          const dlat2 = (wp.lat - prev.lat) * 111320, dlon2 = (wp.lon - prev.lon) * 111320 * Math.cos(wp.lat * Math.PI / 180);
+          const seg = Math.sqrt(dlat2 * dlat2 + dlon2 * dlon2);
+          segInfo = `<br>距上一点: <b>${seg < 1000 ? seg.toFixed(0) + 'm' : (seg/1000).toFixed(1) + 'km'}</b>`;
+        }
         const content = `<div style="font-size:12px;min-width:140px">
           <b>航点 ${i + 1}</b> ${wp.drop ? '<span style="color:#e65100">投放</span>' : ''}<br>
           <span style="color:#888">${wp.lat.toFixed(6)}, ${wp.lon.toFixed(6)}</span><br>
-          高度: <b>${wp.alt}m</b>
-          ${wp.delay ? '<br>延迟: ' + wp.delay + 's' : ''}
+          高度: <b>${wp.alt}m</b>${wp.speed ? ' · 速度: ' + wp.speed + 'm/s' : ''}
+          ${wp.delay ? '<br>延迟: ' + wp.delay + 's' : ''}${segInfo}
         </div>`;
         if (wpPopup) map.closePopup(wpPopup);
         wpPopup = L.popup({ closeButton: true, className: 'wp-popup' })
