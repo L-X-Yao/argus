@@ -314,10 +314,14 @@
     app.waypoints.forEach((wp, i) => {
       const [glat, glon] = toGcj(wp.lat, wp.lon);
       pts.push([glat, glon]);
-      const color = wp.drop ? '#e65100' : '#1565c0';
+      const isLoiter = wp.type === 'loiter_turns' || wp.type === 'loiter_time';
+      const color = wp.drop ? '#e65100' : isLoiter ? '#7e57c2' : '#1565c0';
+      const border = isLoiter ? 'border:2px dashed rgba(255,255,255,0.8)' : 'border:2px solid white';
+      const badge = wp.drop ? '<div style="position:absolute;top:-5px;right:-5px;width:8px;height:8px;border-radius:50%;background:#ff5722;border:1px solid white"></div>' : '';
+      const sub = isLoiter ? `<div style="position:absolute;bottom:-10px;left:50%;transform:translateX(-50%);font-size:8px;color:${color};white-space:nowrap;font-weight:600">${wp.type === 'loiter_turns' ? wp.loiter_param + '圈' : wp.loiter_param + 's'}</div>` : wp.delay ? `<div style="position:absolute;bottom:-10px;left:50%;transform:translateX(-50%);font-size:8px;color:#888;white-space:nowrap">+${wp.delay}s</div>` : '';
       const icon = L.divIcon({
         className: '',
-        html: `<div style="width:22px;height:22px;border-radius:50%;background:${color};color:white;text-align:center;line-height:22px;font-size:11px;font-weight:bold;border:2px solid white;box-shadow:0 0 4px rgba(0,0,0,0.5)">${i + 1}</div>`,
+        html: `<div style="position:relative;width:22px;height:22px;border-radius:50%;background:${color};color:white;text-align:center;line-height:22px;font-size:11px;font-weight:bold;${border};box-shadow:0 0 4px rgba(0,0,0,0.5)">${i + 1}${badge}${sub}</div>`,
         iconSize: [22, 22], iconAnchor: [11, 11],
       });
       const m = L.marker([glat, glon], { icon, draggable: true }).addTo(map);
