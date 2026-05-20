@@ -150,11 +150,11 @@
           }
           if (coords.length > 1 && Math.abs(coords[0].lat - coords[coords.length - 1].lat) < 0.00001)
             coords.pop();
-          if (!coords.length) throw new Error('无坐标');
+          if (!coords.length) throw new Error('No coordinates');
           pushUndo();
           app.waypoints = coords;
           fitAfterLoad();
-        } catch (err: any) { addToast('KML导入失败: ' + err.message, 'error'); }
+        } catch (err: any) { addToast('KML: ' + err.message, 'error'); }
       };
       reader.readAsText(file);
     };
