@@ -1,9 +1,10 @@
 <script lang="ts">
   import { app } from '../lib/stores.svelte';
   import Badge from '$lib/components/ui/badge/badge.svelte';
+  import { t } from '../lib/i18n.svelte';
 
-  const LABELS = ['横滚', '俯仰', '油门', '偏航', 'CH5', 'CH6', 'CH7', 'CH8',
-                  'CH9', 'CH10', 'CH11', 'CH12', 'CH13', 'CH14', 'CH15', 'CH16'];
+  const LABELS = $derived([t('rc.roll'), t('rc.pitch'), t('rc.throttle'), t('rc.yaw'), 'CH5', 'CH6', 'CH7', 'CH8',
+                  'CH9', 'CH10', 'CH11', 'CH12', 'CH13', 'CH14', 'CH15', 'CH16']);
 
   function barWidth(v: number): number {
     return Math.max(0, Math.min(100, (v - 800) / 12));
@@ -17,11 +18,11 @@
 
 <div class="bg-card border border-border rounded-xl p-4">
   <div class="flex items-center justify-between mb-3">
-    <h2 class="text-sm font-semibold text-primary uppercase tracking-wider">遥控通道</h2>
+    <h2 class="text-sm font-semibold text-primary uppercase tracking-wider">{t('rc.title')}</h2>
     <Badge variant="outline" class="text-[10px] font-mono">RSSI: {app.drone.rc_rssi}</Badge>
   </div>
   {#if !app.drone.connected}
-    <div class="text-muted-foreground text-xs text-center py-4">连接后显示遥控通道数据</div>
+    <div class="text-muted-foreground text-xs text-center py-4">{t('rc.empty')}</div>
   {:else if app.drone.rc.length > 0}
     <div class="grid grid-cols-2 gap-x-3 gap-y-1">
       {#each app.drone.rc as val, i}
@@ -38,6 +39,6 @@
       {/each}
     </div>
   {:else}
-    <div class="text-muted-foreground text-xs text-center py-4">未收到遥控数据</div>
+    <div class="text-muted-foreground text-xs text-center py-4">{t('rc.noData')}</div>
   {/if}
 </div>

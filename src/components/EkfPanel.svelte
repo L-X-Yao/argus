@@ -1,6 +1,7 @@
 <script lang="ts">
   import { app } from '../lib/stores.svelte';
   import Badge from '$lib/components/ui/badge/badge.svelte';
+  import { t } from '../lib/i18n.svelte';
 
   let d = $derived(app.drone);
 
@@ -22,19 +23,19 @@
     bad?: boolean;
   }
 
-  const flags: FlagDef[] = [
-    { mask: FLAG_ATTITUDE,      label: '姿态' },
-    { mask: FLAG_VEL_HORIZ,     label: '水平速度' },
-    { mask: FLAG_VEL_VERT,      label: '垂直速度' },
-    { mask: FLAG_POS_HORIZ_REL, label: '相对位置' },
-    { mask: FLAG_POS_HORIZ_ABS, label: '绝对位置' },
-    { mask: FLAG_POS_VERT_ABS,  label: '绝对高度' },
-    { mask: FLAG_POS_VERT_AGL,  label: '对地高度' },
-    { mask: FLAG_CONST_POS,     label: '定点模式', bad: true },
-    { mask: FLAG_PRED_POS_REL,  label: '预测相对' },
-    { mask: FLAG_PRED_POS_ABS,  label: '预测绝对' },
-    { mask: FLAG_UNINITIALIZED, label: '未初始化', bad: true },
-  ];
+  const flags: FlagDef[] = $derived([
+    { mask: FLAG_ATTITUDE,      label: t('ekf.attitude') },
+    { mask: FLAG_VEL_HORIZ,     label: t('ekf.velH') },
+    { mask: FLAG_VEL_VERT,      label: t('ekf.velV') },
+    { mask: FLAG_POS_HORIZ_REL, label: t('ekf.posHRel') },
+    { mask: FLAG_POS_HORIZ_ABS, label: t('ekf.posHAbs') },
+    { mask: FLAG_POS_VERT_ABS,  label: t('ekf.posVAbs') },
+    { mask: FLAG_POS_VERT_AGL,  label: t('ekf.posVAgl') },
+    { mask: FLAG_CONST_POS,     label: t('ekf.constPos'), bad: true },
+    { mask: FLAG_PRED_POS_REL,  label: t('ekf.predRel') },
+    { mask: FLAG_PRED_POS_ABS,  label: t('ekf.predAbs') },
+    { mask: FLAG_UNINITIALIZED, label: t('ekf.uninit'), bad: true },
+  ]);
 
   interface VarDef {
     key: 'ekf_vel' | 'ekf_pos_h' | 'ekf_pos_v' | 'ekf_compass';
@@ -42,12 +43,12 @@
     color: string;
   }
 
-  const variances: VarDef[] = [
-    { key: 'ekf_vel',     label: '速度',   color: '#4fc3f7' },
-    { key: 'ekf_pos_h',   label: '水平位置', color: '#69f0ae' },
-    { key: 'ekf_pos_v',   label: '垂直位置', color: '#ffd54f' },
-    { key: 'ekf_compass', label: '罗盘',   color: '#ff8a65' },
-  ];
+  const variances: VarDef[] = $derived([
+    { key: 'ekf_vel',     label: t('ekf.vel'),     color: '#4fc3f7' },
+    { key: 'ekf_pos_h',   label: t('ekf.posH'),    color: '#69f0ae' },
+    { key: 'ekf_pos_v',   label: t('ekf.posV'),    color: '#ffd54f' },
+    { key: 'ekf_compass', label: t('ekf.compass'), color: '#ff8a65' },
+  ]);
 
   function varColor(v: number): string {
     if (v < 0.5) return '#22c55e';
@@ -56,18 +57,18 @@
   }
 
   function varLevel(v: number): string {
-    if (v < 0.5) return '优';
-    if (v < 1.0) return '警';
-    return '差';
+    if (v < 0.5) return t('ekf.good');
+    if (v < 1.0) return t('ekf.warn');
+    return t('ekf.bad');
   }
 
   function overallHealth(f: number, vel: number, posH: number, posV: number, comp: number): { label: string; variant: 'default' | 'secondary' | 'destructive' } {
-    if (f & FLAG_UNINITIALIZED) return { label: '未初始化', variant: 'destructive' };
-    if (f & FLAG_CONST_POS) return { label: '定点降级', variant: 'destructive' };
+    if (f & FLAG_UNINITIALIZED) return { label: t('ekf.uninit'), variant: 'destructive' };
+    if (f & FLAG_CONST_POS) return { label: t('ekf.degraded'), variant: 'destructive' };
     const maxVar = Math.max(vel, posH, posV, comp);
-    if (maxVar >= 1.0) return { label: '异常', variant: 'destructive' };
-    if (maxVar >= 0.5 || !(f & FLAG_POS_HORIZ_ABS)) return { label: '警告', variant: 'secondary' };
-    return { label: '正常', variant: 'default' };
+    if (maxVar >= 1.0) return { label: t('ekf.bad'), variant: 'destructive' };
+    if (maxVar >= 0.5 || !(f & FLAG_POS_HORIZ_ABS)) return { label: t('ekf.warn'), variant: 'secondary' };
+    return { label: t('ekf.good'), variant: 'default' };
   }
 
   let health = $derived(overallHealth(d.ekf_flags, d.ekf_vel, d.ekf_pos_h, d.ekf_pos_v, d.ekf_compass));

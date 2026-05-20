@@ -1,6 +1,7 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import { app } from '../lib/stores.svelte';
+  import { t } from '../lib/i18n.svelte';
 
   const MAX = 120;
   let altData: number[] = [];
@@ -83,33 +84,33 @@
 </script>
 
 <div class="bg-card border border-border rounded-xl p-4">
-  <h2 class="text-sm font-semibold text-primary uppercase tracking-wider mb-2">实时图表</h2>
+  <h2 class="text-sm font-semibold text-primary uppercase tracking-wider mb-2">{t('chart.title')}</h2>
   {#if !app.drone.connected}
-    <div class="text-muted-foreground text-xs text-center py-8">连接后显示实时数据曲线</div>
+    <div class="text-muted-foreground text-xs text-center py-8">{t('chart.empty')}</div>
   {:else}
     <div class="grid grid-cols-3 gap-2 max-md:grid-cols-2">
       <div>
-        <div class="text-[11px] text-muted-foreground mb-0.5">高度 (m)</div>
+        <div class="text-[11px] text-muted-foreground mb-0.5">{t('chart.alt')}</div>
         <canvas bind:this={cAlt} height="72" class="w-full bg-background rounded-lg"></canvas>
       </div>
       <div>
-        <div class="text-[11px] text-muted-foreground mb-0.5">速度 (m/s)</div>
+        <div class="text-[11px] text-muted-foreground mb-0.5">{t('chart.speed')}</div>
         <canvas bind:this={cSpd} height="72" class="w-full bg-background rounded-lg"></canvas>
       </div>
       <div>
-        <div class="text-[11px] text-muted-foreground mb-0.5">升降 (m/s)</div>
+        <div class="text-[11px] text-muted-foreground mb-0.5">{t('chart.vs')}</div>
         <canvas bind:this={cVz} height="72" class="w-full bg-background rounded-lg"></canvas>
       </div>
       <div>
-        <div class="text-[11px] text-muted-foreground mb-0.5">电压 (V)</div>
+        <div class="text-[11px] text-muted-foreground mb-0.5">{t('chart.voltage')}</div>
         <canvas bind:this={cBat} height="72" class="w-full bg-background rounded-lg"></canvas>
       </div>
       <div>
-        <div class="text-[11px] text-muted-foreground mb-0.5">电流 (A)</div>
+        <div class="text-[11px] text-muted-foreground mb-0.5">{t('chart.current')}</div>
         <canvas bind:this={cCur} height="72" class="w-full bg-background rounded-lg"></canvas>
       </div>
       <div>
-        <div class="text-[11px] text-muted-foreground mb-0.5">振动</div>
+        <div class="text-[11px] text-muted-foreground mb-0.5">{t('chart.vibe')}</div>
         <canvas bind:this={cVibe} height="72" class="w-full bg-background rounded-lg"></canvas>
       </div>
     </div>

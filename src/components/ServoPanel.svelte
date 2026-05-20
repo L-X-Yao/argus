@@ -1,5 +1,6 @@
 <script lang="ts">
   import { app } from '../lib/stores.svelte';
+  import { t } from '../lib/i18n.svelte';
 
   function barWidth(v: number): number {
     return Math.max(0, Math.min(100, (v - 800) / 12));
@@ -12,9 +13,9 @@
 </script>
 
 <div class="bg-card border border-border rounded-xl p-4">
-  <h2 class="text-sm font-semibold text-primary uppercase tracking-wider mb-3">舵机输出</h2>
+  <h2 class="text-sm font-semibold text-primary uppercase tracking-wider mb-3">{t('servo.title')}</h2>
   {#if !app.drone.connected}
-    <div class="text-muted-foreground text-xs text-center py-4">连接后显示舵机输出数据</div>
+    <div class="text-muted-foreground text-xs text-center py-4">{t('servo.empty')}</div>
   {:else if app.drone.servo.length > 0}
     <div class="grid grid-cols-2 gap-x-3 gap-y-1">
       {#each app.drone.servo as val, i}
@@ -30,6 +31,6 @@
       {/each}
     </div>
   {:else}
-    <div class="text-muted-foreground text-xs text-center py-4">未收到舵机数据</div>
+    <div class="text-muted-foreground text-xs text-center py-4">{t('servo.noData')}</div>
   {/if}
 </div>

@@ -2,6 +2,7 @@
   import type { FlightSummary } from '../lib/types';
   import Button from '$lib/components/ui/button/button.svelte';
   import { X, Clock, ArrowUp, Gauge, Route, BatteryLow } from '@lucide/svelte';
+  import { t } from '../lib/i18n.svelte';
 
   let { summary, onclose }: { summary: FlightSummary; onclose: () => void } = $props();
 
@@ -24,8 +25,8 @@
   <div class="bg-card border border-border rounded-2xl overflow-hidden min-w-[340px] shadow-2xl" onclick={(e) => e.stopPropagation()}>
     <div class="bg-gradient-to-r from-primary/20 to-primary/5 px-5 py-3 flex items-center justify-between">
       <div>
-        <h3 class="text-base font-bold text-primary">飞行完成</h3>
-        <p class="text-[11px] text-muted-foreground mt-0.5">飞行数据摘要</p>
+        <h3 class="text-base font-bold text-primary">{t('summary.title')}</h3>
+        <p class="text-[11px] text-muted-foreground mt-0.5">{t('summary.subtitle')}</p>
       </div>
       <Button variant="ghost" size="icon-xs" onclick={onclose}><X size={16} /></Button>
     </div>
@@ -33,28 +34,28 @@
       <div class="flex items-center gap-2.5 py-1.5">
         <div class="w-8 h-8 rounded-lg bg-blue-500/15 flex items-center justify-center shrink-0"><Clock size={16} class="text-blue-400" /></div>
         <div>
-          <div class="text-[10px] text-muted-foreground">飞行时间</div>
+          <div class="text-[10px] text-muted-foreground">{t('summary.duration')}</div>
           <div class="text-sm font-bold tabular-nums">{fmtTime(summary.duration)}</div>
         </div>
       </div>
       <div class="flex items-center gap-2.5 py-1.5">
         <div class="w-8 h-8 rounded-lg bg-sky-500/15 flex items-center justify-center shrink-0"><ArrowUp size={16} class="text-sky-400" /></div>
         <div>
-          <div class="text-[10px] text-muted-foreground">最大高度</div>
+          <div class="text-[10px] text-muted-foreground">{t('summary.maxAlt')}</div>
           <div class="text-sm font-bold tabular-nums">{summary.max_alt} m</div>
         </div>
       </div>
       <div class="flex items-center gap-2.5 py-1.5">
         <div class="w-8 h-8 rounded-lg bg-green-500/15 flex items-center justify-center shrink-0"><Gauge size={16} class="text-green-400" /></div>
         <div>
-          <div class="text-[10px] text-muted-foreground">最大速度</div>
+          <div class="text-[10px] text-muted-foreground">{t('summary.maxSpd')}</div>
           <div class="text-sm font-bold tabular-nums">{summary.max_speed} m/s</div>
         </div>
       </div>
       <div class="flex items-center gap-2.5 py-1.5">
         <div class="w-8 h-8 rounded-lg bg-teal-500/15 flex items-center justify-center shrink-0"><Route size={16} class="text-teal-400" /></div>
         <div>
-          <div class="text-[10px] text-muted-foreground">飞行距离</div>
+          <div class="text-[10px] text-muted-foreground">{t('summary.dist')}</div>
           <div class="text-sm font-bold tabular-nums">{fmtDist(summary.total_dist)}</div>
         </div>
       </div>
@@ -62,7 +63,7 @@
         <div class="flex items-center gap-2.5 py-1.5">
           <div class="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center shrink-0"><BatteryLow size={16} class="text-amber-400" /></div>
           <div>
-            <div class="text-[10px] text-muted-foreground">电量消耗</div>
+            <div class="text-[10px] text-muted-foreground">{t('summary.batUsed')}</div>
             <div class="text-sm font-bold tabular-nums">{summary.bat_used}%</div>
           </div>
         </div>
@@ -70,13 +71,13 @@
       <div class="flex items-center gap-2.5 py-1.5">
         <div class="w-8 h-8 rounded-lg bg-purple-500/15 flex items-center justify-center shrink-0"><Gauge size={16} class="text-purple-400" /></div>
         <div>
-          <div class="text-[10px] text-muted-foreground">平均速度</div>
+          <div class="text-[10px] text-muted-foreground">{t('summary.avgSpd')}</div>
           <div class="text-sm font-bold tabular-nums">{avgSpeed} m/s</div>
         </div>
       </div>
     </div>
     <div class="px-5 pb-4">
-      <Button class="w-full" onclick={onclose}>确认</Button>
+      <Button class="w-full" onclick={onclose}>{t('summary.confirm')}</Button>
     </div>
   </div>
 </div>

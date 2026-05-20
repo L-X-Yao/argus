@@ -2,6 +2,7 @@
   import { untrack } from 'svelte';
   import { app } from '../lib/stores.svelte';
   import Badge from '$lib/components/ui/badge/badge.svelte';
+  import { t } from '../lib/i18n.svelte';
 
   const MAX = 60;
   let xData: number[] = [];
@@ -64,10 +65,10 @@
   }
 
   function vibeLevel(v: number): string {
-    if (v < 15) return '优';
-    if (v < 30) return '良';
-    if (v < 60) return '差';
-    return '危';
+    if (v < 15) return t('vibe.good');
+    if (v < 30) return t('vibe.ok');
+    if (v < 60) return t('vibe.bad');
+    return t('vibe.critical');
   }
   function vibeBadgeVariant(v: number): 'default' | 'secondary' | 'destructive' | 'outline' {
     if (v < 15) return 'default';
@@ -79,9 +80,9 @@
 </script>
 
 <div class="bg-card border border-border rounded-xl p-4">
-  <h2 class="text-sm font-semibold text-primary uppercase tracking-wider mb-2">振动监控</h2>
+  <h2 class="text-sm font-semibold text-primary uppercase tracking-wider mb-2">{t('vibe.title')}</h2>
   {#if !app.drone.connected}
-    <div class="text-muted-foreground text-xs text-center py-8">连接后显示振动数据曲线</div>
+    <div class="text-muted-foreground text-xs text-center py-8">{t('vibe.empty')}</div>
   {:else}
     <div class="flex items-center gap-3 text-xs font-mono mb-2">
       <span class="text-red-400">X: {d.vibe[0]?.toFixed(1)}</span>
