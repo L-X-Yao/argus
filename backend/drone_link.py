@@ -18,6 +18,7 @@ from . import mavlink_dispatch
 from .mavlink_handlers import init_handlers
 from . import commands as cmd_module
 from .param_manager import ParamManager
+from .locale_text import lt
 
 
 class TcpWrapper:
@@ -180,11 +181,11 @@ class DroneLink:
         try:
             self._ser = self._open_port(port, baudrate)
             if port.startswith('udp:'):
-                self.add_event('UDP %s' % port[4:])
+                self.add_event(lt('udp', self.locale) % port[4:])
             elif port.startswith('tcp:'):
-                self.add_event('TCP %s' % port[4:])
+                self.add_event(lt('tcp', self.locale) % port[4:])
         except Exception as e:
-            self.add_event('连接失败: %s' % e)
+            self.add_event(lt('connect_fail', self.locale) % e)
             return False
         self._running = True
         self.connected = False
@@ -222,7 +223,7 @@ class DroneLink:
         self._prev_pos = None
         self._mission_pending = False
         self._stop_log()
-        self.add_event('已断开')
+        self.add_event(lt('disconnected', self.locale))
 
     def reconnect(self) -> bool:
         self._running = False
@@ -239,11 +240,11 @@ class DroneLink:
         try:
             self._ser = self._open_port(self._last_port, self._last_baud)
         except Exception as e:
-            self.add_event('重连失败: %s' % e)
+            self.add_event(lt('reconnect_err', self.locale) % e)
             return False
         self._running = True
         self.sq = 0
-        self.add_event('已重连')
+        self.add_event(lt('reconnected', self.locale))
         self._thread = threading.Thread(target=self._loop, daemon=True)
         self._thread.start()
         return True
@@ -337,7 +338,7 @@ class DroneLink:
         self._logfile = open(logname, 'w')
         self._logfile.write('time,roll,pitch,yaw,lat,lon,alt_rel,alt_msl,gs,vz,voltage,current,remaining,mode,mode_name,armed,gps_fix,sats,wp,hdg,dist,bat_time\n')
         self._last_log_time = 0.0
-        self.add_event('日志: %s' % logname)
+        self.add_event(lt('log_file', self.locale) % logname)
 
     def _stop_log(self) -> None:
         try:
@@ -417,10 +418,10 @@ class DroneLink:
         if self._protocol == 'auto' and len(self._buf) >= 2:
             if self._buf[0] == 0x50 and self._buf[1] == 0x4C:
                 self._protocol = 'pllink'
-                self.add_event('协议: PL-Link')
+                self.add_event(lt('proto_pllink', self.locale))
             else:
                 self._protocol = 'standard'
-                self.add_event('协议: 标准')
+                self.add_event(lt('proto_std', self.locale))
         if self._protocol == 'pllink':
             return pld(self._buf)
         return self._parse_mavlink_frame()
@@ -435,10 +436,10 @@ class DroneLink:
                 if not self.connected and self.frame_count < 3:
                     cmd_module.request_streams(self)
             if self.connected and self.last_frame_time > 0 and now - self.last_frame_time > 5:
-                self.add_event('链路丢失')
+                self.add_event(lt('link_lost', self.locale))
                 self.connected = False
                 if self._reconnect_enabled and self._last_port:
-                    self.add_event('自动重连...')
+                    self.add_event(lt('reconnecting', self.locale))
                     try:
                         if self._ser:
                             self._ser.close()
@@ -448,9 +449,9 @@ class DroneLink:
                     try:
                         self._ser = self._open_port(self._last_port, self._last_baud)
                         self.sq = 0
-                        self.add_event('已重连')
+                        self.add_event(lt('reconnected', self.locale))
                     except Exception:
-                        self.add_event('重连失败, 3秒后重试')
+                        self.add_event(lt('reconnect_fail', self.locale))
                         time.sleep(3)
                     continue
             try:

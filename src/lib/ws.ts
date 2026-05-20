@@ -29,24 +29,27 @@ export function connectWs(): void {
           break;
         case 'event':
           addEvent(msg);
-          if (msg.text.includes('失控') || msg.text.includes('碰撞') || msg.text.includes('紧急'))
+          if (msg.text.includes('失控') || msg.text.includes('碰撞') || msg.text.includes('紧急')
+              || msg.text.includes('Crash') || msg.text.includes('Emergency'))
             addToast(msg.text, 'error', 8000);
-          else if (msg.text.includes('已解锁'))
+          else if (msg.text.includes('已解锁') || msg.text === 'Armed')
             addToast(t('toast.armed'), 'warn', 5000);
-          else if (msg.text.includes('已锁定') && !msg.text.includes('发送'))
+          else if ((msg.text.includes('已锁定') || msg.text === 'Disarmed') && !msg.text.includes('发送') && !msg.text.includes('Disarming'))
             addToast(t('toast.disarmed'), 'success', 4000);
-          else if (msg.text.includes('任务确认') || msg.text.includes('围栏确认')) {
-            addToast(msg.text, msg.text.includes('成功') ? 'success' : 'error');
-            if (msg.text.includes('围栏确认') && msg.text.includes('成功'))
+          else if (msg.text.includes('任务确认') || msg.text.includes('围栏确认')
+              || msg.text.includes('Mission ack') || msg.text.includes('Fence ack')) {
+            addToast(msg.text, (msg.text.includes('成功') || msg.text.includes('success')) ? 'success' : 'error');
+            if ((msg.text.includes('围栏确认') || msg.text.includes('Fence ack')) && (msg.text.includes('成功') || msg.text.includes('success')))
               app.fenceUploaded = true;
           }
-          else if (msg.text.includes('已连接'))
+          else if (msg.text.includes('已连接') || msg.text.includes('Connected'))
             addToast(msg.text, 'success');
-          else if (msg.text.includes('已断开'))
+          else if (msg.text.includes('已断开') || msg.text.includes('Disconnected'))
             addToast(t('toast.disconnected'), 'info');
-          else if (msg.text.includes('低电量') || msg.text.includes('电量极低'))
+          else if (msg.text.includes('低电量') || msg.text.includes('电量极低')
+              || msg.text.includes('Low Battery') || msg.text.includes('Critical Battery'))
             addToast(msg.text, 'error', 8000);
-          else if (msg.text.includes('指令应答') && msg.text.includes('失败'))
+          else if ((msg.text.includes('指令应答') || msg.text.includes('Command')) && (msg.text.includes('失败') || msg.text.includes('failed')))
             addToast(msg.text, 'error', 5000);
           break;
         case 'param_batch':
@@ -71,7 +74,9 @@ export function connectWs(): void {
           addToast(t('toast.logDone').replace('{n}', String(msg.id)), 'success');
           break;
       }
-    } catch {}
+    } catch (e) {
+      if (e instanceof SyntaxError) console.warn('[WS] parse error:', e.message);
+    }
   };
 
   ws.onclose = () => {

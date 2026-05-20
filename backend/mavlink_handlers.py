@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from . import mavlink_dispatch
 from .statustext_filter import filter_statustext
 from .constants import PLANE_MODES, COPTER_MODES
+from .locale_text import lt
 
 if TYPE_CHECKING:
     from .drone_link import DroneLink
@@ -19,10 +20,10 @@ def handle_heartbeat(p: bytes, pl: int, link: DroneLink) -> None:
     old_vtype = link.vtype_raw
     link.vtype_raw = p[4]
     if old_vtype != link.vtype_raw and link.vtype_raw > 0:
-        link.add_event('机型: %s' % ('固定翼' if link.is_plane() else '多旋翼'))
+        link.add_event(lt('vehicle_type', link.locale) % link._get_vehicle_info()[2])
     new_armed = bool(p[6] & 0x80)
     if new_armed != link.armed:
-        link.add_event('已解锁' if new_armed else '已锁定')
+        link.add_event(lt('armed', link.locale) if new_armed else lt('disarmed', link.locale))
         if new_armed:
             link.armed_time = time.time()
             link.max_alt = link.max_speed = link.total_dist = 0
@@ -42,7 +43,7 @@ def handle_heartbeat(p: bytes, pl: int, link: DroneLink) -> None:
     link.sysid = link._raw_sysid
     if not link.connected:
         link.connected = True
-        link.add_event('已连接 (sysid=%d)' % link.sysid)
+        link.add_event(lt('connected', link.locale) % link.sysid)
 
 
 def handle_attitude(p: bytes, pl: int, link: DroneLink) -> None:
@@ -74,7 +75,7 @@ def handle_global_position_int(p: bytes, pl: int, link: DroneLink) -> None:
     if link.home_lat == 0 and link.home_lon == 0 and abs(link.lat) > 0.001:
         link.home_lat = link.lat
         link.home_lon = link.lon
-        link.add_event('起飞点: %.5f, %.5f' % (link.lat, link.lon))
+        link.add_event(lt('home_set', link.locale) % (link.lat, link.lon))
     if link.home_lat != 0:
         dlat = (link.lat - link.home_lat) * 111320
         dlon = (link.lon - link.home_lon) * 111320 * math.cos(math.radians(link.lat))
@@ -137,7 +138,7 @@ def handle_mission_item_reached(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 2:
         return
     seq = p[0] | (p[1] << 8)
-    link.add_event('航点 %d 已到达' % seq)
+    link.add_event(lt('wp_reached', link.locale) % seq)
 
 
 _CMD_NAMES = {
@@ -156,7 +157,7 @@ def handle_command_ack(p: bytes, pl: int, link: DroneLink) -> None:
     result_text = _ACK_RESULTS.get(result, '未知(%d)' % result)
     if result == 4:
         return
-    link.add_event('指令应答: %s — %s' % (cmd_name, result_text))
+    link.add_event(lt('cmd_ack', link.locale) % (cmd_name, result_text))
 
 
 def handle_statustext(p: bytes, pl: int, link: DroneLink) -> None:
@@ -164,8 +165,8 @@ def handle_statustext(p: bytes, pl: int, link: DroneLink) -> None:
         return
     text = bytes(p[1:51]).split(b'\x00')[0].decode('ascii', 'replace').strip()
     if text:
-        text = filter_statustext(text)
-        link.add_event('飞控: %s' % text)
+        text = filter_statustext(text, link.locale)
+        link.add_event(('%s: %s' % ('FC' if link.locale == 'en' else '飞控', text)))
 
 
 def handle_servo_output(p: bytes, pl: int, link: DroneLink) -> None:
@@ -239,7 +240,7 @@ def handle_autopilot_version(p: bytes, pl: int, link: DroneLink) -> None:
     link.fw_version = 'v%d.%d.%d' % (major, minor, patch)
     link.fw_git = git
     link.board_id = board
-    link.add_event('固件: %s (%s)' % (link.fw_version, link.fw_git))
+    link.add_event(lt('fw_info', link.locale) % (link.fw_version, link.fw_git))
 
 
 def handle_mission_count(p: bytes, pl: int, link: DroneLink) -> None:
@@ -250,10 +251,10 @@ def handle_mission_count(p: bytes, pl: int, link: DroneLink) -> None:
     link._dl_items = [None] * count
     if count > 0:
         _request_dl_item(link, 0)
-        link.add_event('任务下载: 共 %d 项' % count)
+        link.add_event(lt('mission_dl_n', link.locale) % count)
     else:
         link._dl_pending = False
-        link.add_event('任务下载: 飞控无任务')
+        link.add_event(lt('mission_dl_none', link.locale))
 
 
 def handle_mission_item_int(p: bytes, pl: int, link: DroneLink) -> None:
@@ -290,7 +291,7 @@ def handle_mission_item_int(p: bytes, pl: int, link: DroneLink) -> None:
         link._dl_messages.append({'type': 'mission_downloaded', 'waypoints': wps})
         if len(link._dl_messages) > 500:
             link._dl_messages = link._dl_messages[-200:]
-        link.add_event('任务下载完成: %d 航点' % len(wps))
+        link.add_event(lt('mission_dl_done', link.locale) % len(wps))
         from pllink_proto import bm
         link.send(bm(47, struct.pack('<BBB', link.sysid, 1, 0), link.sq, 153))
 
@@ -321,10 +322,10 @@ def handle_mission_ack(p: bytes, pl: int, link: DroneLink) -> None:
     mission_type = p[3] if pl >= 4 else 0
     if mission_type == 1 and link._fence_pending:
         link._fence_pending = False
-        link.add_event('围栏确认: %s' % ('成功' if mtype == 0 else '失败(%d)' % mtype))
+        link.add_event((lt('fence_ack_ok', link.locale) if mtype == 0 else lt('fence_ack_fail', link.locale) % mtype))
     elif link._mission_pending:
         link._mission_pending = False
-        link.add_event('任务确认: %s' % ('成功' if mtype == 0 else '失败(%d)' % mtype))
+        link.add_event((lt('mission_ack_ok', link.locale) if mtype == 0 else lt('mission_ack_fail', link.locale) % mtype))
 
 
 def handle_log_entry(p: bytes, pl: int, link: DroneLink) -> None:
@@ -334,7 +335,7 @@ def handle_log_entry(p: bytes, pl: int, link: DroneLink) -> None:
     link._log_list.append({'id': log_id, 'size': size, 'time_utc': time_utc})
     if log_id == last_log_num:
         link._log_messages.append({'type': 'log_list', 'logs': list(link._log_list)})
-        link.add_event('日志: 获取到 %d 条' % len(link._log_list))
+        link.add_event(lt('log_list_n', link.locale) % len(link._log_list))
 
 
 def handle_log_data(p: bytes, pl: int, link: DroneLink) -> None:
@@ -369,7 +370,7 @@ def handle_log_data(p: bytes, pl: int, link: DroneLink) -> None:
             'data': b64,
             'size': link._log_download_size,
         })
-        link.add_event('日志: #%d 下载完成 (%d KB)' % (log_id, link._log_download_size // 1024))
+        link.add_event(lt('log_dl_done', link.locale) % (log_id, link._log_download_size // 1024))
         link._log_download_id = -1
     else:
         from pllink_proto import bm

@@ -4,6 +4,8 @@ import threading
 import time
 from typing import TYPE_CHECKING
 
+from .locale_text import lt
+
 if TYPE_CHECKING:
     from .drone_link import DroneLink
 
@@ -11,42 +13,42 @@ if TYPE_CHECKING:
 def execute(cmd: str, param, link: DroneLink, data: dict | None = None) -> dict | None:
     data = data or {}
     if cmd == 'arm':
-        link.add_event('发送解锁...')
+        link.add_event(lt('arm_send', link.locale))
         _send_cmd(link, 400, p1=1.0)
     elif cmd == 'disarm':
-        link.add_event('发送锁定...')
+        link.add_event(lt('disarm_send', link.locale))
         _send_cmd(link, 400, p1=0)
     elif cmd == 'force_disarm':
-        link.add_event('强制锁定')
+        link.add_event(lt('force_disarm', link.locale))
         _send_cmd(link, 400, p1=0, p2=21196)
     elif cmd == 'rtl':
         rm = 21 if link.is_plane() else 6
-        link.add_event('!!! 返航 (模式 %d) !!!' % rm)
+        link.add_event(lt('rtl', link.locale) % rm)
         _send_set_mode(link, rm)
     elif cmd == 'mode' and param is not None:
         from .constants import PLANE_MODES, COPTER_MODES
         md = PLANE_MODES if link.is_plane() else COPTER_MODES
-        link.add_event('模式 -> %s' % md.get(int(param), str(param)))
+        link.add_event(lt('mode_to', link.locale) % md.get(int(param), str(param)))
         _send_set_mode(link, int(param))
     elif cmd == 'takeoff':
         alt = float(data.get('alt', 30))
-        link.add_event('起飞至 %.0fm' % alt)
+        link.add_event(lt('takeoff', link.locale) % alt)
         _send_cmd(link, 22, p7=alt)
     elif cmd == 'drop':
-        link.add_event('投放: 继电器 OFF')
+        link.add_event(lt('drop_on', link.locale))
         _send_cmd(link, 181, p1=0, p2=0)
     elif cmd == 'drop_stop':
-        link.add_event('投放停止: 继电器 ON')
+        link.add_event(lt('drop_off', link.locale))
         _send_cmd(link, 181, p1=0, p2=1)
     elif cmd == 'mission_start':
         am = 10 if link.is_plane() else 3
-        link.add_event('任务开始')
+        link.add_event(lt('mission_start', link.locale))
         _send_set_mode(link, am)
         threading.Thread(target=lambda: (time.sleep(0.3), _send_cmd(link, 300)), daemon=True).start()
     elif cmd == 'mission_clear':
         from pllink_proto import bm
         link.send(bm(45, bytes([link.sysid, 1, 0]), link.sq, 232))
-        link.add_event('任务已清除')
+        link.add_event(lt('mission_clear', link.locale))
     elif cmd == 'mission_upload':
         wps = data.get('waypoints', [])
         takeoff_alt = float(data.get('takeoff_alt', 30))
@@ -69,40 +71,40 @@ def execute(cmd: str, param, link: DroneLink, data: dict | None = None) -> dict 
         link._fence_items = items
         link._fence_pending = True
         _send_fence_count(link, len(items))
-        link.add_event('围栏: %d 顶点上传中' % len(polygon))
+        link.add_event(lt('fence_upload', link.locale) % len(polygon))
     elif cmd == 'set_vtype':
         v = data.get('vtype', 'auto')
         link.force_plane = True if v == 'plane' else (False if v == 'copter' else None)
-        link.add_event('机型: %s' % {'plane': '固定翼', 'copter': '多旋翼', 'auto': '自动'}.get(v, v))
+        link.add_event(lt('vtype_set', link.locale) % {'plane': '固定翼', 'copter': '多旋翼', 'auto': '自动'}.get(v, v))
     elif cmd == 'guided_goto':
         lat7 = int(float(data.get('lat', 0)) * 1e7)
         lon7 = int(float(data.get('lon', 0)) * 1e7)
         alt = float(data.get('alt', 30))
         gm = 15 if link.is_plane() else 4
         _send_set_mode(link, gm)
-        link.add_event('引导飞往 %.5f, %.5f @ %.0fm' % (lat7 / 1e7, lon7 / 1e7, alt))
+        link.add_event(lt('guided', link.locale) % (lat7 / 1e7, lon7 / 1e7, alt))
         from pllink_proto import bm
         p = struct.pack('<IiifffffffffHBBB',
                         0, lat7, lon7, alt, 0, 0, 0, 0, 0, 0, 0, 0,
                         0x0FF8, link.sysid, 1, 6)
         link.send(bm(84, p, link.sq, 5))
     elif cmd == 'cal_compass':
-        link.add_event('校准: 开始罗盘校准...')
+        link.add_event(lt('cal_compass', link.locale))
         _send_cmd(link, 241, p2=1)
     elif cmd == 'cal_accel':
-        link.add_event('校准: 开始加速度计校准...')
+        link.add_event(lt('cal_accel', link.locale))
         _send_cmd(link, 241, p5=1)
     elif cmd == 'cal_gyro':
-        link.add_event('校准: 开始陀螺仪校准 (请保持静止)...')
+        link.add_event(lt('cal_gyro', link.locale))
         _send_cmd(link, 241, p1=1)
     elif cmd == 'cal_level':
-        link.add_event('校准: 开始水平校准 (请放平飞机)...')
+        link.add_event(lt('cal_level', link.locale))
         _send_cmd(link, 241, p5=4)
     elif cmd == 'cal_baro':
-        link.add_event('校准: 开始气压计校准...')
+        link.add_event(lt('cal_baro', link.locale))
         _send_cmd(link, 241, p3=1)
     elif cmd == 'cal_cancel':
-        link.add_event('校准: 取消')
+        link.add_event(lt('cal_cancel', link.locale))
         _send_cmd(link, 241)
     elif cmd == 'clear_summary':
         link.flight_summary = None
@@ -110,7 +112,7 @@ def execute(cmd: str, param, link: DroneLink, data: dict | None = None) -> dict 
         link._dl_pending = True
         link._dl_total = 0
         link._dl_items = []
-        link.add_event('任务: 正在下载...')
+        link.add_event(lt('mission_dl', link.locale))
         from pllink_proto import bm
         link.send(bm(43, struct.pack('<BBB', link.sysid, 1, 0), link.sq, 132))
     elif cmd == 'param_request_all':
@@ -132,7 +134,7 @@ def execute(cmd: str, param, link: DroneLink, data: dict | None = None) -> dict 
         from pllink_proto import bm
         link._log_list = []
         link.send(bm(117, struct.pack('<HHBB', 0, 0xFFFF, link.sysid, 1), link.sq, 128))
-        link.add_event('日志: 正在获取列表...')
+        link.add_event(lt('log_list_req', link.locale))
     elif cmd == 'log_download':
         log_id = int(data.get('id', 0))
         log_entry = next((l for l in link._log_list if l['id'] == log_id), None)
@@ -142,7 +144,7 @@ def execute(cmd: str, param, link: DroneLink, data: dict | None = None) -> dict 
         link._log_download_size = log_entry['size']
         link._log_download_data = bytearray(log_entry['size'])
         link._log_download_ofs = 0
-        link.add_event('日志: 下载 #%d (%d KB)...' % (log_id, log_entry['size'] // 1024))
+        link.add_event(lt('log_dl', link.locale) % (log_id, log_entry['size'] // 1024))
         from pllink_proto import bm
         chunk = min(90 * 50, log_entry['size'])
         link.send(bm(119, struct.pack('<IIHBB', 0, chunk, log_id, link.sysid, 1), link.sq, 116))
@@ -150,7 +152,7 @@ def execute(cmd: str, param, link: DroneLink, data: dict | None = None) -> dict 
         from pllink_proto import bm
         link.send(bm(126, struct.pack('<BB', link.sysid, 1), link.sq, 203))
         link._log_download_id = -1
-        link.add_event('日志: 下载取消')
+        link.add_event(lt('log_dl_cancel', link.locale))
     elif cmd == 'rc_override':
         channels = data.get('channels', [])
         if len(channels) >= 8:
@@ -202,7 +204,7 @@ def _upload_mission(link: DroneLink, waypoints: list, takeoff_alt: float) -> Non
     link._mission_pending = True
     _send_mission_count(link, len(items))
     drop_n = sum(1 for w in waypoints if w.get('drop'))
-    link.add_event('任务: %d 航点, %d 投放, 高度 %.0fm' % (len(waypoints), drop_n, takeoff_alt))
+    link.add_event(lt('mission_upload', link.locale) % (len(waypoints), drop_n, takeoff_alt))
 
 
 def _send_cmd(link: DroneLink, command: int, p1=0, p2=0, p3=0, p4=0, p5=0, p6=0, p7=0) -> None:

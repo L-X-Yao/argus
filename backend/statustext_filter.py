@@ -45,7 +45,17 @@ _TRAILING_EN = [
 ]
 
 
-def filter_statustext(text: str) -> str:
+_BRAND_ONLY = [
+    ('ArduCopter', 'FC'), ('ArduPlane', 'FC'), ('ArduPilot', 'FC'), ('APM', 'FC'),
+    ('ChibiOS', 'RTOS'),
+]
+
+
+def filter_statustext(text: str, locale: str = 'zh') -> str:
+    if locale == 'en':
+        for old, new in _BRAND_ONLY:
+            text = text.replace(old, new)
+        return text
     for old, new in _LEAK_MSGS.items():
         text = text.replace(old, new)
     for old, new in _LEAK_FILTERS:
