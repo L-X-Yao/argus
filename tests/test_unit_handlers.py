@@ -227,6 +227,29 @@ class TestVehicleTypes:
         _, btns, vn = link._get_vehicle_info()
         assert vn == '水下机器人'
 
+    def test_multi_vehicle_tracking(self):
+        from pllink_proto import bm as _bm
+        link = make_link()
+        link._protocol = 'standard'
+        # Heartbeat from sysid=1
+        hb = _bm(0, struct.pack('<IBBBBB', 5, 2, 3, 0, 0, 3), 0, 50, sysid=1)
+        link._buf = hb
+        payload, consumed = link._parse_mavlink_frame()
+        assert payload is not None
+        link._buf = link._buf[consumed:]
+        link._process(payload)
+        assert link.connected
+        # GPS from sysid=1
+        gps = _bm(33, struct.pack('<IiiiihhhH', 1000,
+            int(34.258 * 1e7), int(108.942 * 1e7), 430000, 30000,
+            500, 300, -100, 4500), 1, 104, sysid=1)
+        link._buf = gps
+        payload, consumed = link._parse_mavlink_frame()
+        link._buf = link._buf[consumed:]
+        link._process(payload)
+        assert 1 in link._vehicles
+        assert abs(link._vehicles[1]['lat'] - 34.258) < 0.001
+
     def test_force_plane(self):
         link = make_link()
         link.vtype_raw = 2
