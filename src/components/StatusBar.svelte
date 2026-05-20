@@ -29,12 +29,15 @@
     fetchPorts();
   });
 
+  const PRESETS = ['tcp:localhost:5770', 'udp:14550', 'udp:14551'];
+
   async function fetchPorts() {
     try {
       const r = await fetch(apiUrl('/api/ports'));
       const data = await r.json();
       (data.ports || []).forEach((p: string) => { if (!portHistory.includes(p)) portHistory.push(p); });
     } catch {}
+    PRESETS.forEach(p => { if (!portHistory.includes(p)) portHistory.push(p); });
   }
 
   function savePortHistory() {
