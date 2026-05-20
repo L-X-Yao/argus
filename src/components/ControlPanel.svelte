@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { app, showConfirm, showSlide, addToast } from '../lib/stores.svelte';
+  import { app, showConfirm, showSlide, addToast, saveSettings } from '../lib/stores.svelte';
   import { sendCommand } from '../lib/ws';
   import Button from '$lib/components/ui/button/button.svelte';
   import { Plane, ShieldCheck, CircleStop, ArrowDown, CornerDownLeft, Play, Pause, Package, ChevronUp, ChevronDown } from '@lucide/svelte';
@@ -72,9 +72,17 @@
     <Button variant="outline" size="sm" class="w-full" onclick={async () => { if (await showConfirm('确认清除飞控上的任务？')) sendCommand('mission_clear'); }}>清除任务</Button>
 
   {:else if phase === 'ground'}
-    <Button size="sm" class="w-full bg-teal-700 hover:bg-teal-800 text-white font-bold gap-1.5" onclick={takeoff}>
-      <Plane size={14} />起飞 {app.defaultAlt}m
-    </Button>
+    <div class="flex gap-1">
+      <Button size="sm" class="flex-1 bg-teal-700 hover:bg-teal-800 text-white font-bold gap-1" onclick={takeoff}>
+        <Plane size={14} />起飞
+      </Button>
+      <div class="flex items-center gap-0.5 bg-muted rounded-md px-1">
+        <input type="number" bind:value={app.defaultAlt} min="5" max="200" step="5"
+               onchange={() => saveSettings()}
+               class="w-9 h-7 px-0.5 text-center text-xs font-bold bg-transparent border-none text-foreground focus:outline-none" />
+        <span class="text-[10px] text-muted-foreground">m</span>
+      </div>
+    </div>
     {#if app.waypoints.length > 0}
       <Button size="sm" class="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold gap-1.5" onclick={startMission}>
         <Play size={14} />开始任务
