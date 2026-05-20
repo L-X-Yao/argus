@@ -3,6 +3,7 @@
   import { paramState } from '../lib/paramStore.svelte';
   import { app, addToast } from '../lib/stores.svelte';
   import { sendCommand } from '../lib/ws';
+  import { t } from '../lib/i18n.svelte';
   import { apiUrl } from '../lib/backend';
   import type { Param } from '../lib/types';
   import Button from '$lib/components/ui/button/button.svelte';
@@ -189,19 +190,19 @@
 <div class="bg-card border border-border rounded-xl p-4 flex flex-col h-full">
   <div class="flex items-center justify-between flex-wrap gap-2 mb-3">
     <div class="flex items-center gap-2">
-      <h2 class="text-sm font-semibold text-primary uppercase tracking-wider">参数管理</h2>
+      <h2 class="text-sm font-semibold text-primary uppercase tracking-wider">{t('param.title')}</h2>
       {#if metaLoaded}
-        <span class="text-[10px] text-muted-foreground/60" title="已加载参数说明数据库">说明已加载</span>
+        <span class="text-[10px] text-muted-foreground/60">{t('param.metaLoaded')}</span>
       {/if}
     </div>
     <div class="flex items-center gap-2">
       <Button variant="default" size="sm" onclick={requestAll} disabled={paramState.fetching}>
-        {paramState.fetching ? `读取中 ${progress}%` : '读取参数'}
+        {paramState.fetching ? `${t('param.reading')} ${progress}%` : t('param.readAll')}
       </Button>
       {#if paramState.list.length > 0}
-        <Button variant="secondary" size="sm" onclick={saveParams}>写入闪存</Button>
-        <Button variant="outline" size="sm" onclick={exportParams}>导出</Button>
-        <Button variant="outline" size="sm" onclick={importParams}>导入</Button>
+        <Button variant="secondary" size="sm" onclick={saveParams}>{t('param.writeFlash')}</Button>
+        <Button variant="outline" size="sm" onclick={exportParams}>{t('param.export')}</Button>
+        <Button variant="outline" size="sm" onclick={importParams}>{t('param.import')}</Button>
         <Badge variant="outline" class="text-[10px] font-mono">{paramState.list.length} 参数</Badge>
       {/if}
     </div>
@@ -270,6 +271,6 @@
       {/each}
     </div>
   {:else if !paramState.fetching}
-    <div class="text-center py-8 text-muted-foreground text-sm">连接飞控后点击"读取参数"</div>
+    <div class="text-center py-8 text-muted-foreground text-sm">{t('param.connectHint')}</div>
   {/if}
 </div>

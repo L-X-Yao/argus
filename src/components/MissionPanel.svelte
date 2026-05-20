@@ -1,5 +1,6 @@
 <script lang="ts">
   import { app, pushUndo, undo, deleteWaypoint, clearWaypoints, saveSettings, saveWaypoints, generateCircle, addToast, showConfirm } from '../lib/stores.svelte';
+  import { t } from '../lib/i18n.svelte';
 
   function fitAfterLoad() { requestAnimationFrame(() => app.fitRouteFlag++); }
   import { sendCommand } from '../lib/ws';
@@ -265,7 +266,7 @@
 
 <div class="bg-card border border-border rounded-xl p-3 w-72 shrink-0 overflow-hidden flex flex-col">
   <div class="flex items-center gap-2 mb-2">
-    <h2 class="text-sm font-semibold text-primary uppercase tracking-wider">航点</h2>
+    <h2 class="text-sm font-semibold text-primary uppercase tracking-wider">{t('wp.title')}</h2>
     <span class="text-xs text-muted-foreground">({app.waypoints.length})</span>
     {#if app.drone.connected && app.drone.wp > 0}
       <span class="text-[11px] text-warning ml-auto">目标 #{app.drone.wp}</span>
@@ -306,7 +307,7 @@
         <button class="bg-transparent border-none text-destructive cursor-pointer text-base px-0.5 leading-none" onclick={() => deleteWaypoint(i)}>&times;</button>
       </div>
     {:else}
-      <div class="text-muted-foreground text-xs py-4 text-center">点击地图添加航点</div>
+      <div class="text-muted-foreground text-xs py-4 text-center">{t('wp.clickToAdd')}</div>
     {/each}
   </div>
   {#if app.waypoints.length > 0}
@@ -325,17 +326,17 @@
            class="w-12 h-6 px-1 bg-input border border-border rounded text-xs text-foreground" />
     <span class="text-[11px] text-muted-foreground">m</span>
     <Button variant="outline" size="xs" onclick={applyAltAll}>全部</Button>
-    <Button size="xs" class="bg-orange-700 hover:bg-orange-800 text-white font-bold" onclick={uploadMission}>上传</Button>
+    <Button size="xs" class="bg-orange-700 hover:bg-orange-800 text-white font-bold" onclick={uploadMission}>{t('wp.upload')}</Button>
   </div>
   <div class="flex gap-1 mt-1.5 items-center flex-wrap">
-    <Button variant="secondary" size="xs" onclick={saveMission}>保存</Button>
-    <Button variant="secondary" size="xs" onclick={loadMission}>加载</Button>
-    <Button variant="secondary" size="xs" onclick={exportKml}>导出</Button>
-    <Button variant="secondary" size="xs" onclick={importKml}>导入</Button>
-    <Button variant="secondary" size="xs" onclick={reverseRoute}>反转</Button>
-    <Button variant="secondary" size="xs" onclick={() => showCircleGen = !showCircleGen}>圆形</Button>
-    <Button variant="secondary" size="xs" onclick={undo} disabled={app.undoStack.length === 0}>撤销</Button>
-    <Button variant="ghost" size="xs" onclick={async () => { if (app.waypoints.length === 0 || await showConfirm(`确认清除全部 ${app.waypoints.length} 个航点？`)) clearWaypoints(); }}>清除</Button>
+    <Button variant="secondary" size="xs" onclick={saveMission}>{t('wp.save')}</Button>
+    <Button variant="secondary" size="xs" onclick={loadMission}>{t('wp.load')}</Button>
+    <Button variant="secondary" size="xs" onclick={exportKml}>{t('wp.export')}</Button>
+    <Button variant="secondary" size="xs" onclick={importKml}>{t('wp.import')}</Button>
+    <Button variant="secondary" size="xs" onclick={reverseRoute}>{t('wp.reverse')}</Button>
+    <Button variant="secondary" size="xs" onclick={() => showCircleGen = !showCircleGen}>{t('wp.circle')}</Button>
+    <Button variant="secondary" size="xs" onclick={undo} disabled={app.undoStack.length === 0}>{t('wp.undo')}</Button>
+    <Button variant="ghost" size="xs" onclick={async () => { if (app.waypoints.length === 0 || await showConfirm(`确认清除全部 ${app.waypoints.length} 个航点？`)) clearWaypoints(); }}>{t('wp.clear')}</Button>
   </div>
   {#if showCircleGen}
     <div class="flex gap-1 items-center mt-1.5 p-1.5 bg-muted rounded-lg flex-wrap">
