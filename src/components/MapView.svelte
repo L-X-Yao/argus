@@ -88,7 +88,7 @@
       const [wlat, wlon] = fromMap(ll.lat, ll.lng);
       sendCommand('guided_goto', undefined, { lat: wlat, lon: wlon, alt: app.defaultAlt });
       guidedTarget = { lat: wlat, lon: wlon, alt: app.defaultAlt };
-      addToast(`引导飞往 ${wlat.toFixed(5)}, ${wlon.toFixed(5)}`, 'info');
+      addToast(`${t('map.guided')} → ${wlat.toFixed(5)}, ${wlon.toFixed(5)}`, 'info');
       return;
     }
     const [wlat, wlon] = fromMap(ll.lat, ll.lng);
@@ -104,7 +104,7 @@
       if (ok) {
         sendCommand('guided_goto', undefined, { lat: wlat, lon: wlon, alt: app.defaultAlt });
         guidedTarget = { lat: wlat, lon: wlon, alt: app.defaultAlt };
-        addToast(`引导飞往 ${wlat.toFixed(5)}, ${wlon.toFixed(5)}`, 'info');
+        addToast(`${t('map.guided')} → ${wlat.toFixed(5)}, ${wlon.toFixed(5)}`, 'info');
       }
     });
   }
@@ -195,7 +195,7 @@
     const blob = new Blob([kml], { type: 'application/vnd.google-earth.kml+xml' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = '轨迹_' + new Date().toISOString().slice(0, 10) + '.kml';
+    a.download = 'track_' + new Date().toISOString().slice(0, 10) + '.kml';
     a.click();
     URL.revokeObjectURL(a.href);
   }
@@ -251,7 +251,7 @@
     </button>
   </div>
   {#if app.drone.connected}
-    <div class="absolute top-12 right-3 z-[1000]" title="航向 {app.drone.hdg.toFixed(0)}°">
+    <div class="absolute top-12 right-3 z-[1000]" title="{t('telem.hdg')} {app.drone.hdg.toFixed(0)}°">
       <svg width="42" height="42" viewBox="0 0 42 42" class="drop-shadow-lg">
         <circle cx="21" cy="21" r="19" fill="rgba(0,0,0,0.65)" stroke="rgba(255,255,255,0.15)" stroke-width="0.5" />
         <text x="21" y="10" text-anchor="middle" fill="#f44336" font-size="9" font-weight="bold" font-family="monospace">N</text>
@@ -268,8 +268,8 @@
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div class="absolute bottom-1.5 left-2.5 z-[1000] bg-card/85 backdrop-blur text-muted-foreground px-2 py-0.5 rounded text-[11px] font-mono cursor-pointer hover:text-primary transition-colors"
-       onclick={() => { if (mouseCoord) { navigator.clipboard.writeText(mouseCoord); addToast('坐标已复制', 'success', 1500); } }}
-       title="点击复制坐标">{mouseCoord || '---'}</div>
+       onclick={() => { if (mouseCoord) { navigator.clipboard.writeText(mouseCoord); addToast(t('toast.coordCopied'), 'success', 1500); } }}
+       title="Click to copy">{mouseCoord || '---'}</div>
   <MapControls />
 
   {#if showHud && app.drone.connected}
