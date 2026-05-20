@@ -22,6 +22,12 @@
       { name: '链路状态', ok: d.connected && d.link_age >= 0 && d.link_age < 2, detail: d.connected ? `延迟 ${d.link_age.toFixed(1)}s` : '未连接', critical: true },
       { name: '导航滤波', ok: !(d.ekf_flags & 0x480) && Math.max(d.ekf_vel, d.ekf_pos_h, d.ekf_pos_v, d.ekf_compass) < 1.0,
         detail: (d.ekf_flags & 0x480) ? '异常' : Math.max(d.ekf_vel, d.ekf_pos_h, d.ekf_pos_v, d.ekf_compass) < 0.5 ? '正常' : '警告', critical: true },
+      { name: '振动水平', ok: Math.max(d.vibe[0], d.vibe[1], d.vibe[2]) < 30,
+        detail: `${Math.max(d.vibe[0], d.vibe[1], d.vibe[2]).toFixed(0)} m/s² (限<30)`, critical: true },
+      { name: '遥控信号', ok: d.rc_rssi > 0 || d.rc[0] > 0,
+        detail: d.rc_rssi > 0 ? `RSSI ${d.rc_rssi}` : d.rc[0] > 0 ? '有信号' : '无信号', critical: false },
+      { name: '任务航线', ok: app.waypoints.length > 0,
+        detail: app.waypoints.length > 0 ? `${app.waypoints.length} 航点` : '未加载', critical: false },
       { name: '机型识别', ok: d.vtype !== '', detail: d.vtype || '未识别', critical: false },
       { name: '未解锁', ok: !d.armed, detail: d.armed ? '已解锁 — 注意安全' : '已锁定', critical: false },
     ];
