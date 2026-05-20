@@ -195,14 +195,28 @@ export function resolveConfirm(result: boolean) {
 }
 
 let _toastId = 0;
+let _toastTimers = new Map<number, ReturnType<typeof setTimeout>>();
 export function addToast(text: string, level: 'info' | 'warn' | 'error' | 'success' = 'info', duration = 4000) {
+  const existing = app.toasts.find(t => t.text === text && t.level === level);
+  if (existing) {
+    existing.count++;
+    const prev = _toastTimers.get(existing.id);
+    if (prev) clearTimeout(prev);
+    _toastTimers.set(existing.id, setTimeout(() => {
+      const idx = app.toasts.findIndex(t => t.id === existing.id);
+      if (idx >= 0) app.toasts.splice(idx, 1);
+      _toastTimers.delete(existing.id);
+    }, duration));
+    return;
+  }
   const id = ++_toastId;
-  app.toasts.push({ id, text, level });
+  app.toasts.push({ id, text, level, count: 1 });
   if (app.toasts.length > 5) app.toasts.shift();
-  setTimeout(() => {
+  _toastTimers.set(id, setTimeout(() => {
     const idx = app.toasts.findIndex(t => t.id === id);
     if (idx >= 0) app.toasts.splice(idx, 1);
-  }, duration);
+    _toastTimers.delete(id);
+  }, duration));
 }
 
 export function dismissToast(id: number) {

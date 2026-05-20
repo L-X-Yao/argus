@@ -89,6 +89,7 @@ export interface Toast {
   id: number;
   text: string;
   level: 'info' | 'warn' | 'error' | 'success';
+  count: number;
 }
 
 export interface Param {

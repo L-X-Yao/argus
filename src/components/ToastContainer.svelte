@@ -26,6 +26,9 @@
           {/if}
         </span>
         {t.text}
+        {#if t.count > 1}
+          <span class="ml-1 px-1.5 py-px rounded-full bg-white/20 text-[10px] font-bold leading-none">&times;{t.count}</span>
+        {/if}
       </div>
     {/each}
   </div>
