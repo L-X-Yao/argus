@@ -7,6 +7,8 @@
   let spdData: number[] = [];
   let batData: number[] = [];
   let curData: number[] = [];
+  let vzData: number[] = [];
+  let vibeData: number[] = [];
 
   $effect(() => {
     if (!app.drone.connected) return;
@@ -14,18 +16,24 @@
     const spd = app.drone.gs;
     const bat = app.drone.voltage;
     const cur = app.drone.current;
+    const vz = app.drone.vz;
+    const vb = Math.max(app.drone.vibe[0], app.drone.vibe[1], app.drone.vibe[2]);
     untrack(() => {
-      altData.push(alt); spdData.push(spd); batData.push(bat); curData.push(cur);
+      altData.push(alt); spdData.push(spd); batData.push(bat); curData.push(cur); vzData.push(vz); vibeData.push(vb);
       if (altData.length > MAX) altData.shift();
       if (spdData.length > MAX) spdData.shift();
       if (batData.length > MAX) batData.shift();
       if (curData.length > MAX) curData.shift();
+      if (vzData.length > MAX) vzData.shift();
+      if (vibeData.length > MAX) vibeData.shift();
     });
     untrack(() => {
       draw(cAlt, altData, '#4fc3f7');
       draw(cSpd, spdData, '#69f0ae');
       draw(cBat, batData, '#ffa726');
       draw(cCur, curData, '#ff5252');
+      draw(cVz, vzData, '#ce93d8');
+      draw(cVibe, vibeData, '#ffab91');
     });
   });
 
@@ -43,10 +51,23 @@
     ctx.fillStyle = '#666'; ctx.font = '9px monospace';
     ctx.fillText(mx.toFixed(1), 2, 10);
     ctx.fillText(mn.toFixed(1), 2, h - 3);
-    ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.beginPath();
+    const pts: [number, number][] = [];
     for (let i = 0; i < data.length; i++) {
-      const x = i / (data.length - 1) * w, y = (1 - (data[i] - mn) / rng) * (h - 4) + 2;
-      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      pts.push([i / (data.length - 1) * w, (1 - (data[i] - mn) / rng) * (h - 4) + 2]);
+    }
+    const grad = ctx.createLinearGradient(0, 0, 0, h);
+    grad.addColorStop(0, color + '30');
+    grad.addColorStop(1, color + '05');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.moveTo(pts[0][0], h);
+    for (const [x, y] of pts) ctx.lineTo(x, y);
+    ctx.lineTo(pts[pts.length - 1][0], h);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.beginPath();
+    for (let i = 0; i < pts.length; i++) {
+      if (i === 0) ctx.moveTo(pts[i][0], pts[i][1]); else ctx.lineTo(pts[i][0], pts[i][1]);
     }
     ctx.stroke();
     ctx.fillStyle = color; ctx.font = 'bold 11px monospace';
@@ -57,6 +78,8 @@
   let cSpd: HTMLCanvasElement;
   let cBat: HTMLCanvasElement;
   let cCur: HTMLCanvasElement;
+  let cVz: HTMLCanvasElement;
+  let cVibe: HTMLCanvasElement;
 </script>
 
 <div class="bg-card border border-border rounded-xl p-4">
@@ -64,22 +87,30 @@
   {#if !app.drone.connected}
     <div class="text-muted-foreground text-xs text-center py-8">连接后显示实时数据曲线</div>
   {:else}
-    <div class="grid grid-cols-2 gap-2">
+    <div class="grid grid-cols-3 gap-2 max-md:grid-cols-2">
       <div>
         <div class="text-[11px] text-muted-foreground mb-0.5">高度 (m)</div>
-        <canvas bind:this={cAlt} height="80" class="w-full bg-background rounded-lg"></canvas>
+        <canvas bind:this={cAlt} height="72" class="w-full bg-background rounded-lg"></canvas>
       </div>
       <div>
         <div class="text-[11px] text-muted-foreground mb-0.5">速度 (m/s)</div>
-        <canvas bind:this={cSpd} height="80" class="w-full bg-background rounded-lg"></canvas>
+        <canvas bind:this={cSpd} height="72" class="w-full bg-background rounded-lg"></canvas>
+      </div>
+      <div>
+        <div class="text-[11px] text-muted-foreground mb-0.5">升降 (m/s)</div>
+        <canvas bind:this={cVz} height="72" class="w-full bg-background rounded-lg"></canvas>
       </div>
       <div>
         <div class="text-[11px] text-muted-foreground mb-0.5">电压 (V)</div>
-        <canvas bind:this={cBat} height="80" class="w-full bg-background rounded-lg"></canvas>
+        <canvas bind:this={cBat} height="72" class="w-full bg-background rounded-lg"></canvas>
       </div>
       <div>
         <div class="text-[11px] text-muted-foreground mb-0.5">电流 (A)</div>
-        <canvas bind:this={cCur} height="80" class="w-full bg-background rounded-lg"></canvas>
+        <canvas bind:this={cCur} height="72" class="w-full bg-background rounded-lg"></canvas>
+      </div>
+      <div>
+        <div class="text-[11px] text-muted-foreground mb-0.5">振动</div>
+        <canvas bind:this={cVibe} height="72" class="w-full bg-background rounded-lg"></canvas>
       </div>
     </div>
   {/if}
