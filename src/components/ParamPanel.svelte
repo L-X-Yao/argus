@@ -87,6 +87,51 @@
 
   function requestAll() { sendCommand('param_request_all'); }
   function saveParams() { sendCommand('param_save'); addToast('参数文件已保存', 'success'); }
+
+  function exportParams() {
+    if (!paramState.list.length) return;
+    const lines = paramState.list.map(p => `${p.name}\t${fmtValue(p.value)}`).join('\n');
+    const blob = new Blob([lines], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = '参数_' + new Date().toISOString().slice(0, 10) + '.param';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    addToast(`已导出 ${paramState.list.length} 个参数`, 'success');
+  }
+
+  function importParams() {
+    const input = document.createElement('input');
+    input.type = 'file'; input.accept = '.param,.txt';
+    input.onchange = (e: any) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev: any) => {
+        const text: string = ev.target.result;
+        const existing = new Map(paramState.list.map(p => [p.name, p.value]));
+        let changed = 0;
+        for (const line of text.split('\n')) {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed.startsWith('#')) continue;
+          const parts = trimmed.split(/[\t,\s]+/);
+          if (parts.length < 2) continue;
+          const name = parts[0], val = parseFloat(parts[1]);
+          if (isNaN(val)) continue;
+          const cur = existing.get(name);
+          if (cur !== undefined && Math.abs(cur - val) > 1e-6) {
+            sendCommand('param_set', undefined, { name, value: val });
+            modified.add(name);
+            changed++;
+          }
+        }
+        modified = new Set(modified);
+        addToast(changed > 0 ? `已写入 ${changed} 个变更参数` : '无参数变更', changed > 0 ? 'success' : 'info');
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  }
 </script>
 
 <div class="bg-card border border-border rounded-xl p-4 flex flex-col h-full">
@@ -97,7 +142,9 @@
         {paramState.fetching ? `读取中 ${progress}%` : '读取参数'}
       </Button>
       {#if paramState.list.length > 0}
-        <Button variant="secondary" size="sm" onclick={saveParams}>保存文件</Button>
+        <Button variant="secondary" size="sm" onclick={saveParams}>写入闪存</Button>
+        <Button variant="outline" size="sm" onclick={exportParams}>导出</Button>
+        <Button variant="outline" size="sm" onclick={importParams}>导入</Button>
         <Badge variant="outline" class="text-[10px] font-mono">{paramState.list.length} 参数</Badge>
       {/if}
     </div>
