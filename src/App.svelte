@@ -196,11 +196,26 @@
         {#if app.drone.connected}
           <TelemetryOverlay />
         {:else}
-          <div class="absolute top-1/3 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[1001]
-                      bg-card/90 backdrop-blur border border-border rounded-xl shadow-lg px-6 py-4 text-center pointer-events-none">
-            <p class="text-sm font-semibold text-foreground">未连接飞控</p>
-            <p class="text-xs text-muted-foreground mt-1">在顶部输入连接地址后点击"连接"</p>
-            <p class="text-[11px] text-muted-foreground mt-0.5">按 <kbd class="px-1 py-px bg-muted border border-border rounded text-[10px] font-mono">?</kbd> 查看快捷键</p>
+          <div class="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[1001] pointer-events-none">
+            <div class="bg-card/90 backdrop-blur-md border border-border rounded-2xl shadow-2xl px-8 py-6 text-center min-w-[280px]">
+              <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary/15 mb-3">
+                <svg viewBox="0 0 24 24" width="28" height="28" fill="none" stroke="currentColor" stroke-width="1.5" class="text-primary">
+                  <path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" />
+                </svg>
+              </div>
+              <h2 class="text-lg font-bold text-primary tracking-wide">PL-Link</h2>
+              <p class="text-xs text-muted-foreground mt-1">地面控制站</p>
+              <div class="mt-4 pt-3 border-t border-border/50">
+                <p class="text-xs text-muted-foreground">在顶部输入连接地址后点击"连接"</p>
+                <div class="flex items-center justify-center gap-3 mt-2 text-[11px] text-muted-foreground/70">
+                  <span><kbd class="px-1 py-px bg-muted border border-border rounded text-[10px] font-mono">?</kbd> 快捷键</span>
+                  <span><kbd class="px-1 py-px bg-muted border border-border rounded text-[10px] font-mono">Ctrl+S</kbd> 设置</span>
+                </div>
+              </div>
+              {#if !app.wsConnected}
+                <div class="mt-3 text-destructive text-[11px] font-bold animate-pulse">后端服务连接中...</div>
+              {/if}
+            </div>
           </div>
         {/if}
         {#if showVideo && app.drone.connected}
