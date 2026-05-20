@@ -1,12 +1,12 @@
 <script lang="ts">
-  import { app, showConfirm } from '../lib/stores.svelte';
+  import { app, showSlide } from '../lib/stores.svelte';
   import { sendCommand } from '../lib/ws';
   import Button from '$lib/components/ui/button/button.svelte';
   import Badge from '$lib/components/ui/badge/badge.svelte';
 
-  async function rtl() { if (await showConfirm('切换到返航模式？', true)) sendCommand('rtl'); }
+  function rtl() { showSlide('滑动切换返航', 'red', () => sendCommand('rtl')); }
   function pause() { sendCommand('mode', app.drone.vtype === '固定翼' ? 19 : 5); }
-  async function forceDisarm() { if (await showConfirm('强制锁定 — 电机立即停转！\n仅在已着陆时使用。继续？', true)) sendCommand('force_disarm'); }
+  function forceDisarm() { showSlide('滑动强制锁定', 'red', () => sendCommand('force_disarm')); }
 
   function fmtTime(s: number): string {
     const m = Math.floor(s / 60), sec = s % 60;
@@ -29,7 +29,7 @@
       <Button variant="destructive" size="xs" onclick={rtl}>返航</Button>
       <Button size="xs" class="bg-amber-600 hover:bg-amber-700 text-white" onclick={pause}>悬停</Button>
       {#if !app.drone.armed}
-        <Button size="xs" class="bg-orange-700 hover:bg-orange-800 text-white" onclick={async () => { if (await showConfirm('确认解锁电机？\n请确保周围无人员。', true)) sendCommand('arm'); }}>解锁</Button>
+        <Button size="xs" class="bg-orange-700 hover:bg-orange-800 text-white" onclick={() => showSlide('滑动解锁电机', 'orange', () => sendCommand('arm'))}>解锁</Button>
       {:else}
         <Button size="xs" class="bg-green-700 hover:bg-green-800 text-white" onclick={() => sendCommand('disarm')}>锁定</Button>
       {/if}

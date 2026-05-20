@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { FlightSummary } from '../lib/types';
   import Button from '$lib/components/ui/button/button.svelte';
-  import { X } from '@lucide/svelte';
+  import { X, Clock, ArrowUp, Gauge, Route, BatteryLow } from '@lucide/svelte';
 
   let { summary, onclose }: { summary: FlightSummary; onclose: () => void } = $props();
 
@@ -10,8 +10,10 @@
     return `${m}:${sec < 10 ? '0' : ''}${sec}`;
   }
   function fmtDist(d: number): string {
-    return d < 1000 ? d + 'm' : (d / 1000).toFixed(1) + 'km';
+    return d < 1000 ? d.toFixed(0) + 'm' : (d / 1000).toFixed(1) + 'km';
   }
+
+  let avgSpeed = $derived(summary.duration > 0 ? (summary.total_dist / summary.duration).toFixed(1) : '---');
 </script>
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -19,32 +21,62 @@
 <div class="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9999] flex items-center justify-center" onclick={onclose}>
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="bg-card border-2 border-primary rounded-xl p-6 min-w-[320px] shadow-2xl" onclick={(e) => e.stopPropagation()}>
-    <div class="flex items-center justify-between mb-4">
-      <h3 class="text-lg font-bold text-primary">飞行摘要</h3>
+  <div class="bg-card border border-border rounded-2xl overflow-hidden min-w-[340px] shadow-2xl" onclick={(e) => e.stopPropagation()}>
+    <div class="bg-gradient-to-r from-primary/20 to-primary/5 px-5 py-3 flex items-center justify-between">
+      <div>
+        <h3 class="text-base font-bold text-primary">飞行完成</h3>
+        <p class="text-[11px] text-muted-foreground mt-0.5">飞行数据摘要</p>
+      </div>
       <Button variant="ghost" size="icon-xs" onclick={onclose}><X size={16} /></Button>
     </div>
-    <div class="flex justify-between py-2 border-b border-border">
-      <span class="text-muted-foreground">飞行时间</span>
-      <span class="font-bold text-base">{fmtTime(summary.duration)}</span>
-    </div>
-    <div class="flex justify-between py-2 border-b border-border">
-      <span class="text-muted-foreground">最大高度</span>
-      <span class="font-bold text-base">{summary.max_alt} m</span>
-    </div>
-    <div class="flex justify-between py-2 border-b border-border">
-      <span class="text-muted-foreground">最大速度</span>
-      <span class="font-bold text-base">{summary.max_speed} m/s</span>
-    </div>
-    <div class="flex justify-between py-2 border-b border-border">
-      <span class="text-muted-foreground">飞行距离</span>
-      <span class="font-bold text-base">{fmtDist(summary.total_dist)}</span>
-    </div>
-    {#if summary.bat_used >= 0}
-      <div class="flex justify-between py-2 border-b border-border">
-        <span class="text-muted-foreground">电量消耗</span>
-        <span class="font-bold text-base">{summary.bat_used}%</span>
+    <div class="px-5 py-3 grid grid-cols-2 gap-3">
+      <div class="flex items-center gap-2.5 py-1.5">
+        <div class="w-8 h-8 rounded-lg bg-blue-500/15 flex items-center justify-center shrink-0"><Clock size={16} class="text-blue-400" /></div>
+        <div>
+          <div class="text-[10px] text-muted-foreground">飞行时间</div>
+          <div class="text-sm font-bold tabular-nums">{fmtTime(summary.duration)}</div>
+        </div>
       </div>
-    {/if}
+      <div class="flex items-center gap-2.5 py-1.5">
+        <div class="w-8 h-8 rounded-lg bg-sky-500/15 flex items-center justify-center shrink-0"><ArrowUp size={16} class="text-sky-400" /></div>
+        <div>
+          <div class="text-[10px] text-muted-foreground">最大高度</div>
+          <div class="text-sm font-bold tabular-nums">{summary.max_alt} m</div>
+        </div>
+      </div>
+      <div class="flex items-center gap-2.5 py-1.5">
+        <div class="w-8 h-8 rounded-lg bg-green-500/15 flex items-center justify-center shrink-0"><Gauge size={16} class="text-green-400" /></div>
+        <div>
+          <div class="text-[10px] text-muted-foreground">最大速度</div>
+          <div class="text-sm font-bold tabular-nums">{summary.max_speed} m/s</div>
+        </div>
+      </div>
+      <div class="flex items-center gap-2.5 py-1.5">
+        <div class="w-8 h-8 rounded-lg bg-teal-500/15 flex items-center justify-center shrink-0"><Route size={16} class="text-teal-400" /></div>
+        <div>
+          <div class="text-[10px] text-muted-foreground">飞行距离</div>
+          <div class="text-sm font-bold tabular-nums">{fmtDist(summary.total_dist)}</div>
+        </div>
+      </div>
+      {#if summary.bat_used >= 0}
+        <div class="flex items-center gap-2.5 py-1.5">
+          <div class="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center shrink-0"><BatteryLow size={16} class="text-amber-400" /></div>
+          <div>
+            <div class="text-[10px] text-muted-foreground">电量消耗</div>
+            <div class="text-sm font-bold tabular-nums">{summary.bat_used}%</div>
+          </div>
+        </div>
+      {/if}
+      <div class="flex items-center gap-2.5 py-1.5">
+        <div class="w-8 h-8 rounded-lg bg-purple-500/15 flex items-center justify-center shrink-0"><Gauge size={16} class="text-purple-400" /></div>
+        <div>
+          <div class="text-[10px] text-muted-foreground">平均速度</div>
+          <div class="text-sm font-bold tabular-nums">{avgSpeed} m/s</div>
+        </div>
+      </div>
+    </div>
+    <div class="px-5 pb-4">
+      <Button class="w-full" onclick={onclose}>确认</Button>
+    </div>
   </div>
 </div>
