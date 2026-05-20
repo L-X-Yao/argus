@@ -1,11 +1,11 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import { app } from '../../lib/stores.svelte';
-  import { toGcj } from '../../lib/gcj02';
 
   declare const L: any;
 
-  let { map }: { map: any } = $props();
+  type CoordFn = (lat: number, lon: number) => [number, number];
+  let { map, coord }: { map: any; coord: CoordFn } = $props();
 
   let polyLayer: any = null;
   let vertMarkers: any[] = [];
@@ -15,7 +15,7 @@
     vertMarkers = [];
     if (polyLayer) { map.removeLayer(polyLayer); polyLayer = null; }
     if (app.surveyPolygon.length === 0) return;
-    const gcjPts = app.surveyPolygon.map(p => toGcj(p.lat, p.lon));
+    const gcjPts = app.surveyPolygon.map(p => coord(p.lat, p.lon));
     if (gcjPts.length >= 3) {
       polyLayer = L.polygon(gcjPts, {
         color: '#ab47bc', fillColor: '#ab47bc', fillOpacity: 0.12, weight: 2, dashArray: '6,4',

@@ -26,6 +26,8 @@ TILE_URLS = {
     '6': 'https://webst01.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}',
     '7': 'https://wprd01.is.autonavi.com/appmaptile?x={x}&y={y}&z={z}&lang=zh_cn&size=1&scl=1&style=7',
     '8': 'https://wprd01.is.autonavi.com/appmaptile?x={x}&y={y}&z={z}&lang=zh_cn&size=1&scl=1&style=8',
+    'osm': 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+    'osm_sat': 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
 }
 
 
@@ -57,6 +59,14 @@ async def health():
 @app.websocket('/ws')
 async def websocket_endpoint(ws: WebSocket):
     await app.state.ws_mgr.handle_client(ws)
+
+
+@app.get('/api/tile_sources')
+async def api_tile_sources():
+    return {
+        'china': {'sat': '6', 'vec': '7', 'label': '8', 'gcj02': True},
+        'global': {'sat': 'osm_sat', 'vec': 'osm', 'label': None, 'gcj02': False},
+    }
 
 
 @app.get('/api/param_meta')

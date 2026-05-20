@@ -1,11 +1,11 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import { app } from '../../lib/stores.svelte';
-  import { toGcj } from '../../lib/gcj02';
 
   declare const L: any;
 
-  let { map }: { map: any } = $props();
+  type CoordFn = (lat: number, lon: number) => [number, number];
+  let { map, coord }: { map: any; coord: CoordFn } = $props();
 
   let polyLayer: any = null;
   let vertMarkers: any[] = [];
@@ -16,7 +16,7 @@
     if (polyLayer) { map.removeLayer(polyLayer); polyLayer = null; }
     if (app.fencePolygon.length === 0) return;
     const uploaded = app.fenceUploaded;
-    const gcjPts = app.fencePolygon.map(p => toGcj(p.lat, p.lon));
+    const gcjPts = app.fencePolygon.map(p => coord(p.lat, p.lon));
     if (gcjPts.length >= 3) {
       polyLayer = L.polygon(gcjPts, {
         color: '#f44336', fillColor: '#f44336',

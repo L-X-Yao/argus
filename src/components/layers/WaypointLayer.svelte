@@ -1,11 +1,11 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import { app, saveWaypoints } from '../../lib/stores.svelte';
-  import { toGcj, toWgs } from '../../lib/gcj02';
 
   declare const L: any;
 
-  let { map }: { map: any } = $props();
+  type CoordFn = (lat: number, lon: number) => [number, number];
+  let { map, coord, coordInv }: { map: any; coord: CoordFn; coordInv: CoordFn } = $props();
 
   let wpMarkers: any[] = [];
   let wpLine: any = null;
@@ -22,7 +22,7 @@
       const wpIdx = seq - 2;
       if (wpIdx >= 0 && wpIdx < app.waypoints.length) {
         const wp = app.waypoints[wpIdx];
-        const [glat, glon] = toGcj(wp.lat, wp.lon);
+        const [glat, glon] = coord(wp.lat, wp.lon);
         activeWpMarker = L.circleMarker([glat, glon], {
           radius: 16, color: '#ffa726', fillColor: 'transparent', weight: 3, dashArray: '4,4',
         }).addTo(map);
@@ -36,7 +36,7 @@
     if (wpLine) { map.removeLayer(wpLine); wpLine = null; }
     const pts: [number, number][] = [];
     app.waypoints.forEach((wp, i) => {
-      const [glat, glon] = toGcj(wp.lat, wp.lon);
+      const [glat, glon] = coord(wp.lat, wp.lon);
       pts.push([glat, glon]);
       const isLoiter = wp.type === 'loiter_turns' || wp.type === 'loiter_time';
       const color = wp.drop ? '#e65100' : isLoiter ? '#7e57c2' : '#1565c0';
@@ -51,7 +51,7 @@
       const m = L.marker([glat, glon], { icon, draggable: true }).addTo(map);
       m.on('dragend', () => {
         const ll = m.getLatLng();
-        const [wlat, wlon] = toWgs(ll.lat, ll.lng);
+        const [wlat, wlon] = coordInv(ll.lat, ll.lng);
         app.waypoints[i].lat = wlat;
         app.waypoints[i].lon = wlon;
         saveWaypoints();
@@ -101,7 +101,7 @@
 
     if (geoCircle) { map.removeLayer(geoCircle); geoCircle = null; }
     if (app.drone.home_lat !== 0 && app.geoRadius > 0) {
-      const [hlat, hlon] = toGcj(app.drone.home_lat, app.drone.home_lon);
+      const [hlat, hlon] = coord(app.drone.home_lat, app.drone.home_lon);
       geoCircle = L.circle([hlat, hlon], { radius: app.geoRadius, color: '#f44336', fill: false, dashArray: '8,4', weight: 1 }).addTo(map);
     }
   });
@@ -109,7 +109,7 @@
   $effect(() => {
     if (app.focusWp < 0 || app.focusWp >= app.waypoints.length) return;
     const wp = app.waypoints[app.focusWp];
-    const [glat, glon] = toGcj(wp.lat, wp.lon);
+    const [glat, glon] = coord(wp.lat, wp.lon);
     map.setView([glat, glon], Math.max(map.getZoom(), 16));
     if (focusRing) map.removeLayer(focusRing);
     focusRing = L.circleMarker([glat, glon], {
@@ -121,7 +121,7 @@
 
   $effect(() => {
     if (app.fitRouteFlag <= 0 || app.waypoints.length < 2) return;
-    const pts = app.waypoints.map(w => toGcj(w.lat, w.lon));
+    const pts = app.waypoints.map(w => coord(w.lat, w.lon));
     map.fitBounds(L.latLngBounds(pts), { padding: [40, 40] });
   });
 

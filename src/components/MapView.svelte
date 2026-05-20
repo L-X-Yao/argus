@@ -35,20 +35,36 @@
   let measureLine: any = null;
   let measureLabel: any = null;
 
-  const SAT_URL = `${API_BASE}/api/tile/6/{z}/{x}/{y}`;
-  const LABEL_URL = `${API_BASE}/api/tile/8/{z}/{x}/{y}`;
-  const VEC_URL = `${API_BASE}/api/tile/7/{z}/{x}/{y}`;
+  const CN_SAT = `${API_BASE}/api/tile/6/{z}/{x}/{y}`;
+  const CN_LABEL = `${API_BASE}/api/tile/8/{z}/{x}/{y}`;
+  const CN_VEC = `${API_BASE}/api/tile/7/{z}/{x}/{y}`;
+  const GL_SAT = `${API_BASE}/api/tile/osm_sat/{z}/{x}/{y}`;
+  const GL_VEC = `${API_BASE}/api/tile/osm/{z}/{x}/{y}`;
+
+  function tileUrls() {
+    if (app.mapRegion === 'global') return { sat: GL_SAT, vec: GL_VEC, label: null };
+    return { sat: CN_SAT, vec: CN_VEC, label: CN_LABEL };
+  }
+  let useGcj = $derived(app.mapRegion === 'china');
+
+  function toMap(lat: number, lon: number): [number, number] {
+    return useGcj ? toGcj(lat, lon) : [lat, lon];
+  }
+  function fromMap(mlat: number, mlon: number): [number, number] {
+    return useGcj ? toWgs(mlat, mlon) : [mlat, mlon];
+  }
 
   onMount(() => {
+    const urls = tileUrls();
     map = L.map(mapEl, { zoomControl: true, attributionControl: false }).setView([34.258, 108.942], 15);
-    satLayer = L.tileLayer(SAT_URL, { maxZoom: 18 }).addTo(map);
-    labelLayer = L.tileLayer(LABEL_URL, { maxZoom: 18 }).addTo(map);
-    vecLayer = L.tileLayer(VEC_URL, { maxZoom: 18 });
+    satLayer = L.tileLayer(urls.sat, { maxZoom: 18 }).addTo(map);
+    labelLayer = urls.label ? L.tileLayer(urls.label, { maxZoom: 18 }).addTo(map) : null;
+    vecLayer = L.tileLayer(urls.vec, { maxZoom: 18 });
     L.control.scale({ metric: true, imperial: false, position: 'bottomright' }).addTo(map);
     map.on('click', onMapClick);
     map.on('contextmenu', onRightClick);
     map.on('mousemove', (e: any) => {
-      const [wlat, wlon] = toWgs(e.latlng.lat, e.latlng.lng);
+      const [wlat, wlon] = fromMap(e.latlng.lat, e.latlng.lng);
       mouseCoord = `${wlat.toFixed(6)}, ${wlon.toFixed(6)}`;
     });
     window.addEventListener('keydown', onKeyDown);
@@ -59,23 +75,23 @@
     const ll = e.latlng;
     if (measuring) { addMeasurePoint(ll); return; }
     if (app.drawingPolygon) {
-      const [wlat, wlon] = toWgs(ll.lat, ll.lng);
+      const [wlat, wlon] = fromMap(ll.lat, ll.lng);
       app.surveyPolygon = [...app.surveyPolygon, { lat: wlat, lon: wlon }];
       return;
     }
     if (app.drawingFence) {
-      const [wlat, wlon] = toWgs(ll.lat, ll.lng);
+      const [wlat, wlon] = fromMap(ll.lat, ll.lng);
       app.fencePolygon = [...app.fencePolygon, { lat: wlat, lon: wlon }];
       return;
     }
     if (app.guidedMode && app.drone.connected && app.drone.armed) {
-      const [wlat, wlon] = toWgs(ll.lat, ll.lng);
+      const [wlat, wlon] = fromMap(ll.lat, ll.lng);
       sendCommand('guided_goto', undefined, { lat: wlat, lon: wlon, alt: app.defaultAlt });
       guidedTarget = { lat: wlat, lon: wlon, alt: app.defaultAlt };
       addToast(`引导飞往 ${wlat.toFixed(5)}, ${wlon.toFixed(5)}`, 'info');
       return;
     }
-    const [wlat, wlon] = toWgs(ll.lat, ll.lng);
+    const [wlat, wlon] = fromMap(ll.lat, ll.lng);
     addWaypoint({ lat: wlat, lon: wlon, alt: app.defaultAlt, drop: false, delay: 0, speed: 0, type: 'wp', loiter_param: 0 });
   }
 
@@ -83,8 +99,8 @@
     e.originalEvent.preventDefault();
     if (!app.drone.connected || !app.drone.armed) return;
     const ll = e.latlng;
-    const [wlat, wlon] = toWgs(ll.lat, ll.lng);
-    showConfirm(`引导飞往此点？\n${wlat.toFixed(5)}, ${wlon.toFixed(5)}\n高度: ${app.defaultAlt}m`).then(ok => {
+    const [wlat, wlon] = fromMap(ll.lat, ll.lng);
+    showConfirm(`${t('confirm.guidedGoto')}\n${wlat.toFixed(5)}, ${wlon.toFixed(5)}\n${t('ctrl.altitude')}: ${app.defaultAlt}m`).then(ok => {
       if (ok) {
         sendCommand('guided_goto', undefined, { lat: wlat, lon: wlon, alt: app.defaultAlt });
         guidedTarget = { lat: wlat, lon: wlon, alt: app.defaultAlt };
@@ -156,18 +172,18 @@
   function toggleExpand() { app.mapExpanded = !app.mapExpanded; setTimeout(() => map?.invalidateSize(), 100); }
 
   function fitRoute() {
-    const pts = app.waypoints.map(w => toGcj(w.lat, w.lon));
+    const pts = app.waypoints.map(w => toMap(w.lat, w.lon));
     if (pts.length) map.fitBounds(L.latLngBounds(pts), { padding: [40, 40] });
   }
 
   function centerHome() {
-    if (app.drone.home_lat) map.setView(toGcj(app.drone.home_lat, app.drone.home_lon), 16);
+    if (app.drone.home_lat) map.setView(toMap(app.drone.home_lat, app.drone.home_lon), 16);
   }
 
   function exportTrack() {
     if (!droneTrail.length) return;
     const coords = droneTrail.map(([glat, glon]) => {
-      const [wlat, wlon] = toWgs(glat, glon);
+      const [wlat, wlon] = fromMap(glat, glon);
       return `${wlon},${wlat},0`;
     }).join('\n');
     const kml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -189,12 +205,12 @@
   <div bind:this={mapEl} class="h-full rounded-lg border border-border"></div>
 
   {#if map}
-    <DroneLayer {map} {follow} trail={droneTrail} />
-    <WaypointLayer {map} />
-    <GuidedLayer {map} bind:target={guidedTarget} />
-    <FenceLayer {map} />
-    <SurveyLayer {map} />
-    <ReplayLayer {map} {follow} />
+    <DroneLayer {map} {follow} trail={droneTrail} coord={toMap} />
+    <WaypointLayer {map} coord={toMap} coordInv={fromMap} />
+    <GuidedLayer {map} bind:target={guidedTarget} coord={toMap} />
+    <FenceLayer {map} coord={toMap} />
+    <SurveyLayer {map} coord={toMap} />
+    <ReplayLayer {map} {follow} coord={toMap} />
   {/if}
 
   <div class="absolute top-2.5 left-2.5 z-[1000] flex gap-1">

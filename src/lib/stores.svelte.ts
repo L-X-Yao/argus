@@ -33,6 +33,7 @@ class AppState {
   showVibe: boolean = $state(false);
   showServo: boolean = $state(false);
   showSettings: boolean = $state(false);
+  mapRegion: 'china' | 'global' = $state('china');
 }
 
 export const app = new AppState();
@@ -93,6 +94,7 @@ export function loadSettings() {
     if (s.dark !== undefined) app.darkTheme = s.dark;
     if (s.muted !== undefined) app.audioMuted = s.muted;
     if (s.voice !== undefined) app.voiceEnabled = s.voice;
+    if (s.region) app.mapRegion = s.region;
   } catch {}
   try {
     const wps = JSON.parse(localStorage.getItem('pllink_v3_waypoints') || '[]');
@@ -109,6 +111,7 @@ export function saveSettings() {
       dark: app.darkTheme,
       muted: app.audioMuted,
       voice: app.voiceEnabled,
+      region: app.mapRegion,
     }));
   } catch {}
 }

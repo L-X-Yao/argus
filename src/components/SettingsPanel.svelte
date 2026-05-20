@@ -93,6 +93,15 @@
             </Button>
           </div>
           <div class="flex justify-between items-center py-2 border-b border-border/50">
+            <label class="text-sm text-muted-foreground">地图区域 / Map</label>
+            <div class="flex gap-1">
+              <Button variant={app.mapRegion === 'china' ? 'default' : 'secondary'} size="sm" class="h-7 text-xs px-2.5"
+                      onclick={() => { app.mapRegion = 'china'; saveSettings(); }}>中国</Button>
+              <Button variant={app.mapRegion === 'global' ? 'default' : 'secondary'} size="sm" class="h-7 text-xs px-2.5"
+                      onclick={() => { app.mapRegion = 'global'; saveSettings(); }}>Global</Button>
+            </div>
+          </div>
+          <div class="flex justify-between items-center py-2 border-b border-border/50">
             <label class="text-sm text-muted-foreground"><Globe size={13} class="inline mr-1" />语言 / Language</label>
             <div class="flex gap-1">
               <Button variant={i18nState.locale === 'zh' ? 'default' : 'secondary'} size="sm" class="h-7 text-xs px-2.5"

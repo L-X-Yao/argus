@@ -1,11 +1,11 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import { app } from '../../lib/stores.svelte';
-  import { toGcj } from '../../lib/gcj02';
 
   declare const L: any;
 
-  let { map, follow }: { map: any; follow: boolean } = $props();
+  type CoordFn = (lat: number, lon: number) => [number, number];
+  let { map, follow, coord }: { map: any; follow: boolean; coord: CoordFn } = $props();
 
   let marker: any = null;
   let trail: [number, number][] = [];
@@ -19,7 +19,7 @@
       trail = [];
       return;
     }
-    const [glat, glon] = toGcj(rp.lat, rp.lon);
+    const [glat, glon] = coord(rp.lat, rp.lon);
     if (!marker) {
       const icon = L.divIcon({
         className: '',

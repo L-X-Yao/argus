@@ -1,11 +1,11 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import { app } from '../../lib/stores.svelte';
-  import { toGcj } from '../../lib/gcj02';
 
   declare const L: any;
 
-  let { map, target = $bindable(null) }: { map: any; target: { lat: number; lon: number; alt: number } | null } = $props();
+  type CoordFn = (lat: number, lon: number) => [number, number];
+  let { map, target = $bindable(null), coord }: { map: any; target: { lat: number; lon: number; alt: number } | null; coord: CoordFn } = $props();
 
   let guidedMarker: any = null;
   let guidedLine: any = null;
@@ -23,12 +23,12 @@
     const dlon = (target.lon - app.drone.lon) * 111320 * Math.cos(app.drone.lat * Math.PI / 180);
     const dist = Math.sqrt(dlat * dlat + dlon * dlon);
     if (dist < 5) { target = null; return; }
-    const [glat, glon] = toGcj(target.lat, target.lon);
+    const [glat, glon] = coord(target.lat, target.lon);
     guidedMarker = L.circleMarker([glat, glon], {
       radius: 12, color: '#ffa726', fillColor: '#ffa726', fillOpacity: 0.2,
       weight: 2.5, dashArray: '6,4', className: 'guided-pulse',
     }).addTo(map);
-    const [dglat, dglon] = toGcj(app.drone.lat, app.drone.lon);
+    const [dglat, dglon] = coord(app.drone.lat, app.drone.lon);
     guidedLine = L.polyline([[dglat, dglon], [glat, glon]], {
       color: '#ffa726', weight: 2, opacity: 0.6, dashArray: '6,6',
     }).addTo(map);

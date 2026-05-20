@@ -1,11 +1,11 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import { app } from '../../lib/stores.svelte';
-  import { toGcj } from '../../lib/gcj02';
 
   declare const L: any;
 
-  let { map, follow, trail }: { map: any; follow: boolean; trail: [number, number][] } = $props();
+  type CoordFn = (lat: number, lon: number) => [number, number];
+  let { map, follow, trail, coord }: { map: any; follow: boolean; trail: [number, number][]; coord: CoordFn } = $props();
 
   let droneMarker: any = null;
   let homeMarker: any = null;
@@ -20,7 +20,7 @@
     if (!app.drone.connected) return;
     const lat = app.drone.lat, lon = app.drone.lon;
     if (Math.abs(lat) < 0.001) return;
-    const [glat, glon] = toGcj(lat, lon);
+    const [glat, glon] = coord(lat, lon);
 
     if (!droneMarker) {
       const icon = L.divIcon({
@@ -60,14 +60,14 @@
 
     if (homeLine) { map.removeLayer(homeLine); homeLine = null; }
     if (app.drone.home_lat !== 0 && app.drone.dist_home > 5) {
-      const [hlat, hlon] = toGcj(app.drone.home_lat, app.drone.home_lon);
+      const [hlat, hlon] = coord(app.drone.home_lat, app.drone.home_lon);
       homeLine = L.polyline([[glat, glon], [hlat, hlon]], {
         color: '#ffa726', weight: 1.5, opacity: 0.5, dashArray: '6,8',
       }).addTo(map);
     }
 
     if (app.drone.home_lat !== 0 && !homeMarker) {
-      const [hlat, hlon] = toGcj(app.drone.home_lat, app.drone.home_lon);
+      const [hlat, hlon] = coord(app.drone.home_lat, app.drone.home_lon);
       const homeIcon = L.divIcon({
         className: '',
         html: '<div style="width:26px;height:26px;border-radius:50%;background:#4caf50;color:white;text-align:center;line-height:26px;font-size:14px;font-weight:bold;border:2px solid white;box-shadow:0 0 6px rgba(0,0,0,0.5)">H</div>',
@@ -94,7 +94,7 @@
     const safeSeconds = Math.max(0, d.bat_time - 60);
     const radius = safeSeconds * speed * 0.5;
     if (radius < 10) return;
-    const [hlat, hlon] = toGcj(d.home_lat, d.home_lon);
+    const [hlat, hlon] = coord(d.home_lat, d.home_lon);
     const ratio = d.dist_home / Math.max(radius, 1);
     const color = ratio > 0.9 ? '#ef4444' : ratio > 0.7 ? '#eab308' : '#22c55e';
     rangeRing = L.circle([hlat, hlon], {
