@@ -99,7 +99,43 @@ export interface Param {
   index: number;
 }
 
-export type WSMessage = DroneState | DroneEvent | ConnectResult;
+export interface ParamBatchMsg {
+  type: 'param_batch';
+  params: { type: string; name: string; value: number; ptype: number; index: number; total: number; received: number }[];
+}
+
+export interface ParamsCompleteMsg {
+  type: 'params_complete';
+  count: number;
+}
+
+export interface MissionDownloadedMsg {
+  type: 'mission_downloaded';
+  waypoints: Waypoint[];
+}
+
+export interface LogListMsg {
+  type: 'log_list';
+  logs: { id: number; size: number; time_utc: number }[];
+}
+
+export interface LogProgressMsg {
+  type: 'log_progress';
+  received: number;
+  total: number;
+}
+
+export interface LogCompleteMsg {
+  type: 'log_complete';
+  id: number;
+  data: string;
+  size: number;
+}
+
+export type WSMessage = DroneState | DroneEvent | ConnectResult
+  | ParamBatchMsg | ParamsCompleteMsg
+  | MissionDownloadedMsg
+  | LogListMsg | LogProgressMsg | LogCompleteMsg;
 
 export const defaultState: DroneState = {
   type: 'state',

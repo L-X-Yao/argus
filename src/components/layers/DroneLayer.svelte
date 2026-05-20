@@ -1,0 +1,110 @@
+<script lang="ts">
+  import { onDestroy } from 'svelte';
+  import { app } from '../../lib/stores.svelte';
+  import { toGcj } from '../../lib/gcj02';
+
+  declare const L: any;
+
+  let { map, follow, trail }: { map: any; follow: boolean; trail: [number, number][] } = $props();
+
+  let droneMarker: any = null;
+  let homeMarker: any = null;
+  let trailLine: any = null;
+  let velocityLine: any = null;
+  let homeLine: any = null;
+  let rangeRing: any = null;
+  let prevLat = 0;
+  let prevLon = 0;
+
+  $effect(() => {
+    if (!app.drone.connected) return;
+    const lat = app.drone.lat, lon = app.drone.lon;
+    if (Math.abs(lat) < 0.001) return;
+    const [glat, glon] = toGcj(lat, lon);
+
+    if (!droneMarker) {
+      const icon = L.divIcon({
+        className: 'drone-icon',
+        html: `<div class="drone-arrow" style="transform:rotate(${app.drone.yaw}deg)"><svg viewBox="-12 -12 24 24" width="28" height="28"><polygon points="0,-10 -7,8 0,4 7,8" fill="#4fc3f7" stroke="white" stroke-width="1"/></svg></div>`,
+        iconSize: [28, 28], iconAnchor: [14, 14],
+      });
+      droneMarker = L.marker([glat, glon], { icon, zIndexOffset: 1000 }).addTo(map);
+      droneMarker.on('click', () => {
+        const d = app.drone;
+        const coordStr = `${d.lat.toFixed(6)}, ${d.lon.toFixed(6)}`;
+        const content = `<div style="font-size:12px;min-width:160px">
+          <b>${d.mode}</b> ${d.armed ? '<span style="color:#f44336">已解锁</span>' : '已锁定'}<br>
+          <span style="color:#888;cursor:pointer;text-decoration:underline dotted" onclick="navigator.clipboard.writeText('${coordStr}')" title="点击复制">${coordStr}</span><br>
+          高度: <b>${d.alt_rel.toFixed(1)}m</b> (海拔 ${d.alt_msl.toFixed(0)}m)<br>
+          速度: <b>${d.gs.toFixed(1)} m/s</b> 航向 ${d.hdg.toFixed(0)}°<br>
+          距起飞点: <b>${d.dist_home.toFixed(0)}m</b>
+        </div>`;
+        L.popup({ closeButton: true }).setLatLng([glat, glon]).setContent(content).openOn(map);
+      });
+    } else {
+      droneMarker.setLatLng([glat, glon]);
+      const el = droneMarker.getElement();
+      if (el) { const a = el.querySelector('.drone-arrow'); if (a) a.style.transform = `rotate(${app.drone.yaw}deg)`; }
+    }
+
+    if (velocityLine) { map.removeLayer(velocityLine); velocityLine = null; }
+    if (app.drone.gs > 0.5) {
+      const hdgRad = app.drone.hdg * Math.PI / 180;
+      const scale = Math.min(app.drone.gs * 8, 200);
+      const endLat = glat + Math.cos(hdgRad) * scale / 111320;
+      const endLon = glon + Math.sin(hdgRad) * scale / (111320 * Math.cos(glat * Math.PI / 180));
+      velocityLine = L.polyline([[glat, glon], [endLat, endLon]], {
+        color: '#69f0ae', weight: 2, opacity: 0.6, dashArray: '4,6',
+      }).addTo(map);
+    }
+
+    if (homeLine) { map.removeLayer(homeLine); homeLine = null; }
+    if (app.drone.home_lat !== 0 && app.drone.dist_home > 5) {
+      const [hlat, hlon] = toGcj(app.drone.home_lat, app.drone.home_lon);
+      homeLine = L.polyline([[glat, glon], [hlat, hlon]], {
+        color: '#ffa726', weight: 1.5, opacity: 0.5, dashArray: '6,8',
+      }).addTo(map);
+    }
+
+    if (app.drone.home_lat !== 0 && !homeMarker) {
+      const [hlat, hlon] = toGcj(app.drone.home_lat, app.drone.home_lon);
+      const homeIcon = L.divIcon({
+        className: '',
+        html: '<div style="width:26px;height:26px;border-radius:50%;background:#4caf50;color:white;text-align:center;line-height:26px;font-size:14px;font-weight:bold;border:2px solid white;box-shadow:0 0 6px rgba(0,0,0,0.5)">H</div>',
+        iconSize: [26, 26], iconAnchor: [13, 13],
+      });
+      homeMarker = L.marker([hlat, hlon], { icon: homeIcon, zIndexOffset: 500 }).addTo(map);
+    }
+
+    if (Math.abs(lat - prevLat) > 0.000001 || Math.abs(lon - prevLon) > 0.000001) {
+      trail.push([glat, glon]);
+      if (trail.length > 2000) trail.splice(0, trail.length - 1500);
+      if (trailLine) map.removeLayer(trailLine);
+      trailLine = L.polyline(trail, { color: '#4fc3f7', weight: 2, opacity: 0.7 }).addTo(map);
+      prevLat = lat; prevLon = lon;
+    }
+    if (follow) map.setView([glat, glon], map.getZoom());
+  });
+
+  $effect(() => {
+    if (rangeRing) { map.removeLayer(rangeRing); rangeRing = null; }
+    const d = app.drone;
+    if (!d.connected || !d.armed || d.home_lat === 0 || d.bat_time <= 0) return;
+    const speed = Math.max(d.gs, 3);
+    const safeSeconds = Math.max(0, d.bat_time - 60);
+    const radius = safeSeconds * speed * 0.5;
+    if (radius < 10) return;
+    const [hlat, hlon] = toGcj(d.home_lat, d.home_lon);
+    const ratio = d.dist_home / Math.max(radius, 1);
+    const color = ratio > 0.9 ? '#ef4444' : ratio > 0.7 ? '#eab308' : '#22c55e';
+    rangeRing = L.circle([hlat, hlon], {
+      radius, color, fill: true, fillColor: color, fillOpacity: 0.06,
+      dashArray: '8,6', weight: 1.5,
+    }).addTo(map);
+  });
+
+  onDestroy(() => {
+    [droneMarker, homeMarker, trailLine, velocityLine, homeLine, rangeRing]
+      .filter(Boolean).forEach(l => map.removeLayer(l));
+  });
+</script>

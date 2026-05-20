@@ -1,4 +1,4 @@
-import type { WSMessage, DroneState, DroneEvent } from './types';
+import type { WSMessage } from './types';
 import { app, updateState, addEvent, setWsConnected, addToast, loadDownloadedMission } from './stores.svelte';
 import { handleParamBatch, handleParamsComplete } from './paramStore.svelte';
 import { setLogList, completeDownload, updateDownloadProgress } from './logStore.svelte';
@@ -19,47 +19,54 @@ export function connectWs(): void {
 
   ws.onmessage = (ev) => {
     try {
-      const msg: WSMessage = JSON.parse(ev.data);
-      if (msg.type === 'state') updateState(msg as DroneState);
-      else if (msg.type === 'event') {
-        const ev = msg as DroneEvent;
-        addEvent(ev);
-        if (ev.text.includes('失控') || ev.text.includes('碰撞') || ev.text.includes('紧急'))
-          addToast(ev.text, 'error', 8000);
-        else if (ev.text.includes('已解锁'))
-          addToast('飞控已解锁', 'warn', 5000);
-        else if (ev.text.includes('已锁定') && !ev.text.includes('发送'))
-          addToast('飞控已锁定', 'success', 4000);
-        else if (ev.text.includes('任务确认') || ev.text.includes('围栏确认')) {
-          addToast(ev.text, ev.text.includes('成功') ? 'success' : 'error');
-          if (ev.text.includes('围栏确认') && ev.text.includes('成功'))
-            app.fenceUploaded = true;
-        }
-        else if (ev.text.includes('已连接'))
-          addToast(ev.text, 'success');
-        else if (ev.text.includes('已断开'))
-          addToast('已断开连接', 'info');
-        else if (ev.text.includes('低电量') || ev.text.includes('电量极低'))
-          addToast(ev.text, 'error', 8000);
-        else if (ev.text.includes('指令应答') && ev.text.includes('失败'))
-          addToast(ev.text, 'error', 5000);
-      }
-      else if (msg.type === 'param_batch') handleParamBatch(msg.params);
-      else if (msg.type === 'params_complete') handleParamsComplete();
-      else if (msg.type === 'mission_downloaded') {
-        loadDownloadedMission(msg.waypoints);
-        addToast('已下载 ' + msg.waypoints.length + ' 个航点', 'success');
-      }
-      else if (msg.type === 'log_list') {
-        setLogList(msg.logs);
-        addToast('获取到 ' + msg.logs.length + ' 条机载日志', 'success');
-      }
-      else if (msg.type === 'log_progress') {
-        updateDownloadProgress(msg.received, msg.total);
-      }
-      else if (msg.type === 'log_complete') {
-        completeDownload(msg.id, msg.data, msg.size);
-        addToast('日志 #' + msg.id + ' 下载完成', 'success');
+      const msg = JSON.parse(ev.data) as WSMessage;
+      switch (msg.type) {
+        case 'state':
+          updateState(msg);
+          break;
+        case 'event':
+          addEvent(msg);
+          if (msg.text.includes('失控') || msg.text.includes('碰撞') || msg.text.includes('紧急'))
+            addToast(msg.text, 'error', 8000);
+          else if (msg.text.includes('已解锁'))
+            addToast('飞控已解锁', 'warn', 5000);
+          else if (msg.text.includes('已锁定') && !msg.text.includes('发送'))
+            addToast('飞控已锁定', 'success', 4000);
+          else if (msg.text.includes('任务确认') || msg.text.includes('围栏确认')) {
+            addToast(msg.text, msg.text.includes('成功') ? 'success' : 'error');
+            if (msg.text.includes('围栏确认') && msg.text.includes('成功'))
+              app.fenceUploaded = true;
+          }
+          else if (msg.text.includes('已连接'))
+            addToast(msg.text, 'success');
+          else if (msg.text.includes('已断开'))
+            addToast('已断开连接', 'info');
+          else if (msg.text.includes('低电量') || msg.text.includes('电量极低'))
+            addToast(msg.text, 'error', 8000);
+          else if (msg.text.includes('指令应答') && msg.text.includes('失败'))
+            addToast(msg.text, 'error', 5000);
+          break;
+        case 'param_batch':
+          handleParamBatch(msg.params);
+          break;
+        case 'params_complete':
+          handleParamsComplete();
+          break;
+        case 'mission_downloaded':
+          loadDownloadedMission(msg.waypoints);
+          addToast('已下载 ' + msg.waypoints.length + ' 个航点', 'success');
+          break;
+        case 'log_list':
+          setLogList(msg.logs);
+          addToast('获取到 ' + msg.logs.length + ' 条机载日志', 'success');
+          break;
+        case 'log_progress':
+          updateDownloadProgress(msg.received, msg.total);
+          break;
+        case 'log_complete':
+          completeDownload(msg.id, msg.data, msg.size);
+          addToast('日志 #' + msg.id + ' 下载完成', 'success');
+          break;
       }
     } catch {}
   };

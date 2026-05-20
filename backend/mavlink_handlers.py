@@ -288,6 +288,8 @@ def handle_mission_item_int(p: bytes, pl: int, link: DroneLink) -> None:
             elif item['cmd'] == 181 and wps:
                 wps[-1]['drop'] = True
         link._dl_messages.append({'type': 'mission_downloaded', 'waypoints': wps})
+        if len(link._dl_messages) > 500:
+            link._dl_messages = link._dl_messages[-200:]
         link.add_event('任务下载完成: %d 航点' % len(wps))
         from pllink_proto import bm
         link.send(bm(47, struct.pack('<BBB', link.sysid, 1, 0), link.sq, 153))
@@ -356,6 +358,8 @@ def handle_log_data(p: bytes, pl: int, link: DroneLink) -> None:
             'received': end,
             'total': link._log_download_size,
         })
+        if len(link._log_messages) > 500:
+            link._log_messages = link._log_messages[-200:]
     if end >= link._log_download_size:
         import base64
         b64 = base64.b64encode(bytes(link._log_download_data)).decode('ascii')

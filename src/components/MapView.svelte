@@ -1,11 +1,17 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { app, addWaypoint, addToast, saveWaypoints, showConfirm } from '../lib/stores.svelte';
+  import { app, addWaypoint, addToast, showConfirm } from '../lib/stores.svelte';
   import { sendCommand } from '../lib/ws';
-  import { toGcj } from '../lib/gcj02';
+  import { toGcj, toWgs } from '../lib/gcj02';
   import { API_BASE } from '../lib/backend';
   import MapControls from './MapControls.svelte';
   import HudOverlay from './HudOverlay.svelte';
+  import DroneLayer from './layers/DroneLayer.svelte';
+  import WaypointLayer from './layers/WaypointLayer.svelte';
+  import GuidedLayer from './layers/GuidedLayer.svelte';
+  import FenceLayer from './layers/FenceLayer.svelte';
+  import SurveyLayer from './layers/SurveyLayer.svelte';
+  import ReplayLayer from './layers/ReplayLayer.svelte';
   import { Layers, Ruler, Navigation, Grid3x3, ShieldAlert, Download, Crosshair, Home, Maximize2 } from '@lucide/svelte';
 
   declare const L: any;
@@ -13,47 +19,24 @@
   let { showHud = true }: { showHud?: boolean } = $props();
 
   let mapEl: HTMLDivElement;
-  let map: any = null;
-  let droneMarker: any = null;
-  let homeMarker: any = null;
-  let trail: [number, number][] = [];
-  let trailLine: any = null;
+  let map = $state<any>(null);
   let follow = $state(true);
   let isSat = $state(true);
   let measuring = $state(false);
   let mouseCoord = $state('');
-  let prevLat = 0;
-  let prevLon = 0;
-  let wpMarkers: any[] = [];
-  let wpLine: any = null;
-  let geoCircle: any = null;
+  let guidedTarget = $state<{ lat: number; lon: number; alt: number } | null>(null);
+  let droneTrail: [number, number][] = $state([]);
+
   let satLayer: any = null;
   let vecLayer: any = null;
-  let activeWpMarker: any = null;
-  let velocityLine: any = null;
+  let labelLayer: any = null;
   let measurePts: any[] = [];
   let measureLine: any = null;
   let measureLabel: any = null;
-  let wpPopup: any = null;
-  let replayMarker: any = null;
-  let replayTrail: [number, number][] = [];
-  let replayTrailLine: any = null;
-  let surveyPolyLayer: any = null;
-  let surveyVertMarkers: any[] = [];
-  let fencePolyLayer: any = null;
-  let fenceVertMarkers: any[] = [];
-  let rangeRing: any = null;
-  let homeLine: any = null;
-  let wpDistLabels: any[] = [];
-  let guidedMarker: any = null;
-  let guidedLine: any = null;
-  let guidedLabel: any = null;
-  let guidedTarget: { lat: number; lon: number; alt: number } | null = null;
 
   const SAT_URL = `${API_BASE}/api/tile/6/{z}/{x}/{y}`;
   const LABEL_URL = `${API_BASE}/api/tile/8/{z}/{x}/{y}`;
   const VEC_URL = `${API_BASE}/api/tile/7/{z}/{x}/{y}`;
-  let labelLayer: any = null;
 
   onMount(() => {
     map = L.map(mapEl, { zoomControl: true, attributionControl: false }).setView([34.258, 108.942], 15);
@@ -63,41 +46,35 @@
     L.control.scale({ metric: true, imperial: false, position: 'bottomright' }).addTo(map);
     map.on('click', onMapClick);
     map.on('contextmenu', onRightClick);
-    map.on('mousemove', onMouseMove);
+    map.on('mousemove', (e: any) => {
+      const [wlat, wlon] = toWgs(e.latlng.lat, e.latlng.lng);
+      mouseCoord = `${wlat.toFixed(6)}, ${wlon.toFixed(6)}`;
+    });
     window.addEventListener('keydown', onKeyDown);
     setTimeout(() => map.invalidateSize(), 100);
   });
 
-  function onMouseMove(e: any) {
-    const ll = e.latlng;
-    const [wlat, wlon] = toWgsFromGcj(ll.lat, ll.lng);
-    mouseCoord = `${wlat.toFixed(6)}, ${wlon.toFixed(6)}`;
-  }
-
   function onMapClick(e: any) {
     const ll = e.latlng;
-    if (measuring) {
-      addMeasurePoint(ll);
-      return;
-    }
+    if (measuring) { addMeasurePoint(ll); return; }
     if (app.drawingPolygon) {
-      const [wlat, wlon] = toWgsFromGcj(ll.lat, ll.lng);
+      const [wlat, wlon] = toWgs(ll.lat, ll.lng);
       app.surveyPolygon = [...app.surveyPolygon, { lat: wlat, lon: wlon }];
       return;
     }
     if (app.drawingFence) {
-      const [wlat, wlon] = toWgsFromGcj(ll.lat, ll.lng);
+      const [wlat, wlon] = toWgs(ll.lat, ll.lng);
       app.fencePolygon = [...app.fencePolygon, { lat: wlat, lon: wlon }];
       return;
     }
     if (app.guidedMode && app.drone.connected && app.drone.armed) {
-      const [wlat, wlon] = toWgsFromGcj(ll.lat, ll.lng);
+      const [wlat, wlon] = toWgs(ll.lat, ll.lng);
       sendCommand('guided_goto', undefined, { lat: wlat, lon: wlon, alt: app.defaultAlt });
       guidedTarget = { lat: wlat, lon: wlon, alt: app.defaultAlt };
       addToast(`引导飞往 ${wlat.toFixed(5)}, ${wlon.toFixed(5)}`, 'info');
       return;
     }
-    const [wlat, wlon] = toWgsFromGcj(ll.lat, ll.lng);
+    const [wlat, wlon] = toWgs(ll.lat, ll.lng);
     addWaypoint({ lat: wlat, lon: wlon, alt: app.defaultAlt, drop: false, delay: 0, speed: 0, type: 'wp', loiter_param: 0 });
   }
 
@@ -105,7 +82,7 @@
     e.originalEvent.preventDefault();
     if (!app.drone.connected || !app.drone.armed) return;
     const ll = e.latlng;
-    const [wlat, wlon] = toWgsFromGcj(ll.lat, ll.lng);
+    const [wlat, wlon] = toWgs(ll.lat, ll.lng);
     showConfirm(`引导飞往此点？\n${wlat.toFixed(5)}, ${wlon.toFixed(5)}\n高度: ${app.defaultAlt}m`).then(ok => {
       if (ok) {
         sendCommand('guided_goto', undefined, { lat: wlat, lon: wlon, alt: app.defaultAlt });
@@ -115,9 +92,17 @@
     });
   }
 
-  function toWgsFromGcj(glat: number, glon: number): [number, number] {
-    const g = toGcj(glat, glon);
-    return [glat * 2 - g[0], glon * 2 - g[1]];
+  function onKeyDown(e: KeyboardEvent) {
+    if (e.key === 'Escape') {
+      if (measuring) clearMeasure();
+      if (app.guidedMode) { app.guidedMode = false; guidedTarget = null; }
+      if (app.drawingPolygon) { app.drawingPolygon = false; app.surveyPolygon = []; }
+      if (app.drawingFence) { app.drawingFence = false; app.fencePolygon = []; }
+      map?.closePopup();
+    }
+    if (e.key === 'g' && (e.target as HTMLElement).tagName !== 'INPUT') {
+      if (app.drone.connected && app.drone.armed) app.guidedMode = !app.guidedMode;
+    }
   }
 
   function addMeasurePoint(ll: any) {
@@ -126,11 +111,8 @@
     if (measurePts.length >= 2) {
       const a = measurePts[measurePts.length - 2].ll;
       const b = measurePts[measurePts.length - 1].ll;
-      const dist = map.distance(a, b);
       let total = 0;
-      for (let i = 1; i < measurePts.length; i++) {
-        total += map.distance(measurePts[i - 1].ll, measurePts[i].ll);
-      }
+      for (let i = 1; i < measurePts.length; i++) total += map.distance(measurePts[i - 1].ll, measurePts[i].ll);
       const pts = measurePts.map((p: any) => [p.ll.lat, p.ll.lng]);
       if (measureLine) map.removeLayer(measureLine);
       measureLine = L.polyline(pts, { color: '#ff5252', weight: 2, dashArray: '4,4' }).addTo(map);
@@ -155,47 +137,7 @@
     if (measureLabel) { map.removeLayer(measureLabel); measureLabel = null; }
   }
 
-  function toggleMeasure() {
-    if (measuring) {
-      clearMeasure();
-    } else {
-      clearMeasure();
-      measuring = true;
-    }
-  }
-
-  function exportTrack() {
-    if (!trail.length) return;
-    const coords = trail.map(([glat, glon]) => {
-      const [wlat, wlon] = toWgsFromGcj(glat, glon);
-      return `${wlon},${wlat},0`;
-    }).join('\n');
-    const kml = `<?xml version="1.0" encoding="UTF-8"?>
-<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>飞行轨迹</name>
-<Style id="track"><LineStyle><color>ff4fc3f7</color><width>2</width></LineStyle></Style>
-<Placemark><name>轨迹</name><styleUrl>#track</styleUrl>
-<LineString><coordinates>${coords}</coordinates></LineString>
-</Placemark></Document></kml>`;
-    const blob = new Blob([kml], { type: 'application/vnd.google-earth.kml+xml' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = '轨迹_' + new Date().toISOString().slice(0, 10) + '.kml';
-    a.click();
-    URL.revokeObjectURL(a.href);
-  }
-
-  function onKeyDown(e: KeyboardEvent) {
-    if (e.key === 'Escape') {
-      if (measuring) clearMeasure();
-      if (app.guidedMode) { app.guidedMode = false; guidedTarget = null; }
-      if (app.drawingPolygon) { app.drawingPolygon = false; app.surveyPolygon = []; }
-      if (app.drawingFence) { app.drawingFence = false; app.fencePolygon = []; }
-      if (wpPopup) { map.closePopup(wpPopup); wpPopup = null; }
-    }
-    if (e.key === 'g' && (e.target as HTMLElement).tagName !== 'INPUT') {
-      if (app.drone.connected && app.drone.armed) app.guidedMode = !app.guidedMode;
-    }
-  }
+  function toggleMeasure() { if (measuring) clearMeasure(); else { clearMeasure(); measuring = true; } }
 
   function toggleMapType() {
     isSat = !isSat;
@@ -211,344 +153,49 @@
   }
 
   function toggleExpand() { app.mapExpanded = !app.mapExpanded; setTimeout(() => map?.invalidateSize(), 100); }
+
   function fitRoute() {
     const pts = app.waypoints.map(w => toGcj(w.lat, w.lon));
     if (pts.length) map.fitBounds(L.latLngBounds(pts), { padding: [40, 40] });
   }
+
   function centerHome() {
     if (app.drone.home_lat) map.setView(toGcj(app.drone.home_lat, app.drone.home_lon), 16);
   }
 
-  $effect(() => {
-    if (!map || !app.drone.connected) return;
-    const lat = app.drone.lat, lon = app.drone.lon;
-    if (Math.abs(lat) < 0.001) return;
-    const [glat, glon] = toGcj(lat, lon);
-
-    if (!droneMarker) {
-      const icon = L.divIcon({
-        className: 'drone-icon',
-        html: `<div class="drone-arrow" style="transform:rotate(${app.drone.yaw}deg)"><svg viewBox="-12 -12 24 24" width="28" height="28"><polygon points="0,-10 -7,8 0,4 7,8" fill="#4fc3f7" stroke="white" stroke-width="1"/></svg></div>`,
-        iconSize: [28, 28], iconAnchor: [14, 14],
-      });
-      droneMarker = L.marker([glat, glon], { icon, zIndexOffset: 1000 }).addTo(map);
-      droneMarker.on('click', () => {
-        const d = app.drone;
-        const coordStr = `${d.lat.toFixed(6)}, ${d.lon.toFixed(6)}`;
-        const content = `<div style="font-size:12px;min-width:160px">
-          <b>${d.mode}</b> ${d.armed ? '<span style="color:#f44336">已解锁</span>' : '已锁定'}<br>
-          <span style="color:#888;cursor:pointer;text-decoration:underline dotted" onclick="navigator.clipboard.writeText('${coordStr}')" title="点击复制">${coordStr}</span><br>
-          高度: <b>${d.alt_rel.toFixed(1)}m</b> (海拔 ${d.alt_msl.toFixed(0)}m)<br>
-          速度: <b>${d.gs.toFixed(1)} m/s</b> 航向 ${d.hdg.toFixed(0)}°<br>
-          距起飞点: <b>${d.dist_home.toFixed(0)}m</b>
-        </div>`;
-        L.popup({ closeButton: true }).setLatLng([glat, glon]).setContent(content).openOn(map);
-      });
-    } else {
-      droneMarker.setLatLng([glat, glon]);
-      const el = droneMarker.getElement();
-      if (el) { const a = el.querySelector('.drone-arrow'); if (a) a.style.transform = `rotate(${app.drone.yaw}deg)`; }
-    }
-
-    if (velocityLine) { map.removeLayer(velocityLine); velocityLine = null; }
-    if (app.drone.gs > 0.5) {
-      const hdgRad = app.drone.hdg * Math.PI / 180;
-      const scale = Math.min(app.drone.gs * 8, 200);
-      const endLat = glat + Math.cos(hdgRad) * scale / 111320;
-      const endLon = glon + Math.sin(hdgRad) * scale / (111320 * Math.cos(glat * Math.PI / 180));
-      velocityLine = L.polyline([[glat, glon], [endLat, endLon]], {
-        color: '#69f0ae', weight: 2, opacity: 0.6, dashArray: '4,6',
-      }).addTo(map);
-    }
-
-    if (homeLine) { map.removeLayer(homeLine); homeLine = null; }
-    if (app.drone.home_lat !== 0 && app.drone.dist_home > 5) {
-      const [hlat, hlon] = toGcj(app.drone.home_lat, app.drone.home_lon);
-      homeLine = L.polyline([[glat, glon], [hlat, hlon]], {
-        color: '#ffa726', weight: 1.5, opacity: 0.5, dashArray: '6,8',
-      }).addTo(map);
-    }
-
-    if (app.drone.home_lat !== 0 && !homeMarker) {
-      const [hlat, hlon] = toGcj(app.drone.home_lat, app.drone.home_lon);
-      const homeIcon = L.divIcon({
-        className: '',
-        html: '<div style="width:26px;height:26px;border-radius:50%;background:#4caf50;color:white;text-align:center;line-height:26px;font-size:14px;font-weight:bold;border:2px solid white;box-shadow:0 0 6px rgba(0,0,0,0.5)">H</div>',
-        iconSize: [26, 26], iconAnchor: [13, 13],
-      });
-      homeMarker = L.marker([hlat, hlon], { icon: homeIcon, zIndexOffset: 500 }).addTo(map);
-    }
-
-    if (Math.abs(lat - prevLat) > 0.000001 || Math.abs(lon - prevLon) > 0.000001) {
-      trail.push([glat, glon]);
-      if (trail.length > 2000) trail.splice(0, trail.length - 1500);
-      if (trailLine) map.removeLayer(trailLine);
-      trailLine = L.polyline(trail, { color: '#4fc3f7', weight: 2, opacity: 0.7 }).addTo(map);
-      prevLat = lat; prevLon = lon;
-    }
-    if (follow) map.setView([glat, glon], map.getZoom());
-  });
-
-  // Active waypoint indicator
-  $effect(() => {
-    if (!map) return;
-    if (activeWpMarker) { map.removeLayer(activeWpMarker); activeWpMarker = null; }
-    const seq = app.drone.wp;
-    if (seq >= 2 && app.waypoints.length > 0) {
-      const wpIdx = seq - 2;
-      if (wpIdx >= 0 && wpIdx < app.waypoints.length) {
-        const wp = app.waypoints[wpIdx];
-        const [glat, glon] = toGcj(wp.lat, wp.lon);
-        activeWpMarker = L.circleMarker([glat, glon], {
-          radius: 16, color: '#ffa726', fillColor: 'transparent', weight: 3, dashArray: '4,4',
-        }).addTo(map);
-      }
-    }
-  });
-
-  $effect(() => {
-    if (!map) return;
-    wpMarkers.forEach(m => map.removeLayer(m));
-    wpMarkers = [];
-    if (wpLine) { map.removeLayer(wpLine); wpLine = null; }
-    const pts: [number, number][] = [];
-    app.waypoints.forEach((wp, i) => {
-      const [glat, glon] = toGcj(wp.lat, wp.lon);
-      pts.push([glat, glon]);
-      const isLoiter = wp.type === 'loiter_turns' || wp.type === 'loiter_time';
-      const color = wp.drop ? '#e65100' : isLoiter ? '#7e57c2' : '#1565c0';
-      const border = isLoiter ? 'border:2px dashed rgba(255,255,255,0.8)' : 'border:2px solid white';
-      const badge = wp.drop ? '<div style="position:absolute;top:-5px;right:-5px;width:8px;height:8px;border-radius:50%;background:#ff5722;border:1px solid white"></div>' : '';
-      const sub = isLoiter ? `<div style="position:absolute;bottom:-10px;left:50%;transform:translateX(-50%);font-size:8px;color:${color};white-space:nowrap;font-weight:600">${wp.type === 'loiter_turns' ? wp.loiter_param + '圈' : wp.loiter_param + 's'}</div>` : wp.delay ? `<div style="position:absolute;bottom:-10px;left:50%;transform:translateX(-50%);font-size:8px;color:#888;white-space:nowrap">+${wp.delay}s</div>` : '';
-      const icon = L.divIcon({
-        className: '',
-        html: `<div style="position:relative;width:22px;height:22px;border-radius:50%;background:${color};color:white;text-align:center;line-height:22px;font-size:11px;font-weight:bold;${border};box-shadow:0 0 4px rgba(0,0,0,0.5)">${i + 1}${badge}${sub}</div>`,
-        iconSize: [22, 22], iconAnchor: [11, 11],
-      });
-      const m = L.marker([glat, glon], { icon, draggable: true }).addTo(map);
-      m.on('dragend', () => {
-        const ll = m.getLatLng();
-        const [wlat, wlon] = toWgsFromGcj(ll.lat, ll.lng);
-        app.waypoints[i].lat = wlat;
-        app.waypoints[i].lon = wlon;
-        saveWaypoints();
-      });
-      m.on('click', (e: any) => {
-        e.originalEvent?.stopPropagation();
-        let segInfo = '';
-        if (i > 0) {
-          const prev = app.waypoints[i - 1];
-          const dlat2 = (wp.lat - prev.lat) * 111320, dlon2 = (wp.lon - prev.lon) * 111320 * Math.cos(wp.lat * Math.PI / 180);
-          const seg = Math.sqrt(dlat2 * dlat2 + dlon2 * dlon2);
-          segInfo = `<br>距上一点: <b>${seg < 1000 ? seg.toFixed(0) + 'm' : (seg/1000).toFixed(1) + 'km'}</b>`;
-        }
-        const content = `<div style="font-size:12px;min-width:140px">
-          <b>航点 ${i + 1}</b> ${wp.drop ? '<span style="color:#e65100">投放</span>' : ''}<br>
-          <span style="color:#888">${wp.lat.toFixed(6)}, ${wp.lon.toFixed(6)}</span><br>
-          高度: <b>${wp.alt}m</b>${wp.speed ? ' · 速度: ' + wp.speed + 'm/s' : ''}
-          ${wp.delay ? '<br>延迟: ' + wp.delay + 's' : ''}${segInfo}
-        </div>`;
-        if (wpPopup) map.closePopup(wpPopup);
-        wpPopup = L.popup({ closeButton: true, className: 'wp-popup' })
-          .setLatLng([glat, glon])
-          .setContent(content)
-          .openOn(map);
-      });
-      wpMarkers.push(m);
-    });
-    if (pts.length > 1) wpLine = L.polyline(pts, { color: '#1565c0', weight: 2, dashArray: '6,4' }).addTo(map);
-
-    wpDistLabels.forEach(l => map.removeLayer(l));
-    wpDistLabels = [];
-    for (let i = 1; i < pts.length; i++) {
-      const [lat1, lon1] = pts[i - 1], [lat2, lon2] = pts[i];
-      const mid = L.latLng((lat1 + lat2) / 2, (lon1 + lon2) / 2);
-      const dist = map.distance(L.latLng(lat1, lon1), L.latLng(lat2, lon2));
-      const txt = dist < 1000 ? `${dist.toFixed(0)}m` : `${(dist / 1000).toFixed(1)}km`;
-      const lbl = L.marker(mid, {
-        icon: L.divIcon({
-          className: '',
-          html: `<div style="background:rgba(21,101,192,0.85);color:white;padding:1px 5px;border-radius:3px;font-size:10px;font-weight:600;white-space:nowrap">${txt}</div>`,
-          iconAnchor: [0, 0],
-        }),
-        interactive: false,
-      }).addTo(map);
-      wpDistLabels.push(lbl);
-    }
-
-    if (geoCircle) { map.removeLayer(geoCircle); geoCircle = null; }
-    if (app.drone.home_lat !== 0 && app.geoRadius > 0) {
-      const [hlat, hlon] = toGcj(app.drone.home_lat, app.drone.home_lon);
-      geoCircle = L.circle([hlat, hlon], { radius: app.geoRadius, color: '#f44336', fill: false, dashArray: '8,4', weight: 1 }).addTo(map);
-    }
-  });
-
-  // RTL range ring — shows safe operating radius based on remaining battery
-  $effect(() => {
-    if (!map) return;
-    if (rangeRing) { map.removeLayer(rangeRing); rangeRing = null; }
-    const d = app.drone;
-    if (!d.connected || !d.armed || d.home_lat === 0 || d.bat_time <= 0) return;
-    const speed = Math.max(d.gs, 3);
-    const safeSeconds = Math.max(0, d.bat_time - 60);
-    const radius = safeSeconds * speed * 0.5;
-    if (radius < 10) return;
-    const [hlat, hlon] = toGcj(d.home_lat, d.home_lon);
-    const ratio = d.dist_home / Math.max(radius, 1);
-    const color = ratio > 0.9 ? '#ef4444' : ratio > 0.7 ? '#eab308' : '#22c55e';
-    rangeRing = L.circle([hlat, hlon], {
-      radius, color, fill: true, fillColor: color, fillOpacity: 0.06,
-      dashArray: '8,6', weight: 1.5,
-    }).addTo(map);
-  });
-
-  // Guided target marker
-  $effect(() => {
-    if (!map) return;
-    if (guidedMarker) { map.removeLayer(guidedMarker); guidedMarker = null; }
-    if (guidedLine) { map.removeLayer(guidedLine); guidedLine = null; }
-    if (guidedLabel) { map.removeLayer(guidedLabel); guidedLabel = null; }
-    if (!guidedTarget || !app.drone.connected || !app.drone.armed) {
-      guidedTarget = null;
-      return;
-    }
-    const dlat = (guidedTarget.lat - app.drone.lat) * 111320;
-    const dlon = (guidedTarget.lon - app.drone.lon) * 111320 * Math.cos(app.drone.lat * Math.PI / 180);
-    const dist = Math.sqrt(dlat * dlat + dlon * dlon);
-    if (dist < 5) { guidedTarget = null; return; }
-    const [glat, glon] = toGcj(guidedTarget.lat, guidedTarget.lon);
-    guidedMarker = L.circleMarker([glat, glon], {
-      radius: 12, color: '#ffa726', fillColor: '#ffa726', fillOpacity: 0.2,
-      weight: 2.5, dashArray: '6,4', className: 'guided-pulse',
-    }).addTo(map);
-    const [dlat2, dlon2] = toGcj(app.drone.lat, app.drone.lon);
-    guidedLine = L.polyline([[dlat2, dlon2], [glat, glon]], {
-      color: '#ffa726', weight: 2, opacity: 0.6, dashArray: '6,6',
-    }).addTo(map);
-    const mid = L.latLng((dlat2 + glat) / 2, (dlon2 + glon) / 2);
-    const txt = dist < 1000 ? `${dist.toFixed(0)}m` : `${(dist / 1000).toFixed(1)}km`;
-    guidedLabel = L.marker(mid, {
-      icon: L.divIcon({
-        className: '',
-        html: `<div style="background:rgba(255,167,38,0.9);color:white;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:600;white-space:nowrap">${txt} · ${guidedTarget.alt}m</div>`,
-        iconAnchor: [0, 0],
-      }),
-      interactive: false,
-    }).addTo(map);
-  });
-
-  // Replay position rendering
-  $effect(() => {
-    if (!map) return;
-    const rp = app.replayPos;
-    if (!rp) {
-      if (replayMarker) { map.removeLayer(replayMarker); replayMarker = null; }
-      if (replayTrailLine) { map.removeLayer(replayTrailLine); replayTrailLine = null; }
-      replayTrail = [];
-      return;
-    }
-    const [glat, glon] = toGcj(rp.lat, rp.lon);
-    if (!replayMarker) {
-      const icon = L.divIcon({
-        className: '',
-        html: `<div class="drone-arrow" style="transform:rotate(${rp.yaw}deg)"><svg viewBox="-12 -12 24 24" width="28" height="28"><polygon points="0,-10 -7,8 0,4 7,8" fill="#ffa726" stroke="white" stroke-width="1"/></svg></div>`,
-        iconSize: [28, 28], iconAnchor: [14, 14],
-      });
-      replayMarker = L.marker([glat, glon], { icon, zIndexOffset: 900 }).addTo(map);
-    } else {
-      replayMarker.setLatLng([glat, glon]);
-      const el = replayMarker.getElement();
-      if (el) { const a = el.querySelector('.drone-arrow'); if (a) a.style.transform = `rotate(${rp.yaw}deg)`; }
-    }
-    replayTrail.push([glat, glon]);
-    if (replayTrail.length > 3000) replayTrail.splice(0, replayTrail.length - 2000);
-    if (replayTrailLine) map.removeLayer(replayTrailLine);
-    replayTrailLine = L.polyline(replayTrail, { color: '#ffa726', weight: 2, opacity: 0.6 }).addTo(map);
-    if (follow) map.setView([glat, glon], map.getZoom());
-  });
-
-  // Survey polygon rendering
-  $effect(() => {
-    if (!map) return;
-    surveyVertMarkers.forEach(m => map.removeLayer(m));
-    surveyVertMarkers = [];
-    if (surveyPolyLayer) { map.removeLayer(surveyPolyLayer); surveyPolyLayer = null; }
-    if (app.surveyPolygon.length === 0) return;
-    const gcjPts = app.surveyPolygon.map(p => toGcj(p.lat, p.lon));
-    if (gcjPts.length >= 3) {
-      surveyPolyLayer = L.polygon(gcjPts, {
-        color: '#ab47bc', fillColor: '#ab47bc', fillOpacity: 0.12, weight: 2, dashArray: '6,4',
-      }).addTo(map);
-    } else if (gcjPts.length >= 2) {
-      surveyPolyLayer = L.polyline(gcjPts, { color: '#ab47bc', weight: 2, dashArray: '6,4' }).addTo(map);
-    }
-    gcjPts.forEach((pt, i) => {
-      const cm = L.circleMarker(pt, {
-        radius: 5, color: '#ab47bc', fillColor: i === 0 ? '#fff' : '#ab47bc', fillOpacity: 1, weight: 2,
-      }).addTo(map);
-      surveyVertMarkers.push(cm);
-    });
-  });
-
-  // Fence polygon rendering
-  $effect(() => {
-    if (!map) return;
-    fenceVertMarkers.forEach(m => map.removeLayer(m));
-    fenceVertMarkers = [];
-    if (fencePolyLayer) { map.removeLayer(fencePolyLayer); fencePolyLayer = null; }
-    if (app.fencePolygon.length === 0) return;
-    const uploaded = app.fenceUploaded;
-    const gcjPts = app.fencePolygon.map(p => toGcj(p.lat, p.lon));
-    if (gcjPts.length >= 3) {
-      fencePolyLayer = L.polygon(gcjPts, {
-        color: '#f44336', fillColor: '#f44336',
-        fillOpacity: uploaded ? 0.15 : 0.06,
-        weight: uploaded ? 2.5 : 2,
-        dashArray: uploaded ? undefined : '6,4',
-      }).addTo(map);
-    } else if (gcjPts.length >= 2) {
-      fencePolyLayer = L.polyline(gcjPts, {
-        color: '#f44336', weight: 2,
-        dashArray: uploaded ? undefined : '6,4',
-      }).addTo(map);
-    }
-    gcjPts.forEach((pt, i) => {
-      const cm = L.circleMarker(pt, {
-        radius: 5, color: '#f44336', fillColor: i === 0 ? '#fff' : '#f44336', fillOpacity: 1, weight: 2,
-      }).addTo(map);
-      fenceVertMarkers.push(cm);
-    });
-  });
-
-  // Focus waypoint from MissionPanel click
-  let focusRing: any = null;
-  $effect(() => {
-    if (!map || app.focusWp < 0 || app.focusWp >= app.waypoints.length) return;
-    const wp = app.waypoints[app.focusWp];
-    const [glat, glon] = toGcj(wp.lat, wp.lon);
-    map.setView([glat, glon], Math.max(map.getZoom(), 16));
-    if (focusRing) map.removeLayer(focusRing);
-    focusRing = L.circleMarker([glat, glon], {
-      radius: 20, color: '#ffa726', fillColor: 'transparent', weight: 3, dashArray: '4,4',
-    }).addTo(map);
-    setTimeout(() => { if (focusRing) { map.removeLayer(focusRing); focusRing = null; } }, 2000);
-    app.focusWp = -1;
-  });
-
-  $effect(() => {
-    if (!map || app.fitRouteFlag <= 0 || app.waypoints.length < 2) return;
-    const pts = app.waypoints.map(w => toGcj(w.lat, w.lon));
-    map.fitBounds(L.latLngBounds(pts), { padding: [40, 40] });
-  });
-
-  function fmtTime(s: number): string {
-    const m = Math.floor(s / 60), sec = s % 60;
-    return `${m}:${sec < 10 ? '0' : ''}${sec}`;
+  function exportTrack() {
+    if (!droneTrail.length) return;
+    const coords = droneTrail.map(([glat, glon]) => {
+      const [wlat, wlon] = toWgs(glat, glon);
+      return `${wlon},${wlat},0`;
+    }).join('\n');
+    const kml = `<?xml version="1.0" encoding="UTF-8"?>
+<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>飞行轨迹</name>
+<Style id="track"><LineStyle><color>ff4fc3f7</color><width>2</width></LineStyle></Style>
+<Placemark><name>轨迹</name><styleUrl>#track</styleUrl>
+<LineString><coordinates>${coords}</coordinates></LineString>
+</Placemark></Document></kml>`;
+    const blob = new Blob([kml], { type: 'application/vnd.google-earth.kml+xml' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = '轨迹_' + new Date().toISOString().slice(0, 10) + '.kml';
+    a.click();
+    URL.revokeObjectURL(a.href);
   }
 </script>
 
 <div class="relative flex-1 min-w-0">
   <div bind:this={mapEl} class="h-full rounded-lg border border-border"></div>
+
+  {#if map}
+    <DroneLayer {map} {follow} trail={droneTrail} />
+    <WaypointLayer {map} />
+    <GuidedLayer {map} bind:target={guidedTarget} />
+    <FenceLayer {map} />
+    <SurveyLayer {map} />
+    <ReplayLayer {map} {follow} />
+  {/if}
+
   <div class="absolute top-2.5 left-2.5 z-[1000] flex gap-1">
     <button class="map-btn" onclick={toggleMapType} title={isSat ? '切换到街道地图' : '切换到卫星地图'}>
       <Layers size={13} />{isSat ? '卫星' : '地图'}
@@ -569,7 +216,7 @@
             onclick={() => app.showFence = !app.showFence} title="电子围栏">
       <ShieldAlert size={13} />围栏
     </button>
-    {#if trail.length > 10}
+    {#if droneTrail.length > 10}
       <button class="map-btn" onclick={exportTrack} title="导出飞行轨迹KML">
         <Download size={13} />轨迹
       </button>
