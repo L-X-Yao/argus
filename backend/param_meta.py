@@ -30,7 +30,7 @@ def get_metadata(vehicle: str) -> dict:
     if cache_path.exists():
         age = time.time() - cache_path.stat().st_mtime
         if age < CACHE_TTL:
-            with open(cache_path) as f:
+            with open(cache_path, encoding='utf-8') as f:
                 data = json.load(f)
             _cache[vehicle] = data
             return data
@@ -40,13 +40,13 @@ def get_metadata(vehicle: str) -> dict:
         raw = urllib.request.urlopen(req, timeout=15).read()
         data = _parse_xml(raw)
         CACHE_DIR.mkdir(exist_ok=True)
-        with open(cache_path, 'w') as f:
+        with open(cache_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, ensure_ascii=False)
         _cache[vehicle] = data
         return data
     except Exception:
         if cache_path.exists():
-            with open(cache_path) as f:
+            with open(cache_path, encoding='utf-8') as f:
                 data = json.load(f)
             _cache[vehicle] = data
             return data
