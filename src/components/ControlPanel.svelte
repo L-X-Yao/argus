@@ -2,7 +2,7 @@
   import { app, showConfirm, showSlide } from '../lib/stores.svelte';
   import { sendCommand } from '../lib/ws';
   import Button from '$lib/components/ui/button/button.svelte';
-  import { Plane, ShieldCheck, Navigation, CircleStop, ArrowDown, CornerDownLeft, Play, Pause, Package } from '@lucide/svelte';
+  import { Plane, ShieldCheck, CircleStop, ArrowDown, CornerDownLeft, Play, Pause, Package } from '@lucide/svelte';
 
   type Phase = 'disarmed' | 'ground' | 'flying' | 'mission' | 'returning';
 

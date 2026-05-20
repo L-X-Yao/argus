@@ -122,6 +122,11 @@
     `速度: ${app.drone.ekf_vel.toFixed(3)}\n水平: ${app.drone.ekf_pos_h.toFixed(3)}\n垂直: ${app.drone.ekf_pos_v.toFixed(3)}\n罗盘: ${app.drone.ekf_compass.toFixed(3)}\n标志: 0x${app.drone.ekf_flags.toString(16).toUpperCase()}`
   );
 
+  function fmtBatTime(s: number): string {
+    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+    return h > 0 ? `~${h}时${m}分` : `~${m}分`;
+  }
+
   function downloadLog() { window.open(apiUrl('/api/log'), '_blank'); }
 </script>
 
@@ -211,7 +216,7 @@
                   fill="{app.drone.remaining < 20 ? '#ef4444' : app.drone.remaining < 40 ? '#eab308' : '#22c55e'}"/>
           {/if}
         </svg>
-        {app.drone.voltage.toFixed(1)}V{app.drone.remaining >= 0 ? ' ' + app.drone.remaining + '%' : ''}{app.drone.current > 0.1 ? ' ' + app.drone.current.toFixed(1) + 'A' : ''}{app.drone.bat_time > 0 ? ' ~' + Math.floor(app.drone.bat_time / 60) + '分' : ''}
+        {app.drone.voltage.toFixed(1)}V{app.drone.remaining >= 0 ? ' ' + app.drone.remaining + '%' : ''}{app.drone.current > 0.1 ? ' ' + app.drone.current.toFixed(1) + 'A' : ''}{app.drone.bat_time > 0 ? ' ' + fmtBatTime(app.drone.bat_time) : ''}
       </span>
 
       {#if app.drone.fw_version}
