@@ -44,6 +44,7 @@
   let fenceVertMarkers: any[] = [];
   let rangeRing: any = null;
   let homeLine: any = null;
+  let wpDistLabels: any[] = [];
 
   const SAT_URL = `${API_BASE}/api/tile/6/{z}/{x}/{y}`;
   const LABEL_URL = `${API_BASE}/api/tile/8/{z}/{x}/{y}`;
@@ -326,6 +327,24 @@
       wpMarkers.push(m);
     });
     if (pts.length > 1) wpLine = L.polyline(pts, { color: '#1565c0', weight: 2, dashArray: '6,4' }).addTo(map);
+
+    wpDistLabels.forEach(l => map.removeLayer(l));
+    wpDistLabels = [];
+    for (let i = 1; i < pts.length; i++) {
+      const [lat1, lon1] = pts[i - 1], [lat2, lon2] = pts[i];
+      const mid = L.latLng((lat1 + lat2) / 2, (lon1 + lon2) / 2);
+      const dist = map.distance(L.latLng(lat1, lon1), L.latLng(lat2, lon2));
+      const txt = dist < 1000 ? `${dist.toFixed(0)}m` : `${(dist / 1000).toFixed(1)}km`;
+      const lbl = L.marker(mid, {
+        icon: L.divIcon({
+          className: '',
+          html: `<div style="background:rgba(21,101,192,0.85);color:white;padding:1px 5px;border-radius:3px;font-size:10px;font-weight:600;white-space:nowrap">${txt}</div>`,
+          iconAnchor: [0, 0],
+        }),
+        interactive: false,
+      }).addTo(map);
+      wpDistLabels.push(lbl);
+    }
 
     if (geoCircle) { map.removeLayer(geoCircle); geoCircle = null; }
     if (app.drone.home_lat !== 0 && app.geoRadius > 0) {
