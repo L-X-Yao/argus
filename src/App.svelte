@@ -228,17 +228,17 @@
                   <path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" />
                 </svg>
               </div>
-              <h2 class="text-lg font-bold text-primary tracking-wide">PL-Link</h2>
-              <p class="text-xs text-muted-foreground mt-1">地面控制站</p>
+              <h2 class="text-lg font-bold text-primary tracking-wide">{t('app.name')}</h2>
+              <p class="text-xs text-muted-foreground mt-1">{t('welcome.subtitle')}</p>
               <div class="mt-4 pt-3 border-t border-border/50">
-                <p class="text-xs text-muted-foreground">在顶部输入连接地址后点击"连接"</p>
+                <p class="text-xs text-muted-foreground">{t('welcome.hint')}</p>
                 <div class="flex items-center justify-center gap-3 mt-2 text-[11px] text-muted-foreground/70">
-                  <span><kbd class="px-1 py-px bg-muted border border-border rounded text-[10px] font-mono">?</kbd> 快捷键</span>
-                  <span><kbd class="px-1 py-px bg-muted border border-border rounded text-[10px] font-mono">Ctrl+S</kbd> 设置</span>
+                  <span><kbd class="px-1 py-px bg-muted border border-border rounded text-[10px] font-mono">?</kbd> {t('welcome.shortcuts')}</span>
+                  <span><kbd class="px-1 py-px bg-muted border border-border rounded text-[10px] font-mono">Ctrl+S</kbd> {t('welcome.settings')}</span>
                 </div>
               </div>
               {#if !app.wsConnected}
-                <div class="mt-3 text-destructive text-[11px] font-bold animate-pulse">后端服务连接中...</div>
+                <div class="mt-3 text-destructive text-[11px] font-bold animate-pulse">{t('welcome.backendDown')}</div>
               {/if}
             </div>
           </div>
@@ -326,27 +326,27 @@
          onclick={() => showShortcuts = false}>
       <div class="bg-card border border-border rounded-xl shadow-2xl p-5 w-[380px]" onclick={(e) => e.stopPropagation()}>
         <div class="flex items-center justify-between mb-3">
-          <h2 class="text-sm font-semibold text-primary uppercase tracking-wider">键盘快捷键</h2>
+          <h2 class="text-sm font-semibold text-primary uppercase tracking-wider">{t('shortcuts.title')}</h2>
           <Button variant="ghost" size="icon-xs" onclick={() => showShortcuts = false}>
             <XIcon size={16} />
           </Button>
         </div>
         <div class="space-y-1 text-xs">
           {#each [
-            ['Space', '悬停/刹车'],
-            ['R', '返航 (需确认)'],
-            ['A', '解锁 (需确认)'],
-            ['D', '锁定'],
-            ['1-9', '切换飞行模式'],
-            ['Ctrl+1~4', '飞行/规划/监控/参数'],
-            ['M', '地图展开/收起'],
-            ['G', '引导模式 (飞行中)'],
-            ['F', '全屏切换'],
-            ['L', '深色/浅色主题'],
-            ['Ctrl+Z', '撤销航点操作'],
-            ['Ctrl+S', '设置'],
-            ['?', '显示/隐藏此面板'],
-            ['Esc', '关闭弹窗'],
+            ['Space', t('shortcut.hold')],
+            ['R', t('shortcut.rtl')],
+            ['A', t('shortcut.arm')],
+            ['D', t('shortcut.disarm')],
+            ['1-9', t('shortcut.modes')],
+            ['Ctrl+1~4', t('shortcut.views')],
+            ['M', t('shortcut.mapExpand')],
+            ['G', t('shortcut.guided')],
+            ['F', t('shortcut.fullscreen')],
+            ['L', t('shortcut.theme')],
+            ['Ctrl+Z', t('shortcut.undo')],
+            ['Ctrl+S', t('shortcut.settings')],
+            ['?', t('shortcut.showPanel')],
+            ['Esc', t('shortcut.close')],
           ] as [key, desc]}
             <div class="flex items-center gap-3 py-1 border-b border-border/50">
               <kbd class="min-w-[60px] px-2 py-0.5 bg-muted border border-border rounded text-[11px] font-mono font-bold text-center">{key}</kbd>
