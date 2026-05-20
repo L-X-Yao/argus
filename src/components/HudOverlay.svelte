@@ -175,6 +175,18 @@
   <!-- Heading Readout -->
   <text x={CX} y="182" text-anchor="middle" fill="white" font-size="13" font-weight="bold" font-family="monospace">{d.hdg.toFixed(0)}&deg;</text>
   <text x={CX} y="192" text-anchor="middle" fill="#777" font-size="8">{cardinal(d.hdg)}</text>
+
+  <!-- Wind Indicator (bottom-right) -->
+  {#if d.wind_speed > 0.3}
+    {@const wr = (d.wind_dir - d.hdg + 360) % 360}
+    <g transform="translate(268,185)">
+      <g transform="rotate({wr})">
+        <line x1="0" y1="8" x2="0" y2="-8" stroke="#69f0ae" stroke-width="1.5" />
+        <polygon points="0,-9 -3,-4 3,-4" fill="#69f0ae" />
+      </g>
+      <text x="0" y="18" text-anchor="middle" fill="#69f0ae" font-size="7" font-family="monospace">{d.wind_speed.toFixed(1)}</text>
+    </g>
+  {/if}
 </svg>
 
 <style>

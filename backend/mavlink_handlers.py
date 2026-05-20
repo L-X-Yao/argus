@@ -208,6 +208,14 @@ def handle_ekf_status(p: bytes, pl: int, link: DroneLink) -> None:
     link.ekf_flags = flags
 
 
+def handle_wind(p: bytes, pl: int, link: DroneLink) -> None:
+    if pl < 12:
+        return
+    direction, speed, _ = struct.unpack_from('<fff', p)
+    link.wind_dir = direction % 360
+    link.wind_speed = speed
+
+
 def handle_param_value(p: bytes, pl: int, link: DroneLink) -> None:
     link.param_mgr.handle_param_value(p, pl)
 
@@ -375,6 +383,7 @@ def init_handlers() -> None:
     mavlink_dispatch.register(65, handle_rc_channels)
     mavlink_dispatch.register(241, handle_vibration)
     mavlink_dispatch.register(74, handle_ekf_status)
+    mavlink_dispatch.register(168, handle_wind)
     mavlink_dispatch.register(22, handle_param_value)
     mavlink_dispatch.register(148, handle_autopilot_version)
     mavlink_dispatch.register(44, handle_mission_count)
