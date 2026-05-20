@@ -111,6 +111,11 @@
     else if (k === 'escape') { showShortcuts = false; }
     else if (k === '?' || (k === '/' && e.shiftKey)) { showShortcuts = !showShortcuts; }
     else if (k === 's' && e.ctrlKey) { e.preventDefault(); app.showSettings = !app.showSettings; }
+    else if (e.ctrlKey && k >= '1' && k <= '4') {
+      e.preventDefault();
+      const views: View[] = ['fly', 'plan', 'monitor', 'params'];
+      view = views[parseInt(k) - 1];
+    }
     else if (k >= '1' && k <= '9') {
       const btns = app.drone.mode_btns;
       const idx = parseInt(k) - 1;
@@ -293,7 +298,9 @@
             ['A', '解锁 (需确认)'],
             ['D', '锁定'],
             ['1-9', '切换飞行模式'],
+            ['Ctrl+1~4', '飞行/规划/监控/参数'],
             ['M', '地图展开/收起'],
+            ['G', '引导模式 (飞行中)'],
             ['F', '全屏切换'],
             ['L', '深色/浅色主题'],
             ['Ctrl+S', '设置'],
