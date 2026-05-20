@@ -64,12 +64,18 @@
     if (!app.waypoints.length) return;
     if (!await showConfirm(`确认上传任务并自动起飞到 ${app.defaultAlt}m？\n将执行：上传→解锁→起飞→开始任务`, true)) return;
     uploadMission();
-    await new Promise(r => setTimeout(r, 1000));
+    addToast('上传任务中...', 'info', 2000);
+    await new Promise(r => setTimeout(r, 1500));
     sendCommand('arm');
-    await new Promise(r => setTimeout(r, 2000));
+    addToast('解锁中...', 'info', 2000);
+    await new Promise(r => setTimeout(r, 2500));
+    if (!app.drone.armed) { addToast('解锁失败 — 请检查预飞条件', 'error'); return; }
     sendCommand('takeoff', undefined, { alt: app.defaultAlt });
+    addToast(`起飞到 ${app.defaultAlt}m...`, 'info', 3000);
     await new Promise(r => setTimeout(r, 3000));
+    if (app.drone.alt_rel < 1) { addToast('起飞失败 — 高度未上升', 'error'); return; }
     sendCommand('mission_start');
+    addToast('开始执行任务', 'success');
   }
 
   function saveMission() {

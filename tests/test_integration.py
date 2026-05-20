@@ -1081,7 +1081,7 @@ class TestConfirmCoverage:
             for f in src_dir.rglob('*.svelte'):
                 content = f.read_text()
                 for m in pat.finditer(content):
-                    ctx = content[max(0, m.start() - 600):m.start() + 50]
+                    ctx = content[max(0, m.start() - 900):m.start() + 50]
                     assert 'confirm(' in ctx or 'showConfirm(' in ctx or 'showSlide(' in ctx, (
                         f'{f.name}: sendCommand("{cmd}") missing confirm guard'
                     )
