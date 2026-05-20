@@ -8,6 +8,7 @@ class AppState {
   waypoints: Waypoint[] = $state([]);
   undoStack: Waypoint[][] = $state([]);
   defaultAlt: number = $state(30);
+  defaultSpeed: number = $state(5);
   geoRadius: number = $state(500);
   darkTheme: boolean = $state(true);
   audioMuted: boolean = $state(false);
@@ -85,6 +86,7 @@ export function loadSettings() {
   try {
     const s = JSON.parse(localStorage.getItem('pllink_v3_settings') || '{}');
     if (s.alt) app.defaultAlt = s.alt;
+    if (s.speed) app.defaultSpeed = s.speed;
     if (s.radius) app.geoRadius = s.radius;
     if (s.dark !== undefined) app.darkTheme = s.dark;
     if (s.muted !== undefined) app.audioMuted = s.muted;
@@ -100,6 +102,7 @@ export function saveSettings() {
   try {
     localStorage.setItem('pllink_v3_settings', JSON.stringify({
       alt: app.defaultAlt,
+      speed: app.defaultSpeed,
       radius: app.geoRadius,
       dark: app.darkTheme,
       muted: app.audioMuted,

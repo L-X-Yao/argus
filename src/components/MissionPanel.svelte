@@ -162,7 +162,7 @@
 
   function estimateTime(): string {
     if (app.waypoints.length < 2) return '--';
-    const defaultSpeed = 5;
+    const defaultSpeed = app.defaultSpeed || 5;
     let totalSec = 0;
     for (let i = 1; i < app.waypoints.length; i++) {
       const d = segDist(app.waypoints[i - 1], app.waypoints[i]);
