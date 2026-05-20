@@ -36,7 +36,12 @@
   type View = 'fly' | 'plan' | 'monitor' | 'params';
   let view = $state<View>('fly');
   let flyEventsOpen = $state(false);
+  let seenEventCount = $state(0);
   let controlsOpen = $state(false);
+  let unseenEvents = $derived(app.events.length - seenEventCount);
+  let hasUrgentEvent = $derived(unseenEvents > 0 && app.events.slice(-unseenEvents).some(
+    e => e.text.includes('失败') || e.text.includes('异常') || e.text.includes('失控') || e.text.includes('紧急') || e.text.includes('低电')
+  ));
   let showLogPanel = $state(false);
   let showVideo = $state(false);
   let showCalibration = $state(false);
@@ -205,9 +210,14 @@
         <div class="absolute bottom-0 left-0 right-0 z-[1001]" class:max-h-52={flyEventsOpen}>
           <!-- svelte-ignore a11y_click_events_have_key_events -->
           <!-- svelte-ignore a11y_no_static_element_interactions -->
-          <div class="bg-card/90 backdrop-blur text-muted-foreground flex items-center justify-center gap-1 py-1 text-[11px] cursor-pointer border-t border-border hover:text-primary transition-colors"
-               onclick={() => flyEventsOpen = !flyEventsOpen}>
-            事件 ({app.events.length}) {#if flyEventsOpen}<ChevronDown size={12} />{:else}<ChevronUp size={12} />{/if}
+          <div class="backdrop-blur flex items-center justify-center gap-1 py-1 text-[11px] cursor-pointer border-t hover:text-primary transition-colors
+            {hasUrgentEvent ? 'bg-destructive/15 border-destructive/40 text-destructive animate-pulse' : 'bg-card/90 border-border text-muted-foreground'}"
+               onclick={() => { flyEventsOpen = !flyEventsOpen; if (flyEventsOpen) seenEventCount = app.events.length; }}>
+            事件 ({app.events.length})
+            {#if unseenEvents > 0 && !flyEventsOpen}
+              <span class="px-1.5 py-px rounded-full text-[10px] font-bold {hasUrgentEvent ? 'bg-destructive text-white' : 'bg-primary text-primary-foreground'}">{unseenEvents}</span>
+            {/if}
+            {#if flyEventsOpen}<ChevronDown size={12} />{:else}<ChevronUp size={12} />{/if}
           </div>
           {#if flyEventsOpen}
             <EventLog />
