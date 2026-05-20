@@ -1,5 +1,6 @@
 <script lang="ts">
   import { confirmState, resolveConfirm } from '../lib/stores.svelte';
+  import { t } from '../lib/i18n.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
   import { AlertTriangle } from '@lucide/svelte';
 
@@ -28,9 +29,9 @@
         <p class="text-sm text-foreground whitespace-pre-line leading-relaxed pt-1.5">{confirmState.message}</p>
       </div>
       <div class="flex justify-end gap-2">
-        <Button variant="outline" size="sm" onclick={() => resolveConfirm(false)}>取消</Button>
+        <Button variant="outline" size="sm" onclick={() => resolveConfirm(false)}>{t('map.cancel')}</Button>
         <Button variant={confirmState.danger ? 'destructive' : 'default'} size="sm"
-                onclick={() => resolveConfirm(true)}>确认</Button>
+                onclick={() => resolveConfirm(true)}>{t('summary.confirm')}</Button>
       </div>
     </div>
   </div>
