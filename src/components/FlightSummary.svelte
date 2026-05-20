@@ -15,6 +15,26 @@
   }
 
   let avgSpeed = $derived(summary.duration > 0 ? (summary.total_dist / summary.duration).toFixed(1) : '---');
+
+  function exportReport() {
+    const lines = [
+      `PL-Link ${t('summary.title')}`,
+      `Date: ${new Date().toLocaleString()}`,
+      ``,
+      `${t('summary.duration')}: ${fmtTime(summary.duration)}`,
+      `${t('summary.maxAlt')}: ${summary.max_alt} m`,
+      `${t('summary.maxSpd')}: ${summary.max_speed} m/s`,
+      `${t('summary.dist')}: ${fmtDist(summary.total_dist)}`,
+      `${t('summary.avgSpd')}: ${avgSpeed} m/s`,
+      summary.bat_used >= 0 ? `${t('summary.batUsed')}: ${summary.bat_used}%` : '',
+    ].filter(Boolean).join('\n');
+    const blob = new Blob([lines], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `flight_${new Date().toISOString().slice(0, 10)}.txt`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
 </script>
 
 <!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -76,8 +96,9 @@
         </div>
       </div>
     </div>
-    <div class="px-5 pb-4">
-      <Button class="w-full" onclick={onclose}>{t('summary.confirm')}</Button>
+    <div class="px-5 pb-4 flex gap-2">
+      <Button variant="outline" class="flex-1" onclick={exportReport}>{t('wp.export')}</Button>
+      <Button class="flex-1" onclick={onclose}>{t('summary.confirm')}</Button>
     </div>
   </div>
 </div>
