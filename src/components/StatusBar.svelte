@@ -224,6 +224,14 @@
         {#if app.drone.connected && msgRate > 0}
           <span class="text-[10px] font-mono tabular-nums" style="color:{barColor}">{msgRate}</span>
         {/if}
+        {#if app.linkHistory.length > 3}
+          {@const pts = app.linkHistory.slice(-20)}
+          {@const maxR = Math.max(...pts.map(p => p.rate), 1)}
+          <svg width="30" height="10" viewBox="0 0 30 10" class="shrink-0 opacity-50">
+            <polyline fill="none" stroke={barColor} stroke-width="1"
+              points={pts.map((p, i) => `${(i / (pts.length - 1)) * 30},${10 - (p.rate / maxR) * 9}`).join(' ')} />
+          </svg>
+        {/if}
       </span>
 
       <Badge variant={gpsVariant} class="font-mono text-[11px] gap-0.5">
