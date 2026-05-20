@@ -84,6 +84,11 @@ def _parse_xml(raw: bytes) -> dict:
                         entry['step'] = float(ft)
                     except ValueError:
                         pass
+                elif fn == 'Default':
+                    try:
+                        entry['default'] = float(ft)
+                    except ValueError:
+                        pass
                 elif fn == 'Bitmask':
                     bits = {}
                     for item in ft.split(','):

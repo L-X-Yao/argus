@@ -85,13 +85,27 @@
 
   let category = $state('all');
   let search = $state('');
+  let showModifiedOnly = $state(false);
   let editName = $state<string | null>(null);
   let editValue = $state('');
   let modified = $state<Set<string>>(new Set());
 
+  function hasDefaultDiff(name: string, value: number): boolean {
+    const m = meta[name];
+    if (!m || !('default' in m)) return false;
+    return Math.abs(value - (m as any).default) > 1e-6;
+  }
+
+  let modifiedCount = $derived(
+    metaLoaded ? paramState.list.filter(p => hasDefaultDiff(p.name, p.value)).length : 0
+  );
+
   let filtered = $derived.by(() => {
     const cat = CATS.find(c => c.key === category)!;
     let list = paramState.list.filter(p => cat.match(p.name));
+    if (showModifiedOnly && metaLoaded) {
+      list = list.filter(p => hasDefaultDiff(p.name, p.value));
+    }
     if (search) {
       const q = search.toLowerCase();
       list = list.filter(p => {
@@ -230,7 +244,14 @@
     <div class="flex items-center gap-2 mb-2">
       <input type="text" placeholder="搜索参数名或说明..." bind:value={search}
              class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50" />
-      <span class="text-[11px] text-muted-foreground whitespace-nowrap">{filtered.length} 项</span>
+      {#if metaLoaded && modifiedCount > 0}
+        <button class="text-[11px] px-2 py-0.5 rounded border transition-all cursor-pointer
+          {showModifiedOnly ? 'bg-warning/20 text-warning border-warning/50' : 'text-muted-foreground border-border hover:text-foreground'}"
+                onclick={() => showModifiedOnly = !showModifiedOnly}>
+          Diff ({modifiedCount})
+        </button>
+      {/if}
+      <span class="text-[11px] text-muted-foreground whitespace-nowrap">{filtered.length}</span>
     </div>
 
     <div class="flex-1 min-h-0 overflow-y-auto rounded-lg border border-border">
