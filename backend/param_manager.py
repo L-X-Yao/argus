@@ -6,6 +6,8 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from .locale_text import lt
+
 if TYPE_CHECKING:
     from .drone_link import DroneLink
 
@@ -26,7 +28,7 @@ class ParamManager:
         self.received_count = 0
         self.fetching = True
         self._fetch_start = time.time()
-        self._link.add_event('参数: 正在读取...')
+        self._link.add_event(lt('param_reading', self._link.locale))
         from pllink_proto import bm
         payload = struct.pack('<BB', self._link.sysid, 1)
         self._link.send(bm(21, payload, self._link.sq, 159))
@@ -60,7 +62,7 @@ class ParamManager:
         if self.received_count >= self.total_count > 0:
             self.fetching = False
             elapsed = time.time() - self._fetch_start
-            self._link.add_event('参数: %d 个已读取 (%.1fs)' % (self.received_count, elapsed))
+            self._link.add_event(lt('param_done', self._link.locale) % (self.received_count, elapsed))
             self._messages.append({
                 'type': 'params_complete', 'count': self.received_count,
             })
@@ -77,7 +79,7 @@ class ParamManager:
                    name_bytes +
                    struct.pack('<B', ptype))
         self._link.send(bm(23, payload, self._link.sq, 168))
-        self._link.add_event('参数: %s → %.4g' % (name, value))
+        self._link.add_event(lt('param_set', self._link.locale) % (name, value))
 
     def save_to_file(self, path: str | None = None) -> str:
         if not path:
@@ -87,7 +89,7 @@ class ParamManager:
         data = {name: p['value'] for name, p in sorted(self.params.items())}
         with open(path, 'w') as f:
             json.dump(data, f, indent=2)
-        self._link.add_event('参数: 已保存 %d 个 → %s' % (len(data), Path(path).name))
+        self._link.add_event(lt('param_saved', self._link.locale) % (len(data), Path(path).name))
         return path
 
     def load_from_file(self, path: str) -> list[str]:
@@ -100,7 +102,7 @@ class ParamManager:
                 self.set_param(name, value)
                 changed.append(name)
                 time.sleep(0.02)
-        self._link.add_event('参数: 已加载 %d 个, %d 个变更' % (len(data), len(changed)))
+        self._link.add_event(lt('param_loaded', self._link.locale) % (len(data), len(changed)))
         return changed
 
     def get_status(self) -> dict:
