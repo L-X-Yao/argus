@@ -26,6 +26,7 @@ export function beep(freq: number, dur: number, count = 1, gap = 100) {
 
 export function speak(text: string) {
   if (!app.voiceEnabled || !('speechSynthesis' in window)) return;
+  if (speechSynthesis.pending) speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
   u.lang = 'zh-CN';
   u.rate = 1.2;
