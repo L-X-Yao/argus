@@ -131,6 +131,16 @@
     { id: 'monitor', label: '监控', icon: Activity },
     { id: 'params', label: '参数', icon: Settings2 },
   ];
+
+  let monitorWarn = $derived(
+    app.drone.connected && (
+      Math.max(app.drone.vibe[0], app.drone.vibe[1], app.drone.vibe[2]) > 30 ||
+      (app.drone.ekf_flags & 0x480) !== 0 ||
+      Math.max(app.drone.ekf_vel, app.drone.ekf_pos_h, app.drone.ekf_pos_v, app.drone.ekf_compass) > 0.8
+    )
+  );
+  let planCount = $derived(app.waypoints.length);
+  let paramProgress = $derived(app.drone.param_fetching);
 </script>
 
 <div class="flex flex-col h-screen overflow-hidden">
@@ -147,6 +157,15 @@
       >
         <tab.icon size={14} />
         {tab.label}
+        {#if tab.id === 'monitor' && monitorWarn && view !== 'monitor'}
+          <span class="w-2 h-2 rounded-full bg-destructive animate-pulse"></span>
+        {/if}
+        {#if tab.id === 'plan' && planCount > 0 && view !== 'plan'}
+          <span class="px-1 py-px rounded-full bg-primary/20 text-primary text-[9px] font-bold leading-none">{planCount}</span>
+        {/if}
+        {#if tab.id === 'params' && paramProgress}
+          <span class="w-2 h-2 rounded-full bg-warning animate-pulse"></span>
+        {/if}
       </button>
     {/each}
 
