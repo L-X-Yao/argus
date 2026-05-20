@@ -1,4 +1,5 @@
 import { app } from './stores.svelte';
+import { i18nState } from './i18n.svelte';
 
 let audioCtx: AudioContext | null = null;
 
@@ -28,7 +29,7 @@ export function speak(text: string) {
   if (!app.voiceEnabled || !('speechSynthesis' in window)) return;
   if (speechSynthesis.pending) speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
-  u.lang = 'zh-CN';
+  u.lang = i18nState.locale === 'en' ? 'en-US' : 'zh-CN';
   u.rate = 1.2;
   u.volume = 0.8;
   speechSynthesis.speak(u);
@@ -46,46 +47,50 @@ let altInit = false;
 let descentNext = Infinity;
 let ascentIdx = 0;
 
-const RTL_MODES = ['返航', '旋翼返航', '智能返航', '降落', '旋翼降落'];
+const RTL_MODES = ['返航', '旋翼返航', '智能返航', '降落', '旋翼降落', 'RTL', 'Q-RTL', 'Smart RTL', 'Land', 'Q-Land'];
+
+function s(zh: string, en: string): string {
+  return i18nState.locale === 'en' ? en : zh;
+}
 const DESCENT_THRESHOLDS = [50, 40, 30, 20, 10, 8, 6, 4, 2];
 const ASCENT_THRESHOLDS = [10, 20, 30, 50, 100];
 
 export function checkAlerts(connected: boolean, armed: boolean, remaining: number, linkAge: number) {
   if (armed && !prevArmed) {
     beep(880, 200, 2);
-    speak('已解锁');
+    speak(s('已解锁', 'Armed'));
   }
   if (!armed && prevArmed) {
     beep(440, 300, 1);
-    speak('已锁定');
+    speak(s('已锁定', 'Disarmed'));
   }
   prevArmed = armed;
 
   if (!connected && prevConnected) {
     beep(200, 1000, 3, 200);
-    speak('飞控连接已断开');
+    speak(s('飞控连接已断开', 'Vehicle connection lost'));
   }
   prevConnected = connected;
 
   const mode = app.drone.mode;
   if (mode && prevMode && mode !== prevMode) {
     if (RTL_MODES.some(m => mode.includes(m))) beep(440, 300, 2, 150);
-    speak(`已切换${mode}`);
+    speak(i18nState.locale === 'en' ? `Mode ${mode}` : `已切换${mode}`);
   }
   prevMode = mode;
 
   if (remaining >= 0) {
     if (remaining < 10 && batWarnLevel < 3 && armed) {
       beep(200, 800, 5, 100);
-      speak('电量严重不足，请立即返航');
+      speak(s('电量严重不足，请立即返航', 'Critical battery, return now'));
       batWarnLevel = 3;
     } else if (remaining < 20 && batWarnLevel < 2) {
       beep(300, 500, 3, 200);
-      speak('低电量警告');
+      speak(s('低电量警告', 'Low battery warning'));
       batWarnLevel = 2;
     } else if (remaining < 30 && batWarnLevel < 1 && armed) {
       beep(400, 400, 2, 200);
-      speak('电量百分之三十，注意返航');
+      speak(s('电量百分之三十，注意返航', 'Battery thirty percent, plan return'));
       batWarnLevel = 1;
     }
   }
@@ -94,7 +99,7 @@ export function checkAlerts(connected: boolean, armed: boolean, remaining: numbe
   if (connected && linkAge > 3 && Date.now() - linkLostBeepT > 5000) {
     beep(200, 800, 1);
     linkLostBeepT = Date.now();
-    if (!linkLostSpoken) { speak('链路延迟过高'); linkLostSpoken = true; }
+    if (!linkLostSpoken) { speak(s('链路延迟过高', 'High link latency')); linkLostSpoken = true; }
   }
   if (connected && linkAge >= 0 && linkAge < 2) linkLostSpoken = false;
 
@@ -102,7 +107,7 @@ export function checkAlerts(connected: boolean, armed: boolean, remaining: numbe
 
   const wp = app.drone.wp;
   if (wp > prevWp && prevWp >= 2 && armed) {
-    speak(`航点${prevWp - 1}`);
+    speak(i18nState.locale === 'en' ? `Waypoint ${prevWp - 1}` : `航点${prevWp - 1}`);
   }
   prevWp = armed ? wp : 0;
 }

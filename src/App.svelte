@@ -79,7 +79,7 @@
     const ws = app.wsConnected;
     if (!ws && prevWsConnected) {
       beep(150, 1000, 2, 300);
-      speak('服务连接中断');
+      speak(t('conn.serviceDown'));
     }
     prevWsConnected = ws;
   });
