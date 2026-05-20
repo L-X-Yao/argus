@@ -96,16 +96,16 @@
       else if ((d.remaining >= 0 && d.remaining < 20) || d.link_age > 3) warn = '[!] ';
       document.title = `${warn}PL-Link — ${parts.join(' | ')}`;
     } else {
-      document.title = 'PL-Link 地面站';
+      document.title = `${t('app.name')} ${t('welcome.subtitle')}`;
     }
   });
 
   function onKey(e: KeyboardEvent) {
     if ((e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'SELECT') return;
     const k = e.key.toLowerCase();
-    if (k === ' ') { e.preventDefault(); sendCommand('mode', app.drone.vtype === '固定翼' ? 19 : 5); }
-    else if (k === 'r') { showConfirm('切换到返航模式？', true).then(ok => ok && sendCommand('rtl')); }
-    else if (k === 'a') { showConfirm('确认解锁电机？\n请确保周围无人员。', true).then(ok => ok && sendCommand('arm')); }
+    if (k === ' ') { e.preventDefault(); sendCommand('mode', (app.drone.vtype === '固定翼' || app.drone.vtype === 'Fixed Wing') ? 19 : 5); }
+    else if (k === 'r') { showConfirm(t('slide.rtl') + '?', true).then(ok => ok && sendCommand('rtl')); }
+    else if (k === 'a') { showConfirm(t('slide.arm') + '?', true).then(ok => ok && sendCommand('arm')); }
     else if (k === 'd') sendCommand('disarm');
     else if (k === 'l') { app.darkTheme = !app.darkTheme; saveSettings(); }
     else if (k === 'm') app.mapExpanded = !app.mapExpanded;
@@ -183,12 +183,12 @@
           <CornerDownLeft size={13} />{t('nav.rtl')}
         </Button>
         <Button size="sm" class="bg-amber-600 hover:bg-amber-700 text-white font-bold gap-1"
-                onclick={() => sendCommand('mode', app.drone.vtype === '固定翼' ? 19 : 5)}
+                onclick={() => sendCommand('mode', (app.drone.vtype === '固定翼' || app.drone.vtype === 'Fixed Wing') ? 19 : 5)}
                 title="{t('ctrl.pause')} (Space)">
           <Pause size={13} />{t('nav.pause')}
         </Button>
         <Button variant="secondary" size="sm" class="gap-1" onclick={() => showLogPanel = true}
-                title="查看/下载机载飞行日志">
+                title={t('nav.logs')}>
           <HardDrive size={13} />{t('nav.logs')}
         </Button>
         <Button variant="secondary" size="sm" class="gap-1" onclick={() => showCalibration = true}
@@ -197,7 +197,7 @@
         </Button>
         {#if view === 'fly'}
           <Button variant={showVideo ? 'default' : 'secondary'} size="sm" class="gap-1"
-                  onclick={() => showVideo = !showVideo} title="RTSP视频画面">
+                  onclick={() => showVideo = !showVideo} title="RTSP Video">
             <Video size={13} />{t('nav.video')}
           </Button>
           <Button variant={controlsOpen ? 'default' : 'secondary'} size="sm" class="gap-1"

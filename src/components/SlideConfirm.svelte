@@ -72,7 +72,7 @@
         <div class="slide-fill" style="width: {progress * 100}%; background: {c.fill}"></div>
         <div class="slide-label" style="color: {c.bg}; opacity: {done ? 1 : 0.5}">
           {#if done}
-            <Check size={16} class="inline -mt-0.5 mr-0.5" />已确认
+            <Check size={16} class="inline -mt-0.5 mr-0.5" />OK
           {:else}
             {slideState.text}
           {/if}

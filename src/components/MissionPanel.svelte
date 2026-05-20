@@ -345,14 +345,14 @@
   </div>
   {#if showCircleGen}
     <div class="flex gap-1 items-center mt-1.5 p-1.5 bg-muted rounded-lg flex-wrap">
-      <label for="cr" class="text-[11px] text-muted-foreground">半径:</label>
+      <label for="cr" class="text-[11px] text-muted-foreground">R:</label>
       <input id="cr" type="number" bind:value={circleRadius} min="10" max="2000" step="10"
              class="w-12 h-6 px-1 bg-input border border-border rounded text-xs text-foreground" />
       <span class="text-[11px] text-muted-foreground">m</span>
-      <label for="cc" class="text-[11px] text-muted-foreground">点数:</label>
+      <label for="cc" class="text-[11px] text-muted-foreground">N:</label>
       <input id="cc" type="number" bind:value={circleCount} min="4" max="72" step="1"
              class="w-12 h-6 px-1 bg-input border border-border rounded text-xs text-foreground" />
-      <Button size="xs" onclick={genCircle}>生成</Button>
+      <Button size="xs" onclick={genCircle}>Gen</Button>
     </div>
   {/if}
 </div>

@@ -187,9 +187,9 @@
       return `${wlon},${wlat},0`;
     }).join('\n');
     const kml = `<?xml version="1.0" encoding="UTF-8"?>
-<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>飞行轨迹</name>
+<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>Flight Track</name>
 <Style id="track"><LineStyle><color>ff4fc3f7</color><width>2</width></LineStyle></Style>
-<Placemark><name>轨迹</name><styleUrl>#track</styleUrl>
+<Placemark><name>Track</name><styleUrl>#track</styleUrl>
 <LineString><coordinates>${coords}</coordinates></LineString>
 </Placemark></Document></kml>`;
     const blob = new Blob([kml], { type: 'application/vnd.google-earth.kml+xml' });
