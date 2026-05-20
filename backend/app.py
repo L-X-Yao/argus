@@ -56,6 +56,26 @@ async def health():
     return {'ok': True}
 
 
+@app.get('/api/version')
+async def api_version():
+    import subprocess
+    git_hash = ''
+    try:
+        git_hash = subprocess.check_output(
+            ['git', 'rev-parse', '--short', 'HEAD'],
+            cwd=str(V3_DIR), timeout=2, stderr=subprocess.DEVNULL,
+        ).decode().strip()
+    except Exception:
+        pass
+    return {
+        'version': '3.1.0',
+        'git': git_hash,
+        'protocols': ['standard', 'pllink'],
+        'vehicles': ['copter', 'plane', 'rover', 'sub'],
+        'features': ['i18n', 'param_meta', 'gamepad', 'pwa', 'global_tiles'],
+    }
+
+
 @app.websocket('/ws')
 async def websocket_endpoint(ws: WebSocket):
     await app.state.ws_mgr.handle_client(ws)
