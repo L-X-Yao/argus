@@ -27,7 +27,8 @@
   import VideoOverlay from './components/VideoOverlay.svelte';
   import CalibrationPanel from './components/CalibrationPanel.svelte';
   import ConfirmDialog from './components/ConfirmDialog.svelte';
-  import { showConfirm } from './lib/stores.svelte';
+  import SlideConfirm from './components/SlideConfirm.svelte';
+  import { showConfirm, showSlide } from './lib/stores.svelte';
   import { ChevronUp, ChevronDown, CornerDownLeft, Pause, HardDrive, Wrench, Video, SlidersHorizontal, PanelLeftClose, Plane, MapPinned, Activity, Settings2, X as XIcon } from '@lucide/svelte';
   import type { Component } from 'svelte';
   import Button from '$lib/components/ui/button/button.svelte';
@@ -142,7 +143,7 @@
     {#if app.drone.connected}
       <div class="ml-auto flex items-center gap-1.5 shrink-0">
         <Button size="sm" class="bg-red-600 hover:bg-red-700 text-white font-bold gap-1"
-                onclick={() => showConfirm('切换到返航模式？', true).then(ok => ok && sendCommand('rtl'))}
+                onclick={() => showSlide('滑动切换返航', 'red', () => sendCommand('rtl'))}
                 title="返航模式 (快捷键 R)">
           <CornerDownLeft size={13} />返航
         </Button>
@@ -262,6 +263,7 @@
     <CalibrationPanel onclose={() => showCalibration = false} />
   {/if}
   <ConfirmDialog />
+  <SlideConfirm />
   {#if showShortcuts}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <!-- svelte-ignore a11y_click_events_have_key_events -->

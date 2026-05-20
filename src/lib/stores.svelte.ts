@@ -147,12 +147,41 @@ class ConfirmState {
 export const confirmState = new ConfirmState();
 
 export function showConfirm(message: string, danger = false): Promise<boolean> {
+  cancelSlide();
   return new Promise(resolve => {
     confirmState.message = message;
     confirmState.danger = danger;
     confirmState.visible = true;
     confirmState._resolve = resolve;
   });
+}
+
+class SlideConfirmState {
+  visible: boolean = $state(false);
+  text: string = $state('');
+  color: string = $state('orange');
+  _onConfirm: (() => void) | null = null;
+}
+export const slideState = new SlideConfirmState();
+
+export function showSlide(text: string, color: string, onConfirm: () => void) {
+  resolveConfirm(false);
+  slideState.text = text;
+  slideState.color = color;
+  slideState.visible = true;
+  slideState._onConfirm = onConfirm;
+}
+
+export function completeSlide() {
+  slideState.visible = false;
+  const fn = slideState._onConfirm;
+  slideState._onConfirm = null;
+  fn?.();
+}
+
+export function cancelSlide() {
+  slideState.visible = false;
+  slideState._onConfirm = null;
 }
 
 export function resolveConfirm(result: boolean) {

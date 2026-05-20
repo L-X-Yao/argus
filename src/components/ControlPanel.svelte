@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { app, showConfirm } from '../lib/stores.svelte';
+  import { app, showConfirm, showSlide } from '../lib/stores.svelte';
   import { sendCommand } from '../lib/ws';
   import Button from '$lib/components/ui/button/button.svelte';
   import { Plane, ShieldCheck, Navigation, CircleStop, ArrowDown, CornerDownLeft, Play, Pause, Package } from '@lucide/svelte';
@@ -33,13 +33,13 @@
     phase === 'returning' ? 'text-orange-400' : 'text-green-400'
   );
 
-  async function arm() { if (await showConfirm('确认解锁电机？\n请确保周围无人员。', true)) sendCommand('arm'); }
+  function arm() { showSlide('滑动解锁电机', 'orange', () => sendCommand('arm')); }
   function disarm() { sendCommand('disarm'); }
-  async function rtl() { if (await showConfirm('切换到返航模式？', true)) sendCommand('rtl'); }
-  async function forceDisarm() { if (await showConfirm('强制锁定 — 电机立即停转！\n仅在已着陆时使用。继续？', true)) sendCommand('force_disarm'); }
+  function rtl() { showSlide('滑动切换返航', 'red', () => sendCommand('rtl')); }
+  function forceDisarm() { showSlide('滑动强制锁定', 'red', () => sendCommand('force_disarm')); }
   function pauseMode() { sendCommand('mode', app.drone.vtype === '固定翼' ? 19 : 5); }
-  async function takeoff() { if (await showConfirm(`确认起飞到 ${app.defaultAlt}m？`, true)) sendCommand('takeoff', undefined, { alt: app.defaultAlt }); }
-  async function startMission() { if (await showConfirm('确认开始自动任务？\n飞机将按航线自主飞行。', true)) sendCommand('mission_start'); }
+  function takeoff() { showSlide(`滑动起飞 ${app.defaultAlt}m`, 'teal', () => sendCommand('takeoff', undefined, { alt: app.defaultAlt })); }
+  function startMission() { showSlide('滑动开始任务', 'blue', () => sendCommand('mission_start')); }
   async function drop() { if (await showConfirm('确认执行载荷投放？', true)) sendCommand('drop'); }
 </script>
 
