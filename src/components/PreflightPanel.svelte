@@ -13,24 +13,25 @@
   }
 
   let checks = $derived.by((): Check[] => {
-    const gpsOk = d.gps_fix === '3D' || d.gps_fix === 'RTK固定' || d.gps_fix === 'RTK浮动' || d.gps_fix === '差分';
+    const gpsOk = d.gps_fix === '3D' || d.gps_fix === 'RTK固定' || d.gps_fix === 'RTK浮动' || d.gps_fix === '差分'
+      || d.gps_fix === 'RTK Fixed' || d.gps_fix === 'RTK Float' || d.gps_fix === 'DGPS';
     return [
-      { name: 'GPS 定位', ok: gpsOk, detail: `${d.gps_fix}`, critical: true },
-      { name: '卫星数量', ok: d.gps_sats >= 10, detail: `${d.gps_sats} 颗 (需≥10)`, critical: true },
-      { name: '电池电压', ok: d.voltage > 22, detail: `${d.voltage.toFixed(1)}V`, critical: true },
-      { name: '电池电量', ok: d.remaining > 30 || d.remaining < 0, detail: d.remaining >= 0 ? `${d.remaining}%` : '---', critical: true },
-      { name: '起飞点', ok: d.home_lat !== 0, detail: d.home_lat !== 0 ? `${d.home_lat.toFixed(5)}, ${d.home_lon.toFixed(5)}` : '未设置', critical: true },
-      { name: '链路状态', ok: d.connected && d.link_age >= 0 && d.link_age < 2, detail: d.connected ? `延迟 ${d.link_age.toFixed(1)}s` : '未连接', critical: true },
-      { name: '导航滤波', ok: !(d.ekf_flags & 0x480) && Math.max(d.ekf_vel, d.ekf_pos_h, d.ekf_pos_v, d.ekf_compass) < 1.0,
-        detail: (d.ekf_flags & 0x480) ? '异常' : Math.max(d.ekf_vel, d.ekf_pos_h, d.ekf_pos_v, d.ekf_compass) < 0.5 ? '正常' : '警告', critical: true },
-      { name: '振动水平', ok: Math.max(d.vibe[0], d.vibe[1], d.vibe[2]) < 30,
-        detail: `${Math.max(d.vibe[0], d.vibe[1], d.vibe[2]).toFixed(0)} m/s² (限<30)`, critical: true },
-      { name: '遥控信号', ok: d.rc_rssi > 0 || d.rc[0] > 0,
-        detail: d.rc_rssi > 0 ? `RSSI ${d.rc_rssi}` : d.rc[0] > 0 ? '有信号' : '无信号', critical: false },
-      { name: '任务航线', ok: app.waypoints.length > 0,
-        detail: app.waypoints.length > 0 ? `${app.waypoints.length} 航点` : '未加载', critical: false },
-      { name: '机型识别', ok: d.vtype !== '', detail: d.vtype || '未识别', critical: false },
-      { name: '未解锁', ok: !d.armed, detail: d.armed ? '已解锁 — 注意安全' : '已锁定', critical: false },
+      { name: t('check.gps'), ok: gpsOk, detail: `${d.gps_fix}`, critical: true },
+      { name: t('check.sats'), ok: d.gps_sats >= 10, detail: `${d.gps_sats} (≥10)`, critical: true },
+      { name: t('check.batV'), ok: d.voltage > 22, detail: `${d.voltage.toFixed(1)}V`, critical: true },
+      { name: t('check.batPct'), ok: d.remaining > 30 || d.remaining < 0, detail: d.remaining >= 0 ? `${d.remaining}%` : '---', critical: true },
+      { name: t('check.home'), ok: d.home_lat !== 0, detail: d.home_lat !== 0 ? `${d.home_lat.toFixed(5)}, ${d.home_lon.toFixed(5)}` : '---', critical: true },
+      { name: t('check.link'), ok: d.connected && d.link_age >= 0 && d.link_age < 2, detail: d.connected ? `${d.link_age.toFixed(1)}s` : '---', critical: true },
+      { name: t('check.nav'), ok: !(d.ekf_flags & 0x480) && Math.max(d.ekf_vel, d.ekf_pos_h, d.ekf_pos_v, d.ekf_compass) < 1.0,
+        detail: (d.ekf_flags & 0x480) ? 'ERR' : Math.max(d.ekf_vel, d.ekf_pos_h, d.ekf_pos_v, d.ekf_compass) < 0.5 ? 'OK' : 'WARN', critical: true },
+      { name: t('check.vibe'), ok: Math.max(d.vibe[0], d.vibe[1], d.vibe[2]) < 30,
+        detail: `${Math.max(d.vibe[0], d.vibe[1], d.vibe[2]).toFixed(0)} m/s²`, critical: true },
+      { name: t('check.rc'), ok: d.rc_rssi > 0 || d.rc[0] > 0,
+        detail: d.rc_rssi > 0 ? `RSSI ${d.rc_rssi}` : d.rc[0] > 0 ? 'OK' : '---', critical: false },
+      { name: t('check.mission'), ok: app.waypoints.length > 0,
+        detail: app.waypoints.length > 0 ? `${app.waypoints.length} WP` : '---', critical: false },
+      { name: t('check.vtype'), ok: d.vtype !== '', detail: d.vtype || '---', critical: false },
+      { name: t('check.notArmed'), ok: !d.armed, detail: d.armed ? t('status.armed') : 'OK', critical: false },
     ];
   });
 

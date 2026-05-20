@@ -154,6 +154,21 @@ const zh: Record<string, string> = {
   'shortcut.settings': '设置',
   'shortcut.showPanel': '显示/隐藏此面板',
   'shortcut.close': '关闭弹窗',
+  'check.gps': 'GPS 定位',
+  'check.sats': '卫星数量',
+  'check.batV': '电池电压',
+  'check.batPct': '电池电量',
+  'check.home': '起飞点',
+  'check.link': '链路状态',
+  'check.nav': '导航滤波',
+  'check.vibe': '振动水平',
+  'check.rc': '遥控信号',
+  'check.mission': '任务航线',
+  'check.vtype': '机型识别',
+  'check.notArmed': '未解锁',
+  'settings.flight': '飞行参数',
+  'settings.safetySection': '安全',
+  'settings.uiSection': '界面',
 };
 
 const en: Record<string, string> = {
@@ -304,6 +319,21 @@ const en: Record<string, string> = {
   'shortcut.settings': 'Settings',
   'shortcut.showPanel': 'Show/hide this panel',
   'shortcut.close': 'Close popup',
+  'check.gps': 'GPS Fix',
+  'check.sats': 'Satellites',
+  'check.batV': 'Battery Voltage',
+  'check.batPct': 'Battery Level',
+  'check.home': 'Home Position',
+  'check.link': 'Link Status',
+  'check.nav': 'Navigation',
+  'check.vibe': 'Vibration',
+  'check.rc': 'RC Signal',
+  'check.mission': 'Mission',
+  'check.vtype': 'Vehicle Type',
+  'check.notArmed': 'Not Armed',
+  'settings.flight': 'Flight Parameters',
+  'settings.safetySection': 'Safety',
+  'settings.uiSection': 'Interface',
 };
 
 const dicts: Record<Locale, Record<string, string>> = { zh, en };
