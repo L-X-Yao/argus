@@ -1,6 +1,8 @@
 """Unit tests: command builder and mission upload logic."""
+import json
 import struct
 import sys
+import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -87,6 +89,191 @@ class TestCommandExecute:
         link.flight_summary = {'duration': 100}
         commands.execute('clear_summary', None, link)
         assert link.flight_summary is None
+
+    # -- 20 new command tests below --
+
+    def test_drop_stop(self):
+        from backend import commands
+        link = make_link()
+        commands.execute('drop_stop', None, link)
+        assert any('投放停止' in e['text'] for e in link.events)
+
+    def test_mission_start_copter(self):
+        from backend import commands
+        link = make_link()
+        link.vtype_raw = 2  # copter
+        commands.execute('mission_start', None, link)
+        assert any('任务开始' in e['text'] for e in link.events)
+        assert link._ser.write.called
+
+    def test_mission_start_plane(self):
+        from backend import commands
+        link = make_link()
+        link.vtype_raw = 1  # plane
+        commands.execute('mission_start', None, link)
+        assert any('任务开始' in e['text'] for e in link.events)
+
+    def test_mission_clear(self):
+        from backend import commands
+        link = make_link()
+        commands.execute('mission_clear', None, link)
+        assert any('任务已清除' in e['text'] for e in link.events)
+
+    def test_fence_upload_sets_pending(self):
+        from backend import commands
+        link = make_link()
+        polygon = [
+            {'lat': 34.0, 'lon': 108.0},
+            {'lat': 34.1, 'lon': 108.0},
+            {'lat': 34.1, 'lon': 108.1},
+        ]
+        commands.execute('fence_upload', None, link, data={'polygon': polygon})
+        assert link._fence_pending is True
+        assert len(link._fence_items) == 3
+        assert any('围栏' in e['text'] for e in link.events)
+
+    def test_fence_upload_too_few_points(self):
+        from backend import commands
+        link = make_link()
+        result = commands.execute('fence_upload', None, link, data={
+            'polygon': [{'lat': 34.0, 'lon': 108.0}, {'lat': 34.1, 'lon': 108.0}],
+        })
+        assert result is not None and not result['ok']
+        assert '3' in result['error']
+
+    def test_guided_goto(self):
+        from backend import commands
+        link = make_link()
+        link.vtype_raw = 2  # copter
+        commands.execute('guided_goto', None, link, data={
+            'lat': 34.25800, 'lon': 108.94200, 'alt': 50,
+        })
+        assert any('引导飞往' in e['text'] and '34.25800' in e['text'] for e in link.events)
+
+    def test_cal_compass(self):
+        from backend import commands
+        link = make_link()
+        commands.execute('cal_compass', None, link)
+        assert any('罗盘校准' in e['text'] for e in link.events)
+
+    def test_cal_accel(self):
+        from backend import commands
+        link = make_link()
+        commands.execute('cal_accel', None, link)
+        assert any('加速度计校准' in e['text'] for e in link.events)
+
+    def test_cal_gyro(self):
+        from backend import commands
+        link = make_link()
+        commands.execute('cal_gyro', None, link)
+        assert any('陀螺仪校准' in e['text'] for e in link.events)
+
+    def test_cal_level(self):
+        from backend import commands
+        link = make_link()
+        commands.execute('cal_level', None, link)
+        assert any('水平校准' in e['text'] for e in link.events)
+
+    def test_cal_baro(self):
+        from backend import commands
+        link = make_link()
+        commands.execute('cal_baro', None, link)
+        assert any('气压计校准' in e['text'] for e in link.events)
+
+    def test_cal_cancel(self):
+        from backend import commands
+        link = make_link()
+        commands.execute('cal_cancel', None, link)
+        assert any('取消' in e['text'] for e in link.events)
+
+    def test_mission_download(self):
+        from backend import commands
+        link = make_link()
+        commands.execute('mission_download', None, link)
+        assert link._dl_pending is True
+        assert link._dl_total == 0
+        assert link._dl_items == []
+        assert any('下载' in e['text'] for e in link.events)
+
+    def test_param_request_all(self):
+        from backend import commands
+        link = make_link()
+        commands.execute('param_request_all', None, link)
+        assert link.param_mgr.fetching is True
+
+    def test_param_set(self):
+        from backend import commands
+        link = make_link()
+        commands.execute('param_set', None, link, data={'name': 'ARMING_CHECK', 'value': 0})
+        assert any('ARMING_CHECK' in e['text'] for e in link.events)
+
+    def test_param_save(self):
+        from backend import commands
+        link = make_link()
+        link.param_mgr.params = {
+            'ARMING_CHECK': {'name': 'ARMING_CHECK', 'value': 1.0, 'type': 9, 'index': 0},
+        }
+        result = commands.execute('param_save', None, link)
+        assert result is not None and result['ok']
+        assert result['path'].endswith('.json')
+        # clean up
+        import os
+        if os.path.exists(result['path']):
+            os.remove(result['path'])
+
+    def test_param_load(self):
+        from backend import commands
+        link = make_link()
+        # pre-populate a param so load_from_file detects a change
+        link.param_mgr.params = {
+            'ARMING_CHECK': {'name': 'ARMING_CHECK', 'value': 1.0, 'type': 9, 'index': 0},
+        }
+        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+            json.dump({'ARMING_CHECK': 0.0}, f)
+            tmp_path = f.name
+        result = commands.execute('param_load', None, link, data={'path': tmp_path})
+        assert result is not None and result['ok']
+        assert 'ARMING_CHECK' in result['changed']
+        import os
+        os.remove(tmp_path)
+
+    def test_log_list(self):
+        from backend import commands
+        link = make_link()
+        commands.execute('log_list', None, link)
+        assert link._log_list == []
+        assert any('日志' in e['text'] for e in link.events)
+
+    def test_log_download(self):
+        from backend import commands
+        link = make_link()
+        link._log_list = [{'id': 5, 'size': 10240}]
+        commands.execute('log_download', None, link, data={'id': 5})
+        assert link._log_download_id == 5
+        assert link._log_download_size == 10240
+        assert any('下载 #5' in e['text'] for e in link.events)
+
+    def test_log_download_invalid_id(self):
+        from backend import commands
+        link = make_link()
+        link._log_list = [{'id': 5, 'size': 10240}]
+        result = commands.execute('log_download', None, link, data={'id': 99})
+        assert result is not None and not result['ok']
+
+    def test_log_cancel(self):
+        from backend import commands
+        link = make_link()
+        link._log_download_id = 5
+        commands.execute('log_cancel', None, link)
+        assert link._log_download_id == -1
+        assert any('取消' in e['text'] for e in link.events)
+
+    def test_rc_override(self):
+        from backend import commands
+        link = make_link()
+        channels = [1500, 1500, 1100, 1500, 1000, 1000, 1000, 1000]
+        commands.execute('rc_override', None, link, data={'channels': channels})
+        assert link._ser.write.called
 
 
 class TestMissionUpload:

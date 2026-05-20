@@ -3,7 +3,10 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from backend.constants import COPTER_MODES, PLANE_MODES, COPTER_BTNS, PLANE_BTNS, FIX_NAMES
+from backend.constants import (COPTER_MODES, PLANE_MODES, ROVER_MODES, SUB_MODES,
+                               COPTER_BTNS, PLANE_BTNS, ROVER_BTNS, SUB_BTNS, FIX_NAMES,
+                               COPTER_MODES_EN, PLANE_MODES_EN, ROVER_MODES_EN, SUB_MODES_EN,
+                               COPTER_BTNS_EN, PLANE_BTNS_EN, ROVER_BTNS_EN, SUB_BTNS_EN, FIX_NAMES_EN)
 
 
 def _has_english(text):
@@ -51,3 +54,81 @@ class TestCompleteness:
         assert 11 in PLANE_MODES  # RTL
         assert 19 in PLANE_MODES  # QLoiter
         assert 21 in PLANE_MODES  # QRTL
+
+    def test_rover_has_common_modes(self):
+        assert 0 in ROVER_MODES  # Manual
+        assert 10 in ROVER_MODES  # Auto
+        assert 11 in ROVER_MODES  # RTL
+
+    def test_sub_has_common_modes(self):
+        assert 0 in SUB_MODES  # Stabilize
+        assert 2 in SUB_MODES  # Depth Hold
+        assert 3 in SUB_MODES  # Auto
+
+
+class TestEnglishModes:
+    def test_en_zh_mode_parity(self):
+        assert set(COPTER_MODES.keys()) == set(COPTER_MODES_EN.keys())
+        assert set(PLANE_MODES.keys()) == set(PLANE_MODES_EN.keys())
+        assert set(ROVER_MODES.keys()) == set(ROVER_MODES_EN.keys())
+        assert set(SUB_MODES.keys()) == set(SUB_MODES_EN.keys())
+
+    def test_en_zh_btn_parity(self):
+        assert len(COPTER_BTNS) == len(COPTER_BTNS_EN)
+        assert len(PLANE_BTNS) == len(PLANE_BTNS_EN)
+        assert len(ROVER_BTNS) == len(ROVER_BTNS_EN)
+        assert len(SUB_BTNS) == len(SUB_BTNS_EN)
+
+    def test_en_btn_ids_match_modes(self):
+        for mid, _ in COPTER_BTNS_EN:
+            assert mid in COPTER_MODES_EN
+        for mid, _ in PLANE_BTNS_EN:
+            assert mid in PLANE_MODES_EN
+        for mid, _ in ROVER_BTNS_EN:
+            assert mid in ROVER_MODES_EN
+        for mid, _ in SUB_BTNS_EN:
+            assert mid in SUB_MODES_EN
+
+    def test_fix_names_en_parity(self):
+        assert set(FIX_NAMES.keys()) == set(FIX_NAMES_EN.keys())
+
+
+class TestIsPlane:
+    def test_zh_copter(self):
+        from backend.drone_link import DroneLink
+        link = DroneLink()
+        link.vtype_raw = 2
+        _, _, vn = link._get_vehicle_info()
+        assert vn == '多旋翼'
+
+    def test_en_copter(self):
+        from backend.drone_link import DroneLink
+        link = DroneLink()
+        link.vtype_raw = 2
+        link.locale = 'en'
+        _, _, vn = link._get_vehicle_info()
+        assert vn == 'Multirotor'
+
+    def test_en_plane(self):
+        from backend.drone_link import DroneLink
+        link = DroneLink()
+        link.vtype_raw = 1
+        link.locale = 'en'
+        _, _, vn = link._get_vehicle_info()
+        assert vn == 'Fixed Wing'
+
+    def test_en_rover(self):
+        from backend.drone_link import DroneLink
+        link = DroneLink()
+        link.vtype_raw = 10
+        link.locale = 'en'
+        _, _, vn = link._get_vehicle_info()
+        assert vn == 'Rover'
+
+    def test_en_sub(self):
+        from backend.drone_link import DroneLink
+        link = DroneLink()
+        link.vtype_raw = 12
+        link.locale = 'en'
+        _, _, vn = link._get_vehicle_info()
+        assert vn == 'Sub'
