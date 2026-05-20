@@ -234,9 +234,10 @@
       droneMarker = L.marker([glat, glon], { icon, zIndexOffset: 1000 }).addTo(map);
       droneMarker.on('click', () => {
         const d = app.drone;
+        const coordStr = `${d.lat.toFixed(6)}, ${d.lon.toFixed(6)}`;
         const content = `<div style="font-size:12px;min-width:160px">
           <b>${d.mode}</b> ${d.armed ? '<span style="color:#f44336">已解锁</span>' : '已锁定'}<br>
-          <span style="color:#888">${d.lat.toFixed(6)}, ${d.lon.toFixed(6)}</span><br>
+          <span style="color:#888;cursor:pointer;text-decoration:underline dotted" onclick="navigator.clipboard.writeText('${coordStr}')" title="点击复制">${coordStr}</span><br>
           高度: <b>${d.alt_rel.toFixed(1)}m</b> (海拔 ${d.alt_msl.toFixed(0)}m)<br>
           速度: <b>${d.gs.toFixed(1)} m/s</b> 航向 ${d.hdg.toFixed(0)}°<br>
           距起飞点: <b>${d.dist_home.toFixed(0)}m</b>
@@ -594,7 +595,11 @@
       </svg>
     </div>
   {/if}
-  <div class="absolute bottom-1.5 left-2.5 z-[1000] bg-card/85 backdrop-blur text-muted-foreground px-2 py-0.5 rounded text-[11px] font-mono">{mouseCoord || '---'}</div>
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class="absolute bottom-1.5 left-2.5 z-[1000] bg-card/85 backdrop-blur text-muted-foreground px-2 py-0.5 rounded text-[11px] font-mono cursor-pointer hover:text-primary transition-colors"
+       onclick={() => { if (mouseCoord) { navigator.clipboard.writeText(mouseCoord); addToast('坐标已复制', 'success', 1500); } }}
+       title="点击复制坐标">{mouseCoord || '---'}</div>
   <MapControls />
 
   {#if showHud && app.drone.connected}
