@@ -1106,6 +1106,16 @@ class TestVersionApi:
         r = httpx.get(f'{backend_url}/api/param_meta?vehicle=copter')
         assert r.status_code == 200
 
+    def test_set_locale_via_ws(self, ws_url, event_loop):
+        import websockets
+        async def _test():
+            ws = await asyncio.wait_for(websockets.connect(ws_url), 5)
+            await ws.send(json.dumps({'type': 'set_locale', 'locale': 'en'}))
+            msg = json.loads(await asyncio.wait_for(ws.recv(), 5))
+            assert msg['type'] == 'state'
+            await ws.close()
+        event_loop.run_until_complete(_test())
+
     def test_tile_sources_endpoint(self, backend_url):
         import httpx
         r = httpx.get(f'{backend_url}/api/tile_sources')

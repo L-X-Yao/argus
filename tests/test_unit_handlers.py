@@ -231,7 +231,6 @@ class TestVehicleTypes:
         from pllink_proto import bm as _bm
         link = make_link()
         link._protocol = 'standard'
-        # Heartbeat from sysid=1
         hb = _bm(0, struct.pack('<IBBBBB', 5, 2, 3, 0, 0, 3), 0, 50, sysid=1)
         link._buf = hb
         payload, consumed = link._parse_mavlink_frame()
@@ -239,7 +238,6 @@ class TestVehicleTypes:
         link._buf = link._buf[consumed:]
         link._process(payload)
         assert link.connected
-        # GPS from sysid=1
         gps = _bm(33, struct.pack('<IiiiihhhH', 1000,
             int(34.258 * 1e7), int(108.942 * 1e7), 430000, 30000,
             500, 300, -100, 4500), 1, 104, sysid=1)
@@ -249,6 +247,18 @@ class TestVehicleTypes:
         link._process(payload)
         assert 1 in link._vehicles
         assert abs(link._vehicles[1]['lat'] - 34.258) < 0.001
+
+    def test_get_state_vehicles_field(self):
+        import time
+        link = make_link()
+        link.connected = True
+        link.sysid = 1
+        link._vehicles[2] = {'sysid': 2, 'lat': 35.0, 'lon': 109.0, 'alt': 50, 'hdg': 90, 't': time.time()}
+        link._vehicles[1] = {'sysid': 1, 'lat': 34.0, 'lon': 108.0, 'alt': 30, 'hdg': 45, 't': time.time()}
+        state = link.get_state()
+        assert 'vehicles' in state
+        assert len(state['vehicles']) == 1
+        assert state['vehicles'][0]['sysid'] == 2
 
     def test_force_plane(self):
         link = make_link()

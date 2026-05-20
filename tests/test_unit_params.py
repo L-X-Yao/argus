@@ -144,3 +144,41 @@ class TestParamManager:
             p = _param_value_payload(name, float(i), i, 2500)
             mgr.handle_param_value(p, len(p))
         assert len(mgr._messages) <= 1500
+
+
+class TestParamMeta:
+    def test_parse_xml(self):
+        from backend.param_meta import _parse_xml
+        xml = b'''<paramfile>
+        <parameters name="ARMING">
+          <param humanName="Arming Check" name="ARMING_CHECK"
+                 documentation="Checks to perform before arming">
+            <field name="Range">0 65535</field>
+            <field name="Units">bitmask</field>
+            <field name="Default">1</field>
+            <values>
+              <value code="0">Disabled</value>
+              <value code="1">Enabled</value>
+            </values>
+          </param>
+        </parameters>
+        </paramfile>'''
+        meta = _parse_xml(xml)
+        assert 'ARMING_CHECK' in meta
+        m = meta['ARMING_CHECK']
+        assert m['human'] == 'Arming Check'
+        assert m['group'] == 'ARMING'
+        assert m['range'] == [0, 65535]
+        assert m['units'] == 'bitmask'
+        assert m['default'] == 1.0
+        assert '0' in m['values']
+        assert m['values']['1'] == 'Enabled'
+
+    def test_empty_xml(self):
+        from backend.param_meta import _parse_xml
+        meta = _parse_xml(b'<paramfile></paramfile>')
+        assert meta == {}
+
+    def test_get_metadata_invalid_vehicle(self):
+        from backend.param_meta import get_metadata
+        assert get_metadata('helicopter') == {}
