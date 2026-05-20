@@ -1,5 +1,6 @@
 <script lang="ts">
   import { app } from '../lib/stores.svelte';
+  import { t } from '../lib/i18n.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
   import { X, Play, Pause } from '@lucide/svelte';
 
@@ -113,12 +114,12 @@
     <button class="w-full py-2.5 bg-transparent border-2 border-dashed border-border rounded-lg cursor-pointer
                     text-sm font-bold text-muted-foreground hover:border-primary hover:text-primary transition-colors"
             onclick={loadFile}>
-      加载飞行日志 (.csv)
+      Load Flight Log (.csv)
     </button>
   {:else}
     <div class="flex items-center gap-2 mb-2">
       <span class="text-xs font-bold text-primary flex-1 truncate">{fileName}</span>
-      <span class="text-[11px] text-muted-foreground">{rows.length} 帧 | {fmtTime(duration)}</span>
+      <span class="text-[11px] text-muted-foreground">{rows.length} frames | {fmtTime(duration)}</span>
       <button class="text-destructive leading-none bg-transparent border-none cursor-pointer px-0.5" onclick={close}><X size={14} /></button>
     </div>
     <div class="flex items-center gap-2">
@@ -137,10 +138,10 @@
     </div>
     {#if current}
       <div class="flex gap-3 mt-1.5 text-[11px] text-muted-foreground">
-        <span>高度 {current.alt_rel.toFixed(1)}m</span>
-        <span>速度 {current.gs.toFixed(1)}m/s</span>
-        <span>电压 {current.voltage.toFixed(1)}V</span>
-        <span>距离 {current.dist.toFixed(0)}m</span>
+        <span>{t('telem.alt')} {current.alt_rel.toFixed(1)}m</span>
+        <span>{t('telem.speed')} {current.gs.toFixed(1)}m/s</span>
+        <span>{t('chart.voltage')} {current.voltage.toFixed(1)}V</span>
+        <span>{t('telem.dist')} {current.dist.toFixed(0)}m</span>
       </div>
     {/if}
   {/if}

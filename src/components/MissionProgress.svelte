@@ -1,11 +1,14 @@
 <script lang="ts">
   import { app } from '../lib/stores.svelte';
+  import { t } from '../lib/i18n.svelte';
 
   let d = $derived(app.drone);
 
   let isAutoMode = $derived(
     (d.vtype === '多旋翼' && d.mode_id === 3) ||
-    (d.vtype === '固定翼' && d.mode_id === 10)
+    (d.vtype === '固定翼' && d.mode_id === 10) ||
+    (d.vtype === 'Multirotor' && d.mode_id === 3) ||
+    (d.vtype === 'Fixed Wing' && d.mode_id === 10)
   );
 
   let wpCount = $derived(app.waypoints.length);
@@ -45,8 +48,8 @@
 {#if isAutoMode && d.armed && wpCount > 0}
   <div class="absolute top-2 left-1/2 -translate-x-1/2 z-[1001] w-80 bg-card/90 backdrop-blur border border-border rounded-xl px-4 py-2 shadow-lg">
     <div class="flex justify-between text-xs text-muted-foreground mb-1">
-      <span>任务进度 #{d.wp}</span>
-      <span>{currentWpIdx}/{wpCount} 航点</span>
+      <span>{t('ctrl.mission')} #{d.wp}</span>
+      <span>{currentWpIdx}/{wpCount} WP</span>
     </div>
     <div class="relative h-2 bg-muted rounded-full overflow-visible">
       <div class="h-full bg-gradient-to-r from-blue-600 to-sky-400 rounded-full transition-all duration-500"
@@ -58,8 +61,8 @@
       {/each}
     </div>
     <div class="flex justify-between text-[11px] text-muted-foreground mt-1">
-      <span>剩余 {fmtDist(remainingDist)}</span>
-      <span>预计 {fmtEta(eta)}</span>
+      <span>{fmtDist(remainingDist)}</span>
+      <span>ETA {fmtEta(eta)}</span>
       <span>{d.gs.toFixed(1)} m/s</span>
     </div>
   </div>
