@@ -282,7 +282,7 @@
   .map-btn:hover { color:hsl(var(--primary)); border-color:hsl(var(--primary)); }
   :global(.drone-icon) { transition: transform 200ms linear !important; background: none !important; border: none !important; }
   :global(.drone-arrow) { transition: transform 150ms ease-out; }
-  :global(.dark .leaflet-tile-pane) { filter: brightness(0.7) saturate(0.8); }
+  :global(.dark .leaflet-tile-pane) { filter: brightness(0.75) contrast(1.1) saturate(0.85); }
   :global(.dark .leaflet-control-zoom a) { background: hsl(var(--card)); color: hsl(var(--foreground)); border-color: hsl(var(--border)); }
   :global(.guided-pulse) { animation: guidedPulse 1.5s ease-in-out infinite; }
   @keyframes guidedPulse { 0%,100% { opacity: 0.6; } 50% { opacity: 1; } }
