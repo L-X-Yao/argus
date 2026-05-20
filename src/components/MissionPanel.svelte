@@ -264,7 +264,8 @@
     {#each app.waypoints as wp, i}
       <div class="flex items-center gap-1 px-1 py-1 border-b border-border/30 text-xs hover:bg-muted/50 transition-colors
         {app.drone.wp === i + 2 ? 'bg-warning/10 border-l-2 border-l-warning pl-0.5' : ''}">
-        <span class="w-5 text-center text-muted-foreground font-bold text-[11px]">{i + 1}</span>
+        <button class="w-5 text-center text-primary font-bold text-[11px] hover:underline cursor-pointer bg-transparent border-none p-0"
+                onclick={() => app.focusWp = i} title="定位到此航点">{i + 1}</button>
         <button class="px-1 py-px rounded text-[9px] font-bold border-none text-white cursor-pointer whitespace-nowrap"
                 style="background:{typeColor(wp.type || 'wp')}" onclick={() => cycleType(i)}
                 title="点击切换: 航点/盘旋圈/盘旋秒">

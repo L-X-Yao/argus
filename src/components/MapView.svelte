@@ -515,6 +515,21 @@
     });
   });
 
+  // Focus waypoint from MissionPanel click
+  let focusRing: any = null;
+  $effect(() => {
+    if (!map || app.focusWp < 0 || app.focusWp >= app.waypoints.length) return;
+    const wp = app.waypoints[app.focusWp];
+    const [glat, glon] = toGcj(wp.lat, wp.lon);
+    map.setView([glat, glon], Math.max(map.getZoom(), 16));
+    if (focusRing) map.removeLayer(focusRing);
+    focusRing = L.circleMarker([glat, glon], {
+      radius: 20, color: '#ffa726', fillColor: 'transparent', weight: 3, dashArray: '4,4',
+    }).addTo(map);
+    setTimeout(() => { if (focusRing) { map.removeLayer(focusRing); focusRing = null; } }, 2000);
+    app.focusWp = -1;
+  });
+
   function fmtTime(s: number): string {
     const m = Math.floor(s / 60), sec = s % 60;
     return `${m}:${sec < 10 ? '0' : ''}${sec}`;

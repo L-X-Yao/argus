@@ -18,6 +18,7 @@ class AppState {
   summaryShown: boolean = $state(false);
   toasts: Toast[] = $state([]);
   guidedMode: boolean = $state(false);
+  focusWp: number = $state(-1);
   replayPos: { lat: number; lon: number; yaw: number } | null = $state(null);
   surveyPolygon: { lat: number; lon: number }[] = $state([]);
   drawingPolygon: boolean = $state(false);
