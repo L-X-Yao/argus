@@ -34,6 +34,7 @@ class AppState {
   showServo: boolean = $state(false);
   showSettings: boolean = $state(false);
   mapRegion: 'china' | 'global' = $state('china');
+  linkHistory: { t: number; rate: number; age: number }[] = $state([]);
 }
 
 export const app = new AppState();

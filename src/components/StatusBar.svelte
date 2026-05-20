@@ -73,6 +73,10 @@
       const f = app.drone.frames;
       msgRate = Math.round((f - prevFrames) / 2);
       prevFrames = f;
+      if (app.drone.connected) {
+        app.linkHistory.push({ t: Date.now(), rate: msgRate, age: app.drone.link_age });
+        if (app.linkHistory.length > 120) app.linkHistory.splice(0, app.linkHistory.length - 90);
+      }
     }, 2000);
     return () => clearInterval(timer);
   });
