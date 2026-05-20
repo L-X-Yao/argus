@@ -13,6 +13,7 @@
   import SurveyLayer from './layers/SurveyLayer.svelte';
   import ReplayLayer from './layers/ReplayLayer.svelte';
   import { Layers, Ruler, Navigation, Grid3x3, ShieldAlert, Download, Crosshair, Home, Maximize2 } from '@lucide/svelte';
+  import { t } from '../lib/i18n.svelte';
 
   declare const L: any;
 
@@ -197,40 +198,40 @@
   {/if}
 
   <div class="absolute top-2.5 left-2.5 z-[1000] flex gap-1">
-    <button class="map-btn" onclick={toggleMapType} title={isSat ? '切换到街道地图' : '切换到卫星地图'}>
-      <Layers size={13} />{isSat ? '卫星' : '地图'}
+    <button class="map-btn" onclick={toggleMapType} title={isSat ? t('map.street') : t('map.satellite')}>
+      <Layers size={13} />{isSat ? t('map.satellite') : t('map.street')}
     </button>
-    <button class="map-btn {measuring ? '!text-destructive !border-destructive' : ''}" onclick={toggleMeasure} title="测量距离">
-      <Ruler size={13} />{measuring ? '取消' : '测距'}
+    <button class="map-btn {measuring ? '!text-destructive !border-destructive' : ''}" onclick={toggleMeasure} title={t('map.measure')}>
+      <Ruler size={13} />{measuring ? t('map.cancel') : t('map.measure')}
     </button>
     {#if app.drone.connected && app.drone.armed}
-      <button class="map-btn {app.guidedMode ? '!text-warning !border-warning' : ''}" onclick={() => app.guidedMode = !app.guidedMode} title="点击地图飞往指定位置">
-        <Navigation size={13} />{app.guidedMode ? '引导中' : '引导'}
+      <button class="map-btn {app.guidedMode ? '!text-warning !border-warning' : ''}" onclick={() => app.guidedMode = !app.guidedMode} title={t('map.guided')}>
+        <Navigation size={13} />{app.guidedMode ? t('map.guidedActive') : t('map.guided')}
       </button>
     {/if}
     <button class="map-btn {app.showSurvey || app.drawingPolygon ? '!text-purple-400 !border-purple-400' : ''}"
-            onclick={() => app.showSurvey = !app.showSurvey} title="测绘航线规划">
-      <Grid3x3 size={13} />测绘
+            onclick={() => app.showSurvey = !app.showSurvey} title={t('map.survey')}>
+      <Grid3x3 size={13} />{t('map.survey')}
     </button>
     <button class="map-btn {app.showFence || app.drawingFence ? '!text-destructive !border-destructive' : ''}"
-            onclick={() => app.showFence = !app.showFence} title="电子围栏">
-      <ShieldAlert size={13} />围栏
+            onclick={() => app.showFence = !app.showFence} title={t('map.fence')}>
+      <ShieldAlert size={13} />{t('map.fence')}
     </button>
     {#if droneTrail.length > 10}
-      <button class="map-btn" onclick={exportTrack} title="导出飞行轨迹KML">
-        <Download size={13} />轨迹
+      <button class="map-btn" onclick={exportTrack} title={t('map.track')}>
+        <Download size={13} />{t('map.track')}
       </button>
     {/if}
   </div>
   <div class="absolute top-2.5 right-2.5 z-[1000] flex gap-1">
-    <button class="map-btn {follow ? '!text-destructive !border-destructive' : ''}" onclick={() => follow = !follow} title={follow ? '停止跟随' : '跟随飞机'}>
-      <Crosshair size={13} />{follow ? '跟随' : '自由'}
+    <button class="map-btn {follow ? '!text-destructive !border-destructive' : ''}" onclick={() => follow = !follow} title={follow ? t('map.free') : t('map.follow')}>
+      <Crosshair size={13} />{follow ? t('map.follow') : t('map.free')}
     </button>
-    <button class="map-btn" onclick={centerHome} title="定位到起飞点">
-      <Home size={13} />起飞点
+    <button class="map-btn" onclick={centerHome} title={t('map.home')}>
+      <Home size={13} />{t('map.home')}
     </button>
-    <button class="map-btn" onclick={fitRoute} title="全览航线">
-      <Maximize2 size={13} />全览
+    <button class="map-btn" onclick={fitRoute} title={t('map.fitAll')}>
+      <Maximize2 size={13} />{t('map.fitAll')}
     </button>
   </div>
   {#if app.drone.connected}

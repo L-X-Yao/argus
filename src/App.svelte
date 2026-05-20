@@ -3,6 +3,7 @@
   import { connectWs, sendCommand } from './lib/ws';
   import { app, loadSettings, saveSettings } from './lib/stores.svelte';
   import { checkAlerts, beep, speak } from './lib/audio';
+  import { t, loadLocale } from './lib/i18n.svelte';
   import StatusBar from './components/StatusBar.svelte';
   import ControlPanel from './components/ControlPanel.svelte';
   import MapView from './components/MapView.svelte';
@@ -48,6 +49,7 @@
   let showShortcuts = $state(false);
 
   onMount(() => {
+    loadLocale();
     loadSettings();
     connectWs();
     window.addEventListener('keydown', onKey);
@@ -129,11 +131,11 @@
 
   function toggleTheme() { app.darkTheme = !app.darkTheme; saveSettings(); }
 
-  const tabs: { id: View; label: string; icon: Component }[] = [
-    { id: 'fly', label: '飞行', icon: Plane },
-    { id: 'plan', label: '规划', icon: MapPinned },
-    { id: 'monitor', label: '监控', icon: Activity },
-    { id: 'params', label: '参数', icon: Settings2 },
+  const tabKeys: { id: View; key: string; icon: Component }[] = [
+    { id: 'fly', key: 'tab.fly', icon: Plane },
+    { id: 'plan', key: 'tab.plan', icon: MapPinned },
+    { id: 'monitor', key: 'tab.monitor', icon: Activity },
+    { id: 'params', key: 'tab.params', icon: Settings2 },
   ];
 
   let monitorWarn = $derived(
@@ -151,7 +153,7 @@
   <StatusBar {toggleTheme} onSettings={() => app.showSettings = !app.showSettings} />
 
   <nav class="flex items-center gap-1 px-3 py-1 bg-card border-b border-border shrink-0 overflow-x-auto scrollbar-hide">
-    {#each tabs as tab}
+    {#each tabKeys as tab}
       <button
         class="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold tracking-wide uppercase rounded-md transition-all
           {view === tab.id
@@ -160,7 +162,7 @@
         onclick={() => view = tab.id}
       >
         <tab.icon size={14} />
-        {tab.label}
+        {t(tab.key)}
         {#if tab.id === 'monitor' && monitorWarn && view !== 'monitor'}
           <span class="w-2 h-2 rounded-full bg-destructive animate-pulse"></span>
         {/if}
@@ -176,31 +178,31 @@
     {#if app.drone.connected}
       <div class="ml-auto flex items-center gap-1.5 shrink-0">
         <Button size="sm" class="bg-red-600 hover:bg-red-700 text-white font-bold gap-1"
-                onclick={() => showSlide('滑动切换返航', 'red', () => sendCommand('rtl'))}
-                title="返航模式 (快捷键 R)">
-          <CornerDownLeft size={13} />返航
+                onclick={() => showSlide(t('slide.rtl'), 'red', () => sendCommand('rtl'))}
+                title="{t('ctrl.rtl')} (R)">
+          <CornerDownLeft size={13} />{t('nav.rtl')}
         </Button>
         <Button size="sm" class="bg-amber-600 hover:bg-amber-700 text-white font-bold gap-1"
                 onclick={() => sendCommand('mode', app.drone.vtype === '固定翼' ? 19 : 5)}
-                title="悬停/刹车 (快捷键 Space)">
-          <Pause size={13} />悬停
+                title="{t('ctrl.pause')} (Space)">
+          <Pause size={13} />{t('nav.pause')}
         </Button>
         <Button variant="secondary" size="sm" class="gap-1" onclick={() => showLogPanel = true}
                 title="查看/下载机载飞行日志">
-          <HardDrive size={13} />日志
+          <HardDrive size={13} />{t('nav.logs')}
         </Button>
         <Button variant="secondary" size="sm" class="gap-1" onclick={() => showCalibration = true}
-                title="传感器校准 (罗盘/加速度计/陀螺仪)">
-          <Wrench size={13} />校准
+                title="{t('nav.calibrate')}">
+          <Wrench size={13} />{t('nav.calibrate')}
         </Button>
         {#if view === 'fly'}
           <Button variant={showVideo ? 'default' : 'secondary'} size="sm" class="gap-1"
                   onclick={() => showVideo = !showVideo} title="RTSP视频画面">
-            <Video size={13} />视频
+            <Video size={13} />{t('nav.video')}
           </Button>
           <Button variant={controlsOpen ? 'default' : 'secondary'} size="sm" class="gap-1"
-                  onclick={() => controlsOpen = !controlsOpen} title="解锁/模式/任务控制面板">
-            {#if controlsOpen}<PanelLeftClose size={13} />收起{:else}<SlidersHorizontal size={13} />操控{/if}
+                  onclick={() => controlsOpen = !controlsOpen} title="{t('nav.controls')}">
+            {#if controlsOpen}<PanelLeftClose size={13} />{t('nav.collapse')}{:else}<SlidersHorizontal size={13} />{t('nav.controls')}{/if}
           </Button>
         {/if}
       </div>

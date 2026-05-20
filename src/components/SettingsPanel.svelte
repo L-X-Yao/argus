@@ -1,7 +1,9 @@
 <script lang="ts">
   import { app, saveSettings } from '../lib/stores.svelte';
+  import { t, i18nState, setLocale } from '../lib/i18n.svelte';
+  import type { Locale } from '../lib/i18n.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
-  import { X, Volume2, VolumeOff, Mic, MicOff, Sun, Moon, Plane, ShieldAlert, Gauge } from '@lucide/svelte';
+  import { X, Volume2, VolumeOff, Mic, MicOff, Sun, Moon, Plane, ShieldAlert, Gauge, Globe } from '@lucide/svelte';
 
   let { onclose }: { onclose: () => void } = $props();
   const VERSION = '3.0.0';
@@ -84,11 +86,20 @@
             </Button>
           </div>
           <div class="flex justify-between items-center py-2 border-b border-border/50">
-            <label class="text-sm text-muted-foreground">深色主题</label>
+            <label class="text-sm text-muted-foreground">{t('settings.darkTheme')}</label>
             <Button variant={app.darkTheme ? 'default' : 'secondary'} size="sm" class="gap-1 h-7 text-xs"
                     onclick={() => { app.darkTheme = !app.darkTheme; saveSettings(); }}>
               {#if app.darkTheme}<Moon size={13} />深色{:else}<Sun size={13} />浅色{/if}
             </Button>
+          </div>
+          <div class="flex justify-between items-center py-2 border-b border-border/50">
+            <label class="text-sm text-muted-foreground"><Globe size={13} class="inline mr-1" />语言 / Language</label>
+            <div class="flex gap-1">
+              <Button variant={i18nState.locale === 'zh' ? 'default' : 'secondary'} size="sm" class="h-7 text-xs px-2.5"
+                      onclick={() => setLocale('zh')}>中文</Button>
+              <Button variant={i18nState.locale === 'en' ? 'default' : 'secondary'} size="sm" class="h-7 text-xs px-2.5"
+                      onclick={() => setLocale('en')}>EN</Button>
+            </div>
           </div>
         </div>
       </div>
