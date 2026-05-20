@@ -4,10 +4,15 @@
 
   let logEl: HTMLDivElement;
   let filter = $state('');
+  let sevFilter = $state<'all' | 'warn' | 'error'>('all');
 
-  let filtered = $derived(
-    filter ? app.events.filter(e => e.text.includes(filter) || e.time.includes(filter)) : app.events
-  );
+  let filtered = $derived.by(() => {
+    let list = app.events;
+    if (sevFilter === 'error') list = list.filter(e => severity(e.text) === 'critical' || severity(e.text) === 'error');
+    else if (sevFilter === 'warn') list = list.filter(e => severity(e.text) !== 'info' && severity(e.text) !== 'ok');
+    if (filter) list = list.filter(e => e.text.includes(filter) || e.time.includes(filter));
+    return list;
+  });
 
   type SevLevel = 'critical' | 'error' | 'warn' | 'ok' | 'info';
 
@@ -61,6 +66,11 @@
   <div class="flex items-center justify-between mb-1.5">
     <h2 class="text-[11px] font-semibold text-primary uppercase tracking-wider">事件日志</h2>
     <div class="flex items-center gap-1.5">
+      {#each [['all', '全部'], ['warn', '警告'], ['error', '错误']] as [key, label]}
+        <button class="px-1.5 py-px rounded text-[10px] font-semibold transition-all
+          {sevFilter === key ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}"
+                onclick={() => sevFilter = key as any}>{label}</button>
+      {/each}
       <Button variant="ghost" size="xs" onclick={() => clearEvents()} disabled={app.events.length === 0}>清空</Button>
       <Button variant="outline" size="xs" onclick={exportLog}>导出</Button>
       <input bind:value={filter} placeholder="筛选..."
