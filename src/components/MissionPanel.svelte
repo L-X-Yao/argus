@@ -298,9 +298,10 @@
     {/each}
   </div>
   {#if app.waypoints.length > 0}
-    <div class="text-xs text-warning mt-1.5">
-      距离: {totalDist()} | {app.waypoints.filter(w => w.drop).length} 投放
-      | ETA: {estimateTime()}
+    <div class="text-xs text-warning mt-1.5 leading-relaxed">
+      距离 {totalDist()} · 时间 {estimateTime()} · 航点 {app.waypoints.length}
+      {#if app.waypoints.filter(w => w.drop).length > 0}· 投放 {app.waypoints.filter(w => w.drop).length}{/if}
+      · 高度 {Math.min(...app.waypoints.map(w => w.alt))}-{Math.max(...app.waypoints.map(w => w.alt))}m
     </div>
   {/if}
   {#if app.waypoints.length >= 2}

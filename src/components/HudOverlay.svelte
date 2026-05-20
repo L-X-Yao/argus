@@ -42,6 +42,13 @@
   let vsc = $derived(Math.max(-VSM, Math.min(VSM, d.vz)));
   let vspx = $derived(-vsc / VSM * (VSH / 2));
 
+  let homeBearing = $derived.by(() => {
+    if (d.home_lat === 0 || d.lat === 0 || d.dist_home < 5) return -1;
+    const dlon = (d.home_lon - d.lon) * Math.cos(d.lat * Math.PI / 180);
+    const dlat = d.home_lat - d.lat;
+    return (Math.atan2(dlon, dlat) * 180 / Math.PI + 360) % 360;
+  });
+
   function cardinal(h: number): string {
     if (h < 22.5 || h >= 337.5) return '北';
     if (h < 67.5) return '东北';
@@ -143,6 +150,16 @@
     {/each}
   </g>
   <polygon points="{CX},{CY - COMP_R - 1} {CX - 3},{CY - COMP_R + 5} {CX + 3},{CY - COMP_R + 5}" fill="#ff9800" />
+
+  <!-- Home Direction on Compass -->
+  {#if homeBearing >= 0}
+    {@const hRel = (homeBearing - d.hdg + 360) % 360}
+    {@const hRad = (hRel - 90) * Math.PI / 180}
+    <polygon
+      points="{CX + COMP_R * Math.cos(hRad)},{CY + COMP_R * Math.sin(hRad)} {CX + (COMP_R - 7) * Math.cos(hRad - 0.08)},{CY + (COMP_R - 7) * Math.sin(hRad - 0.08)} {CX + (COMP_R - 7) * Math.cos(hRad + 0.08)},{CY + (COMP_R - 7) * Math.sin(hRad + 0.08)}"
+      fill="#4caf50" opacity="0.9"
+    />
+  {/if}
 
   <!-- Altitude Tape -->
   <rect x="248" y={TT} width="50" height={TB - TT} rx="3" fill="rgba(0,0,0,0.35)" />
