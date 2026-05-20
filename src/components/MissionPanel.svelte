@@ -321,11 +321,16 @@
     <div class="mt-1.5"><canvas bind:this={profileCanvas} height="50" class="w-full bg-background rounded-lg"></canvas></div>
   {/if}
   <div class="flex gap-1 mt-1.5 items-center flex-wrap">
-    <label for="def-alt" class="text-[11px] text-muted-foreground">高度:</label>
+    <label for="def-alt" class="text-[11px] text-muted-foreground">{t('ctrl.altitude')}:</label>
     <input id="def-alt" type="number" bind:value={app.defaultAlt} min="5" max="200" step="5" onchange={saveSettings}
            class="w-12 h-6 px-1 bg-input border border-border rounded text-xs text-foreground" />
     <span class="text-[11px] text-muted-foreground">m</span>
-    <Button variant="outline" size="xs" onclick={applyAltAll}>全部</Button>
+    {#each [10, 30, 50, 100] as a}
+      <button class="px-1.5 py-px text-[10px] rounded border cursor-pointer transition-colors
+        {app.defaultAlt === a ? 'text-primary border-primary bg-primary/10' : 'text-muted-foreground border-border hover:text-foreground'}"
+              onclick={() => { app.defaultAlt = a; saveSettings(); }}>{a}</button>
+    {/each}
+    <Button variant="outline" size="xs" onclick={applyAltAll}>{t('cat.all')}</Button>
     <Button size="xs" class="bg-orange-700 hover:bg-orange-800 text-white font-bold" onclick={uploadMission}>{t('wp.upload')}</Button>
   </div>
   <div class="flex gap-1 mt-1.5 items-center flex-wrap">
