@@ -23,3 +23,29 @@ PLANE_BTNS = [
 ROVER_BTNS = [[0, '手动'], [4, '固定'], [10, '自动'], [15, '引导'], [11, '返航']]
 SUB_BTNS = [[0, '自稳'], [2, '定深'], [16, '定点'], [3, '自动'], [4, '引导']]
 FIX_NAMES = {0: '无定位', 1: '无定位', 2: '2D', 3: '3D', 4: '差分', 5: 'RTK浮动', 6: 'RTK固定'}
+
+COPTER_MODES_EN = {
+    0: 'Stabilize', 1: 'Acro', 2: 'Alt Hold', 3: 'Auto', 4: 'Guided',
+    5: 'Loiter', 6: 'RTL', 7: 'Circle', 9: 'Land', 16: 'PosHold', 21: 'Smart RTL',
+}
+PLANE_MODES_EN = {
+    0: 'Manual', 1: 'Circle', 2: 'Stabilize', 5: 'FBW-A', 6: 'FBW-B', 7: 'Cruise',
+    10: 'Auto', 11: 'RTL', 12: 'Loiter', 15: 'Guided',
+    17: 'Q-Stabilize', 18: 'Q-Hover', 19: 'Q-Loiter', 20: 'Q-Land', 21: 'Q-RTL',
+}
+ROVER_MODES_EN = {
+    0: 'Manual', 1: 'Acro', 3: 'Steering', 4: 'Hold', 5: 'Follow',
+    10: 'Auto', 11: 'RTL', 12: 'Smart RTL', 15: 'Guided',
+}
+SUB_MODES_EN = {
+    0: 'Stabilize', 1: 'Acro', 2: 'Depth Hold', 3: 'Auto', 4: 'Guided',
+    7: 'Circle', 9: 'Surface', 16: 'PosHold', 19: 'Manual',
+}
+COPTER_BTNS_EN = [[0, 'Stabilize'], [2, 'Alt Hold'], [5, 'Loiter'], [3, 'Auto'], [6, 'RTL'], [9, 'Land']]
+PLANE_BTNS_EN = [
+    [19, 'Q-Loiter'], [18, 'Q-Hover'], [17, 'Q-Stabilize'],
+    [10, 'Auto'], [21, 'Q-RTL'], [20, 'Q-Land'], [12, 'Loiter'], [11, 'RTL'],
+]
+ROVER_BTNS_EN = [[0, 'Manual'], [4, 'Hold'], [10, 'Auto'], [15, 'Guided'], [11, 'RTL']]
+SUB_BTNS_EN = [[0, 'Stabilize'], [2, 'Depth Hold'], [16, 'PosHold'], [3, 'Auto'], [4, 'Guided']]
+FIX_NAMES_EN = {0: 'No Fix', 1: 'No Fix', 2: '2D', 3: '3D', 4: 'DGPS', 5: 'RTK Float', 6: 'RTK Fixed'}

@@ -247,7 +247,11 @@ export function t(key: string): string {
 export function setLocale(l: Locale) {
   i18nState.locale = l;
   try { localStorage.setItem('pllink_locale', l); } catch {}
+  _syncCallback?.(l);
 }
+
+let _syncCallback: ((l: Locale) => void) | null = null;
+export function onLocaleChange(cb: (l: Locale) => void) { _syncCallback = cb; }
 
 export function getLocale(): Locale { return i18nState.locale; }
 

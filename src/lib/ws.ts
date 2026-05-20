@@ -3,6 +3,7 @@ import { app, updateState, addEvent, setWsConnected, addToast, loadDownloadedMis
 import { handleParamBatch, handleParamsComplete } from './paramStore.svelte';
 import { setLogList, completeDownload, updateDownloadProgress } from './logStore.svelte';
 import { getWsUrl } from './backend';
+import { onLocaleChange, getLocale } from './i18n.svelte';
 
 let socket: WebSocket | null = null;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -15,6 +16,8 @@ export function connectWs(): void {
   ws.onopen = () => {
     setWsConnected(true);
     if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+    sendMessage({ type: 'set_locale', locale: getLocale() });
+    onLocaleChange((l) => sendMessage({ type: 'set_locale', locale: l }));
   };
 
   ws.onmessage = (ev) => {

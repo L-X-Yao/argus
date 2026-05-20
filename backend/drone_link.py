@@ -11,7 +11,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
 from pllink_proto import ple, pld, bm
 
 from .constants import (COPTER_MODES, PLANE_MODES, ROVER_MODES, SUB_MODES,
-                        COPTER_BTNS, PLANE_BTNS, ROVER_BTNS, SUB_BTNS, FIX_NAMES)
+                        COPTER_BTNS, PLANE_BTNS, ROVER_BTNS, SUB_BTNS, FIX_NAMES,
+                        COPTER_MODES_EN, PLANE_MODES_EN, ROVER_MODES_EN, SUB_MODES_EN,
+                        COPTER_BTNS_EN, PLANE_BTNS_EN, ROVER_BTNS_EN, SUB_BTNS_EN, FIX_NAMES_EN)
 from . import mavlink_dispatch
 from .mavlink_handlers import init_handlers
 from . import commands as cmd_module
@@ -81,6 +83,7 @@ class DroneLink:
         self._reconnect_enabled = True
 
         self._protocol = 'auto'
+        self.locale = 'zh'
         self.connected = False
         self.frame_count = 0
         self.last_frame_time = 0.0
@@ -246,19 +249,26 @@ class DroneLink:
 
     def _get_vehicle_info(self) -> tuple[dict, list, str]:
         vt = self.vtype_raw
+        en = self.locale == 'en'
         if self.force_plane is True:
-            return PLANE_MODES, PLANE_BTNS, '固定翼'
+            return (PLANE_MODES_EN if en else PLANE_MODES, PLANE_BTNS_EN if en else PLANE_BTNS,
+                    'Fixed Wing' if en else '固定翼')
         if self.force_plane is False:
-            return COPTER_MODES, COPTER_BTNS, '多旋翼'
+            return (COPTER_MODES_EN if en else COPTER_MODES, COPTER_BTNS_EN if en else COPTER_BTNS,
+                    'Multirotor' if en else '多旋翼')
         if vt in (1, 19, 20, 21, 22, 23, 24, 25):
-            return PLANE_MODES, PLANE_BTNS, '固定翼'
+            return (PLANE_MODES_EN if en else PLANE_MODES, PLANE_BTNS_EN if en else PLANE_BTNS,
+                    'Fixed Wing' if en else '固定翼')
         if vt == 10:
-            return ROVER_MODES, ROVER_BTNS, '地面车'
+            return (ROVER_MODES_EN if en else ROVER_MODES, ROVER_BTNS_EN if en else ROVER_BTNS,
+                    'Rover' if en else '地面车')
         if vt == 12:
-            return SUB_MODES, SUB_BTNS, '水下机器人'
+            return (SUB_MODES_EN if en else SUB_MODES, SUB_BTNS_EN if en else SUB_BTNS,
+                    'Sub' if en else '水下机器人')
         if vt > 0:
-            return COPTER_MODES, COPTER_BTNS, '多旋翼'
-        return COPTER_MODES, COPTER_BTNS, ''
+            return (COPTER_MODES_EN if en else COPTER_MODES, COPTER_BTNS_EN if en else COPTER_BTNS,
+                    'Multirotor' if en else '多旋翼')
+        return (COPTER_MODES_EN if en else COPTER_MODES, COPTER_BTNS_EN if en else COPTER_BTNS, '')
 
     def get_state(self) -> dict:
         md, btns, vn = self._get_vehicle_info()
@@ -284,7 +294,7 @@ class DroneLink:
             'voltage': round(self.voltage, 2),
             'current': round(self.current, 2),
             'remaining': self.remaining,
-            'gps_fix': FIX_NAMES.get(self.gps_fix, '?'),
+            'gps_fix': (FIX_NAMES_EN if self.locale == 'en' else FIX_NAMES).get(self.gps_fix, '?'),
             'gps_sats': self.gps_sats,
             'wp': self.wp_seq,
             'vtype': vn,

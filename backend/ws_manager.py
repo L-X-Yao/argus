@@ -55,6 +55,8 @@ class WSManager:
                     await ws.send_text(json.dumps({
                         'type': 'connect_result', 'ok': True, 'error': '',
                     }))
+                elif msg_type == 'set_locale':
+                    self.link.locale = msg.get('locale', 'zh')
                 elif msg_type == 'command':
                     cmd = msg.get('cmd', '')
                     param = msg.get('param')
