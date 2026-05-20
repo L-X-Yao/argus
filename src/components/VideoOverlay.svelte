@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { apiUrl } from '../lib/backend';
+  import { t } from '../lib/i18n.svelte';
   import { X, VideoOff } from '@lucide/svelte';
   import Button from '$lib/components/ui/button/button.svelte';
 
@@ -22,9 +23,9 @@
   let origY = 0;
 
   const sizeMap = {
-    sm: { w: 320, h: 240, label: '小' },
-    md: { w: 480, h: 360, label: '中' },
-    lg: { w: 640, h: 480, label: '大' },
+    sm: { w: 320, h: 240, labelKey: 'video.sizeSmall' },
+    md: { w: 480, h: 360, labelKey: 'video.sizeMedium' },
+    lg: { w: 640, h: 480, labelKey: 'video.sizeLarge' },
   } as const;
 
   let imgSrc = $derived(
@@ -33,7 +34,7 @@
 
   function startStream() {
     if (!videoUrl.trim()) {
-      error = '请输入视频流地址';
+      error = t('video.urlRequired');
       return;
     }
     error = '';
@@ -89,7 +90,7 @@
     class="flex items-center justify-between px-3 py-1.5 border-b border-border cursor-move bg-muted/50"
     onmousedown={onDragStart}
   >
-    <span class="text-xs font-semibold text-foreground tracking-wide">视频监控</span>
+    <span class="text-xs font-semibold text-foreground tracking-wide">{t('video.title')}</span>
     <div class="flex items-center gap-1">
       {#each (['sm', 'md', 'lg'] as const) as s}
         <button
@@ -99,7 +100,7 @@
               : 'text-muted-foreground hover:text-foreground hover:bg-muted'}"
           onclick={() => size = s}
         >
-          {sizeMap[s].label}
+          {t(sizeMap[s].labelKey)}
         </button>
       {/each}
       <button class="ml-1 text-muted-foreground hover:text-foreground leading-none px-0.5"
@@ -117,14 +118,14 @@
     {#if streaming && imgSrc}
       <img
         src={imgSrc}
-        alt="视频流"
+        alt={t('video.alt')}
         class="w-full h-full object-contain"
-        onerror={() => { error = '视频流加载失败'; streaming = false; }}
+        onerror={() => { error = t('video.loadFail'); streaming = false; }}
       />
     {:else}
       <div class="flex flex-col items-center gap-2 text-muted-foreground">
         <VideoOff size={40} class="opacity-40" />
-        <span class="text-xs">无视频源</span>
+        <span class="text-xs">{t('video.noSource')}</span>
       </div>
     {/if}
   </div>
@@ -135,15 +136,15 @@
       type="text"
       class="flex-1 h-7 px-2 text-xs rounded-md border border-border bg-background text-foreground
              placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-      placeholder="rtsp://地址"
+      placeholder={t('video.placeholder')}
       bind:value={videoUrl}
       disabled={streaming}
       onkeydown={(e) => { if (e.key === 'Enter') startStream(); }}
     />
     {#if streaming}
-      <Button variant="destructive" size="sm" onclick={stopStream}>断开</Button>
+      <Button variant="destructive" size="sm" onclick={stopStream}>{t('video.disconnect')}</Button>
     {:else}
-      <Button size="sm" onclick={startStream}>连接</Button>
+      <Button size="sm" onclick={startStream}>{t('video.connect')}</Button>
     {/if}
   </div>
 

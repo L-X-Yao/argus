@@ -2,6 +2,7 @@
   import { app } from '../lib/stores.svelte';
   import { sendCommand } from '../lib/ws';
   import { API_BASE } from '../lib/backend';
+  import { t } from '../lib/i18n.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
   import Badge from '$lib/components/ui/badge/badge.svelte';
   import { X, Compass, Move3d, RotateCw, AlignHorizontalSpaceAround, Thermometer } from '@lucide/svelte';
@@ -11,12 +12,12 @@
 
   type CalType = 'compass' | 'accel' | 'gyro' | 'level' | 'baro';
 
-  const calTypes: { id: CalType; label: string; cmd: string; icon: Component }[] = [
-    { id: 'compass', label: '罗盘', cmd: 'cal_compass', icon: Compass },
-    { id: 'accel', label: '加速度计', cmd: 'cal_accel', icon: Move3d },
-    { id: 'gyro', label: '陀螺仪', cmd: 'cal_gyro', icon: RotateCw },
-    { id: 'level', label: '水平', cmd: 'cal_level', icon: AlignHorizontalSpaceAround },
-    { id: 'baro', label: '气压计', cmd: 'cal_baro', icon: Thermometer },
+  const calTypes: { id: CalType; labelKey: string; cmd: string; icon: Component }[] = [
+    { id: 'compass', labelKey: 'cal.compass', cmd: 'cal_compass', icon: Compass },
+    { id: 'accel', labelKey: 'cal.accel', cmd: 'cal_accel', icon: Move3d },
+    { id: 'gyro', labelKey: 'cal.gyro', cmd: 'cal_gyro', icon: RotateCw },
+    { id: 'level', labelKey: 'cal.level', cmd: 'cal_level', icon: AlignHorizontalSpaceAround },
+    { id: 'baro', labelKey: 'cal.baro', cmd: 'cal_baro', icon: Thermometer },
   ];
 
   /* ── Accel orientation definitions ── */
@@ -32,12 +33,12 @@
   }
 
   const accelOrients: OrientDef[] = [
-    { id: 'level',     label: '水平',     hint: '将飞机水平放置',       img: `${API_BASE}/images/cal/VehicleDown.png`,       keywords: ['level', 'Level', '水平'] },
-    { id: 'nose_up',   label: '机头朝上', hint: '将飞机机头朝上竖立',   img: `${API_BASE}/images/cal/VehicleTailDown.png`,   keywords: ['nose up', 'Nose Up', 'UP', '机头朝上', 'nose-up'] },
-    { id: 'nose_down', label: '机头朝下', hint: '将飞机机头朝下竖立',   img: `${API_BASE}/images/cal/VehicleNoseDown.png`,   keywords: ['nose down', 'Nose Down', 'DOWN', '机头朝下', 'nose-down'] },
-    { id: 'left',      label: '左侧朝下', hint: '将飞机左侧朝下放置',   img: `${API_BASE}/images/cal/VehicleLeft.png`,       keywords: ['left', 'Left', '左侧'] },
-    { id: 'right',     label: '右侧朝下', hint: '将飞机右侧朝下放置',   img: `${API_BASE}/images/cal/VehicleRight.png`,      keywords: ['right', 'Right', '右侧'] },
-    { id: 'back',      label: '倒置',     hint: '将飞机翻转倒置放置',   img: `${API_BASE}/images/cal/VehicleUpsideDown.png`, keywords: ['back', 'Back', 'inverted', '倒置', '翻转'] },
+    { id: 'level',     label: 'cal.orientLevel',    hint: 'cal.hintLevel',    img: `${API_BASE}/images/cal/VehicleDown.png`,       keywords: ['level', 'Level', '水平'] },
+    { id: 'nose_up',   label: 'cal.orientNoseUp',   hint: 'cal.hintNoseUp',   img: `${API_BASE}/images/cal/VehicleTailDown.png`,   keywords: ['nose up', 'Nose Up', 'UP', '机头朝上', 'nose-up'] },
+    { id: 'nose_down', label: 'cal.orientNoseDown',  hint: 'cal.hintNoseDown',  img: `${API_BASE}/images/cal/VehicleNoseDown.png`,   keywords: ['nose down', 'Nose Down', 'DOWN', '机头朝下', 'nose-down'] },
+    { id: 'left',      label: 'cal.orientLeft',     hint: 'cal.hintLeft',     img: `${API_BASE}/images/cal/VehicleLeft.png`,       keywords: ['left', 'Left', '左侧'] },
+    { id: 'right',     label: 'cal.orientRight',    hint: 'cal.hintRight',    img: `${API_BASE}/images/cal/VehicleRight.png`,      keywords: ['right', 'Right', '右侧'] },
+    { id: 'back',      label: 'cal.orientBack',     hint: 'cal.hintBack',     img: `${API_BASE}/images/cal/VehicleUpsideDown.png`, keywords: ['back', 'Back', 'inverted', '倒置', '翻转'] },
   ];
 
   let selected = $state<CalType>('compass');
@@ -209,7 +210,7 @@
 
     <!-- Header -->
     <div class="flex items-center justify-between px-4 py-3 border-b border-border">
-      <h2 class="text-sm font-semibold text-primary uppercase tracking-wider">传感器校准</h2>
+      <h2 class="text-sm font-semibold text-primary uppercase tracking-wider">{t('cal.title')}</h2>
       <Button variant="ghost" size="icon-xs" onclick={onclose}><X size={16} /></Button>
     </div>
 
@@ -225,7 +226,7 @@
                 : 'bg-secondary text-secondary-foreground hover:bg-muted'}"
             onclick={() => { selected = ct.id; }}
           >
-            <ct.icon size={13} />{ct.label}
+            <ct.icon size={13} />{t(ct.labelKey)}
           </button>
         {/each}
       </div>
@@ -236,13 +237,13 @@
       {#if selected === 'accel'}
         <div class="mb-4">
           <div class="flex items-center justify-between mb-2">
-            <p class="text-xs font-semibold text-foreground">加速度计校准</p>
+            <p class="text-xs font-semibold text-foreground">{t('cal.accelTitle')}</p>
             {#if calibrating}
-              <Badge variant="secondary" class="text-[10px]">进度 {accelDoneCount}/6</Badge>
+              <Badge variant="secondary" class="text-[10px]">{t('cal.progress')} {accelDoneCount}/6</Badge>
             {/if}
           </div>
           <p class="text-[11px] text-muted-foreground mb-3">
-            按提示依次将飞机放置在 6 个方向，每个方向保持静止直到提示完成。
+            {t('cal.accelDesc')}
           </p>
 
           <!-- 6-orientation grid -->
@@ -255,18 +256,18 @@
                                    'border-border/50 bg-muted/20'}">
                 <div class="w-20 h-16 flex items-center justify-center mb-1 rounded-md overflow-hidden
                   {st === 'done' ? 'bg-green-900/30 ring-1 ring-green-500/40' : st === 'active' ? 'bg-primary/10 ring-1 ring-primary/40' : 'bg-muted/20'}">
-                  <img src={orient.img} alt={orient.label}
+                  <img src={orient.img} alt={t(orient.label)}
                        class="w-full h-full object-contain transition-all
                          {st === 'done' ? '' : st === 'active' ? '' : 'opacity-40 grayscale'}" />
                 </div>
 
                 <!-- Label + status icon -->
                 <span class="text-[11px] font-medium {st === 'done' ? 'text-green-400' : st === 'active' ? 'text-primary' : 'text-muted-foreground'}">
-                  {orient.label}
+                  {t(orient.label)}
                 </span>
                 <span class="text-[10px] mt-0.5
                   {st === 'done' ? 'text-green-500' : st === 'active' ? 'text-primary' : 'text-muted-foreground/50'}">
-                  {st === 'done' ? '已完成' : st === 'active' ? '校准中...' : '待校准'}
+                  {st === 'done' ? t('cal.done') : st === 'active' ? t('cal.active') : t('cal.pending')}
                 </span>
               </div>
             {/each}
@@ -277,12 +278,12 @@
             {@const ao = accelOrients.find(o => o.id === accelActive)}
             {#if ao}
               <div class="p-2.5 rounded-lg bg-primary/10 border border-primary/20 mb-3">
-                <p class="text-xs text-primary font-medium">{ao.hint}，保持静止</p>
+                <p class="text-xs text-primary font-medium">{t(ao.hint)}，{t('cal.holdStill')}</p>
               </div>
             {/if}
           {:else if !calibrating}
             <div class="p-2.5 rounded-lg bg-muted/50 border border-border/50 mb-3">
-              <p class="text-[11px] text-muted-foreground">点击"开始校准"后，按飞控提示依次完成 6 个方向的放置。</p>
+              <p class="text-[11px] text-muted-foreground">{t('cal.accelHintBefore')}</p>
             </div>
           {/if}
         </div>
@@ -292,9 +293,9 @@
       <!-- ════════════════════════════════════════════ -->
       {:else if selected === 'compass'}
         <div class="mb-4">
-          <p class="text-xs font-semibold text-foreground mb-1">罗盘校准</p>
+          <p class="text-xs font-semibold text-foreground mb-1">{t('cal.compassTitle')}</p>
           <p class="text-[11px] text-muted-foreground mb-4">
-            缓慢旋转飞机，尽量覆盖所有方向（约 60 秒）。
+            {t('cal.compassDesc')}
           </p>
 
           <!-- Circular progress indicator -->
@@ -345,11 +346,11 @@
             </div>
             <p class="mt-2 text-[11px] text-muted-foreground">
               {#if !calibrating && compassProgress === 0}
-                点击"开始校准"后缓慢旋转飞机
+                {t('cal.compassHintBefore')}
               {:else if calibrating}
-                正在校准，请持续旋转飞机...
+                {t('cal.compassHintActive')}
               {:else if compassProgress >= 100}
-                罗盘校准完成
+                {t('cal.compassHintDone')}
               {/if}
             </p>
           </div>
@@ -360,14 +361,14 @@
       <!-- ════════════════════════════════════════════ -->
       {:else}
         {@const labels = {
-          gyro:  { title: '陀螺仪校准', desc: '将飞机放在水平面上，保持完全静止。', icon: '陀' },
-          level: { title: '水平校准',   desc: '将飞机放在水平面上，保持静止。',     icon: '平' },
-          baro:  { title: '气压计校准', desc: '保持飞机静止，等待完成。',           icon: '气' },
+          gyro:  { titleKey: 'cal.gyroTitle', descKey: 'cal.gyroDesc', icon: '陀' },
+          level: { titleKey: 'cal.levelTitle', descKey: 'cal.levelDesc', icon: '平' },
+          baro:  { titleKey: 'cal.baroTitle', descKey: 'cal.baroDesc', icon: '气' },
         }}
         {@const info = labels[selected]}
         <div class="mb-4">
-          <p class="text-xs font-semibold text-foreground mb-1">{info.title}</p>
-          <p class="text-[11px] text-muted-foreground mb-4">{info.desc}</p>
+          <p class="text-xs font-semibold text-foreground mb-1">{t(info.titleKey)}</p>
+          <p class="text-[11px] text-muted-foreground mb-4">{t(info.descKey)}</p>
 
           <div class="flex flex-col items-center mb-4">
             <!-- Pulsing keep-still indicator -->
@@ -391,7 +392,7 @@
               </svg>
             </div>
             <p class="mt-3 text-[11px] {calibrating ? 'text-primary' : 'text-muted-foreground'}">
-              {calibrating ? '校准中，请保持飞机静止...' : '点击"开始校准"，校准过程中请勿移动飞机'}
+              {calibrating ? t('cal.simpleHintActive') : t('cal.simpleHintBefore')}
             </p>
           </div>
         </div>
@@ -401,7 +402,7 @@
       <!-- Status messages (shared)                     -->
       <!-- ════════════════════════════════════════════ -->
       <div class="mb-4">
-        <p class="text-[11px] text-muted-foreground font-semibold uppercase tracking-wider mb-1.5">校准消息</p>
+        <p class="text-[11px] text-muted-foreground font-semibold uppercase tracking-wider mb-1.5">{t('cal.messages')}</p>
         <div class="rounded-lg border border-border bg-muted/30 min-h-[60px] max-h-[120px] overflow-y-auto p-2">
           {#if calEvents.length > 0}
             {#each calEvents as ev (ev.time + ev.text)}
@@ -411,7 +412,7 @@
               </div>
             {/each}
           {:else}
-            <p class="text-xs text-muted-foreground text-center py-3">暂无校准消息</p>
+            <p class="text-xs text-muted-foreground text-center py-3">{t('cal.noMessages')}</p>
           {/if}
         </div>
       </div>
@@ -420,7 +421,7 @@
       {#if calibrating}
         <div class="mb-4 flex items-center gap-2 p-2 rounded-lg bg-primary/10 border border-primary/20">
           <div class="w-3 h-3 rounded-full bg-primary animate-pulse shrink-0"></div>
-          <span class="text-xs text-primary font-medium">校准进行中...</span>
+          <span class="text-xs text-primary font-medium">{t('cal.inProgress')}</span>
         </div>
       {/if}
 
@@ -429,17 +430,17 @@
         <Button variant="default" class="flex-1"
                 onclick={startCal}
                 disabled={calibrating || !app.drone.connected}>
-          开始校准
+          {t('cal.start')}
         </Button>
         <Button variant="secondary" class="flex-1"
                 onclick={cancelCal}
                 disabled={!calibrating}>
-          取消
+          {t('cal.cancel')}
         </Button>
       </div>
 
       {#if !app.drone.connected}
-        <p class="mt-2 text-center text-[11px] text-muted-foreground">请先连接飞控</p>
+        <p class="mt-2 text-center text-[11px] text-muted-foreground">{t('cal.connectFirst')}</p>
       {/if}
     </div>
   </div>

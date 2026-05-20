@@ -1,6 +1,7 @@
 <script lang="ts">
   import { app, addToast } from '../lib/stores.svelte';
   import { sendCommand } from '../lib/ws';
+  import { t } from '../lib/i18n.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
   import Badge from '$lib/components/ui/badge/badge.svelte';
 
@@ -24,7 +25,7 @@
       area += x1 * y2 - x2 * y1;
     }
     const m2 = Math.abs(area) / 2;
-    return m2 < 10000 ? m2.toFixed(0) + ' m²' : (m2 / 10000).toFixed(2) + ' 公顷';
+    return m2 < 10000 ? m2.toFixed(0) + ' m²' : (m2 / 10000).toFixed(2) + ' ' + t('fence.hectare');
   }
 
   function saveFence() {
@@ -32,10 +33,10 @@
     const blob = new Blob([data], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = '围栏_' + new Date().toISOString().slice(0, 10) + '.json';
+    a.download = 'fence_' + new Date().toISOString().slice(0, 10) + '.json';
     a.click();
     URL.revokeObjectURL(a.href);
-    addToast('围栏已导出', 'success');
+    addToast(t('fence.exported'), 'success');
   }
 
   function loadFence() {
@@ -52,9 +53,9 @@
           if (Array.isArray(pts) && pts.length >= 3) {
             app.fencePolygon = pts;
             app.fenceUploaded = false;
-            addToast(`已加载围栏 (${pts.length} 顶点)`, 'success');
+            addToast(t('fence.loaded').replace('{n}', String(pts.length)), 'success');
           }
-        } catch { addToast('加载失败', 'error'); }
+        } catch { addToast(t('fence.loadFail'), 'error'); }
       };
       reader.readAsText(file);
     };
@@ -62,9 +63,9 @@
   }
 
   function uploadFence() {
-    if (app.fencePolygon.length < 3) { addToast('围栏至少需要 3 个顶点', 'error'); return; }
+    if (app.fencePolygon.length < 3) { addToast(t('fence.min3'), 'error'); return; }
     sendCommand('fence_upload', undefined, { polygon: app.fencePolygon });
-    addToast('围栏上传中...', 'info');
+    addToast(t('fence.uploading'), 'info');
   }
 
   function exportKml() {
@@ -81,7 +82,7 @@
     const blob = new Blob([kml], { type: 'application/vnd.google-earth.kml+xml' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = '围栏_' + new Date().toISOString().slice(0, 10) + '.kml';
+    a.download = 'fence_' + new Date().toISOString().slice(0, 10) + '.kml';
     a.click();
     URL.revokeObjectURL(a.href);
   }
@@ -89,12 +90,12 @@
 
 <div class="bg-card border border-border rounded-xl p-3 mx-2 mb-2">
   <div class="flex items-center gap-2 mb-2">
-    <h2 class="text-sm font-semibold text-destructive uppercase tracking-wider">电子围栏</h2>
+    <h2 class="text-sm font-semibold text-destructive uppercase tracking-wider">{t('fence.title')}</h2>
     {#if app.fencePolygon.length >= 3}
       {#if app.fenceUploaded}
-        <Badge variant="default" class="text-[10px]">已上传</Badge>
+        <Badge variant="default" class="text-[10px]">{t('fence.uploaded')}</Badge>
       {:else}
-        <Badge variant="outline" class="text-[10px]">未上传</Badge>
+        <Badge variant="outline" class="text-[10px]">{t('fence.notUploaded')}</Badge>
       {/if}
     {/if}
   </div>
@@ -102,27 +103,27 @@
     <div class="flex gap-2">
       <button class="flex-1 py-2.5 bg-transparent border-2 border-dashed border-destructive/50 rounded-lg cursor-pointer
                       text-sm font-bold text-destructive hover:bg-destructive/5 transition-colors"
-              onclick={startDraw}>绘制围栏</button>
-      <Button variant="outline" size="sm" onclick={loadFence}>加载</Button>
+              onclick={startDraw}>{t('fence.draw')}</button>
+      <Button variant="outline" size="sm" onclick={loadFence}>{t('fence.load')}</Button>
     </div>
-    <div class="text-[11px] text-muted-foreground mt-1 text-center">在地图上点击添加围栏顶点（至少 3 个）</div>
+    <div class="text-[11px] text-muted-foreground mt-1 text-center">{t('fence.drawHint')}</div>
   {:else if drawingFence}
     <div class="flex items-center gap-2 text-sm">
-      <span>已添加 {app.fencePolygon.length} 个顶点</span>
+      <span>{t('fence.vertexCount').replace('{n}', String(app.fencePolygon.length))}</span>
       {#if app.fencePolygon.length >= 3}
-        <Button variant="default" size="xs" onclick={finishDraw}>完成</Button>
+        <Button variant="default" size="xs" onclick={finishDraw}>{t('fence.finish')}</Button>
       {/if}
-      <Button variant="ghost" size="xs" onclick={clearFence}>取消</Button>
+      <Button variant="ghost" size="xs" onclick={clearFence}>{t('map.cancel')}</Button>
     </div>
   {:else}
-    <div class="text-xs text-muted-foreground mb-2">{app.fencePolygon.length} 顶点 | {fmtArea()}</div>
+    <div class="text-xs text-muted-foreground mb-2">{t('fence.vertexSummary').replace('{n}', String(app.fencePolygon.length))} | {fmtArea()}</div>
     <div class="flex flex-wrap gap-1">
-      <Button variant="default" size="xs" onclick={uploadFence}>上传围栏</Button>
-      <Button variant="outline" size="xs" onclick={startDraw}>重新绘制</Button>
-      <Button variant="outline" size="xs" onclick={saveFence}>保存</Button>
-      <Button variant="outline" size="xs" onclick={loadFence}>加载</Button>
+      <Button variant="default" size="xs" onclick={uploadFence}>{t('fence.upload')}</Button>
+      <Button variant="outline" size="xs" onclick={startDraw}>{t('fence.redraw')}</Button>
+      <Button variant="outline" size="xs" onclick={saveFence}>{t('fence.save')}</Button>
+      <Button variant="outline" size="xs" onclick={loadFence}>{t('fence.load')}</Button>
       <Button variant="outline" size="xs" onclick={exportKml}>KML</Button>
-      <Button variant="ghost" size="xs" onclick={clearFence}>清除</Button>
+      <Button variant="ghost" size="xs" onclick={clearFence}>{t('fence.clear')}</Button>
     </div>
   {/if}
 </div>
