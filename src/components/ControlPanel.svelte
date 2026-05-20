@@ -38,7 +38,7 @@
   function disarm() { sendCommand('disarm'); }
   function rtl() { showSlide(t('slide.rtl'), 'red', () => sendCommand('rtl')); }
   function forceDisarm() { showSlide(t('slide.forceDisarm'), 'red', () => sendCommand('force_disarm')); }
-  function pauseMode() { sendCommand('mode', app.drone.vtype === '固定翼' ? 19 : 5); }
+  function pauseMode() { sendCommand('mode', (app.drone.vtype === '固定翼' || app.drone.vtype === 'Fixed Wing') ? 19 : 5); }
   function takeoff() { showSlide(`${t('slide.takeoff')} ${app.defaultAlt}m`, 'teal', () => sendCommand('takeoff', undefined, { alt: app.defaultAlt })); }
   function startMission() { showSlide(t('slide.mission'), 'blue', () => sendCommand('mission_start')); }
   async function drop() { if (await showConfirm(t('ctrl.drop') + '?', true)) sendCommand('drop'); }
@@ -158,7 +158,7 @@
       <CircleStop size={14} />{t('ctrl.cancelRtl')}
     </Button>
     <Button size="sm" class="w-full bg-teal-700 hover:bg-teal-800 text-white gap-1.5"
-            onclick={() => sendCommand('mode', app.drone.vtype === '固定翼' ? 20 : 9)}>
+            onclick={() => sendCommand('mode', (app.drone.vtype === '固定翼' || app.drone.vtype === 'Fixed Wing') ? 20 : 9)}>
       <ArrowDown size={14} />{t('ctrl.land')}
     </Button>
     <Button variant="ghost" size="xs" class="w-full text-destructive mt-2" onclick={forceDisarm}>{t('ctrl.forceDisarm')}</Button>

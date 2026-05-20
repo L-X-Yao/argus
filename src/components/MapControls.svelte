@@ -6,7 +6,7 @@
   import Badge from '$lib/components/ui/badge/badge.svelte';
 
   function rtl() { showSlide(t('slide.rtl'), 'red', () => sendCommand('rtl')); }
-  function pause() { sendCommand('mode', app.drone.vtype === '固定翼' ? 19 : 5); }
+  function pause() { sendCommand('mode', (app.drone.vtype === '固定翼' || app.drone.vtype === 'Fixed Wing') ? 19 : 5); }
   function forceDisarm() { showSlide(t('slide.forceDisarm'), 'red', () => sendCommand('force_disarm')); }
 
   function fmtTime(s: number): string {
