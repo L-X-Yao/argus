@@ -141,12 +141,12 @@
   );
 
   let ekfTooltip = $derived(
-    `速度: ${app.drone.ekf_vel.toFixed(3)}\n水平: ${app.drone.ekf_pos_h.toFixed(3)}\n垂直: ${app.drone.ekf_pos_v.toFixed(3)}\n罗盘: ${app.drone.ekf_compass.toFixed(3)}\n标志: 0x${app.drone.ekf_flags.toString(16).toUpperCase()}`
+    `${t('ekf.vel')}: ${app.drone.ekf_vel.toFixed(3)}\n${t('ekf.posH')}: ${app.drone.ekf_pos_h.toFixed(3)}\n${t('ekf.posV')}: ${app.drone.ekf_pos_v.toFixed(3)}\n${t('ekf.compass')}: ${app.drone.ekf_compass.toFixed(3)}\nFlags: 0x${app.drone.ekf_flags.toString(16).toUpperCase()}`
   );
 
   function fmtBatTime(s: number): string {
     const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
-    return h > 0 ? `~${h}时${m}分` : `~${m}分`;
+    return h > 0 ? `~${h}h${m}m` : `~${m}m`;
   }
 
   function downloadLog() { window.open(apiUrl('/api/log'), '_blank'); }
@@ -177,7 +177,7 @@
         {#if !port.startsWith('tcp:') && !port.startsWith('udp:')}
           <select bind:value={baud}
                   class="h-7 px-1 text-xs bg-input border border-border rounded-md text-foreground cursor-pointer"
-                  title="串口波特率">
+                  title="Baud rate">
             <option value={57600}>57600</option>
             <option value={115200}>115200</option>
           </select>
@@ -214,7 +214,7 @@
         <Badge variant="destructive" class="text-[10px] font-bold animate-pulse">{t('status.armed')}</Badge>
       {/if}
 
-      <span class="flex items-center gap-0.5" title="链路 {app.drone.link_age >= 0 ? app.drone.link_age.toFixed(1) + 's' : '---'} · {msgRate} Hz">
+      <span class="flex items-center gap-0.5" title="Link {app.drone.link_age >= 0 ? app.drone.link_age.toFixed(1) + 's' : '---'} · {msgRate} Hz">
         <svg width="16" height="12" viewBox="0 0 16 12" class="shrink-0">
           <rect x="0" y="9" width="3" height="3" rx="0.5" fill={linkBars >= 1 ? barColor : '#555'} />
           <rect x="4.5" y="6" width="3" height="6" rx="0.5" fill={linkBars >= 2 ? barColor : '#555'} />
@@ -276,19 +276,19 @@
       {/if}
     {/if}
     {#if !app.wsConnected}
-      <span class="text-destructive text-[10px] font-bold animate-pulse" title="与后端服务器的连接已断开，正在重连...">
+      <span class="text-destructive text-[10px] font-bold animate-pulse" title={t('conn.serviceDown')}>
         {t('conn.serviceDown')}
       </span>
     {/if}
 
     <Button variant="ghost" size="icon-xs" onclick={() => { app.audioMuted = !app.audioMuted; saveSettings(); }}
-            class={app.audioMuted ? 'opacity-40' : ''} title={app.audioMuted ? '取消静音' : '静音'}>
+            class={app.audioMuted ? 'opacity-40' : ''} title={app.audioMuted ? 'Unmute' : 'Mute'}>
       {#if app.audioMuted}<VolumeOff size={14} />{:else}<Volume2 size={14} />{/if}
     </Button>
-    <Button variant="ghost" size="icon-xs" onclick={toggleTheme} title={app.darkTheme ? '浅色主题' : '深色主题'}>
+    <Button variant="ghost" size="icon-xs" onclick={toggleTheme} title={app.darkTheme ? 'Light' : 'Dark'}>
       {#if app.darkTheme}<Sun size={14} />{:else}<Moon size={14} />{/if}
     </Button>
-    <Button variant="ghost" size="icon-xs" onclick={onSettings} title="设置">
+    <Button variant="ghost" size="icon-xs" onclick={onSettings} title={t('settings.title')}>
       <Settings size={14} />
     </Button>
   </div>
