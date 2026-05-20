@@ -45,6 +45,10 @@
   let rangeRing: any = null;
   let homeLine: any = null;
   let wpDistLabels: any[] = [];
+  let guidedMarker: any = null;
+  let guidedLine: any = null;
+  let guidedLabel: any = null;
+  let guidedTarget: { lat: number; lon: number; alt: number } | null = null;
 
   const SAT_URL = `${API_BASE}/api/tile/6/{z}/{x}/{y}`;
   const LABEL_URL = `${API_BASE}/api/tile/8/{z}/{x}/{y}`;
@@ -89,6 +93,7 @@
     if (app.guidedMode && app.drone.connected && app.drone.armed) {
       const [wlat, wlon] = toWgsFromGcj(ll.lat, ll.lng);
       sendCommand('guided_goto', undefined, { lat: wlat, lon: wlon, alt: app.defaultAlt });
+      guidedTarget = { lat: wlat, lon: wlon, alt: app.defaultAlt };
       addToast(`引导飞往 ${wlat.toFixed(5)}, ${wlon.toFixed(5)}`, 'info');
       return;
     }
@@ -104,6 +109,7 @@
     showConfirm(`引导飞往此点？\n${wlat.toFixed(5)}, ${wlon.toFixed(5)}\n高度: ${app.defaultAlt}m`).then(ok => {
       if (ok) {
         sendCommand('guided_goto', undefined, { lat: wlat, lon: wlon, alt: app.defaultAlt });
+        guidedTarget = { lat: wlat, lon: wlon, alt: app.defaultAlt };
         addToast(`引导飞往 ${wlat.toFixed(5)}, ${wlon.toFixed(5)}`, 'info');
       }
     });
@@ -181,7 +187,7 @@
   function onKeyDown(e: KeyboardEvent) {
     if (e.key === 'Escape') {
       if (measuring) clearMeasure();
-      if (app.guidedMode) app.guidedMode = false;
+      if (app.guidedMode) { app.guidedMode = false; guidedTarget = null; }
       if (app.drawingPolygon) { app.drawingPolygon = false; app.surveyPolygon = []; }
       if (app.drawingFence) { app.drawingFence = false; app.fencePolygon = []; }
       if (wpPopup) { map.closePopup(wpPopup); wpPopup = null; }
@@ -391,6 +397,41 @@
     }).addTo(map);
   });
 
+  // Guided target marker
+  $effect(() => {
+    if (!map) return;
+    if (guidedMarker) { map.removeLayer(guidedMarker); guidedMarker = null; }
+    if (guidedLine) { map.removeLayer(guidedLine); guidedLine = null; }
+    if (guidedLabel) { map.removeLayer(guidedLabel); guidedLabel = null; }
+    if (!guidedTarget || !app.drone.connected || !app.drone.armed) {
+      guidedTarget = null;
+      return;
+    }
+    const dlat = (guidedTarget.lat - app.drone.lat) * 111320;
+    const dlon = (guidedTarget.lon - app.drone.lon) * 111320 * Math.cos(app.drone.lat * Math.PI / 180);
+    const dist = Math.sqrt(dlat * dlat + dlon * dlon);
+    if (dist < 5) { guidedTarget = null; return; }
+    const [glat, glon] = toGcj(guidedTarget.lat, guidedTarget.lon);
+    guidedMarker = L.circleMarker([glat, glon], {
+      radius: 12, color: '#ffa726', fillColor: '#ffa726', fillOpacity: 0.2,
+      weight: 2.5, dashArray: '6,4', className: 'guided-pulse',
+    }).addTo(map);
+    const [dlat2, dlon2] = toGcj(app.drone.lat, app.drone.lon);
+    guidedLine = L.polyline([[dlat2, dlon2], [glat, glon]], {
+      color: '#ffa726', weight: 2, opacity: 0.6, dashArray: '6,6',
+    }).addTo(map);
+    const mid = L.latLng((dlat2 + glat) / 2, (dlon2 + glon) / 2);
+    const txt = dist < 1000 ? `${dist.toFixed(0)}m` : `${(dist / 1000).toFixed(1)}km`;
+    guidedLabel = L.marker(mid, {
+      icon: L.divIcon({
+        className: '',
+        html: `<div style="background:rgba(255,167,38,0.9);color:white;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:600;white-space:nowrap">${txt} · ${guidedTarget.alt}m</div>`,
+        iconAnchor: [0, 0],
+      }),
+      interactive: false,
+    }).addTo(map);
+  });
+
   // Replay position rendering
   $effect(() => {
     if (!map) return;
@@ -534,4 +575,6 @@
   :global(.drone-arrow) { transition: transform 150ms ease-out; }
   :global(.dark .leaflet-tile-pane) { filter: brightness(0.7) saturate(0.8); }
   :global(.dark .leaflet-control-zoom a) { background: hsl(var(--card)); color: hsl(var(--foreground)); border-color: hsl(var(--border)); }
+  :global(.guided-pulse) { animation: guidedPulse 1.5s ease-in-out infinite; }
+  @keyframes guidedPulse { 0%,100% { opacity: 0.6; } 50% { opacity: 1; } }
 </style>
