@@ -579,6 +579,21 @@
       <Maximize2 size={13} />全览
     </button>
   </div>
+  {#if app.drone.connected}
+    <div class="absolute top-12 right-3 z-[1000]" title="航向 {app.drone.hdg.toFixed(0)}°">
+      <svg width="42" height="42" viewBox="0 0 42 42" class="drop-shadow-lg">
+        <circle cx="21" cy="21" r="19" fill="rgba(0,0,0,0.65)" stroke="rgba(255,255,255,0.15)" stroke-width="0.5" />
+        <text x="21" y="10" text-anchor="middle" fill="#f44336" font-size="9" font-weight="bold" font-family="monospace">N</text>
+        <text x="21" y="37" text-anchor="middle" fill="#666" font-size="7" font-family="monospace">S</text>
+        <text x="5" y="24" text-anchor="middle" fill="#666" font-size="7" font-family="monospace">W</text>
+        <text x="37" y="24" text-anchor="middle" fill="#666" font-size="7" font-family="monospace">E</text>
+        <g transform="rotate({app.drone.hdg}, 21, 21)" class="compass-needle">
+          <polygon points="21,5 18,17 24,17" fill="#4fc3f7" opacity="0.9" />
+          <polygon points="21,37 18,25 24,25" fill="#4fc3f7" opacity="0.25" />
+        </g>
+      </svg>
+    </div>
+  {/if}
   <div class="absolute bottom-1.5 left-2.5 z-[1000] bg-card/85 backdrop-blur text-muted-foreground px-2 py-0.5 rounded text-[11px] font-mono">{mouseCoord || '---'}</div>
   <MapControls />
 
@@ -596,4 +611,5 @@
   :global(.dark .leaflet-control-zoom a) { background: hsl(var(--card)); color: hsl(var(--foreground)); border-color: hsl(var(--border)); }
   :global(.guided-pulse) { animation: guidedPulse 1.5s ease-in-out infinite; }
   @keyframes guidedPulse { 0%,100% { opacity: 0.6; } 50% { opacity: 1; } }
+  .compass-needle { transition: transform 200ms ease-out; transform-origin: 21px 21px; }
 </style>
