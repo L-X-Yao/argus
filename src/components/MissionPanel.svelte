@@ -114,8 +114,8 @@
     if (!app.waypoints.length) return;
     let coords = app.waypoints.map(w => `${w.lon},${w.lat},${w.alt}`).join('\n');
     const kml = `<?xml version="1.0" encoding="UTF-8"?>
-<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>PL-Link任务</name>
-<Placemark><name>航线</name><LineString><coordinates>${coords}</coordinates></LineString></Placemark>
+<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>PL-Link Mission</name>
+<Placemark><name>Route</name><LineString><coordinates>${coords}</coordinates></LineString></Placemark>
 </Document></kml>`;
     const blob = new Blob([kml], { type: 'application/vnd.google-earth.kml+xml' });
     const a = document.createElement('a');
@@ -277,31 +277,31 @@
       <div class="flex items-center gap-1 px-1 py-1 border-b border-border/30 text-xs hover:bg-muted/50 transition-colors
         {app.drone.wp === i + 2 ? 'bg-warning/10 border-l-2 border-l-warning pl-0.5' : ''}">
         <button class="w-5 text-center text-primary font-bold text-[11px] hover:underline cursor-pointer bg-transparent border-none p-0"
-                onclick={() => app.focusWp = i} title="定位到此航点">{i + 1}</button>
+                onclick={() => app.focusWp = i} title="Focus waypoint">{i + 1}</button>
         <button class="px-1 py-px rounded text-[9px] font-bold border-none text-white cursor-pointer whitespace-nowrap"
                 style="background:{typeColor(wp.type || 'wp')}" onclick={() => cycleType(i)}
-                title="点击切换: 航点/盘旋圈/盘旋秒">
+                title="Cycle: WP / Loiter Turns / Loiter Time">
           {typeLabel(wp.type || 'wp')}
         </button>
         <button class="w-4.5 h-4.5 rounded border shrink-0 text-[10px] font-bold p-0 leading-[18px] text-center cursor-pointer
           {wp.drop ? 'bg-orange-700 text-white border-orange-700' : 'bg-transparent text-muted-foreground border-border'}"
-                onclick={() => toggleDrop(i)} title="投放开关">
-          {wp.drop ? '投' : '·'}
+                onclick={() => toggleDrop(i)} title="Drop toggle">
+          {wp.drop ? 'D' : '·'}
         </button>
         {#if (wp.type === 'loiter_turns' || wp.type === 'loiter_time')}
           <input type="number" class="w-7 bg-input text-purple-400 border border-border px-0.5 rounded text-[10px] text-right"
                  value={wp.loiter_param}
                  onchange={(e) => { app.waypoints[i].loiter_param = parseFloat((e.target as HTMLInputElement).value) || 0; saveWaypoints(); }}
-                 title={wp.type === 'loiter_turns' ? '盘旋圈数' : '盘旋秒数'} />
+                 title={wp.type === 'loiter_turns' ? 'Turns' : 'Seconds'} />
         {/if}
         <span class="flex-1 text-muted-foreground text-[10px] overflow-hidden whitespace-nowrap">{wp.lat.toFixed(5)},{wp.lon.toFixed(5)}
           {#if i > 0}<span class="text-muted-foreground/60 text-[9px] ml-0.5">{fmtSegDist(i)}</span>{/if}
         </span>
         <input type="number" class="w-9 bg-input text-foreground border border-border px-0.5 rounded text-[11px] text-right"
-               value={wp.alt} onchange={(e) => setAlt(i, (e.target as HTMLInputElement).value)} title="高度(m)" />
+               value={wp.alt} onchange={(e) => setAlt(i, (e.target as HTMLInputElement).value)} title="Alt (m)" />
         <input type="number" class="w-9 bg-input text-success border border-border px-0.5 rounded text-[11px] text-right"
                value={wp.speed || ''} placeholder="—"
-               onchange={(e) => setSpeed(i, (e.target as HTMLInputElement).value)} title="速度(m/s)" />
+               onchange={(e) => setSpeed(i, (e.target as HTMLInputElement).value)} title="Spd (m/s)" />
         <button class="bg-transparent border-none text-muted-foreground cursor-pointer text-xs px-px" onclick={() => moveWp(i, -1)}>&uarr;</button>
         <button class="bg-transparent border-none text-muted-foreground cursor-pointer text-xs px-px" onclick={() => moveWp(i, 1)}>&darr;</button>
         <button class="bg-transparent border-none text-destructive cursor-pointer text-base px-0.5 leading-none" onclick={() => deleteWaypoint(i)}>&times;</button>
@@ -312,7 +312,7 @@
   </div>
   {#if app.waypoints.length > 0}
     <div class="text-xs text-warning mt-1.5 leading-relaxed">
-      距离 {totalDist()} · 时间 {estimateTime()} · 航点 {app.waypoints.length}
+      {t('telem.dist')} {totalDist()} · ETA {estimateTime()} · WP {app.waypoints.length}
       {#if app.waypoints.filter(w => w.drop).length > 0}· {t('ctrl.drop')} {app.waypoints.filter(w => w.drop).length}{/if}
       · {t('telem.alt')} {Math.min(...app.waypoints.map(w => w.alt))}-{Math.max(...app.waypoints.map(w => w.alt))}m
     </div>
