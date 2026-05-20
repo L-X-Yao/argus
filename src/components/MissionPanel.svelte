@@ -84,7 +84,7 @@
     const blob = new Blob([data], { type: 'application/json' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = '任务_' + new Date().toISOString().slice(0, 10) + '.json';
+    a.download = 'mission_' + new Date().toISOString().slice(0, 10) + '.json';
     a.click();
     URL.revokeObjectURL(a.href);
   }
@@ -120,7 +120,7 @@
     const blob = new Blob([kml], { type: 'application/vnd.google-earth.kml+xml' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = '任务_' + new Date().toISOString().slice(0, 10) + '.kml';
+    a.download = 'mission_' + new Date().toISOString().slice(0, 10) + '.kml';
     a.click();
     URL.revokeObjectURL(a.href);
   }

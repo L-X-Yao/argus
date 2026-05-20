@@ -161,7 +161,7 @@
     const blob = new Blob([lines], { type: 'text/plain' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = '参数_' + new Date().toISOString().slice(0, 10) + '.param';
+    a.download = 'params_' + new Date().toISOString().slice(0, 10) + '.param';
     a.click();
     URL.revokeObjectURL(a.href);
     addToast(`已导出 ${paramState.list.length} 个参数`, 'success');

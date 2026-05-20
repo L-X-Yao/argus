@@ -51,7 +51,7 @@
     const blob = new Blob([lines], { type: 'text/plain' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = '事件_' + new Date().toISOString().slice(0, 16).replace(':', '') + '.txt';
+    a.download = 'events_' + new Date().toISOString().slice(0, 16).replace(':', '') + '.txt';
     a.click();
     URL.revokeObjectURL(a.href);
   }
