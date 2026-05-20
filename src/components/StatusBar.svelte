@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { app, saveSettings } from '../lib/stores.svelte';
   import { sendConnect, sendDisconnect, sendCommand } from '../lib/ws';
+  import { t } from '../lib/i18n.svelte';
   import { apiUrl } from '../lib/backend';
   import Button from '$lib/components/ui/button/button.svelte';
   import Badge from '$lib/components/ui/badge/badge.svelte';
@@ -115,8 +116,8 @@
   );
 
   let ekfLabel = $derived(
-    ekfLevel === 'red' ? '导航异常' :
-    ekfLevel === 'yellow' ? '导航警告' : '导航'
+    ekfLevel === 'red' ? t('status.navError') :
+    ekfLevel === 'yellow' ? t('status.navWarn') : t('status.nav')
   );
 
   let ekfTooltip = $derived(
@@ -134,12 +135,12 @@
 <header class="flex items-center justify-between gap-3 px-3 py-1.5 shrink-0 min-w-0 overflow-x-auto scrollbar-hide transition-colors duration-300
   {app.drone.armed ? 'bg-destructive/8 border-b-2 border-destructive/60' : 'bg-card border-b-2 border-border'}">
   <div class="flex items-center gap-2">
-    <span class="text-sm font-bold text-primary tracking-wider">PL-Link</span>
+    <span class="text-sm font-bold text-primary tracking-wider">{t('app.name')}</span>
 
     <div class="flex items-center gap-1.5">
       {#if !app.drone.connected}
         <div class="relative">
-          <input bind:value={port} placeholder="tcp:ip:port / udp:port"
+          <input bind:value={port} placeholder={t('conn.placeholder')}
                  class="w-40 h-7 px-2 text-xs font-mono bg-input border border-border rounded-md text-foreground
                         placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 port-input"
                  onfocus={() => showHistory = true}
@@ -163,10 +164,10 @@
         {/if}
         <select bind:value={protocol}
                 class="h-7 px-1 text-xs bg-input border border-border rounded-md text-foreground cursor-pointer"
-                title="通信协议">
-          <option value="auto">自动</option>
-          <option value="standard">标准</option>
-          <option value="pllink">PL-Link</option>
+                title={t('conn.protocol')}>
+          <option value="auto">{t('conn.auto')}</option>
+          <option value="standard">{t('conn.standard')}</option>
+          <option value="pllink">{t('conn.pllink')}</option>
         </select>
       {/if}
       <Button
@@ -176,7 +177,7 @@
         onclick={toggle}
         class={connecting ? 'animate-pulse' : ''}
       >
-        {app.drone.connected ? '断开' : connecting ? '连接中...' : '连接'}
+        {app.drone.connected ? t('conn.disconnect') : connecting ? t('conn.connecting') : t('conn.connect')}
       </Button>
     </div>
   </div>
@@ -185,7 +186,7 @@
     {#if app.drone.connected}
       <Badge variant={modeVariant} class="text-xs font-bold">{app.drone.mode}</Badge>
       {#if app.drone.armed}
-        <Badge variant="destructive" class="text-[10px] font-bold animate-pulse">已解锁</Badge>
+        <Badge variant="destructive" class="text-[10px] font-bold animate-pulse">{t('status.armed')}</Badge>
       {/if}
 
       <span class="flex items-center gap-0.5" title="链路 {app.drone.link_age >= 0 ? app.drone.link_age.toFixed(1) + 's' : '---'} · {msgRate} Hz">
@@ -232,14 +233,14 @@
       {/if}
 
       {#if app.drone.log_active}
-        <Button variant="outline" size="xs" onclick={downloadLog} class="text-success border-success/50">日志</Button>
+        <Button variant="outline" size="xs" onclick={downloadLog} class="text-success border-success/50">{t('status.log')}</Button>
       {/if}
     {:else}
-      <span class="text-muted-foreground">未连接</span>
+      <span class="text-muted-foreground">{t('conn.disconnected')}</span>
     {/if}
     {#if !app.wsConnected}
       <span class="text-destructive text-[10px] font-bold animate-pulse" title="与后端服务器的连接已断开，正在重连...">
-        服务断开
+        {t('conn.serviceDown')}
       </span>
     {/if}
 
