@@ -35,9 +35,16 @@ export function speak(text: string) {
 
 let prevArmed = false;
 let prevConnected = false;
-let prevBatLow = false;
 let linkLostBeepT = 0;
 let linkLostSpoken = false;
+let prevMode = '';
+let batWarnLevel = 0;
+let prevWp = 0;
+let altCalloutThreshold = Infinity;
+let altCalloutInit = false;
+
+const RTL_MODES = ['返航', '旋翼返航', '智能返航', '降落', '旋翼降落'];
+const ALT_THRESHOLDS = [50, 40, 30, 20, 10, 8, 6, 4, 2];
 
 export function checkAlerts(connected: boolean, armed: boolean, remaining: number, linkAge: number) {
   if (armed && !prevArmed) {
@@ -56,12 +63,29 @@ export function checkAlerts(connected: boolean, armed: boolean, remaining: numbe
   }
   prevConnected = connected;
 
-  const batLow = remaining >= 0 && remaining < 20;
-  if (batLow && !prevBatLow) {
-    beep(300, 500, 3, 200);
-    speak('低电量警告');
+  const mode = app.drone.mode;
+  if (mode && prevMode && mode !== prevMode) {
+    if (RTL_MODES.some(m => mode.includes(m))) beep(440, 300, 2, 150);
+    speak(`已切换${mode}`);
   }
-  prevBatLow = batLow;
+  prevMode = mode;
+
+  if (remaining >= 0) {
+    if (remaining < 10 && batWarnLevel < 3 && armed) {
+      beep(200, 800, 5, 100);
+      speak('电量严重不足，请立即返航');
+      batWarnLevel = 3;
+    } else if (remaining < 20 && batWarnLevel < 2) {
+      beep(300, 500, 3, 200);
+      speak('低电量警告');
+      batWarnLevel = 2;
+    } else if (remaining < 30 && batWarnLevel < 1 && armed) {
+      beep(400, 400, 2, 200);
+      speak('电量百分之三十，注意返航');
+      batWarnLevel = 1;
+    }
+  }
+  if (remaining >= 30 || remaining < 0) batWarnLevel = 0;
 
   if (connected && linkAge > 3 && Date.now() - linkLostBeepT > 5000) {
     beep(200, 800, 1);
@@ -69,4 +93,33 @@ export function checkAlerts(connected: boolean, armed: boolean, remaining: numbe
     if (!linkLostSpoken) { speak('链路延迟过高'); linkLostSpoken = true; }
   }
   if (connected && linkAge >= 0 && linkAge < 2) linkLostSpoken = false;
+
+  checkAltCallouts(app.drone.alt_rel, armed);
+
+  const wp = app.drone.wp;
+  if (wp > prevWp && prevWp >= 2 && armed) {
+    speak(`航点${prevWp - 1}`);
+  }
+  prevWp = armed ? wp : 0;
+}
+
+function checkAltCallouts(alt: number, armed: boolean) {
+  if (!armed) {
+    altCalloutThreshold = Infinity;
+    altCalloutInit = false;
+    return;
+  }
+  if (!altCalloutInit) {
+    altCalloutThreshold = ALT_THRESHOLDS.find(t => t <= alt) ?? 0;
+    altCalloutInit = true;
+    return;
+  }
+  if (alt > altCalloutThreshold + 3) altCalloutThreshold = Infinity;
+  for (const t of ALT_THRESHOLDS) {
+    if (alt <= t + 0.5 && t < altCalloutThreshold) {
+      speak(`${t}米`);
+      altCalloutThreshold = t;
+      break;
+    }
+  }
 }
