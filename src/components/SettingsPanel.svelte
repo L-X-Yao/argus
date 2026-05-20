@@ -18,7 +18,7 @@
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div class="bg-card border border-border rounded-2xl overflow-hidden min-w-[380px] max-h-[80vh] shadow-2xl flex flex-col" onclick={(e) => e.stopPropagation()}>
     <div class="bg-gradient-to-r from-primary/20 to-primary/5 px-5 py-3 flex items-center justify-between shrink-0">
-      <h3 class="text-base font-bold text-primary">设置</h3>
+      <h3 class="text-base font-bold text-primary">{t('settings.title')}</h3>
       <Button variant="ghost" size="icon-xs" onclick={onclose}><X size={16} /></Button>
     </div>
 
@@ -26,11 +26,11 @@
       <div>
         <div class="flex items-center gap-1.5 mb-2">
           <Plane size={14} class="text-primary" />
-          <span class="text-[11px] font-semibold text-primary uppercase tracking-wider">飞行参数</span>
+          <span class="text-[11px] font-semibold text-primary uppercase tracking-wider">{t('settings.flight')}</span>
         </div>
         <div class="space-y-1">
           <div class="flex justify-between items-center py-2 border-b border-border/50">
-            <label for="s-alt" class="text-sm text-muted-foreground">默认高度</label>
+            <label for="s-alt" class="text-sm text-muted-foreground">{t('ctrl.altitude')}</label>
             <div class="flex items-center gap-1">
               <input id="s-alt" type="number" bind:value={app.defaultAlt} min="5" max="500" step="5"
                      onchange={saveSettings}
@@ -39,7 +39,7 @@
             </div>
           </div>
           <div class="flex justify-between items-center py-2 border-b border-border/50">
-            <label for="s-speed" class="text-sm text-muted-foreground">默认速度</label>
+            <label for="s-speed" class="text-sm text-muted-foreground">{t('telem.speed')}</label>
             <div class="flex items-center gap-1">
               <input id="s-speed" type="number" bind:value={app.defaultSpeed} min="1" max="30" step="0.5"
                      onchange={saveSettings}
@@ -53,10 +53,10 @@
       <div>
         <div class="flex items-center gap-1.5 mb-2">
           <ShieldAlert size={14} class="text-primary" />
-          <span class="text-[11px] font-semibold text-primary uppercase tracking-wider">安全</span>
+          <span class="text-[11px] font-semibold text-primary uppercase tracking-wider">{t('settings.safetySection')}</span>
         </div>
         <div class="flex justify-between items-center py-2 border-b border-border/50">
-          <label for="s-radius" class="text-sm text-muted-foreground">围栏半径</label>
+          <label for="s-radius" class="text-sm text-muted-foreground">{t('map.fence')}</label>
           <div class="flex items-center gap-1">
             <input id="s-radius" type="number" bind:value={app.geoRadius} min="0" max="10000" step="100"
                    onchange={saveSettings}
@@ -69,18 +69,18 @@
       <div>
         <div class="flex items-center gap-1.5 mb-2">
           <Gauge size={14} class="text-primary" />
-          <span class="text-[11px] font-semibold text-primary uppercase tracking-wider">界面</span>
+          <span class="text-[11px] font-semibold text-primary uppercase tracking-wider">{t('settings.uiSection')}</span>
         </div>
         <div class="space-y-1">
           <div class="flex justify-between items-center py-2 border-b border-border/50">
-            <label class="text-sm text-muted-foreground">声音提示</label>
+            <label class="text-sm text-muted-foreground">{t('settings.audio')}</label>
             <Button variant={app.audioMuted ? 'secondary' : 'default'} size="sm" class="gap-1 h-7 text-xs"
                     onclick={() => { app.audioMuted = !app.audioMuted; saveSettings(); }}>
               {#if app.audioMuted}<VolumeOff size={13} />关{:else}<Volume2 size={13} />开{/if}
             </Button>
           </div>
           <div class="flex justify-between items-center py-2 border-b border-border/50">
-            <label class="text-sm text-muted-foreground">语音播报</label>
+            <label class="text-sm text-muted-foreground">{t('settings.voice')}</label>
             <Button variant={app.voiceEnabled ? 'default' : 'secondary'} size="sm" class="gap-1 h-7 text-xs"
                     onclick={() => { app.voiceEnabled = !app.voiceEnabled; saveSettings(); }}>
               {#if app.voiceEnabled}<Mic size={13} />开{:else}<MicOff size={13} />关{/if}
@@ -127,7 +127,7 @@
       </div>
 
       <div class="pt-2 border-t border-border text-center">
-        <p class="text-[11px] text-muted-foreground font-semibold">PL-Link 地面站</p>
+        <p class="text-[11px] text-muted-foreground font-semibold">{t('app.name')} {t('welcome.subtitle')}</p>
         <p class="text-[10px] text-muted-foreground/60">v{VERSION} · {BUILD}</p>
       </div>
     </div>
