@@ -12,6 +12,7 @@ from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from .drone_link import DroneLink
+from .param_meta import get_metadata
 from .video import router as video_router
 from .ws_manager import WSManager
 
@@ -56,6 +57,11 @@ async def health():
 @app.websocket('/ws')
 async def websocket_endpoint(ws: WebSocket):
     await app.state.ws_mgr.handle_client(ws)
+
+
+@app.get('/api/param_meta')
+async def api_param_meta(vehicle: str = 'copter'):
+    return get_metadata(vehicle)
 
 
 @app.get('/api/ports')

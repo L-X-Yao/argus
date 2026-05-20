@@ -1,42 +1,83 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { paramState } from '../lib/paramStore.svelte';
+  import { app, addToast } from '../lib/stores.svelte';
   import { sendCommand } from '../lib/ws';
-  import { addToast } from '../lib/stores.svelte';
+  import { apiUrl } from '../lib/backend';
   import type { Param } from '../lib/types';
   import Button from '$lib/components/ui/button/button.svelte';
   import Badge from '$lib/components/ui/badge/badge.svelte';
-  import { Battery, ShieldAlert, Sliders, Navigation, Radio, ToggleLeft, Cpu, FileText, List } from '@lucide/svelte';
+  import { Battery, ShieldAlert, Sliders, Navigation, Radio, ToggleLeft, Cpu, FileText, List, Info } from '@lucide/svelte';
   import type { Component } from 'svelte';
 
-  const DESC: Record<string, string> = {
-    BATT_CAPACITY: '电池容量 (mAh)', BATT_MONITOR: '电池监测类型',
-    ARMING_CHECK: '解锁检查掩码', ARMING_REQUIRE: '解锁方式',
-    FS_THR_ENABLE: '油门失控保护', FS_THR_VALUE: '油门失控阈值 (PWM)',
-    FS_GCS_ENABLE: '地面站失联保护',
-    FS_BATT_ENABLE: '电池失控保护', FS_BATT_MAH: '电池mAh保护阈值',
-    FS_BATT_VOLTAGE: '电池电压保护阈值 (V)',
-    ATC_RAT_RLL_P: '横滚速率 P', ATC_RAT_RLL_I: '横滚速率 I', ATC_RAT_RLL_D: '横滚速率 D',
-    ATC_RAT_PIT_P: '俯仰速率 P', ATC_RAT_PIT_I: '俯仰速率 I', ATC_RAT_PIT_D: '俯仰速率 D',
-    ATC_RAT_YAW_P: '偏航速率 P', ATC_RAT_YAW_I: '偏航速率 I', ATC_RAT_YAW_D: '偏航速率 D',
-    INS_GYRO_FILTER: '陀螺仪滤波频率 (Hz)', INS_ACCEL_FILTER: '加速度计滤波频率 (Hz)',
-    INS_LOG_BAT_MASK: 'IMU 批量日志掩码',
-    LOG_BITMASK: '日志记录掩码', LOG_BACKEND_TYPE: '日志后端类型',
-    RC1_MAX: '通道1最大 (PWM)', RC1_MIN: '通道1最小 (PWM)', RC1_TRIM: '通道1中位 (PWM)',
-    RC2_MAX: '通道2最大 (PWM)', RC2_MIN: '通道2最小 (PWM)', RC2_TRIM: '通道2中位 (PWM)',
-    WPNAV_SPEED: '航线速度 (cm/s)', WPNAV_SPEED_UP: '上升速度 (cm/s)', WPNAV_SPEED_DN: '下降速度 (cm/s)',
-    RTL_ALT: '返航高度 (cm)', RTL_SPEED: '返航速度 (cm/s, 0=默认)',
-    FLTMODE1: '模式开关1', FLTMODE2: '模式开关2', FLTMODE3: '模式开关3',
-    FLTMODE4: '模式开关4', FLTMODE5: '模式开关5', FLTMODE6: '模式开关6',
+  interface ParamMeta {
+    desc?: string;
+    human?: string;
+    group?: string;
+    range?: [number, number];
+    units?: string;
+    step?: number;
+    values?: Record<string, string>;
+    bitmask?: Record<string, string>;
+  }
+
+  let meta = $state<Record<string, ParamMeta>>({});
+  let metaLoaded = $state(false);
+
+  const VTYPE_MAP: Record<string, string> = {
+    '多旋翼': 'copter', '固定翼': 'plane', '地面车': 'rover', '水下机器人': 'sub',
   };
+
+  let lastVtype = '';
+  $effect(() => {
+    const vt = app.drone.vtype;
+    if (vt && vt !== lastVtype && VTYPE_MAP[vt]) {
+      lastVtype = vt;
+      fetchMeta(VTYPE_MAP[vt]);
+    }
+  });
+
+  async function fetchMeta(vehicle: string) {
+    try {
+      const r = await fetch(apiUrl(`/api/param_meta?vehicle=${vehicle}`));
+      if (r.ok) {
+        meta = await r.json();
+        metaLoaded = true;
+      }
+    } catch {}
+  }
+
+  function getDesc(name: string): string {
+    const m = meta[name];
+    if (m) return m.human || m.desc || '';
+    return '';
+  }
+
+  function getUnits(name: string): string {
+    return meta[name]?.units || '';
+  }
+
+  function getRangeStr(name: string): string {
+    const r = meta[name]?.range;
+    if (!r) return '';
+    return `${r[0]} ~ ${r[1]}`;
+  }
+
+  function getValueLabel(name: string, val: number): string {
+    const v = meta[name]?.values;
+    if (!v) return '';
+    const key = String(Math.round(val));
+    return v[key] || '';
+  }
 
   const CATS: { key: string; label: string; icon: Component; match: (n: string) => boolean }[] = [
     { key: 'battery', label: '电池', icon: Battery, match: n => n.startsWith('BATT') || n === 'FS_BATT_ENABLE' || n === 'FS_BATT_MAH' || n === 'FS_BATT_VOLTAGE' },
     { key: 'failsafe', label: '保护', icon: ShieldAlert, match: n => n.startsWith('FS_') },
-    { key: 'pid', label: 'PID', icon: Sliders, match: n => n.startsWith('ATC_RAT_') },
-    { key: 'nav', label: '导航', icon: Navigation, match: n => n.startsWith('WPNAV') || n.startsWith('RTL') },
+    { key: 'pid', label: 'PID', icon: Sliders, match: n => n.startsWith('ATC_RAT_') || n.startsWith('ATC_ANG_') },
+    { key: 'nav', label: '导航', icon: Navigation, match: n => n.startsWith('WPNAV') || n.startsWith('RTL') || n.startsWith('LOIT') },
     { key: 'rc', label: '遥控', icon: Radio, match: n => /^RC\d/.test(n) },
-    { key: 'modes', label: '模式', icon: ToggleLeft, match: n => n.startsWith('FLTMODE') },
-    { key: 'sensor', label: '传感器', icon: Cpu, match: n => n.startsWith('INS_') },
+    { key: 'modes', label: '模式', icon: ToggleLeft, match: n => n.startsWith('FLTMODE') || n.startsWith('MODE') },
+    { key: 'sensor', label: '传感器', icon: Cpu, match: n => n.startsWith('INS_') || n.startsWith('COMPASS') || n.startsWith('BARO') },
     { key: 'log', label: '日志', icon: FileText, match: n => n.startsWith('LOG_') },
     { key: 'all', label: '全部', icon: List, match: () => true },
   ];
@@ -51,8 +92,15 @@
     const cat = CATS.find(c => c.key === category)!;
     let list = paramState.list.filter(p => cat.match(p.name));
     if (search) {
-      const q = search.toUpperCase();
-      list = list.filter(p => p.name.includes(q) || (DESC[p.name] || '').includes(search));
+      const q = search.toLowerCase();
+      list = list.filter(p => {
+        if (p.name.toLowerCase().includes(q)) return true;
+        const d = getDesc(p.name);
+        if (d && d.toLowerCase().includes(q)) return true;
+        const m = meta[p.name];
+        if (m?.human && m.human.toLowerCase().includes(q)) return true;
+        return false;
+      });
     }
     return list;
   });
@@ -66,12 +114,16 @@
     if (!editName) return;
     const val = parseFloat(editValue);
     if (isNaN(val)) { addToast('无效数值', 'error'); return; }
+    const r = meta[editName]?.range;
+    if (r && (val < r[0] || val > r[1])) {
+      addToast(`超出范围 ${r[0]} ~ ${r[1]}`, 'warn');
+    }
     const name = editName;
     sendCommand('param_set', undefined, { name, value: val });
     modified.add(name);
     modified = new Set(modified);
     editName = null;
-    addToast(`${name} = ${val} 已发送`, 'info', 2000);
+    addToast(`${name} = ${val}`, 'info', 2000);
   }
 
   function onKeydown(e: KeyboardEvent) {
@@ -136,7 +188,12 @@
 
 <div class="bg-card border border-border rounded-xl p-4 flex flex-col h-full">
   <div class="flex items-center justify-between flex-wrap gap-2 mb-3">
-    <h2 class="text-sm font-semibold text-primary uppercase tracking-wider">参数管理</h2>
+    <div class="flex items-center gap-2">
+      <h2 class="text-sm font-semibold text-primary uppercase tracking-wider">参数管理</h2>
+      {#if metaLoaded}
+        <span class="text-[10px] text-muted-foreground/60" title="已加载参数说明数据库">说明已加载</span>
+      {/if}
+    </div>
     <div class="flex items-center gap-2">
       <Button variant="default" size="sm" onclick={requestAll} disabled={paramState.fetching}>
         {paramState.fetching ? `读取中 ${progress}%` : '读取参数'}
@@ -177,20 +234,37 @@
 
     <div class="flex-1 min-h-0 overflow-y-auto rounded-lg border border-border">
       {#each filtered as p (p.name)}
+        {@const desc = getDesc(p.name)}
+        {@const units = getUnits(p.name)}
+        {@const rangeStr = getRangeStr(p.name)}
+        {@const valLabel = getValueLabel(p.name, p.value)}
         <div class="flex items-center gap-2 px-2 py-1.5 text-xs border-b border-border/50 hover:bg-muted/50 transition-colors
               {modified.has(p.name) ? 'bg-warning/5' : ''}">
-          <div class="w-40 shrink-0 font-bold font-mono text-[11px]">{p.name}</div>
-          <div class="flex-1 text-muted-foreground text-[11px] truncate min-w-0">{DESC[p.name] || ''}</div>
+          <div class="w-40 shrink-0">
+            <div class="font-bold font-mono text-[11px] leading-tight">{p.name}</div>
+            {#if desc}
+              <div class="text-[10px] text-muted-foreground leading-tight truncate" title={desc}>{desc}</div>
+            {/if}
+          </div>
           {#if editName === p.name}
-            <input type="text" bind:value={editValue} onkeydown={onKeydown}
-                   class="w-20 h-6 px-1 text-right font-mono text-xs bg-input border-2 border-primary rounded text-foreground focus:outline-none" />
-            <Button variant="default" size="xs" onclick={submitEdit}>写入</Button>
-            <Button variant="ghost" size="xs" onclick={cancelEdit}>取消</Button>
+            <div class="flex-1 flex items-center gap-1 min-w-0">
+              <input type="text" bind:value={editValue} onkeydown={onKeydown}
+                     class="w-24 h-6 px-1 text-right font-mono text-xs bg-input border-2 border-primary rounded text-foreground focus:outline-none" />
+              {#if units}<span class="text-[10px] text-muted-foreground">{units}</span>{/if}
+              {#if rangeStr}<span class="text-[10px] text-muted-foreground/60">[{rangeStr}]</span>{/if}
+              <Button variant="default" size="xs" onclick={submitEdit}>写入</Button>
+              <Button variant="ghost" size="xs" onclick={cancelEdit}>取消</Button>
+            </div>
           {:else}
-            <!-- svelte-ignore a11y_click_events_have_key_events -->
-            <!-- svelte-ignore a11y_no_static_element_interactions -->
-            <div class="w-24 text-right font-mono cursor-pointer px-1 py-0.5 rounded hover:bg-input transition-colors"
-                 onclick={() => startEdit(p)}>{fmtValue(p.value)}</div>
+            <div class="flex-1 flex items-center gap-1.5 min-w-0">
+              <!-- svelte-ignore a11y_click_events_have_key_events -->
+              <!-- svelte-ignore a11y_no_static_element_interactions -->
+              <div class="font-mono cursor-pointer px-1.5 py-0.5 rounded hover:bg-input transition-colors text-right min-w-[60px]"
+                   onclick={() => startEdit(p)}>{fmtValue(p.value)}</div>
+              {#if units}<span class="text-[10px] text-muted-foreground">{units}</span>{/if}
+              {#if valLabel}<span class="text-[10px] text-primary/70 truncate">{valLabel}</span>{/if}
+              {#if rangeStr}<span class="text-[10px] text-muted-foreground/50 ml-auto whitespace-nowrap">[{rangeStr}]</span>{/if}
+            </div>
           {/if}
         </div>
       {/each}
