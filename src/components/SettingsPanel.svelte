@@ -7,7 +7,7 @@
   import { X, Volume2, VolumeOff, Mic, MicOff, Sun, Moon, Plane, ShieldAlert, Gauge, Globe, Gamepad2 } from '@lucide/svelte';
 
   let { onclose }: { onclose: () => void } = $props();
-  const VERSION = '3.0.0';
+  const VERSION = '3.1.0';
   const BUILD = __BUILD_DATE__;
 </script>
 
@@ -129,6 +129,7 @@
       <div class="pt-2 border-t border-border text-center">
         <p class="text-[11px] text-muted-foreground font-semibold">{t('app.name')} {t('welcome.subtitle')}</p>
         <p class="text-[10px] text-muted-foreground/60">v{VERSION} · {BUILD}</p>
+        <p class="text-[9px] text-muted-foreground/40 mt-0.5">Copter · Plane · Rover · Sub | UDP · TCP · Serial</p>
       </div>
     </div>
   </div>
