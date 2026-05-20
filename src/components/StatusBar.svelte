@@ -264,6 +264,11 @@
       {#if app.drone.fw_version}
         <span class="text-muted-foreground text-[10px]">{app.drone.fw_version}</span>
       {/if}
+      {#if app.drone.vehicles && app.drone.vehicles.length > 0}
+        <Badge variant="outline" class="text-[9px] font-mono gap-0.5">
+          +{app.drone.vehicles.length}
+        </Badge>
+      {/if}
 
       {#if app.drone.log_active}
         <Button variant="outline" size="xs" onclick={downloadLog} class="text-success border-success/50">{t('status.log')}</Button>
