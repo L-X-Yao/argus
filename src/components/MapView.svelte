@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { app, addWaypoint, addToast, saveWaypoints } from '../lib/stores.svelte';
+  import { app, addWaypoint, addToast, saveWaypoints, showConfirm } from '../lib/stores.svelte';
   import { sendCommand } from '../lib/ws';
   import { toGcj } from '../lib/gcj02';
   import { API_BASE } from '../lib/backend';
@@ -98,10 +98,12 @@
     if (!app.drone.connected || !app.drone.armed) return;
     const ll = e.latlng;
     const [wlat, wlon] = toWgsFromGcj(ll.lat, ll.lng);
-    if (confirm(`引导飞往此点？\n${wlat.toFixed(5)}, ${wlon.toFixed(5)}\n高度: ${app.defaultAlt}m`)) {
-      sendCommand('guided_goto', undefined, { lat: wlat, lon: wlon, alt: app.defaultAlt });
-      addToast(`引导飞往 ${wlat.toFixed(5)}, ${wlon.toFixed(5)}`, 'info');
-    }
+    showConfirm(`引导飞往此点？\n${wlat.toFixed(5)}, ${wlon.toFixed(5)}\n高度: ${app.defaultAlt}m`).then(ok => {
+      if (ok) {
+        sendCommand('guided_goto', undefined, { lat: wlat, lon: wlon, alt: app.defaultAlt });
+        addToast(`引导飞往 ${wlat.toFixed(5)}, ${wlon.toFixed(5)}`, 'info');
+      }
+    });
   }
 
   function toWgsFromGcj(glat: number, glon: number): [number, number] {

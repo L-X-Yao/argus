@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { app, pushUndo, deleteWaypoint, clearWaypoints, saveSettings, saveWaypoints, generateCircle, addToast } from '../lib/stores.svelte';
+  import { app, pushUndo, deleteWaypoint, clearWaypoints, saveSettings, saveWaypoints, generateCircle, addToast, showConfirm } from '../lib/stores.svelte';
   import { sendCommand } from '../lib/ws';
   import { toGcj } from '../lib/gcj02';
   import Button from '$lib/components/ui/button/button.svelte';
@@ -59,7 +59,7 @@
 
   async function armAndFly() {
     if (!app.waypoints.length) return;
-    if (!confirm(`确认上传任务并自动起飞到 ${app.defaultAlt}m？\n将执行：上传→解锁→起飞→开始任务`)) return;
+    if (!await showConfirm(`确认上传任务并自动起飞到 ${app.defaultAlt}m？\n将执行：上传→解锁→起飞→开始任务`, true)) return;
     uploadMission();
     await new Promise(r => setTimeout(r, 1000));
     sendCommand('arm');
@@ -321,7 +321,7 @@
     <Button variant="secondary" size="xs" onclick={importKml}>导入</Button>
     <Button variant="secondary" size="xs" onclick={reverseRoute}>反转</Button>
     <Button variant="secondary" size="xs" onclick={() => showCircleGen = !showCircleGen}>圆形</Button>
-    <Button variant="ghost" size="xs" onclick={() => { if (app.waypoints.length === 0 || confirm(`确认清除全部 ${app.waypoints.length} 个航点？`)) clearWaypoints(); }}>清除</Button>
+    <Button variant="ghost" size="xs" onclick={async () => { if (app.waypoints.length === 0 || await showConfirm(`确认清除全部 ${app.waypoints.length} 个航点？`)) clearWaypoints(); }}>清除</Button>
   </div>
   {#if showCircleGen}
     <div class="flex gap-1 items-center mt-1.5 p-1.5 bg-muted rounded-lg flex-wrap">

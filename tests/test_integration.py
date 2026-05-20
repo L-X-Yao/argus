@@ -1069,7 +1069,7 @@ class TestAudioAlertLogic:
 
 
 class TestConfirmCoverage:
-    """Verify all dangerous commands have confirm() guards in source."""
+    """Verify all dangerous commands have confirm/showConfirm guards in source."""
 
     def test_dangerous_commands_guarded(self):
         import re
@@ -1082,6 +1082,6 @@ class TestConfirmCoverage:
                 content = f.read_text()
                 for m in pat.finditer(content):
                     ctx = content[max(0, m.start() - 600):m.start() + 50]
-                    assert 'confirm(' in ctx, (
-                        f'{f.name}: sendCommand("{cmd}") missing confirm'
+                    assert 'confirm(' in ctx or 'showConfirm(' in ctx, (
+                        f'{f.name}: sendCommand("{cmd}") missing confirm guard'
                     )

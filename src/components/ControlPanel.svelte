@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { app } from '../lib/stores.svelte';
+  import { app, showConfirm } from '../lib/stores.svelte';
   import { sendCommand } from '../lib/ws';
   import Button from '$lib/components/ui/button/button.svelte';
   import { Plane, ShieldCheck, Navigation, CircleStop, ArrowDown, CornerDownLeft, Play, Pause, Package } from '@lucide/svelte';
@@ -33,14 +33,14 @@
     phase === 'returning' ? 'text-orange-400' : 'text-green-400'
   );
 
-  function arm() { if (confirm('确认解锁电机？\n请确保周围无人员。')) sendCommand('arm'); }
+  async function arm() { if (await showConfirm('确认解锁电机？\n请确保周围无人员。', true)) sendCommand('arm'); }
   function disarm() { sendCommand('disarm'); }
-  function rtl() { if (confirm('切换到返航模式？')) sendCommand('rtl'); }
-  function forceDisarm() { if (confirm('强制锁定 — 电机立即停转！\n仅在已着陆时使用。继续？')) sendCommand('force_disarm'); }
+  async function rtl() { if (await showConfirm('切换到返航模式？', true)) sendCommand('rtl'); }
+  async function forceDisarm() { if (await showConfirm('强制锁定 — 电机立即停转！\n仅在已着陆时使用。继续？', true)) sendCommand('force_disarm'); }
   function pauseMode() { sendCommand('mode', app.drone.vtype === '固定翼' ? 19 : 5); }
-  function takeoff() { if (confirm(`确认起飞到 ${app.defaultAlt}m？`)) sendCommand('takeoff', undefined, { alt: app.defaultAlt }); }
-  function startMission() { if (confirm('确认开始自动任务？\n飞机将按航线自主飞行。')) sendCommand('mission_start'); }
-  function drop() { if (confirm('确认执行载荷投放？')) sendCommand('drop'); }
+  async function takeoff() { if (await showConfirm(`确认起飞到 ${app.defaultAlt}m？`, true)) sendCommand('takeoff', undefined, { alt: app.defaultAlt }); }
+  async function startMission() { if (await showConfirm('确认开始自动任务？\n飞机将按航线自主飞行。', true)) sendCommand('mission_start'); }
+  async function drop() { if (await showConfirm('确认执行载荷投放？', true)) sendCommand('drop'); }
 </script>
 
 <div class="bg-card border-r border-border p-3 w-44 shrink-0 flex flex-col gap-2">
@@ -62,7 +62,7 @@
     </div>
     <div class="text-[11px] text-muted-foreground font-semibold mt-1 tracking-wide uppercase">任务</div>
     <Button variant="outline" size="sm" class="w-full" onclick={() => sendCommand('mission_download')}>下载任务</Button>
-    <Button variant="outline" size="sm" class="w-full" onclick={() => { if (confirm('确认清除飞控上的任务？')) sendCommand('mission_clear'); }}>清除任务</Button>
+    <Button variant="outline" size="sm" class="w-full" onclick={async () => { if (await showConfirm('确认清除飞控上的任务？')) sendCommand('mission_clear'); }}>清除任务</Button>
 
   {:else if phase === 'ground'}
     <Button size="sm" class="w-full bg-teal-700 hover:bg-teal-800 text-white font-bold gap-1.5" onclick={takeoff}>

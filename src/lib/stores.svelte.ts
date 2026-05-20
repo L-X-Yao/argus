@@ -137,6 +137,30 @@ export function loadDownloadedMission(wps: Waypoint[]) {
   saveWaypoints();
 }
 
+// Confirm dialog
+class ConfirmState {
+  visible: boolean = $state(false);
+  message: string = $state('');
+  danger: boolean = $state(false);
+  _resolve: ((v: boolean) => void) | null = null;
+}
+export const confirmState = new ConfirmState();
+
+export function showConfirm(message: string, danger = false): Promise<boolean> {
+  return new Promise(resolve => {
+    confirmState.message = message;
+    confirmState.danger = danger;
+    confirmState.visible = true;
+    confirmState._resolve = resolve;
+  });
+}
+
+export function resolveConfirm(result: boolean) {
+  confirmState.visible = false;
+  confirmState._resolve?.(result);
+  confirmState._resolve = null;
+}
+
 let _toastId = 0;
 export function addToast(text: string, level: 'info' | 'warn' | 'error' | 'success' = 'info', duration = 4000) {
   const id = ++_toastId;
