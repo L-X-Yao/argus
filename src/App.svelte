@@ -28,7 +28,7 @@
   import CalibrationPanel from './components/CalibrationPanel.svelte';
   import ConfirmDialog from './components/ConfirmDialog.svelte';
   import SlideConfirm from './components/SlideConfirm.svelte';
-  import { showConfirm, showSlide } from './lib/stores.svelte';
+  import { showConfirm, showSlide, undo } from './lib/stores.svelte';
   import { ChevronUp, ChevronDown, CornerDownLeft, Pause, HardDrive, Wrench, Video, SlidersHorizontal, PanelLeftClose, Plane, MapPinned, Activity, Settings2, X as XIcon } from '@lucide/svelte';
   import type { Component } from 'svelte';
   import Button from '$lib/components/ui/button/button.svelte';
@@ -111,6 +111,7 @@
     else if (k === 'escape') { showShortcuts = false; }
     else if (k === '?' || (k === '/' && e.shiftKey)) { showShortcuts = !showShortcuts; }
     else if (k === 's' && e.ctrlKey) { e.preventDefault(); app.showSettings = !app.showSettings; }
+    else if (k === 'z' && e.ctrlKey) { e.preventDefault(); undo(); }
     else if (e.ctrlKey && k >= '1' && k <= '4') {
       e.preventDefault();
       const views: View[] = ['fly', 'plan', 'monitor', 'params'];

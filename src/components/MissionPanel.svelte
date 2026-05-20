@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { app, pushUndo, deleteWaypoint, clearWaypoints, saveSettings, saveWaypoints, generateCircle, addToast, showConfirm } from '../lib/stores.svelte';
+  import { app, pushUndo, undo, deleteWaypoint, clearWaypoints, saveSettings, saveWaypoints, generateCircle, addToast, showConfirm } from '../lib/stores.svelte';
 
   function fitAfterLoad() { requestAnimationFrame(() => app.fitRouteFlag++); }
   import { sendCommand } from '../lib/ws';
@@ -328,6 +328,7 @@
     <Button variant="secondary" size="xs" onclick={importKml}>导入</Button>
     <Button variant="secondary" size="xs" onclick={reverseRoute}>反转</Button>
     <Button variant="secondary" size="xs" onclick={() => showCircleGen = !showCircleGen}>圆形</Button>
+    <Button variant="secondary" size="xs" onclick={undo} disabled={app.undoStack.length === 0}>撤销</Button>
     <Button variant="ghost" size="xs" onclick={async () => { if (app.waypoints.length === 0 || await showConfirm(`确认清除全部 ${app.waypoints.length} 个航点？`)) clearWaypoints(); }}>清除</Button>
   </div>
   {#if showCircleGen}
