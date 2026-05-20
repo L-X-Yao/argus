@@ -63,7 +63,7 @@
 
   async function armAndFly() {
     if (!app.waypoints.length) return;
-    if (!await showConfirm(`确认上传任务并自动起飞到 ${app.defaultAlt}m？\n将执行：上传→解锁→起飞→开始任务`, true)) return;
+    if (!await showConfirm(t('confirm.armAndFly').replace('{alt}', String(app.defaultAlt)), true)) return;
     uploadMission();
     addToast(t('toast.uploading'), 'info', 2000);
     await new Promise(r => setTimeout(r, 1500));
@@ -341,7 +341,7 @@
     <Button variant="secondary" size="xs" onclick={reverseRoute}>{t('wp.reverse')}</Button>
     <Button variant="secondary" size="xs" onclick={() => showCircleGen = !showCircleGen}>{t('wp.circle')}</Button>
     <Button variant="secondary" size="xs" onclick={undo} disabled={app.undoStack.length === 0}>{t('wp.undo')}</Button>
-    <Button variant="ghost" size="xs" onclick={async () => { if (app.waypoints.length === 0 || await showConfirm(`确认清除全部 ${app.waypoints.length} 个航点？`)) clearWaypoints(); }}>{t('wp.clear')}</Button>
+    <Button variant="ghost" size="xs" onclick={async () => { if (app.waypoints.length === 0 || await showConfirm(t('confirm.clearWps').replace('{n}', String(app.waypoints.length)))) clearWaypoints(); }}>{t('wp.clear')}</Button>
   </div>
   {#if showCircleGen}
     <div class="flex gap-1 items-center mt-1.5 p-1.5 bg-muted rounded-lg flex-wrap">
