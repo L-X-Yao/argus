@@ -264,6 +264,9 @@
       {#if app.drone.fw_version}
         <span class="text-muted-foreground text-[10px]">{app.drone.fw_version}</span>
       {/if}
+      {#if app.drone.parse_errors > 0}
+        <span class="text-[9px] text-destructive/70 font-mono" title="Parse errors">E:{app.drone.parse_errors}</span>
+      {/if}
       {#if app.drone.vehicles && app.drone.vehicles.length > 0}
         <Badge variant="outline" class="text-[9px] font-mono gap-0.5">
           +{app.drone.vehicles.length}
