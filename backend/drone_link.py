@@ -112,6 +112,7 @@ class DroneLink:
         self.servo_out: list[int] = [0] * 16
         self.wind_dir = 0.0
         self.wind_speed = 0.0
+        self.terrain_alt = -1.0
 
     def is_plane(self) -> bool:
         if self.force_plane is not None:
@@ -260,6 +261,7 @@ class DroneLink:
             'ekf_flags': self.ekf_flags,
             'wind_dir': round(self.wind_dir, 1),
             'wind_speed': round(self.wind_speed, 1),
+            'terrain_alt': round(self.terrain_alt, 1),
             **self.param_mgr.get_status(),
         }
 

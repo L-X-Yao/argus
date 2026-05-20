@@ -43,6 +43,7 @@
   let fencePolyLayer: any = null;
   let fenceVertMarkers: any[] = [];
   let rangeRing: any = null;
+  let homeLine: any = null;
 
   const SAT_URL = `${API_BASE}/api/tile/6/{z}/{x}/{y}`;
   const LABEL_URL = `${API_BASE}/api/tile/8/{z}/{x}/{y}`;
@@ -237,6 +238,14 @@
       const endLon = glon + Math.sin(hdgRad) * scale / (111320 * Math.cos(glat * Math.PI / 180));
       velocityLine = L.polyline([[glat, glon], [endLat, endLon]], {
         color: '#69f0ae', weight: 2, opacity: 0.6, dashArray: '4,6',
+      }).addTo(map);
+    }
+
+    if (homeLine) { map.removeLayer(homeLine); homeLine = null; }
+    if (app.drone.home_lat !== 0 && app.drone.dist_home > 5) {
+      const [hlat, hlon] = toGcj(app.drone.home_lat, app.drone.home_lon);
+      homeLine = L.polyline([[glat, glon], [hlat, hlon]], {
+        color: '#ffa726', weight: 1.5, opacity: 0.5, dashArray: '6,8',
       }).addTo(map);
     }
 
