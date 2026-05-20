@@ -74,7 +74,7 @@
       {/each}
       <Button variant="ghost" size="xs" onclick={() => clearEvents()} disabled={app.events.length === 0}>{t('event.clear')}</Button>
       <Button variant="outline" size="xs" onclick={exportLog}>{t('event.export')}</Button>
-      <input bind:value={filter} placeholder="筛选..."
+      <input bind:value={filter} placeholder="Filter..."
              class="w-20 h-5 px-1.5 text-[11px] bg-input border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/50" />
     </div>
   </div>

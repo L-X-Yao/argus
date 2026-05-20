@@ -71,16 +71,16 @@
     return v[key] || '';
   }
 
-  const CATS: { key: string; label: string; icon: Component; match: (n: string) => boolean }[] = [
-    { key: 'battery', label: '电池', icon: Battery, match: n => n.startsWith('BATT') || n === 'FS_BATT_ENABLE' || n === 'FS_BATT_MAH' || n === 'FS_BATT_VOLTAGE' },
-    { key: 'failsafe', label: '保护', icon: ShieldAlert, match: n => n.startsWith('FS_') },
-    { key: 'pid', label: 'PID', icon: Sliders, match: n => n.startsWith('ATC_RAT_') || n.startsWith('ATC_ANG_') },
-    { key: 'nav', label: '导航', icon: Navigation, match: n => n.startsWith('WPNAV') || n.startsWith('RTL') || n.startsWith('LOIT') },
-    { key: 'rc', label: '遥控', icon: Radio, match: n => /^RC\d/.test(n) },
-    { key: 'modes', label: '模式', icon: ToggleLeft, match: n => n.startsWith('FLTMODE') || n.startsWith('MODE') },
-    { key: 'sensor', label: '传感器', icon: Cpu, match: n => n.startsWith('INS_') || n.startsWith('COMPASS') || n.startsWith('BARO') },
-    { key: 'log', label: '日志', icon: FileText, match: n => n.startsWith('LOG_') },
-    { key: 'all', label: '全部', icon: List, match: () => true },
+  const CAT_DEFS: { key: string; i18nKey: string; icon: Component; match: (n: string) => boolean }[] = [
+    { key: 'battery', i18nKey: 'cat.battery', icon: Battery, match: n => n.startsWith('BATT') || n === 'FS_BATT_ENABLE' || n === 'FS_BATT_MAH' || n === 'FS_BATT_VOLTAGE' },
+    { key: 'failsafe', i18nKey: 'cat.failsafe', icon: ShieldAlert, match: n => n.startsWith('FS_') },
+    { key: 'pid', i18nKey: 'cat.pid', icon: Sliders, match: n => n.startsWith('ATC_RAT_') || n.startsWith('ATC_ANG_') },
+    { key: 'nav', i18nKey: 'cat.nav', icon: Navigation, match: n => n.startsWith('WPNAV') || n.startsWith('RTL') || n.startsWith('LOIT') },
+    { key: 'rc', i18nKey: 'cat.rc', icon: Radio, match: n => /^RC\d/.test(n) },
+    { key: 'modes', i18nKey: 'cat.modes', icon: ToggleLeft, match: n => n.startsWith('FLTMODE') || n.startsWith('MODE') },
+    { key: 'sensor', i18nKey: 'cat.sensor', icon: Cpu, match: n => n.startsWith('INS_') || n.startsWith('COMPASS') || n.startsWith('BARO') },
+    { key: 'log', i18nKey: 'cat.log', icon: FileText, match: n => n.startsWith('LOG_') },
+    { key: 'all', i18nKey: 'cat.all', icon: List, match: () => true },
   ];
 
   let category = $state('all');
@@ -101,7 +101,7 @@
   );
 
   let filtered = $derived.by(() => {
-    const cat = CATS.find(c => c.key === category)!;
+    const cat = CAT_DEFS.find(c => c.key === category)!;
     let list = paramState.list.filter(p => cat.match(p.name));
     if (showModifiedOnly && metaLoaded) {
       list = list.filter(p => hasDefaultDiff(p.name, p.value));
@@ -230,19 +230,19 @@
 
   {#if paramState.list.length > 0}
     <div class="flex flex-wrap gap-1 mb-2">
-      {#each CATS as cat}
+      {#each CAT_DEFS as cat}
         <button class="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] rounded-md border transition-all cursor-pointer
           {category === cat.key
             ? 'bg-primary text-primary-foreground border-primary'
             : 'bg-card text-muted-foreground border-border hover:text-foreground hover:bg-muted'}"
                 onclick={() => category = cat.key}>
-          <cat.icon size={11} />{cat.label}
+          <cat.icon size={11} />{t(cat.i18nKey)}
         </button>
       {/each}
     </div>
 
     <div class="flex items-center gap-2 mb-2">
-      <input type="text" placeholder="搜索参数名或说明..." bind:value={search}
+      <input type="text" placeholder={t('param.search')} bind:value={search}
              class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50" />
       {#if metaLoaded && modifiedCount > 0}
         <button class="text-[11px] px-2 py-0.5 rounded border transition-all cursor-pointer

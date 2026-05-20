@@ -76,21 +76,21 @@
             <label class="text-sm text-muted-foreground">{t('settings.audio')}</label>
             <Button variant={app.audioMuted ? 'secondary' : 'default'} size="sm" class="gap-1 h-7 text-xs"
                     onclick={() => { app.audioMuted = !app.audioMuted; saveSettings(); }}>
-              {#if app.audioMuted}<VolumeOff size={13} />关{:else}<Volume2 size={13} />开{/if}
+              {#if app.audioMuted}<VolumeOff size={13} />OFF{:else}<Volume2 size={13} />ON{/if}
             </Button>
           </div>
           <div class="flex justify-between items-center py-2 border-b border-border/50">
             <label class="text-sm text-muted-foreground">{t('settings.voice')}</label>
             <Button variant={app.voiceEnabled ? 'default' : 'secondary'} size="sm" class="gap-1 h-7 text-xs"
                     onclick={() => { app.voiceEnabled = !app.voiceEnabled; saveSettings(); }}>
-              {#if app.voiceEnabled}<Mic size={13} />开{:else}<MicOff size={13} />关{/if}
+              {#if app.voiceEnabled}<Mic size={13} />ON{:else}<MicOff size={13} />OFF{/if}
             </Button>
           </div>
           <div class="flex justify-between items-center py-2 border-b border-border/50">
             <label class="text-sm text-muted-foreground">{t('settings.darkTheme')}</label>
             <Button variant={app.darkTheme ? 'default' : 'secondary'} size="sm" class="gap-1 h-7 text-xs"
                     onclick={() => { app.darkTheme = !app.darkTheme; saveSettings(); }}>
-              {#if app.darkTheme}<Moon size={13} />深色{:else}<Sun size={13} />浅色{/if}
+              {#if app.darkTheme}<Moon size={13} />Dark{:else}<Sun size={13} />Light{/if}
             </Button>
           </div>
           <div class="flex justify-between items-center py-2 border-b border-border/50">
