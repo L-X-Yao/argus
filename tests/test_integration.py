@@ -1085,3 +1085,31 @@ class TestConfirmCoverage:
                     assert 'confirm(' in ctx or 'showConfirm(' in ctx or 'showSlide(' in ctx, (
                         f'{f.name}: sendCommand("{cmd}") missing confirm guard'
                     )
+
+
+class TestVersionApi:
+    def test_version_endpoint(self, backend_url):
+        import httpx
+        r = httpx.get(f'{backend_url}/api/version')
+        assert r.status_code == 200
+        data = r.json()
+        assert 'version' in data
+        assert 'protocols' in data
+        assert 'vehicles' in data
+        assert 'features' in data
+        assert 'standard' in data['protocols']
+        assert 'copter' in data['vehicles']
+        assert 'i18n' in data['features']
+
+    def test_param_meta_endpoint(self, backend_url):
+        import httpx
+        r = httpx.get(f'{backend_url}/api/param_meta?vehicle=copter')
+        assert r.status_code == 200
+
+    def test_tile_sources_endpoint(self, backend_url):
+        import httpx
+        r = httpx.get(f'{backend_url}/api/tile_sources')
+        assert r.status_code == 200
+        data = r.json()
+        assert 'china' in data
+        assert 'global' in data
