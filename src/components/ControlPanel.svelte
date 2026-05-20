@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { app, showConfirm, showSlide } from '../lib/stores.svelte';
+  import { app, showConfirm, showSlide, addToast } from '../lib/stores.svelte';
   import { sendCommand } from '../lib/ws';
   import Button from '$lib/components/ui/button/button.svelte';
-  import { Plane, ShieldCheck, CircleStop, ArrowDown, CornerDownLeft, Play, Pause, Package } from '@lucide/svelte';
+  import { Plane, ShieldCheck, CircleStop, ArrowDown, CornerDownLeft, Play, Pause, Package, ChevronUp, ChevronDown } from '@lucide/svelte';
 
   type Phase = 'disarmed' | 'ground' | 'flying' | 'mission' | 'returning';
 
@@ -41,6 +41,13 @@
   function takeoff() { showSlide(`滑动起飞 ${app.defaultAlt}m`, 'teal', () => sendCommand('takeoff', undefined, { alt: app.defaultAlt })); }
   function startMission() { showSlide('滑动开始任务', 'blue', () => sendCommand('mission_start')); }
   async function drop() { if (await showConfirm('确认执行载荷投放？', true)) sendCommand('drop'); }
+  function adjustAlt(delta: number) {
+    const d = app.drone;
+    if (!d.connected || !d.armed || d.lat === 0) return;
+    const newAlt = Math.max(5, Math.round(d.alt_rel + delta));
+    sendCommand('guided_goto', undefined, { lat: d.lat, lon: d.lon, alt: newAlt });
+    addToast(`调整高度到 ${newAlt}m`, 'info', 2000);
+  }
 </script>
 
 <div class="bg-card border-r border-border p-3 w-44 shrink-0 flex flex-col gap-2">
@@ -94,6 +101,12 @@
         <Play size={14} />开始任务
       </Button>
     {/if}
+    <div class="text-[11px] text-muted-foreground font-semibold mt-1 tracking-wide uppercase">高度</div>
+    <div class="flex items-center gap-1">
+      <Button variant="outline" size="xs" class="px-1.5" onclick={() => adjustAlt(-5)}><ChevronDown size={12} /></Button>
+      <span class="flex-1 text-center text-xs font-bold tabular-nums">{app.drone.alt_rel.toFixed(0)}m</span>
+      <Button variant="outline" size="xs" class="px-1.5" onclick={() => adjustAlt(5)}><ChevronUp size={12} /></Button>
+    </div>
     <div class="text-[11px] text-muted-foreground font-semibold mt-1 tracking-wide uppercase">载荷</div>
     <div class="flex gap-1.5">
       <Button size="sm" class="flex-1 bg-orange-700 hover:bg-orange-800 text-white font-bold" onclick={drop}>
