@@ -1,12 +1,12 @@
 <script lang="ts">
-  import { app, showSlide } from '../lib/stores.svelte';
+  import { app, showSlide, isPlane } from '../lib/stores.svelte';
   import { sendCommand } from '../lib/ws';
   import { t } from '../lib/i18n.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
   import Badge from '$lib/components/ui/badge/badge.svelte';
 
   function rtl() { showSlide(t('slide.rtl'), 'red', () => sendCommand('rtl')); }
-  function pause() { sendCommand('mode', (app.drone.vtype === '固定翼' || app.drone.vtype === 'Fixed Wing') ? 19 : 5); }
+  function pause() { sendCommand('mode', isPlane() ? 19 : 5); }
   function forceDisarm() { showSlide(t('slide.forceDisarm'), 'red', () => sendCommand('force_disarm')); }
 
   function fmtTime(s: number): string {

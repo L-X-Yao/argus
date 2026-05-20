@@ -43,6 +43,11 @@ export function updateState(s: DroneState) {
   Object.assign(app.drone, s);
 }
 
+export function isPlane(): boolean {
+  const v = app.drone.vtype;
+  return v === '固定翼' || v === 'Fixed Wing';
+}
+
 export function setWsConnected(v: boolean) {
   app.wsConnected = v;
 }

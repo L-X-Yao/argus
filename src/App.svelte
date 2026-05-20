@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { connectWs, sendCommand } from './lib/ws';
-  import { app, loadSettings, saveSettings } from './lib/stores.svelte';
+  import { app, loadSettings, saveSettings, isPlane } from './lib/stores.svelte';
   import { checkAlerts, beep, speak } from './lib/audio';
   import { t, loadLocale } from './lib/i18n.svelte';
   import StatusBar from './components/StatusBar.svelte';
@@ -103,7 +103,7 @@
   function onKey(e: KeyboardEvent) {
     if ((e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'SELECT') return;
     const k = e.key.toLowerCase();
-    if (k === ' ') { e.preventDefault(); sendCommand('mode', (app.drone.vtype === '固定翼' || app.drone.vtype === 'Fixed Wing') ? 19 : 5); }
+    if (k === ' ') { e.preventDefault(); sendCommand('mode', isPlane() ? 19 : 5); }
     else if (k === 'r') { showConfirm(t('slide.rtl') + '?', true).then(ok => ok && sendCommand('rtl')); }
     else if (k === 'a') { showConfirm(t('slide.arm') + '?', true).then(ok => ok && sendCommand('arm')); }
     else if (k === 'd') sendCommand('disarm');
@@ -183,7 +183,7 @@
           <CornerDownLeft size={13} />{t('nav.rtl')}
         </Button>
         <Button size="sm" class="bg-amber-600 hover:bg-amber-700 text-white font-bold gap-1"
-                onclick={() => sendCommand('mode', (app.drone.vtype === '固定翼' || app.drone.vtype === 'Fixed Wing') ? 19 : 5)}
+                onclick={() => sendCommand('mode', isPlane() ? 19 : 5)}
                 title="{t('ctrl.pause')} (Space)">
           <Pause size={13} />{t('nav.pause')}
         </Button>
