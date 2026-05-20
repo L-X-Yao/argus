@@ -40,11 +40,14 @@ let linkLostSpoken = false;
 let prevMode = '';
 let batWarnLevel = 0;
 let prevWp = 0;
-let altCalloutThreshold = Infinity;
-let altCalloutInit = false;
+let altPrev = 0;
+let altInit = false;
+let descentNext = Infinity;
+let ascentIdx = 0;
 
 const RTL_MODES = ['返航', '旋翼返航', '智能返航', '降落', '旋翼降落'];
-const ALT_THRESHOLDS = [50, 40, 30, 20, 10, 8, 6, 4, 2];
+const DESCENT_THRESHOLDS = [50, 40, 30, 20, 10, 8, 6, 4, 2];
+const ASCENT_THRESHOLDS = [10, 20, 30, 50, 100];
 
 export function checkAlerts(connected: boolean, armed: boolean, remaining: number, linkAge: number) {
   if (armed && !prevArmed) {
@@ -105,21 +108,41 @@ export function checkAlerts(connected: boolean, armed: boolean, remaining: numbe
 
 function checkAltCallouts(alt: number, armed: boolean) {
   if (!armed) {
-    altCalloutThreshold = Infinity;
-    altCalloutInit = false;
+    descentNext = Infinity;
+    ascentIdx = 0;
+    altInit = false;
+    altPrev = 0;
     return;
   }
-  if (!altCalloutInit) {
-    altCalloutThreshold = ALT_THRESHOLDS.find(t => t <= alt) ?? 0;
-    altCalloutInit = true;
+  if (!altInit) {
+    altPrev = alt;
+    descentNext = DESCENT_THRESHOLDS.find(t => t <= alt) ?? 0;
+    ascentIdx = ASCENT_THRESHOLDS.findIndex(t => t > alt);
+    if (ascentIdx < 0) ascentIdx = ASCENT_THRESHOLDS.length;
+    altInit = true;
     return;
   }
-  if (alt > altCalloutThreshold + 3) altCalloutThreshold = Infinity;
-  for (const t of ALT_THRESHOLDS) {
-    if (alt <= t + 0.5 && t < altCalloutThreshold) {
-      speak(`${t}米`);
-      altCalloutThreshold = t;
-      break;
+  const climbing = alt > altPrev + 0.2;
+  const descending = alt < altPrev - 0.2;
+  altPrev = alt;
+
+  if (climbing && ascentIdx < ASCENT_THRESHOLDS.length && alt >= ASCENT_THRESHOLDS[ascentIdx] - 0.5) {
+    speak(`${ASCENT_THRESHOLDS[ascentIdx]}米`);
+    ascentIdx++;
+  }
+  if (ascentIdx > 0 && alt < ASCENT_THRESHOLDS[ascentIdx - 1] - 5) {
+    ascentIdx = ASCENT_THRESHOLDS.findIndex(t => t > alt);
+    if (ascentIdx < 0) ascentIdx = ASCENT_THRESHOLDS.length;
+  }
+
+  if (alt > descentNext + 3) descentNext = Infinity;
+  if (descending) {
+    for (const t of DESCENT_THRESHOLDS) {
+      if (alt <= t + 0.5 && t < descentNext) {
+        speak(`${t}米`);
+        descentNext = t;
+        break;
+      }
     }
   }
 }
