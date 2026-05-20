@@ -199,6 +199,11 @@
       >
         {app.drone.connected ? t('conn.disconnect') : connecting ? t('conn.connecting') : t('conn.connect')}
       </Button>
+      {#if !app.drone.connected && !connecting}
+        <Button variant="outline" size="sm" class="text-[10px] px-2 opacity-60 hover:opacity-100"
+                onclick={() => { port = 'udp:14550'; protocol = 'standard'; toggle(); }}
+                title="Quick connect to SITL (udp:14550)">SITL</Button>
+      {/if}
     </div>
   </div>
 
