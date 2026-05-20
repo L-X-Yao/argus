@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { apiUrl } from '../lib/backend';
   import { X, VideoOff } from '@lucide/svelte';
   import Button from '$lib/components/ui/button/button.svelte';
@@ -6,6 +7,7 @@
   let { onclose }: { onclose: () => void } = $props();
 
   let videoUrl = $state('');
+  onMount(() => { try { videoUrl = localStorage.getItem('pllink_video_url') || ''; } catch {} });
   let streaming = $state(false);
   let size = $state<'sm' | 'md' | 'lg'>('md');
   let error = $state('');
@@ -36,6 +38,7 @@
     }
     error = '';
     streaming = true;
+    try { localStorage.setItem('pllink_video_url', videoUrl); } catch {}
   }
 
   async function stopStream() {
