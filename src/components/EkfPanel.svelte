@@ -76,14 +76,14 @@
 
 <div class="bg-card border border-border rounded-xl p-4">
   <div class="flex items-center gap-2 mb-3">
-    <h2 class="text-sm font-semibold text-primary uppercase tracking-wider">导航滤波器</h2>
+    <h2 class="text-sm font-semibold text-primary uppercase tracking-wider">{t('ekf.title')}</h2>
     {#if app.drone.connected}
       <Badge variant={health.variant} class="text-[10px]">{health.label}</Badge>
     {/if}
   </div>
 
   {#if !app.drone.connected}
-    <div class="text-muted-foreground text-xs text-center py-4">连接后显示导航滤波器状态</div>
+    <div class="text-muted-foreground text-xs text-center py-4">{t('ekf.empty')}</div>
   {:else}
   <div class="space-y-2 mb-3">
     {#each variances as v}
@@ -107,7 +107,7 @@
   </div>
 
   <div class="border-t border-border pt-2">
-    <div class="text-[10px] text-muted-foreground mb-1.5 font-semibold">标志位状态</div>
+    <div class="text-[10px] text-muted-foreground mb-1.5 font-semibold">{t('ekf.flags')}</div>
     <div class="flex flex-wrap gap-1">
       {#each flags as f}
         {@const active = !!(d.ekf_flags & f.mask)}
