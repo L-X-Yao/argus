@@ -2,53 +2,143 @@
   import { app } from '../lib/stores.svelte';
   import { sendCommand } from '../lib/ws';
   import Button from '$lib/components/ui/button/button.svelte';
+  import { Plane, ShieldCheck, Navigation, CircleStop, ArrowDown, CornerDownLeft, Play, Pause, Package } from '@lucide/svelte';
+
+  type Phase = 'disarmed' | 'ground' | 'flying' | 'mission' | 'returning';
+
+  const RTL_MODES = ['返航', '旋翼返航', '智能返航'];
+  const LAND_MODES = ['降落', '旋翼降落'];
+  const AUTO_MODES = ['自动'];
+
+  let phase = $derived.by((): Phase => {
+    const d = app.drone;
+    if (!d.armed) return 'disarmed';
+    if (RTL_MODES.includes(d.mode) || LAND_MODES.includes(d.mode)) return 'returning';
+    if (AUTO_MODES.includes(d.mode)) return 'mission';
+    if (d.alt_rel < 2 && d.gs < 1) return 'ground';
+    return 'flying';
+  });
+
+  let phaseLabel = $derived(
+    phase === 'disarmed' ? '待命' :
+    phase === 'ground' ? '地面就绪' :
+    phase === 'mission' ? '任务执行' :
+    phase === 'returning' ? '返航中' : '飞行中'
+  );
+
+  let phaseColor = $derived(
+    phase === 'disarmed' ? 'text-muted-foreground' :
+    phase === 'ground' ? 'text-teal-400' :
+    phase === 'mission' ? 'text-blue-400' :
+    phase === 'returning' ? 'text-orange-400' : 'text-green-400'
+  );
 
   function arm() { if (confirm('确认解锁电机？\n请确保周围无人员。')) sendCommand('arm'); }
   function disarm() { sendCommand('disarm'); }
   function rtl() { if (confirm('切换到返航模式？')) sendCommand('rtl'); }
   function forceDisarm() { if (confirm('强制锁定 — 电机立即停转！\n仅在已着陆时使用。继续？')) sendCommand('force_disarm'); }
-  function pause() { sendCommand('mode', app.drone.vtype === '固定翼' ? 19 : 5); }
+  function pauseMode() { sendCommand('mode', app.drone.vtype === '固定翼' ? 19 : 5); }
+  function takeoff() { if (confirm(`确认起飞到 ${app.defaultAlt}m？`)) sendCommand('takeoff', undefined, { alt: app.defaultAlt }); }
+  function startMission() { if (confirm('确认开始自动任务？\n飞机将按航线自主飞行。')) sendCommand('mission_start'); }
+  function drop() { if (confirm('确认执行载荷投放？')) sendCommand('drop'); }
 </script>
 
 <div class="bg-card border-r border-border p-3 w-44 shrink-0 flex flex-col gap-2">
-  {#if app.drone.armed}
-    <div class="flex items-center gap-1.5 px-2 py-1 rounded-md bg-orange-900/30 border border-orange-700/40">
-      <span class="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span>
-      <span class="text-[11px] font-bold text-orange-400">已解锁</span>
+  <div class="flex items-center gap-2 px-1">
+    <span class="w-2 h-2 rounded-full {phase === 'disarmed' ? 'bg-gray-500' : 'bg-current animate-pulse'} {phaseColor}"></span>
+    <span class="text-[11px] font-bold uppercase tracking-wider {phaseColor}">{phaseLabel}</span>
+  </div>
+
+  {#if phase === 'disarmed'}
+    <Button size="sm" class="w-full bg-orange-700 hover:bg-orange-800 text-white font-bold gap-1.5" onclick={arm}>
+      <ShieldCheck size={14} />解锁电机
+    </Button>
+    <div class="text-[11px] text-muted-foreground font-semibold mt-1 tracking-wide uppercase">模式</div>
+    <div class="flex flex-col gap-1">
+      {#each app.drone.mode_btns as [id, name]}
+        <Button variant={app.drone.mode_id === id ? 'default' : 'secondary'} size="sm" class="w-full justify-start"
+                onclick={() => sendCommand('mode', id)}>{name}</Button>
+      {/each}
     </div>
-    <Button size="sm" class="w-full bg-green-700 hover:bg-green-800 text-white font-bold" onclick={disarm} title="锁定电机 (快捷键 D)">锁定电机</Button>
-  {:else}
-    <Button size="sm" class="w-full bg-orange-700 hover:bg-orange-800 text-white font-bold" onclick={arm} title="解锁电机 (快捷键 A，需确认)">解锁电机</Button>
-  {/if}
-  <Button variant="destructive" size="xs" class="w-full" onclick={forceDisarm} title="紧急停机 — 电机立即停转">强制锁定</Button>
-
-  <div class="text-[11px] text-muted-foreground font-semibold mt-2 tracking-wide uppercase">模式</div>
-  <div class="flex flex-col gap-1">
-    {#each app.drone.mode_btns as [id, name]}
-      <Button variant={app.drone.mode_id === id ? 'default' : 'secondary'} size="sm" class="w-full justify-start"
-              onclick={() => sendCommand('mode', id)}>
-        {name}
-      </Button>
-    {/each}
-  </div>
-
-  <div class="text-[11px] text-muted-foreground font-semibold mt-2 tracking-wide uppercase">载荷</div>
-  <div class="flex gap-1.5">
-    <Button size="sm" class="flex-1 bg-orange-700 hover:bg-orange-800 text-white font-bold"
-            onclick={() => { if (confirm('确认执行载荷投放？')) sendCommand('drop'); }} title="执行载荷投放">投放</Button>
-    <Button size="sm" variant="secondary" class="flex-1" onclick={() => sendCommand('drop_stop')} title="停止投放">停止</Button>
-  </div>
-
-  <div class="text-[11px] text-muted-foreground font-semibold mt-2 tracking-wide uppercase">任务</div>
-  <div class="flex flex-col gap-1">
-    <Button variant="outline" size="sm" class="w-full" onclick={() => { if (confirm('确认开始自动任务？\n飞机将按航线自主飞行。')) sendCommand('mission_start'); }}>开始任务</Button>
+    <div class="text-[11px] text-muted-foreground font-semibold mt-1 tracking-wide uppercase">任务</div>
     <Button variant="outline" size="sm" class="w-full" onclick={() => sendCommand('mission_download')}>下载任务</Button>
-    <Button variant="outline" size="sm" class="w-full" onclick={() => { if (confirm('确认清除飞控上的任务？\n此操作不可撤销。')) sendCommand('mission_clear'); }}>清除任务</Button>
-  </div>
+    <Button variant="outline" size="sm" class="w-full" onclick={() => { if (confirm('确认清除飞控上的任务？')) sendCommand('mission_clear'); }}>清除任务</Button>
 
-  <div class="text-[11px] text-muted-foreground font-semibold mt-2 tracking-wide uppercase">起飞</div>
-  <Button variant="outline" size="sm" class="w-full border-teal-600 text-teal-400 hover:bg-teal-900/30"
-          onclick={() => { if (confirm(`确认起飞到 ${app.defaultAlt}m？`)) sendCommand('takeoff', undefined, { alt: app.defaultAlt }); }}>
-    起飞 {app.defaultAlt}m
-  </Button>
+  {:else if phase === 'ground'}
+    <Button size="sm" class="w-full bg-teal-700 hover:bg-teal-800 text-white font-bold gap-1.5" onclick={takeoff}>
+      <Plane size={14} />起飞 {app.defaultAlt}m
+    </Button>
+    {#if app.waypoints.length > 0}
+      <Button size="sm" class="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold gap-1.5" onclick={startMission}>
+        <Play size={14} />开始任务
+      </Button>
+    {/if}
+    <Button size="sm" class="w-full bg-green-700 hover:bg-green-800 text-white" onclick={disarm}>锁定电机</Button>
+    <div class="text-[11px] text-muted-foreground font-semibold mt-1 tracking-wide uppercase">模式</div>
+    <div class="flex flex-col gap-1">
+      {#each app.drone.mode_btns.slice(0, 4) as [id, name]}
+        <Button variant={app.drone.mode_id === id ? 'default' : 'secondary'} size="sm" class="w-full justify-start"
+                onclick={() => sendCommand('mode', id)}>{name}</Button>
+      {/each}
+    </div>
+
+  {:else if phase === 'flying'}
+    <Button variant="destructive" size="sm" class="w-full font-bold gap-1.5" onclick={rtl}>
+      <CornerDownLeft size={14} />返航
+    </Button>
+    <Button size="sm" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold gap-1.5" onclick={pauseMode}>
+      <Pause size={14} />悬停
+    </Button>
+    {#if app.waypoints.length > 0}
+      <Button size="sm" class="w-full bg-blue-700 hover:bg-blue-800 text-white gap-1.5" onclick={startMission}>
+        <Play size={14} />开始任务
+      </Button>
+    {/if}
+    <div class="text-[11px] text-muted-foreground font-semibold mt-1 tracking-wide uppercase">载荷</div>
+    <div class="flex gap-1.5">
+      <Button size="sm" class="flex-1 bg-orange-700 hover:bg-orange-800 text-white font-bold" onclick={drop}>
+        <Package size={12} />投放
+      </Button>
+      <Button size="sm" variant="secondary" class="flex-1" onclick={() => sendCommand('drop_stop')}>停止</Button>
+    </div>
+    <div class="text-[11px] text-muted-foreground font-semibold mt-1 tracking-wide uppercase">模式</div>
+    <div class="flex flex-col gap-1">
+      {#each app.drone.mode_btns as [id, name]}
+        <Button variant={app.drone.mode_id === id ? 'default' : 'secondary'} size="sm" class="w-full justify-start"
+                onclick={() => sendCommand('mode', id)}>{name}</Button>
+      {/each}
+    </div>
+    <Button variant="ghost" size="xs" class="w-full text-destructive mt-1" onclick={forceDisarm}>强制锁定</Button>
+
+  {:else if phase === 'mission'}
+    <Button size="sm" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold gap-1.5" onclick={pauseMode}>
+      <Pause size={14} />暂停任务
+    </Button>
+    <Button variant="destructive" size="sm" class="w-full font-bold gap-1.5" onclick={rtl}>
+      <CornerDownLeft size={14} />终止返航
+    </Button>
+    <div class="text-[11px] text-muted-foreground font-semibold mt-1 tracking-wide uppercase">载荷</div>
+    <div class="flex gap-1.5">
+      <Button size="sm" class="flex-1 bg-orange-700 hover:bg-orange-800 text-white font-bold" onclick={drop}>投放</Button>
+      <Button size="sm" variant="secondary" class="flex-1" onclick={() => sendCommand('drop_stop')}>停止</Button>
+    </div>
+    <div class="text-[11px] text-muted-foreground font-semibold mt-1 tracking-wide uppercase">模式</div>
+    <div class="flex flex-col gap-1">
+      {#each app.drone.mode_btns.slice(0, 4) as [id, name]}
+        <Button variant={app.drone.mode_id === id ? 'default' : 'secondary'} size="sm" class="w-full justify-start"
+                onclick={() => sendCommand('mode', id)}>{name}</Button>
+      {/each}
+    </div>
+    <Button variant="ghost" size="xs" class="w-full text-destructive mt-1" onclick={forceDisarm}>强制锁定</Button>
+
+  {:else if phase === 'returning'}
+    <Button size="sm" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold gap-1.5" onclick={pauseMode}>
+      <CircleStop size={14} />取消返航
+    </Button>
+    <Button size="sm" class="w-full bg-teal-700 hover:bg-teal-800 text-white gap-1.5"
+            onclick={() => sendCommand('mode', app.drone.vtype === '固定翼' ? 20 : 9)}>
+      <ArrowDown size={14} />立即着陆
+    </Button>
+    <Button variant="ghost" size="xs" class="w-full text-destructive mt-2" onclick={forceDisarm}>强制锁定</Button>
+  {/if}
 </div>
