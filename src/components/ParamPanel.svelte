@@ -237,6 +237,10 @@
             : 'bg-card text-muted-foreground border-border hover:text-foreground hover:bg-muted'}"
                 onclick={() => category = cat.key}>
           <cat.icon size={11} />{t(cat.i18nKey)}
+          {#if cat.key !== 'all' && paramState.list.length > 0}
+            {@const cnt = paramState.list.filter(p => cat.match(p.name)).length}
+            {#if cnt > 0}<span class="text-[9px] opacity-60">{cnt}</span>{/if}
+          {/if}
         </button>
       {/each}
     </div>
