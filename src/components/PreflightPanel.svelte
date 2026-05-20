@@ -1,5 +1,6 @@
 <script lang="ts">
   import { app } from '../lib/stores.svelte';
+  import { t } from '../lib/i18n.svelte';
   import { Check, X as XIcon } from '@lucide/svelte';
 
   let d = $derived(app.drone);
@@ -39,9 +40,9 @@
 
 <div class="p-3">
   <div class="flex items-center justify-between mb-2">
-    <h2 class="text-xs font-semibold text-primary uppercase tracking-wider">预飞检查</h2>
+    <h2 class="text-xs font-semibold text-primary uppercase tracking-wider">{t('preflight.title')}</h2>
     <span class="text-[11px] font-medium {allCriticalOk ? 'text-success' : 'text-muted-foreground'}">
-      {passCount}/{checks.length} {allCriticalOk ? '就绪' : '未就绪'}
+      {passCount}/{checks.length} {allCriticalOk ? t('preflight.ready') : t('preflight.notReady')}
     </span>
   </div>
   <div class="grid grid-cols-2 gap-x-3 gap-y-1 max-sm:grid-cols-1">
@@ -58,7 +59,7 @@
   </div>
   {#if allCriticalOk}
     <div class="mt-2 py-1.5 bg-green-900/40 text-success text-center rounded-lg text-xs font-bold border border-green-700/30">
-      所有关键项通过 — 可以飞行
+      {t('preflight.allPass')}
     </div>
   {/if}
 </div>

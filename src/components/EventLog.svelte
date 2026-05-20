@@ -1,5 +1,6 @@
 <script lang="ts">
   import { app, clearEvents } from '../lib/stores.svelte';
+  import { t } from '../lib/i18n.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
 
   let logEl: HTMLDivElement;
@@ -64,15 +65,15 @@
 
 <div class="bg-card border-t border-border p-2">
   <div class="flex items-center justify-between mb-1.5">
-    <h2 class="text-[11px] font-semibold text-primary uppercase tracking-wider">事件日志</h2>
+    <h2 class="text-[11px] font-semibold text-primary uppercase tracking-wider">{t('event.title')}</h2>
     <div class="flex items-center gap-1.5">
-      {#each [['all', '全部'], ['warn', '警告'], ['error', '错误']] as [key, label]}
+      {#each [['all', t('event.all')], ['warn', t('event.warn')], ['error', t('event.error')]] as [key, label]}
         <button class="px-1.5 py-px rounded text-[10px] font-semibold transition-all
           {sevFilter === key ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}"
                 onclick={() => sevFilter = key as any}>{label}</button>
       {/each}
-      <Button variant="ghost" size="xs" onclick={() => clearEvents()} disabled={app.events.length === 0}>清空</Button>
-      <Button variant="outline" size="xs" onclick={exportLog}>导出</Button>
+      <Button variant="ghost" size="xs" onclick={() => clearEvents()} disabled={app.events.length === 0}>{t('event.clear')}</Button>
+      <Button variant="outline" size="xs" onclick={exportLog}>{t('event.export')}</Button>
       <input bind:value={filter} placeholder="筛选..."
              class="w-20 h-5 px-1.5 text-[11px] bg-input border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/50" />
     </div>
@@ -86,7 +87,7 @@
         <span class="min-w-0">{ev.text}</span>
       </div>
     {:else}
-      <div class="text-muted-foreground text-center py-3">暂无事件</div>
+      <div class="text-muted-foreground text-center py-3">{t('event.empty')}</div>
     {/each}
   </div>
 </div>
