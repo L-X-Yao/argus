@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import { app, saveWaypoints } from '../../lib/stores.svelte';
+  import { i18nState } from '../../lib/i18n.svelte';
 
   declare const L: any;
 
@@ -63,13 +64,16 @@
           const prev = app.waypoints[i - 1];
           const dlat2 = (wp.lat - prev.lat) * 111320, dlon2 = (wp.lon - prev.lon) * 111320 * Math.cos(wp.lat * Math.PI / 180);
           const seg = Math.sqrt(dlat2 * dlat2 + dlon2 * dlon2);
-          segInfo = `<br>距上一点: <b>${seg < 1000 ? seg.toFixed(0) + 'm' : (seg/1000).toFixed(1) + 'km'}</b>`;
+          const en = i18nState.locale === 'en';
+          const segFmt = seg < 1000 ? seg.toFixed(0) + 'm' : (seg/1000).toFixed(1) + 'km';
+          segInfo = `<br>${en ? 'Seg' : '距上一点'}: <b>${segFmt}</b>`;
         }
+        const en = i18nState.locale === 'en';
         const content = `<div style="font-size:12px;min-width:140px">
-          <b>航点 ${i + 1}</b> ${wp.drop ? '<span style="color:#e65100">投放</span>' : ''}<br>
+          <b>${en ? 'WP' : '航点'} ${i + 1}</b> ${wp.drop ? `<span style="color:#e65100">${en ? 'Drop' : '投放'}</span>` : ''}<br>
           <span style="color:#888">${wp.lat.toFixed(6)}, ${wp.lon.toFixed(6)}</span><br>
-          高度: <b>${wp.alt}m</b>${wp.speed ? ' · 速度: ' + wp.speed + 'm/s' : ''}
-          ${wp.delay ? '<br>延迟: ' + wp.delay + 's' : ''}${segInfo}
+          ${en ? 'Alt' : '高度'}: <b>${wp.alt}m</b>${wp.speed ? ` · ${en ? 'Spd' : '速度'}: ${wp.speed}m/s` : ''}
+          ${wp.delay ? `<br>${en ? 'Delay' : '延迟'}: ${wp.delay}s` : ''}${segInfo}
         </div>`;
         if (wpPopup) map.closePopup(wpPopup);
         wpPopup = L.popup({ closeButton: true, className: 'wp-popup' })

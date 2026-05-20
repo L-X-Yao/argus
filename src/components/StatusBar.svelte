@@ -205,7 +205,7 @@
       </span>
 
       <Badge variant={gpsVariant} class="font-mono text-[11px] gap-0.5">
-        <Satellite size={11} />{app.drone.gps_fix} {app.drone.gps_sats}星
+        <Satellite size={11} />{app.drone.gps_fix} {app.drone.gps_sats}
       </Badge>
 
       <Badge variant={ekfVariant} class="text-[11px]" title={ekfTooltip}>
