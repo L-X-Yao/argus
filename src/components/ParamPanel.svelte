@@ -281,10 +281,15 @@
             <div class="flex-1 flex items-center gap-1.5 min-w-0">
               <!-- svelte-ignore a11y_click_events_have_key_events -->
               <!-- svelte-ignore a11y_no_static_element_interactions -->
-              <div class="font-mono cursor-pointer px-1.5 py-0.5 rounded hover:bg-input transition-colors text-right min-w-[60px]"
+              <div class="font-mono cursor-pointer px-1.5 py-0.5 rounded hover:bg-input transition-colors text-right min-w-[60px] {hasDefaultDiff(p.name, p.value) ? 'text-warning' : ''}"
                    onclick={() => startEdit(p)}>{fmtValue(p.value)}</div>
               {#if units}<span class="text-[10px] text-muted-foreground">{units}</span>{/if}
               {#if valLabel}<span class="text-[10px] text-primary/70 truncate">{valLabel}</span>{/if}
+              {#if hasDefaultDiff(p.name, p.value)}
+                <button class="text-[9px] text-muted-foreground/60 hover:text-warning px-0.5 cursor-pointer bg-transparent border-none"
+                        onclick={() => { sendCommand('param_set', undefined, { name: p.name, value: (meta[p.name] as any).default }); modified.add(p.name); modified = new Set(modified); }}
+                        title="Reset to default: {(meta[p.name] as any).default}">↩</button>
+              {/if}
               {#if rangeStr}<span class="text-[10px] text-muted-foreground/50 ml-auto whitespace-nowrap">[{rangeStr}]</span>{/if}
             </div>
           {/if}
