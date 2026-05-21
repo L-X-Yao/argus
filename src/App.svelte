@@ -193,7 +193,7 @@
           <HardDrive size={13} />{t('nav.logs')}
         </Button>
         <Button variant="secondary" size="sm" class="gap-1" onclick={() => showCalibration = true}
-                title="{t('nav.calibrate')}">
+                title={t('nav.calibrate')}>
           <Wrench size={13} />{t('nav.calibrate')}
         </Button>
         {#if view === 'fly'}
@@ -202,7 +202,7 @@
             <Video size={13} />{t('nav.video')}
           </Button>
           <Button variant={controlsOpen ? 'default' : 'secondary'} size="sm" class="gap-1"
-                  onclick={() => controlsOpen = !controlsOpen} title="{t('nav.controls')}">
+                  onclick={() => controlsOpen = !controlsOpen} title={t('nav.controls')}>
             {#if controlsOpen}<PanelLeftClose size={13} />{t('nav.collapse')}{:else}<SlidersHorizontal size={13} />{t('nav.controls')}{/if}
           </Button>
         {/if}

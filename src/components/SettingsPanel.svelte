@@ -74,21 +74,21 @@
         </div>
         <div class="space-y-1">
           <div class="flex justify-between items-center py-2 border-b border-border/50">
-            <label class="text-sm text-muted-foreground">{t('settings.audio')}</label>
+            <span class="text-sm text-muted-foreground">{t('settings.audio')}</span>
             <Button variant={app.audioMuted ? 'secondary' : 'default'} size="sm" class="gap-1 h-7 text-xs"
                     onclick={() => { app.audioMuted = !app.audioMuted; saveSettings(); }}>
               {#if app.audioMuted}<VolumeOff size={13} />OFF{:else}<Volume2 size={13} />ON{/if}
             </Button>
           </div>
           <div class="flex justify-between items-center py-2 border-b border-border/50">
-            <label class="text-sm text-muted-foreground">{t('settings.voice')}</label>
+            <span class="text-sm text-muted-foreground">{t('settings.voice')}</span>
             <Button variant={app.voiceEnabled ? 'default' : 'secondary'} size="sm" class="gap-1 h-7 text-xs"
                     onclick={() => { app.voiceEnabled = !app.voiceEnabled; saveSettings(); }}>
               {#if app.voiceEnabled}<Mic size={13} />ON{:else}<MicOff size={13} />OFF{/if}
             </Button>
           </div>
           <div class="flex justify-between items-center py-2 border-b border-border/50">
-            <label class="text-sm text-muted-foreground">{t('settings.darkTheme')}</label>
+            <span class="text-sm text-muted-foreground">{t('settings.darkTheme')}</span>
             <Button variant={app.darkTheme ? 'default' : 'secondary'} size="sm" class="gap-1 h-7 text-xs"
                     onclick={() => { app.darkTheme = !app.darkTheme; saveSettings(); }}>
               {#if app.darkTheme}<Moon size={13} />Dark{:else}<Sun size={13} />Light{/if}
@@ -107,7 +107,7 @@
             </div>
           </div>
           <div class="flex justify-between items-center py-2 border-b border-border/50">
-            <label class="text-sm text-muted-foreground">{t('settings.mapRegion')}</label>
+            <span class="text-sm text-muted-foreground">{t('settings.mapRegion')}</span>
             <div class="flex gap-1">
               <Button variant={app.mapRegion === 'china' ? 'default' : 'secondary'} size="sm" class="h-7 text-xs px-2.5"
                       onclick={() => { app.mapRegion = 'china'; saveSettings(); }}>{t('settings.china')}</Button>
