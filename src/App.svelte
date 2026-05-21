@@ -62,6 +62,10 @@
   import CustomDashboard from './components/CustomDashboard.svelte';
   import AiPlannerPanel from './components/AiPlannerPanel.svelte';
   import ScriptPanel from './components/ScriptPanel.svelte';
+  import OrthoOverlayPanel from './components/OrthoOverlayPanel.svelte';
+  import AiAnnotationPanel from './components/AiAnnotationPanel.svelte';
+  import SchedulerPanel from './components/SchedulerPanel.svelte';
+  import PositionSourcePanel from './components/PositionSourcePanel.svelte';
   import { showConfirm, showSlide, undo } from './lib/stores.svelte';
   import { ChevronUp, ChevronDown, CornerDownLeft, Pause, HardDrive, Wrench, Video, SlidersHorizontal, PanelLeftClose, Plane, MapPinned, Activity, Settings2, X as XIcon } from '@lucide/svelte';
   import type { Component } from 'svelte';
@@ -114,6 +118,10 @@
   let showDashboard = $state(false);
   let showAiPlanner = $state(false);
   let showScript = $state(false);
+  let showOrtho = $state(false);
+  let showAiAnnotation = $state(false);
+  let showScheduler = $state(false);
+  let showPosSource = $state(false);
 
   onMount(() => {
     loadLocale();
@@ -537,6 +545,18 @@
   {/if}
   {#if showScript}
     <ScriptPanel onclose={() => showScript = false} />
+  {/if}
+  {#if showOrtho}
+    <OrthoOverlayPanel onclose={() => showOrtho = false} />
+  {/if}
+  {#if showAiAnnotation}
+    <AiAnnotationPanel onclose={() => showAiAnnotation = false} />
+  {/if}
+  {#if showScheduler}
+    <SchedulerPanel onclose={() => showScheduler = false} />
+  {/if}
+  {#if showPosSource}
+    <PositionSourcePanel onclose={() => showPosSource = false} />
   {/if}
   {#if showShortcuts}
     <!-- svelte-ignore a11y_no_static_element_interactions -->

@@ -21,6 +21,15 @@ from .log import logger
 from .param_manager import ParamManager
 from .locale_text import lt
 
+_CRC_EXTRA = {
+    0: 50, 1: 124, 22: 220, 24: 24, 30: 39, 33: 104, 35: 244, 36: 222,
+    40: 230, 42: 28, 43: 132, 44: 221, 46: 11, 47: 153, 51: 196, 65: 118,
+    70: 124, 73: 38, 74: 20, 77: 143, 83: 22, 85: 143, 87: 5, 105: 93,
+    116: 76, 117: 128, 118: 56, 119: 116, 120: 134, 125: 203, 126: 220,
+    136: 1, 147: 154, 148: 178, 163: 127, 168: 1, 178: 47, 233: 35,
+    241: 90, 242: 104, 246: 184, 253: 83, 310: 28, 311: 95,
+}
+
 _MSG_NAMES = {
     0: 'HEARTBEAT', 1: 'SYS_STATUS', 22: 'PARAM_VALUE', 24: 'GPS_RAW_INT',
     30: 'ATTITUDE', 33: 'GLOBAL_POSITION_INT', 35: 'RC_CHANNELS_RAW',
@@ -364,6 +373,15 @@ class DroneLink:
     def _open_port(self, port: str, baudrate: int):
         return open_port(port, baudrate)
 
+    def _mavlink_crc16(self, data: bytes) -> int:
+        crc = 0xFFFF
+        for b in data:
+            tmp = b ^ (crc & 0xFF)
+            tmp ^= (tmp << 4) & 0xFF
+            crc = (crc >> 8) ^ (tmp << 8) ^ (tmp << 3) ^ (tmp >> 4)
+            crc &= 0xFFFF
+        return crc
+
     def _parse_mavlink_frame(self):
         buf = self._buf
         idx = buf.find(b'\xfd')
@@ -378,6 +396,15 @@ class DroneLink:
         frame_len = 12 + payload_len + (13 if has_sig else 0)
         if len(buf) < frame_len:
             return None, 0
+        crc_offset = 10 + payload_len
+        if crc_offset + 2 <= len(buf):
+            expected_crc = buf[crc_offset] | (buf[crc_offset + 1] << 8)
+            crc_data = bytes(buf[1:10 + payload_len])
+            mid = buf[7] | (buf[8] << 8) | (buf[9] << 16)
+            crc_extra = _CRC_EXTRA.get(mid, 0)
+            calc_crc = self._mavlink_crc16(crc_data + bytes([crc_extra]))
+            if calc_crc != expected_crc and crc_extra != 0:
+                return None, 1
         return bytes(buf[:frame_len]), frame_len
 
     def _next_frame(self):
