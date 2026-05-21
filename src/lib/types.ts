@@ -21,6 +21,7 @@ export interface DroneState {
   current: number;
   remaining: number;
   gps_fix: string;
+  gps_fix_raw: number;
   gps_sats: number;
   wp: number;
   vtype: string;
@@ -67,6 +68,7 @@ export interface DroneEvent {
   type: 'event';
   time: string;
   text: string;
+  event_type: string;
 }
 
 export interface ConnectResult {
@@ -146,7 +148,7 @@ export const defaultState: DroneState = {
   lat: 0, lon: 0, alt_rel: 0, alt_msl: 0,
   gs: 0, vz: 0, hdg: 0, dist_home: 0, flight_time: 0,
   voltage: 0, current: 0, remaining: -1,
-  gps_fix: '---', gps_sats: 0, wp: 0,
+  gps_fix: '---', gps_fix_raw: 0, gps_sats: 0, wp: 0,
   vtype: '', vtype_raw: 0, mode_btns: [],
   link_age: -1, bat_time: -1,
   home_lat: 0, home_lon: 0, parse_errors: 0,

@@ -24,6 +24,7 @@ class TestHeartbeat:
         assert link.connected
         assert link.mode == 5
         assert link.vtype_raw == 2
+        assert any(e['event_type'] == 'connected' for e in link.events)
 
     def test_armed_flag(self):
         from backend.mavlink_handlers import handle_heartbeat
@@ -31,6 +32,7 @@ class TestHeartbeat:
         p = struct.pack('<IBBBBB', 5, 2, 3, 0x80, 0, 3)
         handle_heartbeat(p, len(p), link)
         assert link.armed
+        assert any(e['event_type'] == 'armed' for e in link.events)
 
     def test_disarm_generates_summary(self):
         from backend.mavlink_handlers import handle_heartbeat
@@ -144,6 +146,7 @@ class TestCommandAck:
         handle_command_ack(p, len(p), link)
         assert len(link.events) == 1
         assert '成功' in link.events[0]['text']
+        assert link.events[0]['event_type'] == 'cmd_ack_ok'
 
     def test_failure(self):
         from backend.mavlink_handlers import handle_command_ack
@@ -151,6 +154,16 @@ class TestCommandAck:
         p = struct.pack('<HB', 400, 2)
         handle_command_ack(p, len(p), link)
         assert '拒绝' in link.events[0]['text']
+        assert link.events[0]['event_type'] == 'cmd_ack_fail'
+
+    def test_en_locale(self):
+        from backend.mavlink_handlers import handle_command_ack
+        link = make_link()
+        link.locale = 'en'
+        p = struct.pack('<HBB', 400, 0, 0)
+        handle_command_ack(p, len(p), link)
+        assert 'success' in link.events[0]['text']
+        assert 'Arm/Disarm' in link.events[0]['text']
 
 
 class TestMavlinkFrameParser:

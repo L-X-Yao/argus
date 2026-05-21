@@ -29,28 +29,30 @@ export function connectWs(): void {
           break;
         case 'event':
           addEvent(msg);
-          if (msg.text.includes('失控') || msg.text.includes('碰撞') || msg.text.includes('紧急')
-              || msg.text.includes('Crash') || msg.text.includes('Emergency'))
-            addToast(msg.text, 'error', 8000);
-          else if (msg.text.includes('已解锁') || msg.text === 'Armed')
-            addToast(t('toast.armed'), 'warn', 5000);
-          else if ((msg.text.includes('已锁定') || msg.text === 'Disarmed') && !msg.text.includes('发送') && !msg.text.includes('Disarming'))
-            addToast(t('toast.disarmed'), 'success', 4000);
-          else if (msg.text.includes('任务确认') || msg.text.includes('围栏确认')
-              || msg.text.includes('Mission ack') || msg.text.includes('Fence ack')) {
-            addToast(msg.text, (msg.text.includes('成功') || msg.text.includes('success')) ? 'success' : 'error');
-            if ((msg.text.includes('围栏确认') || msg.text.includes('Fence ack')) && (msg.text.includes('成功') || msg.text.includes('success')))
-              app.fenceUploaded = true;
+          switch (msg.event_type) {
+            case 'armed':
+              addToast(t('toast.armed'), 'warn', 5000); break;
+            case 'disarmed':
+              addToast(t('toast.disarmed'), 'success', 4000); break;
+            case 'connected':
+              addToast(msg.text, 'success'); break;
+            case 'disconnected': case 'link_lost':
+              addToast(t('toast.disconnected'), 'info'); break;
+            case 'mission_ack_ok':
+              addToast(msg.text, 'success'); break;
+            case 'mission_ack_fail':
+              addToast(msg.text, 'error'); break;
+            case 'fence_ack_ok':
+              addToast(msg.text, 'success'); app.fenceUploaded = true; break;
+            case 'fence_ack_fail':
+              addToast(msg.text, 'error'); break;
+            case 'cmd_ack_fail':
+              addToast(msg.text, 'error', 5000); break;
+            case 'rtl':
+              addToast(msg.text, 'error', 8000); break;
+            default:
+              break;
           }
-          else if (msg.text.includes('已连接') || msg.text.includes('Connected'))
-            addToast(msg.text, 'success');
-          else if (msg.text.includes('已断开') || msg.text.includes('Disconnected'))
-            addToast(t('toast.disconnected'), 'info');
-          else if (msg.text.includes('低电量') || msg.text.includes('电量极低')
-              || msg.text.includes('Low Battery') || msg.text.includes('Critical Battery'))
-            addToast(msg.text, 'error', 8000);
-          else if ((msg.text.includes('指令应答') || msg.text.includes('Command')) && (msg.text.includes('失败') || msg.text.includes('failed')))
-            addToast(msg.text, 'error', 5000);
           break;
         case 'param_batch':
           handleParamBatch(msg.params);

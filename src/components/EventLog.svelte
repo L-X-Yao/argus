@@ -7,27 +7,32 @@
   let filter = $state('');
   let sevFilter = $state<'all' | 'warn' | 'error'>('all');
 
+  type SevLevel = 'critical' | 'error' | 'warn' | 'ok' | 'info';
+
+  const CRITICAL_TYPES = new Set(['rtl', 'force_disarm']);
+  const ERROR_TYPES = new Set(['cmd_ack_fail', 'mission_ack_fail', 'fence_ack_fail', 'connect_fail', 'reconnect_fail', 'reconnect_err', 'link_lost']);
+  const WARN_TYPES = new Set(['reconnecting']);
+  const OK_TYPES = new Set(['connected', 'reconnected', 'armed', 'mission_ack_ok', 'fence_ack_ok', 'param_done', 'mission_dl_done', 'log_dl_done']);
+
+  function severity(ev: { text: string; event_type: string }): SevLevel {
+    const et = ev.event_type;
+    if (et) {
+      if (CRITICAL_TYPES.has(et)) return 'critical';
+      if (ERROR_TYPES.has(et)) return 'error';
+      if (WARN_TYPES.has(et)) return 'warn';
+      if (OK_TYPES.has(et)) return 'ok';
+    }
+    if (ev.text.includes('!!!')) return 'critical';
+    return 'info';
+  }
+
   let filtered = $derived.by(() => {
     let list = app.events;
-    if (sevFilter === 'error') list = list.filter(e => severity(e.text) === 'critical' || severity(e.text) === 'error');
-    else if (sevFilter === 'warn') list = list.filter(e => severity(e.text) !== 'info' && severity(e.text) !== 'ok');
+    if (sevFilter === 'error') list = list.filter(e => severity(e) === 'critical' || severity(e) === 'error');
+    else if (sevFilter === 'warn') list = list.filter(e => severity(e) !== 'info' && severity(e) !== 'ok');
     if (filter) list = list.filter(e => e.text.includes(filter) || e.time.includes(filter));
     return list;
   });
-
-  type SevLevel = 'critical' | 'error' | 'warn' | 'ok' | 'info';
-
-  function severity(text: string): SevLevel {
-    if (text.includes('!!!') || text.includes('失控') || text.includes('碰撞') || text.includes('紧急'))
-      return 'critical';
-    if (text.includes('失败') || text.includes('异常') || text.includes('丢失') || text.includes('极低'))
-      return 'error';
-    if (text.includes('警告') || text.includes('低电') || text.includes('未校准') || text.includes('链路'))
-      return 'warn';
-    if (text.includes('成功') || text.includes('就绪') || text.includes('已连接') || text.includes('已解锁'))
-      return 'ok';
-    return 'info';
-  }
 
   const sevStyle: Record<SevLevel, string> = {
     critical: 'bg-destructive/15 text-destructive',
@@ -80,7 +85,7 @@
   </div>
   <div bind:this={logEl} class="bg-background rounded-lg p-2 h-24 overflow-y-auto text-xs font-mono">
     {#each filtered as ev}
-      {@const sev = severity(ev.text)}
+      {@const sev = severity(ev)}
       <div class="flex items-start gap-1.5 py-0.5 px-1 border-b border-border/50 rounded {sevStyle[sev]}">
         <span class="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0 {sevDot[sev]}"></span>
         <span class="text-muted-foreground shrink-0">{ev.time}</span>

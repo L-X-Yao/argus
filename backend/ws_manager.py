@@ -84,6 +84,7 @@ class WSManager:
                             'type': 'event',
                             'time': ev['time'],
                             'text': ev['text'],
+                            'event_type': ev.get('event_type', ''),
                         }))
                     event_cursor = len(events)
                 dlmsg = self.link._dl_messages

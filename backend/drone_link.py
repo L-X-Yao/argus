@@ -159,8 +159,8 @@ class DroneLink:
         if len(self._ws_queue) > 2000:
             self._ws_queue = self._ws_queue[-1000:]
 
-    def add_event(self, text: str) -> None:
-        self.events.append({'time': time.strftime('%H:%M:%S'), 'text': text})
+    def add_event(self, text: str, event_type: str = '') -> None:
+        self.events.append({'time': time.strftime('%H:%M:%S'), 'text': text, 'event_type': event_type})
         if len(self.events) > 100:
             self.events = self.events[-50:]
 
@@ -181,11 +181,11 @@ class DroneLink:
         try:
             self._ser = self._open_port(port, baudrate)
             if port.startswith('udp:'):
-                self.add_event(lt('udp', self.locale) % port[4:])
+                self.add_event(lt('udp', self.locale) % port[4:], 'udp')
             elif port.startswith('tcp:'):
-                self.add_event(lt('tcp', self.locale) % port[4:])
+                self.add_event(lt('tcp', self.locale) % port[4:], 'tcp')
         except Exception as e:
-            self.add_event(lt('connect_fail', self.locale) % e)
+            self.add_event(lt('connect_fail', self.locale) % e, 'connect_fail')
             return False
         self._running = True
         self.connected = False
@@ -223,7 +223,7 @@ class DroneLink:
         self._prev_pos = None
         self._mission_pending = False
         self._stop_log()
-        self.add_event(lt('disconnected', self.locale))
+        self.add_event(lt('disconnected', self.locale), 'disconnected')
 
     def reconnect(self) -> bool:
         self._running = False
@@ -240,11 +240,11 @@ class DroneLink:
         try:
             self._ser = self._open_port(self._last_port, self._last_baud)
         except Exception as e:
-            self.add_event(lt('reconnect_err', self.locale) % e)
+            self.add_event(lt('reconnect_err', self.locale) % e, 'reconnect_err')
             return False
         self._running = True
         self.sq = 0
-        self.add_event(lt('reconnected', self.locale))
+        self.add_event(lt('reconnected', self.locale), 'reconnected')
         self._thread = threading.Thread(target=self._loop, daemon=True)
         self._thread.start()
         return True
@@ -297,6 +297,7 @@ class DroneLink:
             'current': round(self.current, 2),
             'remaining': self.remaining,
             'gps_fix': (FIX_NAMES_EN if self.locale == 'en' else FIX_NAMES).get(self.gps_fix, '?'),
+            'gps_fix_raw': self.gps_fix,
             'gps_sats': self.gps_sats,
             'wp': self.wp_seq,
             'vtype': vn,
@@ -335,10 +336,10 @@ class DroneLink:
         log_dir = Path(__file__).resolve().parent.parent / 'logs'
         log_dir.mkdir(exist_ok=True)
         logname = str(log_dir / time.strftime('pllink_%Y%m%d_%H%M%S.csv'))
-        self._logfile = open(logname, 'w')
+        self._logfile = open(logname, 'w', encoding='utf-8')
         self._logfile.write('time,roll,pitch,yaw,lat,lon,alt_rel,alt_msl,gs,vz,voltage,current,remaining,mode,mode_name,armed,gps_fix,sats,wp,hdg,dist,bat_time\n')
         self._last_log_time = 0.0
-        self.add_event(lt('log_file', self.locale) % logname)
+        self.add_event(lt('log_file', self.locale) % logname, 'log_file')
 
     def _stop_log(self) -> None:
         try:
@@ -418,10 +419,10 @@ class DroneLink:
         if self._protocol == 'auto' and len(self._buf) >= 2:
             if self._buf[0] == 0x50 and self._buf[1] == 0x4C:
                 self._protocol = 'pllink'
-                self.add_event(lt('proto_pllink', self.locale))
+                self.add_event(lt('proto_pllink', self.locale), 'proto_pllink')
             else:
                 self._protocol = 'standard'
-                self.add_event(lt('proto_std', self.locale))
+                self.add_event(lt('proto_std', self.locale), 'proto_std')
         if self._protocol == 'pllink':
             return pld(self._buf)
         return self._parse_mavlink_frame()
@@ -436,10 +437,10 @@ class DroneLink:
                 if not self.connected and self.frame_count < 3:
                     cmd_module.request_streams(self)
             if self.connected and self.last_frame_time > 0 and now - self.last_frame_time > 5:
-                self.add_event(lt('link_lost', self.locale))
+                self.add_event(lt('link_lost', self.locale), 'link_lost')
                 self.connected = False
                 if self._reconnect_enabled and self._last_port:
-                    self.add_event(lt('reconnecting', self.locale))
+                    self.add_event(lt('reconnecting', self.locale), 'reconnecting')
                     try:
                         if self._ser:
                             self._ser.close()
@@ -449,9 +450,9 @@ class DroneLink:
                     try:
                         self._ser = self._open_port(self._last_port, self._last_baud)
                         self.sq = 0
-                        self.add_event(lt('reconnected', self.locale))
+                        self.add_event(lt('reconnected', self.locale), 'reconnected')
                     except Exception:
-                        self.add_event(lt('reconnect_fail', self.locale))
+                        self.add_event(lt('reconnect_fail', self.locale), 'reconnect_fail')
                         time.sleep(3)
                     continue
             try:

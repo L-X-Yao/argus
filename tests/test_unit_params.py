@@ -33,7 +33,7 @@ class TestParamManager:
         mgr.request_all()
         assert mgr.fetching is True
         link.send.assert_called_once()
-        link.add_event.assert_called_with('参数: 正在读取...')
+        link.add_event.assert_called_with('参数: 正在读取...', 'param_reading')
 
     def test_handle_single_param(self):
         link = _make_link()

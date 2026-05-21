@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { app, saveSettings } from '../lib/stores.svelte';
+  import { app, saveSettings, isPlane } from '../lib/stores.svelte';
   import { sendConnect, sendDisconnect, sendCommand } from '../lib/ws';
   import { t } from '../lib/i18n.svelte';
   import { apiUrl } from '../lib/backend';
@@ -99,20 +99,20 @@
     app.drone.remaining < 40 ? 'text-warning' : 'text-success'
   );
 
-  const EMERGENCY_MODES = ['返航', '着陆', '智能RTL', '刹车', 'QRTL', 'QLAND', '自降'];
-  const MANUAL_MODES = ['手动', '增稳', '特技', '训练', '运动', '翻转', '抛飞'];
+  const EMERGENCY_MODE_IDS = new Set([6, 9, 11, 17, 20, 21]);
+  const MANUAL_MODE_IDS_COPTER = new Set([0, 1, 13, 14]);
+  const MANUAL_MODE_IDS_PLANE = new Set([0, 2, 4]);
   let modeVariant = $derived.by((): 'default' | 'secondary' | 'destructive' => {
-    const m = app.drone.mode;
-    if (EMERGENCY_MODES.some(e => m.includes(e))) return 'destructive';
-    if (MANUAL_MODES.some(e => m.includes(e))) return 'secondary';
+    const m = app.drone.mode_id;
+    if (EMERGENCY_MODE_IDS.has(m)) return 'destructive';
+    const manualSet = isPlane() ? MANUAL_MODE_IDS_PLANE : MANUAL_MODE_IDS_COPTER;
+    if (manualSet.has(m)) return 'secondary';
     return 'default';
   });
 
-  let gpsOk = $derived(
-    app.drone.gps_fix === '3D' || app.drone.gps_fix === 'RTK固定' || app.drone.gps_fix === 'RTK浮动' || app.drone.gps_fix === '差分'
-  );
+  let gpsOk = $derived(app.drone.gps_fix_raw >= 3);
   let gpsVariant = $derived.by((): 'default' | 'secondary' | 'destructive' => {
-    if (app.drone.gps_fix === 'RTK固定') return 'default';
+    if (app.drone.gps_fix_raw >= 6) return 'default';
     if (gpsOk && app.drone.gps_sats >= 10) return 'default';
     if (gpsOk) return 'secondary';
     return 'destructive';

@@ -25,16 +25,19 @@
   let meta = $state<Record<string, ParamMeta>>({});
   let metaLoaded = $state(false);
 
-  const VTYPE_MAP: Record<string, string> = {
-    '多旋翼': 'copter', '固定翼': 'plane', '地面车': 'rover', '水下机器人': 'sub',
+  const VTYPE_RAW_MAP: Record<number, string> = {
+    2: 'copter', 3: 'copter', 4: 'copter', 13: 'copter', 14: 'copter',
+    1: 'plane', 19: 'plane', 20: 'plane', 21: 'plane', 22: 'plane', 23: 'plane', 24: 'plane', 25: 'plane',
+    10: 'rover',
+    12: 'sub',
   };
 
-  let lastVtype = '';
+  let lastVtypeRaw = 0;
   $effect(() => {
-    const vt = app.drone.vtype;
-    if (vt && vt !== lastVtype && VTYPE_MAP[vt]) {
-      lastVtype = vt;
-      fetchMeta(VTYPE_MAP[vt]);
+    const vr = app.drone.vtype_raw;
+    if (vr > 0 && vr !== lastVtypeRaw && VTYPE_RAW_MAP[vr]) {
+      lastVtypeRaw = vr;
+      fetchMeta(VTYPE_RAW_MAP[vr]);
     }
   });
 
@@ -128,10 +131,10 @@
   function submitEdit() {
     if (!editName) return;
     const val = parseFloat(editValue);
-    if (isNaN(val)) { addToast('无效数值', 'error'); return; }
+    if (isNaN(val)) { addToast(t('param.invalidNum'), 'error'); return; }
     const r = meta[editName]?.range;
     if (r && (val < r[0] || val > r[1])) {
-      addToast(`超出范围 ${r[0]} ~ ${r[1]}`, 'warn');
+      addToast(`${t('param.outOfRange')} ${r[0]} ~ ${r[1]}`, 'warn');
     }
     const name = editName;
     sendCommand('param_set', undefined, { name, value: val });
@@ -153,7 +156,7 @@
   }
 
   function requestAll() { sendCommand('param_request_all'); }
-  function saveParams() { sendCommand('param_save'); addToast('参数文件已保存', 'success'); }
+  function saveParams() { sendCommand('param_save'); addToast(t('param.saved'), 'success'); }
 
   function exportParams() {
     if (!paramState.list.length) return;
@@ -164,7 +167,7 @@
     a.download = 'params_' + new Date().toISOString().slice(0, 10) + '.param';
     a.click();
     URL.revokeObjectURL(a.href);
-    addToast(`已导出 ${paramState.list.length} 个参数`, 'success');
+    addToast(t('param.exported').replace('{n}', String(paramState.list.length)), 'success');
   }
 
   function importParams() {
@@ -193,7 +196,7 @@
           }
         }
         modified = new Set(modified);
-        addToast(changed > 0 ? `已写入 ${changed} 个变更参数` : '无参数变更', changed > 0 ? 'success' : 'info');
+        addToast(changed > 0 ? t('param.imported').replace('{n}', String(changed)) : t('param.noChange'), changed > 0 ? 'success' : 'info');
       };
       reader.readAsText(file);
     };
@@ -217,7 +220,7 @@
         <Button variant="secondary" size="sm" onclick={saveParams}>{t('param.writeFlash')}</Button>
         <Button variant="outline" size="sm" onclick={exportParams}>{t('param.export')}</Button>
         <Button variant="outline" size="sm" onclick={importParams}>{t('param.import')}</Button>
-        <Badge variant="outline" class="text-[10px] font-mono">{paramState.list.length} 参数</Badge>
+        <Badge variant="outline" class="text-[10px] font-mono">{paramState.list.length} {t('param.params')}</Badge>
       {/if}
     </div>
   </div>
@@ -278,8 +281,8 @@
                      class="w-24 h-6 px-1 text-right font-mono text-xs bg-input border-2 border-primary rounded text-foreground focus:outline-none" />
               {#if units}<span class="text-[10px] text-muted-foreground">{units}</span>{/if}
               {#if rangeStr}<span class="text-[10px] text-muted-foreground/60">[{rangeStr}]</span>{/if}
-              <Button variant="default" size="xs" onclick={submitEdit}>写入</Button>
-              <Button variant="ghost" size="xs" onclick={cancelEdit}>取消</Button>
+              <Button variant="default" size="xs" onclick={submitEdit}>{t('param.write')}</Button>
+              <Button variant="ghost" size="xs" onclick={cancelEdit}>{t('param.cancel')}</Button>
             </div>
           {:else}
             <div class="flex-1 flex items-center gap-1.5 min-w-0">

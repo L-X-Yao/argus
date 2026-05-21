@@ -60,6 +60,10 @@ _T = {
     'log_dl':          ('日志: 下载 #%d (%d KB)...', 'Log: downloading #%d (%d KB)...'),
     'log_dl_done':     ('日志: #%d 下载完成 (%d KB)', 'Log: #%d complete (%d KB)'),
     'log_dl_cancel':   ('日志: 下载取消',           'Log: download cancelled'),
+    'err_no_wp':       ('无航点',                   'No waypoints'),
+    'err_bad_coord':   ('坐标无效',                 'Invalid coordinates'),
+    'err_fence_min':   ('围栏至少需要 3 个顶点',     'Fence needs at least 3 vertices'),
+    'err_log_not_found': ('日志不存在',              'Log not found'),
 }
 
 

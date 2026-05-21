@@ -28,7 +28,7 @@ class ParamManager:
         self.received_count = 0
         self.fetching = True
         self._fetch_start = time.time()
-        self._link.add_event(lt('param_reading', self._link.locale))
+        self._link.add_event(lt('param_reading', self._link.locale), 'param_reading')
         from pllink_proto import bm
         payload = struct.pack('<BB', self._link.sysid, 1)
         self._link.send(bm(21, payload, self._link.sq, 159))
@@ -62,7 +62,7 @@ class ParamManager:
         if self.received_count >= self.total_count > 0:
             self.fetching = False
             elapsed = time.time() - self._fetch_start
-            self._link.add_event(lt('param_done', self._link.locale) % (self.received_count, elapsed))
+            self._link.add_event(lt('param_done', self._link.locale) % (self.received_count, elapsed), 'param_done')
             self._messages.append({
                 'type': 'params_complete', 'count': self.received_count,
             })
@@ -79,7 +79,7 @@ class ParamManager:
                    name_bytes +
                    struct.pack('<B', ptype))
         self._link.send(bm(23, payload, self._link.sq, 168))
-        self._link.add_event(lt('param_set', self._link.locale) % (name, value))
+        self._link.add_event(lt('param_set', self._link.locale) % (name, value), 'param_set')
 
     def save_to_file(self, path: str | None = None) -> str:
         if not path:
@@ -87,13 +87,13 @@ class ParamManager:
             save_dir.mkdir(exist_ok=True)
             path = str(save_dir / ('params_%s.json' % time.strftime('%Y%m%d_%H%M%S')))
         data = {name: p['value'] for name, p in sorted(self.params.items())}
-        with open(path, 'w') as f:
+        with open(path, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=2)
-        self._link.add_event(lt('param_saved', self._link.locale) % (len(data), Path(path).name))
+        self._link.add_event(lt('param_saved', self._link.locale) % (len(data), Path(path).name), 'param_saved')
         return path
 
     def load_from_file(self, path: str) -> list[str]:
-        with open(path) as f:
+        with open(path, encoding='utf-8') as f:
             data = json.load(f)
         changed = []
         for name, value in data.items():
@@ -102,7 +102,7 @@ class ParamManager:
                 self.set_param(name, value)
                 changed.append(name)
                 time.sleep(0.02)
-        self._link.add_event(lt('param_loaded', self._link.locale) % (len(data), len(changed)))
+        self._link.add_event(lt('param_loaded', self._link.locale) % (len(data), len(changed)), 'param_loaded')
         return changed
 
     def get_status(self) -> dict:

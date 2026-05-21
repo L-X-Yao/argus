@@ -20,10 +20,11 @@ def handle_heartbeat(p: bytes, pl: int, link: DroneLink) -> None:
     old_vtype = link.vtype_raw
     link.vtype_raw = p[4]
     if old_vtype != link.vtype_raw and link.vtype_raw > 0:
-        link.add_event(lt('vehicle_type', link.locale) % link._get_vehicle_info()[2])
+        link.add_event(lt('vehicle_type', link.locale) % link._get_vehicle_info()[2], 'vehicle_type')
     new_armed = bool(p[6] & 0x80)
     if new_armed != link.armed:
-        link.add_event(lt('armed', link.locale) if new_armed else lt('disarmed', link.locale))
+        link.add_event(lt('armed', link.locale) if new_armed else lt('disarmed', link.locale),
+                       'armed' if new_armed else 'disarmed')
         if new_armed:
             link.armed_time = time.time()
             link.max_alt = link.max_speed = link.total_dist = 0
@@ -43,7 +44,7 @@ def handle_heartbeat(p: bytes, pl: int, link: DroneLink) -> None:
     link.sysid = link._raw_sysid
     if not link.connected:
         link.connected = True
-        link.add_event(lt('connected', link.locale) % link.sysid)
+        link.add_event(lt('connected', link.locale) % link.sysid, 'connected')
 
 
 def handle_attitude(p: bytes, pl: int, link: DroneLink) -> None:
@@ -75,7 +76,7 @@ def handle_global_position_int(p: bytes, pl: int, link: DroneLink) -> None:
     if link.home_lat == 0 and link.home_lon == 0 and abs(link.lat) > 0.001:
         link.home_lat = link.lat
         link.home_lon = link.lon
-        link.add_event(lt('home_set', link.locale) % (link.lat, link.lon))
+        link.add_event(lt('home_set', link.locale) % (link.lat, link.lon), 'home_set')
     if link.home_lat != 0:
         dlat = (link.lat - link.home_lat) * 111320
         dlon = (link.lon - link.home_lon) * 111320 * math.cos(math.radians(link.lat))
@@ -138,14 +139,19 @@ def handle_mission_item_reached(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 2:
         return
     seq = p[0] | (p[1] << 8)
-    link.add_event(lt('wp_reached', link.locale) % seq)
+    link.add_event(lt('wp_reached', link.locale) % seq, 'wp_reached')
 
 
-_CMD_NAMES = {
+_CMD_NAMES_ZH = {
     22: '起飞', 176: '模式', 181: '继电器', 241: '校准', 300: '任务开始',
     400: '解锁/锁定', 410: '引导',
 }
-_ACK_RESULTS = {0: '成功', 1: '暂时拒绝', 2: '拒绝', 3: '不支持', 4: '进行中', 5: '已取消'}
+_CMD_NAMES_EN = {
+    22: 'Takeoff', 176: 'Mode', 181: 'Relay', 241: 'Calibration', 300: 'Mission Start',
+    400: 'Arm/Disarm', 410: 'Guided',
+}
+_ACK_RESULTS_ZH = {0: '成功', 1: '暂时拒绝', 2: '拒绝', 3: '不支持', 4: '进行中', 5: '已取消'}
+_ACK_RESULTS_EN = {0: 'success', 1: 'temporarily rejected', 2: 'denied', 3: 'unsupported', 4: 'in progress', 5: 'cancelled'}
 
 def handle_command_ack(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 3:
@@ -153,11 +159,13 @@ def handle_command_ack(p: bytes, pl: int, link: DroneLink) -> None:
     import struct
     cmd_id = struct.unpack_from('<H', p, 0)[0]
     result = p[2]
-    cmd_name = _CMD_NAMES.get(cmd_id, str(cmd_id))
-    result_text = _ACK_RESULTS.get(result, '未知(%d)' % result)
+    en = link.locale == 'en'
+    cmd_name = (_CMD_NAMES_EN if en else _CMD_NAMES_ZH).get(cmd_id, str(cmd_id))
+    result_text = (_ACK_RESULTS_EN if en else _ACK_RESULTS_ZH).get(result, 'unknown(%d)' % result if en else '未知(%d)' % result)
     if result == 4:
         return
-    link.add_event(lt('cmd_ack', link.locale) % (cmd_name, result_text))
+    etype = 'cmd_ack_ok' if result == 0 else 'cmd_ack_fail'
+    link.add_event(lt('cmd_ack', link.locale) % (cmd_name, result_text), etype)
 
 
 def handle_statustext(p: bytes, pl: int, link: DroneLink) -> None:
@@ -166,7 +174,7 @@ def handle_statustext(p: bytes, pl: int, link: DroneLink) -> None:
     text = bytes(p[1:51]).split(b'\x00')[0].decode('ascii', 'replace').strip()
     if text:
         text = filter_statustext(text, link.locale)
-        link.add_event(('%s: %s' % ('FC' if link.locale == 'en' else '飞控', text)))
+        link.add_event(('%s: %s' % ('FC' if link.locale == 'en' else '飞控', text)), 'statustext')
 
 
 def handle_servo_output(p: bytes, pl: int, link: DroneLink) -> None:
@@ -240,7 +248,7 @@ def handle_autopilot_version(p: bytes, pl: int, link: DroneLink) -> None:
     link.fw_version = 'v%d.%d.%d' % (major, minor, patch)
     link.fw_git = git
     link.board_id = board
-    link.add_event(lt('fw_info', link.locale) % (link.fw_version, link.fw_git))
+    link.add_event(lt('fw_info', link.locale) % (link.fw_version, link.fw_git), 'fw_info')
 
 
 def handle_mission_count(p: bytes, pl: int, link: DroneLink) -> None:
@@ -251,10 +259,10 @@ def handle_mission_count(p: bytes, pl: int, link: DroneLink) -> None:
     link._dl_items = [None] * count
     if count > 0:
         _request_dl_item(link, 0)
-        link.add_event(lt('mission_dl_n', link.locale) % count)
+        link.add_event(lt('mission_dl_n', link.locale) % count, 'mission_dl_n')
     else:
         link._dl_pending = False
-        link.add_event(lt('mission_dl_none', link.locale))
+        link.add_event(lt('mission_dl_none', link.locale), 'mission_dl_none')
 
 
 def handle_mission_item_int(p: bytes, pl: int, link: DroneLink) -> None:
@@ -291,7 +299,7 @@ def handle_mission_item_int(p: bytes, pl: int, link: DroneLink) -> None:
         link._dl_messages.append({'type': 'mission_downloaded', 'waypoints': wps})
         if len(link._dl_messages) > 500:
             link._dl_messages = link._dl_messages[-200:]
-        link.add_event(lt('mission_dl_done', link.locale) % len(wps))
+        link.add_event(lt('mission_dl_done', link.locale) % len(wps), 'mission_dl_done')
         from pllink_proto import bm
         link.send(bm(47, struct.pack('<BBB', link.sysid, 1, 0), link.sq, 153))
 
@@ -322,10 +330,12 @@ def handle_mission_ack(p: bytes, pl: int, link: DroneLink) -> None:
     mission_type = p[3] if pl >= 4 else 0
     if mission_type == 1 and link._fence_pending:
         link._fence_pending = False
-        link.add_event((lt('fence_ack_ok', link.locale) if mtype == 0 else lt('fence_ack_fail', link.locale) % mtype))
+        link.add_event((lt('fence_ack_ok', link.locale) if mtype == 0 else lt('fence_ack_fail', link.locale) % mtype),
+                       'fence_ack_ok' if mtype == 0 else 'fence_ack_fail')
     elif link._mission_pending:
         link._mission_pending = False
-        link.add_event((lt('mission_ack_ok', link.locale) if mtype == 0 else lt('mission_ack_fail', link.locale) % mtype))
+        link.add_event((lt('mission_ack_ok', link.locale) if mtype == 0 else lt('mission_ack_fail', link.locale) % mtype),
+                       'mission_ack_ok' if mtype == 0 else 'mission_ack_fail')
 
 
 def handle_log_entry(p: bytes, pl: int, link: DroneLink) -> None:
@@ -335,7 +345,7 @@ def handle_log_entry(p: bytes, pl: int, link: DroneLink) -> None:
     link._log_list.append({'id': log_id, 'size': size, 'time_utc': time_utc})
     if log_id == last_log_num:
         link._log_messages.append({'type': 'log_list', 'logs': list(link._log_list)})
-        link.add_event(lt('log_list_n', link.locale) % len(link._log_list))
+        link.add_event(lt('log_list_n', link.locale) % len(link._log_list), 'log_list_n')
 
 
 def handle_log_data(p: bytes, pl: int, link: DroneLink) -> None:
@@ -370,7 +380,7 @@ def handle_log_data(p: bytes, pl: int, link: DroneLink) -> None:
             'data': b64,
             'size': link._log_download_size,
         })
-        link.add_event(lt('log_dl_done', link.locale) % (log_id, link._log_download_size // 1024))
+        link.add_event(lt('log_dl_done', link.locale) % (log_id, link._log_download_size // 1024), 'log_dl_done')
         link._log_download_id = -1
     else:
         from pllink_proto import bm

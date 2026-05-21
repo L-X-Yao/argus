@@ -7,15 +7,20 @@
 
   type Phase = 'disarmed' | 'ground' | 'flying' | 'mission' | 'returning';
 
-  const RTL_MODES = ['返航', '旋翼返航', '智能返航'];
-  const LAND_MODES = ['降落', '旋翼降落'];
-  const AUTO_MODES = ['自动'];
+  const COPTER_RTL = new Set([6, 21]);
+  const COPTER_LAND = new Set([9]);
+  const COPTER_AUTO = new Set([3]);
+  const PLANE_RTL = new Set([11, 21]);
+  const PLANE_LAND = new Set([20]);
+  const PLANE_AUTO = new Set([10]);
 
   let phase = $derived.by((): Phase => {
     const d = app.drone;
     if (!d.armed) return 'disarmed';
-    if (RTL_MODES.includes(d.mode) || LAND_MODES.includes(d.mode)) return 'returning';
-    if (AUTO_MODES.includes(d.mode)) return 'mission';
+    const m = d.mode_id;
+    const plane = isPlane();
+    if ((plane ? PLANE_RTL : COPTER_RTL).has(m) || (plane ? PLANE_LAND : COPTER_LAND).has(m)) return 'returning';
+    if ((plane ? PLANE_AUTO : COPTER_AUTO).has(m)) return 'mission';
     if (d.alt_rel < 2 && d.gs < 1) return 'ground';
     return 'flying';
   });

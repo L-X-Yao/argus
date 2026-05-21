@@ -40,8 +40,9 @@
   let seenEventCount = $state(0);
   let controlsOpen = $state(false);
   let unseenEvents = $derived(app.events.length - seenEventCount);
+  const URGENT_TYPES = new Set(['rtl', 'force_disarm', 'cmd_ack_fail', 'mission_ack_fail', 'fence_ack_fail', 'link_lost', 'connect_fail']);
   let hasUrgentEvent = $derived(unseenEvents > 0 && app.events.slice(-unseenEvents).some(
-    e => e.text.includes('失败') || e.text.includes('异常') || e.text.includes('失控') || e.text.includes('紧急') || e.text.includes('低电')
+    e => URGENT_TYPES.has(e.event_type) || e.text.includes('!!!')
   ));
   let showLogPanel = $state(false);
   let showVideo = $state(false);
