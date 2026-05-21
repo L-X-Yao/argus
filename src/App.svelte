@@ -45,6 +45,17 @@
   import ParamDiffPanel from './components/ParamDiffPanel.svelte';
   import MultiVehiclePanel from './components/MultiVehiclePanel.svelte';
   import FlightReportPanel from './components/FlightReportPanel.svelte';
+  import LogViewerPanel from './components/LogViewerPanel.svelte';
+  import FFTPanel from './components/FFTPanel.svelte';
+  import Compass3DPanel from './components/Compass3DPanel.svelte';
+  import AdvancedCmdPanel from './components/AdvancedCmdPanel.svelte';
+  import OverlapCalcPanel from './components/OverlapCalcPanel.svelte';
+  import CorridorPanel from './components/CorridorPanel.svelte';
+  import PoiPanel from './components/PoiPanel.svelte';
+  import AnnotationPanel from './components/AnnotationPanel.svelte';
+  import RemotePanel from './components/RemotePanel.svelte';
+  import RolePanel from './components/RolePanel.svelte';
+  import AirspacePanel from './components/AirspacePanel.svelte';
   import { showConfirm, showSlide, undo } from './lib/stores.svelte';
   import { ChevronUp, ChevronDown, CornerDownLeft, Pause, HardDrive, Wrench, Video, SlidersHorizontal, PanelLeftClose, Plane, MapPinned, Activity, Settings2, X as XIcon } from '@lucide/svelte';
   import type { Component } from 'svelte';
@@ -80,6 +91,17 @@
   let showParamDiff = $state(false);
   let showMultiVehicle = $state(false);
   let showFlightReport = $state(false);
+  let showLogViewer = $state(false);
+  let showFFT = $state(false);
+  let showCompass3D = $state(false);
+  let showAdvCmd = $state(false);
+  let showOverlapCalc = $state(false);
+  let showCorridor = $state(false);
+  let showPoi = $state(false);
+  let showAnnotation = $state(false);
+  let showRemote = $state(false);
+  let showRole = $state(false);
+  let showAirspace = $state(false);
 
   onMount(() => {
     loadLocale();
@@ -376,6 +398,17 @@
       onparamdiff={() => showParamDiff = true}
       onmultivehicle={() => showMultiVehicle = true}
       onreport={() => showFlightReport = true}
+      onlogviewer={() => showLogViewer = true}
+      onfft={() => showFFT = true}
+      oncompass3d={() => showCompass3D = true}
+      onadvcmd={() => showAdvCmd = true}
+      onoverlap={() => showOverlapCalc = true}
+      oncorridor={() => showCorridor = true}
+      onpoi={() => showPoi = true}
+      onannotation={() => showAnnotation = true}
+      onremote={() => showRemote = true}
+      onrole={() => showRole = true}
+      onairspace={() => showAirspace = true}
     />
   {/if}
   {#if showInspector}
@@ -428,6 +461,39 @@
   {/if}
   {#if showFlightReport}
     <FlightReportPanel onclose={() => showFlightReport = false} />
+  {/if}
+  {#if showLogViewer}
+    <LogViewerPanel onclose={() => showLogViewer = false} />
+  {/if}
+  {#if showFFT}
+    <FFTPanel onclose={() => showFFT = false} />
+  {/if}
+  {#if showCompass3D}
+    <Compass3DPanel onclose={() => showCompass3D = false} />
+  {/if}
+  {#if showAdvCmd}
+    <AdvancedCmdPanel onclose={() => showAdvCmd = false} />
+  {/if}
+  {#if showOverlapCalc}
+    <OverlapCalcPanel onclose={() => showOverlapCalc = false} />
+  {/if}
+  {#if showCorridor}
+    <CorridorPanel onclose={() => showCorridor = false} />
+  {/if}
+  {#if showPoi}
+    <PoiPanel onclose={() => showPoi = false} />
+  {/if}
+  {#if showAnnotation}
+    <AnnotationPanel onclose={() => showAnnotation = false} />
+  {/if}
+  {#if showRemote}
+    <RemotePanel onclose={() => showRemote = false} />
+  {/if}
+  {#if showRole}
+    <RolePanel onclose={() => showRole = false} />
+  {/if}
+  {#if showAirspace}
+    <AirspacePanel onclose={() => showAirspace = false} />
   {/if}
   {#if showShortcuts}
     <!-- svelte-ignore a11y_no_static_element_interactions -->

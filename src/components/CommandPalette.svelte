@@ -15,7 +15,8 @@
 
   let { onclose, onnavigate, oninspector, onconsole, onlogs, oncalibration, onvideo, onmotor,
          onrccal, onfailsafe, onpower, onesccal, onframe, onpid, onautotune, onmodes, onsetup, onparamdiff,
-         onmultivehicle, onreport }:
+         onmultivehicle, onreport, onlogviewer, onfft, oncompass3d, onadvcmd, onoverlap, oncorridor,
+         onpoi, onannotation, onremote, onrole, onairspace }:
     { onclose: () => void;
       onnavigate: (v: 'fly' | 'plan' | 'monitor' | 'params') => void;
       oninspector: () => void;
@@ -36,6 +37,17 @@
       onparamdiff: () => void;
       onmultivehicle: () => void;
       onreport: () => void;
+      onlogviewer: () => void;
+      onfft: () => void;
+      oncompass3d: () => void;
+      onadvcmd: () => void;
+      onoverlap: () => void;
+      oncorridor: () => void;
+      onpoi: () => void;
+      onannotation: () => void;
+      onremote: () => void;
+      onrole: () => void;
+      onairspace: () => void;
     } = $props();
 
   interface PaletteItem {
@@ -137,6 +149,28 @@
         handler: () => onmultivehicle(), available: connected },
       { id: 'tool-report', label: t('report.title'), category: t('cmd.catTools'), icon: Search,
         handler: () => onreport(), available: true },
+      { id: 'tool-logviewer', label: t('logview.title'), category: t('cmd.catTools'), icon: Search,
+        handler: () => onlogviewer(), available: true },
+      { id: 'tool-fft', label: t('fft.title'), category: t('cmd.catTools'), icon: Search,
+        handler: () => onfft(), available: true },
+      { id: 'tool-compass3d', label: t('compass3d.title'), category: t('cmd.catTools'), icon: Compass,
+        handler: () => oncompass3d(), available: connected },
+      { id: 'tool-advcmd', label: t('advcmd.title'), category: t('ctrl.mission'), icon: Zap,
+        handler: () => onadvcmd(), available: true },
+      { id: 'tool-overlap', label: t('overlap.title'), category: t('ctrl.mission'), icon: Search,
+        handler: () => onoverlap(), available: true },
+      { id: 'tool-corridor', label: t('corridor.title'), category: t('ctrl.mission'), icon: Search,
+        handler: () => oncorridor(), available: true },
+      { id: 'tool-poi', label: t('poi.title'), category: t('ctrl.mission'), icon: Search,
+        handler: () => onpoi(), available: connected },
+      { id: 'tool-annotation', label: t('annotation.title'), category: t('cmd.catTools'), icon: Search,
+        handler: () => onannotation(), available: true },
+      { id: 'tool-remote', label: t('remote.title'), category: t('cmd.catTools'), icon: Radio,
+        handler: () => onremote(), available: true },
+      { id: 'tool-role', label: t('role.current'), category: t('cmd.catTools'), icon: ShieldAlert,
+        handler: () => onrole(), available: true },
+      { id: 'tool-airspace', label: t('airspace.title'), category: t('cmd.catTools'), icon: ShieldAlert,
+        handler: () => onairspace(), available: true },
 
       { id: 'set-theme', label: t('settings.darkTheme'), category: t('settings.title'), shortcut: 'L', icon: app.darkTheme ? Sun : Moon,
         handler: () => { app.darkTheme = !app.darkTheme; saveSettings(); }, available: true },
