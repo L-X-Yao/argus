@@ -361,9 +361,9 @@
       <!-- ════════════════════════════════════════════ -->
       {:else}
         {@const labels = {
-          gyro:  { titleKey: 'cal.gyroTitle', descKey: 'cal.gyroDesc', icon: '陀' },
-          level: { titleKey: 'cal.levelTitle', descKey: 'cal.levelDesc', icon: '平' },
-          baro:  { titleKey: 'cal.baroTitle', descKey: 'cal.baroDesc', icon: '气' },
+          gyro:  { titleKey: 'cal.gyroTitle', descKey: 'cal.gyroDesc', icon: t('cal.iconGyro') },
+          level: { titleKey: 'cal.levelTitle', descKey: 'cal.levelDesc', icon: t('cal.iconLevel') },
+          baro:  { titleKey: 'cal.baroTitle', descKey: 'cal.baroDesc', icon: t('cal.iconBaro') },
         }}
         {@const info = labels[selected]}
         <div class="mb-4">

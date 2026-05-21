@@ -279,31 +279,31 @@
       <div class="flex items-center gap-1 px-1 py-1 border-b border-border/30 text-xs hover:bg-muted/50 transition-colors
         {app.drone.wp === i + 2 ? 'bg-warning/10 border-l-2 border-l-warning pl-0.5' : ''}">
         <button class="w-5 text-center text-primary font-bold text-[11px] hover:underline cursor-pointer bg-transparent border-none p-0"
-                onclick={() => app.focusWp = i} title="Focus waypoint">{i + 1}</button>
+                onclick={() => app.focusWp = i} title={t('tip.focusWp')}>{i + 1}</button>
         <button class="px-1 py-px rounded text-[9px] font-bold border-none text-white cursor-pointer whitespace-nowrap"
                 style="background:{typeColor(wp.type || 'wp')}" onclick={() => cycleType(i)}
-                title="Cycle: WP / Loiter Turns / Loiter Time">
+                title={t('tip.cycleType')}>
           {typeLabel(wp.type || 'wp')}
         </button>
         <button class="w-4.5 h-4.5 rounded border shrink-0 text-[10px] font-bold p-0 leading-[18px] text-center cursor-pointer
           {wp.drop ? 'bg-orange-700 text-white border-orange-700' : 'bg-transparent text-muted-foreground border-border'}"
-                onclick={() => toggleDrop(i)} title="Drop toggle">
+                onclick={() => toggleDrop(i)} title={t('tip.dropToggle')}>
           {wp.drop ? 'D' : '·'}
         </button>
         {#if (wp.type === 'loiter_turns' || wp.type === 'loiter_time')}
           <input type="number" class="w-7 bg-input text-purple-400 border border-border px-0.5 rounded text-[10px] text-right"
                  value={wp.loiter_param}
                  onchange={(e) => { app.waypoints[i].loiter_param = parseFloat((e.target as HTMLInputElement).value) || 0; saveWaypoints(); }}
-                 title={wp.type === 'loiter_turns' ? 'Turns' : 'Seconds'} />
+                 title={wp.type === 'loiter_turns' ? t('tip.turns') : t('tip.seconds')} />
         {/if}
         <span class="flex-1 text-muted-foreground text-[10px] overflow-hidden whitespace-nowrap">{wp.lat.toFixed(5)},{wp.lon.toFixed(5)}
           {#if i > 0}<span class="text-muted-foreground/60 text-[9px] ml-0.5">{fmtSegDist(i)}</span>{/if}
         </span>
         <input type="number" class="w-9 bg-input text-foreground border border-border px-0.5 rounded text-[11px] text-right"
-               value={wp.alt} onchange={(e) => setAlt(i, (e.target as HTMLInputElement).value)} title="Alt (m)" />
+               value={wp.alt} onchange={(e) => setAlt(i, (e.target as HTMLInputElement).value)} title={t('tip.altM')} />
         <input type="number" class="w-9 bg-input text-success border border-border px-0.5 rounded text-[11px] text-right"
                value={wp.speed || ''} placeholder="—"
-               onchange={(e) => setSpeed(i, (e.target as HTMLInputElement).value)} title="Spd (m/s)" />
+               onchange={(e) => setSpeed(i, (e.target as HTMLInputElement).value)} title={t('tip.spdMs')} />
         <button class="bg-transparent border-none text-muted-foreground cursor-pointer text-xs px-px" onclick={() => moveWp(i, -1)}>&uarr;</button>
         <button class="bg-transparent border-none text-muted-foreground cursor-pointer text-xs px-px" onclick={() => moveWp(i, 1)}>&darr;</button>
         <button class="bg-transparent border-none text-destructive cursor-pointer text-base px-0.5 leading-none" onclick={() => deleteWaypoint(i)}>&times;</button>

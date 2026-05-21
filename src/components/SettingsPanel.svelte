@@ -95,7 +95,7 @@
             </Button>
           </div>
           <div class="flex justify-between items-center py-2 border-b border-border/50">
-            <label class="text-sm text-muted-foreground"><Gamepad2 size={13} class="inline mr-1" />手柄 / Gamepad</label>
+            <label class="text-sm text-muted-foreground"><Gamepad2 size={13} class="inline mr-1" />{t('settings.gamepad')}</label>
             <div class="flex items-center gap-1.5">
               {#if gamepad.connected}
                 <span class="text-[10px] text-success">{gamepad.name}</span>
@@ -107,19 +107,19 @@
             </div>
           </div>
           <div class="flex justify-between items-center py-2 border-b border-border/50">
-            <label class="text-sm text-muted-foreground">地图区域 / Map</label>
+            <label class="text-sm text-muted-foreground">{t('settings.mapRegion')}</label>
             <div class="flex gap-1">
               <Button variant={app.mapRegion === 'china' ? 'default' : 'secondary'} size="sm" class="h-7 text-xs px-2.5"
-                      onclick={() => { app.mapRegion = 'china'; saveSettings(); }}>中国</Button>
+                      onclick={() => { app.mapRegion = 'china'; saveSettings(); }}>{t('settings.china')}</Button>
               <Button variant={app.mapRegion === 'global' ? 'default' : 'secondary'} size="sm" class="h-7 text-xs px-2.5"
                       onclick={() => { app.mapRegion = 'global'; saveSettings(); }}>Global</Button>
             </div>
           </div>
           <div class="flex justify-between items-center py-2 border-b border-border/50">
-            <label class="text-sm text-muted-foreground"><Globe size={13} class="inline mr-1" />语言 / Language</label>
+            <label class="text-sm text-muted-foreground"><Globe size={13} class="inline mr-1" />{t('settings.language')}</label>
             <div class="flex gap-1">
               <Button variant={i18nState.locale === 'zh' ? 'default' : 'secondary'} size="sm" class="h-7 text-xs px-2.5"
-                      onclick={() => setLocale('zh')}>中文</Button>
+                      onclick={() => setLocale('zh')}>{t('settings.zhLabel')}</Button>
               <Button variant={i18nState.locale === 'en' ? 'default' : 'secondary'} size="sm" class="h-7 text-xs px-2.5"
                       onclick={() => setLocale('en')}>EN</Button>
             </div>

@@ -178,7 +178,7 @@
         {#if !port.startsWith('tcp:') && !port.startsWith('udp:')}
           <select bind:value={baud}
                   class="h-7 px-1 text-xs bg-input border border-border rounded-md text-foreground cursor-pointer"
-                  title="Baud rate">
+                  title={t('tip.baudRate')}>
             <option value={57600}>57600</option>
             <option value={115200}>115200</option>
           </select>
@@ -203,7 +203,7 @@
       {#if !app.drone.connected && !connecting}
         <Button variant="outline" size="sm" class="text-[10px] px-2 opacity-60 hover:opacity-100"
                 onclick={() => { port = 'udp:14550'; protocol = 'standard'; toggle(); }}
-                title="Quick connect to SITL (udp:14550)">SITL</Button>
+                title={t('tip.sitl')}>SITL</Button>
       {/if}
     </div>
   </div>
@@ -266,7 +266,7 @@
         <span class="text-muted-foreground text-[10px]">{app.drone.fw_version}</span>
       {/if}
       {#if app.drone.parse_errors > 0}
-        <span class="text-[9px] text-destructive/70 font-mono" title="Parse errors">E:{app.drone.parse_errors}</span>
+        <span class="text-[9px] text-destructive/70 font-mono" title={t('tip.parseErrors')}>E:{app.drone.parse_errors}</span>
       {/if}
       {#if app.drone.vehicles && app.drone.vehicles.length > 0}
         <button class="relative cursor-pointer bg-transparent border-none p-0"
@@ -311,7 +311,7 @@
             class={app.audioMuted ? 'opacity-40' : ''} title={app.audioMuted ? 'Unmute' : 'Mute'}>
       {#if app.audioMuted}<VolumeOff size={14} />{:else}<Volume2 size={14} />{/if}
     </Button>
-    <Button variant="ghost" size="icon-xs" onclick={toggleTheme} title={app.darkTheme ? 'Light' : 'Dark'}>
+    <Button variant="ghost" size="icon-xs" onclick={toggleTheme} title={t('tip.theme')}>
       {#if app.darkTheme}<Sun size={14} />{:else}<Moon size={14} />{/if}
     </Button>
     <Button variant="ghost" size="icon-xs" onclick={onSettings} title={t('settings.title')}>

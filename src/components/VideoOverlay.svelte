@@ -158,7 +158,7 @@
       onkeydown={(e) => { if (e.key === 'Enter') startStream(); }}
     />
     {#if streaming}
-      <Button variant="ghost" size="icon-xs" onclick={takeScreenshot} title="Screenshot"><Camera size={14} /></Button>
+      <Button variant="ghost" size="icon-xs" onclick={takeScreenshot} title={t('tip.screenshot')}><Camera size={14} /></Button>
       <Button variant="destructive" size="sm" onclick={stopStream}>{t('video.disconnect')}</Button>
     {:else}
       <Button size="sm" onclick={startStream}>{t('video.connect')}</Button>

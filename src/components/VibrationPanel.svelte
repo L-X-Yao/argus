@@ -92,14 +92,14 @@
         {vibeLevel(Math.max(...d.vibe))}
       </Badge>
       {#if d.vibe_clip[0] + d.vibe_clip[1] + d.vibe_clip[2] > 0}
-        <span class="text-destructive text-[10px]">裁剪: {d.vibe_clip[0]}/{d.vibe_clip[1]}/{d.vibe_clip[2]}</span>
+        <span class="text-destructive text-[10px]">{t('vibe.clip')} {d.vibe_clip[0]}/{d.vibe_clip[1]}/{d.vibe_clip[2]}</span>
       {/if}
     </div>
     <div class="w-full">
       <canvas bind:this={canvas} height="80" class="w-full bg-background rounded-lg"></canvas>
     </div>
     <div class="text-center mt-1 text-[9px] text-muted-foreground">
-      红线=30 (阈值) │
+      {t('vibe.threshold')} │
       <span class="text-red-400">━ X</span>
       <span class="text-green-400"> ━ Y</span>
       <span class="text-sky-400"> ━ Z</span>

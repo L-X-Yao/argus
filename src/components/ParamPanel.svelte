@@ -295,7 +295,7 @@
               {#if hasDefaultDiff(p.name, p.value)}
                 <button class="text-[9px] text-muted-foreground/60 hover:text-warning px-0.5 cursor-pointer bg-transparent border-none"
                         onclick={() => { sendCommand('param_set', undefined, { name: p.name, value: (meta[p.name] as any).default }); modified.add(p.name); modified = new Set(modified); }}
-                        title="Reset to default: {(meta[p.name] as any).default}">↩</button>
+                        title={t('tip.resetDefault').replace('{v}', String((meta[p.name] as any).default))}>↩</button>
               {/if}
               {#if rangeStr}<span class="text-[10px] text-muted-foreground/50 ml-auto whitespace-nowrap">[{rangeStr}]</span>{/if}
             </div>

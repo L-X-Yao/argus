@@ -1,5 +1,6 @@
 import { app } from './stores.svelte';
 import { i18nState } from './i18n.svelte';
+import { t } from './i18n.svelte';
 
 let audioCtx: AudioContext | null = null;
 
@@ -75,7 +76,7 @@ export function checkAlerts(connected: boolean, armed: boolean, remaining: numbe
   const mode = app.drone.mode;
   if (mode && prevMode && mode !== prevMode) {
     if (RTL_MODES.some(m => mode.includes(m))) beep(440, 300, 2, 150);
-    speak(i18nState.locale === 'en' ? `Mode ${mode}` : `已切换${mode}`);
+    speak(t('audio.modeSwitch').replace('{mode}', mode));
   }
   prevMode = mode;
 
@@ -107,7 +108,7 @@ export function checkAlerts(connected: boolean, armed: boolean, remaining: numbe
 
   const wp = app.drone.wp;
   if (wp > prevWp && prevWp >= 2 && armed) {
-    speak(i18nState.locale === 'en' ? `Waypoint ${prevWp - 1}` : `航点${prevWp - 1}`);
+    speak(t('audio.waypoint').replace('{n}', String(prevWp - 1)));
   }
   prevWp = armed ? wp : 0;
 }
@@ -122,8 +123,8 @@ function checkAltCallouts(alt: number, armed: boolean) {
   }
   if (!altInit) {
     altPrev = alt;
-    descentNext = DESCENT_THRESHOLDS.find(t => t <= alt) ?? 0;
-    ascentIdx = ASCENT_THRESHOLDS.findIndex(t => t > alt);
+    descentNext = DESCENT_THRESHOLDS.find(th => th <= alt) ?? 0;
+    ascentIdx = ASCENT_THRESHOLDS.findIndex(th => th > alt);
     if (ascentIdx < 0) ascentIdx = ASCENT_THRESHOLDS.length;
     altInit = true;
     return;
@@ -133,20 +134,20 @@ function checkAltCallouts(alt: number, armed: boolean) {
   altPrev = alt;
 
   if (climbing && ascentIdx < ASCENT_THRESHOLDS.length && alt >= ASCENT_THRESHOLDS[ascentIdx] - 0.5) {
-    speak(`${ASCENT_THRESHOLDS[ascentIdx]}米`);
+    speak(t('audio.meters').replace('{n}', String(ASCENT_THRESHOLDS[ascentIdx])));
     ascentIdx++;
   }
   if (ascentIdx > 0 && alt < ASCENT_THRESHOLDS[ascentIdx - 1] - 5) {
-    ascentIdx = ASCENT_THRESHOLDS.findIndex(t => t > alt);
+    ascentIdx = ASCENT_THRESHOLDS.findIndex(th => th > alt);
     if (ascentIdx < 0) ascentIdx = ASCENT_THRESHOLDS.length;
   }
 
   if (alt > descentNext + 3) descentNext = Infinity;
   if (descending) {
-    for (const t of DESCENT_THRESHOLDS) {
-      if (alt <= t + 0.5 && t < descentNext) {
-        speak(`${t}米`);
-        descentNext = t;
+    for (const th of DESCENT_THRESHOLDS) {
+      if (alt <= th + 0.5 && th < descentNext) {
+        speak(t('audio.meters').replace('{n}', String(th)));
+        descentNext = th;
         break;
       }
     }

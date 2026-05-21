@@ -114,7 +114,7 @@
     <button class="w-full py-2.5 bg-transparent border-2 border-dashed border-border rounded-lg cursor-pointer
                     text-sm font-bold text-muted-foreground hover:border-primary hover:text-primary transition-colors"
             onclick={loadFile}>
-      Load Flight Log (.csv)
+      {t('replay.loadCsv')}
     </button>
   {:else}
     <div class="flex items-center gap-2 mb-2">

@@ -13,8 +13,7 @@
   }
 
   let checks = $derived.by((): Check[] => {
-    const gpsOk = d.gps_fix === '3D' || d.gps_fix === 'RTK固定' || d.gps_fix === 'RTK浮动' || d.gps_fix === '差分'
-      || d.gps_fix === 'RTK Fixed' || d.gps_fix === 'RTK Float' || d.gps_fix === 'DGPS';
+    const gpsOk = d.gps_fix_raw >= 3;
     return [
       { name: t('check.gps'), ok: gpsOk, detail: `${d.gps_fix}`, critical: true },
       { name: t('check.sats'), ok: d.gps_sats >= 10, detail: `${d.gps_sats} (≥10)`, critical: true },
