@@ -1,110 +1,180 @@
-# PL-Link GCS
+# Argus
 
-A modern, web-based ground control station for autonomous vehicles.
+Universal web-based ground control station for MAVLink drones.
+
+## Vision
+
+Argus aims to be the first truly universal **web GCS** — one interface that works with any MAVLink vehicle (ArduPilot, PX4), on any platform (browser, desktop, tablet), in any language (10 supported). No install, no native dependencies, just open a URL and fly.
+
+### Why another GCS?
+
+| Existing GCS | Limitation |
+|---|---|
+| QGroundControl | Native app, heavy install, no web version |
+| Mission Planner | Windows-only, legacy UI |
+| Cloud platforms (FlytBase, ADOS) | Vendor lock-in, closed source |
+
+Argus fills the gap: **open-source + web-native + protocol-agnostic + white-label ready**.
 
 ## Features
 
-| Feature | Description |
-|---------|-------------|
-| **Standard MAVLink** | Connect to any ArduPilot/PX4 vehicle via UDP, TCP, or serial |
-| **Protocol Auto-detect** | Automatically identifies standard MAVLink or PL-Link framing |
-| **Multi-vehicle** | Track and display multiple vehicles on the map simultaneously |
-| **4 Vehicle Types** | Full support for Copter, Plane, Rover, and Sub with dedicated mode maps |
-| **Bilingual UI** | Chinese/English locale switching — all panels, buttons, alerts, and audio |
-| **Mission Planning** | Waypoints, circle patterns, survey grids, KML import/export, altitude profile |
-| **Parameter Metadata** | Descriptions, ranges, units, enum values from upstream XML definitions |
-| **Parameter Diff** | Instantly see which parameters differ from defaults, one-click reset |
-| **Geofence** | Polygon geofence upload with map visualization |
-| **Sensor Calibration** | Compass, accelerometer, gyroscope, level, barometer wizards |
-| **PFD** | Primary Flight Display with attitude, speed/altitude tapes, compass, wind |
-| **Real-time Charts** | Altitude, speed, vertical speed, voltage, current, vibration |
-| **EKF Status** | Navigation filter variance bars and status flags |
-| **Gamepad Control** | Joystick/gamepad via browser Gamepad API with RC override |
-| **Audio Alerts** | Bilingual voice callouts for mode, battery, altitude, waypoints |
-| **Video Overlay** | RTSP video feed with size presets |
-| **Flight Report** | Post-flight summary with export |
-| **Global Maps** | China (Amap/GCJ-02) and international (OSM/ArcGIS/WGS-84) tile sources |
-| **PWA** | Installable web app with offline-capable architecture |
-| **Dark Mode** | Full dark/light theme with optimized map tile rendering |
-| **Log Download** | Browse, download, and replay onboard flight logs |
+| Category | Features |
+|---|---|
+| **Connections** | TCP / UDP / Serial / WebSerial (browser-direct USB) |
+| **Protocols** | ArduPilot + PX4 (auto-detect via FC adapter layer) |
+| **Vehicles** | Copter, Plane, VTOL, Rover, Sub |
+| **Map** | 8 tile sources (Amap, Google, OSM, Esri, CartoDB, Tianditu) + 3D terrain (MapLibre GL) |
+| **Mission** | WP / Spline / Loiter / Survey grid / Crosshatch / Spiral / Orbit |
+| **Formats** | .waypoints (MP) / .plan (QGC) / .gpx / .kml import & export |
+| **Parameters** | Metadata (desc/range/units/enum/bitmask), tree view, diff export, default reset |
+| **Calibration** | Compass, accel, gyro, level, baro wizards |
+| **Firmware** | Upload .apj, online firmware browser, reboot to bootloader |
+| **RTK** | NTRIP client panel with fix status display |
+| **Fleet** | Multi-vehicle dashboard with live telemetry per vehicle |
+| **Video** | RTSP → MJPEG proxy, screenshot capture |
+| **HUD** | PFD (attitude/speed/altitude/compass/wind), real-time charts, EKF status |
+| **Audio** | Bilingual voice callouts (mode, battery, altitude, waypoints) |
+| **i18n** | 10 languages (zh, en, ja, ko, de, fr, es, pt, ru, ar) + RTL |
+| **Offline** | PWA with service worker, mbtiles support, tile caching |
+| **Desktop** | Tauri v2 packaging (Windows MSI/NSIS installer) |
+| **Security** | Token auth, statustext filtering (hides ArduPilot internals) |
 
 ## Quick Start
 
-### Browser (development)
+### 1. Browser (development)
 
 ```bash
-# Install dependencies
+# Frontend
 npm install
-pip install -r requirements.txt  # or: pip install fastapi uvicorn pyserial
+npm run dev          # http://localhost:5173
 
-# Start
-python run.py --sim   # backend + simulator
-# Open http://localhost:8100
+# Backend
+pip install fastapi uvicorn pyserial websockets
+python run.py        # API at http://localhost:8100
 ```
 
-### Windows Package (zero-install)
+### 2. With simulator
 
 ```bash
-python build_package.py
-# Output: release/PLLink_GCS_v3.1.zip
-# Extract → double-click "PL-Link地面站.bat"
+python sim_pllink.py 5770          # Start MAVLink simulator
+python run.py                      # Start backend
+npm run dev                        # Start frontend
+# Browser → type "tcp:localhost:5770" → Connect
 ```
 
-### Connect to SITL
+### 3. With ArduPilot SITL
 
 ```bash
-# Start ArduPilot SITL
 sim_vehicle.py -v ArduCopter --out=udp:127.0.0.1:14550
-
-# In GCS: type "udp:14550" → select "Standard" protocol → Connect
+# In Argus: type "udp:14550" → protocol "Standard" → Connect
 # Or click the "SITL" quick-connect button
+```
+
+### 4. WebSerial (no backend needed)
+
+Open Argus in Chrome/Edge → click the **USB** button → select your flight controller from the browser prompt. Telemetry flows directly via WebSerial + the built-in TypeScript MAVLink v2 codec.
+
+### 5. Production build
+
+```bash
+npm run build        # Output: dist/
+python run.py        # Serves dist/ + API on :8100
 ```
 
 ## Architecture
 
 ```
-Browser (Svelte 5 + TypeScript + Tailwind)
-    ↕ WebSocket (JSON)
-Python Backend (FastAPI + uvicorn)
-    ↕ MAVLink v2 (TCP/UDP/Serial)
-Flight Controller
+┌─────────────────────────────────────────┐
+│  Browser (Svelte 5 + TypeScript)        │
+│  75 components, 22K lines               │
+│  MAVLink v2 codec (pure TS)             │
+│  WebSerial direct USB connection        │
+├─────────────────────────────────────────┤
+│          ↕ WebSocket (JSON)             │
+├─────────────────────────────────────────┤
+│  Python Backend (FastAPI + uvicorn)     │
+│  17 modules, 2.8K lines                │
+│  MAVLink dispatch + 27 message handlers │
+│  Tile proxy, video proxy, firmware API  │
+├─────────────────────────────────────────┤
+│          ↕ MAVLink v2                   │
+│  TCP / UDP / Serial / PL-Link           │
+├─────────────────────────────────────────┤
+│  Flight Controller (ArduPilot / PX4)    │
+└─────────────────────────────────────────┘
 ```
 
-- **Frontend**: 33 Svelte 5 components + 6 composable map layers, 335KB JS (gzip 103KB)
-- **Backend**: 15 Python modules, MAVLink dispatch + handler architecture
-- **Tests**: 216 automated tests (unit + integration)
-- **i18n**: 345+ bilingual string pairs, locale-aware backend events
+### Key modules
 
-## Connection Types
+| Module | Description |
+|---|---|
+| `src/lib/mavlink/` | Pure TypeScript MAVLink v2 encoder/decoder with CRC validation |
+| `src/lib/fc/` | Flight controller adapter (ArduPilot + PX4 mode/command mapping) |
+| `src/lib/transport.ts` | Dual-mode transport (WebSocket backend vs WebSerial direct) |
+| `src/lib/serial.ts` | Web Serial API wrapper with FC USB vendor filters |
+| `src/lib/terrain.ts` | SRTM elevation queries for terrain-following missions |
+| `src/lib/missionIO.ts` | Mission import/export (.waypoints / .plan / .gpx) |
+| `src/lib/survey.ts` | Survey patterns (grid, crosshatch, spiral, orbit) |
+| `src/lib/i18n.svelte.ts` | 10-language i18n with RTL support |
+| `backend/drone_link.py` | MAVLink connection, frame parsing, state management |
+| `backend/commands.py` | 35+ command handlers (arm, mode, mission, calibration, etc.) |
+| `backend/config.py` | Centralized configuration (all timeouts/ports/rates) |
 
-| Type | Format | Example |
-|------|--------|---------|
-| TCP | `tcp:host:port` | `tcp:localhost:5770` |
-| UDP | `udp:port` | `udp:14550` |
-| Serial | `/dev/ttyUSB0` or `COM3` | `/dev/ttyUSB0` |
+## Simulator
 
-Protocol (Standard MAVLink or PL-Link) is auto-detected from the first received bytes.
+`sim_pllink.py` is a MAVLink vehicle simulator for development and testing:
 
-## API
+```bash
+python sim_pllink.py 5770           # TCP, standard MAVLink
+python sim_pllink.py 5770 --pllink  # TCP, PL-Link wrapped
+python sim_pllink.py 14550 --udp    # UDP
+```
 
-| Endpoint | Description |
-|----------|-------------|
-| `GET /health` | Health check |
-| `GET /api/version` | Version, protocols, vehicles, features |
-| `GET /api/ports` | Available serial ports |
-| `GET /api/param_meta?vehicle=copter` | Parameter metadata (cached from upstream XML) |
-| `GET /api/tile_sources` | Available map tile configurations |
-| `GET /api/tile/{style}/{z}/{x}/{y}` | Tile proxy with disk cache |
-| `GET /api/log` | Download active connection log (CSV) |
-| `WS /ws` | WebSocket for telemetry, commands, events |
+It generates realistic telemetry: GPS position (Xi'an), attitude, battery drain, heartbeat, and responds to arm/disarm/mode commands.
 
-## Tech Stack
+## Tests
 
-- **Frontend**: Svelte 5 (runes), TypeScript, Vite, Tailwind CSS, shadcn/ui, Leaflet
-- **Backend**: Python, FastAPI, uvicorn, pyserial
-- **Protocol**: MAVLink v2 (standard + PL-Link wrapper)
-- **Tests**: pytest, Playwright (screenshots), httpx
+```bash
+# Backend unit tests (165 tests)
+python -m pytest tests/test_unit_*.py -v
+
+# Frontend unit tests (93 tests)
+npx vitest run
+
+# Type check (0 errors, 0 warnings)
+npx svelte-check --tsconfig ./tsconfig.json
+
+# E2E (requires dev server)
+npx playwright test
+```
+
+## Build Stats
+
+| Metric | Value |
+|---|---|
+| Frontend components | 75 |
+| Frontend lines | 22,000 |
+| Backend modules | 17 |
+| Backend lines | 2,800 |
+| MAVLink handlers | 27 |
+| Commands | 35+ |
+| Tests | 258 (165 pytest + 93 vitest) |
+| Languages | 10 |
+| Bundle (main) | 504 KB (139 KB gzip) |
+| Bundle (3D map) | 1,061 KB (lazy loaded) |
+| Tile sources | 8 |
+| Mission formats | 4 (.waypoints, .plan, .gpx, .kml) |
+
+## Roadmap
+
+- [ ] Deepen WebSerial command routing (mission upload, param management)
+- [ ] 3D map feature parity with 2D (waypoint editing, fences, measurement)
+- [ ] WebRTC video streaming
+- [ ] MQTT cloud relay for fleet management
+- [ ] Complete i18n (200+ keys per language, currently ~30 per new language)
+- [ ] MAVLink FTP for firmware upload and Lua script management
+- [ ] MSP protocol support (BetaFlight / iNav)
 
 ## License
 
-Proprietary — PengLiKeJi Technology Co., Ltd.
+MIT
