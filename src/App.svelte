@@ -67,6 +67,7 @@
   import SchedulerPanel from './components/SchedulerPanel.svelte';
   import PositionSourcePanel from './components/PositionSourcePanel.svelte';
   import NtripPanel from './components/NtripPanel.svelte';
+  import FleetDashboard from './components/FleetDashboard.svelte';
   let Map3DViewModule: any = $state(null);
   $effect(() => {
     if (app.mapMode === '3d' && !Map3DViewModule) {
@@ -130,6 +131,7 @@
   let showScheduler = $state(false);
   let showPosSource = $state(false);
   let showNtrip = $state(false);
+  let showFleet = $state(false);
 
   onMount(() => {
     loadLocale();
@@ -582,6 +584,9 @@
   {/if}
   {#if showNtrip}
     <NtripPanel onclose={() => showNtrip = false} />
+  {/if}
+  {#if showFleet}
+    <FleetDashboard onclose={() => showFleet = false} />
   {/if}
   {#if showShortcuts}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
