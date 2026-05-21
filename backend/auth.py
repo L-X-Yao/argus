@@ -1,15 +1,13 @@
 """Simple token-based authentication for remote operation mode."""
 from __future__ import annotations
+
 import hashlib
 import hmac
 import os
-import time
 from pathlib import Path
 
 from fastapi import Request, WebSocket
 from fastapi.responses import JSONResponse
-
-from .config import cfg
 
 TOKEN_FILE = Path(__file__).resolve().parent.parent / '.gcs_token'
 _token: str | None = None

@@ -17,16 +17,17 @@ GCS 连接:
     - 定期发送 ArduPilot 风格 STATUSTEXT 测试过滤器
 """
 
-import socket
-import struct
-import time
 import math
 import random
+import socket
+import struct
 import sys
+import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from backend.pllink_proto import ple, pld, bm as _bm
+from backend.pllink_proto import bm as _bm
+from backend.pllink_proto import pld, ple
 
 
 def bm(mid, p, s, ce):
@@ -651,7 +652,7 @@ def serve(port):
                     if not data:
                         break
                     buf += data
-                except socket.timeout:
+                except TimeoutError:
                     pass
 
                 while len(buf) >= 7:

@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import glob
 import os
 import shutil
@@ -12,12 +13,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
+from .auth import auth_middleware, auth_required, generate_token, verify_token, verify_ws_token
 from .config import cfg
 from .drone_link import DroneLink
 from .param_meta import get_metadata
 from .video import router as video_router
 from .ws_manager import WSManager
-from .auth import auth_middleware, verify_ws_token, auth_required, generate_token, verify_token
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 DIST_DIR = ROOT_DIR / 'dist'
@@ -147,7 +148,7 @@ async def api_version():
     except Exception:
         pass
     return {
-        'version': '3.2.0',
+        'version': '3.3.0',
         'git': git_hash,
         'protocols': ['standard', 'pllink'],
         'vehicles': ['copter', 'plane', 'rover', 'sub'],
@@ -265,7 +266,6 @@ async def api_tile_cache():
 @app.get('/api/terrain/elevation', tags=['Map'])
 async def api_terrain_elevation(request: Request):
     """Get ground elevation for a list of lat/lon points using SRTM data."""
-    import math
     params = request.query_params
     points_str = params.get('points', '')
     if not points_str:
@@ -286,7 +286,8 @@ SRTM_CACHE = ROOT_DIR / 'srtm_cache'
 
 
 async def _get_srtm_elevation(lat: float, lon: float) -> float:
-    import math, struct
+    import math
+    import struct
     ilat = int(math.floor(lat))
     ilon = int(math.floor(lon))
     ns = 'N' if ilat >= 0 else 'S'
@@ -329,7 +330,7 @@ async def _get_srtm_elevation(lat: float, lon: float) -> float:
 @app.post('/api/tile_bulk_download', tags=['Map'])
 async def api_tile_bulk_download(request: Request):
     """Download tiles for a bounding box at specified zoom levels."""
-    import asyncio, math
+    import math
     body = await request.json()
     lat_min, lat_max = body.get('lat_min', 0), body.get('lat_max', 0)
     lon_min, lon_max = body.get('lon_min', 0), body.get('lon_max', 0)
@@ -425,6 +426,7 @@ async def api_firmware_list():
 
 
 import base64 as _b64
+
 _FW_BASE = _b64.b64decode(b'aHR0cHM6Ly9maXJtd2FyZS5hcmR1cGlsb3Qub3JnLw==').decode()
 
 _BOARD_MAP = {

@@ -6,7 +6,7 @@
 
   let { onclose }: { onclose: () => void } = $props();
 
-  const STORAGE_KEY = 'pllink_ortho_overlays';
+  const STORAGE_KEY = 'argus_ortho_overlays';
 
   interface OrthoOverlay {
     id: number;

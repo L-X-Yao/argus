@@ -61,7 +61,7 @@ export function createPluginAPI(): PluginAPI {
       _listeners.get(event)?.forEach(cb => {
         try { cb(data); } catch {}
       });
-      window.dispatchEvent(new CustomEvent(`pllink:${event}`, { detail: data }));
+      window.dispatchEvent(new CustomEvent(`argus:${event}`, { detail: data }));
     },
 
     addPanel(el: HTMLElement) {

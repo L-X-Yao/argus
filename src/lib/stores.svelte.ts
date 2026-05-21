@@ -28,10 +28,6 @@ class AppState {
   drawingFence: boolean = $state(false);
   showFence: boolean = $state(false);
   fenceUploaded: boolean = $state(false);
-  showParams: boolean = $state(false);
-  showRc: boolean = $state(false);
-  showVibe: boolean = $state(false);
-  showServo: boolean = $state(false);
   showSettings: boolean = $state(false);
   mapRegion: 'china' | 'global' = $state('china');
   tileSource: string = $state('amap');
@@ -40,8 +36,6 @@ class AppState {
   rallyPoints: RallyPoint[] = $state([]);
   showRally: boolean = $state(false);
   kmlOverlay: { type: string; coords: [number, number][]; name: string }[] = $state([]);
-  showMultiVehicle: boolean = $state(false);
-  showReport: boolean = $state(false);
   unitSystem: 'metric' | 'imperial' = $state('metric');
 }
 
@@ -102,7 +96,7 @@ export function clearWaypoints() {
 
 export function loadSettings() {
   try {
-    const s = JSON.parse(localStorage.getItem('pllink_v3_settings') || '{}');
+    const s = JSON.parse(localStorage.getItem('argus_settings') || '{}');
     if (s.alt) app.defaultAlt = s.alt;
     if (s.speed) app.defaultSpeed = s.speed;
     if (s.radius) app.geoRadius = s.radius;
@@ -113,14 +107,14 @@ export function loadSettings() {
     if (s.tileSource) app.tileSource = s.tileSource;
   } catch {}
   try {
-    const wps = JSON.parse(localStorage.getItem('pllink_v3_waypoints') || '[]');
+    const wps = JSON.parse(localStorage.getItem('argus_waypoints') || '[]');
     if (Array.isArray(wps) && wps.length > 0) app.waypoints = wps;
   } catch {}
 }
 
 export function saveSettings() {
   try {
-    localStorage.setItem('pllink_v3_settings', JSON.stringify({
+    localStorage.setItem('argus_settings', JSON.stringify({
       alt: app.defaultAlt,
       speed: app.defaultSpeed,
       radius: app.geoRadius,
@@ -135,7 +129,7 @@ export function saveSettings() {
 
 export function saveWaypoints() {
   try {
-    localStorage.setItem('pllink_v3_waypoints', JSON.stringify(app.waypoints));
+    localStorage.setItem('argus_waypoints', JSON.stringify(app.waypoints));
   } catch {}
 }
 

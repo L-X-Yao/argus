@@ -1,13 +1,13 @@
 from __future__ import annotations
-import struct
+
 import math
+import struct
 import time
 from typing import TYPE_CHECKING
 
 from . import mavlink_dispatch
-from .statustext_filter import filter_statustext
-from .constants import PLANE_MODES, COPTER_MODES
 from .locale_text import lt
+from .statustext_filter import filter_statustext
 
 if TYPE_CHECKING:
     from .drone_link import DroneLink

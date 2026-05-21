@@ -34,13 +34,13 @@ let gpIndex = -1;
 
 export function loadGamepadMap() {
   try {
-    const saved = JSON.parse(localStorage.getItem('pllink_gamepad_map') || '{}');
+    const saved = JSON.parse(localStorage.getItem('argus_gamepad_map') || '{}');
     if (saved.roll !== undefined) gamepad.channelMap = { ...DEFAULT_MAP, ...saved };
   } catch {}
 }
 
 export function saveGamepadMap() {
-  try { localStorage.setItem('pllink_gamepad_map', JSON.stringify(gamepad.channelMap)); } catch {}
+  try { localStorage.setItem('argus_gamepad_map', JSON.stringify(gamepad.channelMap)); } catch {}
 }
 
 export function startGamepad() {

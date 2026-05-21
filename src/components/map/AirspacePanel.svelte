@@ -64,7 +64,7 @@
   /* ── Persist enable toggle ── */
   function loadEnabled(): boolean {
     try {
-      const v = localStorage.getItem('pllink_v3_airspace');
+      const v = localStorage.getItem('argus_airspace');
       if (v === 'true' || v === 'false') return v === 'true';
     } catch {}
     return false;
@@ -74,7 +74,7 @@
 
   function toggleEnabled(val: boolean) {
     enabled = val;
-    try { localStorage.setItem('pllink_v3_airspace', String(val)); } catch {}
+    try { localStorage.setItem('argus_airspace', String(val)); } catch {}
   }
 
   /* ── Distance calculation (Haversine) ── */

@@ -154,7 +154,7 @@ def build():
         zip_name.unlink()
 
     with zipfile.ZipFile(zip_name, 'w', zipfile.ZIP_DEFLATED) as zf:
-        for root, dirs, files in os.walk(build_dir):
+        for root, _dirs, files in os.walk(build_dir):
             for f in files:
                 filepath = Path(root) / f
                 arcname = 'PLLink_GCS_v3/' + str(filepath.relative_to(build_dir))

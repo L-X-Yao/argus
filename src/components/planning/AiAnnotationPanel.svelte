@@ -41,13 +41,13 @@
   let editNotes = $state('');
 
   function storageKey(): string {
-    return `pllink_ai_annotations_${imgFileName}`;
+    return `argus_ai_annotations_${imgFileName}`;
   }
 
   function loadAnnotations(): Annotation[] {
     if (!imgFileName) return [];
     try {
-      const raw = localStorage.getItem(`pllink_ai_annotations_${imgFileName}`);
+      const raw = localStorage.getItem(`argus_ai_annotations_${imgFileName}`);
       if (raw) {
         const parsed = JSON.parse(raw);
         if (Array.isArray(parsed)) return parsed;

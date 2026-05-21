@@ -11,7 +11,7 @@ export interface FlightRecord {
   eventCount: number;
 }
 
-const DB_KEY = 'pllink_flights';
+const DB_KEY = 'argus_flights';
 
 export function saveFlightRecord(record: Omit<FlightRecord, 'id'>): void {
   const records = loadFlightRecords();

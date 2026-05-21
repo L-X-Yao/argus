@@ -7,7 +7,7 @@
   let { onclose }: { onclose: () => void } = $props();
 
   /* ── Editable fields ── */
-  let pilotName = $state(localStorage.getItem('pllink_pilot_name') ?? '');
+  let pilotName = $state(localStorage.getItem('argus_pilot_name') ?? '');
   let reportDate = $state(new Date().toISOString().slice(0, 10));
   let weather = $state('');
   let notes = $state('');
@@ -39,7 +39,7 @@
 
   /* ── Persist pilot name ── */
   function savePilot() {
-    try { localStorage.setItem('pllink_pilot_name', pilotName); } catch {}
+    try { localStorage.setItem('argus_pilot_name', pilotName); } catch {}
   }
 
   /* ── Export report ── */

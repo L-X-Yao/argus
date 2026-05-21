@@ -25,13 +25,13 @@
 
   onMount(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem('pllink_port_history') || '[]');
+      const saved = JSON.parse(localStorage.getItem('argus_port_history') || '[]');
       if (Array.isArray(saved)) portHistory = saved;
-      const lastPort = localStorage.getItem('pllink_last_port');
+      const lastPort = localStorage.getItem('argus_last_port');
       if (lastPort) port = lastPort;
-      const lastBaud = localStorage.getItem('pllink_last_baud');
+      const lastBaud = localStorage.getItem('argus_last_baud');
       if (lastBaud) baud = parseInt(lastBaud);
-      const profs = JSON.parse(localStorage.getItem('pllink_profiles') || '[]');
+      const profs = JSON.parse(localStorage.getItem('argus_profiles') || '[]');
       if (Array.isArray(profs)) profiles = profs;
     } catch {}
     fetchPorts();
@@ -40,7 +40,7 @@
   function saveProfile() {
     const name = profileName.trim() || port;
     profiles = [...profiles.filter(p => p.name !== name), { name, port, baud, protocol }];
-    try { localStorage.setItem('pllink_profiles', JSON.stringify(profiles)); } catch {}
+    try { localStorage.setItem('argus_profiles', JSON.stringify(profiles)); } catch {}
     showProfileSave = false;
     profileName = '';
   }
@@ -52,7 +52,7 @@
 
   function deleteProfile(name: string) {
     profiles = profiles.filter(p => p.name !== name);
-    try { localStorage.setItem('pllink_profiles', JSON.stringify(profiles)); } catch {}
+    try { localStorage.setItem('argus_profiles', JSON.stringify(profiles)); } catch {}
   }
 
   const PRESETS = ['tcp:localhost:5770', 'udp:14550', 'udp:14551'];
@@ -70,9 +70,9 @@
     if (port && !portHistory.includes(port)) portHistory = [port, ...portHistory].slice(0, 10);
     else if (port) portHistory = [port, ...portHistory.filter(p => p !== port)].slice(0, 10);
     try {
-      localStorage.setItem('pllink_port_history', JSON.stringify(portHistory));
-      localStorage.setItem('pllink_last_port', port);
-      localStorage.setItem('pllink_last_baud', String(baud));
+      localStorage.setItem('argus_port_history', JSON.stringify(portHistory));
+      localStorage.setItem('argus_last_port', port);
+      localStorage.setItem('argus_last_baud', String(baud));
     } catch {}
   }
 

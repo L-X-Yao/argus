@@ -54,14 +54,14 @@
 
   function saveConfig() {
     try {
-      localStorage.setItem('pllink_ntrip', JSON.stringify({ host, port, mountpoint, username }));
+      localStorage.setItem('argus_ntrip', JSON.stringify({ host, port, mountpoint, username }));
     } catch {}
   }
 
   import { onMount } from 'svelte';
   onMount(() => {
     try {
-      const saved = JSON.parse(localStorage.getItem('pllink_ntrip') || '{}');
+      const saved = JSON.parse(localStorage.getItem('argus_ntrip') || '{}');
       if (saved.host) host = saved.host;
       if (saved.port) port = saved.port;
       if (saved.mountpoint) mountpoint = saved.mountpoint;

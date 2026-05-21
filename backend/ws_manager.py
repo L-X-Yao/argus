@@ -1,13 +1,15 @@
 from __future__ import annotations
+
 import asyncio
 import json
 import logging
+
 from fastapi import WebSocket, WebSocketDisconnect
 
+from . import commands
 from .config import cfg
 from .drone_link import DroneLink
 from .locale_text import lt
-from . import commands
 
 logger = logging.getLogger(__name__)
 

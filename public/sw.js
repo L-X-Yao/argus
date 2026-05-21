@@ -1,4 +1,4 @@
-const CACHE_NAME = 'pllink-gcs-v3.3';
+const CACHE_NAME = 'argus-gcs-v3.3';
 const APP_SHELL = [
   '/',
   '/manifest.json',

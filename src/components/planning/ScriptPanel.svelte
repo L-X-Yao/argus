@@ -26,7 +26,7 @@ log("Alt: " + drone.alt_rel + "m");
 
   function loadScripts() {
     try {
-      const saved = JSON.parse(localStorage.getItem('pllink_scripts') || '[]');
+      const saved = JSON.parse(localStorage.getItem('argus_scripts') || '[]');
       if (Array.isArray(saved)) scripts = saved;
     } catch {}
   }
@@ -35,14 +35,14 @@ log("Alt: " + drone.alt_rel + "m");
   function saveScript() {
     const name = window.prompt('Script name:') || 'Untitled';
     scripts = [...scripts.filter(s => s.name !== name), { name, code }];
-    try { localStorage.setItem('pllink_scripts', JSON.stringify(scripts)); } catch {}
+    try { localStorage.setItem('argus_scripts', JSON.stringify(scripts)); } catch {}
     addToast(`Saved: ${name}`, 'success');
   }
 
   function loadScript(s: { name: string; code: string }) { code = s.code; }
   function deleteScript(name: string) {
     scripts = scripts.filter(s => s.name !== name);
-    try { localStorage.setItem('pllink_scripts', JSON.stringify(scripts)); } catch {}
+    try { localStorage.setItem('argus_scripts', JSON.stringify(scripts)); } catch {}
   }
 
   async function runScript() {

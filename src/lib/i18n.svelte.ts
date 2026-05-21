@@ -34,7 +34,7 @@ export function t(key: string): string {
 
 export function setLocale(l: Locale) {
   i18nState.locale = l;
-  try { localStorage.setItem('pllink_locale', l); } catch {}
+  try { localStorage.setItem('argus_locale', l); } catch {}
   if (!loadedDicts[l]) {
     LOCALE_LOADERS[l]().then(mod => { loadedDicts[l] = mod.default; });
   }
@@ -86,7 +86,7 @@ export { VALID_LOCALES };
 
 export function loadLocale() {
   try {
-    const saved = localStorage.getItem('pllink_locale');
+    const saved = localStorage.getItem('argus_locale');
     if (saved && VALID_LOCALES.includes(saved as Locale)) {
       i18nState.locale = saved as Locale;
       if (!loadedDicts[saved as Locale]) {

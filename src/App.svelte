@@ -35,6 +35,7 @@
     }
   });
   import { showConfirm, showSlide, undo } from './lib/stores.svelte';
+  import { migrateLocalStorage } from './lib/migrate';
   import { panels, type PanelId } from './lib/panels.svelte';
   import { ChevronUp, ChevronDown, CornerDownLeft, Pause, HardDrive, Wrench, Video, SlidersHorizontal, PanelLeftClose, Plane, MapPinned, Activity, Settings2, X as XIcon, Globe } from '@lucide/svelte';
   import type { Component } from 'svelte';
@@ -54,6 +55,7 @@
   const p = panels;
 
   onMount(() => {
+    migrateLocalStorage();
     loadLocale();
     loadSettings();
     connectWs();

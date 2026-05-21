@@ -4,14 +4,14 @@ let _system: UnitSystem = 'metric';
 
 export function setUnitSystem(s: UnitSystem) {
   _system = s;
-  try { localStorage.setItem('pllink_units', s); } catch {}
+  try { localStorage.setItem('argus_units', s); } catch {}
 }
 
 export function getUnitSystem(): UnitSystem { return _system; }
 
 export function loadUnitSystem() {
   try {
-    const saved = localStorage.getItem('pllink_units');
+    const saved = localStorage.getItem('argus_units');
     if (saved === 'imperial') _system = 'imperial';
   } catch {}
 }

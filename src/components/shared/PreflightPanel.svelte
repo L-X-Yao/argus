@@ -14,7 +14,7 @@
   }
 
   /* ── Customization state ── */
-  const CONFIG_KEY = 'pllink_preflight_config';
+  const CONFIG_KEY = 'argus_preflight_config';
 
   function loadConfig(): Record<string, boolean> {
     try {

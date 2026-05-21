@@ -1,5 +1,6 @@
 """Transport wrappers for TCP, UDP, and serial connections."""
 from __future__ import annotations
+
 import socket
 
 from .config import cfg
@@ -12,7 +13,7 @@ class TcpWrapper:
     def read(self, n: int) -> bytes:
         try:
             return self._sock.recv(n)
-        except (socket.timeout, OSError):
+        except (TimeoutError, OSError):
             return b''
 
     def write(self, data: bytes) -> None:
@@ -36,7 +37,7 @@ class UdpWrapper:
             if not self._remote:
                 self._remote = addr
             return data
-        except (socket.timeout, OSError):
+        except (TimeoutError, OSError):
             return b''
 
     def write(self, data: bytes) -> None:

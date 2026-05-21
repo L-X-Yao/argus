@@ -14,7 +14,7 @@
     lon: number;
   }
 
-  const STORAGE_KEY = 'pllink_annotations';
+  const STORAGE_KEY = 'argus_annotations';
 
   let annotations: Annotation[] = $state(loadAnnotations());
   let showForm = $state(false);

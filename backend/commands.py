@@ -1,4 +1,5 @@
 from __future__ import annotations
+
 import struct
 import threading
 import time
@@ -27,7 +28,7 @@ def execute(cmd: str, param, link: DroneLink, data: dict | None = None) -> dict 
         link.add_event(lt('rtl', link.locale) % rm, 'rtl')
         _send_set_mode(link, rm)
     elif cmd == 'mode' and param is not None:
-        from .constants import PLANE_MODES, COPTER_MODES
+        from .constants import COPTER_MODES, PLANE_MODES
         md = PLANE_MODES if link.is_plane() else COPTER_MODES
         link.add_event(lt('mode_to', link.locale) % md.get(int(param), str(param)), 'mode_to')
         _send_set_mode(link, int(param))

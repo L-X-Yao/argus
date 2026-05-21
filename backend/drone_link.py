@@ -1,26 +1,50 @@
 from __future__ import annotations
+
 import struct
 import threading
 import time
 from pathlib import Path
 
-from .pllink_proto import ple, pld, bm
-
-from .constants import (COPTER_MODES, PLANE_MODES, ROVER_MODES, SUB_MODES,
-                        COPTER_BTNS, PLANE_BTNS, ROVER_BTNS, SUB_BTNS, FIX_NAMES,
-                        COPTER_MODES_EN, PLANE_MODES_EN, ROVER_MODES_EN, SUB_MODES_EN,
-                        COPTER_BTNS_EN, PLANE_BTNS_EN, ROVER_BTNS_EN, SUB_BTNS_EN, FIX_NAMES_EN)
-from . import mavlink_dispatch
-from .mavlink_handlers import init_handlers
 from . import commands as cmd_module
+from . import mavlink_dispatch
 from .config import cfg
 from .connection import open_port
-from .log import logger
-from .param_manager import ParamManager
+from .constants import (
+    COPTER_BTNS,
+    COPTER_BTNS_EN,
+    COPTER_MODES,
+    COPTER_MODES_EN,
+    FIX_NAMES,
+    FIX_NAMES_EN,
+    PLANE_BTNS,
+    PLANE_BTNS_EN,
+    PLANE_MODES,
+    PLANE_MODES_EN,
+    ROVER_BTNS,
+    ROVER_BTNS_EN,
+    ROVER_MODES,
+    ROVER_MODES_EN,
+    SUB_BTNS,
+    SUB_BTNS_EN,
+    SUB_MODES,
+    SUB_MODES_EN,
+)
 from .locale_text import lt
-from .state import (AttitudeState, BatteryState, GpsState, VehicleState,
-                    MissionState, DiagnosticState, RcServoState, LogState,
-                    TrafficState)
+from .log import logger
+from .mavlink_handlers import init_handlers
+from .param_manager import ParamManager
+from .pllink_proto import pld, ple
+from .state import (
+    AttitudeState,
+    BatteryState,
+    DiagnosticState,
+    GpsState,
+    LogState,
+    MissionState,
+    RcServoState,
+    TrafficState,
+    VehicleState,
+)
 
 _CRC_EXTRA = {
     0: 50, 1: 124, 22: 220, 24: 24, 30: 39, 33: 104, 35: 244, 36: 222,
@@ -293,7 +317,7 @@ class DroneLink:
     def _start_log(self) -> None:
         log_dir = Path(__file__).resolve().parent.parent / 'logs'
         log_dir.mkdir(exist_ok=True)
-        logname = str(log_dir / time.strftime('pllink_%Y%m%d_%H%M%S.csv'))
+        logname = str(log_dir / time.strftime('argus_%Y%m%d_%H%M%S.csv'))
         self._logfile = open(logname, 'w', encoding='utf-8')
         self._logfile.write('time,roll,pitch,yaw,lat,lon,alt_rel,alt_msl,gs,vz,voltage,current,remaining,mode,mode_name,armed,gps_fix,sats,wp,hdg,dist,bat_time\n')
         self._last_log_time = 0.0

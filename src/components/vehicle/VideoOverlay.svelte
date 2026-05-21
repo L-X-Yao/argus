@@ -13,7 +13,7 @@
   let arGimbalPitch = $state(0);
 
   let videoUrl = $state('');
-  onMount(() => { try { videoUrl = localStorage.getItem('pllink_video_url') || ''; } catch {} });
+  onMount(() => { try { videoUrl = localStorage.getItem('argus_video_url') || ''; } catch {} });
   let streaming = $state(false);
   let size = $state<'sm' | 'md' | 'lg'>('md');
   let error = $state('');
@@ -44,7 +44,7 @@
     }
     error = '';
     streaming = true;
-    try { localStorage.setItem('pllink_video_url', videoUrl); } catch {}
+    try { localStorage.setItem('argus_video_url', videoUrl); } catch {}
   }
 
   async function stopStream() {

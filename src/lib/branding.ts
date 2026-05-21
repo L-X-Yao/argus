@@ -21,7 +21,7 @@ let _brand: BrandConfig = { ...DEFAULT_BRAND };
 
 export function loadBranding() {
   try {
-    const el = document.getElementById('pllink-branding');
+    const el = document.getElementById('argus-branding');
     if (el) {
       const cfg = JSON.parse(el.textContent || '{}');
       _brand = { ...DEFAULT_BRAND, ...cfg };

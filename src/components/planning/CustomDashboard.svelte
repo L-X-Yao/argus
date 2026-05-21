@@ -122,7 +122,7 @@
   ];
 
   /* ── Selected widgets (persisted) ── */
-  const STORAGE_KEY = 'pllink_dashboard_widgets';
+  const STORAGE_KEY = 'argus_dashboard_widgets';
 
   function loadSelection(): Set<string> {
     try {

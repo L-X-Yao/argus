@@ -1,5 +1,6 @@
 """Parameter management — MAVLink PARAM protocol."""
 from __future__ import annotations
+
 import json
 import struct
 import time

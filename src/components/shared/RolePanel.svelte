@@ -43,7 +43,7 @@
   /* ── Persist role to localStorage ── */
   function loadRole(): Role {
     try {
-      const v = localStorage.getItem('pllink_v3_role');
+      const v = localStorage.getItem('argus_role');
       if (v === 'pilot' || v === 'observer' || v === 'commander') return v;
     } catch {}
     return 'pilot';
@@ -53,7 +53,7 @@
 
   function selectRole(r: Role) {
     currentRole = r;
-    try { localStorage.setItem('pllink_v3_role', r); } catch {}
+    try { localStorage.setItem('argus_role', r); } catch {}
     addToast(`${t('role.set')}: ${t('role.' + r)}`, 'info');
   }
 </script>

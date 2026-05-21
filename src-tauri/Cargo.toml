@@ -1,7 +1,7 @@
 [package]
-name = "pllink-gcs"
-version = "3.0.0"
-description = "PL-Link 地面站"
+name = "argus-gcs"
+version = "3.3.0"
+description = "Argus 地面控制站"
 authors = ["Plkj"]
 edition = "2021"
 

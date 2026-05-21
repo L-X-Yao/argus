@@ -1,0 +1,45 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install Python deps
+        run: pip install -e '.[dev]' ruff
+
+      - name: Install Node deps
+        run: npm ci
+
+      - name: Ruff lint
+        run: ruff check backend/ scripts/ tests/
+
+      - name: Python tests
+        run: python -m pytest tests/test_unit_*.py -v
+
+      - name: TypeScript check
+        run: npx svelte-check --tsconfig ./tsconfig.json
+
+      - name: Frontend tests
+        run: npx vitest run
+
+      - name: Build
+        run: npm run build

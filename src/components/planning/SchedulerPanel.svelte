@@ -7,7 +7,7 @@
 
   let { onclose }: { onclose: () => void } = $props();
 
-  const STORAGE_KEY = 'pllink_schedules';
+  const STORAGE_KEY = 'argus_schedules';
 
   type Frequency = 'once' | 'daily' | 'weekly' | 'custom';
   type ScheduleStatus = 'pending' | 'active' | 'completed';
@@ -38,8 +38,8 @@
     try {
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key?.startsWith('pllink_mission_')) {
-          names.push(key.replace('pllink_mission_', ''));
+        if (key?.startsWith('argus_mission_')) {
+          names.push(key.replace('argus_mission_', ''));
         }
       }
     } catch {}
