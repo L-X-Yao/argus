@@ -74,6 +74,29 @@
     return v[key] || '';
   }
 
+  function getBitmaskEntries(name: string, val: number): { bit: number; label: string; set: boolean }[] {
+    const bm = meta[name]?.bitmask;
+    if (!bm) return [];
+    const iv = Math.round(val);
+    return Object.entries(bm).map(([k, v]) => {
+      const bit = parseInt(k);
+      return { bit, label: v, set: (iv & (1 << bit)) !== 0 };
+    }).sort((a, b) => a.bit - b.bit);
+  }
+
+  interface TreeGroup { name: string; params: typeof filtered; expanded: boolean }
+  let treeGroups = $derived.by((): TreeGroup[] => {
+    if (viewMode !== 'tree') return [];
+    const groups = new Map<string, typeof filtered>();
+    for (const p of filtered) {
+      const prefix = p.name.split('_').slice(0, p.name.startsWith('BRD') || p.name.startsWith('LOG') || p.name.startsWith('GPS') ? 1 : Math.min(2, p.name.split('_').length - 1)).join('_');
+      const key = prefix || 'OTHER';
+      if (!groups.has(key)) groups.set(key, []);
+      groups.get(key)!.push(p);
+    }
+    return Array.from(groups.entries()).map(([name, params]) => ({ name, params, expanded: false }));
+  });
+
   const CAT_DEFS: { key: string; i18nKey: string; icon: Component; match: (n: string) => boolean }[] = [
     { key: 'battery', i18nKey: 'cat.battery', icon: Battery, match: n => n.startsWith('BATT') || n === 'FS_BATT_ENABLE' || n === 'FS_BATT_MAH' || n === 'FS_BATT_VOLTAGE' },
     { key: 'failsafe', i18nKey: 'cat.failsafe', icon: ShieldAlert, match: n => n.startsWith('FS_') },
@@ -92,6 +115,8 @@
   let editName = $state<string | null>(null);
   let editValue = $state('');
   let modified = $state<Set<string>>(new Set());
+  let expandedParam = $state<string | null>(null);
+  let viewMode = $state<'flat' | 'tree'>('flat');
 
   function hasDefaultDiff(name: string, value: number): boolean {
     const m = meta[name];
@@ -204,6 +229,14 @@
     addToast(t('param.exported').replace('{n}', String(diffs.length)), 'success');
   }
 
+  function toggleBitmaskBit(name: string, currentVal: number, bit: number) {
+    const newVal = currentVal ^ (1 << bit);
+    sendCommand('param_set', undefined, { name, value: newVal });
+    modified.add(name);
+    modified = new Set(modified);
+    addToast(`${name} = ${newVal}`, 'info', 2000);
+  }
+
   function importParams() {
     const input = document.createElement('input');
     input.type = 'file'; input.accept = '.param,.txt';
@@ -237,6 +270,94 @@
     input.click();
   }
 </script>
+
+{#snippet paramRow(p: Param)}
+  {@const desc = getDesc(p.name)}
+  {@const units = getUnits(p.name)}
+  {@const rangeStr = getRangeStr(p.name)}
+  {@const valLabel = getValueLabel(p.name, p.value)}
+  {@const isExpanded = expandedParam === p.name}
+  {@const bmEntries = getBitmaskEntries(p.name, p.value)}
+  <div>
+    <div class="flex items-center gap-2 px-2 py-1.5 text-xs border-b border-border/50 hover:bg-muted/50 transition-colors
+          {modified.has(p.name) ? 'bg-warning/5' : ''}">
+      <!-- svelte-ignore a11y_click_events_have_key_events -->
+      <!-- svelte-ignore a11y_no_static_element_interactions -->
+      <div class="w-40 shrink-0 cursor-pointer" onclick={() => expandedParam = isExpanded ? null : p.name}>
+        <div class="font-bold font-mono text-[11px] leading-tight flex items-center gap-1">
+          {#if metaLoaded}<span class="text-[9px] text-muted-foreground/40">{isExpanded ? '▼' : '▶'}</span>{/if}
+          {p.name}
+        </div>
+        {#if desc}
+          <div class="text-[10px] text-muted-foreground leading-tight truncate" title={desc}>{desc}</div>
+        {/if}
+      </div>
+      {#if editName === p.name}
+        <div class="flex-1 flex items-center gap-1 min-w-0">
+          <input type="text" bind:value={editValue} onkeydown={onKeydown}
+                 class="w-24 h-6 px-1 text-right font-mono text-xs bg-input border-2 border-primary rounded text-foreground focus:outline-none" />
+          {#if units}<span class="text-[10px] text-muted-foreground">{units}</span>{/if}
+          {#if rangeStr}<span class="text-[10px] text-muted-foreground/60">[{rangeStr}]</span>{/if}
+          <Button variant="default" size="xs" onclick={submitEdit}>{t('param.write')}</Button>
+          <Button variant="ghost" size="xs" onclick={cancelEdit}>{t('param.cancel')}</Button>
+        </div>
+      {:else}
+        <div class="flex-1 flex items-center gap-1.5 min-w-0">
+          <!-- svelte-ignore a11y_click_events_have_key_events -->
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div class="font-mono cursor-pointer px-1.5 py-0.5 rounded hover:bg-input transition-colors text-right min-w-[60px] {hasDefaultDiff(p.name, p.value) ? 'text-warning' : ''}"
+               onclick={() => startEdit(p)}>{fmtValue(p.value)}</div>
+          {#if units}<span class="text-[10px] text-muted-foreground">{units}</span>{/if}
+          {#if valLabel}<span class="text-[10px] text-primary/70 truncate">{valLabel}</span>{/if}
+          {#if hasDefaultDiff(p.name, p.value)}
+            <button class="text-[9px] text-muted-foreground/60 hover:text-warning px-0.5 cursor-pointer bg-transparent border-none"
+                    onclick={() => { sendCommand('param_set', undefined, { name: p.name, value: (meta[p.name] as any).default }); modified.add(p.name); modified = new Set(modified); }}
+                    title={t('tip.resetDefault').replace('{v}', String((meta[p.name] as any).default))}>↩</button>
+          {/if}
+          {#if rangeStr}<span class="text-[10px] text-muted-foreground/50 ml-auto whitespace-nowrap">[{rangeStr}]</span>{/if}
+        </div>
+      {/if}
+    </div>
+    {#if isExpanded && metaLoaded}
+      <div class="px-3 py-2 bg-muted/30 border-b border-border/50 text-[11px] space-y-1.5">
+        {#if meta[p.name]?.desc}
+          <p class="text-muted-foreground leading-relaxed">{meta[p.name]!.desc}</p>
+        {/if}
+        <div class="flex flex-wrap gap-x-4 gap-y-1 text-[10px]">
+          {#if meta[p.name]?.group}<span class="text-muted-foreground/60">Group: <span class="text-foreground">{meta[p.name]!.group}</span></span>{/if}
+          {#if units}<span class="text-muted-foreground/60">Units: <span class="text-foreground">{units}</span></span>{/if}
+          {#if rangeStr}<span class="text-muted-foreground/60">Range: <span class="text-foreground">{rangeStr}</span></span>{/if}
+          {#if meta[p.name]?.step}<span class="text-muted-foreground/60">Step: <span class="text-foreground">{meta[p.name]!.step}</span></span>{/if}
+          {#if 'default' in (meta[p.name] || {})}<span class="text-muted-foreground/60">Default: <span class="text-foreground">{(meta[p.name] as any).default}</span></span>{/if}
+        </div>
+        {#if meta[p.name]?.values}
+          <div class="flex flex-wrap gap-1">
+            {#each Object.entries(meta[p.name]!.values!) as [code, label]}
+              <span class="px-1.5 py-0.5 rounded text-[10px] border
+                {String(Math.round(p.value)) === code ? 'bg-primary/20 text-primary border-primary/50' : 'bg-muted text-muted-foreground border-border/50'}">
+                {code}: {label}
+              </span>
+            {/each}
+          </div>
+        {/if}
+        {#if bmEntries.length > 0}
+          <div class="space-y-0.5">
+            <span class="text-[10px] text-muted-foreground/60 font-semibold">Bitmask:</span>
+            <div class="flex flex-wrap gap-1">
+              {#each bmEntries as bm}
+                <button class="px-1.5 py-0.5 rounded text-[10px] border cursor-pointer transition-colors
+                  {bm.set ? 'bg-green-500/20 text-green-400 border-green-500/50' : 'bg-muted text-muted-foreground border-border/50 hover:border-primary/50'}"
+                        onclick={() => toggleBitmaskBit(p.name, p.value, bm.bit)}>
+                  {bm.bit}: {bm.label} {bm.set ? '✓' : ''}
+                </button>
+              {/each}
+            </div>
+          </div>
+        {/if}
+      </div>
+    {/if}
+  </div>
+{/snippet}
 
 <div class="bg-card border border-border rounded-xl p-4 flex flex-col h-full">
   <div class="flex items-center justify-between flex-wrap gap-2 mb-3">
@@ -288,6 +409,12 @@
     <div class="flex items-center gap-2 mb-2">
       <input type="text" placeholder={t('param.search')} bind:value={search}
              class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50" />
+      <button class="text-[11px] px-2 py-0.5 rounded border transition-all cursor-pointer
+        {viewMode === 'tree' ? 'bg-primary/20 text-primary border-primary/50' : 'text-muted-foreground border-border hover:text-foreground'}"
+              onclick={() => viewMode = viewMode === 'flat' ? 'tree' : 'flat'}
+              title={viewMode === 'flat' ? 'Tree view' : 'Flat view'}>
+        {viewMode === 'flat' ? '🌲' : '☰'}
+      </button>
       {#if metaLoaded && modifiedCount > 0}
         <button class="text-[11px] px-2 py-0.5 rounded border transition-all cursor-pointer
           {showModifiedOnly ? 'bg-warning/20 text-warning border-warning/50' : 'text-muted-foreground border-border hover:text-foreground'}"
@@ -299,46 +426,27 @@
     </div>
 
     <div class="flex-1 min-h-0 overflow-y-auto rounded-lg border border-border" bind:this={scrollContainer} onscroll={onScroll}>
-      {#each visibleParams as p (p.name)}
-        {@const desc = getDesc(p.name)}
-        {@const units = getUnits(p.name)}
-        {@const rangeStr = getRangeStr(p.name)}
-        {@const valLabel = getValueLabel(p.name, p.value)}
-        <div class="flex items-center gap-2 px-2 py-1.5 text-xs border-b border-border/50 hover:bg-muted/50 transition-colors
-              {modified.has(p.name) ? 'bg-warning/5' : ''}">
-          <div class="w-40 shrink-0">
-            <div class="font-bold font-mono text-[11px] leading-tight">{p.name}</div>
-            {#if desc}
-              <div class="text-[10px] text-muted-foreground leading-tight truncate" title={desc}>{desc}</div>
-            {/if}
+      {#if viewMode === 'tree' && treeGroups.length > 0}
+        {#each treeGroups as group}
+          <!-- svelte-ignore a11y_click_events_have_key_events -->
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div class="flex items-center gap-2 px-2 py-1.5 text-xs border-b border-border bg-muted/30 cursor-pointer hover:bg-muted/60 transition-colors"
+               onclick={() => group.expanded = !group.expanded}>
+            <span class="text-[10px] text-muted-foreground w-4">{group.expanded ? '▼' : '▶'}</span>
+            <span class="font-bold font-mono text-primary text-[11px]">{group.name}</span>
+            <span class="text-[10px] text-muted-foreground">({group.params.length})</span>
           </div>
-          {#if editName === p.name}
-            <div class="flex-1 flex items-center gap-1 min-w-0">
-              <input type="text" bind:value={editValue} onkeydown={onKeydown}
-                     class="w-24 h-6 px-1 text-right font-mono text-xs bg-input border-2 border-primary rounded text-foreground focus:outline-none" />
-              {#if units}<span class="text-[10px] text-muted-foreground">{units}</span>{/if}
-              {#if rangeStr}<span class="text-[10px] text-muted-foreground/60">[{rangeStr}]</span>{/if}
-              <Button variant="default" size="xs" onclick={submitEdit}>{t('param.write')}</Button>
-              <Button variant="ghost" size="xs" onclick={cancelEdit}>{t('param.cancel')}</Button>
-            </div>
-          {:else}
-            <div class="flex-1 flex items-center gap-1.5 min-w-0">
-              <!-- svelte-ignore a11y_click_events_have_key_events -->
-              <!-- svelte-ignore a11y_no_static_element_interactions -->
-              <div class="font-mono cursor-pointer px-1.5 py-0.5 rounded hover:bg-input transition-colors text-right min-w-[60px] {hasDefaultDiff(p.name, p.value) ? 'text-warning' : ''}"
-                   onclick={() => startEdit(p)}>{fmtValue(p.value)}</div>
-              {#if units}<span class="text-[10px] text-muted-foreground">{units}</span>{/if}
-              {#if valLabel}<span class="text-[10px] text-primary/70 truncate">{valLabel}</span>{/if}
-              {#if hasDefaultDiff(p.name, p.value)}
-                <button class="text-[9px] text-muted-foreground/60 hover:text-warning px-0.5 cursor-pointer bg-transparent border-none"
-                        onclick={() => { sendCommand('param_set', undefined, { name: p.name, value: (meta[p.name] as any).default }); modified.add(p.name); modified = new Set(modified); }}
-                        title={t('tip.resetDefault').replace('{v}', String((meta[p.name] as any).default))}>↩</button>
-              {/if}
-              {#if rangeStr}<span class="text-[10px] text-muted-foreground/50 ml-auto whitespace-nowrap">[{rangeStr}]</span>{/if}
-            </div>
+          {#if group.expanded}
+            {#each group.params as p (p.name)}
+              {@render paramRow(p)}
+            {/each}
           {/if}
-        </div>
-      {/each}
+        {/each}
+      {:else}
+        {#each visibleParams as p (p.name)}
+          {@render paramRow(p)}
+        {/each}
+      {/if}
     </div>
   {:else if !paramState.fetching}
     <div class="text-center py-8 text-muted-foreground text-sm">{t('param.connectHint')}</div>

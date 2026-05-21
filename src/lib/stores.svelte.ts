@@ -34,6 +34,7 @@ class AppState {
   showServo: boolean = $state(false);
   showSettings: boolean = $state(false);
   mapRegion: 'china' | 'global' = $state('china');
+  tileSource: string = $state('amap');
   linkHistory: { t: number; rate: number; age: number }[] = $state([]);
   rallyPoints: RallyPoint[] = $state([]);
   showRally: boolean = $state(false);
@@ -108,6 +109,7 @@ export function loadSettings() {
     if (s.muted !== undefined) app.audioMuted = s.muted;
     if (s.voice !== undefined) app.voiceEnabled = s.voice;
     if (s.region) app.mapRegion = s.region;
+    if (s.tileSource) app.tileSource = s.tileSource;
   } catch {}
   try {
     const wps = JSON.parse(localStorage.getItem('pllink_v3_waypoints') || '[]');
@@ -125,6 +127,7 @@ export function saveSettings() {
       muted: app.audioMuted,
       voice: app.voiceEnabled,
       region: app.mapRegion,
+      tileSource: app.tileSource,
     }));
   } catch {}
 }

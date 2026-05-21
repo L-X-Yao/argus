@@ -30,6 +30,59 @@ TILE_URLS = {
     '8': 'https://wprd01.is.autonavi.com/appmaptile?x={x}&y={y}&z={z}&lang=zh_cn&size=1&scl=1&style=8',
     'osm': 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
     'osm_sat': 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
+    'google_sat': 'https://mt1.google.com/vt/lyrs=s&x={x}&y={y}&z={z}',
+    'google_street': 'https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+    'google_hybrid': 'https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}',
+    'google_terrain': 'https://mt1.google.com/vt/lyrs=p&x={x}&y={y}&z={z}',
+    'carto_dark': 'https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png',
+    'carto_light': 'https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png',
+    'esri_topo': 'https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}',
+    'tdt_vec': 'https://t0.tianditu.gov.cn/vec_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=vec&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILECOL={x}&TILEROW={y}&TILEMATRIX={z}&tk=',
+    'tdt_sat': 'https://t0.tianditu.gov.cn/img_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=img&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILECOL={x}&TILEROW={y}&TILEMATRIX={z}&tk=',
+    'tdt_label': 'https://t0.tianditu.gov.cn/cia_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=cia&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILECOL={x}&TILEROW={y}&TILEMATRIX={z}&tk=',
+}
+
+TILE_SOURCES = {
+    'amap': {
+        'name': 'Amap (Gaode)',
+        'sat': '6', 'vec': '7', 'label': '8',
+        'gcj02': True, 'region': 'china',
+    },
+    'google_sat': {
+        'name': 'Google Satellite',
+        'sat': 'google_sat', 'vec': 'google_street', 'label': None,
+        'gcj02': False, 'region': 'global',
+    },
+    'google_hybrid': {
+        'name': 'Google Hybrid',
+        'sat': 'google_hybrid', 'vec': 'google_street', 'label': None,
+        'gcj02': False, 'region': 'global',
+    },
+    'osm': {
+        'name': 'OpenStreetMap',
+        'sat': 'osm_sat', 'vec': 'osm', 'label': None,
+        'gcj02': False, 'region': 'global',
+    },
+    'carto_dark': {
+        'name': 'CartoDB Dark',
+        'sat': 'carto_dark', 'vec': 'carto_dark', 'label': None,
+        'gcj02': False, 'region': 'global',
+    },
+    'carto_light': {
+        'name': 'CartoDB Light',
+        'sat': 'carto_light', 'vec': 'carto_light', 'label': None,
+        'gcj02': False, 'region': 'global',
+    },
+    'esri': {
+        'name': 'Esri Satellite + Topo',
+        'sat': 'osm_sat', 'vec': 'esri_topo', 'label': None,
+        'gcj02': False, 'region': 'global',
+    },
+    'tianditu': {
+        'name': 'Tianditu',
+        'sat': 'tdt_sat', 'vec': 'tdt_vec', 'label': 'tdt_label',
+        'gcj02': False, 'region': 'china',
+    },
 }
 
 
@@ -135,10 +188,7 @@ async def websocket_endpoint(ws: WebSocket):
 
 @app.get('/api/tile_sources')
 async def api_tile_sources():
-    return {
-        'china': {'sat': '6', 'vec': '7', 'label': '8', 'gcj02': True},
-        'global': {'sat': 'osm_sat', 'vec': 'osm', 'label': None, 'gcj02': False},
-    }
+    return TILE_SOURCES
 
 
 @app.get('/api/param_meta')

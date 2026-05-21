@@ -107,13 +107,23 @@
             </div>
           </div>
           <div class="flex justify-between items-center py-2 border-b border-border/50">
-            <span class="text-sm text-muted-foreground">{t('settings.mapRegion')}</span>
-            <div class="flex gap-1">
-              <Button variant={app.mapRegion === 'china' ? 'default' : 'secondary'} size="sm" class="h-7 text-xs px-2.5"
-                      onclick={() => { app.mapRegion = 'china'; saveSettings(); }}>{t('settings.china')}</Button>
-              <Button variant={app.mapRegion === 'global' ? 'default' : 'secondary'} size="sm" class="h-7 text-xs px-2.5"
-                      onclick={() => { app.mapRegion = 'global'; saveSettings(); }}>Global</Button>
-            </div>
+            <span class="text-sm text-muted-foreground">{t('settings.mapSource')}</span>
+            <select class="h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50"
+                    value={app.tileSource}
+                    onchange={(e) => { app.tileSource = (e.target as HTMLSelectElement).value; app.mapRegion = (['amap', 'tianditu'].includes(app.tileSource) ? 'china' : 'global') as any; saveSettings(); }}>
+              <optgroup label={t('settings.china')}>
+                <option value="amap">{t('map.amap')}</option>
+                <option value="tianditu">{t('map.tianditu')}</option>
+              </optgroup>
+              <optgroup label="Global">
+                <option value="google_sat">Google Satellite</option>
+                <option value="google_hybrid">Google Hybrid</option>
+                <option value="osm">OpenStreetMap</option>
+                <option value="esri">Esri Topo + Satellite</option>
+                <option value="carto_dark">CartoDB Dark</option>
+                <option value="carto_light">CartoDB Light</option>
+              </optgroup>
+            </select>
           </div>
           <div class="flex justify-between items-center py-2 border-b border-border/50">
             <label class="text-sm text-muted-foreground"><Globe size={13} class="inline mr-1" />{t('settings.language')}</label>
