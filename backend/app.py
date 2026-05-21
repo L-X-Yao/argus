@@ -1,5 +1,6 @@
 from __future__ import annotations
 import glob
+import os
 import shutil
 import sys
 import urllib.request as urlreq
@@ -8,7 +9,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, Request, UploadFile, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from .config import cfg
@@ -101,9 +102,10 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+_cors_origins = os.environ.get('ARGUS_CORS_ORIGINS', '*').split(',')
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=['*'],
+    allow_origins=_cors_origins,
     allow_methods=['*'],
     allow_headers=['*'],
 )
@@ -126,10 +128,10 @@ async def api_session(request):
     return {
         'clients': mgr.client_count,
         'connected': link.connected,
-        'armed': link.armed,
-        'sysid': link.sysid,
-        'mode': link.mode,
-        'vtype': link.vtype_raw,
+        'armed': link.vehicle.armed,
+        'sysid': link.vehicle.sysid,
+        'mode': link.vehicle.mode,
+        'vtype': link.vehicle.vtype_raw,
     }
 
 
@@ -221,7 +223,7 @@ async def api_log():
             media_type='text/csv',
             filename=os.path.basename(path),
         )
-    return Response(status_code=404, content='无活动日志')
+    return Response(status_code=404, content='No active log')
 
 
 @app.get('/api/tile/{style}/{z}/{x}/{y}')

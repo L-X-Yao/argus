@@ -4,14 +4,15 @@ from __future__ import annotations
 import asyncio
 import shutil
 import subprocess
+import threading
 
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 
 router = APIRouter()
 
-# Track active ffmpeg process so /api/video/stop can kill it.
 _active_proc: subprocess.Popen | None = None
+_proc_lock = threading.Lock()
 
 
 def _ffmpeg_available() -> bool:
@@ -24,21 +25,20 @@ async def video_stream(url: str = ''):
     global _active_proc
 
     if not url:
-        return {'error': '未提供视频地址'}
+        return {'error': 'No video URL provided'}
     if not _ffmpeg_available():
-        return {'error': '服务器未安装 ffmpeg，无法转码视频流'}
+        return {'error': 'ffmpeg not installed on server'}
 
-    # Kill any previous stream before starting a new one.
-    if _active_proc is not None:
-        try:
-            _active_proc.kill()
-            _active_proc.wait(timeout=3)
-        except Exception:
-            pass
-        _active_proc = None
+    with _proc_lock:
+        if _active_proc is not None:
+            try:
+                _active_proc.kill()
+                _active_proc.wait(timeout=3)
+            except Exception:
+                pass
 
     async def generate():
-        global _active_proc
+        global _active_proc  # noqa: PLW0603
         proc = subprocess.Popen(
             [
                 'ffmpeg',
@@ -53,7 +53,8 @@ async def video_stream(url: str = ''):
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
         )
-        _active_proc = proc
+        with _proc_lock:
+            _active_proc = proc
         loop = asyncio.get_event_loop()
         try:
             buf = b''
@@ -82,7 +83,8 @@ async def video_stream(url: str = ''):
         finally:
             proc.kill()
             proc.wait()
-            _active_proc = None
+            with _proc_lock:
+                _active_proc = None
 
     return StreamingResponse(
         generate(),
@@ -93,14 +95,15 @@ async def video_stream(url: str = ''):
 @router.get('/api/video/stop')
 async def video_stop():
     """Stop active video stream."""
-    global _active_proc
-    if _active_proc is not None:
-        try:
-            _active_proc.kill()
-            _active_proc.wait(timeout=3)
-        except Exception:
-            pass
-        _active_proc = None
+    global _active_proc  # noqa: PLW0603
+    with _proc_lock:
+        if _active_proc is not None:
+            try:
+                _active_proc.kill()
+                _active_proc.wait(timeout=3)
+            except Exception:
+                pass
+            _active_proc = None
     return {'ok': True}
 
 

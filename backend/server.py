@@ -14,9 +14,8 @@ import time
 import webbrowser
 from pathlib import Path
 
-_here = Path(__file__).resolve().parent
-sys.path.insert(0, str(_here))
-sys.path.insert(0, str(_here.parent))
+_root = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(_root))
 
 import uvicorn
 

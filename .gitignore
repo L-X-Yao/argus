@@ -11,6 +11,9 @@ src-tauri/binaries/
 src-tauri/gen/
 build/
 param_cache/
+params/
 firmware/
 logs/
 mbtiles/
+.gcs_token
+.pytest_cache/

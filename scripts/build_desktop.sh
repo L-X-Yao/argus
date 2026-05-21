@@ -43,7 +43,9 @@ python3 -m PyInstaller \
     --hidden-import backend.mavlink_dispatch \
     --hidden-import backend.param_manager \
     --hidden-import backend.statustext_filter \
-    --hidden-import backend.models \
+    --hidden-import backend.pllink_proto \
+    --hidden-import backend.server \
+    --hidden-import backend.state \
     --hidden-import backend.constants \
     --hidden-import backend.config \
     --hidden-import backend.connection \
@@ -62,7 +64,7 @@ python3 -m PyInstaller \
     --hidden-import uvicorn.protocols.websockets.auto \
     --hidden-import uvicorn.lifespan \
     --hidden-import uvicorn.lifespan.on \
-    backend_server.py
+    backend/server.py
 
 echo "Sidecar built: src-tauri/binaries/python-backend-${TARGET_TRIPLE}"
 

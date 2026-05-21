@@ -1,10 +1,19 @@
 """Centralized configuration — all tunable constants in one place."""
 from __future__ import annotations
 
+import os
+
+
+def _env(key: str, default, cast=None):
+    val = os.environ.get(key)
+    if val is None:
+        return default
+    return (cast or type(default))(val)
+
 
 class Config:
-    HOST: str = '127.0.0.1'
-    PORT: int = 8100
+    HOST: str = _env('ARGUS_HOST', '127.0.0.1')
+    PORT: int = _env('ARGUS_PORT', 8100)
 
     # Connection
     TCP_CONNECT_TIMEOUT: float = 5.0

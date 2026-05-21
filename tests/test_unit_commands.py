@@ -16,7 +16,7 @@ def make_link():
     link = DroneLink()
     link._ser = MagicMock()
     link.connected = True
-    link.sysid = 1
+    link.vehicle.sysid = 1
     return link
 
 
@@ -42,14 +42,14 @@ class TestCommandExecute:
     def test_rtl_copter(self):
         from backend import commands
         link = make_link()
-        link.vtype_raw = 2
+        link.vehicle.vtype_raw = 2
         commands.execute('rtl', None, link)
         assert any('返航' in e['text'] for e in link.events)
 
     def test_rtl_plane(self):
         from backend import commands
         link = make_link()
-        link.vtype_raw = 1
+        link.vehicle.vtype_raw = 1
         commands.execute('rtl', None, link)
         assert any('返航' in e['text'] for e in link.events)
 
@@ -75,20 +75,20 @@ class TestCommandExecute:
         from backend import commands
         link = make_link()
         commands.execute('set_vtype', None, link, data={'vtype': 'plane'})
-        assert link.force_plane is True
+        assert link.vehicle.force_plane is True
 
     def test_set_vtype_auto(self):
         from backend import commands
         link = make_link()
         commands.execute('set_vtype', None, link, data={'vtype': 'auto'})
-        assert link.force_plane is None
+        assert link.vehicle.force_plane is None
 
     def test_clear_summary(self):
         from backend import commands
         link = make_link()
-        link.flight_summary = {'duration': 100}
+        link.vehicle.flight_summary = {'duration': 100}
         commands.execute('clear_summary', None, link)
-        assert link.flight_summary is None
+        assert link.vehicle.flight_summary is None
 
     # -- 20 new command tests below --
 
@@ -101,7 +101,7 @@ class TestCommandExecute:
     def test_mission_start_copter(self):
         from backend import commands
         link = make_link()
-        link.vtype_raw = 2  # copter
+        link.vehicle.vtype_raw = 2  # copter
         commands.execute('mission_start', None, link)
         assert any('任务开始' in e['text'] for e in link.events)
         assert link._ser.write.called
@@ -109,7 +109,7 @@ class TestCommandExecute:
     def test_mission_start_plane(self):
         from backend import commands
         link = make_link()
-        link.vtype_raw = 1  # plane
+        link.vehicle.vtype_raw = 1  # plane
         commands.execute('mission_start', None, link)
         assert any('任务开始' in e['text'] for e in link.events)
 
@@ -128,8 +128,8 @@ class TestCommandExecute:
             {'lat': 34.1, 'lon': 108.1},
         ]
         commands.execute('fence_upload', None, link, data={'polygon': polygon})
-        assert link._fence_pending is True
-        assert len(link._fence_items) == 3
+        assert link.mission._fence_pending is True
+        assert len(link.mission._fence_items) == 3
         assert any('围栏' in e['text'] for e in link.events)
 
     def test_fence_upload_too_few_points(self):
@@ -144,7 +144,7 @@ class TestCommandExecute:
     def test_guided_goto(self):
         from backend import commands
         link = make_link()
-        link.vtype_raw = 2  # copter
+        link.vehicle.vtype_raw = 2  # copter
         commands.execute('guided_goto', None, link, data={
             'lat': 34.25800, 'lon': 108.94200, 'alt': 50,
         })
@@ -190,9 +190,9 @@ class TestCommandExecute:
         from backend import commands
         link = make_link()
         commands.execute('mission_download', None, link)
-        assert link._dl_pending is True
-        assert link._dl_total == 0
-        assert link._dl_items == []
+        assert link.mission._dl_pending is True
+        assert link.mission._dl_total == 0
+        assert link.mission._dl_items == []
         assert any('下载' in e['text'] for e in link.events)
 
     def test_param_request_all(self):
@@ -241,31 +241,31 @@ class TestCommandExecute:
         from backend import commands
         link = make_link()
         commands.execute('log_list', None, link)
-        assert link._log_list == []
+        assert link.log_dl._log_list == []
         assert any('日志' in e['text'] for e in link.events)
 
     def test_log_download(self):
         from backend import commands
         link = make_link()
-        link._log_list = [{'id': 5, 'size': 10240}]
+        link.log_dl._log_list = [{'id': 5, 'size': 10240}]
         commands.execute('log_download', None, link, data={'id': 5})
-        assert link._log_download_id == 5
-        assert link._log_download_size == 10240
+        assert link.log_dl._log_download_id == 5
+        assert link.log_dl._log_download_size == 10240
         assert any('下载 #5' in e['text'] for e in link.events)
 
     def test_log_download_invalid_id(self):
         from backend import commands
         link = make_link()
-        link._log_list = [{'id': 5, 'size': 10240}]
+        link.log_dl._log_list = [{'id': 5, 'size': 10240}]
         result = commands.execute('log_download', None, link, data={'id': 99})
         assert result is not None and not result['ok']
 
     def test_log_cancel(self):
         from backend import commands
         link = make_link()
-        link._log_download_id = 5
+        link.log_dl._log_download_id = 5
         commands.execute('log_cancel', None, link)
-        assert link._log_download_id == -1
+        assert link.log_dl._log_download_id == -1
         assert any('取消' in e['text'] for e in link.events)
 
     def test_rc_override(self):
@@ -301,9 +301,9 @@ class TestMissionUpload:
         commands.execute('mission_upload', None, link, data={
             'waypoints': wps, 'takeoff_alt': 30,
         })
-        assert link._mission_pending
+        assert link.mission._mission_pending
         # home(0) + takeoff(1) + wp1(2) + wp2(3) + drop(4) + RTL(5) = 6
-        assert len(link._mission_items) == 6
+        assert len(link.mission._mission_items) == 6
         assert any('任务' in e['text'] for e in link.events)
 
 
@@ -337,18 +337,18 @@ class TestDroneLinkLog:
 class TestDroneLink:
     def test_is_plane_copter(self):
         link = DroneLink()
-        link.vtype_raw = 2
+        link.vehicle.vtype_raw = 2
         assert not link.is_plane()
 
     def test_is_plane_plane(self):
         link = DroneLink()
-        link.vtype_raw = 1
+        link.vehicle.vtype_raw = 1
         assert link.is_plane()
 
     def test_force_plane_override(self):
         link = DroneLink()
-        link.vtype_raw = 2
-        link.force_plane = True
+        link.vehicle.vtype_raw = 2
+        link.vehicle.force_plane = True
         assert link.is_plane()
 
     def test_add_event_trims(self):

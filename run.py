@@ -15,7 +15,7 @@ import webbrowser
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parent
-SIM_SCRIPT = ROOT_DIR / 'sim_pllink.py'
+SIM_SCRIPT = ROOT_DIR / 'scripts' / 'sim_pllink.py'
 
 
 def main():

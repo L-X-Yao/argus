@@ -30,8 +30,8 @@ class ParamManager:
         self.fetching = True
         self._fetch_start = time.time()
         self._link.add_event(lt('param_reading', self._link.locale), 'param_reading')
-        from pllink_proto import bm
-        payload = struct.pack('<BB', self._link.sysid, 1)
+        from .pllink_proto import bm
+        payload = struct.pack('<BB', self._link.vehicle.sysid, 1)
         self._link.send(bm(21, payload, self._link.sq, 159))
 
     def handle_param_value(self, p: bytes, pl: int) -> None:
@@ -73,10 +73,10 @@ class ParamManager:
     def set_param(self, name: str, value: float) -> None:
         param = self.params.get(name)
         ptype = param['type'] if param else 9
-        from pllink_proto import bm
+        from .pllink_proto import bm
         name_bytes = name.encode('ascii')[:16].ljust(16, b'\x00')
         payload = (struct.pack('<f', value) +
-                   struct.pack('<BB', self._link.sysid, 1) +
+                   struct.pack('<BB', self._link.vehicle.sysid, 1) +
                    name_bytes +
                    struct.pack('<B', ptype))
         self._link.send(bm(23, payload, self._link.sq, 168))

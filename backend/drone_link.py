@@ -1,12 +1,10 @@
 from __future__ import annotations
 import struct
-import sys
 import threading
 import time
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from pllink_proto import ple, pld, bm
+from .pllink_proto import ple, pld, bm
 
 from .constants import (COPTER_MODES, PLANE_MODES, ROVER_MODES, SUB_MODES,
                         COPTER_BTNS, PLANE_BTNS, ROVER_BTNS, SUB_BTNS, FIX_NAMES,
@@ -20,6 +18,9 @@ from .connection import open_port
 from .log import logger
 from .param_manager import ParamManager
 from .locale_text import lt
+from .state import (AttitudeState, BatteryState, GpsState, VehicleState,
+                    MissionState, DiagnosticState, RcServoState, LogState,
+                    TrafficState)
 
 _CRC_EXTRA = {
     0: 50, 1: 124, 22: 220, 24: 24, 30: 39, 33: 104, 35: 244, 36: 222,
@@ -48,13 +49,15 @@ _MSG_NAMES = {
 }
 
 
+
 class DroneLink:
     def __init__(self):
         init_handlers()
         self._ser = None
         self._running = False
         self._thread = None
-        self._lock = threading.Lock()
+        self._lock = threading.Lock()           # protects _ser.write() only
+        self._state_lock = threading.RLock()    # protects all state reads/writes (handlers + get_state)
         self._buf = b''
         self.sq = 0
         self._parse_errors = 0
@@ -73,76 +76,32 @@ class DroneLink:
         self.last_frame_time = 0.0
         self.start_time = 0.0
         self.events: list[dict] = []
-
-        self.roll = self.pitch = self.yaw = 0.0
-        self.lat = self.lon = self.alt_rel = self.alt_msl = 0.0
-        self.vx = self.vy = self.vz = self.gs = self.hdg = 0.0
-        self.home_lat = self.home_lon = 0.0
-        self.dist_home = 0.0
-        self.armed_time = 0.0
-        self.voltage = self.current = 0.0
-        self.remaining = -1
-        self.mode = 0
-        self.armed = False
-        self.gps_fix = 0
-        self.gps_sats = 0
-        self.wp_seq = 0
-        self.vtype_raw = 0
-        self.force_plane = None
-        self.sysid = 1
-        self.max_alt = self.max_speed = self.total_dist = 0.0
-        self._prev_pos = None
-        self._bat_history: list[tuple[float, int]] = []
-        self.bat_time_remaining = -1
-        self._bat_start_pct = -1
-        self._mission_items: list[dict] = []
-        self._mission_pending = False
-        self._seq_to_wp: dict[int, int] = {}
-        self._fence_items: list[dict] = []
-        self._fence_pending = False
-        self.flight_summary = None
-        self.param_mgr = ParamManager(self)
-        self.fw_version = ''
-        self.fw_git = ''
-        self.board_id = 0
-        self._dl_pending = False
-        self._dl_total = 0
-        self._dl_items: list[dict | None] = []
-        self._dl_messages: list[dict] = []
         self._ws_queue: list[dict] = []
-        self._log_list: list[dict] = []
-        self._log_download_id = -1
-        self._log_download_data = bytearray()
-        self._log_download_size = 0
-        self._log_download_ofs = 0
-        self._log_messages: list[dict] = []
-        self.rc_channels: list[int] = [0] * 16
-        self.rc_rssi = 0
-        self.vibe_x = self.vibe_y = self.vibe_z = 0.0
-        self.vibe_clip0 = self.vibe_clip1 = self.vibe_clip2 = 0
-        self.ekf_vel_var = 0.0
-        self.ekf_pos_h_var = 0.0
-        self.ekf_pos_v_var = 0.0
-        self.ekf_compass_var = 0.0
-        self.ekf_terrain_var = 0.0
-        self.ekf_flags = 0
-        self.servo_out: list[int] = [0] * 16
-        self.wind_dir = 0.0
-        self.wind_speed = 0.0
-        self.terrain_alt = -1.0
-        self.battery_cells: list[float] = []
-        self.inspector_enabled = False
-        self._adsb_vehicles: dict[int, dict] = {}
         self.active_sysid = 1
+        self.inspector_enabled = False
         self._msg_stats: dict[int, dict] = {}
         self._msg_stats_window = 5.0
         self._console_buf: list[str] = []
         self._prearm_messages: list[str] = []
+        self.param_mgr = ParamManager(self)
+
+        self.attitude = AttitudeState()
+        self.battery = BatteryState()
+        self.gps = GpsState()
+        self.vehicle = VehicleState()
+        self.mission = MissionState()
+        self.diagnostic = DiagnosticState()
+        self.rc_servo = RcServoState()
+        self.log_dl = LogState()
+        self.traffic = TrafficState()
+
+
 
     def is_plane(self) -> bool:
-        if self.force_plane is not None:
-            return self.force_plane
-        return self.vtype_raw in (1, 19, 20, 21, 22, 23, 24, 25)
+        v = self.vehicle
+        if v.force_plane is not None:
+            return v.force_plane
+        return v.vtype_raw in (1, 19, 20, 21, 22, 23, 24, 25)
 
     def queue_ws(self, msg: dict) -> None:
         self._ws_queue.append(msg)
@@ -182,10 +141,10 @@ class DroneLink:
         self.frame_count = 0
         self._buf = b''
         self.sq = 0
-        self.vtype_raw = 0
-        self.home_lat = self.home_lon = 0.0
-        self.dist_home = 0.0
-        self.armed_time = 0.0
+        self.vehicle.vtype_raw = 0
+        self.attitude.home_lat = self.attitude.home_lon = 0.0
+        self.attitude.dist_home = 0.0
+        self.vehicle.armed_time = 0.0
         self.last_frame_time = 0.0
         self.start_time = time.time()
         self._last_port = port
@@ -208,10 +167,10 @@ class DroneLink:
             pass
         self._ser = None
         self.connected = False
-        self.vtype_raw = 0
-        self.force_plane = None
-        self._prev_pos = None
-        self._mission_pending = False
+        self.vehicle.vtype_raw = 0
+        self.vehicle.force_plane = None
+        self.attitude._prev_pos = None
+        self.mission._mission_pending = False
         self._stop_log()
         self.add_event(lt('disconnected', self.locale), 'disconnected')
 
@@ -240,12 +199,12 @@ class DroneLink:
         return True
 
     def _get_vehicle_info(self) -> tuple[dict, list, str]:
-        vt = self.vtype_raw
+        vt = self.vehicle.vtype_raw
         en = self.locale == 'en'
-        if self.force_plane is True:
+        if self.vehicle.force_plane is True:
             return (PLANE_MODES_EN if en else PLANE_MODES, PLANE_BTNS_EN if en else PLANE_BTNS,
                     'Fixed Wing' if en else '固定翼')
-        if self.force_plane is False:
+        if self.vehicle.force_plane is False:
             return (COPTER_MODES_EN if en else COPTER_MODES, COPTER_BTNS_EN if en else COPTER_BTNS,
                     'Multirotor' if en else '多旋翼')
         if vt in (1, 19, 20, 21, 22, 23, 24, 25):
@@ -263,66 +222,72 @@ class DroneLink:
         return (COPTER_MODES_EN if en else COPTER_MODES, COPTER_BTNS_EN if en else COPTER_BTNS, '')
 
     def get_state(self) -> dict:
+        with self._state_lock:
+            return self._build_state()
+
+    def _build_state(self) -> dict:
         md, btns, vn = self._get_vehicle_info()
+        a, v, bat, g = self.attitude, self.vehicle, self.battery, self.gps
+        d, rc, m = self.diagnostic, self.rc_servo, self.mission
         return {
             'type': 'state',
             'connected': self.connected,
             'frames': self.frame_count,
-            'mode': md.get(self.mode, 'MODE%d' % self.mode),
-            'mode_id': self.mode,
-            'armed': self.armed,
-            'roll': round(self.roll, 1),
-            'pitch': round(self.pitch, 1),
-            'yaw': round(self.yaw, 1),
-            'lat': round(self.lat, 7),
-            'lon': round(self.lon, 7),
-            'alt_rel': round(self.alt_rel, 1),
-            'alt_msl': round(self.alt_msl, 1),
-            'gs': round(self.gs, 1),
-            'vz': round(-self.vz, 1),
-            'hdg': round(self.hdg, 0),
-            'dist_home': round(self.dist_home, 0),
-            'flight_time': int(time.time() - self.armed_time) if self.armed and self.armed_time else 0,
-            'voltage': round(self.voltage, 2),
-            'current': round(self.current, 2),
-            'remaining': self.remaining,
-            'gps_fix': (FIX_NAMES_EN if self.locale == 'en' else FIX_NAMES).get(self.gps_fix, '?'),
-            'gps_fix_raw': self.gps_fix,
-            'gps_sats': self.gps_sats,
-            'wp': self.wp_seq,
+            'mode': md.get(v.mode, 'MODE%d' % v.mode),
+            'mode_id': v.mode,
+            'armed': v.armed,
+            'roll': round(a.roll, 1),
+            'pitch': round(a.pitch, 1),
+            'yaw': round(a.yaw, 1),
+            'lat': round(a.lat, 7),
+            'lon': round(a.lon, 7),
+            'alt_rel': round(a.alt_rel, 1),
+            'alt_msl': round(a.alt_msl, 1),
+            'gs': round(a.gs, 1),
+            'vz': round(-a.vz, 1),
+            'hdg': round(a.hdg, 0),
+            'dist_home': round(a.dist_home, 0),
+            'flight_time': int(time.time() - v.armed_time) if v.armed and v.armed_time else 0,
+            'voltage': round(bat.voltage, 2),
+            'current': round(bat.current, 2),
+            'remaining': bat.remaining,
+            'gps_fix': (FIX_NAMES_EN if self.locale == 'en' else FIX_NAMES).get(g.gps_fix, '?'),
+            'gps_fix_raw': g.gps_fix,
+            'gps_sats': g.gps_sats,
+            'wp': m.wp_seq,
             'vtype': vn,
-            'vtype_raw': self.vtype_raw,
+            'vtype_raw': v.vtype_raw,
             'mode_btns': btns,
             'link_age': round(time.time() - self.last_frame_time, 1) if self.connected and self.last_frame_time > 0 else -1,
-            'bat_time': self.bat_time_remaining if self.bat_time_remaining > 0 else -1,
-            'home_lat': round(self.home_lat, 7),
-            'home_lon': round(self.home_lon, 7),
+            'bat_time': bat.bat_time_remaining if bat.bat_time_remaining > 0 else -1,
+            'home_lat': round(a.home_lat, 7),
+            'home_lon': round(a.home_lon, 7),
             'parse_errors': self._parse_errors,
-            'flight_summary': self.flight_summary,
+            'flight_summary': v.flight_summary,
             'log_active': self._logfile is not None,
-            'fw_version': self.fw_version,
-            'fw_git': self.fw_git,
-            'board_id': self.board_id,
-            'rc': self.rc_channels,
-            'rc_rssi': self.rc_rssi,
-            'vibe': [round(self.vibe_x, 1), round(self.vibe_y, 1), round(self.vibe_z, 1)],
-            'vibe_clip': [self.vibe_clip0, self.vibe_clip1, self.vibe_clip2],
-            'servo': self.servo_out,
-            'ekf_vel': round(self.ekf_vel_var, 4),
-            'ekf_pos_h': round(self.ekf_pos_h_var, 4),
-            'ekf_pos_v': round(self.ekf_pos_v_var, 4),
-            'ekf_compass': round(self.ekf_compass_var, 4),
-            'ekf_flags': self.ekf_flags,
-            'wind_dir': round(self.wind_dir, 1),
-            'wind_speed': round(self.wind_speed, 1),
-            'terrain_alt': round(self.terrain_alt, 1),
+            'fw_version': v.fw_version,
+            'fw_git': v.fw_git,
+            'board_id': v.board_id,
+            'rc': rc.rc_channels,
+            'rc_rssi': rc.rc_rssi,
+            'vibe': [round(d.vibe_x, 1), round(d.vibe_y, 1), round(d.vibe_z, 1)],
+            'vibe_clip': [d.vibe_clip0, d.vibe_clip1, d.vibe_clip2],
+            'servo': rc.servo_out,
+            'ekf_vel': round(d.ekf_vel_var, 4),
+            'ekf_pos_h': round(d.ekf_pos_h_var, 4),
+            'ekf_pos_v': round(d.ekf_pos_v_var, 4),
+            'ekf_compass': round(d.ekf_compass_var, 4),
+            'ekf_flags': d.ekf_flags,
+            'wind_dir': round(d.wind_dir, 1),
+            'wind_speed': round(d.wind_speed, 1),
+            'terrain_alt': round(d.terrain_alt, 1),
             **self.param_mgr.get_status(),
-            'vehicles': [v for v in self._vehicles.values()
-                         if v.get('lat', 0) != 0 and v['sysid'] != self.sysid
-                         and time.time() - v.get('t', 0) < 10],
+            'vehicles': [veh for veh in self._vehicles.values()
+                         if veh.get('lat', 0) != 0 and veh['sysid'] != v.sysid
+                         and time.time() - veh.get('t', 0) < 10],
             'prearm': self._prearm_messages,
-            'adsb': [v for v in self._adsb_vehicles.values() if time.time() - v.get('t', 0) < 60],
-            'cells': self.battery_cells,
+            'adsb': [av for av in self.traffic._adsb_vehicles.values() if time.time() - av.get('t', 0) < 60],
+            'cells': bat.battery_cells,
         }
 
     def _start_log(self) -> None:
@@ -355,16 +320,17 @@ class DroneLink:
         self._last_log_time = now
         md = PLANE_MODES if self.is_plane() else COPTER_MODES
         t = now - self.start_time
+        a, v, bat, g = self.attitude, self.vehicle, self.battery, self.gps
         try:
             self._logfile.write(
                 '%.2f,%.2f,%.2f,%.1f,%.7f,%.7f,%.1f,%.1f,%.1f,%.1f,%.2f,%.2f,%d,%d,%s,%d,%d,%d,%d,%.0f,%.0f,%d\n'
-                % (t, self.roll, self.pitch, self.yaw, self.lat, self.lon,
-                   self.alt_rel, self.alt_msl, self.gs, self.vz,
-                   self.voltage, self.current, self.remaining,
-                   self.mode, md.get(self.mode, '?'), self.armed,
-                   self.gps_fix, self.gps_sats, self.wp_seq, self.hdg,
-                   self.dist_home,
-                   self.bat_time_remaining if self.bat_time_remaining > 0 else -1)
+                % (t, a.roll, a.pitch, a.yaw, a.lat, a.lon,
+                   a.alt_rel, a.alt_msl, a.gs, a.vz,
+                   bat.voltage, bat.current, bat.remaining,
+                   v.mode, md.get(v.mode, '?'), v.armed,
+                   g.gps_fix, g.gps_sats, self.mission.wp_seq, a.hdg,
+                   a.dist_home,
+                   bat.bat_time_remaining if bat.bat_time_remaining > 0 else -1)
             )
             self._logfile.flush()
         except Exception:
@@ -451,6 +417,9 @@ class DroneLink:
                 data = self._ser.read(1024)
                 if data:
                     self._buf += data
+                    if len(self._buf) > 65536:
+                        self._buf = self._buf[-32768:]
+                        self._parse_errors += 1
             except Exception:
                 time.sleep(0.1)
                 continue
@@ -510,19 +479,20 @@ class DroneLink:
             if len(st['times']) > 100:
                 st['times'] = st['times'][-50:]
         sid = self._raw_sysid
-        if mid == 33 and pl >= 20:
-            lat = struct.unpack_from('<i', p, 4)[0] / 1e7
-            lon = struct.unpack_from('<i', p, 8)[0] / 1e7
-            alt = struct.unpack_from('<i', p, 16)[0] / 1000.0
-            hdg = struct.unpack_from('<H', p, 26)[0] / 100.0 if pl >= 28 else 0
-            v = self._vehicles.get(sid, {})
-            v.update({'sysid': sid, 'lat': round(lat, 7), 'lon': round(lon, 7),
-                      'alt': round(alt, 1), 'hdg': round(hdg, 0), 't': time.time()})
-            self._vehicles[sid] = v
-        if mid == 0 and pl >= 7:
-            v = self._vehicles.get(sid, {'sysid': sid, 'lat': 0, 'lon': 0, 'alt': 0, 'hdg': 0, 't': 0})
-            v['armed'] = bool(p[6] & 0x80)
-            v['mode'] = p[0] | (p[1] << 8) | (p[2] << 16) | (p[3] << 24)
-            v['vtype'] = p[4]
-            self._vehicles[sid] = v
-        mavlink_dispatch.dispatch(mid, p, pl, self)
+        with self._state_lock:
+            if mid == 33 and pl >= 20:
+                lat = struct.unpack_from('<i', p, 4)[0] / 1e7
+                lon = struct.unpack_from('<i', p, 8)[0] / 1e7
+                alt = struct.unpack_from('<i', p, 16)[0] / 1000.0
+                hdg = struct.unpack_from('<H', p, 26)[0] / 100.0 if pl >= 28 else 0
+                v = self._vehicles.get(sid, {})
+                v.update({'sysid': sid, 'lat': round(lat, 7), 'lon': round(lon, 7),
+                          'alt': round(alt, 1), 'hdg': round(hdg, 0), 't': time.time()})
+                self._vehicles[sid] = v
+            if mid == 0 and pl >= 7:
+                v = self._vehicles.get(sid, {'sysid': sid, 'lat': 0, 'lon': 0, 'alt': 0, 'hdg': 0, 't': 0})
+                v['armed'] = bool(p[6] & 0x80)
+                v['mode'] = p[0] | (p[1] << 8) | (p[2] << 16) | (p[3] << 24)
+                v['vtype'] = p[4]
+                self._vehicles[sid] = v
+            mavlink_dispatch.dispatch(mid, p, pl, self)

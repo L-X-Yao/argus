@@ -45,10 +45,16 @@ def execute(cmd: str, param, link: DroneLink, data: dict | None = None) -> dict 
         am = 10 if link.is_plane() else 3
         link.add_event(lt('mission_start', link.locale), 'mission_start')
         _send_set_mode(link, am)
-        threading.Thread(target=lambda: (time.sleep(cfg.MISSION_START_DELAY), _send_cmd(link, 300)), daemon=True).start()
+        def _delayed_mission_cmd():
+            time.sleep(cfg.MISSION_START_DELAY)
+            try:
+                _send_cmd(link, 300)
+            except Exception:
+                link.add_event('Mission start command failed', 'cmd_ack_fail')
+        threading.Thread(target=_delayed_mission_cmd, daemon=True, name='mission-start').start()
     elif cmd == 'mission_clear':
-        from pllink_proto import bm
-        link.send(bm(45, bytes([link.sysid, 1, 0]), link.sq, 232))
+        from .pllink_proto import bm
+        link.send(bm(45, bytes([link.vehicle.sysid, 1, 0]), link.sq, 232))
         link.add_event(lt('mission_clear', link.locale), 'mission_clear')
     elif cmd == 'mission_upload':
         wps = data.get('waypoints', [])
@@ -69,13 +75,13 @@ def execute(cmd: str, param, link: DroneLink, data: dict | None = None) -> dict 
                 'seq': i, 'cmd': 5001, 'lat': pt['lat'], 'lon': pt['lon'],
                 'alt': 0, 'p1': len(polygon), 'p2': 0,
             })
-        link._fence_items = items
-        link._fence_pending = True
+        link.mission._fence_items = items
+        link.mission._fence_pending = True
         _send_fence_count(link, len(items))
         link.add_event(lt('fence_upload', link.locale) % len(polygon), 'fence_upload')
     elif cmd == 'set_vtype':
         v = data.get('vtype', 'auto')
-        link.force_plane = True if v == 'plane' else (False if v == 'copter' else None)
+        link.vehicle.force_plane = True if v == 'plane' else (False if v == 'copter' else None)
         vname = lt('vtype_plane' if v == 'plane' else 'vtype_copter' if v == 'copter' else 'vtype_auto', link.locale)
         link.add_event(lt('vtype_set', link.locale) % vname, 'vtype_set')
     elif cmd == 'guided_goto':
@@ -85,10 +91,10 @@ def execute(cmd: str, param, link: DroneLink, data: dict | None = None) -> dict 
         gm = 15 if link.is_plane() else 4
         _send_set_mode(link, gm)
         link.add_event(lt('guided', link.locale) % (lat7 / 1e7, lon7 / 1e7, alt), 'guided')
-        from pllink_proto import bm
+        from .pllink_proto import bm
         p = struct.pack('<IiifffffffffHBBB',
                         0, lat7, lon7, alt, 0, 0, 0, 0, 0, 0, 0, 0,
-                        0x0FF8, link.sysid, 1, 6)
+                        0x0FF8, link.vehicle.sysid, 1, 6)
         link.send(bm(84, p, link.sq, 5))
     elif cmd == 'cal_compass':
         link.add_event(lt('cal_compass', link.locale), 'cal_compass')
@@ -109,14 +115,14 @@ def execute(cmd: str, param, link: DroneLink, data: dict | None = None) -> dict 
         link.add_event(lt('cal_cancel', link.locale), 'cal_cancel')
         _send_cmd(link, 241)
     elif cmd == 'clear_summary':
-        link.flight_summary = None
+        link.vehicle.flight_summary = None
     elif cmd == 'mission_download':
-        link._dl_pending = True
-        link._dl_total = 0
-        link._dl_items = []
+        link.mission._dl_pending = True
+        link.mission._dl_total = 0
+        link.mission._dl_items = []
         link.add_event(lt('mission_dl', link.locale), 'mission_dl')
-        from pllink_proto import bm
-        link.send(bm(43, struct.pack('<BBB', link.sysid, 1, 0), link.sq, 132))
+        from .pllink_proto import bm
+        link.send(bm(43, struct.pack('<BBB', link.vehicle.sysid, 1, 0), link.sq, 132))
     elif cmd == 'param_request_all':
         link.param_mgr.request_all()
     elif cmd == 'param_set':
@@ -133,27 +139,28 @@ def execute(cmd: str, param, link: DroneLink, data: dict | None = None) -> dict 
             changed = link.param_mgr.load_from_file(path)
             return {'ok': True, 'changed': changed}
     elif cmd == 'log_list':
-        from pllink_proto import bm
-        link._log_list = []
-        link.send(bm(117, struct.pack('<HHBB', 0, 0xFFFF, link.sysid, 1), link.sq, 128))
+        from .pllink_proto import bm
+        link.log_dl._log_list = []
+        link.send(bm(117, struct.pack('<HHBB', 0, 0xFFFF, link.vehicle.sysid, 1), link.sq, 128))
         link.add_event(lt('log_list_req', link.locale), 'log_list_req')
     elif cmd == 'log_download':
         log_id = int(data.get('id', 0))
-        log_entry = next((l for l in link._log_list if l['id'] == log_id), None)
+        lg = link.log_dl
+        log_entry = next((l for l in lg._log_list if l['id'] == log_id), None)
         if not log_entry:
             return {'ok': False, 'error': lt('err_log_not_found', link.locale)}
-        link._log_download_id = log_id
-        link._log_download_size = log_entry['size']
-        link._log_download_data = bytearray(log_entry['size'])
-        link._log_download_ofs = 0
+        lg._log_download_id = log_id
+        lg._log_download_size = log_entry['size']
+        lg._log_download_data = bytearray(log_entry['size'])
+        lg._log_download_ofs = 0
         link.add_event(lt('log_dl', link.locale) % (log_id, log_entry['size'] // 1024), 'log_dl')
-        from pllink_proto import bm
+        from .pllink_proto import bm
         chunk = min(90 * 50, log_entry['size'])
-        link.send(bm(119, struct.pack('<IIHBB', 0, chunk, log_id, link.sysid, 1), link.sq, 116))
+        link.send(bm(119, struct.pack('<IIHBB', 0, chunk, log_id, link.vehicle.sysid, 1), link.sq, 116))
     elif cmd == 'log_cancel':
-        from pllink_proto import bm
-        link.send(bm(126, struct.pack('<BB', link.sysid, 1), link.sq, 203))
-        link._log_download_id = -1
+        from .pllink_proto import bm
+        link.send(bm(126, struct.pack('<BB', link.vehicle.sysid, 1), link.sq, 203))
+        link.log_dl._log_download_id = -1
         link.add_event(lt('log_dl_cancel', link.locale), 'log_dl_cancel')
     elif cmd == 'reboot_bootloader':
         link.add_event(lt('reboot_bl', link.locale), 'reboot_bl')
@@ -164,8 +171,8 @@ def execute(cmd: str, param, link: DroneLink, data: dict | None = None) -> dict 
     elif cmd == 'rc_override':
         channels = data.get('channels', [])
         if len(channels) >= 8:
-            from pllink_proto import bm
-            p = struct.pack('<BB', link.sysid, 1)
+            from .pllink_proto import bm
+            p = struct.pack('<BB', link.vehicle.sysid, 1)
             for i in range(8):
                 p += struct.pack('<H', max(0, min(65535, int(channels[i]))))
             link.send(bm(70, p, link.sq, 124))
@@ -187,14 +194,14 @@ def execute(cmd: str, param, link: DroneLink, data: dict | None = None) -> dict 
     elif cmd == 'switch_vehicle':
         new_sysid = int(data.get('sysid', 1))
         link.active_sysid = new_sysid
-        link.sysid = new_sysid
+        link.vehicle.sysid = new_sysid
         link.add_event(lt('vehicle_switch', link.locale) % new_sysid, 'vehicle_switch')
     elif cmd == 'inject_rtcm':
         rtcm_data = data.get('data', '')
         if rtcm_data:
             import base64
             raw = base64.b64decode(rtcm_data)
-            from pllink_proto import bm
+            from .pllink_proto import bm
             for i in range(0, len(raw), 110):
                 chunk = raw[i:i + 110]
                 flags = 0x01
@@ -214,9 +221,9 @@ def execute(cmd: str, param, link: DroneLink, data: dict | None = None) -> dict 
     elif cmd == 'gimbal_rate':
         pitch_rate = float(data.get('pitch_rate', 0))
         yaw_rate = float(data.get('yaw_rate', 0))
-        from pllink_proto import bm
+        from .pllink_proto import bm
         p = struct.pack('<ffffffBBB', 0, 0, 0, float(pitch_rate * 100), 0, float(yaw_rate * 100),
-                        link.sysid, 1, 2)
+                        link.vehicle.sysid, 1, 2)
         link.send(bm(282, p, link.sq, 0))  # GIMBAL_MANAGER_SET_MANUAL_CONTROL approx
     elif cmd == 'camera_trigger':
         _send_cmd(link, 203)  # MAV_CMD_DO_DIGICAM_CONTROL
@@ -265,60 +272,61 @@ def _upload_mission(link: DroneLink, waypoints: list, takeoff_alt: float) -> Non
             items.append({'seq': seq, 'cmd': 181, 'lat': 0, 'lon': 0, 'alt': 0, 'p1': 0, 'p2': 0})
             seq += 1
     items.append({'seq': seq, 'cmd': 20, 'lat': 0, 'lon': 0, 'alt': 0, 'p1': 0, 'p2': 0})
-    link._mission_items = items
-    link._seq_to_wp = {}
+    m = link.mission
+    m._mission_items = items
+    m._seq_to_wp = {}
     s2 = 2
     for i, wp in enumerate(waypoints):
         if float(wp.get('speed', 0)) > 0:
             s2 += 1
-        link._seq_to_wp[s2] = i
+        m._seq_to_wp[s2] = i
         s2 += 1
         if wp.get('drop'):
             s2 += 1
-    link._mission_pending = True
+    m._mission_pending = True
     _send_mission_count(link, len(items))
     drop_n = sum(1 for w in waypoints if w.get('drop'))
     link.add_event(lt('mission_upload', link.locale) % (len(waypoints), drop_n, takeoff_alt))
 
 
 def _send_cmd(link: DroneLink, command: int, p1=0, p2=0, p3=0, p4=0, p5=0, p6=0, p7=0) -> None:
-    from pllink_proto import bm
+    from .pllink_proto import bm
     payload = struct.pack('<fffffffHBBB', float(p1), float(p2), float(p3), float(p4),
-                          float(p5), float(p6), float(p7), command, link.sysid, 1, 0)
+                          float(p5), float(p6), float(p7), command, link.vehicle.sysid, 1, 0)
     link.send(bm(76, payload, link.sq, 152))
 
 
 def _send_set_mode(link: DroneLink, mode: int) -> None:
-    from pllink_proto import bm
-    payload = struct.pack('<IBB', mode, link.sysid, 0x01)
+    from .pllink_proto import bm
+    payload = struct.pack('<IBB', mode, link.vehicle.sysid, 0x01)
     link.send(bm(11, payload, link.sq, 89))
 
 
 def _send_mission_count(link: DroneLink, count: int) -> None:
-    from pllink_proto import bm
-    link.send(bm(44, struct.pack('<HBB', count, link.sysid, 1) + bytes([0]), link.sq, 221))
+    from .pllink_proto import bm
+    link.send(bm(44, struct.pack('<HBB', count, link.vehicle.sysid, 1) + bytes([0]), link.sq, 221))
 
 
 def _send_fence_count(link: DroneLink, count: int) -> None:
-    from pllink_proto import bm
-    link.send(bm(44, struct.pack('<HBB', count, link.sysid, 1) + bytes([1]), link.sq, 221))
+    from .pllink_proto import bm
+    link.send(bm(44, struct.pack('<HBB', count, link.vehicle.sysid, 1) + bytes([1]), link.sq, 221))
 
 
 def send_fence_item_int(link: DroneLink, item: dict) -> None:
-    from pllink_proto import bm
+    from .pllink_proto import bm
     lat7 = int(item.get('lat', 0) * 1e7)
     lon7 = int(item.get('lon', 0) * 1e7)
     p = struct.pack('<ffffiifHHBBBBBB',
                     float(item.get('p1', 0)), float(item.get('p2', 0)), 0.0, 0.0,
                     lat7, lon7, float(item.get('alt', 0)),
                     item['seq'], item['cmd'],
-                    link.sysid, 1, 3,
+                    link.vehicle.sysid, 1, 3,
                     0, 1, 1)
     link.send(bm(73, p, link.sq, 38))
 
 
 def send_mission_item_int(link: DroneLink, wp: dict) -> None:
-    from pllink_proto import bm
+    from .pllink_proto import bm
     frame = 3 if wp['cmd'] in (16, 19, 21, 22, 82) else 2
     lat7 = int(wp.get('lat', 0) * 1e7)
     lon7 = int(wp.get('lon', 0) * 1e7)
@@ -326,13 +334,13 @@ def send_mission_item_int(link: DroneLink, wp: dict) -> None:
                     float(wp.get('p1', 0)), float(wp.get('p2', 0)), 0.0, 0.0,
                     lat7, lon7, float(wp.get('alt', 0)),
                     wp['seq'], wp['cmd'],
-                    link.sysid, 1, frame,
+                    link.vehicle.sysid, 1, frame,
                     1 if wp['seq'] == 0 else 0, 1, 0)
     link.send(bm(73, p, link.sq, 38))
 
 
 def _send_serial_control(link: DroneLink, text: str) -> None:
-    from pllink_proto import bm
+    from .pllink_proto import bm
     data = (text + '\n').encode('ascii', 'replace')[:70]
     flags = 0x06
     p = struct.pack('<BBHB', 10, flags, 0, len(data))
@@ -341,28 +349,28 @@ def _send_serial_control(link: DroneLink, text: str) -> None:
 
 
 def send_heartbeat(link: DroneLink) -> None:
-    from pllink_proto import bm
+    from .pllink_proto import bm
     payload = struct.pack('<IBBBBB', 0, 6, 8, 0, 0, 3)
     link.send(bm(0, payload, link.sq, 50))
 
 
 def _upload_rally(link: DroneLink, points: list) -> None:
-    from pllink_proto import bm
+    from .pllink_proto import bm
     count = len(points)
-    link.send(bm(44, struct.pack('<HBB', count, link.sysid, 1) + bytes([2]), link.sq, 221))
+    link.send(bm(44, struct.pack('<HBB', count, link.vehicle.sysid, 1) + bytes([2]), link.sq, 221))
     for i, pt in enumerate(points):
         lat7 = int(float(pt.get('lat', 0)) * 1e7)
         lon7 = int(float(pt.get('lon', 0)) * 1e7)
         alt = float(pt.get('alt', 100))
         p = struct.pack('<ffffiifHHBBBBBB',
                         0.0, 0.0, 0.0, 0.0, lat7, lon7, alt,
-                        i, 5100, link.sysid, 1, 3, 0, 2, 0)
+                        i, 5100, link.vehicle.sysid, 1, 3, 0, 2, 0)
         link.send(bm(73, p, link.sq, 38))
     link.add_event(lt('rally_uploaded', link.locale) % count, 'rally_uploaded')
 
 
 def request_streams(link: DroneLink) -> None:
-    from pllink_proto import bm
+    from .pllink_proto import bm
     streams = [
         (30, 250000), (33, 250000), (24, 250000),
         (1, 1000000), (42, 1000000),
@@ -372,7 +380,7 @@ def request_streams(link: DroneLink) -> None:
     for mid, interval in streams:
         payload = struct.pack('<fffffffHBBB',
                               float(mid), float(interval), 0, 0, 0, 0, 0,
-                              511, link.sysid, 1, 0)
+                              511, link.vehicle.sysid, 1, 0)
         link.send(bm(76, payload, link.sq, 152))
         time.sleep(cfg.STREAM_REQUEST_SPACING)
     _send_cmd(link, 512, p1=148.0)

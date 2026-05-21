@@ -13,7 +13,7 @@ import pytest
 import websockets
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
-SIM_SCRIPT = ROOT_DIR / 'sim_pllink.py'
+SIM_SCRIPT = ROOT_DIR / 'scripts' / 'sim_pllink.py'
 
 SIM_PORT = 15770
 BACKEND_PORT = 18100

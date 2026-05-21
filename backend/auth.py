@@ -32,6 +32,7 @@ def _load_token() -> str | None:
 def generate_token() -> str:
     token = hashlib.sha256(os.urandom(32)).hexdigest()[:32]
     TOKEN_FILE.write_text(token)
+    TOKEN_FILE.chmod(0o600)
     global _token
     _token = token
     return token

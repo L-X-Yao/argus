@@ -97,14 +97,14 @@ class TestIsPlane:
     def test_zh_copter(self):
         from backend.drone_link import DroneLink
         link = DroneLink()
-        link.vtype_raw = 2
+        link.vehicle.vtype_raw = 2
         _, _, vn = link._get_vehicle_info()
         assert vn == '多旋翼'
 
     def test_en_copter(self):
         from backend.drone_link import DroneLink
         link = DroneLink()
-        link.vtype_raw = 2
+        link.vehicle.vtype_raw = 2
         link.locale = 'en'
         _, _, vn = link._get_vehicle_info()
         assert vn == 'Multirotor'
@@ -112,7 +112,7 @@ class TestIsPlane:
     def test_en_plane(self):
         from backend.drone_link import DroneLink
         link = DroneLink()
-        link.vtype_raw = 1
+        link.vehicle.vtype_raw = 1
         link.locale = 'en'
         _, _, vn = link._get_vehicle_info()
         assert vn == 'Fixed Wing'
@@ -120,7 +120,7 @@ class TestIsPlane:
     def test_en_rover(self):
         from backend.drone_link import DroneLink
         link = DroneLink()
-        link.vtype_raw = 10
+        link.vehicle.vtype_raw = 10
         link.locale = 'en'
         _, _, vn = link._get_vehicle_info()
         assert vn == 'Rover'
@@ -128,7 +128,7 @@ class TestIsPlane:
     def test_en_sub(self):
         from backend.drone_link import DroneLink
         link = DroneLink()
-        link.vtype_raw = 12
+        link.vehicle.vtype_raw = 12
         link.locale = 'en'
         _, _, vn = link._get_vehicle_info()
         assert vn == 'Sub'

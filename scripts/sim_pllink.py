@@ -25,8 +25,8 @@ import random
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-from pllink_proto import ple, pld, bm as _bm
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from backend.pllink_proto import ple, pld, bm as _bm
 
 
 def bm(mid, p, s, ce):

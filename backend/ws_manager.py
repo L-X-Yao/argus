@@ -1,11 +1,15 @@
 from __future__ import annotations
 import asyncio
 import json
+import logging
 from fastapi import WebSocket, WebSocketDisconnect
 
 from .config import cfg
 from .drone_link import DroneLink
+from .locale_text import lt
 from . import commands
+
+logger = logging.getLogger(__name__)
 
 
 class WSManager:
@@ -63,7 +67,7 @@ class WSManager:
                     ok = self.link.connect(port, baud, protocol=protocol)
                     await ws.send_text(json.dumps({
                         'type': 'connect_result', 'ok': ok,
-                        'error': '' if ok else '无法连接',
+                        'error': '' if ok else lt('err_connect', self.link.locale),
                     }))
                 elif msg_type == 'disconnect':
                     self.link.disconnect()
@@ -102,19 +106,36 @@ class WSManager:
                     result = commands.execute(cmd, param, self.link, data=msg)
                     if result:
                         await ws.send_text(json.dumps({'type': 'cmd_result', **result}))
-        except (WebSocketDisconnect, Exception):
-            return
+        except WebSocketDisconnect:
+            pass
+        except Exception:
+            logger.warning('receive_loop error', exc_info=True)
 
     async def _push_loop(self, ws: WebSocket) -> None:
         event_cursor = len(self.link.events)
         param_cursor = len(self.link.param_mgr._messages)
-        dl_cursor = len(self.link._dl_messages)
-        log_cursor = len(self.link._log_messages)
+        dl_cursor = len(self.link.mission._dl_messages)
+        log_cursor = len(self.link.log_dl._log_messages)
+        last_sent: dict = {}
+        push_count = 0
         try:
             while True:
                 state = self.link.get_state()
-                await ws.send_text(json.dumps(state))
-                events = self.link.events
+                push_count += 1
+                if push_count % 10 == 1:
+                    delta = state
+                else:
+                    delta = {k: v for k, v in state.items() if last_sent.get(k) != v}
+                    delta['type'] = 'state'
+                    delta['connected'] = state['connected']
+                if delta:
+                    await ws.send_text(json.dumps(delta))
+                    last_sent.update(state)
+                with self.link._state_lock:
+                    events = list(self.link.events)
+                    dlmsg = list(self.link.mission._dl_messages)
+                    logmsg = list(self.link.log_dl._log_messages)
+                    pmsg = list(self.link.param_mgr._messages)
                 if event_cursor > len(events):
                     event_cursor = 0
                 if len(events) > event_cursor:
@@ -126,21 +147,18 @@ class WSManager:
                             'event_type': ev.get('event_type', ''),
                         }))
                     event_cursor = len(events)
-                dlmsg = self.link._dl_messages
                 if dl_cursor > len(dlmsg):
                     dl_cursor = 0
                 if len(dlmsg) > dl_cursor:
                     for msg in dlmsg[dl_cursor:]:
                         await ws.send_text(json.dumps(msg))
                     dl_cursor = len(dlmsg)
-                logmsg = self.link._log_messages
                 if log_cursor > len(logmsg):
                     log_cursor = 0
                 if len(logmsg) > log_cursor:
                     for msg in logmsg[log_cursor:]:
                         await ws.send_text(json.dumps(msg))
                     log_cursor = len(logmsg)
-                pmsg = self.link.param_mgr._messages
                 if param_cursor > len(pmsg):
                     param_cursor = 0
                 if len(pmsg) > param_cursor:
@@ -159,13 +177,19 @@ class WSManager:
                         'type': 'inspector',
                         'messages': self.link.get_inspector_data(),
                     }))
-                if self.link._console_buf:
-                    text = ''.join(self.link._console_buf)
-                    self.link._console_buf.clear()
+                with self.link._state_lock:
+                    if self.link._console_buf:
+                        text = ''.join(self.link._console_buf)
+                        self.link._console_buf.clear()
+                    else:
+                        text = ''
+                if text:
                     await ws.send_text(json.dumps({
                         'type': 'console_output', 'text': text,
                     }))
                 interval = cfg.WS_PUSH_INTERVAL_CONNECTED if self.link.connected else cfg.WS_PUSH_INTERVAL_IDLE
                 await asyncio.sleep(interval)
-        except (WebSocketDisconnect, Exception):
-            return
+        except WebSocketDisconnect:
+            pass
+        except Exception:
+            logger.warning('push_loop error', exc_info=True)

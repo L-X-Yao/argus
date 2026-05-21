@@ -72,6 +72,10 @@ _T = {
     'motor_test':        ('电机测试: #%d @ %.0f%%',   'Motor test: #%d @ %.0f%%'),
     'rally_uploaded':    ('备降点: 已上传 %d 个',    'Rally: uploaded %d points'),
     'vehicle_switch':    ('切换控制: sysid=%d',       'Switch control: sysid=%d'),
+    'err_connect':     ('无法连接',                 'Connection failed'),
+    'err_no_log':      ('无活动日志',               'No active log'),
+    'err_no_video_url':('未提供视频地址',           'No video URL provided'),
+    'err_no_ffmpeg':   ('服务器未安装 ffmpeg',      'ffmpeg not installed on server'),
 }
 
 

@@ -17,7 +17,7 @@ import urllib.request
 import zipfile
 from pathlib import Path
 
-SCRIPT_DIR = Path(__file__).resolve().parent
+SCRIPT_DIR = Path(__file__).resolve().parent.parent
 OUTPUT_DIR = SCRIPT_DIR / 'release'
 
 PY_VER = '3.10.11'
@@ -111,11 +111,8 @@ def build():
     for f in (SCRIPT_DIR / 'backend').glob('*.py'):
         shutil.copy2(f, be_dst / f.name)
 
-    shutil.copy2(SCRIPT_DIR / 'backend_server.py', build_dir / 'backend_server.py')
-    proto_src = SCRIPT_DIR.parent / 'pllink_proto.py'
-    if proto_src.exists():
-        shutil.copy2(proto_src, build_dir / 'pllink_proto.py')
-    sim_src = SCRIPT_DIR.parent / 'sim_pllink.py'
+    shutil.copy2(SCRIPT_DIR / 'backend' / 'server.py', build_dir / 'backend' / 'server.py')
+    sim_src = SCRIPT_DIR / 'sim_pllink.py'
     if sim_src.exists():
         shutil.copy2(sim_src, build_dir / 'sim_pllink.py')
 
@@ -132,7 +129,7 @@ def build():
         'echo 正在启动，浏览器将自动打开...\r\n'
         'echo 按 Ctrl+C 停止\r\n'
         'echo.\r\n'
-        'python\\python.exe backend_server.py --port 8100 --host 0.0.0.0\r\n'
+        'python\\python.exe backend\\server.py --port 8100 --host 0.0.0.0\r\n'
         'if errorlevel 1 pause\r\n',
         encoding='utf-8',
     )
