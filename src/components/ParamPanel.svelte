@@ -125,6 +125,23 @@
 
   let progress = $derived(paramState.total > 0 ? Math.round(paramState.received / paramState.total * 100) : 0);
 
+  let scrollContainer: HTMLDivElement = $state(null!);
+  let visibleStart = $state(0);
+  const PAGE_SIZE = 100;
+  let visibleParams = $derived(filtered.slice(visibleStart, visibleStart + PAGE_SIZE));
+
+  function onScroll(e: Event) {
+    const el = e.target as HTMLDivElement;
+    if (el.scrollTop + el.clientHeight >= el.scrollHeight - 50 && visibleStart + PAGE_SIZE < filtered.length) {
+      visibleStart = Math.min(visibleStart + 50, Math.max(0, filtered.length - PAGE_SIZE));
+    }
+    if (el.scrollTop < 50 && visibleStart > 0) {
+      visibleStart = Math.max(0, visibleStart - 50);
+    }
+  }
+
+  $effect(() => { filtered; visibleStart = 0; });
+
   function startEdit(p: Param) { editName = p.name; editValue = fmtValue(p.value); }
   function cancelEdit() { editName = null; }
 
@@ -281,8 +298,8 @@
       <span class="text-[11px] text-muted-foreground whitespace-nowrap">{filtered.length}</span>
     </div>
 
-    <div class="flex-1 min-h-0 overflow-y-auto rounded-lg border border-border">
-      {#each filtered as p (p.name)}
+    <div class="flex-1 min-h-0 overflow-y-auto rounded-lg border border-border" bind:this={scrollContainer} onscroll={onScroll}>
+      {#each visibleParams as p (p.name)}
         {@const desc = getDesc(p.name)}
         {@const units = getUnits(p.name)}
         {@const rangeStr = getRangeStr(p.name)}

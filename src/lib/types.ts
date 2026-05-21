@@ -56,6 +56,7 @@ export interface DroneState {
   vehicles: { sysid: number; lat: number; lon: number; alt: number; hdg: number; armed?: boolean; mode?: number; vtype?: number }[];
   prearm: string[];
   adsb: { icao: number; lat: number; lon: number; alt: number; hdg: number; speed: number; vs: number; callsign: string }[];
+  cells: number[];
 }
 
 export interface FlightSummary {
@@ -183,4 +184,5 @@ export const defaultState: DroneState = {
   vehicles: [],
   prearm: [],
   adsb: [],
+  cells: [],
 };

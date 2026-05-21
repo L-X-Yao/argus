@@ -16,6 +16,7 @@ from .drone_link import DroneLink
 from .param_meta import get_metadata
 from .video import router as video_router
 from .ws_manager import WSManager
+from .auth import auth_middleware, verify_ws_token, auth_required, generate_token, verify_token
 
 V3_DIR = Path(__file__).resolve().parent.parent
 DIST_DIR = V3_DIR / 'dist'
@@ -55,6 +56,7 @@ app.add_middleware(
 )
 
 app.include_router(video_router)
+app.middleware('http')(auth_middleware)
 
 
 @app.get('/health', tags=['System'])
@@ -98,8 +100,36 @@ async def api_version():
     }
 
 
+@app.post('/api/auth/login', tags=['Auth'])
+async def api_auth_login(request: Request):
+    """Authenticate with token. Returns ok if valid."""
+    body = await request.json()
+    token = body.get('token', '')
+    if verify_token(token):
+        return {'ok': True}
+    return JSONResponse(status_code=401, content={'ok': False, 'error': 'invalid token'})
+
+
+@app.get('/api/auth/status', tags=['Auth'])
+async def api_auth_status():
+    """Check if authentication is enabled."""
+    return {'auth_required': auth_required()}
+
+
+@app.post('/api/auth/generate', tags=['Auth'])
+async def api_auth_generate():
+    """Generate a new auth token (only works if no token exists yet)."""
+    if auth_required():
+        return JSONResponse(status_code=403, content={'error': 'token already exists'})
+    token = generate_token()
+    return {'token': token}
+
+
 @app.websocket('/ws')
 async def websocket_endpoint(ws: WebSocket):
+    if not verify_ws_token(ws):
+        await ws.close(code=4001, reason='unauthorized')
+        return
     await app.state.ws_mgr.handle_client(ws)
 
 

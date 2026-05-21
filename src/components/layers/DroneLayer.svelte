@@ -133,9 +133,38 @@
     }
   });
 
+  let adsbMarkers = new Map<number, any>();
+
+  $effect(() => {
+    const adsb = app.drone.adsb || [];
+    const seen = new Set<number>();
+    for (const a of adsb) {
+      seen.add(a.icao);
+      const [glat, glon] = coord(a.lat, a.lon);
+      const existing = adsbMarkers.get(a.icao);
+      if (existing) {
+        existing.setLatLng([glat, glon]);
+      } else {
+        const icon = L.divIcon({
+          className: '',
+          html: `<div style="transform:rotate(${a.hdg}deg)"><svg viewBox="-10 -10 20 20" width="20" height="20"><polygon points="0,-8 -5,6 0,3 5,6" fill="#ffc107" stroke="#333" stroke-width="0.5"/></svg></div>
+            <div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-size:8px;color:#ffc107;font-weight:bold;white-space:nowrap">${a.callsign || a.icao.toString(16)}</div>`,
+          iconSize: [20, 20], iconAnchor: [10, 10],
+        });
+        const m = L.marker([glat, glon], { icon, zIndexOffset: 600 }).addTo(map);
+        m.bindTooltip(`${a.callsign || 'ADSB'} | ${a.alt.toFixed(0)}m | ${a.speed.toFixed(0)}m/s`, { permanent: false });
+        adsbMarkers.set(a.icao, m);
+      }
+    }
+    for (const [icao, m] of adsbMarkers) {
+      if (!seen.has(icao)) { map.removeLayer(m); adsbMarkers.delete(icao); }
+    }
+  });
+
   onDestroy(() => {
     [droneMarker, homeMarker, trailLine, velocityLine, homeLine, rangeRing]
       .filter(Boolean).forEach(l => map.removeLayer(l));
     otherMarkers.forEach(m => map.removeLayer(m));
+    adsbMarkers.forEach(m => map.removeLayer(m));
   });
 </script>

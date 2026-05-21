@@ -10,6 +10,26 @@ export default defineConfig({
   test: {
     include: ['src/**/*.test.ts'],
   },
+  build: {
+    chunkSizeWarningLimit: 300,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-ui': ['clsx', 'tailwind-merge', 'bits-ui'],
+          'vendor-icons': ['@lucide/svelte'],
+          'tools': [
+            './src/lib/dflog.ts',
+            './src/lib/survey.ts',
+            './src/lib/gcj02.ts',
+            './src/lib/flightDb.ts',
+            './src/lib/plugins.ts',
+            './src/lib/units.ts',
+            './src/lib/branding.ts',
+          ],
+        },
+      },
+    },
+  },
   plugins: [tailwindcss(), svelte()],
   resolve: {
     alias: {

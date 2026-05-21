@@ -354,6 +354,20 @@ def handle_log_entry(p: bytes, pl: int, link: DroneLink) -> None:
         link.add_event(lt('log_list_n', link.locale) % len(link._log_list), 'log_list_n')
 
 
+def handle_battery_status(p: bytes, pl: int, link: DroneLink) -> None:
+    if pl < 36:
+        return
+    cell_count = 0
+    cells = []
+    for i in range(10):
+        v = struct.unpack_from('<H', p, 10 + i * 2)[0]
+        if v == 0xFFFF:
+            break
+        cells.append(v / 1000.0)
+        cell_count += 1
+    link.battery_cells = cells
+
+
 def handle_adsb_vehicle(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 38:
         return
@@ -455,3 +469,4 @@ def init_handlers() -> None:
     mavlink_dispatch.register(120, handle_log_data)
     mavlink_dispatch.register(126, handle_serial_control)
     mavlink_dispatch.register(246, handle_adsb_vehicle)
+    mavlink_dispatch.register(147, handle_battery_status)
