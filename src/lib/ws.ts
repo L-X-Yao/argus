@@ -104,7 +104,10 @@ export function connectWs(): void {
     scheduleReconnect();
   };
 
-  ws.onerror = () => { ws.close(); };
+  ws.onerror = (ev) => {
+    console.error('[WS] connection error', ev);
+    ws.close();
+  };
 }
 
 function scheduleReconnect(): void {
@@ -112,7 +115,16 @@ function scheduleReconnect(): void {
   reconnectTimer = setTimeout(() => { reconnectTimer = null; connectWs(); }, 2000);
 }
 
-export function sendMessage(msg: Record<string, unknown>): void {
+type OutgoingMessage =
+  | { type: 'connect'; port: string; baud: number; protocol: string }
+  | { type: 'disconnect' }
+  | { type: 'set_locale'; locale: string }
+  | { type: 'set_role'; role: string }
+  | { type: 'command'; cmd: string; param?: number; [key: string]: unknown }
+  | { type: 'request_handoff' }
+  | { type: 'handoff_accept' };
+
+export function sendMessage(msg: OutgoingMessage): void {
   if (socket && socket.readyState === WebSocket.OPEN) {
     socket.send(JSON.stringify(msg));
   } else if (msg.type === 'command') {

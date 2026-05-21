@@ -47,8 +47,8 @@ class AppState {
 
 export const app = new AppState();
 
-export function updateState(s: DroneState) {
-  Object.assign(app.drone, s);
+export function updateState(s: Partial<DroneState>) {
+  app.drone = { ...app.drone, ...s };
 }
 
 const PLANE_VTYPE_RAW = new Set([1, 19, 20, 21, 22, 23, 24, 25]);

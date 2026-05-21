@@ -97,7 +97,7 @@ export async function connectSerial(
         }
         dispatchFrame(frame, serial.handlers);
       }
-    }).catch(() => {}).finally(() => {
+    }).catch((e) => { console.error('[Serial] read loop error', e); }).finally(() => {
       serial.running = false;
     });
 
@@ -124,7 +124,7 @@ export async function disconnectSerial(): Promise<void> {
 function sendSerialFrame(msgId: number, payload: Uint8Array): void {
   if (!serial.conn || !serial.running) return;
   const frame = encodeFrame(msgId, payload, 255, 190, serial.seq++);
-  serialWrite(serial.conn, frame).catch(() => {});
+  serialWrite(serial.conn, frame).catch((e) => { console.error('[Serial] write error', e); });
 }
 
 function requestStreams(): void {

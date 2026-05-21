@@ -4,77 +4,38 @@
   import { app, loadSettings, saveSettings, isPlane } from './lib/stores.svelte';
   import { checkAlerts, beep, speak } from './lib/audio';
   import { t, loadLocale, i18nState } from './lib/i18n.svelte';
-  import StatusBar from './components/StatusBar.svelte';
-  import ControlPanel from './components/ControlPanel.svelte';
-  import MapView from './components/MapView.svelte';
-  import EventLog from './components/EventLog.svelte';
-  import MissionPanel from './components/MissionPanel.svelte';
-  import FlightSummary from './components/FlightSummary.svelte';
-  import ChartPanel from './components/ChartPanel.svelte';
-  import SettingsPanel from './components/SettingsPanel.svelte';
-  import ToastContainer from './components/ToastContainer.svelte';
-  import PreflightPanel from './components/PreflightPanel.svelte';
-  import MissionProgress from './components/MissionProgress.svelte';
-  import ReplayPanel from './components/ReplayPanel.svelte';
-  import SurveyPanel from './components/SurveyPanel.svelte';
-  import FencePanel from './components/FencePanel.svelte';
-  import ParamPanel from './components/ParamPanel.svelte';
-  import RcPanel from './components/RcPanel.svelte';
-  import VibrationPanel from './components/VibrationPanel.svelte';
-  import ServoPanel from './components/ServoPanel.svelte';
-  import EkfPanel from './components/EkfPanel.svelte';
-  import TelemetryOverlay from './components/TelemetryOverlay.svelte';
-  import LogPanel from './components/LogPanel.svelte';
-  import VideoOverlay from './components/VideoOverlay.svelte';
-  import CalibrationPanel from './components/CalibrationPanel.svelte';
-  import ConfirmDialog from './components/ConfirmDialog.svelte';
-  import SlideConfirm from './components/SlideConfirm.svelte';
-  import CommandPalette from './components/CommandPalette.svelte';
-  import InspectorPanel from './components/InspectorPanel.svelte';
-  import ConsolePanel from './components/ConsolePanel.svelte';
-  import MotorTestPanel from './components/MotorTestPanel.svelte';
-  import RcCalibPanel from './components/RcCalibPanel.svelte';
-  import FailsafeConfigPanel from './components/FailsafeConfigPanel.svelte';
-  import PowerCalPanel from './components/PowerCalPanel.svelte';
-  import EscCalPanel from './components/EscCalPanel.svelte';
-  import FrameSelectPanel from './components/FrameSelectPanel.svelte';
-  import PidPanel from './components/PidPanel.svelte';
-  import AutoTunePanel from './components/AutoTunePanel.svelte';
-  import FlightModePanel from './components/FlightModePanel.svelte';
-  import SetupWizard from './components/SetupWizard.svelte';
-  import ParamDiffPanel from './components/ParamDiffPanel.svelte';
-  import MultiVehiclePanel from './components/MultiVehiclePanel.svelte';
-  import FlightReportPanel from './components/FlightReportPanel.svelte';
-  import LogViewerPanel from './components/LogViewerPanel.svelte';
-  import FFTPanel from './components/FFTPanel.svelte';
-  import Compass3DPanel from './components/Compass3DPanel.svelte';
-  import AdvancedCmdPanel from './components/AdvancedCmdPanel.svelte';
-  import OverlapCalcPanel from './components/OverlapCalcPanel.svelte';
-  import CorridorPanel from './components/CorridorPanel.svelte';
-  import PoiPanel from './components/PoiPanel.svelte';
-  import AnnotationPanel from './components/AnnotationPanel.svelte';
-  import RemotePanel from './components/RemotePanel.svelte';
-  import RolePanel from './components/RolePanel.svelte';
-  import AirspacePanel from './components/AirspacePanel.svelte';
-  import OfflineMapPanel from './components/OfflineMapPanel.svelte';
-  import Mission3DPanel from './components/Mission3DPanel.svelte';
-  import GimbalPanel from './components/GimbalPanel.svelte';
-  import CustomDashboard from './components/CustomDashboard.svelte';
-  import AiPlannerPanel from './components/AiPlannerPanel.svelte';
-  import ScriptPanel from './components/ScriptPanel.svelte';
-  import OrthoOverlayPanel from './components/OrthoOverlayPanel.svelte';
-  import AiAnnotationPanel from './components/AiAnnotationPanel.svelte';
-  import SchedulerPanel from './components/SchedulerPanel.svelte';
-  import PositionSourcePanel from './components/PositionSourcePanel.svelte';
-  import NtripPanel from './components/NtripPanel.svelte';
-  import FleetDashboard from './components/FleetDashboard.svelte';
+  import LazyPanelHost from './components/core/LazyPanelHost.svelte';
+  import StatusBar from './components/core/StatusBar.svelte';
+  import ControlPanel from './components/core/ControlPanel.svelte';
+  import MapView from './components/core/MapView.svelte';
+  import EventLog from './components/core/EventLog.svelte';
+  import MissionPanel from './components/mission/MissionPanel.svelte';
+  import FlightSummary from './components/shared/FlightSummary.svelte';
+  import ChartPanel from './components/core/ChartPanel.svelte';
+  import SettingsPanel from './components/shared/SettingsPanel.svelte';
+  import ToastContainer from './components/core/ToastContainer.svelte';
+  import PreflightPanel from './components/shared/PreflightPanel.svelte';
+  import MissionProgress from './components/mission/MissionProgress.svelte';
+  import SurveyPanel from './components/mission/SurveyPanel.svelte';
+  import FencePanel from './components/mission/FencePanel.svelte';
+  import ParamPanel from './components/params/ParamPanel.svelte';
+  import RcPanel from './components/telemetry/RcPanel.svelte';
+  import VibrationPanel from './components/telemetry/VibrationPanel.svelte';
+  import ServoPanel from './components/telemetry/ServoPanel.svelte';
+  import EkfPanel from './components/telemetry/EkfPanel.svelte';
+  import TelemetryOverlay from './components/telemetry/TelemetryOverlay.svelte';
+  import ConfirmDialog from './components/shared/ConfirmDialog.svelte';
+  import SlideConfirm from './components/shared/SlideConfirm.svelte';
+  import CommandPalette from './components/shared/CommandPalette.svelte';
+  import ReplayPanel from './components/tools/ReplayPanel.svelte';
   let Map3DViewModule: any = $state(null);
   $effect(() => {
     if (app.mapMode === '3d' && !Map3DViewModule) {
-      import('./components/Map3DView.svelte').then(m => Map3DViewModule = m.default);
+      import('./components/map/Map3DView.svelte').then(m => Map3DViewModule = m.default);
     }
   });
   import { showConfirm, showSlide, undo } from './lib/stores.svelte';
+  import { panels, type PanelId } from './lib/panels.svelte';
   import { ChevronUp, ChevronDown, CornerDownLeft, Pause, HardDrive, Wrench, Video, SlidersHorizontal, PanelLeftClose, Plane, MapPinned, Activity, Settings2, X as XIcon, Globe } from '@lucide/svelte';
   import type { Component } from 'svelte';
   import Button from '$lib/components/ui/button/button.svelte';
@@ -89,49 +50,8 @@
   let hasUrgentEvent = $derived(unseenEvents > 0 && app.events.slice(-unseenEvents).some(
     e => URGENT_TYPES.has(e.event_type) || e.text.includes('!!!')
   ));
-  let showLogPanel = $state(false);
-  let showVideo = $state(false);
-  let showCalibration = $state(false);
-  let showShortcuts = $state(false);
   let showCmdPalette = $state(false);
-  let showInspector = $state(false);
-  let showConsole = $state(false);
-  let showMotorTest = $state(false);
-  let showRcCal = $state(false);
-  let showFailsafe = $state(false);
-  let showPowerCal = $state(false);
-  let showEscCal = $state(false);
-  let showFrameSelect = $state(false);
-  let showPid = $state(false);
-  let showAutoTune = $state(false);
-  let showFlightModes = $state(false);
-  let showSetupWizard = $state(false);
-  let showParamDiff = $state(false);
-  let showMultiVehicle = $state(false);
-  let showFlightReport = $state(false);
-  let showLogViewer = $state(false);
-  let showFFT = $state(false);
-  let showCompass3D = $state(false);
-  let showAdvCmd = $state(false);
-  let showOverlapCalc = $state(false);
-  let showCorridor = $state(false);
-  let showPoi = $state(false);
-  let showAnnotation = $state(false);
-  let showRemote = $state(false);
-  let showRole = $state(false);
-  let showAirspace = $state(false);
-  let showOfflineMap = $state(false);
-  let showMission3D = $state(false);
-  let showGimbal = $state(false);
-  let showDashboard = $state(false);
-  let showAiPlanner = $state(false);
-  let showScript = $state(false);
-  let showOrtho = $state(false);
-  let showAiAnnotation = $state(false);
-  let showScheduler = $state(false);
-  let showPosSource = $state(false);
-  let showNtrip = $state(false);
-  let showFleet = $state(false);
+  const p = panels;
 
   onMount(() => {
     loadLocale();
@@ -203,8 +123,8 @@
       if (document.fullscreenElement) document.exitFullscreen();
       else document.documentElement.requestFullscreen().catch(() => {});
     }
-    else if (k === 'escape') { showShortcuts = false; }
-    else if (k === '?' || (k === '/' && e.shiftKey)) { showShortcuts = !showShortcuts; }
+    else if (k === 'escape') { p.close('shortcuts'); }
+    else if (k === '?' || (k === '/' && e.shiftKey)) { p.toggle('shortcuts'); }
     else if (k === 'k' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); showCmdPalette = !showCmdPalette; }
     else if (k === 's' && e.ctrlKey) { e.preventDefault(); app.showSettings = !app.showSettings; }
     else if (k === 'z' && e.ctrlKey) { e.preventDefault(); undo(); }
@@ -289,11 +209,11 @@
                 title="{t('ctrl.pause')} (Space)">
           <Pause size={13} />{t('nav.pause')}
         </Button>
-        <Button variant="secondary" size="sm" class="gap-1" onclick={() => showLogPanel = true}
+        <Button variant="secondary" size="sm" class="gap-1" onclick={() => p.open('logPanel')}
                 title={t('nav.logs')}>
           <HardDrive size={13} />{t('nav.logs')}
         </Button>
-        <Button variant="secondary" size="sm" class="gap-1" onclick={() => showCalibration = true}
+        <Button variant="secondary" size="sm" class="gap-1" onclick={() => p.open('calibration')}
                 title={t('nav.calibrate')}>
           <Wrench size={13} />{t('nav.calibrate')}
         </Button>
@@ -303,8 +223,8 @@
                   title={app.mapMode === '3d' ? '2D Map' : '3D Globe'}>
             <Globe size={13} />{app.mapMode === '3d' ? '3D' : '2D'}
           </Button>
-          <Button variant={showVideo ? 'default' : 'secondary'} size="sm" class="gap-1"
-                  onclick={() => showVideo = !showVideo} title="RTSP Video">
+          <Button variant={p.isOpen('video') ? 'default' : 'secondary'} size="sm" class="gap-1"
+                  onclick={() => p.toggle('video')} title="RTSP Video">
             <Video size={13} />{t('nav.video')}
           </Button>
           <Button variant={controlsOpen ? 'default' : 'secondary'} size="sm" class="gap-1"
@@ -354,9 +274,6 @@
               {/if}
             </div>
           </div>
-        {/if}
-        {#if showVideo && app.drone.connected}
-          <VideoOverlay onclose={() => showVideo = false} />
         {/if}
         <MissionProgress />
         {#if app.drone.connected && !app.drone.armed}
@@ -423,180 +340,24 @@
   {#if app.showSettings}
     <SettingsPanel onclose={() => app.showSettings = false} />
   {/if}
-  {#if showLogPanel}
-    <LogPanel onclose={() => showLogPanel = false} />
-  {/if}
-  {#if showCalibration}
-    <CalibrationPanel onclose={() => showCalibration = false} />
-  {/if}
   <ConfirmDialog />
   <SlideConfirm />
   {#if showCmdPalette}
     <CommandPalette
       onclose={() => showCmdPalette = false}
       onnavigate={(v) => { view = v; showCmdPalette = false; }}
-      oninspector={() => showInspector = true}
-      onconsole={() => showConsole = true}
-      onlogs={() => showLogPanel = true}
-      oncalibration={() => showCalibration = true}
-      onvideo={() => showVideo = true}
-      onmotor={() => showMotorTest = true}
-      onrccal={() => showRcCal = true}
-      onfailsafe={() => showFailsafe = true}
-      onpower={() => showPowerCal = true}
-      onesccal={() => showEscCal = true}
-      onframe={() => showFrameSelect = true}
-      onpid={() => showPid = true}
-      onautotune={() => showAutoTune = true}
-      onmodes={() => showFlightModes = true}
-      onsetup={() => showSetupWizard = true}
-      onparamdiff={() => showParamDiff = true}
-      onmultivehicle={() => showMultiVehicle = true}
-      onreport={() => showFlightReport = true}
-      onlogviewer={() => showLogViewer = true}
-      onfft={() => showFFT = true}
-      oncompass3d={() => showCompass3D = true}
-      onadvcmd={() => showAdvCmd = true}
-      onoverlap={() => showOverlapCalc = true}
-      oncorridor={() => showCorridor = true}
-      onpoi={() => showPoi = true}
-      onannotation={() => showAnnotation = true}
-      onremote={() => showRemote = true}
-      onrole={() => showRole = true}
-      onairspace={() => showAirspace = true}
-      onofflinemap={() => showOfflineMap = true}
-      onmission3d={() => showMission3D = true}
     />
   {/if}
-  {#if showInspector}
-    <InspectorPanel onclose={() => showInspector = false} />
-  {/if}
-  {#if showConsole}
-    <ConsolePanel onclose={() => showConsole = false} />
-  {/if}
-  {#if showMotorTest}
-    <MotorTestPanel onclose={() => showMotorTest = false} />
-  {/if}
-  {#if showRcCal}
-    <RcCalibPanel onclose={() => showRcCal = false} />
-  {/if}
-  {#if showFailsafe}
-    <FailsafeConfigPanel onclose={() => showFailsafe = false} />
-  {/if}
-  {#if showPowerCal}
-    <PowerCalPanel onclose={() => showPowerCal = false} />
-  {/if}
-  {#if showEscCal}
-    <EscCalPanel onclose={() => showEscCal = false} />
-  {/if}
-  {#if showFrameSelect}
-    <FrameSelectPanel onclose={() => showFrameSelect = false} />
-  {/if}
-  {#if showPid}
-    <PidPanel onclose={() => showPid = false} />
-  {/if}
-  {#if showAutoTune}
-    <AutoTunePanel onclose={() => showAutoTune = false} />
-  {/if}
-  {#if showFlightModes}
-    <FlightModePanel onclose={() => showFlightModes = false} />
-  {/if}
-  {#if showSetupWizard}
-    <SetupWizard onclose={() => showSetupWizard = false}
-      onframe={() => showFrameSelect = true}
-      onrccal={() => showRcCal = true}
-      onmotor={() => showMotorTest = true}
-      oncalibration={() => showCalibration = true}
-      onfailsafe={() => showFailsafe = true}
-      onmodes={() => showFlightModes = true} />
-  {/if}
-  {#if showParamDiff}
-    <ParamDiffPanel onclose={() => showParamDiff = false} />
-  {/if}
-  {#if showMultiVehicle}
-    <MultiVehiclePanel onclose={() => showMultiVehicle = false} />
-  {/if}
-  {#if showFlightReport}
-    <FlightReportPanel onclose={() => showFlightReport = false} />
-  {/if}
-  {#if showLogViewer}
-    <LogViewerPanel onclose={() => showLogViewer = false} />
-  {/if}
-  {#if showFFT}
-    <FFTPanel onclose={() => showFFT = false} />
-  {/if}
-  {#if showCompass3D}
-    <Compass3DPanel onclose={() => showCompass3D = false} />
-  {/if}
-  {#if showAdvCmd}
-    <AdvancedCmdPanel onclose={() => showAdvCmd = false} />
-  {/if}
-  {#if showOverlapCalc}
-    <OverlapCalcPanel onclose={() => showOverlapCalc = false} />
-  {/if}
-  {#if showCorridor}
-    <CorridorPanel onclose={() => showCorridor = false} />
-  {/if}
-  {#if showPoi}
-    <PoiPanel onclose={() => showPoi = false} />
-  {/if}
-  {#if showAnnotation}
-    <AnnotationPanel onclose={() => showAnnotation = false} />
-  {/if}
-  {#if showRemote}
-    <RemotePanel onclose={() => showRemote = false} />
-  {/if}
-  {#if showRole}
-    <RolePanel onclose={() => showRole = false} />
-  {/if}
-  {#if showAirspace}
-    <AirspacePanel onclose={() => showAirspace = false} />
-  {/if}
-  {#if showOfflineMap}
-    <OfflineMapPanel onclose={() => showOfflineMap = false} />
-  {/if}
-  {#if showMission3D}
-    <Mission3DPanel onclose={() => showMission3D = false} />
-  {/if}
-  {#if showGimbal}
-    <GimbalPanel onclose={() => showGimbal = false} />
-  {/if}
-  {#if showDashboard}
-    <CustomDashboard onclose={() => showDashboard = false} />
-  {/if}
-  {#if showAiPlanner}
-    <AiPlannerPanel onclose={() => showAiPlanner = false} />
-  {/if}
-  {#if showScript}
-    <ScriptPanel onclose={() => showScript = false} />
-  {/if}
-  {#if showOrtho}
-    <OrthoOverlayPanel onclose={() => showOrtho = false} />
-  {/if}
-  {#if showAiAnnotation}
-    <AiAnnotationPanel onclose={() => showAiAnnotation = false} />
-  {/if}
-  {#if showScheduler}
-    <SchedulerPanel onclose={() => showScheduler = false} />
-  {/if}
-  {#if showPosSource}
-    <PositionSourcePanel onclose={() => showPosSource = false} />
-  {/if}
-  {#if showNtrip}
-    <NtripPanel onclose={() => showNtrip = false} />
-  {/if}
-  {#if showFleet}
-    <FleetDashboard onclose={() => showFleet = false} />
-  {/if}
-  {#if showShortcuts}
+  <LazyPanelHost />
+  {#if p.isOpen('shortcuts')}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <!-- svelte-ignore a11y_click_events_have_key_events -->
     <div class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
-         onclick={() => showShortcuts = false}>
+         onclick={() => p.close('shortcuts')}>
       <div class="bg-card border border-border rounded-xl shadow-2xl p-5 w-[380px]" onclick={(e) => e.stopPropagation()}>
         <div class="flex items-center justify-between mb-3">
           <h2 class="text-sm font-semibold text-primary uppercase tracking-wider">{t('shortcuts.title')}</h2>
-          <Button variant="ghost" size="icon-xs" onclick={() => showShortcuts = false}>
+          <Button variant="ghost" size="icon-xs" onclick={() => p.close('shortcuts')}>
             <XIcon size={16} />
           </Button>
         </div>

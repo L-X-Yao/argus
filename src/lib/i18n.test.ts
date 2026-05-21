@@ -4,21 +4,18 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dir = dirname(fileURLToPath(import.meta.url));
-const src = readFileSync(resolve(__dir, 'i18n.svelte.ts'), 'utf-8');
 
-function extractKeys(section: string): Set<string> {
+function extractKeys(file: string): Set<string> {
+  const src = readFileSync(resolve(__dir, file), 'utf-8');
   const keys = new Set<string>();
   const re = /^\s+'([^']+)':/gm;
   let m;
-  while ((m = re.exec(section)) !== null) keys.add(m[1]);
+  while ((m = re.exec(src)) !== null) keys.add(m[1]);
   return keys;
 }
 
-const parts = src.split(/^const en:/m);
-const zhSection = parts[0];
-const enSection = parts[1] || '';
-const zhKeys = extractKeys(zhSection);
-const enKeys = extractKeys(enSection);
+const zhKeys = extractKeys('locales/zh.ts');
+const enKeys = extractKeys('locales/en.ts');
 
 describe('i18n key parity', () => {
   it('every ZH key has an EN key', () => {
