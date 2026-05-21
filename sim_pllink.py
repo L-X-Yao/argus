@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-PL-Link 飞控模拟器 — GCS 仿真测试
+Argus 飞控模拟器 — GCS 仿真测试
 
 用法:
     python3 sim_pllink.py [端口]       (默认 5770)
@@ -617,7 +617,7 @@ def serve(port):
     srv.bind(('0.0.0.0', port))
     srv.listen(1)
     print('=' * 50)
-    print('  PL-Link 飞控模拟器')
+    print('  Argus 飞控模拟器')
     print('  监听: tcp://0.0.0.0:%d' % port)
     print('  GCS 端口栏填: tcp:localhost:%d' % port)
     print('  Ctrl+C 停止')

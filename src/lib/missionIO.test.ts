@@ -37,7 +37,7 @@ describe('QGC .plan JSON', () => {
   it('export has correct structure', () => {
     const plan = JSON.parse(exportQgcPlan(sampleWps));
     expect(plan.fileType).toBe('Plan');
-    expect(plan.groundStation).toBe('PL-Link GCS');
+    expect(plan.groundStation).toBe('Argus GCS');
     expect(plan.mission.items.length).toBe(3);
   });
 });

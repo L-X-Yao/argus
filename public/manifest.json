@@ -1,6 +1,6 @@
 {
-  "name": "PL-Link Ground Control Station",
-  "short_name": "PL-Link",
+  "name": "Argus Ground Control Station",
+  "short_name": "Argus",
   "description": "Universal web-based ground control station for drones",
   "start_url": "/",
   "display": "standalone",

@@ -18,7 +18,7 @@
 
   function exportReport() {
     const lines = [
-      `PL-Link ${t('summary.title')}`,
+      `Argus ${t('summary.title')}`,
       `Date: ${new Date().toLocaleString()}`,
       ``,
       `${t('summary.duration')}: ${fmtTime(summary.duration)}`,

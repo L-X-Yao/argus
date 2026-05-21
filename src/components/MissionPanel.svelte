@@ -182,7 +182,7 @@
     if (!app.waypoints.length) return;
     let coords = app.waypoints.map(w => `${w.lon},${w.lat},${w.alt}`).join('\n');
     const kml = `<?xml version="1.0" encoding="UTF-8"?>
-<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>PL-Link Mission</name>
+<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>Argus Mission</name>
 <Placemark><name>Route</name><LineString><coordinates>${coords}</coordinates></LineString></Placemark>
 </Document></kml>`;
     const blob = new Blob([kml], { type: 'application/vnd.google-earth.kml+xml' });

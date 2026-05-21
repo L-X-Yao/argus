@@ -95,7 +95,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(
-    title='PL-Link GCS API',
+    title='Argus GCS API',
     description='Universal Web Ground Control Station — REST API for MAVLink vehicle control',
     version='3.3.0',
     lifespan=lifespan,

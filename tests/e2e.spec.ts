@@ -4,7 +4,7 @@ test.describe('GCS v3 E2E', () => {
   test('homepage loads with status bar', async ({ page }) => {
     await page.goto('/');
     await expect(page.locator('body')).toBeVisible();
-    await expect(page.getByText('PL-Link')).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText('Argus')).toBeVisible({ timeout: 5000 });
   });
 
   test('settings panel opens and closes', async ({ page }) => {

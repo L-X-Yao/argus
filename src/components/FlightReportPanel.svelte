@@ -50,7 +50,7 @@
     savePilot();
 
     const lines: string[] = [];
-    lines.push('=== PL-Link Flight Report ===');
+    lines.push('=== Argus Flight Report ===');
     lines.push(`Date: ${reportDate}`);
     lines.push(`Pilot: ${pilotName || '---'}`);
     lines.push(`Vehicle: ${vehicleInfo}`);

@@ -7,7 +7,7 @@
 
   let { onclose }: { onclose: () => void } = $props();
 
-  let code = $state(`// PL-Link Script Engine
+  let code = $state(`// Argus Script Engine
 // Available API:
 //   drone    — current drone state (read-only)
 //   send(cmd, data) — send command

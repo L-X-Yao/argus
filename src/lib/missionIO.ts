@@ -57,7 +57,7 @@ export function exportQgcPlan(wps: Waypoint[], homeAlt: number = 0): string {
   const plan = {
     fileType: 'Plan',
     geoFence: { circles: [], polygons: [], version: 2 },
-    groundStation: 'PL-Link GCS',
+    groundStation: 'Argus GCS',
     mission: {
       cruiseSpeed: 15,
       firmwareType: 3,
@@ -91,13 +91,13 @@ export function importQgcPlan(text: string): Waypoint[] {
 
 /* ── GPX format ── */
 
-export function exportGpx(wps: Waypoint[], name: string = 'PL-Link Mission'): string {
+export function exportGpx(wps: Waypoint[], name: string = 'Argus Mission'): string {
   const rtePts = wps.map((w, i) =>
     `    <rtept lat="${w.lat.toFixed(7)}" lon="${w.lon.toFixed(7)}"><ele>${w.alt.toFixed(1)}</ele><name>WP${i + 1}</name></rtept>`
   ).join('\n');
 
   return `<?xml version="1.0" encoding="UTF-8"?>
-<gpx version="1.1" creator="PL-Link GCS">
+<gpx version="1.1" creator="Argus GCS">
   <rte>
     <name>${name}</name>
 ${rtePts}

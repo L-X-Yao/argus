@@ -7,7 +7,7 @@ class I18nState {
 export const i18nState = new I18nState();
 
 const zh: Record<string, string> = {
-  'app.name': 'PL-Link',
+  'app.name': 'Argus',
   'app.subtitle': '地面控制站',
   'tab.fly': '飞行',
   'tab.plan': '规划',
@@ -921,7 +921,7 @@ const zh: Record<string, string> = {
 };
 
 const en: Record<string, string> = {
-  'app.name': 'PL-Link',
+  'app.name': 'Argus',
   'app.subtitle': 'Ground Control Station',
   'tab.fly': 'Fly',
   'tab.plan': 'Plan',
@@ -1835,7 +1835,7 @@ const en: Record<string, string> = {
 };
 
 const ja: Record<string, string> = {
-  'app.name': 'PL-Link', 'app.subtitle': 'GCS', 'tab.fly': 'フライト', 'tab.plan': 'プラン', 'tab.monitor': 'モニター', 'tab.params': 'パラメータ',
+  'app.name': 'Argus', 'app.subtitle': 'GCS', 'tab.fly': 'フライト', 'tab.plan': 'プラン', 'tab.monitor': 'モニター', 'tab.params': 'パラメータ',
   'conn.connect': '接続', 'conn.disconnect': '切断', 'conn.connecting': '接続中...', 'ctrl.arm': '解除', 'ctrl.disarm': 'ロック',
   'ctrl.rtl': 'RTL', 'ctrl.auto': '自動', 'ctrl.altitude': '高度', 'telem.speed': '速度', 'telem.battery': 'バッテリー',
   'status.armed': '解除済み', 'status.nav': 'ナビ', 'settings.title': '設定', 'settings.darkTheme': 'ダークテーマ',
@@ -1846,7 +1846,7 @@ const ja: Record<string, string> = {
 };
 
 const ko: Record<string, string> = {
-  'app.name': 'PL-Link', 'app.subtitle': 'GCS', 'tab.fly': '비행', 'tab.plan': '계획', 'tab.monitor': '모니터', 'tab.params': '매개변수',
+  'app.name': 'Argus', 'app.subtitle': 'GCS', 'tab.fly': '비행', 'tab.plan': '계획', 'tab.monitor': '모니터', 'tab.params': '매개변수',
   'conn.connect': '연결', 'conn.disconnect': '연결해제', 'conn.connecting': '연결중...', 'ctrl.arm': '시동', 'ctrl.disarm': '잠금',
   'ctrl.rtl': 'RTL', 'ctrl.auto': '자동', 'ctrl.altitude': '고도', 'telem.speed': '속도', 'telem.battery': '배터리',
   'status.armed': '시동됨', 'status.nav': '항법', 'settings.title': '설정', 'settings.darkTheme': '다크 테마',
@@ -1857,7 +1857,7 @@ const ko: Record<string, string> = {
 };
 
 const de: Record<string, string> = {
-  'app.name': 'PL-Link', 'app.subtitle': 'Bodenstation', 'tab.fly': 'Flug', 'tab.plan': 'Plan', 'tab.monitor': 'Monitor', 'tab.params': 'Parameter',
+  'app.name': 'Argus', 'app.subtitle': 'Bodenstation', 'tab.fly': 'Flug', 'tab.plan': 'Plan', 'tab.monitor': 'Monitor', 'tab.params': 'Parameter',
   'conn.connect': 'Verbinden', 'conn.disconnect': 'Trennen', 'conn.connecting': 'Verbinde...', 'ctrl.arm': 'Entsichern', 'ctrl.disarm': 'Sichern',
   'ctrl.rtl': 'RTL', 'ctrl.auto': 'Auto', 'ctrl.altitude': 'Höhe', 'telem.speed': 'Geschw.', 'telem.battery': 'Batterie',
   'status.armed': 'Entsichert', 'status.nav': 'Nav', 'settings.title': 'Einstellungen', 'settings.darkTheme': 'Dunkles Thema',
@@ -1868,7 +1868,7 @@ const de: Record<string, string> = {
 };
 
 const fr: Record<string, string> = {
-  'app.name': 'PL-Link', 'app.subtitle': 'Station Sol', 'tab.fly': 'Vol', 'tab.plan': 'Plan', 'tab.monitor': 'Moniteur', 'tab.params': 'Paramètres',
+  'app.name': 'Argus', 'app.subtitle': 'Station Sol', 'tab.fly': 'Vol', 'tab.plan': 'Plan', 'tab.monitor': 'Moniteur', 'tab.params': 'Paramètres',
   'conn.connect': 'Connecter', 'conn.disconnect': 'Déconnecter', 'conn.connecting': 'Connexion...', 'ctrl.arm': 'Armer', 'ctrl.disarm': 'Désarmer',
   'ctrl.rtl': 'RTL', 'ctrl.auto': 'Auto', 'ctrl.altitude': 'Altitude', 'telem.speed': 'Vitesse', 'telem.battery': 'Batterie',
   'status.armed': 'Armé', 'status.nav': 'Nav', 'settings.title': 'Paramètres', 'settings.darkTheme': 'Thème sombre',
@@ -1879,7 +1879,7 @@ const fr: Record<string, string> = {
 };
 
 const es: Record<string, string> = {
-  'app.name': 'PL-Link', 'app.subtitle': 'Estación Terrestre', 'tab.fly': 'Vuelo', 'tab.plan': 'Plan', 'tab.monitor': 'Monitor', 'tab.params': 'Parámetros',
+  'app.name': 'Argus', 'app.subtitle': 'Estación Terrestre', 'tab.fly': 'Vuelo', 'tab.plan': 'Plan', 'tab.monitor': 'Monitor', 'tab.params': 'Parámetros',
   'conn.connect': 'Conectar', 'conn.disconnect': 'Desconectar', 'conn.connecting': 'Conectando...', 'ctrl.arm': 'Armar', 'ctrl.disarm': 'Desarmar',
   'ctrl.rtl': 'RTL', 'ctrl.auto': 'Auto', 'ctrl.altitude': 'Altitud', 'telem.speed': 'Velocidad', 'telem.battery': 'Batería',
   'status.armed': 'Armado', 'status.nav': 'Nav', 'settings.title': 'Ajustes', 'settings.darkTheme': 'Tema oscuro',
@@ -1890,7 +1890,7 @@ const es: Record<string, string> = {
 };
 
 const pt: Record<string, string> = {
-  'app.name': 'PL-Link', 'app.subtitle': 'Estação Terrestre', 'tab.fly': 'Voo', 'tab.plan': 'Plano', 'tab.monitor': 'Monitor', 'tab.params': 'Parâmetros',
+  'app.name': 'Argus', 'app.subtitle': 'Estação Terrestre', 'tab.fly': 'Voo', 'tab.plan': 'Plano', 'tab.monitor': 'Monitor', 'tab.params': 'Parâmetros',
   'conn.connect': 'Conectar', 'conn.disconnect': 'Desconectar', 'conn.connecting': 'Conectando...', 'ctrl.arm': 'Armar', 'ctrl.disarm': 'Desarmar',
   'ctrl.rtl': 'RTL', 'ctrl.auto': 'Auto', 'ctrl.altitude': 'Altitude', 'telem.speed': 'Velocidade', 'telem.battery': 'Bateria',
   'status.armed': 'Armado', 'status.nav': 'Nav', 'settings.title': 'Configurações', 'settings.darkTheme': 'Tema escuro',
@@ -1901,7 +1901,7 @@ const pt: Record<string, string> = {
 };
 
 const ru: Record<string, string> = {
-  'app.name': 'PL-Link', 'app.subtitle': 'Наземная станция', 'tab.fly': 'Полёт', 'tab.plan': 'План', 'tab.monitor': 'Монитор', 'tab.params': 'Параметры',
+  'app.name': 'Argus', 'app.subtitle': 'Наземная станция', 'tab.fly': 'Полёт', 'tab.plan': 'План', 'tab.monitor': 'Монитор', 'tab.params': 'Параметры',
   'conn.connect': 'Подключить', 'conn.disconnect': 'Отключить', 'conn.connecting': 'Подключение...', 'ctrl.arm': 'Взвести', 'ctrl.disarm': 'Снять',
   'ctrl.rtl': 'RTL', 'ctrl.auto': 'Авто', 'ctrl.altitude': 'Высота', 'telem.speed': 'Скорость', 'telem.battery': 'Батарея',
   'status.armed': 'Взведён', 'status.nav': 'Нав', 'settings.title': 'Настройки', 'settings.darkTheme': 'Тёмная тема',
@@ -1912,7 +1912,7 @@ const ru: Record<string, string> = {
 };
 
 const ar: Record<string, string> = {
-  'app.name': 'PL-Link', 'app.subtitle': 'محطة أرضية', 'tab.fly': 'طيران', 'tab.plan': 'خطة', 'tab.monitor': 'مراقبة', 'tab.params': 'معلمات',
+  'app.name': 'Argus', 'app.subtitle': 'محطة أرضية', 'tab.fly': 'طيران', 'tab.plan': 'خطة', 'tab.monitor': 'مراقبة', 'tab.params': 'معلمات',
   'conn.connect': 'اتصال', 'conn.disconnect': 'قطع', 'conn.connecting': 'جاري الاتصال...', 'ctrl.arm': 'تسليح', 'ctrl.disarm': 'نزع',
   'ctrl.rtl': 'RTL', 'ctrl.auto': 'تلقائي', 'ctrl.altitude': 'ارتفاع', 'telem.speed': 'سرعة', 'telem.battery': 'بطارية',
   'status.armed': 'مسلّح', 'status.nav': 'ملاحة', 'settings.title': 'إعدادات', 'settings.darkTheme': 'وضع داكن',

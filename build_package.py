@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Build self-contained Windows package for PL-Link GCS v3.
+Build self-contained Windows package for Argus GCS v3.
 Downloads Python 3.10 embeddable, bundles all dependencies offline,
 produces a zip that runs on any Windows 10/11 x64 with zero install.
 
@@ -34,7 +34,7 @@ PIP_DEPS = [
 
 def download(url, desc):
     print('  Downloading %s ...' % desc)
-    req = urllib.request.Request(url, headers={'User-Agent': 'plkj-builder/1.0'})
+    req = urllib.request.Request(url, headers={'User-Agent': 'argus-builder/1.0'})
     resp = urllib.request.urlopen(req, timeout=120)
     data = resp.read()
     print('    Done (%.1f KB)' % (len(data) / 1024))
@@ -42,7 +42,7 @@ def download(url, desc):
 
 
 def build():
-    print('=== PL-Link GCS v3 Package Builder ===\n')
+    print('=== Argus GCS v3 Package Builder ===\n')
 
     build_dir = SCRIPT_DIR / '_build'
     if build_dir.exists():
@@ -120,13 +120,13 @@ def build():
         shutil.copy2(sim_src, build_dir / 'sim_pllink.py')
 
     # Create launcher bat
-    (build_dir / 'PL-Link地面站.bat').write_text(
+    (build_dir / 'Argus地面站.bat').write_text(
         '@echo off\r\n'
         'cd /d "%~dp0"\r\n'
         'chcp 65001 >nul\r\n'
-        'title PL-Link 地面站 v3.0\r\n'
+        'title Argus 地面站 v3.0\r\n'
         'echo ============================================\r\n'
-        'echo   PL-Link 地面站 v3.0\r\n'
+        'echo   Argus 地面站 v3.0\r\n'
         'echo ============================================\r\n'
         'echo.\r\n'
         'echo 正在启动，浏览器将自动打开...\r\n'
@@ -168,7 +168,7 @@ def build():
     size_mb = zip_name.stat().st_size / 1024 / 1024
     print('\n=== Done! ===')
     print('Output: %s (%.1f MB)' % (zip_name, size_mb))
-    print('Usage: Extract zip, double-click "PL-Link地面站.bat"')
+    print('Usage: Extract zip, double-click "Argus地面站.bat"')
 
 
 if __name__ == '__main__':

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Standalone entry point for PL-Link GCS backend (used by Tauri sidecar).
+"""Standalone entry point for Argus GCS backend (used by Tauri sidecar).
 
 When packaged with PyInstaller, this becomes the single-file executable that
 Tauri spawns as a sidecar process.  It starts the FastAPI/uvicorn server on
@@ -35,7 +35,7 @@ def _open_browser(port: int):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='PL-Link GCS backend')
+    parser = argparse.ArgumentParser(description='Argus GCS backend')
     parser.add_argument('--port', type=int, default=8100)
     parser.add_argument('--host', default='127.0.0.1')
     parser.add_argument('--no-browser', action='store_true')

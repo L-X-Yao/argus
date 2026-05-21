@@ -184,7 +184,7 @@
       let warn = '';
       if ((d.remaining >= 0 && d.remaining < 10) || (d.ekf_flags & 0x480)) warn = '[!!] ';
       else if ((d.remaining >= 0 && d.remaining < 20) || d.link_age > 3) warn = '[!] ';
-      document.title = `${warn}PL-Link — ${parts.join(' | ')}`;
+      document.title = `${warn}Argus — ${parts.join(' | ')}`;
     } else {
       document.title = `${t('app.name')} ${t('welcome.subtitle')}`;
     }

@@ -10,7 +10,7 @@ export interface BrandConfig {
 }
 
 const DEFAULT_BRAND: BrandConfig = {
-  appName: 'PL-Link',
+  appName: 'Argus',
   subtitle: 'Ground Control Station',
   defaultPort: 'tcp:localhost:5770',
   defaultProtocol: 'auto',
@@ -28,7 +28,7 @@ export function loadBranding() {
     }
   } catch {}
   try {
-    const saved = localStorage.getItem('pllink_branding');
+    const saved = localStorage.getItem('argus_branding');
     if (saved) {
       const cfg = JSON.parse(saved);
       _brand = { ...DEFAULT_BRAND, ...cfg };

@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
-  "description": "Default capabilities for PL-Link GCS",
+  "description": "Default capabilities for Argus GCS",
   "windows": ["main"],
   "permissions": [
     "core:default",

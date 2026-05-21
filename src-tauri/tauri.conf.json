@@ -1,8 +1,8 @@
 {
   "$schema": "https://raw.githubusercontent.com/tauri-apps/tauri/tauri-v2.5.1/crates/tauri-cli/schema.json",
-  "productName": "PL-Link",
+  "productName": "Argus",
   "version": "3.1.0",
-  "identifier": "com.plkj.gcs",
+  "identifier": "dev.argus.gcs",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
@@ -10,10 +10,10 @@
     "beforeDevCommand": "node node_modules/vite/bin/vite.js"
   },
   "app": {
-    "title": "PL-Link 地面站",
+    "title": "Argus 地面站",
     "windows": [
       {
-        "title": "PL-Link 地面站",
+        "title": "Argus 地面站",
         "width": 1400,
         "height": 900,
         "resizable": true,

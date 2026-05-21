@@ -1,5 +1,5 @@
 #!/bin/bash
-# Build PL-Link GCS desktop application.
+# Build Argus GCS desktop application.
 #
 # Prerequisites:
 #   - Node.js, npm (frontend build)
