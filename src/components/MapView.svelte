@@ -6,6 +6,7 @@
   import { API_BASE } from '../lib/backend';
   import MapControls from './MapControls.svelte';
   import HudOverlay from './HudOverlay.svelte';
+  import { FileUp } from '@lucide/svelte';
   import DroneLayer from './layers/DroneLayer.svelte';
   import WaypointLayer from './layers/WaypointLayer.svelte';
   import GuidedLayer from './layers/GuidedLayer.svelte';
@@ -155,6 +156,58 @@
 
   function toggleMeasure() { if (measuring) clearMeasure(); else { clearMeasure(); measuring = true; } }
 
+  let kmlLayers: any[] = $state([]);
+
+  function importKmlOverlay() {
+    const input = document.createElement('input');
+    input.type = 'file'; input.accept = '.kml,.kmz';
+    input.onchange = (e: any) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev: any) => {
+        try {
+          const doc = new DOMParser().parseFromString(ev.target.result, 'text/xml');
+          let count = 0;
+          const placemarks = doc.getElementsByTagName('Placemark');
+          for (let i = 0; i < placemarks.length; i++) {
+            const pm = placemarks[i];
+            const coordsEl = pm.getElementsByTagName('coordinates');
+            if (coordsEl.length === 0) continue;
+            const pts: [number, number][] = [];
+            coordsEl[0].textContent!.trim().split(/\s+/).forEach((c: string) => {
+              const p = c.split(',');
+              if (p.length >= 2) {
+                const lon = parseFloat(p[0]), lat = parseFloat(p[1]);
+                if (Math.abs(lat) > 0.001) {
+                  const [mlat, mlon] = toMap(lat, lon);
+                  pts.push([mlat, mlon]);
+                }
+              }
+            });
+            if (pts.length < 2) continue;
+            const isPolygon = pm.getElementsByTagName('Polygon').length > 0;
+            const layer = isPolygon
+              ? L.polygon(pts, { color: '#e040fb', weight: 2, fillOpacity: 0.1 }).addTo(map)
+              : L.polyline(pts, { color: '#e040fb', weight: 2 }).addTo(map);
+            const name = pm.getElementsByTagName('name')[0]?.textContent || '';
+            if (name) layer.bindTooltip(name, { permanent: false });
+            kmlLayers.push(layer);
+            count++;
+          }
+          addToast(t('kml.loaded').replace('{n}', String(count)), 'success');
+        } catch { addToast(t('kml.loadFail'), 'error'); }
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  }
+
+  function clearKmlOverlay() {
+    kmlLayers.forEach(l => map.removeLayer(l));
+    kmlLayers = [];
+  }
+
   function toggleMapType() {
     isSat = !isSat;
     if (isSat) {
@@ -235,6 +288,14 @@
     {#if droneTrail.length > 10}
       <button class="map-btn" onclick={exportTrack} title={t('map.track')}>
         <Download size={13} />{t('map.track')}
+      </button>
+    {/if}
+    <button class="map-btn" onclick={importKmlOverlay} title={t('kml.import')}>
+      <FileUp size={13} />KML
+    </button>
+    {#if kmlLayers.length > 0}
+      <button class="map-btn !text-purple-400 !border-purple-400" onclick={clearKmlOverlay} title={t('kml.clear')}>
+        ✕ KML
       </button>
     {/if}
   </div>

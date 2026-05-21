@@ -14,7 +14,8 @@
   } from '@lucide/svelte';
 
   let { onclose, onnavigate, oninspector, onconsole, onlogs, oncalibration, onvideo, onmotor,
-         onrccal, onfailsafe, onpower, onesccal, onframe, onpid, onautotune, onmodes, onsetup, onparamdiff }:
+         onrccal, onfailsafe, onpower, onesccal, onframe, onpid, onautotune, onmodes, onsetup, onparamdiff,
+         onmultivehicle, onreport }:
     { onclose: () => void;
       onnavigate: (v: 'fly' | 'plan' | 'monitor' | 'params') => void;
       oninspector: () => void;
@@ -33,6 +34,8 @@
       onmodes: () => void;
       onsetup: () => void;
       onparamdiff: () => void;
+      onmultivehicle: () => void;
+      onreport: () => void;
     } = $props();
 
   interface PaletteItem {
@@ -130,6 +133,10 @@
         handler: () => onsetup(), available: true },
       { id: 'tool-paramdiff', label: t('paramdiff.title'), category: t('cmd.catTools'), icon: Search,
         handler: () => onparamdiff(), available: paramState.list.length > 0 },
+      { id: 'tool-multivehicle', label: t('multi.title'), category: t('cmd.catTools'), icon: Plane,
+        handler: () => onmultivehicle(), available: connected },
+      { id: 'tool-report', label: t('report.title'), category: t('cmd.catTools'), icon: Search,
+        handler: () => onreport(), available: true },
 
       { id: 'set-theme', label: t('settings.darkTheme'), category: t('settings.title'), shortcut: 'L', icon: app.darkTheme ? Sun : Moon,
         handler: () => { app.darkTheme = !app.darkTheme; saveSettings(); }, available: true },

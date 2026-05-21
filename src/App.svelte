@@ -43,6 +43,8 @@
   import FlightModePanel from './components/FlightModePanel.svelte';
   import SetupWizard from './components/SetupWizard.svelte';
   import ParamDiffPanel from './components/ParamDiffPanel.svelte';
+  import MultiVehiclePanel from './components/MultiVehiclePanel.svelte';
+  import FlightReportPanel from './components/FlightReportPanel.svelte';
   import { showConfirm, showSlide, undo } from './lib/stores.svelte';
   import { ChevronUp, ChevronDown, CornerDownLeft, Pause, HardDrive, Wrench, Video, SlidersHorizontal, PanelLeftClose, Plane, MapPinned, Activity, Settings2, X as XIcon } from '@lucide/svelte';
   import type { Component } from 'svelte';
@@ -76,6 +78,8 @@
   let showFlightModes = $state(false);
   let showSetupWizard = $state(false);
   let showParamDiff = $state(false);
+  let showMultiVehicle = $state(false);
+  let showFlightReport = $state(false);
 
   onMount(() => {
     loadLocale();
@@ -370,6 +374,8 @@
       onmodes={() => showFlightModes = true}
       onsetup={() => showSetupWizard = true}
       onparamdiff={() => showParamDiff = true}
+      onmultivehicle={() => showMultiVehicle = true}
+      onreport={() => showFlightReport = true}
     />
   {/if}
   {#if showInspector}
@@ -416,6 +422,12 @@
   {/if}
   {#if showParamDiff}
     <ParamDiffPanel onclose={() => showParamDiff = false} />
+  {/if}
+  {#if showMultiVehicle}
+    <MultiVehiclePanel onclose={() => showMultiVehicle = false} />
+  {/if}
+  {#if showFlightReport}
+    <FlightReportPanel onclose={() => showFlightReport = false} />
   {/if}
   {#if showShortcuts}
     <!-- svelte-ignore a11y_no_static_element_interactions -->

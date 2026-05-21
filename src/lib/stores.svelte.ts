@@ -37,6 +37,10 @@ class AppState {
   linkHistory: { t: number; rate: number; age: number }[] = $state([]);
   rallyPoints: RallyPoint[] = $state([]);
   showRally: boolean = $state(false);
+  kmlOverlay: { type: string; coords: [number, number][]; name: string }[] = $state([]);
+  showMultiVehicle: boolean = $state(false);
+  showReport: boolean = $state(false);
+  unitSystem: 'metric' | 'imperial' = $state('metric');
 }
 
 export const app = new AppState();

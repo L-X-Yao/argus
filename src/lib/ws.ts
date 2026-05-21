@@ -3,6 +3,7 @@ import { app, updateState, addEvent, setWsConnected, addToast, loadDownloadedMis
 import { handleParamBatch, handleParamsComplete } from './paramStore.svelte';
 import { setLogList, completeDownload, updateDownloadProgress } from './logStore.svelte';
 import { updateInspector, appendConsole } from './inspectorStore.svelte';
+import { saveFlightRecord } from './flightDb';
 import { getWsUrl } from './backend';
 import { onLocaleChange, getLocale, t } from './i18n.svelte';
 
@@ -26,6 +27,15 @@ export function connectWs(): void {
       const msg = JSON.parse(ev.data) as WSMessage;
       switch (msg.type) {
         case 'state':
+          if (msg.flight_summary && !app.drone.flight_summary) {
+            const s = msg.flight_summary;
+            saveFlightRecord({
+              date: new Date().toISOString(),
+              duration: s.duration, maxAlt: s.max_alt, maxSpeed: s.max_speed,
+              totalDist: s.total_dist, batUsed: s.bat_used,
+              vtype: msg.vtype, fw: msg.fw_version, eventCount: app.events.length,
+            });
+          }
           updateState(msg);
           break;
         case 'event':
