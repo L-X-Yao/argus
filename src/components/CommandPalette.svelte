@@ -13,7 +13,8 @@
     ChevronRight,
   } from '@lucide/svelte';
 
-  let { onclose, onnavigate, oninspector, onconsole, onlogs, oncalibration, onvideo, onmotor }:
+  let { onclose, onnavigate, oninspector, onconsole, onlogs, oncalibration, onvideo, onmotor,
+         onrccal, onfailsafe, onpower, onesccal }:
     { onclose: () => void;
       onnavigate: (v: 'fly' | 'plan' | 'monitor' | 'params') => void;
       oninspector: () => void;
@@ -22,6 +23,10 @@
       oncalibration: () => void;
       onvideo: () => void;
       onmotor: () => void;
+      onrccal: () => void;
+      onfailsafe: () => void;
+      onpower: () => void;
+      onesccal: () => void;
     } = $props();
 
   interface PaletteItem {
@@ -99,6 +104,14 @@
         handler: () => onvideo(), available: true },
       { id: 'tool-motor', label: t('cmd.motorTest'), category: t('cmd.catTools'), icon: Zap,
         handler: () => onmotor(), available: connected },
+      { id: 'tool-rccal', label: t('rccal.title'), category: t('cmd.catTools'), icon: Radio,
+        handler: () => onrccal(), available: connected },
+      { id: 'tool-failsafe', label: t('failsafe.title'), category: t('cmd.catTools'), icon: ShieldAlert,
+        handler: () => onfailsafe(), available: connected },
+      { id: 'tool-power', label: t('power.title'), category: t('cmd.catTools'), icon: Zap,
+        handler: () => onpower(), available: connected },
+      { id: 'tool-esccal', label: t('esccal.title'), category: t('cmd.catTools'), icon: Zap,
+        handler: () => onesccal(), available: connected },
 
       { id: 'set-theme', label: t('settings.darkTheme'), category: t('settings.title'), shortcut: 'L', icon: app.darkTheme ? Sun : Moon,
         handler: () => { app.darkTheme = !app.darkTheme; saveSettings(); }, available: true },

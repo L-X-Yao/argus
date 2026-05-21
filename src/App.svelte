@@ -33,6 +33,10 @@
   import InspectorPanel from './components/InspectorPanel.svelte';
   import ConsolePanel from './components/ConsolePanel.svelte';
   import MotorTestPanel from './components/MotorTestPanel.svelte';
+  import RcCalibPanel from './components/RcCalibPanel.svelte';
+  import FailsafeConfigPanel from './components/FailsafeConfigPanel.svelte';
+  import PowerCalPanel from './components/PowerCalPanel.svelte';
+  import EscCalPanel from './components/EscCalPanel.svelte';
   import { showConfirm, showSlide, undo } from './lib/stores.svelte';
   import { ChevronUp, ChevronDown, CornerDownLeft, Pause, HardDrive, Wrench, Video, SlidersHorizontal, PanelLeftClose, Plane, MapPinned, Activity, Settings2, X as XIcon } from '@lucide/svelte';
   import type { Component } from 'svelte';
@@ -56,6 +60,10 @@
   let showInspector = $state(false);
   let showConsole = $state(false);
   let showMotorTest = $state(false);
+  let showRcCal = $state(false);
+  let showFailsafe = $state(false);
+  let showPowerCal = $state(false);
+  let showEscCal = $state(false);
 
   onMount(() => {
     loadLocale();
@@ -340,6 +348,10 @@
       oncalibration={() => showCalibration = true}
       onvideo={() => showVideo = true}
       onmotor={() => showMotorTest = true}
+      onrccal={() => showRcCal = true}
+      onfailsafe={() => showFailsafe = true}
+      onpower={() => showPowerCal = true}
+      onesccal={() => showEscCal = true}
     />
   {/if}
   {#if showInspector}
@@ -350,6 +362,18 @@
   {/if}
   {#if showMotorTest}
     <MotorTestPanel onclose={() => showMotorTest = false} />
+  {/if}
+  {#if showRcCal}
+    <RcCalibPanel onclose={() => showRcCal = false} />
+  {/if}
+  {#if showFailsafe}
+    <FailsafeConfigPanel onclose={() => showFailsafe = false} />
+  {/if}
+  {#if showPowerCal}
+    <PowerCalPanel onclose={() => showPowerCal = false} />
+  {/if}
+  {#if showEscCal}
+    <EscCalPanel onclose={() => showEscCal = false} />
   {/if}
   {#if showShortcuts}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
