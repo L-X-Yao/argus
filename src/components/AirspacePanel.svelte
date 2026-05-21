@@ -7,18 +7,58 @@
 
   let { onclose }: { onclose: () => void } = $props();
 
-  /* ── Airport database (top 10 Chinese airports) ── */
-  const AIRPORTS = [
-    { name: '北京首都 PEK', lat: 40.0801, lon: 116.5846, radius: 8500 },
-    { name: '北京大兴 PKX', lat: 39.5098, lon: 116.4105, radius: 8500 },
-    { name: '上海浦东 PVG', lat: 31.1443, lon: 121.8083, radius: 8500 },
-    { name: '上海虹桥 SHA', lat: 31.1979, lon: 121.3363, radius: 6000 },
-    { name: '广州白云 CAN', lat: 23.3924, lon: 113.2988, radius: 8500 },
-    { name: '深圳宝安 SZX', lat: 22.6393, lon: 113.8107, radius: 6000 },
-    { name: '成都天府 TFU', lat: 30.3194, lon: 104.4419, radius: 8500 },
-    { name: '西安咸阳 XIY', lat: 34.4371, lon: 108.7519, radius: 8500 },
-    { name: '杭州萧山 HGH', lat: 30.2295, lon: 120.4344, radius: 6000 },
-    { name: '南京禄口 NKG', lat: 31.7420, lon: 118.8620, radius: 6000 },
+  /* ── Airport database (top 50 Chinese airports by passenger volume) ── */
+  const AIRPORTS: { name: string; code: string; lat: number; lon: number; radius: number }[] = [
+    { name: '北京首都', code: 'PEK', lat: 40.0801, lon: 116.5846, radius: 8500 },
+    { name: '北京大兴', code: 'PKX', lat: 39.5098, lon: 116.4105, radius: 8500 },
+    { name: '上海浦东', code: 'PVG', lat: 31.1443, lon: 121.8083, radius: 8500 },
+    { name: '上海虹桥', code: 'SHA', lat: 31.1979, lon: 121.3363, radius: 6000 },
+    { name: '广州白云', code: 'CAN', lat: 23.3924, lon: 113.2988, radius: 8500 },
+    { name: '深圳宝安', code: 'SZX', lat: 22.6393, lon: 113.8107, radius: 6000 },
+    { name: '成都双流', code: 'CTU', lat: 30.5785, lon: 103.9471, radius: 8500 },
+    { name: '成都天府', code: 'TFU', lat: 30.3194, lon: 104.4419, radius: 8500 },
+    { name: '西安咸阳', code: 'XIY', lat: 34.4371, lon: 108.7519, radius: 8500 },
+    { name: '杭州萧山', code: 'HGH', lat: 30.2295, lon: 120.4344, radius: 6000 },
+    { name: '南京禄口', code: 'NKG', lat: 31.7420, lon: 118.8620, radius: 6000 },
+    { name: '昆明长水', code: 'KMG', lat: 24.9924, lon: 102.7432, radius: 8500 },
+    { name: '武汉天河', code: 'WUH', lat: 30.7838, lon: 114.2081, radius: 6000 },
+    { name: '重庆江北', code: 'CKG', lat: 29.7192, lon: 106.6417, radius: 8500 },
+    { name: '厦门高崎', code: 'XMN', lat: 24.5440, lon: 118.1277, radius: 6000 },
+    { name: '长沙黄花', code: 'CSX', lat: 28.1892, lon: 113.2200, radius: 6000 },
+    { name: '青岛胶东', code: 'TAO', lat: 36.3661, lon: 120.0874, radius: 6000 },
+    { name: '大连周水子', code: 'DLC', lat: 38.9657, lon: 121.5386, radius: 6000 },
+    { name: '沈阳桃仙', code: 'SHE', lat: 41.6398, lon: 123.4834, radius: 6000 },
+    { name: '海口美兰', code: 'HAK', lat: 19.9349, lon: 110.4590, radius: 6000 },
+    { name: '三亚凤凰', code: 'SYX', lat: 18.3029, lon: 109.4122, radius: 6000 },
+    { name: '郑州新郑', code: 'CGO', lat: 34.5197, lon: 113.8408, radius: 6000 },
+    { name: '乌鲁木齐地窝堡', code: 'URC', lat: 43.9071, lon: 87.4742, radius: 6000 },
+    { name: '哈尔滨太平', code: 'HRB', lat: 45.6234, lon: 126.2503, radius: 6000 },
+    { name: '天津滨海', code: 'TSN', lat: 39.1244, lon: 117.3462, radius: 6000 },
+    { name: '福州长乐', code: 'FOC', lat: 25.9351, lon: 119.6631, radius: 6000 },
+    { name: '南宁吴圩', code: 'NNG', lat: 22.6083, lon: 108.1722, radius: 6000 },
+    { name: '济南遥墙', code: 'TNA', lat: 36.8572, lon: 117.2158, radius: 6000 },
+    { name: '长春龙嘉', code: 'CGQ', lat: 43.9962, lon: 125.6852, radius: 6000 },
+    { name: '贵阳龙洞堡', code: 'KWE', lat: 26.5385, lon: 106.8017, radius: 6000 },
+    { name: '兰州中川', code: 'LHW', lat: 36.5152, lon: 103.6207, radius: 6000 },
+    { name: '银川河东', code: 'INC', lat: 38.3228, lon: 106.3931, radius: 6000 },
+    { name: '呼和浩特白塔', code: 'HET', lat: 40.8514, lon: 111.8242, radius: 6000 },
+    { name: '石家庄正定', code: 'SJW', lat: 38.2807, lon: 114.6963, radius: 6000 },
+    { name: '温州龙湾', code: 'WNZ', lat: 27.9122, lon: 120.8522, radius: 6000 },
+    { name: '南通兴东', code: 'NTG', lat: 32.0708, lon: 120.9760, radius: 6000 },
+    { name: '烟台蓬莱', code: 'YNT', lat: 37.6575, lon: 120.9870, radius: 6000 },
+    { name: '南昌昌北', code: 'KHN', lat: 28.8650, lon: 115.9001, radius: 6000 },
+    { name: '西宁曹家堡', code: 'XNN', lat: 36.5275, lon: 102.0433, radius: 6000 },
+    { name: '珠海金湾', code: 'ZUH', lat: 22.0064, lon: 113.3760, radius: 6000 },
+    { name: '丽江三义', code: 'LJG', lat: 26.6800, lon: 100.2460, radius: 4500 },
+    { name: '绵阳南郊', code: 'MIG', lat: 31.4281, lon: 104.7418, radius: 4500 },
+    { name: '威海大水泊', code: 'WEH', lat: 36.6463, lon: 122.2289, radius: 4500 },
+    { name: '泉州晋江', code: 'JJN', lat: 24.7964, lon: 118.5902, radius: 4500 },
+    { name: '合肥新桥', code: 'HFE', lat: 31.9800, lon: 116.9770, radius: 6000 },
+    { name: '太原武宿', code: 'TYN', lat: 37.7469, lon: 112.6285, radius: 6000 },
+    { name: '洛阳北郊', code: 'LYA', lat: 34.7411, lon: 112.3880, radius: 4500 },
+    { name: '西双版纳嘎洒', code: 'JHG', lat: 21.9739, lon: 100.7600, radius: 4500 },
+    { name: '鄂尔多斯伊金霍洛', code: 'DSN', lat: 39.4900, lon: 109.8614, radius: 4500 },
+    { name: '拉萨贡嘎', code: 'LXA', lat: 29.2978, lon: 90.9119, radius: 6000 },
   ];
 
   /* ── Persist enable toggle ── */
@@ -62,7 +102,8 @@
     return AIRPORTS.map(ap => {
       const dist = hasPos ? haversineM(droneLat, droneLon, ap.lat, ap.lon) : -1;
       const inside = hasPos && dist < ap.radius;
-      return { ...ap, dist, inside };
+      const label = `${ap.name} ${ap.code}`;
+      return { ...ap, label, dist, inside };
     }).sort((a, b) => {
       if (a.dist < 0) return 1;
       if (b.dist < 0) return -1;
@@ -113,13 +154,13 @@
 
       <!-- Airport cards -->
       <div class="space-y-2">
-        {#each airportList as ap (ap.name)}
+        {#each airportList as ap (ap.code)}
           <div class="p-3 rounded-lg border transition-colors
             {ap.inside ? 'bg-destructive/5 border-destructive/30' : 'bg-muted/30 border-border'}">
             <div class="flex items-center justify-between">
               <div class="flex items-center gap-2">
                 <PlaneIcon size={14} class={ap.inside ? 'text-destructive' : 'text-muted-foreground'} />
-                <span class="text-xs font-semibold text-foreground">{ap.name}</span>
+                <span class="text-xs font-semibold text-foreground">{ap.label}</span>
                 {#if ap.inside}
                   <span class="text-[10px] font-medium text-destructive bg-destructive/10 px-1.5 py-0.5 rounded">
                     {t('airspace.noFly')}
