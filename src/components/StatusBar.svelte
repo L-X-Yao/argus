@@ -1,12 +1,13 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { app, saveSettings, isPlane } from '../lib/stores.svelte';
+  import { app, saveSettings, isPlane, addToast } from '../lib/stores.svelte';
   import { sendConnect, sendDisconnect, sendCommand } from '../lib/ws';
   import { t } from '../lib/i18n.svelte';
   import { apiUrl } from '../lib/backend';
+  import { webSerialAvailable, connectSerial, disconnectSerial, isSerialConnected } from '../lib/transport';
   import Button from '$lib/components/ui/button/button.svelte';
   import Badge from '$lib/components/ui/badge/badge.svelte';
-  import { Volume2, VolumeOff, Sun, Moon, Settings, Satellite } from '@lucide/svelte';
+  import { Volume2, VolumeOff, Sun, Moon, Settings, Satellite, Usb } from '@lucide/svelte';
 
   let { toggleTheme, onSettings }: { toggleTheme: () => void; onSettings: () => void } = $props();
 
@@ -176,6 +177,74 @@
   }
 
   function downloadLog() { window.open(apiUrl('/api/log'), '_blank'); }
+
+  let serialConnecting = $state(false);
+  async function toggleSerial() {
+    if (isSerialConnected()) {
+      await disconnectSerial();
+      addToast(t('conn.serialDisconnected'), 'info');
+      return;
+    }
+    serialConnecting = true;
+    try {
+      const ok = await connectSerial(115200, {
+        onHeartbeat: (msg) => {
+          if (!app.drone.connected) {
+            app.drone.connected = true;
+            addToast(t('conn.serialConnected'), 'success');
+          }
+          app.drone.vtype_raw = msg.type;
+          app.drone.armed = (msg.baseMode & 128) !== 0;
+          app.drone.mode_id = msg.customMode;
+        },
+        onGlobalPositionInt: (msg) => {
+          app.drone.lat = msg.lat;
+          app.drone.lon = msg.lon;
+          app.drone.alt_msl = msg.altMsl;
+          app.drone.alt_rel = msg.altRel;
+          app.drone.vz = -msg.vz;
+          app.drone.hdg = msg.hdg;
+        },
+        onAttitude: (msg) => {
+          app.drone.roll = msg.roll;
+          app.drone.pitch = msg.pitch;
+          app.drone.yaw = msg.yaw;
+        },
+        onSysStatus: (msg) => {
+          app.drone.voltage = msg.voltage;
+          app.drone.current = msg.current;
+          app.drone.remaining = msg.remaining;
+        },
+        onGpsRawInt: (msg) => {
+          app.drone.gps_fix_raw = msg.fixType;
+          app.drone.gps_sats = msg.sats;
+        },
+        onVfrHud: (msg) => {
+          app.drone.gs = msg.groundspeed;
+        },
+        onRcChannels: (msg) => {
+          app.drone.rc = msg.channels;
+          app.drone.rc_rssi = msg.rssi;
+        },
+        onVibration: (msg) => {
+          app.drone.vibe = [msg.x, msg.y, msg.z];
+          app.drone.vibe_clip = [msg.clip0, msg.clip1, msg.clip2];
+        },
+        onHomePosition: (msg) => {
+          app.drone.home_lat = msg.lat;
+          app.drone.home_lon = msg.lon;
+        },
+        onStatusText: (msg) => {
+          app.events.push({ type: 'event', time: new Date().toLocaleTimeString(), text: msg.text, event_type: 'statustext' });
+        },
+      });
+      if (!ok) addToast(t('conn.serialFailed'), 'error');
+    } catch {
+      addToast(t('conn.serialFailed'), 'error');
+    } finally {
+      serialConnecting = false;
+    }
+  }
 </script>
 
 <header class="flex items-center justify-between gap-3 px-3 max-sm:px-1.5 py-1.5 shrink-0 min-w-0 overflow-x-auto scrollbar-hide transition-colors duration-300
@@ -258,6 +327,13 @@
         <Button variant="outline" size="sm" class="text-[10px] px-2 opacity-60 hover:opacity-100"
                 onclick={() => { port = 'udp:14550'; protocol = 'standard'; toggle(); }}
                 title={t('tip.sitl')}>SITL</Button>
+        {#if webSerialAvailable()}
+          <Button variant="outline" size="sm" class="text-[10px] px-2 gap-1 {serialConnecting ? 'animate-pulse' : ''} {isSerialConnected() ? 'border-success text-success' : 'opacity-60 hover:opacity-100'}"
+                  onclick={toggleSerial}
+                  title={t('conn.serialTitle')}>
+            <Usb size={12} />USB
+          </Button>
+        {/if}
       {/if}
     </div>
   </div>
