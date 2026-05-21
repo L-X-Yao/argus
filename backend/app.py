@@ -422,6 +422,59 @@ async def api_firmware_list():
     return {'files': files}
 
 
+import base64 as _b64
+_FW_BASE = _b64.b64decode(b'aHR0cHM6Ly9maXJtd2FyZS5hcmR1cGlsb3Qub3JnLw==').decode()
+
+_BOARD_MAP = {
+    56: ('Plane', 'Plkj-Industrial'),
+    57: ('Copter', 'Plkj-caac'),
+}
+
+
+@app.get('/api/firmware/online')
+async def api_firmware_online(board_id: int = 0):
+    board_info = _BOARD_MAP.get(board_id)
+    if not board_info:
+        return {'versions': [], 'error': 'Unknown board_id'}
+    vehicle, board_name = board_info
+    versions = []
+    try:
+        url = '%s%s/stable-%s/' % (_FW_BASE, vehicle, board_name)
+        req = urlreq.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+        html = urlreq.urlopen(req, timeout=10).read().decode('utf-8', errors='replace')
+        import re
+        for m in re.finditer(r'href="([^"]*\.apj)"', html):
+            fname = m.group(1)
+            ver_m = re.search(r'(\d+\.\d+\.\d+)', fname)
+            ver = ver_m.group(1) if ver_m else fname
+            versions.append({
+                'version': ver,
+                'date': '',
+                'url': url + fname,
+                'size': 0,
+            })
+    except Exception:
+        pass
+    return {'versions': versions[-10:]}
+
+
+@app.post('/api/firmware/download')
+async def api_firmware_download(request: Request):
+    body = await request.json()
+    fw_url = body.get('url', '')
+    filename = body.get('filename', 'firmware.apj')
+    if not fw_url or not filename.endswith('.apj'):
+        return {'ok': False, 'error': 'Invalid params'}
+    try:
+        req = urlreq.Request(fw_url, headers={'User-Agent': 'Mozilla/5.0'})
+        data = urlreq.urlopen(req, timeout=60).read()
+        FIRMWARE_DIR.mkdir(exist_ok=True)
+        (FIRMWARE_DIR / filename).write_bytes(data)
+        return {'ok': True, 'filename': filename, 'size': len(data)}
+    except Exception as e:
+        return {'ok': False, 'error': str(e)}
+
+
 if DIST_DIR.exists():
     app.mount('/assets', StaticFiles(directory=str(DIST_DIR / 'assets')), name='assets')
     if (DIST_DIR / 'images').exists():
