@@ -1,4 +1,4 @@
-export type Locale = 'zh' | 'en';
+export type Locale = 'zh' | 'en' | 'ja' | 'ko' | 'de' | 'fr' | 'es' | 'pt' | 'ru' | 'ar';
 
 class I18nState {
   locale: Locale = $state('zh');
@@ -1792,7 +1792,95 @@ const en: Record<string, string> = {
   'posSource.uninit': 'Uninitialized',
 };
 
-const dicts: Record<Locale, Record<string, string>> = { zh, en };
+const ja: Record<string, string> = {
+  'app.name': 'PL-Link', 'app.subtitle': 'GCS', 'tab.fly': 'フライト', 'tab.plan': 'プラン', 'tab.monitor': 'モニター', 'tab.params': 'パラメータ',
+  'conn.connect': '接続', 'conn.disconnect': '切断', 'conn.connecting': '接続中...', 'ctrl.arm': '解除', 'ctrl.disarm': 'ロック',
+  'ctrl.rtl': 'RTL', 'ctrl.auto': '自動', 'ctrl.altitude': '高度', 'telem.speed': '速度', 'telem.battery': 'バッテリー',
+  'status.armed': '解除済み', 'status.nav': 'ナビ', 'settings.title': '設定', 'settings.darkTheme': 'ダークテーマ',
+  'settings.mapSource': 'マップソース', 'settings.language': '言語', 'param.title': 'パラメータ', 'param.readAll': '全読込',
+  'map.measure': '計測', 'map.area': '面積', 'map.guided': 'ガイド', 'map.survey': 'サーベイ', 'map.fence': 'フェンス',
+  'wp.title': 'ウェイポイント', 'wp.upload': 'アップロード', 'wp.clear': 'クリア',
+  'event.title': 'イベント', 'shortcuts.title': 'キーボードショートカット', 'welcome.subtitle': 'GCS',
+};
+
+const ko: Record<string, string> = {
+  'app.name': 'PL-Link', 'app.subtitle': 'GCS', 'tab.fly': '비행', 'tab.plan': '계획', 'tab.monitor': '모니터', 'tab.params': '매개변수',
+  'conn.connect': '연결', 'conn.disconnect': '연결해제', 'conn.connecting': '연결중...', 'ctrl.arm': '시동', 'ctrl.disarm': '잠금',
+  'ctrl.rtl': 'RTL', 'ctrl.auto': '자동', 'ctrl.altitude': '고도', 'telem.speed': '속도', 'telem.battery': '배터리',
+  'status.armed': '시동됨', 'status.nav': '항법', 'settings.title': '설정', 'settings.darkTheme': '다크 테마',
+  'settings.mapSource': '지도 소스', 'settings.language': '언어', 'param.title': '매개변수', 'param.readAll': '전체읽기',
+  'map.measure': '측정', 'map.area': '면적', 'map.guided': '가이드', 'map.survey': '측량', 'map.fence': '펜스',
+  'wp.title': '웨이포인트', 'wp.upload': '업로드', 'wp.clear': '지우기',
+  'event.title': '이벤트', 'shortcuts.title': '키보드 단축키', 'welcome.subtitle': 'GCS',
+};
+
+const de: Record<string, string> = {
+  'app.name': 'PL-Link', 'app.subtitle': 'Bodenstation', 'tab.fly': 'Flug', 'tab.plan': 'Plan', 'tab.monitor': 'Monitor', 'tab.params': 'Parameter',
+  'conn.connect': 'Verbinden', 'conn.disconnect': 'Trennen', 'conn.connecting': 'Verbinde...', 'ctrl.arm': 'Entsichern', 'ctrl.disarm': 'Sichern',
+  'ctrl.rtl': 'RTL', 'ctrl.auto': 'Auto', 'ctrl.altitude': 'Höhe', 'telem.speed': 'Geschw.', 'telem.battery': 'Batterie',
+  'status.armed': 'Entsichert', 'status.nav': 'Nav', 'settings.title': 'Einstellungen', 'settings.darkTheme': 'Dunkles Thema',
+  'settings.mapSource': 'Kartenquelle', 'settings.language': 'Sprache', 'param.title': 'Parameter', 'param.readAll': 'Alle lesen',
+  'map.measure': 'Messen', 'map.area': 'Fläche', 'map.guided': 'Geführt', 'map.survey': 'Vermessung', 'map.fence': 'Zaun',
+  'wp.title': 'Wegpunkte', 'wp.upload': 'Hochladen', 'wp.clear': 'Löschen',
+  'event.title': 'Ereignisse', 'shortcuts.title': 'Tastenkürzel', 'welcome.subtitle': 'Bodenstation',
+};
+
+const fr: Record<string, string> = {
+  'app.name': 'PL-Link', 'app.subtitle': 'Station Sol', 'tab.fly': 'Vol', 'tab.plan': 'Plan', 'tab.monitor': 'Moniteur', 'tab.params': 'Paramètres',
+  'conn.connect': 'Connecter', 'conn.disconnect': 'Déconnecter', 'conn.connecting': 'Connexion...', 'ctrl.arm': 'Armer', 'ctrl.disarm': 'Désarmer',
+  'ctrl.rtl': 'RTL', 'ctrl.auto': 'Auto', 'ctrl.altitude': 'Altitude', 'telem.speed': 'Vitesse', 'telem.battery': 'Batterie',
+  'status.armed': 'Armé', 'status.nav': 'Nav', 'settings.title': 'Paramètres', 'settings.darkTheme': 'Thème sombre',
+  'settings.mapSource': 'Source carte', 'settings.language': 'Langue', 'param.title': 'Paramètres', 'param.readAll': 'Tout lire',
+  'map.measure': 'Mesurer', 'map.area': 'Surface', 'map.guided': 'Guidé', 'map.survey': 'Relevé', 'map.fence': 'Clôture',
+  'wp.title': 'Points de passage', 'wp.upload': 'Télécharger', 'wp.clear': 'Effacer',
+  'event.title': 'Événements', 'shortcuts.title': 'Raccourcis clavier', 'welcome.subtitle': 'Station Sol',
+};
+
+const es: Record<string, string> = {
+  'app.name': 'PL-Link', 'app.subtitle': 'Estación Terrestre', 'tab.fly': 'Vuelo', 'tab.plan': 'Plan', 'tab.monitor': 'Monitor', 'tab.params': 'Parámetros',
+  'conn.connect': 'Conectar', 'conn.disconnect': 'Desconectar', 'conn.connecting': 'Conectando...', 'ctrl.arm': 'Armar', 'ctrl.disarm': 'Desarmar',
+  'ctrl.rtl': 'RTL', 'ctrl.auto': 'Auto', 'ctrl.altitude': 'Altitud', 'telem.speed': 'Velocidad', 'telem.battery': 'Batería',
+  'status.armed': 'Armado', 'status.nav': 'Nav', 'settings.title': 'Ajustes', 'settings.darkTheme': 'Tema oscuro',
+  'settings.mapSource': 'Fuente mapa', 'settings.language': 'Idioma', 'param.title': 'Parámetros', 'param.readAll': 'Leer todo',
+  'map.measure': 'Medir', 'map.area': 'Área', 'map.guided': 'Guiado', 'map.survey': 'Estudio', 'map.fence': 'Valla',
+  'wp.title': 'Waypoints', 'wp.upload': 'Subir', 'wp.clear': 'Borrar',
+  'event.title': 'Eventos', 'shortcuts.title': 'Atajos de teclado', 'welcome.subtitle': 'Estación Terrestre',
+};
+
+const pt: Record<string, string> = {
+  'app.name': 'PL-Link', 'app.subtitle': 'Estação Terrestre', 'tab.fly': 'Voo', 'tab.plan': 'Plano', 'tab.monitor': 'Monitor', 'tab.params': 'Parâmetros',
+  'conn.connect': 'Conectar', 'conn.disconnect': 'Desconectar', 'conn.connecting': 'Conectando...', 'ctrl.arm': 'Armar', 'ctrl.disarm': 'Desarmar',
+  'ctrl.rtl': 'RTL', 'ctrl.auto': 'Auto', 'ctrl.altitude': 'Altitude', 'telem.speed': 'Velocidade', 'telem.battery': 'Bateria',
+  'status.armed': 'Armado', 'status.nav': 'Nav', 'settings.title': 'Configurações', 'settings.darkTheme': 'Tema escuro',
+  'settings.mapSource': 'Fonte do mapa', 'settings.language': 'Idioma', 'param.title': 'Parâmetros', 'param.readAll': 'Ler tudo',
+  'map.measure': 'Medir', 'map.area': 'Área', 'map.guided': 'Guiado', 'map.survey': 'Levantamento', 'map.fence': 'Cerca',
+  'wp.title': 'Waypoints', 'wp.upload': 'Enviar', 'wp.clear': 'Limpar',
+  'event.title': 'Eventos', 'shortcuts.title': 'Atalhos de teclado', 'welcome.subtitle': 'Estação Terrestre',
+};
+
+const ru: Record<string, string> = {
+  'app.name': 'PL-Link', 'app.subtitle': 'Наземная станция', 'tab.fly': 'Полёт', 'tab.plan': 'План', 'tab.monitor': 'Монитор', 'tab.params': 'Параметры',
+  'conn.connect': 'Подключить', 'conn.disconnect': 'Отключить', 'conn.connecting': 'Подключение...', 'ctrl.arm': 'Взвести', 'ctrl.disarm': 'Снять',
+  'ctrl.rtl': 'RTL', 'ctrl.auto': 'Авто', 'ctrl.altitude': 'Высота', 'telem.speed': 'Скорость', 'telem.battery': 'Батарея',
+  'status.armed': 'Взведён', 'status.nav': 'Нав', 'settings.title': 'Настройки', 'settings.darkTheme': 'Тёмная тема',
+  'settings.mapSource': 'Источник карт', 'settings.language': 'Язык', 'param.title': 'Параметры', 'param.readAll': 'Читать всё',
+  'map.measure': 'Измерить', 'map.area': 'Площадь', 'map.guided': 'Ведомый', 'map.survey': 'Съёмка', 'map.fence': 'Забор',
+  'wp.title': 'Маршрут', 'wp.upload': 'Загрузить', 'wp.clear': 'Очистить',
+  'event.title': 'События', 'shortcuts.title': 'Горячие клавиши', 'welcome.subtitle': 'Наземная станция',
+};
+
+const ar: Record<string, string> = {
+  'app.name': 'PL-Link', 'app.subtitle': 'محطة أرضية', 'tab.fly': 'طيران', 'tab.plan': 'خطة', 'tab.monitor': 'مراقبة', 'tab.params': 'معلمات',
+  'conn.connect': 'اتصال', 'conn.disconnect': 'قطع', 'conn.connecting': 'جاري الاتصال...', 'ctrl.arm': 'تسليح', 'ctrl.disarm': 'نزع',
+  'ctrl.rtl': 'RTL', 'ctrl.auto': 'تلقائي', 'ctrl.altitude': 'ارتفاع', 'telem.speed': 'سرعة', 'telem.battery': 'بطارية',
+  'status.armed': 'مسلّح', 'status.nav': 'ملاحة', 'settings.title': 'إعدادات', 'settings.darkTheme': 'وضع داكن',
+  'settings.mapSource': 'مصدر الخريطة', 'settings.language': 'لغة', 'param.title': 'معلمات', 'param.readAll': 'قراءة الكل',
+  'map.measure': 'قياس', 'map.area': 'مساحة', 'map.guided': 'موجّه', 'map.survey': 'مسح', 'map.fence': 'سياج',
+  'wp.title': 'نقاط المسار', 'wp.upload': 'رفع', 'wp.clear': 'مسح',
+  'event.title': 'أحداث', 'shortcuts.title': 'اختصارات', 'welcome.subtitle': 'محطة أرضية',
+};
+
+const dicts: Record<Locale, Record<string, string>> = { zh, en, ja, ko, de, fr, es, pt, ru, ar };
 
 export function t(key: string): string {
   return dicts[i18nState.locale][key] || dicts['zh'][key] || key;
@@ -1844,9 +1932,12 @@ export function fmtNumber(n: number, decimals = 1): string {
   });
 }
 
+const VALID_LOCALES: Locale[] = ['zh', 'en', 'ja', 'ko', 'de', 'fr', 'es', 'pt', 'ru', 'ar'];
+export { VALID_LOCALES };
+
 export function loadLocale() {
   try {
     const saved = localStorage.getItem('pllink_locale');
-    if (saved === 'en' || saved === 'zh') i18nState.locale = saved;
+    if (saved && VALID_LOCALES.includes(saved as Locale)) i18nState.locale = saved as Locale;
   } catch {}
 }

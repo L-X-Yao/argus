@@ -3,7 +3,7 @@
   import { connectWs, sendCommand } from './lib/ws';
   import { app, loadSettings, saveSettings, isPlane } from './lib/stores.svelte';
   import { checkAlerts, beep, speak } from './lib/audio';
-  import { t, loadLocale } from './lib/i18n.svelte';
+  import { t, loadLocale, i18nState } from './lib/i18n.svelte';
   import StatusBar from './components/StatusBar.svelte';
   import ControlPanel from './components/ControlPanel.svelte';
   import MapView from './components/MapView.svelte';
@@ -143,6 +143,11 @@
     } else {
       document.documentElement.classList.remove('dark');
     }
+  });
+
+  $effect(() => {
+    document.documentElement.dir = i18nState.locale === 'ar' ? 'rtl' : 'ltr';
+    document.documentElement.lang = i18nState.locale;
   });
 
   $effect(() => {

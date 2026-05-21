@@ -1,7 +1,13 @@
 <script lang="ts">
   import { app, saveSettings } from '../lib/stores.svelte';
-  import { t, i18nState, setLocale } from '../lib/i18n.svelte';
+  import { t, i18nState, setLocale, VALID_LOCALES } from '../lib/i18n.svelte';
   import type { Locale } from '../lib/i18n.svelte';
+
+  const LOCALE_LABELS: Record<string, string> = {
+    zh: '中文', en: 'English', ja: '日本語', ko: '한국어',
+    de: 'Deutsch', fr: 'Français', es: 'Español', pt: 'Português',
+    ru: 'Русский', ar: 'العربية',
+  };
   import { gamepad, startGamepad, stopGamepad } from '../lib/gamepad.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
   import FirmwarePanel from './FirmwarePanel.svelte';
@@ -127,12 +133,13 @@
           </div>
           <div class="flex justify-between items-center py-2 border-b border-border/50">
             <label class="text-sm text-muted-foreground"><Globe size={13} class="inline mr-1" />{t('settings.language')}</label>
-            <div class="flex gap-1">
-              <Button variant={i18nState.locale === 'zh' ? 'default' : 'secondary'} size="sm" class="h-7 text-xs px-2.5"
-                      onclick={() => setLocale('zh')}>{t('settings.zhLabel')}</Button>
-              <Button variant={i18nState.locale === 'en' ? 'default' : 'secondary'} size="sm" class="h-7 text-xs px-2.5"
-                      onclick={() => setLocale('en')}>EN</Button>
-            </div>
+            <select class="h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50"
+                    value={i18nState.locale}
+                    onchange={(e) => setLocale((e.target as HTMLSelectElement).value as Locale)}>
+              {#each VALID_LOCALES as loc}
+                <option value={loc}>{LOCALE_LABELS[loc] || loc}</option>
+              {/each}
+            </select>
           </div>
         </div>
       </div>
