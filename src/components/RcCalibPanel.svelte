@@ -56,16 +56,39 @@
     }
   }
 
+  let reversed = $state(Array(CH_COUNT).fill(false));
+
+  function detectReverse() {
+    for (let i = 0; i < 4; i++) {
+      const expectedHighFirst = i === 0 || i === 3;
+      if (minValues[i] < 2200 && maxValues[i] > 800) {
+        const range = maxValues[i] - minValues[i];
+        if (range > 300) {
+          const centerToTrim = trimValues[i] - (minValues[i] + maxValues[i]) / 2;
+          if ((expectedHighFirst && centerToTrim < -50) || (!expectedHighFirst && centerToTrim > 50)) {
+            reversed[i] = true;
+          }
+        }
+      }
+    }
+    reversed = [...reversed];
+  }
+
   async function writeToFc() {
     writing = true;
+    detectReverse();
     for (let i = 0; i < CH_COUNT; i++) {
       const ch = i + 1;
-      sendCommand('param_set', undefined, { name: `RC${ch}_MIN`, value: minValues[i] });
-      sendCommand('param_set', undefined, { name: `RC${ch}_MAX`, value: maxValues[i] });
+      const rev = reversed[i];
+      sendCommand('param_set', undefined, { name: `RC${ch}_MIN`, value: rev ? maxValues[i] : minValues[i] });
+      sendCommand('param_set', undefined, { name: `RC${ch}_MAX`, value: rev ? minValues[i] : maxValues[i] });
       sendCommand('param_set', undefined, { name: `RC${ch}_TRIM`, value: trimValues[i] });
+      sendCommand('param_set', undefined, { name: `RC${ch}_REVERSED`, value: rev ? 1 : 0 });
     }
     writing = false;
-    addToast(t('rccal.writeDone'), 'success');
+    const revCount = reversed.filter(r => r).length;
+    const msg = t('rccal.writeDone').replace('{n}', String(CH_COUNT * 4));
+    addToast(msg + (revCount > 0 ? ` (${revCount} reversed)` : ''), 'success');
   }
 
   function resetWizard() {

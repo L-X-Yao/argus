@@ -84,6 +84,68 @@
     onSliderChange(paramName, clamped);
   }
 
+  /* ── Response curve tracking ── */
+
+  const HISTORY_LEN = 200;
+  let responseHistory = $state<{ t: number; actual: number; target: number }[]>([]);
+  let responseCanvas: HTMLCanvasElement = $state(null!);
+  let showResponse = $state(false);
+
+  $effect(() => {
+    if (!showResponse || !app.drone.connected) return;
+    const d = app.drone;
+    const actual = activeTab === 'roll' ? d.roll : activeTab === 'pitch' ? d.pitch : d.yaw;
+    const target = 0;
+    responseHistory.push({ t: Date.now(), actual, target });
+    if (responseHistory.length > HISTORY_LEN) responseHistory.splice(0, responseHistory.length - HISTORY_LEN);
+  });
+
+  $effect(() => {
+    if (!responseCanvas || !showResponse || responseHistory.length < 2) return;
+    const ctx = responseCanvas.getContext('2d')!;
+    const w = responseCanvas.width = responseCanvas.parentElement!.clientWidth;
+    const h = responseCanvas.height;
+    ctx.clearRect(0, 0, w, h);
+    ctx.fillStyle = '#0d1117';
+    ctx.fillRect(0, 0, w, h);
+    const data = responseHistory;
+    const vals = data.map(d => d.actual);
+    const minV = Math.min(...vals, -10);
+    const maxV = Math.max(...vals, 10);
+    const range = maxV - minV || 1;
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 0.5;
+    const zeroY = h - ((-minV) / range) * (h - 20) - 10;
+    ctx.beginPath(); ctx.moveTo(0, zeroY); ctx.lineTo(w, zeroY); ctx.stroke();
+    ctx.strokeStyle = '#4fc3f7';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (let i = 0; i < data.length; i++) {
+      const x = (i / (HISTORY_LEN - 1)) * w;
+      const y = h - ((data[i].actual - minV) / range) * (h - 20) - 10;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    ctx.strokeStyle = '#555';
+    ctx.lineWidth = 1;
+    ctx.setLineDash([3, 3]);
+    ctx.beginPath();
+    for (let i = 0; i < data.length; i++) {
+      const x = (i / (HISTORY_LEN - 1)) * w;
+      const y = h - ((data[i].target - minV) / range) * (h - 20) - 10;
+      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#4fc3f7';
+    ctx.font = '9px monospace';
+    ctx.fillText('Actual', 4, 12);
+    ctx.fillStyle = '#555';
+    ctx.fillText('Target', 4, 24);
+    ctx.fillStyle = '#666';
+    ctx.fillText(`${vals[vals.length - 1]?.toFixed(1)}°`, w - 40, 12);
+  });
+
   /* ── Save to flash ── */
 
   function saveToFlash() {
@@ -174,9 +236,20 @@
           {/each}
         </div>
 
-        <!-- ════════════════════════════════════════════ -->
-        <!-- Save to Flash button                          -->
-        <!-- ════════════════════════════════════════════ -->
+        <!-- Response curve -->
+        <div class="mt-4">
+          <button class="text-[10px] text-muted-foreground hover:text-primary transition-colors cursor-pointer border-none bg-transparent"
+                  onclick={() => { showResponse = !showResponse; responseHistory = []; }}>
+            {showResponse ? '▼' : '▶'} Response Curve
+          </button>
+          {#if showResponse}
+            <div class="mt-2 border border-border rounded-lg overflow-hidden">
+              <canvas bind:this={responseCanvas} height="120" class="w-full"></canvas>
+            </div>
+          {/if}
+        </div>
+
+        <!-- Save to Flash button -->
         <div class="flex justify-end pt-4">
           <Button variant="default" size="sm" class="h-8 text-xs px-6" onclick={saveToFlash}
                   disabled={!app.drone.connected}>

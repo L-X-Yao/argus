@@ -1,5 +1,14 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { getPlugins, getPluginApi, unloadPlugin } from './plugins';
+
+vi.mock('./stores.svelte', () => ({
+  app: { drone: {}, waypoints: [] },
+  addToast: vi.fn(),
+}));
+vi.mock('./ws', () => ({
+  sendCommand: vi.fn(),
+}));
+
+import { getPlugins, createPluginAPI, unloadPlugin } from './plugins';
 
 describe('plugins', () => {
   it('getPlugins returns an array', () => {
@@ -7,8 +16,8 @@ describe('plugins', () => {
     expect(Array.isArray(plugins)).toBe(true);
   });
 
-  it('getPluginApi returns an object with version and event methods', () => {
-    const api = getPluginApi();
+  it('createPluginAPI returns an object with version and event methods', () => {
+    const api = createPluginAPI();
     expect(api.version).toBe('3.2.0');
     expect(typeof api.subscribe).toBe('function');
     expect(typeof api.emit).toBe('function');
@@ -18,7 +27,7 @@ describe('plugins', () => {
     expect(() => unloadPlugin('nonexistent_plugin_xyz')).not.toThrow();
   });
 
-  it('getPluginApi emit and subscribe roundtrip works', () => {
+  it('createPluginAPI emit and subscribe roundtrip works', () => {
     // window.addEventListener / dispatchEvent are available in vitest
     // node environment via globalThis (jsdom not required for EventTarget)
     const listeners: Record<string, Function[]> = {};
@@ -31,7 +40,7 @@ describe('plugins', () => {
       },
     });
 
-    const api = getPluginApi();
+    const api = createPluginAPI();
     let received: any = null;
     api.subscribe('test-roundtrip', (data: any) => { received = data; });
     api.emit('test-roundtrip', { hello: 'world' });

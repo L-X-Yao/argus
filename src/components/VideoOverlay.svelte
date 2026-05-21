@@ -9,6 +9,8 @@
   let { onclose }: { onclose: () => void } = $props();
   let arEnabled = $state(false);
   let arCanvas: HTMLCanvasElement = $state(null!);
+  let arFov = $state(70);
+  let arGimbalPitch = $state(0);
 
   let videoUrl = $state('');
   onMount(() => { try { videoUrl = localStorage.getItem('pllink_video_url') || ''; } catch {} });
@@ -103,10 +105,11 @@
     const w = arCanvas.width = sizeMap[size].w;
     const h = arCanvas.height = sizeMap[size].h;
     ctx.clearRect(0, 0, w, h);
-    const hfov = 70 * Math.PI / 180;
+    const hfov = arFov * Math.PI / 180;
     const vfov = hfov * (h / w);
     const yawRad = d.yaw * Math.PI / 180;
-    const pitchRad = d.pitch * Math.PI / 180;
+    const gimbalP = (d as any).gimbal_pitch ?? arGimbalPitch;
+    const pitchRad = (d.pitch + gimbalP) * Math.PI / 180;
     for (let i = 0; i < wps.length; i++) {
       const dlat = (wps[i].lat - d.lat) * 111320;
       const dlon = (wps[i].lon - d.lon) * 111320 * Math.cos(d.lat * Math.PI / 180);
@@ -223,6 +226,10 @@
     {#if streaming}
       <Button variant="ghost" size="icon-xs" onclick={takeScreenshot} title={t('tip.screenshot')}><Camera size={14} /></Button>
       <Button variant={arEnabled ? 'default' : 'ghost'} size="icon-xs" onclick={() => arEnabled = !arEnabled} title={t('ar.overlay')}><Crosshair size={14} /></Button>
+      {#if arEnabled}
+        <input type="number" bind:value={arFov} min="30" max="120" step="5" title="FOV °"
+               class="w-10 h-5 px-1 text-[9px] text-center bg-input border border-border rounded font-mono" />
+      {/if}
       <Button variant="destructive" size="sm" onclick={stopStream}>{t('video.disconnect')}</Button>
     {:else}
       <Button size="sm" onclick={startStream}>{t('video.connect')}</Button>

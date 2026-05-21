@@ -215,12 +215,23 @@
   );
   let planCount = $derived(app.waypoints.length);
   let paramProgress = $derived(app.drone.param_fetching);
+  let isMobile = $state(false);
+  import { onMount as onMountApp } from 'svelte';
+  onMountApp(() => {
+    const check = () => { isMobile = window.innerWidth < 768; };
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  });
 </script>
 
-<div class="flex flex-col h-screen overflow-hidden">
+<a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:z-[99999] focus:bg-primary focus:text-primary-foreground focus:p-2 focus:rounded-md focus:top-2 focus:left-2">
+  Skip to content
+</a>
+<div class="flex flex-col h-screen overflow-hidden" role="application">
   <StatusBar {toggleTheme} onSettings={() => app.showSettings = !app.showSettings} />
 
-  <nav class="flex items-center gap-1 px-3 py-1 bg-card border-b border-border shrink-0 overflow-x-auto scrollbar-hide">
+  <nav class="flex items-center gap-1 px-3 py-1 bg-card border-b border-border shrink-0 overflow-x-auto scrollbar-hide max-md:hidden">
     {#each tabKeys as tab}
       <button
         class="flex items-center gap-1.5 px-4 max-sm:px-2.5 py-1.5 text-xs font-semibold tracking-wide uppercase rounded-md transition-all
@@ -278,7 +289,7 @@
   </nav>
 
   {#if view === 'fly'}
-    <div class="flex-1 flex overflow-hidden">
+    <div id="main-content" class="flex-1 flex overflow-hidden">
       {#if app.drone.connected && controlsOpen}
         <div class="shrink-0 border-r border-border bg-card z-[1002] overflow-y-auto">
           <ControlPanel />
@@ -565,5 +576,19 @@
         </div>
       </div>
     </div>
+  {/if}
+
+  <!-- Mobile bottom navigation -->
+  {#if isMobile}
+    <nav class="md:hidden fixed bottom-0 left-0 right-0 z-[2000] bg-card border-t border-border flex items-center justify-around py-1.5 safe-area-bottom">
+      {#each tabKeys as tab}
+        <button class="flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg transition-all min-w-[56px]
+          {view === tab.id ? 'text-primary' : 'text-muted-foreground'}"
+          onclick={() => view = tab.id}>
+          <tab.icon size={20} />
+          <span class="text-[9px] font-semibold">{t(tab.key)}</span>
+        </button>
+      {/each}
+    </nav>
   {/if}
 </div>
