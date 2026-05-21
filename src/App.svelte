@@ -37,6 +37,11 @@
   import FailsafeConfigPanel from './components/FailsafeConfigPanel.svelte';
   import PowerCalPanel from './components/PowerCalPanel.svelte';
   import EscCalPanel from './components/EscCalPanel.svelte';
+  import FrameSelectPanel from './components/FrameSelectPanel.svelte';
+  import PidPanel from './components/PidPanel.svelte';
+  import AutoTunePanel from './components/AutoTunePanel.svelte';
+  import FlightModePanel from './components/FlightModePanel.svelte';
+  import SetupWizard from './components/SetupWizard.svelte';
   import { showConfirm, showSlide, undo } from './lib/stores.svelte';
   import { ChevronUp, ChevronDown, CornerDownLeft, Pause, HardDrive, Wrench, Video, SlidersHorizontal, PanelLeftClose, Plane, MapPinned, Activity, Settings2, X as XIcon } from '@lucide/svelte';
   import type { Component } from 'svelte';
@@ -64,6 +69,11 @@
   let showFailsafe = $state(false);
   let showPowerCal = $state(false);
   let showEscCal = $state(false);
+  let showFrameSelect = $state(false);
+  let showPid = $state(false);
+  let showAutoTune = $state(false);
+  let showFlightModes = $state(false);
+  let showSetupWizard = $state(false);
 
   onMount(() => {
     loadLocale();
@@ -352,6 +362,11 @@
       onfailsafe={() => showFailsafe = true}
       onpower={() => showPowerCal = true}
       onesccal={() => showEscCal = true}
+      onframe={() => showFrameSelect = true}
+      onpid={() => showPid = true}
+      onautotune={() => showAutoTune = true}
+      onmodes={() => showFlightModes = true}
+      onsetup={() => showSetupWizard = true}
     />
   {/if}
   {#if showInspector}
@@ -374,6 +389,27 @@
   {/if}
   {#if showEscCal}
     <EscCalPanel onclose={() => showEscCal = false} />
+  {/if}
+  {#if showFrameSelect}
+    <FrameSelectPanel onclose={() => showFrameSelect = false} />
+  {/if}
+  {#if showPid}
+    <PidPanel onclose={() => showPid = false} />
+  {/if}
+  {#if showAutoTune}
+    <AutoTunePanel onclose={() => showAutoTune = false} />
+  {/if}
+  {#if showFlightModes}
+    <FlightModePanel onclose={() => showFlightModes = false} />
+  {/if}
+  {#if showSetupWizard}
+    <SetupWizard onclose={() => showSetupWizard = false}
+      onframe={() => showFrameSelect = true}
+      onrccal={() => showRcCal = true}
+      onmotor={() => showMotorTest = true}
+      oncalibration={() => showCalibration = true}
+      onfailsafe={() => showFailsafe = true}
+      onmodes={() => showFlightModes = true} />
   {/if}
   {#if showShortcuts}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
