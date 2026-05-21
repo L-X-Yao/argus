@@ -12,9 +12,8 @@ import httpx
 import pytest
 import websockets
 
-V3_DIR = Path(__file__).resolve().parent.parent
-GS_DIR = V3_DIR.parent
-SIM_SCRIPT = GS_DIR / 'sim_pllink.py'
+ROOT_DIR = Path(__file__).resolve().parent.parent
+SIM_SCRIPT = ROOT_DIR / 'sim_pllink.py'
 
 SIM_PORT = 15770
 BACKEND_PORT = 18100
@@ -37,7 +36,7 @@ def _wait_tcp(port, timeout=10):
 def sim_process():
     proc = subprocess.Popen(
         [sys.executable, str(SIM_SCRIPT), str(SIM_PORT)],
-        cwd=str(GS_DIR),
+        cwd=str(ROOT_DIR),
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
@@ -53,7 +52,7 @@ def backend_process(sim_process):
         [sys.executable, '-m', 'uvicorn', 'backend.app:app',
          '--host', '127.0.0.1', '--port', str(BACKEND_PORT),
          '--log-level', 'warning'],
-        cwd=str(V3_DIR),
+        cwd=str(ROOT_DIR),
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )

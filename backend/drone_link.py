@@ -5,7 +5,7 @@ import threading
 import time
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from pllink_proto import ple, pld, bm
 
 from .constants import (COPTER_MODES, PLANE_MODES, ROVER_MODES, SUB_MODES,

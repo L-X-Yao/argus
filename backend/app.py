@@ -18,9 +18,9 @@ from .video import router as video_router
 from .ws_manager import WSManager
 from .auth import auth_middleware, verify_ws_token, auth_required, generate_token, verify_token
 
-V3_DIR = Path(__file__).resolve().parent.parent
-DIST_DIR = V3_DIR / 'dist'
-TILE_CACHE = V3_DIR / 'tile_cache'
+ROOT_DIR = Path(__file__).resolve().parent.parent
+DIST_DIR = ROOT_DIR / 'dist'
+TILE_CACHE = ROOT_DIR / 'tile_cache'
 _TILE_MAX = cfg.TILE_CACHE_MAX
 _tile_count = -1
 
@@ -140,7 +140,7 @@ async def api_version():
     try:
         git_hash = subprocess.check_output(
             ['git', 'rev-parse', '--short', 'HEAD'],
-            cwd=str(V3_DIR), timeout=cfg.GIT_HASH_TIMEOUT, stderr=subprocess.DEVNULL,
+            cwd=str(ROOT_DIR), timeout=cfg.GIT_HASH_TIMEOUT, stderr=subprocess.DEVNULL,
         ).decode().strip()
     except Exception:
         pass
@@ -280,7 +280,7 @@ async def api_terrain_elevation(request: Request):
     return {'elevations': elevations}
 
 
-SRTM_CACHE = V3_DIR / 'srtm_cache'
+SRTM_CACHE = ROOT_DIR / 'srtm_cache'
 
 
 async def _get_srtm_elevation(lat: float, lon: float) -> float:
@@ -370,8 +370,8 @@ async def api_tile_cache_clear():
     return {'ok': True}
 
 
-FIRMWARE_DIR = V3_DIR / 'firmware'
-MBTILES_DIR = V3_DIR / 'mbtiles'
+FIRMWARE_DIR = ROOT_DIR / 'firmware'
+MBTILES_DIR = ROOT_DIR / 'mbtiles'
 
 
 @app.get('/api/mbtiles/list')

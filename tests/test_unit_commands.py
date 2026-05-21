@@ -7,7 +7,7 @@ from pathlib import Path
 from unittest.mock import MagicMock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from backend.drone_link import DroneLink
 

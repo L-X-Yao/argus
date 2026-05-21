@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-PL-Link GCS v3 — one-click launcher.
+Argus GCS — one-click launcher.
 Starts simulator + backend on a single port, opens browser.
 
 Usage:
@@ -14,13 +14,12 @@ import time
 import webbrowser
 from pathlib import Path
 
-V3_DIR = Path(__file__).resolve().parent
-GS_DIR = V3_DIR.parent
-SIM_SCRIPT = GS_DIR / 'sim_pllink.py'
+ROOT_DIR = Path(__file__).resolve().parent
+SIM_SCRIPT = ROOT_DIR / 'sim_pllink.py'
 
 
 def main():
-    parser = argparse.ArgumentParser(description='PL-Link GCS v3')
+    parser = argparse.ArgumentParser(description='Argus GCS')
     parser.add_argument('--sim', action='store_true', help='Start simulator on port 5770')
     parser.add_argument('--host', default='0.0.0.0', help='Bind address (default: 0.0.0.0)')
     parser.add_argument('--port', type=int, default=8100, help='HTTP port (default: 8100)')
@@ -31,12 +30,12 @@ def main():
         print('[SIM] Starting simulator on port 5770...')
         sim_proc = subprocess.Popen(
             [sys.executable, str(SIM_SCRIPT), '5770'],
-            cwd=str(GS_DIR),
+            cwd=str(ROOT_DIR),
         )
         time.sleep(1)
 
     print('=' * 50)
-    print('  PL-Link GCS v3')
+    print('  Argus GCS')
     print('  http://localhost:%d' % args.port)
     if args.sim:
         print('  Simulator: tcp:localhost:5770')
