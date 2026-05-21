@@ -3,7 +3,6 @@
   import { app } from '../../lib/stores.svelte';
   import { i18nState } from '../../lib/i18n.svelte';
 
-  declare const L: any;
 
   type CoordFn = (lat: number, lon: number) => [number, number];
   let { map, follow, trail, coord }: { map: any; follow: boolean; trail: [number, number][]; coord: CoordFn } = $props();

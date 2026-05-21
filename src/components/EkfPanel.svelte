@@ -128,9 +128,9 @@
   </div>
 
   <div class="text-center mt-2 text-[9px] text-muted-foreground">
-    {t('ekf.variance')} <span class="text-green-500">&#9632;</span>&lt;0.5 {t('ekf.normal')}
-    <span class="text-yellow-500"> &#9632;</span>&lt;1.0 {t('ekf.warn')}
-    <span class="text-red-500"> &#9632;</span>&ge;1.0 {t('ekf.abnormal')}
+    {t('ekf.variance')} <span class="text-green-500">&#9632;</span>&lt;0.5 {t('ekf.legendOk')}
+    <span class="text-yellow-500"> &#9632;</span>&lt;1.0 {t('ekf.legendWarn')}
+    <span class="text-red-500"> &#9632;</span>&ge;1.0 {t('ekf.legendBad')}
   </div>
   {/if}
 </div>

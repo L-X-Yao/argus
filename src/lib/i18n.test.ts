@@ -1,8 +1,10 @@
 import { describe, it, expect } from 'vitest';
-import fs from 'fs';
-import path from 'path';
+import { readFileSync } from 'node:fs';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const src = fs.readFileSync(path.resolve(__dirname, 'i18n.svelte.ts'), 'utf-8');
+const __dir = dirname(fileURLToPath(import.meta.url));
+const src = readFileSync(resolve(__dir, 'i18n.svelte.ts'), 'utf-8');
 
 function extractKeys(section: string): Set<string> {
   const keys = new Set<string>();

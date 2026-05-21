@@ -2,7 +2,6 @@
   import { onDestroy } from 'svelte';
   import { app } from '../../lib/stores.svelte';
 
-  declare const L: any;
 
   type CoordFn = (lat: number, lon: number) => [number, number];
   let { map, coord }: { map: any; coord: CoordFn } = $props();

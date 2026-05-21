@@ -45,6 +45,12 @@ python3 -m PyInstaller \
     --hidden-import backend.statustext_filter \
     --hidden-import backend.models \
     --hidden-import backend.constants \
+    --hidden-import backend.config \
+    --hidden-import backend.connection \
+    --hidden-import backend.log \
+    --hidden-import backend.locale_text \
+    --hidden-import backend.param_meta \
+    --hidden-import backend.video \
     --hidden-import uvicorn \
     --hidden-import uvicorn.logging \
     --hidden-import uvicorn.loops \

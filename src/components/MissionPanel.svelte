@@ -1,6 +1,7 @@
 <script lang="ts">
   import { app, pushUndo, undo, deleteWaypoint, clearWaypoints, saveSettings, saveWaypoints, generateCircle, addToast, showConfirm } from '../lib/stores.svelte';
   import { t } from '../lib/i18n.svelte';
+  import type { Waypoint } from '../lib/types';
 
   function fitAfterLoad() { requestAnimationFrame(() => app.fitRouteFlag++); }
   import { sendCommand } from '../lib/ws';
@@ -93,23 +94,64 @@
 
   function loadMission() {
     const input = document.createElement('input');
-    input.type = 'file'; input.accept = '.json';
+    input.type = 'file'; input.accept = '.json,.waypoints,.plan';
     input.onchange = (e: any) => {
       const file = e.target.files[0];
       if (!file) return;
       const reader = new FileReader();
       reader.onload = (ev: any) => {
         try {
-          const d = JSON.parse(ev.target.result);
-          pushUndo();
-          app.waypoints = d.waypoints || [];
-          if (d.alt) app.defaultAlt = d.alt;
+          const text: string = ev.target.result;
+          const name = file.name.toLowerCase();
+          if (name.endsWith('.waypoints')) {
+            parseQgcWaypoints(text);
+          } else if (name.endsWith('.plan')) {
+            parseQgcPlan(text);
+          } else {
+            const d = JSON.parse(text);
+            pushUndo();
+            app.waypoints = d.waypoints || [];
+            if (d.alt) app.defaultAlt = d.alt;
+          }
           fitAfterLoad();
         } catch (err) { addToast(t('toast.loadFail'), 'error'); }
       };
       reader.readAsText(file);
     };
     input.click();
+  }
+
+  function parseQgcWaypoints(text: string) {
+    const wps: Waypoint[] = [];
+    for (const line of text.split('\n')) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('QGC') || trimmed.startsWith('#')) continue;
+      const cols = trimmed.split('\t');
+      if (cols.length < 12) continue;
+      const cmd = parseInt(cols[3]);
+      if (cmd !== 16 && cmd !== 82) continue;
+      const lat = parseFloat(cols[8]), lon = parseFloat(cols[9]), alt = parseFloat(cols[10]);
+      if (Math.abs(lat) < 0.001) continue;
+      wps.push({ lat, lon, alt, drop: false, delay: parseFloat(cols[4]) || 0, speed: 0, type: cmd === 82 ? 'spline' : 'wp', loiter_param: 0 });
+    }
+    pushUndo();
+    app.waypoints = wps;
+  }
+
+  function parseQgcPlan(text: string) {
+    const plan = JSON.parse(text);
+    const items = plan?.mission?.items || [];
+    const wps: Waypoint[] = [];
+    for (const item of items) {
+      const cmd = item.command;
+      if (cmd !== 16 && cmd !== 82) continue;
+      const params = item.params || [];
+      const lat = params[4] ?? 0, lon = params[5] ?? 0, alt = params[6] ?? 30;
+      if (Math.abs(lat) < 0.001) continue;
+      wps.push({ lat, lon, alt, drop: false, delay: params[0] || 0, speed: 0, type: cmd === 82 ? 'spline' : 'wp', loiter_param: 0 });
+    }
+    pushUndo();
+    app.waypoints = wps;
   }
 
   function exportKml() {

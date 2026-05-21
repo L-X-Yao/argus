@@ -3,7 +3,6 @@
   import { app, saveWaypoints } from '../../lib/stores.svelte';
   import { i18nState } from '../../lib/i18n.svelte';
 
-  declare const L: any;
 
   type CoordFn = (lat: number, lon: number) => [number, number];
   let { map, coord, coordInv }: { map: any; coord: CoordFn; coordInv: CoordFn } = $props();

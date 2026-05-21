@@ -170,6 +170,23 @@
     addToast(t('param.exported').replace('{n}', String(paramState.list.length)), 'success');
   }
 
+  function exportDiff() {
+    if (!metaLoaded || !paramState.list.length) return;
+    const diffs = paramState.list.filter(p => hasDefaultDiff(p.name, p.value));
+    if (!diffs.length) { addToast(t('param.noChange'), 'info'); return; }
+    const lines = diffs.map(p => {
+      const def = (meta[p.name] as any)?.default;
+      return `${p.name}\t${fmtValue(p.value)}\t# default=${def !== undefined ? def : '?'}`;
+    }).join('\n');
+    const blob = new Blob([`# ${diffs.length} parameters differ from defaults\n${lines}\n`], { type: 'text/plain' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'params_diff_' + new Date().toISOString().slice(0, 10) + '.param';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    addToast(t('param.exported').replace('{n}', String(diffs.length)), 'success');
+  }
+
   function importParams() {
     const input = document.createElement('input');
     input.type = 'file'; input.accept = '.param,.txt';
@@ -219,6 +236,9 @@
       {#if paramState.list.length > 0}
         <Button variant="secondary" size="sm" onclick={saveParams}>{t('param.writeFlash')}</Button>
         <Button variant="outline" size="sm" onclick={exportParams}>{t('param.export')}</Button>
+        {#if metaLoaded && modifiedCount > 0}
+          <Button variant="outline" size="sm" onclick={exportDiff}>Diff</Button>
+        {/if}
         <Button variant="outline" size="sm" onclick={importParams}>{t('param.import')}</Button>
         <Badge variant="outline" class="text-[10px] font-mono">{paramState.list.length} {t('param.params')}</Badge>
       {/if}

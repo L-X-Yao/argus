@@ -15,7 +15,6 @@
   import { Layers, Ruler, Navigation, Grid3x3, ShieldAlert, Download, Crosshair, Home, Maximize2 } from '@lucide/svelte';
   import { t } from '../lib/i18n.svelte';
 
-  declare const L: any;
 
   let { showHud = true }: { showHud?: boolean } = $props();
 
