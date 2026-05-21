@@ -14,7 +14,7 @@
   import { X, Volume2, VolumeOff, Mic, MicOff, Sun, Moon, Plane, ShieldAlert, Gauge, Globe, Gamepad2 } from '@lucide/svelte';
 
   let { onclose }: { onclose: () => void } = $props();
-  const VERSION = '3.2.0';
+  const VERSION = '3.3.0';
   const BUILD = __BUILD_DATE__;
 </script>
 
