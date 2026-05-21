@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { apiUrl } from '../lib/backend';
   import { t } from '../lib/i18n.svelte';
-  import { X, VideoOff } from '@lucide/svelte';
+  import { X, VideoOff, Camera } from '@lucide/svelte';
   import Button from '$lib/components/ui/button/button.svelte';
 
   let { onclose }: { onclose: () => void } = $props();
@@ -72,6 +72,20 @@
     window.removeEventListener('mouseup', onDragEnd);
   }
 
+  let videoImg: HTMLImageElement | null = $state(null);
+
+  function takeScreenshot() {
+    if (!videoImg) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = videoImg.naturalWidth || sizeMap[size].w;
+    canvas.height = videoImg.naturalHeight || sizeMap[size].h;
+    canvas.getContext('2d')!.drawImage(videoImg, 0, 0);
+    const a = document.createElement('a');
+    a.href = canvas.toDataURL('image/png');
+    a.download = 'screenshot_' + new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19) + '.png';
+    a.click();
+  }
+
   function handleClose() {
     if (streaming) stopStream();
     onclose();
@@ -117,9 +131,11 @@
   >
     {#if streaming && imgSrc}
       <img
+        bind:this={videoImg}
         src={imgSrc}
         alt={t('video.alt')}
         class="w-full h-full object-contain"
+        crossorigin="anonymous"
         onerror={() => { error = t('video.loadFail'); streaming = false; }}
       />
     {:else}
@@ -142,6 +158,7 @@
       onkeydown={(e) => { if (e.key === 'Enter') startStream(); }}
     />
     {#if streaming}
+      <Button variant="ghost" size="icon-xs" onclick={takeScreenshot} title="Screenshot"><Camera size={14} /></Button>
       <Button variant="destructive" size="sm" onclick={stopStream}>{t('video.disconnect')}</Button>
     {:else}
       <Button size="sm" onclick={startStream}>{t('video.connect')}</Button>

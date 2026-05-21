@@ -64,6 +64,11 @@ _T = {
     'err_bad_coord':   ('坐标无效',                 'Invalid coordinates'),
     'err_fence_min':   ('围栏至少需要 3 个顶点',     'Fence needs at least 3 vertices'),
     'err_log_not_found': ('日志不存在',              'Log not found'),
+    'reboot_bl':         ('重启至引导程序...',          'Rebooting to bootloader...'),
+    'reboot':            ('重启飞控...',               'Rebooting FC...'),
+    'vtype_plane':       ('固定翼',                  'Fixed Wing'),
+    'vtype_copter':      ('多旋翼',                  'Multirotor'),
+    'vtype_auto':        ('自动',                    'Auto'),
 }
 
 

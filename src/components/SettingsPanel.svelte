@@ -4,6 +4,7 @@
   import type { Locale } from '../lib/i18n.svelte';
   import { gamepad, startGamepad, stopGamepad } from '../lib/gamepad.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
+  import FirmwarePanel from './FirmwarePanel.svelte';
   import { X, Volume2, VolumeOff, Mic, MicOff, Sun, Moon, Plane, ShieldAlert, Gauge, Globe, Gamepad2 } from '@lucide/svelte';
 
   let { onclose }: { onclose: () => void } = $props();
@@ -125,6 +126,8 @@
           </div>
         </div>
       </div>
+
+      <FirmwarePanel />
 
       <div class="pt-2 border-t border-border text-center">
         <p class="text-[11px] text-muted-foreground font-semibold">{t('app.name')} {t('welcome.subtitle')}</p>

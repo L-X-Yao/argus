@@ -30,7 +30,8 @@
         detail: d.rc_rssi > 0 ? `RSSI ${d.rc_rssi}` : d.rc[0] > 0 ? 'OK' : '---', critical: false },
       { name: t('check.mission'), ok: app.waypoints.length > 0,
         detail: app.waypoints.length > 0 ? `${app.waypoints.length} WP` : '---', critical: false },
-      { name: t('check.vtype'), ok: d.vtype !== '', detail: d.vtype || '---', critical: false },
+      { name: t('check.vtype'), ok: d.vtype_raw > 0,
+        detail: d.vtype_raw > 0 ? t([1,19,20,21,22,23,24,25].includes(d.vtype_raw) ? 'vtype.plane' : d.vtype_raw === 10 ? 'vtype.rover' : d.vtype_raw === 12 ? 'vtype.sub' : 'vtype.copter') : '---', critical: false },
       { name: t('check.notArmed'), ok: !d.armed, detail: d.armed ? t('status.armed') : 'OK', critical: false },
     ];
   });

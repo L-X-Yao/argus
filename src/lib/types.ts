@@ -84,7 +84,7 @@ export interface Waypoint {
   drop: boolean;
   delay: number;
   speed: number;
-  type: 'wp' | 'loiter_turns' | 'loiter_time';
+  type: 'wp' | 'loiter_turns' | 'loiter_time' | 'spline';
   loiter_param: number;
 }
 

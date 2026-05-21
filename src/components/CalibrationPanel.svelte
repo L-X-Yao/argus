@@ -136,7 +136,7 @@
       if (selected === 'compass') {
         if (t.includes('Compass') || t.includes('罗盘') || t.includes('Rotate') || t.includes('旋转') || t.includes('校准')) {
           compassMsgCount++;
-          /* Estimate progress from message count; ArduPilot typically sends ~30+ messages during compass cal */
+          /* FC typically sends ~30+ messages during compass cal */
           compassProgress = Math.min(95, Math.round(compassMsgCount * 3));
         }
         if (t.includes('success') || t.includes('成功') || t.includes('complete') || t.includes('Complete')) {

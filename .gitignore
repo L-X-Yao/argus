@@ -11,3 +11,6 @@ src-tauri/binaries/
 src-tauri/gen/
 build/
 param_cache/
+firmware/
+logs/
+mbtiles/

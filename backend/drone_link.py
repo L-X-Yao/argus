@@ -1,6 +1,4 @@
 from __future__ import annotations
-import math
-import socket
 import struct
 import sys
 import threading
@@ -17,53 +15,11 @@ from .constants import (COPTER_MODES, PLANE_MODES, ROVER_MODES, SUB_MODES,
 from . import mavlink_dispatch
 from .mavlink_handlers import init_handlers
 from . import commands as cmd_module
+from .config import cfg
+from .connection import open_port
+from .log import logger
 from .param_manager import ParamManager
 from .locale_text import lt
-
-
-class TcpWrapper:
-    def __init__(self, sock: socket.socket):
-        self._sock = sock
-
-    def read(self, n: int) -> bytes:
-        try:
-            return self._sock.recv(n)
-        except (socket.timeout, OSError):
-            return b''
-
-    def write(self, data: bytes) -> None:
-        self._sock.sendall(data)
-
-    def close(self) -> None:
-        self._sock.close()
-
-
-class UdpWrapper:
-    def __init__(self, port: int, host: str = ''):
-        self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        self._sock.settimeout(0.1)
-        self._sock.bind((host or '', port))
-        self._remote = None
-
-    def read(self, n: int) -> bytes:
-        try:
-            data, addr = self._sock.recvfrom(n)
-            if not self._remote:
-                self._remote = addr
-            return data
-        except (socket.timeout, OSError):
-            return b''
-
-    def write(self, data: bytes) -> None:
-        if self._remote:
-            try:
-                self._sock.sendto(data, self._remote)
-            except OSError:
-                pass
-
-    def close(self) -> None:
-        self._sock.close()
 
 
 class DroneLink:
@@ -80,7 +36,7 @@ class DroneLink:
         self._logfile = None
         self._last_log_time = 0.0
         self._last_port = ''
-        self._last_baud = 57600
+        self._last_baud = cfg.SERIAL_BAUD
         self._reconnect_enabled = True
 
         self._protocol = 'auto'
@@ -357,7 +313,7 @@ class DroneLink:
 
     def _write_log_line(self) -> None:
         now = time.time()
-        if not self._logfile or now - self._last_log_time < 0.25:
+        if not self._logfile or now - self._last_log_time < cfg.LOG_WRITE_INTERVAL:
             return
         self._last_log_time = now
         md = PLANE_MODES if self.is_plane() else COPTER_MODES
@@ -378,26 +334,7 @@ class DroneLink:
             pass
 
     def _open_port(self, port: str, baudrate: int):
-        if port.startswith('udp:'):
-            parts = port[4:].split(':')
-            if len(parts) == 2:
-                host, udp_port = parts[0], int(parts[1])
-            else:
-                host, udp_port = '', int(parts[0])
-            return UdpWrapper(udp_port, host)
-        elif port.startswith('tcp:'):
-            parts = port[4:].split(':')
-            host, tcp_port = parts[0], int(parts[1])
-            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            sock.settimeout(5)
-            sock.connect((host, tcp_port))
-            sock.settimeout(0.1)
-            return TcpWrapper(sock)
-        else:
-            import serial
-            s = serial.Serial(port, baudrate, timeout=0.1)
-            s.reset_input_buffer()
-            return s
+        return open_port(port, baudrate)
 
     def _parse_mavlink_frame(self):
         buf = self._buf
@@ -431,12 +368,12 @@ class DroneLink:
         last_hb = 0.0
         while self._running:
             now = time.time()
-            if now - last_hb >= 0.5:
+            if now - last_hb >= cfg.HEARTBEAT_INTERVAL:
                 cmd_module.send_heartbeat(self)
                 last_hb = now
                 if not self.connected and self.frame_count < 3:
                     cmd_module.request_streams(self)
-            if self.connected and self.last_frame_time > 0 and now - self.last_frame_time > 5:
+            if self.connected and self.last_frame_time > 0 and now - self.last_frame_time > cfg.LINK_LOST_TIMEOUT:
                 self.add_event(lt('link_lost', self.locale), 'link_lost')
                 self.connected = False
                 if self._reconnect_enabled and self._last_port:
@@ -453,7 +390,7 @@ class DroneLink:
                         self.add_event(lt('reconnected', self.locale), 'reconnected')
                     except Exception:
                         self.add_event(lt('reconnect_fail', self.locale), 'reconnect_fail')
-                        time.sleep(3)
+                        time.sleep(cfg.RECONNECT_DELAY)
                     continue
             try:
                 data = self._ser.read(1024)
@@ -473,16 +410,15 @@ class DroneLink:
                         self._parse_errors += 1
                         if self._parse_errors == 1 or self._parse_errors % 100 == 0:
                             import traceback
-                            print('[GCS] parse error #%d: %s' % (
-                                self._parse_errors,
-                                traceback.format_exc().splitlines()[-1]
-                            ), file=sys.stderr)
+                            logger.warning('parse error #%d: %s',
+                                           self._parse_errors,
+                                           traceback.format_exc().splitlines()[-1])
                 elif consumed > 0:
                     self._buf = self._buf[consumed:]
                 else:
                     break
             self._write_log_line()
-            time.sleep(0.02)
+            time.sleep(cfg.MAIN_LOOP_SLEEP)
 
     def _process(self, payload: bytes) -> None:
         if len(payload) < 12 or payload[0] != 0xFD:

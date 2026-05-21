@@ -20,6 +20,19 @@ SIM_PORT = 15770
 BACKEND_PORT = 18100
 
 
+def _wait_tcp(port, timeout=10):
+    import socket
+    deadline = time.time() + timeout
+    while time.time() < deadline:
+        try:
+            s = socket.create_connection(('127.0.0.1', port), timeout=0.5)
+            s.close()
+            return
+        except OSError:
+            time.sleep(0.2)
+    raise TimeoutError(f'port {port} not ready within {timeout}s')
+
+
 @pytest.fixture(scope='session')
 def sim_process():
     proc = subprocess.Popen(
@@ -28,7 +41,7 @@ def sim_process():
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
-    time.sleep(1.5)
+    _wait_tcp(SIM_PORT, timeout=10)
     yield proc
     proc.terminate()
     proc.wait(timeout=5)
@@ -44,7 +57,14 @@ def backend_process(sim_process):
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
-    time.sleep(2)
+    deadline = time.time() + 10
+    while time.time() < deadline:
+        try:
+            r = httpx.get(f'http://127.0.0.1:{BACKEND_PORT}/health', timeout=1)
+            if r.status_code == 200:
+                break
+        except Exception:
+            time.sleep(0.3)
     yield proc
     proc.terminate()
     proc.wait(timeout=5)

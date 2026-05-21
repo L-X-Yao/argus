@@ -6,6 +6,7 @@ import time
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from .config import cfg
 from .locale_text import lt
 
 if TYPE_CHECKING:
@@ -101,7 +102,7 @@ class ParamManager:
             if current and abs(current['value'] - value) > 1e-7:
                 self.set_param(name, value)
                 changed.append(name)
-                time.sleep(0.02)
+                time.sleep(cfg.PARAM_LOAD_SPACING)
         self._link.add_event(lt('param_loaded', self._link.locale) % (len(data), len(changed)), 'param_loaded')
         return changed
 

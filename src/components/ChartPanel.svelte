@@ -75,12 +75,12 @@
     ctx.fillText(data[data.length - 1].toFixed(1), w - 45, 12);
   }
 
-  let cAlt: HTMLCanvasElement;
-  let cSpd: HTMLCanvasElement;
-  let cBat: HTMLCanvasElement;
-  let cCur: HTMLCanvasElement;
-  let cVz: HTMLCanvasElement;
-  let cVibe: HTMLCanvasElement;
+  let cAlt: HTMLCanvasElement = $state(null!);
+  let cSpd: HTMLCanvasElement = $state(null!);
+  let cBat: HTMLCanvasElement = $state(null!);
+  let cCur: HTMLCanvasElement = $state(null!);
+  let cVz: HTMLCanvasElement = $state(null!);
+  let cVibe: HTMLCanvasElement = $state(null!);
 </script>
 
 <div class="bg-card border border-border rounded-xl p-4">

@@ -6,11 +6,12 @@ import urllib.request as urlreq
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, WebSocket
+from fastapi import FastAPI, UploadFile, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
 
+from .config import cfg
 from .drone_link import DroneLink
 from .param_meta import get_metadata
 from .video import router as video_router
@@ -19,7 +20,7 @@ from .ws_manager import WSManager
 V3_DIR = Path(__file__).resolve().parent.parent
 DIST_DIR = V3_DIR / 'dist'
 TILE_CACHE = V3_DIR / 'tile_cache'
-_TILE_MAX = 50000
+_TILE_MAX = cfg.TILE_CACHE_MAX
 _tile_count = -1
 
 TILE_URLS = {
@@ -63,7 +64,7 @@ async def api_version():
     try:
         git_hash = subprocess.check_output(
             ['git', 'rev-parse', '--short', 'HEAD'],
-            cwd=str(V3_DIR), timeout=2, stderr=subprocess.DEVNULL,
+            cwd=str(V3_DIR), timeout=cfg.GIT_HASH_TIMEOUT, stderr=subprocess.DEVNULL,
         ).decode().strip()
     except Exception:
         pass
@@ -133,7 +134,7 @@ async def api_tile(style: str, z: int, x: int, y: int):
     url = TILE_URLS.get(style, TILE_URLS['6']).format(x=x, y=y, z=z)
     try:
         req = urlreq.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        data = urlreq.urlopen(req, timeout=10).read()
+        data = urlreq.urlopen(req, timeout=cfg.TILE_DOWNLOAD_TIMEOUT).read()
         if _tile_count < 0:
             _tile_count = sum(1 for _ in TILE_CACHE.rglob('*.png')) if TILE_CACHE.exists() else 0
         if _tile_count < _TILE_MAX:
@@ -165,6 +166,58 @@ async def api_tile_cache_clear():
         shutil.rmtree(TILE_CACHE)
     _tile_count = 0
     return {'ok': True}
+
+
+FIRMWARE_DIR = V3_DIR / 'firmware'
+MBTILES_DIR = V3_DIR / 'mbtiles'
+
+
+@app.get('/api/mbtiles/list')
+async def api_mbtiles_list():
+    if not MBTILES_DIR.exists():
+        return {'files': []}
+    return {'files': [f.name for f in sorted(MBTILES_DIR.glob('*.mbtiles'))]}
+
+
+@app.get('/api/mbtiles/{name}/{z}/{x}/{y}')
+async def api_mbtiles_tile(name: str, z: int, x: int, y: int):
+    import sqlite3
+    path = MBTILES_DIR / name
+    if not path.exists() or not name.endswith('.mbtiles'):
+        return Response(status_code=404, content='not found')
+    tms_y = (1 << z) - 1 - y
+    try:
+        conn = sqlite3.connect(str(path))
+        row = conn.execute('SELECT tile_data FROM tiles WHERE zoom_level=? AND tile_column=? AND tile_row=?',
+                           (z, x, tms_y)).fetchone()
+        conn.close()
+        if row:
+            return Response(content=row[0], media_type='image/png',
+                            headers={'Cache-Control': 'public, max-age=604800'})
+    except Exception:
+        pass
+    return Response(status_code=404, content='tile not found')
+
+
+@app.post('/api/firmware/upload')
+async def api_firmware_upload(file: UploadFile):
+    if not file.filename or not file.filename.endswith('.apj'):
+        return {'ok': False, 'error': 'Only .apj files accepted'}
+    FIRMWARE_DIR.mkdir(exist_ok=True)
+    dest = FIRMWARE_DIR / file.filename
+    data = await file.read()
+    dest.write_bytes(data)
+    return {'ok': True, 'filename': file.filename, 'size': len(data)}
+
+
+@app.get('/api/firmware/list')
+async def api_firmware_list():
+    if not FIRMWARE_DIR.exists():
+        return {'files': []}
+    files = []
+    for f in sorted(FIRMWARE_DIR.glob('*.apj')):
+        files.append({'name': f.name, 'size': f.stat().st_size})
+    return {'files': files}
 
 
 if DIST_DIR.exists():

@@ -2,7 +2,7 @@
   import { slideState, completeSlide, cancelSlide } from '../lib/stores.svelte';
   import { ChevronRight, Check } from '@lucide/svelte';
 
-  let trackEl: HTMLDivElement;
+  let trackEl: HTMLDivElement = $state(null!);
   let dragging = $state(false);
   let progress = $state(0);
   let done = $state(false);

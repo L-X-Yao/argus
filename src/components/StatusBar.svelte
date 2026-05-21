@@ -51,6 +51,7 @@
   }
 
   let connectTimeout = $state(false);
+  let showVehicles = $state(false);
 
   function toggle() {
     if (app.drone.connected) { sendDisconnect(); }
@@ -268,9 +269,26 @@
         <span class="text-[9px] text-destructive/70 font-mono" title="Parse errors">E:{app.drone.parse_errors}</span>
       {/if}
       {#if app.drone.vehicles && app.drone.vehicles.length > 0}
-        <Badge variant="outline" class="text-[9px] font-mono gap-0.5">
-          +{app.drone.vehicles.length}
-        </Badge>
+        <button class="relative cursor-pointer bg-transparent border-none p-0"
+                onclick={() => showVehicles = !showVehicles}>
+          <Badge variant="outline" class="text-[9px] font-mono gap-0.5">
+            +{app.drone.vehicles.length}
+          </Badge>
+        </button>
+        {#if showVehicles}
+          <!-- svelte-ignore a11y_click_events_have_key_events -->
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div class="absolute top-full right-0 mt-1 bg-card border border-border rounded-lg shadow-xl p-2 z-50 min-w-[200px]"
+               onclick={(e) => e.stopPropagation()}>
+            {#each app.drone.vehicles as v}
+              <div class="flex items-center gap-2 px-2 py-1 text-xs border-b border-border/50 last:border-0">
+                <span class="font-mono font-bold text-primary">#{v.sysid}</span>
+                <span class="{v.armed ? 'text-warning' : 'text-muted-foreground'}">{v.armed ? t('status.armed') : '---'}</span>
+                <span class="text-muted-foreground ml-auto">{v.alt?.toFixed(0) || 0}m</span>
+              </div>
+            {/each}
+          </div>
+        {/if}
       {/if}
 
       {#if app.drone.log_active}

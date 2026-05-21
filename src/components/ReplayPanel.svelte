@@ -2,7 +2,7 @@
   import { app } from '../lib/stores.svelte';
   import { t } from '../lib/i18n.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
-  import { X, Play, Pause } from '@lucide/svelte';
+  import { X, Play, Pause, SkipBack, SkipForward } from '@lucide/svelte';
 
   interface LogRow {
     t: number; roll: number; pitch: number; yaw: number;
@@ -123,8 +123,14 @@
       <button class="text-destructive leading-none bg-transparent border-none cursor-pointer px-0.5" onclick={close}><X size={14} /></button>
     </div>
     <div class="flex items-center gap-2">
+      <Button variant="ghost" size="icon-xs" class="shrink-0" onclick={() => { cursor = Math.max(0, cursor - 10); emitPosition(); }}>
+        <SkipBack size={12} />
+      </Button>
       <Button variant="default" size="icon-sm" class="rounded-full shrink-0" onclick={togglePlay}>
         {#if playing}<Pause size={14} />{:else}<Play size={14} />{/if}
+      </Button>
+      <Button variant="ghost" size="icon-xs" class="shrink-0" onclick={() => { cursor = Math.min(rows.length - 1, cursor + 10); emitPosition(); }}>
+        <SkipForward size={12} />
       </Button>
       <input type="range" class="flex-1 h-1 accent-primary" min="0" max={rows.length - 1} value={cursor} oninput={seek} />
       <span class="text-xs text-muted-foreground font-mono min-w-[40px]">{fmtTime(current?.t || 0)}</span>
@@ -142,6 +148,7 @@
         <span>{t('telem.speed')} {current.gs.toFixed(1)}m/s</span>
         <span>{t('chart.voltage')} {current.voltage.toFixed(1)}V</span>
         <span>{t('telem.dist')} {current.dist.toFixed(0)}m</span>
+        <span>R:{current.roll.toFixed(0)} P:{current.pitch.toFixed(0)} Y:{current.yaw.toFixed(0)}</span>
       </div>
     {/if}
   {/if}

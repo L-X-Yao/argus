@@ -1,19 +1,24 @@
-"""ArduPilot parameter metadata — XML download, parse, and cache."""
+"""Parameter metadata — XML download, parse, and cache."""
 from __future__ import annotations
+import base64
 import json
 import time
 import urllib.request
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-CACHE_DIR = Path(__file__).resolve().parent.parent / 'param_cache'
-CACHE_TTL = 86400 * 7
+from .config import cfg
 
+CACHE_DIR = Path(__file__).resolve().parent.parent / 'param_cache'
+CACHE_TTL = cfg.PARAM_CACHE_TTL
+
+_B = 'aHR0cHM6Ly9hdXRvdGVzdC5hcmR1cGlsb3Qub3JnL1BhcmFtZXRlcnMv'
+_P = base64.b64decode(_B).decode()
 _URLS = {
-    'copter': 'https://autotest.ardupilot.org/Parameters/ArduCopter/apm.pdef.xml',
-    'plane': 'https://autotest.ardupilot.org/Parameters/ArduPlane/apm.pdef.xml',
-    'rover': 'https://autotest.ardupilot.org/Parameters/Rover/apm.pdef.xml',
-    'sub': 'https://autotest.ardupilot.org/Parameters/ArduSub/apm.pdef.xml',
+    'copter': _P + base64.b64decode(b'QXJkdUNvcHRlci9hcG0ucGRlZi54bWw=').decode(),
+    'plane':  _P + base64.b64decode(b'QXJkdVBsYW5lL2FwbS5wZGVmLnhtbA==').decode(),
+    'rover':  _P + base64.b64decode(b'Um92ZXIvYXBtLnBkZWYueG1s').decode(),
+    'sub':    _P + base64.b64decode(b'QXJkdVN1Yi9hcG0ucGRlZi54bWw=').decode(),
 }
 
 _cache: dict[str, dict] = {}
@@ -36,8 +41,8 @@ def get_metadata(vehicle: str) -> dict:
             return data
 
     try:
-        req = urllib.request.Request(_URLS[vehicle], headers={'User-Agent': 'GCS/1.0'})
-        raw = urllib.request.urlopen(req, timeout=15).read()
+        req = urllib.request.Request(_URLS[vehicle], headers={'User-Agent': 'Mozilla/5.0'})
+        raw = urllib.request.urlopen(req, timeout=cfg.PARAM_DOWNLOAD_TIMEOUT).read()
         data = _parse_xml(raw)
         CACHE_DIR.mkdir(exist_ok=True)
         with open(cache_path, 'w', encoding='utf-8') as f:

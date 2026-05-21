@@ -5,3 +5,7 @@ import { mount } from 'svelte';
 const app = mount(App, { target: document.getElementById('app')! });
 
 export default app;
+
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('/sw.js').catch(() => {});
+}

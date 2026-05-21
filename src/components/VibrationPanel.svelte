@@ -21,7 +21,7 @@
     });
   });
 
-  let canvas: HTMLCanvasElement;
+  let canvas: HTMLCanvasElement = $state(null!);
 
   function draw() {
     if (!canvas) return;

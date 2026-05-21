@@ -4,6 +4,7 @@ import threading
 import time
 from typing import TYPE_CHECKING
 
+from .config import cfg
 from .locale_text import lt
 
 if TYPE_CHECKING:
@@ -44,7 +45,7 @@ def execute(cmd: str, param, link: DroneLink, data: dict | None = None) -> dict 
         am = 10 if link.is_plane() else 3
         link.add_event(lt('mission_start', link.locale), 'mission_start')
         _send_set_mode(link, am)
-        threading.Thread(target=lambda: (time.sleep(0.3), _send_cmd(link, 300)), daemon=True).start()
+        threading.Thread(target=lambda: (time.sleep(cfg.MISSION_START_DELAY), _send_cmd(link, 300)), daemon=True).start()
     elif cmd == 'mission_clear':
         from pllink_proto import bm
         link.send(bm(45, bytes([link.sysid, 1, 0]), link.sq, 232))
@@ -75,7 +76,8 @@ def execute(cmd: str, param, link: DroneLink, data: dict | None = None) -> dict 
     elif cmd == 'set_vtype':
         v = data.get('vtype', 'auto')
         link.force_plane = True if v == 'plane' else (False if v == 'copter' else None)
-        link.add_event(lt('vtype_set', link.locale) % {'plane': '固定翼', 'copter': '多旋翼', 'auto': '自动'}.get(v, v), 'vtype_set')
+        vname = lt('vtype_plane' if v == 'plane' else 'vtype_copter' if v == 'copter' else 'vtype_auto', link.locale)
+        link.add_event(lt('vtype_set', link.locale) % vname, 'vtype_set')
     elif cmd == 'guided_goto':
         lat7 = int(float(data.get('lat', 0)) * 1e7)
         lon7 = int(float(data.get('lon', 0)) * 1e7)
@@ -153,6 +155,12 @@ def execute(cmd: str, param, link: DroneLink, data: dict | None = None) -> dict 
         link.send(bm(126, struct.pack('<BB', link.sysid, 1), link.sq, 203))
         link._log_download_id = -1
         link.add_event(lt('log_dl_cancel', link.locale), 'log_dl_cancel')
+    elif cmd == 'reboot_bootloader':
+        link.add_event(lt('reboot_bl', link.locale), 'reboot_bl')
+        _send_cmd(link, 246, p1=3)
+    elif cmd == 'reboot':
+        link.add_event(lt('reboot', link.locale), 'reboot')
+        _send_cmd(link, 246, p1=1)
     elif cmd == 'rc_override':
         channels = data.get('channels', [])
         if len(channels) >= 8:
@@ -181,6 +189,9 @@ def _upload_mission(link: DroneLink, waypoints: list, takeoff_alt: float) -> Non
         elif wtype == 'loiter_time':
             nav_cmd = 19
             p1_val = float(wp.get('loiter_param', 10))
+        elif wtype == 'spline':
+            nav_cmd = 82
+            p1_val = float(wp.get('delay', 0))
         else:
             nav_cmd = 16
             p1_val = float(wp.get('delay', 0))
@@ -245,7 +256,7 @@ def send_fence_item_int(link: DroneLink, item: dict) -> None:
 
 def send_mission_item_int(link: DroneLink, wp: dict) -> None:
     from pllink_proto import bm
-    frame = 3 if wp['cmd'] in (16, 19, 21, 22) else 2
+    frame = 3 if wp['cmd'] in (16, 19, 21, 22, 82) else 2
     lat7 = int(wp.get('lat', 0) * 1e7)
     lon7 = int(wp.get('lon', 0) * 1e7)
     p = struct.pack('<ffffiifHHBBBBBB',
@@ -276,5 +287,5 @@ def request_streams(link: DroneLink) -> None:
                               float(mid), float(interval), 0, 0, 0, 0, 0,
                               511, link.sysid, 1, 0)
         link.send(bm(76, payload, link.sq, 152))
-        time.sleep(0.01)
+        time.sleep(cfg.STREAM_REQUEST_SPACING)
     _send_cmd(link, 512, p1=148.0)

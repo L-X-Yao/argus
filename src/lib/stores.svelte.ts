@@ -43,9 +43,10 @@ export function updateState(s: DroneState) {
   Object.assign(app.drone, s);
 }
 
+const PLANE_VTYPE_RAW = new Set([1, 19, 20, 21, 22, 23, 24, 25]);
+
 export function isPlane(): boolean {
-  const v = app.drone.vtype;
-  return v === '固定翼' || v === 'Fixed Wing';
+  return PLANE_VTYPE_RAW.has(app.drone.vtype_raw);
 }
 
 export function setWsConnected(v: boolean) {

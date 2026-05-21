@@ -27,7 +27,7 @@
   function setSpeed(i: number, v: string) { app.waypoints[i].speed = parseFloat(v) || 0; saveWaypoints(); }
   function cycleType(i: number) {
     pushUndo();
-    const types: ('wp' | 'loiter_turns' | 'loiter_time')[] = ['wp', 'loiter_turns', 'loiter_time'];
+    const types: ('wp' | 'loiter_turns' | 'loiter_time' | 'spline')[] = ['wp', 'spline', 'loiter_turns', 'loiter_time'];
     const cur = types.indexOf(app.waypoints[i].type || 'wp');
     app.waypoints[i].type = types[(cur + 1) % types.length];
     if (app.waypoints[i].type === 'loiter_turns' && !app.waypoints[i].loiter_param) app.waypoints[i].loiter_param = 3;
@@ -37,11 +37,13 @@
   function typeLabel(tp: string): string {
     if (tp === 'loiter_turns') return t('wp.loiterTurns');
     if (tp === 'loiter_time') return t('wp.loiterTime');
+    if (tp === 'spline') return t('wp.spline');
     return t('wp.waypoint');
   }
   function typeColor(t: string): string {
     if (t === 'loiter_turns') return '#ab47bc';
     if (t === 'loiter_time') return '#7e57c2';
+    if (t === 'spline') return '#00897b';
     return '#1565c0';
   }
   function applyAltAll() { pushUndo(); app.waypoints.forEach(w => w.alt = app.defaultAlt); }
@@ -200,7 +202,7 @@
     return Math.sqrt(dlat * dlat + dlon * dlon);
   }
 
-  let profileCanvas: HTMLCanvasElement;
+  let profileCanvas: HTMLCanvasElement = $state(null!);
 
   $effect(() => {
     if (!profileCanvas || app.waypoints.length < 2) return;

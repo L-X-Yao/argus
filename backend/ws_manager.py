@@ -3,6 +3,7 @@ import asyncio
 import json
 from fastapi import WebSocket, WebSocketDisconnect
 
+from .config import cfg
 from .drone_link import DroneLink
 from . import commands
 
@@ -43,7 +44,7 @@ class WSManager:
                 msg_type = msg.get('type', '')
                 if msg_type == 'connect':
                     port = msg.get('port', 'tcp:localhost:5770')
-                    baud = msg.get('baud', 57600)
+                    baud = msg.get('baud', cfg.SERIAL_BAUD)
                     protocol = msg.get('protocol', 'auto')
                     ok = self.link.connect(port, baud, protocol=protocol)
                     await ws.send_text(json.dumps({
@@ -115,7 +116,7 @@ class WSManager:
                     for msg in others:
                         await ws.send_text(json.dumps(msg))
                     param_cursor = len(pmsg)
-                interval = 0.2 if self.link.connected else 1.0
+                interval = cfg.WS_PUSH_INTERVAL_CONNECTED if self.link.connected else cfg.WS_PUSH_INTERVAL_IDLE
                 await asyncio.sleep(interval)
         except (WebSocketDisconnect, Exception):
             return
