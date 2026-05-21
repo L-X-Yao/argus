@@ -17,6 +17,11 @@
   let showHistory = $state(false);
   let connecting = $state(false);
 
+  interface ConnProfile { name: string; port: string; baud: number; protocol: string; }
+  let profiles: ConnProfile[] = $state([]);
+  let showProfileSave = $state(false);
+  let profileName = $state('');
+
   onMount(() => {
     try {
       const saved = JSON.parse(localStorage.getItem('pllink_port_history') || '[]');
@@ -25,9 +30,29 @@
       if (lastPort) port = lastPort;
       const lastBaud = localStorage.getItem('pllink_last_baud');
       if (lastBaud) baud = parseInt(lastBaud);
+      const profs = JSON.parse(localStorage.getItem('pllink_profiles') || '[]');
+      if (Array.isArray(profs)) profiles = profs;
     } catch {}
     fetchPorts();
   });
+
+  function saveProfile() {
+    const name = profileName.trim() || port;
+    profiles = [...profiles.filter(p => p.name !== name), { name, port, baud, protocol }];
+    try { localStorage.setItem('pllink_profiles', JSON.stringify(profiles)); } catch {}
+    showProfileSave = false;
+    profileName = '';
+  }
+
+  function loadProfile(p: ConnProfile) {
+    port = p.port; baud = p.baud; protocol = p.protocol;
+    showHistory = false;
+  }
+
+  function deleteProfile(name: string) {
+    profiles = profiles.filter(p => p.name !== name);
+    try { localStorage.setItem('pllink_profiles', JSON.stringify(profiles)); } catch {}
+  }
 
   const PRESETS = ['tcp:localhost:5770', 'udp:14550', 'udp:14551'];
 
@@ -166,12 +191,41 @@
                         placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50 port-input"
                  onfocus={() => showHistory = true}
                  onblur={() => setTimeout(() => showHistory = false, 200)} />
-          {#if showHistory && portHistory.length > 0}
-            <div class="absolute top-full left-0 right-0 z-[9999] mt-1 bg-popover border border-border rounded-md shadow-lg overflow-hidden">
+          {#if showHistory && (portHistory.length > 0 || profiles.length > 0)}
+            <div class="absolute top-full left-0 right-0 z-[9999] mt-1 bg-popover border border-border rounded-md shadow-lg overflow-hidden min-w-[220px]">
+              {#if profiles.length > 0}
+                <div class="px-2 pt-1.5 pb-0.5 text-[9px] font-semibold text-muted-foreground/50 uppercase">{t('conn.profiles')}</div>
+                {#each profiles as prof}
+                  <div class="flex items-center group">
+                    <button class="flex-1 text-left px-2 py-1.5 text-xs text-popover-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
+                            onmousedown={() => loadProfile(prof)}>
+                      <span class="font-semibold">{prof.name}</span>
+                      <span class="text-[10px] text-muted-foreground ml-1 font-mono">{prof.port}</span>
+                    </button>
+                    <button class="px-1.5 opacity-0 group-hover:opacity-60 hover:!opacity-100 text-destructive transition-opacity"
+                            onmousedown={() => deleteProfile(prof.name)} title="Delete">×</button>
+                  </div>
+                {/each}
+                <div class="border-t border-border/50"></div>
+              {/if}
               {#each portHistory as p}
                 <button class="block w-full text-left px-2 py-1.5 text-xs font-mono text-popover-foreground hover:bg-accent hover:text-accent-foreground transition-colors"
                         onmousedown={() => { port = p; showHistory = false; }}>{p}</button>
               {/each}
+              <div class="border-t border-border/50">
+                <button class="block w-full text-left px-2 py-1.5 text-[11px] text-primary hover:bg-accent transition-colors"
+                        onmousedown={() => { showProfileSave = true; showHistory = false; }}>+ {t('conn.saveProfile')}</button>
+              </div>
+            </div>
+          {/if}
+          {#if showProfileSave}
+            <div class="absolute top-full left-0 z-[9999] mt-1 bg-popover border border-border rounded-md shadow-lg p-2 flex gap-1">
+              <input bind:value={profileName} placeholder={t('conn.profileName')}
+                     class="w-28 h-6 px-1.5 text-xs bg-input border border-border rounded text-foreground" />
+              <button class="px-2 h-6 text-xs bg-primary text-primary-foreground rounded hover:bg-primary/90"
+                      onclick={saveProfile}>{t('conn.saveProfile')}</button>
+              <button class="px-1.5 h-6 text-xs text-muted-foreground hover:text-foreground"
+                      onclick={() => showProfileSave = false}>×</button>
             </div>
           {/if}
         </div>

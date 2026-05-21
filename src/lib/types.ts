@@ -54,6 +54,7 @@ export interface DroneState {
   param_total: number;
   param_fetching: boolean;
   vehicles: { sysid: number; lat: number; lon: number; alt: number; hdg: number; armed?: boolean; mode?: number; vtype?: number }[];
+  prearm: string[];
 }
 
 export interface FlightSummary {
@@ -135,10 +136,21 @@ export interface LogCompleteMsg {
   size: number;
 }
 
+export interface InspectorMsg {
+  type: 'inspector';
+  messages: { id: number; name: string; hz: number; count: number; size: number; last_fields: Record<string, unknown> }[];
+}
+
+export interface ConsoleOutputMsg {
+  type: 'console_output';
+  text: string;
+}
+
 export type WSMessage = DroneState | DroneEvent | ConnectResult
   | ParamBatchMsg | ParamsCompleteMsg
   | MissionDownloadedMsg
-  | LogListMsg | LogProgressMsg | LogCompleteMsg;
+  | LogListMsg | LogProgressMsg | LogCompleteMsg
+  | InspectorMsg | ConsoleOutputMsg;
 
 export const defaultState: DroneState = {
   type: 'state',
@@ -159,4 +171,5 @@ export const defaultState: DroneState = {
   wind_dir: 0, wind_speed: 0, terrain_alt: -1,
   param_count: 0, param_total: -1, param_fetching: false,
   vehicles: [],
+  prearm: [],
 };

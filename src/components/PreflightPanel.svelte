@@ -63,4 +63,17 @@
       {t('preflight.allPass')}
     </div>
   {/if}
+  {#if d.prearm && d.prearm.length > 0}
+    <div class="mt-2 pt-2 border-t border-border/50">
+      <span class="text-[10px] font-semibold text-destructive uppercase tracking-wider">{t('prearm.title')}</span>
+      <div class="mt-1 space-y-0.5">
+        {#each d.prearm as msg}
+          <div class="flex items-center gap-1.5 text-[11px] text-destructive/80">
+            <XIcon size={10} class="shrink-0" />
+            <span>{msg}</span>
+          </div>
+        {/each}
+      </div>
+    </div>
+  {/if}
 </div>

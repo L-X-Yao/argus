@@ -29,6 +29,10 @@
   import CalibrationPanel from './components/CalibrationPanel.svelte';
   import ConfirmDialog from './components/ConfirmDialog.svelte';
   import SlideConfirm from './components/SlideConfirm.svelte';
+  import CommandPalette from './components/CommandPalette.svelte';
+  import InspectorPanel from './components/InspectorPanel.svelte';
+  import ConsolePanel from './components/ConsolePanel.svelte';
+  import MotorTestPanel from './components/MotorTestPanel.svelte';
   import { showConfirm, showSlide, undo } from './lib/stores.svelte';
   import { ChevronUp, ChevronDown, CornerDownLeft, Pause, HardDrive, Wrench, Video, SlidersHorizontal, PanelLeftClose, Plane, MapPinned, Activity, Settings2, X as XIcon } from '@lucide/svelte';
   import type { Component } from 'svelte';
@@ -48,6 +52,10 @@
   let showVideo = $state(false);
   let showCalibration = $state(false);
   let showShortcuts = $state(false);
+  let showCmdPalette = $state(false);
+  let showInspector = $state(false);
+  let showConsole = $state(false);
+  let showMotorTest = $state(false);
 
   onMount(() => {
     loadLocale();
@@ -116,6 +124,7 @@
     }
     else if (k === 'escape') { showShortcuts = false; }
     else if (k === '?' || (k === '/' && e.shiftKey)) { showShortcuts = !showShortcuts; }
+    else if (k === 'k' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); showCmdPalette = !showCmdPalette; }
     else if (k === 's' && e.ctrlKey) { e.preventDefault(); app.showSettings = !app.showSettings; }
     else if (k === 'z' && e.ctrlKey) { e.preventDefault(); undo(); }
     else if (e.ctrlKey && k >= '1' && k <= '4') {
@@ -234,6 +243,7 @@
               <div class="mt-4 pt-3 border-t border-border/50">
                 <p class="text-xs text-muted-foreground">{t('welcome.hint')}</p>
                 <div class="flex items-center justify-center gap-3 mt-2 text-[11px] text-muted-foreground/70">
+                  <span><kbd class="px-1 py-px bg-muted border border-border rounded text-[10px] font-mono">Ctrl+K</kbd> {t('cmd.openPalette')}</span>
                   <span><kbd class="px-1 py-px bg-muted border border-border rounded text-[10px] font-mono">?</kbd> {t('welcome.shortcuts')}</span>
                   <span><kbd class="px-1 py-px bg-muted border border-border rounded text-[10px] font-mono">Ctrl+S</kbd> {t('welcome.settings')}</span>
                 </div>
@@ -320,6 +330,27 @@
   {/if}
   <ConfirmDialog />
   <SlideConfirm />
+  {#if showCmdPalette}
+    <CommandPalette
+      onclose={() => showCmdPalette = false}
+      onnavigate={(v) => { view = v; showCmdPalette = false; }}
+      oninspector={() => showInspector = true}
+      onconsole={() => showConsole = true}
+      onlogs={() => showLogPanel = true}
+      oncalibration={() => showCalibration = true}
+      onvideo={() => showVideo = true}
+      onmotor={() => showMotorTest = true}
+    />
+  {/if}
+  {#if showInspector}
+    <InspectorPanel onclose={() => showInspector = false} />
+  {/if}
+  {#if showConsole}
+    <ConsolePanel onclose={() => showConsole = false} />
+  {/if}
+  {#if showMotorTest}
+    <MotorTestPanel onclose={() => showMotorTest = false} />
+  {/if}
   {#if showShortcuts}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
     <!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -347,6 +378,7 @@
             ['Ctrl+Z', t('shortcut.undo')],
             ['Ctrl+S', t('shortcut.settings')],
             ['?', t('shortcut.showPanel')],
+            ['Ctrl+K', t('cmd.openPalette')],
             ['Esc', t('shortcut.close')],
           ] as [key, desc]}
             <div class="flex items-center gap-3 py-1 border-b border-border/50">

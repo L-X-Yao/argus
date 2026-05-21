@@ -21,6 +21,23 @@ from .log import logger
 from .param_manager import ParamManager
 from .locale_text import lt
 
+_MSG_NAMES = {
+    0: 'HEARTBEAT', 1: 'SYS_STATUS', 22: 'PARAM_VALUE', 24: 'GPS_RAW_INT',
+    30: 'ATTITUDE', 33: 'GLOBAL_POSITION_INT', 35: 'RC_CHANNELS_RAW',
+    36: 'SERVO_OUTPUT_RAW', 40: 'MISSION_REQUEST', 42: 'MISSION_CURRENT',
+    43: 'MISSION_REQUEST_LIST', 44: 'MISSION_COUNT', 46: 'MISSION_ITEM_REACHED',
+    47: 'MISSION_ACK', 51: 'MISSION_REQUEST_INT', 65: 'RC_CHANNELS',
+    69: 'MANUAL_CONTROL', 70: 'RC_CHANNELS_OVERRIDE', 73: 'MISSION_ITEM_INT',
+    74: 'VFR_HUD', 77: 'COMMAND_ACK', 83: 'ATTITUDE_TARGET',
+    85: 'POSITION_TARGET_LOCAL_NED', 87: 'POSITION_TARGET_GLOBAL_INT',
+    105: 'HIGHRES_IMU', 116: 'SCALED_IMU2', 117: 'LOG_REQUEST_LIST',
+    118: 'LOG_ENTRY', 119: 'LOG_REQUEST_DATA', 120: 'LOG_DATA',
+    125: 'POWER_STATUS', 126: 'SERIAL_CONTROL', 136: 'TERRAIN_REPORT',
+    147: 'BATTERY_STATUS', 148: 'AUTOPILOT_VERSION', 163: 'AHRS',
+    168: 'WIND', 178: 'AHRS2', 241: 'VIBRATION', 242: 'HOME_POSITION',
+    253: 'STATUSTEXT', 310: 'UAVCAN_NODE_STATUS', 311: 'UAVCAN_NODE_INFO',
+}
+
 
 class DroneLink:
     def __init__(self):
@@ -104,6 +121,11 @@ class DroneLink:
         self.wind_dir = 0.0
         self.wind_speed = 0.0
         self.terrain_alt = -1.0
+        self.inspector_enabled = False
+        self._msg_stats: dict[int, dict] = {}
+        self._msg_stats_window = 5.0
+        self._console_buf: list[str] = []
+        self._prearm_messages: list[str] = []
 
     def is_plane(self) -> bool:
         if self.force_plane is not None:
@@ -286,6 +308,7 @@ class DroneLink:
             'vehicles': [v for v in self._vehicles.values()
                          if v.get('lat', 0) != 0 and v['sysid'] != self.sysid
                          and time.time() - v.get('t', 0) < 10],
+            'prearm': self._prearm_messages,
         }
 
     def _start_log(self) -> None:
@@ -420,6 +443,21 @@ class DroneLink:
             self._write_log_line()
             time.sleep(cfg.MAIN_LOOP_SLEEP)
 
+    def get_inspector_data(self) -> list[dict]:
+        now = time.time()
+        result = []
+        for mid, st in sorted(self._msg_stats.items()):
+            times = st.get('times', [])
+            times = [t for t in times if now - t < self._msg_stats_window]
+            st['times'] = times
+            hz = len(times) / self._msg_stats_window if times else 0
+            result.append({
+                'id': mid, 'name': st.get('name', ''),
+                'hz': round(hz, 1), 'count': st.get('count', 0),
+                'size': st.get('size', 0), 'last_fields': st.get('last_fields', {}),
+            })
+        return result
+
     def _process(self, payload: bytes) -> None:
         if len(payload) < 12 or payload[0] != 0xFD:
             return
@@ -428,6 +466,17 @@ class DroneLink:
         mid = payload[7] | (payload[8] << 8) | (payload[9] << 16)
         p = payload[10:10 + payload[1]]
         pl = payload[1]
+        if self.inspector_enabled:
+            now = time.time()
+            st = self._msg_stats.get(mid)
+            if not st:
+                st = {'name': _MSG_NAMES.get(mid, ''), 'count': 0, 'size': pl, 'times': [], 'last_fields': {}}
+                self._msg_stats[mid] = st
+            st['count'] += 1
+            st['size'] = pl
+            st['times'].append(now)
+            if len(st['times']) > 100:
+                st['times'] = st['times'][-50:]
         sid = self._raw_sysid
         if mid == 33 and pl >= 20:
             lat = struct.unpack_from('<i', p, 4)[0] / 1e7

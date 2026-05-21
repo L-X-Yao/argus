@@ -169,6 +169,21 @@ def execute(cmd: str, param, link: DroneLink, data: dict | None = None) -> dict 
             for i in range(8):
                 p += struct.pack('<H', max(0, min(65535, int(channels[i]))))
             link.send(bm(70, p, link.sq, 124))
+    elif cmd == 'motor_test':
+        motor = int(data.get('motor', 0))
+        throttle = float(data.get('throttle', 5))
+        duration = float(data.get('duration', 2))
+        link.add_event(lt('motor_test', link.locale) % (motor + 1, throttle), 'motor_test')
+        _send_cmd(link, 209, p1=float(motor), p2=0, p3=throttle, p4=duration, p5=1)
+    elif cmd == 'motor_test_stop':
+        for i in range(8):
+            _send_cmd(link, 209, p1=float(i), p2=0, p3=0, p4=0, p5=1)
+    elif cmd == 'serial_control':
+        text = data.get('text', '')
+        if text:
+            _send_serial_control(link, text)
+    elif cmd == 'inspector_toggle':
+        link.inspector_enabled = not link.inspector_enabled
     return None
 
 
@@ -266,6 +281,15 @@ def send_mission_item_int(link: DroneLink, wp: dict) -> None:
                     link.sysid, 1, frame,
                     1 if wp['seq'] == 0 else 0, 1, 0)
     link.send(bm(73, p, link.sq, 38))
+
+
+def _send_serial_control(link: DroneLink, text: str) -> None:
+    from pllink_proto import bm
+    data = (text + '\n').encode('ascii', 'replace')[:70]
+    flags = 0x06
+    p = struct.pack('<BBHB', 10, flags, 0, len(data))
+    p += data + b'\x00' * (70 - len(data))
+    link.send(bm(126, p, link.sq, 220))
 
 
 def send_heartbeat(link: DroneLink) -> None:

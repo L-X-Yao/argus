@@ -2,6 +2,7 @@ import type { WSMessage } from './types';
 import { app, updateState, addEvent, setWsConnected, addToast, loadDownloadedMission } from './stores.svelte';
 import { handleParamBatch, handleParamsComplete } from './paramStore.svelte';
 import { setLogList, completeDownload, updateDownloadProgress } from './logStore.svelte';
+import { updateInspector, appendConsole } from './inspectorStore.svelte';
 import { getWsUrl } from './backend';
 import { onLocaleChange, getLocale, t } from './i18n.svelte';
 
@@ -74,6 +75,12 @@ export function connectWs(): void {
         case 'log_complete':
           completeDownload(msg.id, msg.data, msg.size);
           addToast(t('toast.logDone').replace('{n}', String(msg.id)), 'success');
+          break;
+        case 'inspector':
+          updateInspector(msg.messages);
+          break;
+        case 'console_output':
+          appendConsole(msg.text);
           break;
       }
     } catch (e) {

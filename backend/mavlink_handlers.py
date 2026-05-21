@@ -173,6 +173,12 @@ def handle_statustext(p: bytes, pl: int, link: DroneLink) -> None:
         return
     text = bytes(p[1:51]).split(b'\x00')[0].decode('ascii', 'replace').strip()
     if text:
+        if text.startswith('PreArm:') or text.startswith('Arm:'):
+            msg = text.split(':', 1)[1].strip()
+            if msg not in link._prearm_messages:
+                link._prearm_messages.append(msg)
+                if len(link._prearm_messages) > 20:
+                    link._prearm_messages = link._prearm_messages[-10:]
         text = filter_statustext(text, link.locale)
         link.add_event(('%s: %s' % ('FC' if link.locale == 'en' else '飞控', text)), 'statustext')
 
@@ -348,6 +354,17 @@ def handle_log_entry(p: bytes, pl: int, link: DroneLink) -> None:
         link.add_event(lt('log_list_n', link.locale) % len(link._log_list), 'log_list_n')
 
 
+def handle_serial_control(p: bytes, pl: int, link: DroneLink) -> None:
+    if pl < 10:
+        return
+    count = p[4]
+    if count > 0 and count <= 70:
+        text = bytes(p[5:5 + count]).decode('ascii', 'replace')
+        link._console_buf.append(text)
+        if len(link._console_buf) > 500:
+            link._console_buf = link._console_buf[-250:]
+
+
 def handle_log_data(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 7:
         return
@@ -415,3 +432,4 @@ def init_handlers() -> None:
     mavlink_dispatch.register(47, handle_mission_ack)
     mavlink_dispatch.register(118, handle_log_entry)
     mavlink_dispatch.register(120, handle_log_data)
+    mavlink_dispatch.register(126, handle_serial_control)

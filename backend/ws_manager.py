@@ -116,6 +116,17 @@ class WSManager:
                     for msg in others:
                         await ws.send_text(json.dumps(msg))
                     param_cursor = len(pmsg)
+                if self.link.inspector_enabled:
+                    await ws.send_text(json.dumps({
+                        'type': 'inspector',
+                        'messages': self.link.get_inspector_data(),
+                    }))
+                if self.link._console_buf:
+                    text = ''.join(self.link._console_buf)
+                    self.link._console_buf.clear()
+                    await ws.send_text(json.dumps({
+                        'type': 'console_output', 'text': text,
+                    }))
                 interval = cfg.WS_PUSH_INTERVAL_CONNECTED if self.link.connected else cfg.WS_PUSH_INTERVAL_IDLE
                 await asyncio.sleep(interval)
         except (WebSocketDisconnect, Exception):
