@@ -90,7 +90,7 @@ async def api_version():
     except Exception:
         pass
     return {
-        'version': '3.1.0',
+        'version': '3.2.0',
         'git': git_hash,
         'protocols': ['standard', 'pllink'],
         'vehicles': ['copter', 'plane', 'rover', 'sub'],
