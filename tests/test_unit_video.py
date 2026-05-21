@@ -4,7 +4,7 @@ import threading
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from backend.video import _proc_lock, _ffmpeg_available
+from backend.video import _ffmpeg_available, _proc_lock
 
 
 class TestVideoModule:

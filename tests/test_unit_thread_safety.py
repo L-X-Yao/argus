@@ -1,5 +1,4 @@
 """Thread safety tests for DroneLink state access."""
-import struct
 import sys
 import threading
 import time

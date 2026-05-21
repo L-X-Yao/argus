@@ -1,6 +1,5 @@
 """Unit tests: command builder and mission upload logic."""
 import json
-import struct
 import sys
 import tempfile
 from pathlib import Path
@@ -329,7 +328,8 @@ class TestDroneLinkLog:
         assert link.get_state()['log_active'] is True
         link._stop_log()
         assert link.get_state()['log_active'] is False
-        import os, glob
+        import glob
+        import os
         for f in glob.glob(str(Path(__file__).resolve().parent.parent / 'logs' / '*.csv')):
             os.remove(f)
 

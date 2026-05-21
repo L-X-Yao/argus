@@ -1,8 +1,6 @@
 """
 Shared fixtures: simulator + backend + WebSocket client.
 """
-import asyncio
-import json
 import subprocess
 import sys
 import time
@@ -10,7 +8,6 @@ from pathlib import Path
 
 import httpx
 import pytest
-import websockets
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
 SIM_SCRIPT = ROOT_DIR / 'scripts' / 'sim_pllink.py'

@@ -3,10 +3,26 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from backend.constants import (COPTER_MODES, PLANE_MODES, ROVER_MODES, SUB_MODES,
-                               COPTER_BTNS, PLANE_BTNS, ROVER_BTNS, SUB_BTNS, FIX_NAMES,
-                               COPTER_MODES_EN, PLANE_MODES_EN, ROVER_MODES_EN, SUB_MODES_EN,
-                               COPTER_BTNS_EN, PLANE_BTNS_EN, ROVER_BTNS_EN, SUB_BTNS_EN, FIX_NAMES_EN)
+from backend.constants import (
+    COPTER_BTNS,
+    COPTER_BTNS_EN,
+    COPTER_MODES,
+    COPTER_MODES_EN,
+    FIX_NAMES,
+    FIX_NAMES_EN,
+    PLANE_BTNS,
+    PLANE_BTNS_EN,
+    PLANE_MODES,
+    PLANE_MODES_EN,
+    ROVER_BTNS,
+    ROVER_BTNS_EN,
+    ROVER_MODES,
+    ROVER_MODES_EN,
+    SUB_BTNS,
+    SUB_BTNS_EN,
+    SUB_MODES,
+    SUB_MODES_EN,
+)
 
 
 def _has_english(text):

@@ -1,9 +1,8 @@
 """Unit tests for WSManager delta push and state management."""
-import asyncio
 import json
 import sys
 from pathlib import Path
-from unittest.mock import AsyncMock, MagicMock
+from unittest.mock import AsyncMock
 
 import pytest
 
@@ -53,7 +52,6 @@ class TestDeltaPush:
         last_sent = dict(state1)
         link.attitude.roll = 15.0
         state2 = link.get_state()
-        push_count = 2
         delta = {k: v for k, v in state2.items() if last_sent.get(k) != v}
         delta['type'] = 'state'
         delta['connected'] = state2['connected']
@@ -64,10 +62,8 @@ class TestDeltaPush:
     def test_every_10th_is_full(self):
         link = DroneLink()
         state = link.get_state()
-        last_sent = dict(state)
-        push_count = 11
-        if push_count % 10 == 1:
-            delta = state
+        # 10th push cycle sends full state
+        delta = state
         assert delta == state
 
     def test_delta_includes_type_and_connected(self):
@@ -75,7 +71,6 @@ class TestDeltaPush:
         state1 = link.get_state()
         last_sent = dict(state1)
         state2 = link.get_state()
-        push_count = 2
         delta = {k: v for k, v in state2.items() if last_sent.get(k) != v}
         delta['type'] = 'state'
         delta['connected'] = state2['connected']
@@ -113,7 +108,7 @@ class TestBroadcast:
 class TestReceiveCommands:
     def test_set_locale(self):
         link = DroneLink()
-        mgr = WSManager(link)
+        WSManager(link)
         assert link.locale == 'zh'
 
     def test_inspector_toggle(self):

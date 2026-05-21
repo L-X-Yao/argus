@@ -1,7 +1,6 @@
 """Unit tests: survey grid generation algorithm (Python mirror of survey.ts)."""
 import math
 
-
 M_PER_DEG_LAT = 111320
 
 def m_per_deg_lon(lat):

@@ -1,12 +1,10 @@
 """Unit tests for auth module."""
-import hashlib
-import hmac
 import os
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from backend.auth import verify_token, auth_required, generate_token, TOKEN_FILE
+from backend.auth import TOKEN_FILE, auth_required, generate_token, verify_token
 
 
 class TestAuthNoToken:
