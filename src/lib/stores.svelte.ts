@@ -35,6 +35,7 @@ class AppState {
   showSettings: boolean = $state(false);
   mapRegion: 'china' | 'global' = $state('china');
   tileSource: string = $state('amap');
+  mapMode: '2d' | '3d' = $state('2d');
   linkHistory: { t: number; rate: number; age: number }[] = $state([]);
   rallyPoints: RallyPoint[] = $state([]);
   showRally: boolean = $state(false);

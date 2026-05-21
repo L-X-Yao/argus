@@ -66,8 +66,14 @@
   import AiAnnotationPanel from './components/AiAnnotationPanel.svelte';
   import SchedulerPanel from './components/SchedulerPanel.svelte';
   import PositionSourcePanel from './components/PositionSourcePanel.svelte';
+  let Map3DViewModule: any = $state(null);
+  $effect(() => {
+    if (app.mapMode === '3d' && !Map3DViewModule) {
+      import('./components/Map3DView.svelte').then(m => Map3DViewModule = m.default);
+    }
+  });
   import { showConfirm, showSlide, undo } from './lib/stores.svelte';
-  import { ChevronUp, ChevronDown, CornerDownLeft, Pause, HardDrive, Wrench, Video, SlidersHorizontal, PanelLeftClose, Plane, MapPinned, Activity, Settings2, X as XIcon } from '@lucide/svelte';
+  import { ChevronUp, ChevronDown, CornerDownLeft, Pause, HardDrive, Wrench, Video, SlidersHorizontal, PanelLeftClose, Plane, MapPinned, Activity, Settings2, X as XIcon, Globe } from '@lucide/svelte';
   import type { Component } from 'svelte';
   import Button from '$lib/components/ui/button/button.svelte';
 
@@ -283,6 +289,11 @@
           <Wrench size={13} />{t('nav.calibrate')}
         </Button>
         {#if view === 'fly'}
+          <Button variant={app.mapMode === '3d' ? 'default' : 'secondary'} size="sm" class="gap-1"
+                  onclick={() => app.mapMode = app.mapMode === '3d' ? '2d' : '3d'}
+                  title={app.mapMode === '3d' ? '2D Map' : '3D Globe'}>
+            <Globe size={13} />{app.mapMode === '3d' ? '3D' : '2D'}
+          </Button>
           <Button variant={showVideo ? 'default' : 'secondary'} size="sm" class="gap-1"
                   onclick={() => showVideo = !showVideo} title="RTSP Video">
             <Video size={13} />{t('nav.video')}
@@ -304,7 +315,11 @@
         </div>
       {/if}
       <div class="flex-1 relative min-h-0 flex flex-col min-w-0">
-        <MapView />
+        {#if app.mapMode === '3d' && Map3DViewModule}
+          <Map3DViewModule />
+        {:else}
+          <MapView />
+        {/if}
         {#if app.drone.connected}
           <TelemetryOverlay />
         {:else}
