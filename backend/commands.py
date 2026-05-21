@@ -193,6 +193,31 @@ def execute(cmd: str, param, link: DroneLink, data: dict | None = None) -> dict 
         points = data.get('points', [])
         if points:
             _upload_rally(link, points)
+    elif cmd == 'gimbal_angle':
+        pitch = float(data.get('pitch', 0))
+        yaw = float(data.get('yaw', 0))
+        _send_cmd(link, 205, p1=pitch, p4=yaw)  # MAV_CMD_DO_MOUNT_CONTROL
+    elif cmd == 'gimbal_rate':
+        pitch_rate = float(data.get('pitch_rate', 0))
+        yaw_rate = float(data.get('yaw_rate', 0))
+        from pllink_proto import bm
+        p = struct.pack('<ffffffBBB', 0, 0, 0, float(pitch_rate * 100), 0, float(yaw_rate * 100),
+                        link.sysid, 1, 2)
+        link.send(bm(282, p, link.sq, 0))  # GIMBAL_MANAGER_SET_MANUAL_CONTROL approx
+    elif cmd == 'camera_trigger':
+        _send_cmd(link, 203)  # MAV_CMD_DO_DIGICAM_CONTROL
+    elif cmd == 'camera_video_start':
+        _send_cmd(link, 2500, p1=0, p2=0, p3=1)  # MAV_CMD_VIDEO_START_CAPTURE
+    elif cmd == 'camera_video_stop':
+        _send_cmd(link, 2501)  # MAV_CMD_VIDEO_STOP_CAPTURE
+    elif cmd == 'camera_zoom':
+        zoom_val = float(data.get('zoom', 1))
+        _send_cmd(link, 531, p1=1, p2=zoom_val)  # MAV_CMD_SET_CAMERA_ZOOM
+    elif cmd == 'do_set_roi':
+        lat = float(data.get('lat', 0))
+        lon = float(data.get('lon', 0))
+        alt = float(data.get('alt', 0))
+        _send_cmd(link, 201, p5=lat, p6=lon, p7=alt)
     return None
 
 

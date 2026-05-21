@@ -2,6 +2,7 @@
   import { app, pushUndo, undo, deleteWaypoint, clearWaypoints, saveSettings, saveWaypoints, generateCircle, addToast, showConfirm } from '../lib/stores.svelte';
   import { t } from '../lib/i18n.svelte';
   import type { Waypoint } from '../lib/types';
+  import { getElevationProfile, adjustWaypointsForTerrain, interpolateRoute } from '../lib/terrain';
 
   function fitAfterLoad() { requestAnimationFrame(() => app.fitRouteFlag++); }
   import { sendCommand } from '../lib/ws';
@@ -11,6 +12,29 @@
   let showCircleGen = $state(false);
   let circleRadius = $state(50);
   let circleCount = $state(12);
+
+  // Terrain profile data (loaded asynchronously, does not block initial render)
+  let terrainElevations: number[] | null = $state(null);
+  let terrainPoints: { lat: number; lon: number; wpIndex: number }[] = $state([]);
+  let terrainLoading = $state(false);
+
+  async function applyTerrainFollow() {
+    if (!app.waypoints.length) return;
+    terrainLoading = true;
+    try {
+      const adjusted = await adjustWaypointsForTerrain(app.waypoints, app.defaultAlt);
+      pushUndo();
+      for (let i = 0; i < app.waypoints.length; i++) {
+        app.waypoints[i].alt = adjusted[i].alt;
+      }
+      saveWaypoints();
+      addToast(t('terrain.adjusted').replace('{n}', String(app.waypoints.length)).replace('{alt}', String(app.defaultAlt)), 'success');
+    } catch {
+      addToast(t('terrain.noData'), 'error');
+    } finally {
+      terrainLoading = false;
+    }
+  }
 
   function genCircle() {
     const center = app.drone.lat !== 0
@@ -286,6 +310,28 @@
 
   let profileCanvas: HTMLCanvasElement = $state(null!);
 
+  // Fetch terrain data whenever waypoints change (async, non-blocking)
+  $effect(() => {
+    if (app.waypoints.length < 2) { terrainElevations = null; terrainPoints = []; return; }
+    const wps = app.waypoints.map(w => ({ lat: w.lat, lon: w.lon }));
+    const pts = interpolateRoute(wps, 50);
+    // Capture a snapshot to detect staleness after await
+    const snapshot = JSON.stringify(wps.map(w => `${w.lat.toFixed(5)},${w.lon.toFixed(5)}`));
+    terrainLoading = true;
+    getElevationProfile(pts).then(elevs => {
+      // Only apply if waypoints haven't changed since we started
+      const current = app.waypoints.map(w => `${w.lat.toFixed(5)},${w.lon.toFixed(5)}`);
+      if (JSON.stringify(current) !== snapshot) return;
+      terrainPoints = pts;
+      terrainElevations = elevs;
+    }).catch(() => {
+      terrainElevations = null;
+      terrainPoints = [];
+    }).finally(() => {
+      terrainLoading = false;
+    });
+  });
+
   $effect(() => {
     if (!profileCanvas || app.waypoints.length < 2) return;
     const wps = app.waypoints;
@@ -300,38 +346,123 @@
     }
     const totalD = dists[dists.length - 1] || 1;
     const alts = wps.map(wp => wp.alt);
+
+    // Compute altitude range — include terrain elevations if available
     let mn = Math.min(...alts), mx = Math.max(...alts);
+    const tElevs = terrainElevations;
+    if (tElevs && tElevs.length > 0) {
+      const tMin = Math.min(...tElevs);
+      const tMax = Math.max(...tElevs);
+      mn = Math.min(mn, tMin);
+      mx = Math.max(mx, tMax);
+    }
     if (mx === mn) { mx += 5; mn = Math.max(0, mn - 5); }
-    const pad = (mx - mn) * 0.1;
+    const pad = (mx - mn) * 0.15;
     mn -= pad; mx += pad;
 
+    const toY = (alt: number) => (1 - (alt - mn) / (mx - mn)) * (h - 16) + 8;
+
+    // --- Terrain ground profile (drawn first, behind everything) ---
+    if (tElevs && tElevs.length > 0 && terrainPoints.length === tElevs.length) {
+      const tPts = terrainPoints;
+      // Compute cumulative distance along interpolated points
+      const tDists: number[] = [0];
+      for (let i = 1; i < tPts.length; i++) {
+        tDists.push(tDists[i - 1] + segDist(tPts[i - 1], tPts[i]));
+      }
+      const tTotalD = tDists[tDists.length - 1] || totalD;
+
+      // Brown filled ground area
+      ctx.fillStyle = 'rgba(141,110,68,0.35)';
+      ctx.beginPath();
+      ctx.moveTo(0, h);
+      for (let i = 0; i < tPts.length; i++) {
+        const x = (tDists[i] / tTotalD) * w;
+        const y = toY(tElevs[i]);
+        ctx.lineTo(x, y);
+      }
+      ctx.lineTo(w, h);
+      ctx.closePath();
+      ctx.fill();
+
+      // Green clearance fill between waypoint line and ground
+      ctx.fillStyle = 'rgba(76,175,80,0.18)';
+      ctx.beginPath();
+      // Trace the waypoint altitude line forward
+      for (let i = 0; i < wps.length; i++) {
+        const x = (dists[i] / totalD) * w;
+        const y = toY(alts[i]);
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      // Trace the terrain line backward
+      for (let i = tPts.length - 1; i >= 0; i--) {
+        const x = (tDists[i] / tTotalD) * w;
+        const y = toY(tElevs[i]);
+        ctx.lineTo(x, y);
+      }
+      ctx.closePath();
+      ctx.fill();
+
+      // Terrain contour line
+      ctx.strokeStyle = 'rgba(141,110,68,0.6)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (let i = 0; i < tPts.length; i++) {
+        const x = (tDists[i] / tTotalD) * w;
+        const y = toY(tElevs[i]);
+        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+
+      // Red highlight segments where waypoint is below ground
+      for (let i = 0; i < wps.length; i++) {
+        // Find the terrain elevation at this waypoint position
+        const wpElev = tElevs[tPts.findIndex((p, idx) => p.wpIndex === i)] ?? 0;
+        if (alts[i] < wpElev) {
+          const x = (dists[i] / totalD) * w;
+          const y = toY(alts[i]);
+          ctx.fillStyle = 'rgba(244,67,54,0.3)';
+          ctx.beginPath();
+          ctx.arc(x, y, 6, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#f44336';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.arc(x, y, 6, 0, Math.PI * 2);
+          ctx.stroke();
+        }
+      }
+    }
+
+    // --- Waypoint altitude fill (original) ---
     ctx.fillStyle = 'rgba(21,101,192,0.15)';
     ctx.beginPath();
     ctx.moveTo(0, h);
     for (let i = 0; i < wps.length; i++) {
       const x = (dists[i] / totalD) * w;
-      const y = (1 - (alts[i] - mn) / (mx - mn)) * (h - 16) + 8;
-      if (i === 0) ctx.lineTo(x, y); else ctx.lineTo(x, y);
+      const y = toY(alts[i]);
+      ctx.lineTo(x, y);
     }
     ctx.lineTo(w, h);
     ctx.closePath();
     ctx.fill();
 
+    // --- Waypoint altitude line (original) ---
     ctx.strokeStyle = '#1565c0';
     ctx.lineWidth = 2;
     ctx.beginPath();
     for (let i = 0; i < wps.length; i++) {
       const x = (dists[i] / totalD) * w;
-      const y = (1 - (alts[i] - mn) / (mx - mn)) * (h - 16) + 8;
+      const y = toY(alts[i]);
       if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
     }
     ctx.stroke();
 
-    ctx.fillStyle = '#aaa';
+    // --- Waypoint dots and labels (original + ground clearance) ---
     ctx.font = '9px monospace';
     for (let i = 0; i < wps.length; i++) {
       const x = (dists[i] / totalD) * w;
-      const y = (1 - (alts[i] - mn) / (mx - mn)) * (h - 16) + 8;
+      const y = toY(alts[i]);
       ctx.fillStyle = wps[i].drop ? '#e65100' : '#1565c0';
       ctx.beginPath();
       ctx.arc(x, y, 3, 0, Math.PI * 2);
@@ -340,8 +471,21 @@
         ctx.fillStyle = '#888';
         ctx.fillText(`${alts[i].toFixed(0)}m`, x + 4, y - 4);
       }
+      // Ground clearance label at each waypoint when terrain is available
+      if (tElevs && tElevs.length > 0 && terrainPoints.length > 0) {
+        const tIdx = terrainPoints.findIndex(p => p.wpIndex === i);
+        if (tIdx >= 0) {
+          const groundElev = tElevs[tIdx];
+          const clearance = alts[i] - groundElev;
+          const color = clearance < 0 ? '#f44336' : clearance < 10 ? '#ff9800' : '#4caf50';
+          ctx.fillStyle = color;
+          const gY = toY(groundElev);
+          ctx.fillText(`${t('terrain.clearance')}${clearance.toFixed(0)}m`, x + 4, (y + gY) / 2);
+        }
+      }
     }
 
+    // --- Axis labels (original) ---
     ctx.fillStyle = '#555';
     ctx.fillText(`${mn.toFixed(0)}m`, 2, h - 2);
     ctx.fillText(`${mx.toFixed(0)}m`, 2, 10);
@@ -416,6 +560,7 @@
     {/each}
     <Button variant="outline" size="xs" onclick={applyAltAll}>{t('cat.all')}</Button>
     <Button variant="outline" size="xs" onclick={validateMission}>{t('wp.validate')}</Button>
+    <Button variant="outline" size="xs" onclick={applyTerrainFollow} disabled={terrainLoading || app.waypoints.length < 1}>{terrainLoading ? t('terrain.loading') : t('terrain.follow')}</Button>
     <Button size="xs" class="bg-orange-700 hover:bg-orange-800 text-white font-bold" onclick={uploadMission}>{t('wp.upload')}</Button>
   </div>
   <div class="flex gap-1 mt-1.5 items-center flex-wrap">

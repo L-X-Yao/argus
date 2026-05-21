@@ -1,6 +1,22 @@
 import { sendCommand } from './ws';
 import { app } from './stores.svelte';
 
+export interface ChannelMap {
+  roll: number;
+  pitch: number;
+  throttle: number;
+  yaw: number;
+  invertRoll: boolean;
+  invertPitch: boolean;
+  invertThrottle: boolean;
+  invertYaw: boolean;
+}
+
+const DEFAULT_MAP: ChannelMap = {
+  roll: 0, pitch: 1, throttle: 3, yaw: 2,
+  invertRoll: false, invertPitch: true, invertThrottle: true, invertYaw: false,
+};
+
 class GamepadState {
   connected: boolean = $state(false);
   name: string = $state('');
@@ -8,12 +24,24 @@ class GamepadState {
   buttons: boolean[] = $state([]);
   enabled: boolean = $state(false);
   deadzone: number = $state(0.08);
+  channelMap: ChannelMap = $state({ ...DEFAULT_MAP });
 }
 
 export const gamepad = new GamepadState();
 
 let animFrame = 0;
 let gpIndex = -1;
+
+export function loadGamepadMap() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('pllink_gamepad_map') || '{}');
+    if (saved.roll !== undefined) gamepad.channelMap = { ...DEFAULT_MAP, ...saved };
+  } catch {}
+}
+
+export function saveGamepadMap() {
+  try { localStorage.setItem('pllink_gamepad_map', JSON.stringify(gamepad.channelMap)); } catch {}
+}
 
 export function startGamepad() {
   gamepad.enabled = true;
@@ -75,10 +103,11 @@ function poll() {
 
   if (!app.drone.connected || !app.drone.armed) return;
 
-  const roll = 1500 + Math.round(axes[0] * 500);
-  const pitch = 1500 - Math.round(axes[1] * 500);
-  const thr = 1500 - Math.round(axes[3] * 500);
-  const yaw = 1500 + Math.round(axes[2] * 500);
+  const m = gamepad.channelMap;
+  const roll = 1500 + Math.round(axes[m.roll] * (m.invertRoll ? -500 : 500));
+  const pitch = 1500 + Math.round(axes[m.pitch] * (m.invertPitch ? -500 : 500));
+  const thr = 1500 + Math.round(axes[m.throttle] * (m.invertThrottle ? -500 : 500));
+  const yaw = 1500 + Math.round(axes[m.yaw] * (m.invertYaw ? -500 : 500));
 
   sendCommand('rc_override', undefined, {
     channels: [roll, pitch, thr, yaw, 0, 0, 0, 0],
