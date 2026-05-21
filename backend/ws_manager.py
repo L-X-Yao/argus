@@ -13,6 +13,10 @@ class WSManager:
         self.link = link
         self._clients: set[WebSocket] = set()
 
+    @property
+    def client_count(self) -> int:
+        return len(self._clients)
+
     async def handle_client(self, ws: WebSocket) -> None:
         await ws.accept()
         self._clients.add(ws)

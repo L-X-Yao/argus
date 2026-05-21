@@ -604,6 +604,13 @@ const zh: Record<string, string> = {
   'paramdiff.count': '{n} 个参数不同',
   'paramdiff.noDiff': '两组参数完全一致',
   'paramdiff.hint': '加载 .param 文件与当前参数对比',
+  'units.metric': '公制',
+  'units.imperial': '英制',
+  'units.ft': 'ft',
+  'units.mph': 'mph',
+  'units.fpm': 'ft/min',
+  'units.mi': 'mi',
+  'units.kts': 'kts',
 };
 
 const en: Record<string, string> = {
@@ -1204,6 +1211,13 @@ const en: Record<string, string> = {
   'paramdiff.count': '{n} parameters differ',
   'paramdiff.noDiff': 'Parameters are identical',
   'paramdiff.hint': 'Load a .param file to compare with current values',
+  'units.metric': 'Metric',
+  'units.imperial': 'Imperial',
+  'units.ft': 'ft',
+  'units.mph': 'mph',
+  'units.fpm': 'ft/min',
+  'units.mi': 'mi',
+  'units.kts': 'kts',
 };
 
 const dicts: Record<Locale, Record<string, string>> = { zh, en };

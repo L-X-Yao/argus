@@ -6,7 +6,7 @@ import urllib.request as urlreq
 from contextlib import asynccontextmanager
 from pathlib import Path
 
-from fastapi import FastAPI, UploadFile, WebSocket
+from fastapi import FastAPI, Request, UploadFile, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response
 from fastapi.staticfiles import StaticFiles
@@ -63,7 +63,22 @@ async def health():
     return {'ok': True}
 
 
-@app.get('/api/version')
+@app.get('/api/session', tags=['System'])
+async def api_session(request):
+    """Current session info: connected clients, vehicle state."""
+    link = request.app.state.link
+    mgr = request.app.state.ws_mgr
+    return {
+        'clients': mgr.client_count,
+        'connected': link.connected,
+        'armed': link.armed,
+        'sysid': link.sysid,
+        'mode': link.mode,
+        'vtype': link.vtype_raw,
+    }
+
+
+@app.get('/api/version', tags=['System'])
 async def api_version():
     import subprocess
     git_hash = ''
