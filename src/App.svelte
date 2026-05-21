@@ -66,6 +66,7 @@
   import AiAnnotationPanel from './components/AiAnnotationPanel.svelte';
   import SchedulerPanel from './components/SchedulerPanel.svelte';
   import PositionSourcePanel from './components/PositionSourcePanel.svelte';
+  import NtripPanel from './components/NtripPanel.svelte';
   let Map3DViewModule: any = $state(null);
   $effect(() => {
     if (app.mapMode === '3d' && !Map3DViewModule) {
@@ -128,6 +129,7 @@
   let showAiAnnotation = $state(false);
   let showScheduler = $state(false);
   let showPosSource = $state(false);
+  let showNtrip = $state(false);
 
   onMount(() => {
     loadLocale();
@@ -577,6 +579,9 @@
   {/if}
   {#if showPosSource}
     <PositionSourcePanel onclose={() => showPosSource = false} />
+  {/if}
+  {#if showNtrip}
+    <NtripPanel onclose={() => showNtrip = false} />
   {/if}
   {#if showShortcuts}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
