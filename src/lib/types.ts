@@ -89,6 +89,12 @@ export interface Waypoint {
   loiter_param: number;
 }
 
+export interface RallyPoint {
+  lat: number;
+  lon: number;
+  alt: number;
+}
+
 export interface Toast {
   id: number;
   text: string;

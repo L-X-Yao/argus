@@ -244,6 +244,46 @@
     return Math.sqrt(dlat * dlat + dlon * dlon);
   }
 
+  function validateMission() {
+    const issues: string[] = [];
+    const wps = app.waypoints;
+    if (wps.length < 1) return;
+    for (let i = 1; i < wps.length; i++) {
+      const d = segDist(wps[i - 1], wps[i]);
+      if (d > 5000) issues.push(t('wp.tooFar').replace('{a}', String(i)).replace('{b}', String(i + 1)).replace('{d}', d > 1000 ? (d / 1000).toFixed(1) + 'km' : d.toFixed(0) + 'm'));
+    }
+    for (let i = 0; i < wps.length; i++) {
+      if (wps[i].alt < 2 || wps[i].alt > 500) issues.push(t('wp.tooHigh').replace('{n}', String(i + 1)).replace('{h}', String(wps[i].alt)));
+    }
+    if (app.fencePolygon.length >= 3) {
+      for (let i = 0; i < wps.length; i++) {
+        if (!pointInPoly(wps[i].lat, wps[i].lon, app.fencePolygon)) {
+          issues.push(t('wp.outFence').replace('{n}', String(i + 1)));
+        }
+      }
+    }
+    if (app.drone.home_lat === 0 && app.drone.home_lon === 0) {
+      issues.push(t('wp.noHome'));
+    }
+    if (issues.length === 0) {
+      addToast(t('wp.validated'), 'success');
+    } else {
+      for (const issue of issues.slice(0, 5)) addToast(issue, 'warn', 6000);
+      addToast(t('wp.validFail').replace('{n}', String(issues.length)), 'error');
+    }
+  }
+
+  function pointInPoly(lat: number, lon: number, poly: { lat: number; lon: number }[]): boolean {
+    let inside = false;
+    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+      if ((poly[i].lon > lon) !== (poly[j].lon > lon) &&
+          lat < (poly[j].lat - poly[i].lat) * (lon - poly[i].lon) / (poly[j].lon - poly[i].lon) + poly[i].lat) {
+        inside = !inside;
+      }
+    }
+    return inside;
+  }
+
   let profileCanvas: HTMLCanvasElement = $state(null!);
 
   $effect(() => {
@@ -375,6 +415,7 @@
               onclick={() => { app.defaultAlt = a; saveSettings(); }}>{a}</button>
     {/each}
     <Button variant="outline" size="xs" onclick={applyAltAll}>{t('cat.all')}</Button>
+    <Button variant="outline" size="xs" onclick={validateMission}>{t('wp.validate')}</Button>
     <Button size="xs" class="bg-orange-700 hover:bg-orange-800 text-white font-bold" onclick={uploadMission}>{t('wp.upload')}</Button>
   </div>
   <div class="flex gap-1 mt-1.5 items-center flex-wrap">

@@ -1,4 +1,4 @@
-import type { DroneState, DroneEvent, Waypoint, Toast } from './types';
+import type { DroneState, DroneEvent, Waypoint, Toast, RallyPoint } from './types';
 import { defaultState } from './types';
 
 class AppState {
@@ -35,6 +35,8 @@ class AppState {
   showSettings: boolean = $state(false);
   mapRegion: 'china' | 'global' = $state('china');
   linkHistory: { t: number; rate: number; age: number }[] = $state([]);
+  rallyPoints: RallyPoint[] = $state([]);
+  showRally: boolean = $state(false);
 }
 
 export const app = new AppState();

@@ -184,6 +184,10 @@ def execute(cmd: str, param, link: DroneLink, data: dict | None = None) -> dict 
             _send_serial_control(link, text)
     elif cmd == 'inspector_toggle':
         link.inspector_enabled = not link.inspector_enabled
+    elif cmd == 'rally_upload':
+        points = data.get('points', [])
+        if points:
+            _upload_rally(link, points)
     return None
 
 
@@ -296,6 +300,21 @@ def send_heartbeat(link: DroneLink) -> None:
     from pllink_proto import bm
     payload = struct.pack('<IBBBBB', 0, 6, 8, 0, 0, 3)
     link.send(bm(0, payload, link.sq, 50))
+
+
+def _upload_rally(link: DroneLink, points: list) -> None:
+    from pllink_proto import bm
+    count = len(points)
+    link.send(bm(44, struct.pack('<HBB', count, link.sysid, 1) + bytes([2]), link.sq, 221))
+    for i, pt in enumerate(points):
+        lat7 = int(float(pt.get('lat', 0)) * 1e7)
+        lon7 = int(float(pt.get('lon', 0)) * 1e7)
+        alt = float(pt.get('alt', 100))
+        p = struct.pack('<ffffiifHHBBBBBB',
+                        0.0, 0.0, 0.0, 0.0, lat7, lon7, alt,
+                        i, 5100, link.sysid, 1, 3, 0, 2, 0)
+        link.send(bm(73, p, link.sq, 38))
+    link.add_event(lt('rally_uploaded', link.locale) % count, 'rally_uploaded')
 
 
 def request_streams(link: DroneLink) -> None:

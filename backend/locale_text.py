@@ -70,6 +70,7 @@ _T = {
     'vtype_copter':      ('多旋翼',                  'Multirotor'),
     'vtype_auto':        ('自动',                    'Auto'),
     'motor_test':        ('电机测试: #%d @ %.0f%%',   'Motor test: #%d @ %.0f%%'),
+    'rally_uploaded':    ('备降点: 已上传 %d 个',    'Rally: uploaded %d points'),
 }
 
 
