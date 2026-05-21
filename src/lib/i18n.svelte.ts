@@ -591,6 +591,19 @@ const zh: Record<string, string> = {
   'advcmd.camDist': '间距 (m)',
   'advcmd.delaySec': '延时 (秒)',
   'advcmd.yawDeg': '角度 (°)',
+  'paramdiff.title': '参数对比',
+  'paramdiff.loadFile': '加载 .param 文件',
+  'paramdiff.current': '当前值',
+  'paramdiff.file': '文件值',
+  'paramdiff.diff': '差异',
+  'paramdiff.same': '相同',
+  'paramdiff.onlyFile': '仅文件中有',
+  'paramdiff.onlyCurrent': '仅当前有',
+  'paramdiff.apply': '应用文件值',
+  'paramdiff.applyAll': '全部应用',
+  'paramdiff.count': '{n} 个参数不同',
+  'paramdiff.noDiff': '两组参数完全一致',
+  'paramdiff.hint': '加载 .param 文件与当前参数对比',
 };
 
 const en: Record<string, string> = {
@@ -1178,6 +1191,19 @@ const en: Record<string, string> = {
   'advcmd.camDist': 'Distance (m)',
   'advcmd.delaySec': 'Delay (s)',
   'advcmd.yawDeg': 'Angle (°)',
+  'paramdiff.title': 'Parameter Compare',
+  'paramdiff.loadFile': 'Load .param file',
+  'paramdiff.current': 'Current',
+  'paramdiff.file': 'File',
+  'paramdiff.diff': 'Different',
+  'paramdiff.same': 'Same',
+  'paramdiff.onlyFile': 'File only',
+  'paramdiff.onlyCurrent': 'Current only',
+  'paramdiff.apply': 'Apply file value',
+  'paramdiff.applyAll': 'Apply all',
+  'paramdiff.count': '{n} parameters differ',
+  'paramdiff.noDiff': 'Parameters are identical',
+  'paramdiff.hint': 'Load a .param file to compare with current values',
 };
 
 const dicts: Record<Locale, Record<string, string>> = { zh, en };

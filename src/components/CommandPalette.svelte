@@ -14,7 +14,7 @@
   } from '@lucide/svelte';
 
   let { onclose, onnavigate, oninspector, onconsole, onlogs, oncalibration, onvideo, onmotor,
-         onrccal, onfailsafe, onpower, onesccal, onframe, onpid, onautotune, onmodes, onsetup }:
+         onrccal, onfailsafe, onpower, onesccal, onframe, onpid, onautotune, onmodes, onsetup, onparamdiff }:
     { onclose: () => void;
       onnavigate: (v: 'fly' | 'plan' | 'monitor' | 'params') => void;
       oninspector: () => void;
@@ -32,6 +32,7 @@
       onautotune: () => void;
       onmodes: () => void;
       onsetup: () => void;
+      onparamdiff: () => void;
     } = $props();
 
   interface PaletteItem {
@@ -127,6 +128,8 @@
         handler: () => onmodes(), available: connected },
       { id: 'tool-setup', label: t('setup.title'), category: t('cmd.catTools'), icon: Wrench,
         handler: () => onsetup(), available: true },
+      { id: 'tool-paramdiff', label: t('paramdiff.title'), category: t('cmd.catTools'), icon: Search,
+        handler: () => onparamdiff(), available: paramState.list.length > 0 },
 
       { id: 'set-theme', label: t('settings.darkTheme'), category: t('settings.title'), shortcut: 'L', icon: app.darkTheme ? Sun : Moon,
         handler: () => { app.darkTheme = !app.darkTheme; saveSettings(); }, available: true },

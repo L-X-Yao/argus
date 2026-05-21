@@ -40,7 +40,12 @@ async def lifespan(app: FastAPI):
     app.state.link.disconnect()
 
 
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(
+    title='PL-Link GCS API',
+    description='Universal Web Ground Control Station — REST API for MAVLink vehicle control',
+    version='3.2.0',
+    lifespan=lifespan,
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -52,8 +57,9 @@ app.add_middleware(
 app.include_router(video_router)
 
 
-@app.get('/health')
+@app.get('/health', tags=['System'])
 async def health():
+    """Health check endpoint."""
     return {'ok': True}
 
 

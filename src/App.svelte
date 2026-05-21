@@ -42,6 +42,7 @@
   import AutoTunePanel from './components/AutoTunePanel.svelte';
   import FlightModePanel from './components/FlightModePanel.svelte';
   import SetupWizard from './components/SetupWizard.svelte';
+  import ParamDiffPanel from './components/ParamDiffPanel.svelte';
   import { showConfirm, showSlide, undo } from './lib/stores.svelte';
   import { ChevronUp, ChevronDown, CornerDownLeft, Pause, HardDrive, Wrench, Video, SlidersHorizontal, PanelLeftClose, Plane, MapPinned, Activity, Settings2, X as XIcon } from '@lucide/svelte';
   import type { Component } from 'svelte';
@@ -74,6 +75,7 @@
   let showAutoTune = $state(false);
   let showFlightModes = $state(false);
   let showSetupWizard = $state(false);
+  let showParamDiff = $state(false);
 
   onMount(() => {
     loadLocale();
@@ -367,6 +369,7 @@
       onautotune={() => showAutoTune = true}
       onmodes={() => showFlightModes = true}
       onsetup={() => showSetupWizard = true}
+      onparamdiff={() => showParamDiff = true}
     />
   {/if}
   {#if showInspector}
@@ -410,6 +413,9 @@
       oncalibration={() => showCalibration = true}
       onfailsafe={() => showFailsafe = true}
       onmodes={() => showFlightModes = true} />
+  {/if}
+  {#if showParamDiff}
+    <ParamDiffPanel onclose={() => showParamDiff = false} />
   {/if}
   {#if showShortcuts}
     <!-- svelte-ignore a11y_no_static_element_interactions -->
