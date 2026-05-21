@@ -189,6 +189,20 @@ def execute(cmd: str, param, link: DroneLink, data: dict | None = None) -> dict 
         link.active_sysid = new_sysid
         link.sysid = new_sysid
         link.add_event(lt('vehicle_switch', link.locale) % new_sysid, 'vehicle_switch')
+    elif cmd == 'inject_rtcm':
+        rtcm_data = data.get('data', '')
+        if rtcm_data:
+            import base64
+            raw = base64.b64decode(rtcm_data)
+            from pllink_proto import bm
+            for i in range(0, len(raw), 110):
+                chunk = raw[i:i + 110]
+                flags = 0x01
+                if i == 0: flags |= 0x04
+                if i + 110 >= len(raw): flags |= 0x08
+                p = struct.pack('<BBHB', 0, flags, len(chunk), len(chunk))
+                p += chunk + b'\x00' * (110 - len(chunk))
+                link.send(bm(233, p, link.sq, 0))
     elif cmd == 'rally_upload':
         points = data.get('points', [])
         if points:

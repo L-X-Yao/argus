@@ -183,6 +183,12 @@ const zh: Record<string, string> = {
   'check.mission': '任务航线',
   'check.vtype': '机型识别',
   'check.notArmed': '未解锁',
+  'check.compass': '罗盘偏差',
+  'check.baro': '气压计健康',
+  'check.ahrs': 'AHRS 状态',
+  'preflight.customize': '自定义',
+  'preflight.customizeTitle': '自定义检查项',
+  'preflight.save': '保存',
   'vtype.plane': '固定翼',
   'vtype.copter': '多旋翼',
   'vtype.rover': '地面车',
@@ -978,6 +984,12 @@ const en: Record<string, string> = {
   'check.mission': 'Mission',
   'check.vtype': 'Vehicle Type',
   'check.notArmed': 'Not Armed',
+  'check.compass': 'Compass Dev',
+  'check.baro': 'Barometer',
+  'check.ahrs': 'AHRS Status',
+  'preflight.customize': 'Customize',
+  'preflight.customizeTitle': 'Customize Checks',
+  'preflight.save': 'Save',
   'vtype.plane': 'Fixed Wing',
   'vtype.copter': 'Multirotor',
   'vtype.rover': 'Rover',
@@ -1612,6 +1624,41 @@ let _syncCallback: ((l: Locale) => void) | null = null;
 export function onLocaleChange(cb: (l: Locale) => void) { _syncCallback = cb; }
 
 export function getLocale(): Locale { return i18nState.locale; }
+
+export function tp(key: string, count: number): string {
+  const tmpl = t(key);
+  const replaced = tmpl.replace('{n}', String(count));
+  if (i18nState.locale === 'en' && count !== 1) {
+    return replaced.replace(/(\w+)$/, (m) => {
+      if (m.endsWith('s') || m.endsWith('x') || m.endsWith('z')) return m + 'es';
+      return m + 's';
+    });
+  }
+  return replaced;
+}
+
+export function fmtDate(date: Date | string): string {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  if (i18nState.locale === 'zh') {
+    return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
+  }
+  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+}
+
+export function fmtTime(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  if (h > 0) return `${h}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  return `${m}:${s.toString().padStart(2, '0')}`;
+}
+
+export function fmtNumber(n: number, decimals = 1): string {
+  return n.toLocaleString(i18nState.locale === 'zh' ? 'zh-CN' : 'en-US', {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: decimals,
+  });
+}
 
 export function loadLocale() {
   try {

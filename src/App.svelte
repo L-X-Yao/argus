@@ -60,6 +60,8 @@
   import Mission3DPanel from './components/Mission3DPanel.svelte';
   import GimbalPanel from './components/GimbalPanel.svelte';
   import CustomDashboard from './components/CustomDashboard.svelte';
+  import AiPlannerPanel from './components/AiPlannerPanel.svelte';
+  import ScriptPanel from './components/ScriptPanel.svelte';
   import { showConfirm, showSlide, undo } from './lib/stores.svelte';
   import { ChevronUp, ChevronDown, CornerDownLeft, Pause, HardDrive, Wrench, Video, SlidersHorizontal, PanelLeftClose, Plane, MapPinned, Activity, Settings2, X as XIcon } from '@lucide/svelte';
   import type { Component } from 'svelte';
@@ -110,6 +112,8 @@
   let showMission3D = $state(false);
   let showGimbal = $state(false);
   let showDashboard = $state(false);
+  let showAiPlanner = $state(false);
+  let showScript = $state(false);
 
   onMount(() => {
     loadLocale();
@@ -516,6 +520,12 @@
   {/if}
   {#if showDashboard}
     <CustomDashboard onclose={() => showDashboard = false} />
+  {/if}
+  {#if showAiPlanner}
+    <AiPlannerPanel onclose={() => showAiPlanner = false} />
+  {/if}
+  {#if showScript}
+    <ScriptPanel onclose={() => showScript = false} />
   {/if}
   {#if showShortcuts}
     <!-- svelte-ignore a11y_no_static_element_interactions -->

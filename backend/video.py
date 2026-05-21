@@ -102,3 +102,29 @@ async def video_stop():
             pass
         _active_proc = None
     return {'ok': True}
+
+
+@router.get('/api/video/capabilities')
+async def video_capabilities():
+    """Report video streaming capabilities."""
+    return {
+        'mjpeg': _ffmpeg_available(),
+        'webrtc': False,
+        'protocols': ['rtsp', 'rtmp', 'http'] if _ffmpeg_available() else [],
+    }
+
+
+_webrtc_offers: list[dict] = []
+
+
+@router.post('/api/video/webrtc/offer')
+async def webrtc_offer(request):
+    """WebRTC offer endpoint (stub for future implementation)."""
+    from fastapi import Request
+    body = await request.json()
+    _webrtc_offers.append(body)
+    return {
+        'status': 'pending',
+        'message': 'WebRTC not yet implemented. Use MJPEG proxy for now.',
+        'answer': None,
+    }
