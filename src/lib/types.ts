@@ -55,6 +55,7 @@ export interface DroneState {
   param_fetching: boolean;
   vehicles: { sysid: number; lat: number; lon: number; alt: number; hdg: number; armed?: boolean; mode?: number; vtype?: number }[];
   prearm: string[];
+  adsb: { icao: number; lat: number; lon: number; alt: number; hdg: number; speed: number; vs: number; callsign: string }[];
 }
 
 export interface FlightSummary {
@@ -78,6 +79,8 @@ export interface ConnectResult {
   error: string;
 }
 
+export type AltMode = 'relative' | 'msl' | 'terrain';
+
 export interface Waypoint {
   lat: number;
   lon: number;
@@ -87,6 +90,7 @@ export interface Waypoint {
   speed: number;
   type: 'wp' | 'loiter_turns' | 'loiter_time' | 'spline';
   loiter_param: number;
+  altMode?: AltMode;
 }
 
 export interface RallyPoint {
@@ -178,4 +182,5 @@ export const defaultState: DroneState = {
   param_count: 0, param_total: -1, param_fetching: false,
   vehicles: [],
   prearm: [],
+  adsb: [],
 };

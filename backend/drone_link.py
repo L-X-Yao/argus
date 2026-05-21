@@ -122,6 +122,8 @@ class DroneLink:
         self.wind_speed = 0.0
         self.terrain_alt = -1.0
         self.inspector_enabled = False
+        self._adsb_vehicles: dict[int, dict] = {}
+        self.active_sysid = 1
         self._msg_stats: dict[int, dict] = {}
         self._msg_stats_window = 5.0
         self._console_buf: list[str] = []
@@ -309,6 +311,7 @@ class DroneLink:
                          if v.get('lat', 0) != 0 and v['sysid'] != self.sysid
                          and time.time() - v.get('t', 0) < 10],
             'prearm': self._prearm_messages,
+            'adsb': [v for v in self._adsb_vehicles.values() if time.time() - v.get('t', 0) < 60],
         }
 
     def _start_log(self) -> None:

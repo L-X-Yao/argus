@@ -354,6 +354,27 @@ def handle_log_entry(p: bytes, pl: int, link: DroneLink) -> None:
         link.add_event(lt('log_list_n', link.locale) % len(link._log_list), 'log_list_n')
 
 
+def handle_adsb_vehicle(p: bytes, pl: int, link: DroneLink) -> None:
+    if pl < 38:
+        return
+    icao = struct.unpack_from('<I', p, 0)[0]
+    lat = struct.unpack_from('<i', p, 4)[0] / 1e7
+    lon = struct.unpack_from('<i', p, 8)[0] / 1e7
+    alt = struct.unpack_from('<i', p, 12)[0] / 1000.0
+    hdg = struct.unpack_from('<H', p, 16)[0] / 100.0
+    hor_vel = struct.unpack_from('<H', p, 18)[0] / 100.0
+    ver_vel = struct.unpack_from('<h', p, 20)[0] / 100.0
+    callsign = bytes(p[22:31]).split(b'\x00')[0].decode('ascii', 'replace').strip()
+    link._adsb_vehicles[icao] = {
+        'icao': icao, 'lat': round(lat, 7), 'lon': round(lon, 7),
+        'alt': round(alt, 0), 'hdg': round(hdg, 0), 'speed': round(hor_vel, 1),
+        'vs': round(ver_vel, 1), 'callsign': callsign, 't': time.time(),
+    }
+    if len(link._adsb_vehicles) > 200:
+        oldest = min(link._adsb_vehicles, key=lambda k: link._adsb_vehicles[k]['t'])
+        del link._adsb_vehicles[oldest]
+
+
 def handle_serial_control(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 10:
         return
@@ -433,3 +454,4 @@ def init_handlers() -> None:
     mavlink_dispatch.register(118, handle_log_entry)
     mavlink_dispatch.register(120, handle_log_data)
     mavlink_dispatch.register(126, handle_serial_control)
+    mavlink_dispatch.register(246, handle_adsb_vehicle)

@@ -12,10 +12,20 @@ class WSManager:
     def __init__(self, link: DroneLink):
         self.link = link
         self._clients: set[WebSocket] = set()
+        self._pilot_ws: WebSocket | None = None
+        self._roles: dict[int, str] = {}
 
     @property
     def client_count(self) -> int:
         return len(self._clients)
+
+    async def broadcast(self, msg: dict) -> None:
+        text = json.dumps(msg)
+        for ws in list(self._clients):
+            try:
+                await ws.send_text(text)
+            except Exception:
+                self._clients.discard(ws)
 
     async def handle_client(self, ws: WebSocket) -> None:
         await ws.accept()
@@ -62,6 +72,30 @@ class WSManager:
                     }))
                 elif msg_type == 'set_locale':
                     self.link.locale = msg.get('locale', 'zh')
+                elif msg_type == 'set_role':
+                    role = msg.get('role', 'observer')
+                    self._roles[id(ws)] = role
+                    if role == 'pilot':
+                        self._pilot_ws = ws
+                    await self.broadcast({'type': 'role_update', 'clients': self.client_count,
+                                          'pilot_connected': self._pilot_ws in self._clients})
+                elif msg_type == 'request_handoff':
+                    if self._pilot_ws and self._pilot_ws != ws and self._pilot_ws in self._clients:
+                        await self._pilot_ws.send_text(json.dumps({'type': 'handoff_request', 'from': id(ws)}))
+                    else:
+                        self._pilot_ws = ws
+                        self._roles[id(ws)] = 'pilot'
+                        await ws.send_text(json.dumps({'type': 'handoff_granted'}))
+                elif msg_type == 'handoff_accept':
+                    target_id = msg.get('target')
+                    for client in self._clients:
+                        if id(client) == target_id:
+                            self._pilot_ws = client
+                            self._roles[id(client)] = 'pilot'
+                            self._roles[id(ws)] = 'observer'
+                            await client.send_text(json.dumps({'type': 'handoff_granted'}))
+                            await ws.send_text(json.dumps({'type': 'handoff_released'}))
+                            break
                 elif msg_type == 'command':
                     cmd = msg.get('cmd', '')
                     param = msg.get('param')

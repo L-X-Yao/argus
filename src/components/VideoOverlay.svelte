@@ -1,11 +1,14 @@
 <script lang="ts">
   import { onMount } from 'svelte';
+  import { app } from '../lib/stores.svelte';
   import { apiUrl } from '../lib/backend';
   import { t } from '../lib/i18n.svelte';
-  import { X, VideoOff, Camera } from '@lucide/svelte';
+  import { X, VideoOff, Camera, Crosshair } from '@lucide/svelte';
   import Button from '$lib/components/ui/button/button.svelte';
 
   let { onclose }: { onclose: () => void } = $props();
+  let arEnabled = $state(false);
+  let arCanvas: HTMLCanvasElement = $state(null!);
 
   let videoUrl = $state('');
   onMount(() => { try { videoUrl = localStorage.getItem('pllink_video_url') || ''; } catch {} });
@@ -90,6 +93,63 @@
     if (streaming) stopStream();
     onclose();
   }
+
+  $effect(() => {
+    if (!arEnabled || !arCanvas || !streaming) return;
+    const d = app.drone;
+    const wps = app.waypoints;
+    if (!d.connected || d.lat === 0 || wps.length === 0) return;
+    const ctx = arCanvas.getContext('2d')!;
+    const w = arCanvas.width = sizeMap[size].w;
+    const h = arCanvas.height = sizeMap[size].h;
+    ctx.clearRect(0, 0, w, h);
+    const hfov = 70 * Math.PI / 180;
+    const vfov = hfov * (h / w);
+    const yawRad = d.yaw * Math.PI / 180;
+    const pitchRad = d.pitch * Math.PI / 180;
+    for (let i = 0; i < wps.length; i++) {
+      const dlat = (wps[i].lat - d.lat) * 111320;
+      const dlon = (wps[i].lon - d.lon) * 111320 * Math.cos(d.lat * Math.PI / 180);
+      const dist = Math.sqrt(dlat * dlat + dlon * dlon);
+      if (dist < 1 || dist > 5000) continue;
+      const bearing = Math.atan2(dlon, dlat);
+      let relBearing = bearing - yawRad;
+      while (relBearing > Math.PI) relBearing -= 2 * Math.PI;
+      while (relBearing < -Math.PI) relBearing += 2 * Math.PI;
+      if (Math.abs(relBearing) > hfov / 2) continue;
+      const dalt = wps[i].alt - d.alt_rel;
+      const elevAngle = Math.atan2(dalt, dist) - pitchRad;
+      if (Math.abs(elevAngle) > vfov / 2) continue;
+      const sx = w / 2 + (relBearing / (hfov / 2)) * (w / 2);
+      const sy = h / 2 - (elevAngle / (vfov / 2)) * (h / 2);
+      ctx.strokeStyle = '#4fc3f7';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(sx - 8, sy); ctx.lineTo(sx + 8, sy);
+      ctx.moveTo(sx, sy - 8); ctx.lineTo(sx, sy + 8);
+      ctx.stroke();
+      ctx.fillStyle = '#4fc3f7';
+      ctx.font = 'bold 10px monospace';
+      ctx.fillText(`WP${i + 1}`, sx + 10, sy - 4);
+      ctx.fillText(`${dist.toFixed(0)}m`, sx + 10, sy + 8);
+    }
+    if (d.home_lat !== 0) {
+      const dlat = (d.home_lat - d.lat) * 111320;
+      const dlon = (d.home_lon - d.lon) * 111320 * Math.cos(d.lat * Math.PI / 180);
+      const dist = Math.sqrt(dlat * dlat + dlon * dlon);
+      const bearing = Math.atan2(dlon, dlat);
+      let relBearing = bearing - yawRad;
+      while (relBearing > Math.PI) relBearing -= 2 * Math.PI;
+      while (relBearing < -Math.PI) relBearing += 2 * Math.PI;
+      if (Math.abs(relBearing) <= hfov / 2) {
+        const sx = w / 2 + (relBearing / (hfov / 2)) * (w / 2);
+        ctx.fillStyle = '#f44336';
+        ctx.beginPath(); ctx.arc(sx, h - 20, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.font = 'bold 9px monospace';
+        ctx.fillText(`H ${dist.toFixed(0)}m`, sx + 8, h - 16);
+      }
+    }
+  });
 </script>
 
 <!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -138,6 +198,9 @@
         crossorigin="anonymous"
         onerror={() => { error = t('video.loadFail'); streaming = false; }}
       />
+      {#if arEnabled}
+        <canvas bind:this={arCanvas} class="absolute inset-0 w-full h-full pointer-events-none"></canvas>
+      {/if}
     {:else}
       <div class="flex flex-col items-center gap-2 text-muted-foreground">
         <VideoOff size={40} class="opacity-40" />
@@ -159,6 +222,7 @@
     />
     {#if streaming}
       <Button variant="ghost" size="icon-xs" onclick={takeScreenshot} title={t('tip.screenshot')}><Camera size={14} /></Button>
+      <Button variant={arEnabled ? 'default' : 'ghost'} size="icon-xs" onclick={() => arEnabled = !arEnabled} title={t('ar.overlay')}><Crosshair size={14} /></Button>
       <Button variant="destructive" size="sm" onclick={stopStream}>{t('video.disconnect')}</Button>
     {:else}
       <Button size="sm" onclick={startStream}>{t('video.connect')}</Button>

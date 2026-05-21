@@ -184,6 +184,11 @@ def execute(cmd: str, param, link: DroneLink, data: dict | None = None) -> dict 
             _send_serial_control(link, text)
     elif cmd == 'inspector_toggle':
         link.inspector_enabled = not link.inspector_enabled
+    elif cmd == 'switch_vehicle':
+        new_sysid = int(data.get('sysid', 1))
+        link.active_sysid = new_sysid
+        link.sysid = new_sysid
+        link.add_event(lt('vehicle_switch', link.locale) % new_sysid, 'vehicle_switch')
     elif cmd == 'rally_upload':
         points = data.get('points', [])
         if points:

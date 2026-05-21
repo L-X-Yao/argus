@@ -178,7 +178,7 @@
   function downloadLog() { window.open(apiUrl('/api/log'), '_blank'); }
 </script>
 
-<header class="flex items-center justify-between gap-3 px-3 py-1.5 shrink-0 min-w-0 overflow-x-auto scrollbar-hide transition-colors duration-300
+<header class="flex items-center justify-between gap-3 px-3 max-sm:px-1.5 py-1.5 shrink-0 min-w-0 overflow-x-auto scrollbar-hide transition-colors duration-300
   {app.drone.armed ? 'bg-destructive/8 border-b-2 border-destructive/60' : 'bg-card border-b-2 border-border'}">
   <div class="flex items-center gap-2">
     <span class="text-sm font-bold text-primary tracking-wider">{t('app.name')}</span>

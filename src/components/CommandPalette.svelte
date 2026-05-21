@@ -16,7 +16,7 @@
   let { onclose, onnavigate, oninspector, onconsole, onlogs, oncalibration, onvideo, onmotor,
          onrccal, onfailsafe, onpower, onesccal, onframe, onpid, onautotune, onmodes, onsetup, onparamdiff,
          onmultivehicle, onreport, onlogviewer, onfft, oncompass3d, onadvcmd, onoverlap, oncorridor,
-         onpoi, onannotation, onremote, onrole, onairspace }:
+         onpoi, onannotation, onremote, onrole, onairspace, onofflinemap, onmission3d }:
     { onclose: () => void;
       onnavigate: (v: 'fly' | 'plan' | 'monitor' | 'params') => void;
       oninspector: () => void;
@@ -48,6 +48,8 @@
       onremote: () => void;
       onrole: () => void;
       onairspace: () => void;
+      onofflinemap: () => void;
+      onmission3d: () => void;
     } = $props();
 
   interface PaletteItem {
@@ -171,6 +173,10 @@
         handler: () => onrole(), available: true },
       { id: 'tool-airspace', label: t('airspace.title'), category: t('cmd.catTools'), icon: ShieldAlert,
         handler: () => onairspace(), available: true },
+      { id: 'tool-offlinemap', label: t('offmap.title'), category: t('cmd.catTools'), icon: Search,
+        handler: () => onofflinemap(), available: true },
+      { id: 'tool-mission3d', label: '3D Preview', category: t('ctrl.mission'), icon: Search,
+        handler: () => onmission3d(), available: true },
 
       { id: 'set-theme', label: t('settings.darkTheme'), category: t('settings.title'), shortcut: 'L', icon: app.darkTheme ? Sun : Moon,
         handler: () => { app.darkTheme = !app.darkTheme; saveSettings(); }, available: true },

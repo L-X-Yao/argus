@@ -1,6 +1,7 @@
 <script lang="ts">
   import { app } from '../lib/stores.svelte';
   import { t } from '../lib/i18n.svelte';
+  import { parseDFLog, getTimeSeries, type DFLog } from '../lib/dflog';
   import Button from '$lib/components/ui/button/button.svelte';
   import { X, Play, Pause, SkipBack, SkipForward } from '@lucide/svelte';
 
@@ -29,16 +30,63 @@
   function loadFile() {
     const input = document.createElement('input');
     input.type = 'file';
-    input.accept = '.csv';
+    input.accept = '.csv,.bin,.log';
     input.onchange = (e: any) => {
       const file = e.target.files[0];
       if (!file) return;
       fileName = file.name;
-      const reader = new FileReader();
-      reader.onload = (ev: any) => { parseCSV(ev.target.result as string); };
-      reader.readAsText(file);
+      if (file.name.endsWith('.bin') || file.name.endsWith('.log')) {
+        const reader = new FileReader();
+        reader.onload = (ev: any) => { parseBinLog(ev.target.result as ArrayBuffer); };
+        reader.readAsArrayBuffer(file);
+      } else {
+        const reader = new FileReader();
+        reader.onload = (ev: any) => { parseCSV(ev.target.result as string); };
+        reader.readAsText(file);
+      }
     };
     input.click();
+  }
+
+  function parseBinLog(buffer: ArrayBuffer) {
+    const log = parseDFLog(buffer);
+    const att = log.messages.filter(m => m.type === 'ATT');
+    const gps = log.messages.filter(m => m.type === 'GPS');
+    const bat = log.messages.filter(m => m.type === 'BAT');
+    if (att.length < 2 && gps.length < 2) return;
+    const t0 = log.messages[0]?.timestamp || 0;
+    const parsed: LogRow[] = [];
+    let gi = 0, bi = 0;
+    for (const a of att) {
+      while (gi < gps.length - 1 && gps[gi + 1].timestamp <= a.timestamp) gi++;
+      while (bi < bat.length - 1 && bat[bi + 1].timestamp <= a.timestamp) bi++;
+      const g = gps[gi] || { fields: {} };
+      const b = bat[bi] || { fields: {} };
+      parsed.push({
+        t: a.timestamp - t0,
+        roll: (a.fields['Roll'] as number) || 0,
+        pitch: (a.fields['Pitch'] as number) || 0,
+        yaw: (a.fields['Yaw'] as number) || 0,
+        lat: (g.fields['Lat'] as number) || 0,
+        lon: (g.fields['Lng'] as number) || 0,
+        alt_rel: (g.fields['Alt'] as number) || 0,
+        alt_msl: (g.fields['Alt'] as number) || 0,
+        gs: (g.fields['Spd'] as number) || 0,
+        vz: 0,
+        voltage: (b.fields['Volt'] as number) || 0,
+        current: (b.fields['Curr'] as number) || 0,
+        remaining: (b.fields['CurrTot'] as number) || -1,
+        mode: 0, mode_name: '', armed: 0,
+        gps_fix: (g.fields['Status'] as number) || 0,
+        sats: (g.fields['NSats'] as number) || 0,
+        wp: 0, hdg: (g.fields['GCrs'] as number) || 0,
+        dist: 0, bat_time: -1,
+      });
+    }
+    rows = parsed;
+    cursor = 0;
+    playing = false;
+    if (timer) { clearInterval(timer); timer = null; }
   }
 
   function parseCSV(text: string) {

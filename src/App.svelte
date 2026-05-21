@@ -56,6 +56,8 @@
   import RemotePanel from './components/RemotePanel.svelte';
   import RolePanel from './components/RolePanel.svelte';
   import AirspacePanel from './components/AirspacePanel.svelte';
+  import OfflineMapPanel from './components/OfflineMapPanel.svelte';
+  import Mission3DPanel from './components/Mission3DPanel.svelte';
   import { showConfirm, showSlide, undo } from './lib/stores.svelte';
   import { ChevronUp, ChevronDown, CornerDownLeft, Pause, HardDrive, Wrench, Video, SlidersHorizontal, PanelLeftClose, Plane, MapPinned, Activity, Settings2, X as XIcon } from '@lucide/svelte';
   import type { Component } from 'svelte';
@@ -102,6 +104,8 @@
   let showRemote = $state(false);
   let showRole = $state(false);
   let showAirspace = $state(false);
+  let showOfflineMap = $state(false);
+  let showMission3D = $state(false);
 
   onMount(() => {
     loadLocale();
@@ -211,7 +215,7 @@
   <nav class="flex items-center gap-1 px-3 py-1 bg-card border-b border-border shrink-0 overflow-x-auto scrollbar-hide">
     {#each tabKeys as tab}
       <button
-        class="flex items-center gap-1.5 px-4 py-1.5 text-xs font-semibold tracking-wide uppercase rounded-md transition-all
+        class="flex items-center gap-1.5 px-4 max-sm:px-2.5 py-1.5 text-xs font-semibold tracking-wide uppercase rounded-md transition-all
           {view === tab.id
             ? 'bg-primary text-primary-foreground shadow-sm'
             : 'text-muted-foreground hover:text-foreground hover:bg-muted'}"
@@ -330,7 +334,7 @@
 
   {:else if view === 'plan'}
     <div class="flex-1 flex flex-col overflow-auto">
-      <div class="flex gap-2 p-2 flex-1 min-h-72">
+      <div class="flex max-md:flex-col gap-2 p-2 flex-1 min-h-72">
         <MapView showHud={false} />
         <MissionPanel />
       </div>
@@ -340,7 +344,7 @@
 
   {:else if view === 'monitor'}
     <div class="flex-1 overflow-auto p-3">
-      <div class="grid grid-cols-3 gap-3 max-lg:grid-cols-2 max-md:grid-cols-1">
+      <div class="grid grid-cols-3 gap-3 max-lg:grid-cols-2 max-sm:grid-cols-1">
         <RcPanel />
         <ServoPanel />
         <VibrationPanel />
@@ -409,6 +413,8 @@
       onremote={() => showRemote = true}
       onrole={() => showRole = true}
       onairspace={() => showAirspace = true}
+      onofflinemap={() => showOfflineMap = true}
+      onmission3d={() => showMission3D = true}
     />
   {/if}
   {#if showInspector}
@@ -494,6 +500,12 @@
   {/if}
   {#if showAirspace}
     <AirspacePanel onclose={() => showAirspace = false} />
+  {/if}
+  {#if showOfflineMap}
+    <OfflineMapPanel onclose={() => showOfflineMap = false} />
+  {/if}
+  {#if showMission3D}
+    <Mission3DPanel onclose={() => showMission3D = false} />
   {/if}
   {#if showShortcuts}
     <!-- svelte-ignore a11y_no_static_element_interactions -->

@@ -180,6 +180,107 @@ async def api_tile_cache():
     return {'size': total, 'count': count}
 
 
+@app.get('/api/terrain/elevation', tags=['Map'])
+async def api_terrain_elevation(request: Request):
+    """Get ground elevation for a list of lat/lon points using SRTM data."""
+    import math
+    params = request.query_params
+    points_str = params.get('points', '')
+    if not points_str:
+        return {'elevations': []}
+    points = []
+    for p in points_str.split(';'):
+        parts = p.split(',')
+        if len(parts) >= 2:
+            points.append((float(parts[0]), float(parts[1])))
+    elevations = []
+    for lat, lon in points:
+        elev = await _get_srtm_elevation(lat, lon)
+        elevations.append(elev)
+    return {'elevations': elevations}
+
+
+SRTM_CACHE = V3_DIR / 'srtm_cache'
+
+
+async def _get_srtm_elevation(lat: float, lon: float) -> float:
+    import math, struct
+    ilat = int(math.floor(lat))
+    ilon = int(math.floor(lon))
+    ns = 'N' if ilat >= 0 else 'S'
+    ew = 'E' if ilon >= 0 else 'W'
+    fname = '%s%02d%s%03d.hgt' % (ns, abs(ilat), ew, abs(ilon))
+    cache_file = SRTM_CACHE / fname
+    if not cache_file.exists():
+        SRTM_CACHE.mkdir(parents=True, exist_ok=True)
+        url = 'https://elevation-tiles-prod.s3.amazonaws.com/skadi/%s%02d/%s' % (ns, abs(ilat), fname)
+        try:
+            req = urlreq.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+            data = urlreq.urlopen(req, timeout=10).read()
+            cache_file.write_bytes(data)
+        except Exception:
+            return 0
+    try:
+        data = cache_file.read_bytes()
+        samples = 1201
+        if len(data) == 2884802:
+            samples = 1201
+        elif len(data) == 25934402:
+            samples = 3601
+        else:
+            return 0
+        frac_lat = lat - ilat
+        frac_lon = lon - ilon
+        row = int((1 - frac_lat) * (samples - 1))
+        col = int(frac_lon * (samples - 1))
+        idx = (row * samples + col) * 2
+        if idx + 2 > len(data):
+            return 0
+        elev = struct.unpack('>h', data[idx:idx + 2])[0]
+        if elev == -32768:
+            return 0
+        return float(elev)
+    except Exception:
+        return 0
+
+
+@app.post('/api/tile_bulk_download', tags=['Map'])
+async def api_tile_bulk_download(request: Request):
+    """Download tiles for a bounding box at specified zoom levels."""
+    import asyncio, math
+    body = await request.json()
+    lat_min, lat_max = body.get('lat_min', 0), body.get('lat_max', 0)
+    lon_min, lon_max = body.get('lon_min', 0), body.get('lon_max', 0)
+    z_min, z_max = body.get('z_min', 10), min(body.get('z_max', 16), 18)
+    style = body.get('style', '6')
+    total = downloaded = skipped = 0
+    for z in range(z_min, z_max + 1):
+        n = 2 ** z
+        x_min = int((lon_min + 180) / 360 * n)
+        x_max = int((lon_max + 180) / 360 * n)
+        y_min = int((1 - math.log(math.tan(math.radians(lat_max)) + 1 / math.cos(math.radians(lat_max))) / math.pi) / 2 * n)
+        y_max = int((1 - math.log(math.tan(math.radians(lat_min)) + 1 / math.cos(math.radians(lat_min))) / math.pi) / 2 * n)
+        for x in range(x_min, x_max + 1):
+            for y in range(y_min, y_max + 1):
+                total += 1
+                cache_file = TILE_CACHE / style / str(z) / str(x) / ('%d.png' % y)
+                if cache_file.exists():
+                    skipped += 1
+                    continue
+                url = TILE_URLS.get(style, TILE_URLS['6']).format(x=x, y=y, z=z)
+                try:
+                    req = urlreq.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+                    data = urlreq.urlopen(req, timeout=5).read()
+                    cache_file.parent.mkdir(parents=True, exist_ok=True)
+                    cache_file.write_bytes(data)
+                    downloaded += 1
+                except Exception:
+                    pass
+                if total > 5000:
+                    return {'total': total, 'downloaded': downloaded, 'skipped': skipped, 'truncated': True}
+    return {'total': total, 'downloaded': downloaded, 'skipped': skipped, 'truncated': False}
+
+
 @app.post('/api/tile_cache_clear')
 async def api_tile_cache_clear():
     global _tile_count
