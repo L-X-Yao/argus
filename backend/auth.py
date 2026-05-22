@@ -56,8 +56,6 @@ async def auth_middleware(request: Request, call_next):
     if path == '/api/auth/login':
         return await call_next(request)
     token = request.headers.get('Authorization', '').replace('Bearer ', '')
-    if not token:
-        token = request.query_params.get('token', '')
     if not verify_token(token):
         return JSONResponse(status_code=401, content={'error': 'unauthorized'})
     return await call_next(request)

@@ -131,11 +131,11 @@ class TestProtectedEndpoints:
         r = client.get('/api/session', headers={'Authorization': f'Bearer {token}'})
         assert r.status_code == 200
 
-    def test_query_param_token_accepted(self, client):
-        """Token passed as query parameter is accepted."""
+    def test_query_param_token_rejected_for_http(self, client):
+        """Token in query params is not accepted for HTTP — must use Authorization header."""
         token = generate_token()
         r = client.get(f'/api/session?token={token}')
-        assert r.status_code == 200
+        assert r.status_code == 401
 
     def test_health_endpoint_bypasses_auth(self, client):
         """Health endpoint is always accessible regardless of auth."""

@@ -111,12 +111,21 @@ _cors_origins = os.environ.get(
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins,
-    allow_methods=['*'],
-    allow_headers=['*'],
+    allow_methods=['GET', 'POST', 'OPTIONS'],
+    allow_headers=['Content-Type', 'Authorization'],
 )
 
 app.include_router(video_router)
 app.middleware('http')(auth_middleware)
+
+
+@app.middleware('http')
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    return response
 
 
 @app.get('/health', tags=['System'])
@@ -187,6 +196,10 @@ async def api_auth_generate():
 
 @app.websocket('/ws')
 async def websocket_endpoint(ws: WebSocket):
+    origin = (ws.headers.get('origin') or '').rstrip('/')
+    if origin and origin not in _cors_origins:
+        await ws.close(code=4003, reason='origin not allowed')
+        return
     if not verify_ws_token(ws):
         await ws.close(code=4001, reason='unauthorized')
         return
