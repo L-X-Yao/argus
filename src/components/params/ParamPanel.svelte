@@ -22,7 +22,9 @@
     default?: number;
   }
 
-  let meta = $state<Record<string, ParamMeta>>({});
+  let _metaRaw: Record<string, ParamMeta> = {};
+  let _metaVersion = $state(0);
+  function getMeta(): Record<string, ParamMeta> { void _metaVersion; return _metaRaw; }
   let metaLoaded = $state(false);
 
   const VTYPE_RAW_MAP: Record<number, string> = {
@@ -45,37 +47,38 @@
     try {
       const r = await fetch(apiUrl(`/api/param_meta?vehicle=${vehicle}`));
       if (r.ok) {
-        meta = await r.json();
+        _metaRaw = await r.json();
+        _metaVersion++;
         metaLoaded = true;
       }
     } catch {}
   }
 
   function getDesc(name: string): string {
-    const m = meta[name];
+    const m = getMeta()[name];
     if (m) return m.human || m.desc || '';
     return '';
   }
 
   function getUnits(name: string): string {
-    return meta[name]?.units || '';
+    return getMeta()[name]?.units || '';
   }
 
   function getRangeStr(name: string): string {
-    const r = meta[name]?.range;
+    const r = getMeta()[name]?.range;
     if (!r) return '';
     return `${r[0]} ~ ${r[1]}`;
   }
 
   function getValueLabel(name: string, val: number): string {
-    const v = meta[name]?.values;
+    const v = getMeta()[name]?.values;
     if (!v) return '';
     const key = String(Math.round(val));
     return v[key] || '';
   }
 
   function getBitmaskEntries(name: string, val: number): { bit: number; label: string; set: boolean }[] {
-    const bm = meta[name]?.bitmask;
+    const bm = getMeta()[name]?.bitmask;
     if (!bm) return [];
     const iv = Math.round(val);
     return Object.entries(bm).map(([k, v]) => {
@@ -119,7 +122,7 @@
   let viewMode = $state<'flat' | 'tree'>('flat');
 
   function hasDefaultDiff(name: string, value: number): boolean {
-    const m = meta[name];
+    const m = getMeta()[name];
     if (!m || m.default === undefined) return false;
     return Math.abs(value - m.default!) > 1e-6;
   }
@@ -158,7 +161,7 @@
         if (p.name.toLowerCase().includes(q)) return true;
         const d = getDesc(p.name);
         if (d && d.toLowerCase().includes(q)) return true;
-        const m = meta[p.name];
+        const m = getMeta()[p.name];
         if (m?.human && m.human.toLowerCase().includes(q)) return true;
         return false;
       });
@@ -191,7 +194,7 @@
     if (!editName) return;
     const val = parseFloat(editValue);
     if (isNaN(val)) { addToast(t('param.invalidNum'), 'error'); return; }
-    const r = meta[editName]?.range;
+    const r = getMeta()[editName]?.range;
     if (r && (val < r[0] || val > r[1])) {
       addToast(`${t('param.outOfRange')} ${r[0]} ~ ${r[1]}`, 'warn');
     }
@@ -234,7 +237,7 @@
     const diffs = paramState.list.filter(p => hasDefaultDiff(p.name, p.value));
     if (!diffs.length) { addToast(t('param.noChange'), 'info'); return; }
     const lines = diffs.map(p => {
-      const def = meta[p.name]?.default;
+      const def = getMeta()[p.name]?.default;
       return `${p.name}\t${fmtValue(p.value)}\t# default=${def !== undefined ? def : '?'}`;
     }).join('\n');
     const blob = new Blob([`# ${diffs.length} parameters differ from defaults\n${lines}\n`], { type: 'text/plain' });
@@ -324,8 +327,8 @@
           {#if valLabel}<span class="text-[10px] text-primary/70 truncate">{valLabel}</span>{/if}
           {#if hasDefaultDiff(p.name, p.value)}
             <button class="text-[9px] text-muted-foreground/60 hover:text-warning px-0.5 cursor-pointer bg-transparent border-none"
-                    onclick={() => { sendCommand('param_set', undefined, { name: p.name, value: meta[p.name]!.default! }); modified.add(p.name); modified = new Set(modified); }}
-                    title={t('tip.resetDefault').replace('{v}', String(meta[p.name]!.default))}>↩</button>
+                    onclick={() => { sendCommand('param_set', undefined, { name: p.name, value: getMeta()[p.name]!.default! }); modified.add(p.name); modified = new Set(modified); }}
+                    title={t('tip.resetDefault').replace('{v}', String(getMeta()[p.name]!.default))}>↩</button>
           {/if}
           {#if rangeStr}<span class="text-[10px] text-muted-foreground/50 ml-auto whitespace-nowrap">[{rangeStr}]</span>{/if}
         </div>
@@ -333,19 +336,19 @@
     </div>
     {#if isExpanded && metaLoaded}
       <div class="px-3 py-2 bg-muted/30 border-b border-border/50 text-[11px] space-y-1.5">
-        {#if meta[p.name]?.desc}
-          <p class="text-muted-foreground leading-relaxed">{meta[p.name]!.desc}</p>
+        {#if getMeta()[p.name]?.desc}
+          <p class="text-muted-foreground leading-relaxed">{getMeta()[p.name]!.desc}</p>
         {/if}
         <div class="flex flex-wrap gap-x-4 gap-y-1 text-[10px]">
-          {#if meta[p.name]?.group}<span class="text-muted-foreground/60">Group: <span class="text-foreground">{meta[p.name]!.group}</span></span>{/if}
+          {#if getMeta()[p.name]?.group}<span class="text-muted-foreground/60">Group: <span class="text-foreground">{getMeta()[p.name]!.group}</span></span>{/if}
           {#if units}<span class="text-muted-foreground/60">Units: <span class="text-foreground">{units}</span></span>{/if}
           {#if rangeStr}<span class="text-muted-foreground/60">Range: <span class="text-foreground">{rangeStr}</span></span>{/if}
-          {#if meta[p.name]?.step}<span class="text-muted-foreground/60">Step: <span class="text-foreground">{meta[p.name]!.step}</span></span>{/if}
-          {#if meta[p.name]?.default !== undefined}<span class="text-muted-foreground/60">Default: <span class="text-foreground">{meta[p.name]!.default}</span></span>{/if}
+          {#if getMeta()[p.name]?.step}<span class="text-muted-foreground/60">Step: <span class="text-foreground">{getMeta()[p.name]!.step}</span></span>{/if}
+          {#if getMeta()[p.name]?.default !== undefined}<span class="text-muted-foreground/60">Default: <span class="text-foreground">{getMeta()[p.name]!.default}</span></span>{/if}
         </div>
-        {#if meta[p.name]?.values}
+        {#if getMeta()[p.name]?.values}
           <div class="flex flex-wrap gap-1">
-            {#each Object.entries(meta[p.name]!.values!) as [code, label]}
+            {#each Object.entries(getMeta()[p.name]!.values!) as [code, label]}
               <span class="px-1.5 py-0.5 rounded text-[10px] border
                 {String(Math.round(p.value)) === code ? 'bg-primary/20 text-primary border-primary/50' : 'bg-muted text-muted-foreground border-border/50'}">
                 {code}: {label}
