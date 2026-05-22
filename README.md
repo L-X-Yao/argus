@@ -56,7 +56,7 @@ python run.py        # API at http://localhost:8100
 ### 2. With simulator
 
 ```bash
-python sim_pllink.py 5770          # Start MAVLink simulator
+python scripts/sim_pllink.py 5770  # Start MAVLink simulator
 python run.py                      # Start backend
 npm run dev                        # Start frontend
 # Browser → type "tcp:localhost:5770" → Connect
@@ -85,17 +85,18 @@ python run.py        # Serves dist/ + API on :8100
 
 ```
 ┌─────────────────────────────────────────┐
-│  Browser (Svelte 5 + TypeScript)        │
-│  75 components, 22K lines               │
+│  Browser (Svelte 5 + TypeScript 6)      │
+│  144 components, 21K lines              │
 │  MAVLink v2 codec (pure TS)             │
 │  WebSerial direct USB connection        │
+│  42 lazy-loaded panels + view splitting │
 ├─────────────────────────────────────────┤
-│          ↕ WebSocket (JSON)             │
+│          ↕ WebSocket (JSON delta push)  │
 ├─────────────────────────────────────────┤
 │  Python Backend (FastAPI + uvicorn)     │
-│  17 modules, 2.8K lines                │
+│  23 modules, 3.5K lines                │
 │  MAVLink dispatch + 27 message handlers │
-│  Tile proxy, video proxy, firmware API  │
+│  46 commands, tile/video/firmware API   │
 ├─────────────────────────────────────────┤
 │          ↕ MAVLink v2                   │
 │  TCP / UDP / Serial / PL-Link           │
@@ -117,17 +118,17 @@ python run.py        # Serves dist/ + API on :8100
 | `src/lib/survey.ts` | Survey patterns (grid, crosshatch, spiral, orbit) |
 | `src/lib/i18n.svelte.ts` | 10-language i18n with RTL support |
 | `backend/drone_link.py` | MAVLink connection, frame parsing, state management |
-| `backend/commands.py` | 35+ command handlers (arm, mode, mission, calibration, etc.) |
+| `backend/commands/` | 46 command handlers (arm, mode, mission, calibration, gimbal, etc.) |
 | `backend/config.py` | Centralized configuration (all timeouts/ports/rates) |
 
 ## Simulator
 
-`sim_pllink.py` is a MAVLink vehicle simulator for development and testing:
+`scripts/sim_pllink.py` is a MAVLink vehicle simulator for development and testing:
 
 ```bash
-python sim_pllink.py 5770           # TCP, standard MAVLink
-python sim_pllink.py 5770 --pllink  # TCP, PL-Link wrapped
-python sim_pllink.py 14550 --udp    # UDP
+python scripts/sim_pllink.py 5770           # TCP, standard MAVLink
+python scripts/sim_pllink.py 5770 --pllink  # TCP, PL-Link wrapped
+python scripts/sim_pllink.py 14550 --udp    # UDP
 ```
 
 It generates realistic telemetry: GPS position (Xi'an), attitude, battery drain, heartbeat, and responds to arm/disarm/mode commands.
@@ -135,14 +136,17 @@ It generates realistic telemetry: GPS position (Xi'an), attitude, battery drain,
 ## Tests
 
 ```bash
-# Backend unit tests (165 tests)
+# Backend unit tests (929 tests)
 python -m pytest tests/test_unit_*.py -v
 
-# Frontend unit tests (93 tests)
+# Frontend unit tests (400 tests)
 npx vitest run
 
 # Type check (0 errors, 0 warnings)
 npx svelte-check --tsconfig ./tsconfig.json
+
+# Python lint
+ruff check backend/ scripts/ tests/
 
 # E2E (requires dev server)
 npx playwright test
@@ -152,26 +156,25 @@ npx playwright test
 
 | Metric | Value |
 |---|---|
-| Frontend components | 75 |
-| Frontend lines | 22,000 |
-| Backend modules | 17 |
-| Backend lines | 2,800 |
+| Frontend components | 144 |
+| Frontend lines | 21,000 |
+| Backend modules | 23 |
+| Backend lines | 3,500 |
 | MAVLink handlers | 27 |
-| Commands | 35+ |
-| Tests | 258 (165 pytest + 93 vitest) |
+| Commands | 46 |
+| Tests | 1,329 (929 pytest + 400 vitest) |
 | Languages | 10 |
-| Bundle (main) | 504 KB (139 KB gzip) |
-| Bundle (3D map) | 1,061 KB (lazy loaded) |
+| Bundle (main) | 207 KB (65 KB gzip) |
+| Bundle (3D map) | 1,028 KB (lazy loaded) |
 | Tile sources | 8 |
 | Mission formats | 4 (.waypoints, .plan, .gpx, .kml) |
 
 ## Roadmap
 
-- [ ] Deepen WebSerial command routing (mission upload, param management)
+- [ ] WebSerial command routing (mission upload, param management via browser USB)
 - [ ] 3D map feature parity with 2D (waypoint editing, fences, measurement)
-- [ ] WebRTC video streaming
+- [ ] WebRTC video streaming (replace RTSP→MJPEG proxy)
 - [ ] MQTT cloud relay for fleet management
-- [ ] Complete i18n (200+ keys per language, currently ~30 per new language)
 - [ ] MAVLink FTP for firmware upload and Lua script management
 - [ ] MSP protocol support (BetaFlight / iNav)
 
