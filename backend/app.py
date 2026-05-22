@@ -4,6 +4,7 @@ import glob
 import os
 import shutil
 import sys
+import urllib.error
 import urllib.request as urlreq
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -148,7 +149,7 @@ async def api_version():
             ['git', 'rev-parse', '--short', 'HEAD'],
             cwd=str(ROOT_DIR), timeout=cfg.GIT_HASH_TIMEOUT, stderr=subprocess.DEVNULL,
         ).decode().strip()
-    except Exception:
+    except (OSError, subprocess.SubprocessError):
         pass
     return {
         'version': '3.3.0',
@@ -209,7 +210,7 @@ async def api_ports():
         try:
             from serial.tools.list_ports import comports
             ports = sorted(p.device for p in comports())
-        except Exception:
+        except (ImportError, OSError):
             pass
         return {'ports': ports or ['COM3']}
     else:
@@ -252,7 +253,7 @@ async def api_tile(style: str, z: int, x: int, y: int):
             _tile_count += 1
         return Response(content=data, media_type='image/png',
                         headers={'Cache-Control': 'public, max-age=604800'})
-    except Exception:
+    except (OSError, urllib.error.URLError):
         return Response(status_code=404, content='tile unavailable')
 
 
@@ -317,7 +318,7 @@ async def _get_srtm_elevation(lat: float, lon: float) -> float:
             if len(data) >= 30 * 1024 * 1024:
                 return 0
             cache_file.write_bytes(data)
-        except Exception:
+        except (OSError, urllib.error.URLError):
             return 0
     try:
         data = cache_file.read_bytes()
@@ -339,7 +340,7 @@ async def _get_srtm_elevation(lat: float, lon: float) -> float:
         if elev == -32768:
             return 0
         return float(elev)
-    except Exception:
+    except (OSError, struct.error):
         return 0
 
 
@@ -376,7 +377,7 @@ async def api_tile_bulk_download(request: Request):
                     cache_file.parent.mkdir(parents=True, exist_ok=True)
                     cache_file.write_bytes(data)
                     downloaded += 1
-                except Exception:
+                except (OSError, urllib.error.URLError):
                     pass
                 if total > 5000:
                     return {'total': total, 'downloaded': downloaded, 'skipped': skipped, 'truncated': True}
@@ -418,7 +419,7 @@ async def api_mbtiles_tile(name: str, z: int, x: int, y: int):
         if row:
             return Response(content=row[0], media_type='image/png',
                             headers={'Cache-Control': 'public, max-age=604800'})
-    except Exception:
+    except (OSError, sqlite3.Error):
         pass
     return Response(status_code=404, content='tile not found')
 
@@ -478,7 +479,7 @@ async def api_firmware_online(board_id: int = 0):
                 'url': url + fname,
                 'size': 0,
             })
-    except Exception:
+    except (OSError, urllib.error.URLError):
         pass
     return {'versions': versions[-10:]}
 
@@ -503,7 +504,7 @@ async def api_firmware_download(request: Request):
         FIRMWARE_DIR.mkdir(exist_ok=True)
         (FIRMWARE_DIR / filename).write_bytes(data)
         return {'ok': True, 'filename': filename, 'size': len(data)}
-    except Exception as e:
+    except (OSError, urllib.error.URLError) as e:
         return {'ok': False, 'error': str(e)}
 
 
