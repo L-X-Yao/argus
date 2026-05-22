@@ -75,19 +75,19 @@ describe('setWsConnected', () => {
 
 describe('events', () => {
   it('addEvent pushes event', () => {
-    addEvent({ time: '12:00', text: 'test', event_type: 'info' });
+    addEvent({ type: 'event', time: '12:00', text: 'test', event_type: 'info' });
     expect(app.events.length).toBe(1);
   });
 
   it('trims at 200', () => {
     for (let i = 0; i < 210; i++) {
-      addEvent({ time: '12:00', text: `e${i}`, event_type: '' });
+      addEvent({ type: 'event', time: '12:00', text: `e${i}`, event_type: '' });
     }
     expect(app.events.length).toBeLessThanOrEqual(200);
   });
 
   it('clearEvents empties', () => {
-    addEvent({ time: '12:00', text: 'test', event_type: '' });
+    addEvent({ type: 'event', time: '12:00', text: 'test', event_type: '' });
     clearEvents();
     expect(app.events.length).toBe(0);
   });
