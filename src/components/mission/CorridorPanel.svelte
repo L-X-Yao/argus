@@ -11,7 +11,7 @@
   let spacing = $state(30);
   let altitude = $state(app.defaultAlt);
 
-  let centerLine = $derived(app.waypoints.filter((_w, i) => i < app.waypoints.length));
+  let centerLine = $derived(app.waypoints);
   let canGenerate = $derived(centerLine.length >= 2 && width > 0 && spacing > 0);
 
   const M_PER_DEG_LAT = 111320;

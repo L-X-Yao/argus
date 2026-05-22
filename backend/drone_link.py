@@ -220,6 +220,7 @@ class DroneLink:
         with self._state_lock:
             self.connected = False
             self._buf = b''
+        self._protocol = 'auto'
         try:
             self._ser = self._open_port(self._last_port, self._last_baud)
         except OSError as e:
@@ -440,6 +441,7 @@ class DroneLink:
                     except OSError:
                         pass
                     self._buf = b''
+                    self._protocol = 'auto'
                     try:
                         self._ser = self._open_port(self._last_port, self._last_baud)
                         self.sq = 0

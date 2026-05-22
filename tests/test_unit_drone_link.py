@@ -512,8 +512,8 @@ class TestDroneLinkSend:
         assert written[0] == 0x50
         assert written[1] == 0x4C
 
-    def test_send_auto_protocol_wraps_pllink(self):
-        """Auto protocol defaults to PL-Link wrapping."""
+    def test_send_auto_protocol_sends_standard(self):
+        """Auto protocol sends standard MAVLink (not PL-Link wrapped)."""
         mock_ser = MagicMock()
         link = DroneLink()
         link._ser = mock_ser
@@ -522,8 +522,7 @@ class TestDroneLinkSend:
         frame = b'\xfd\x09'
         link.send(frame)
         written = mock_ser.write.call_args[0][0]
-        assert written[0] == 0x50
-        assert written[1] == 0x4C
+        assert written[0] == 0xFD
 
 
 # ---------------------------------------------------------------------------

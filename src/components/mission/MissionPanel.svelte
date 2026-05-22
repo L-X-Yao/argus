@@ -178,6 +178,10 @@
     return calcTotalDist(app.waypoints);
   }
 
+  let dropCount = $derived(app.waypoints.filter(w => w.drop).length);
+  let altMin = $derived(app.waypoints.length > 0 ? Math.min(...app.waypoints.map(w => w.alt)) : 0);
+  let altMax = $derived(app.waypoints.length > 0 ? Math.max(...app.waypoints.map(w => w.alt)) : 0);
+
   function estimateTime(): string {
     if (app.waypoints.length < 2) return '--';
     const defaultSpeed = app.defaultSpeed || 5;
@@ -464,8 +468,8 @@
   {#if app.waypoints.length > 0}
     <div class="text-xs text-warning mt-1.5 leading-relaxed">
       {t('telem.dist')} {totalDist()} · ETA {estimateTime()} · WP {app.waypoints.length}
-      {#if app.waypoints.filter(w => w.drop).length > 0}· {t('ctrl.drop')} {app.waypoints.filter(w => w.drop).length}{/if}
-      · {t('telem.alt')} {Math.min(...app.waypoints.map(w => w.alt))}-{Math.max(...app.waypoints.map(w => w.alt))}m
+      {#if dropCount > 0}· {t('ctrl.drop')} {dropCount}{/if}
+      · {t('telem.alt')} {altMin}-{altMax}m
     </div>
   {/if}
   {#if app.waypoints.length >= 2}
