@@ -20,7 +20,7 @@
   let { showHud = true }: { showHud?: boolean } = $props();
 
   let mapEl: HTMLDivElement;
-  let map = $state<L.Map | null>(null);
+  let map = $state<any>(null);
   let follow = $state(true);
   let isSat = $state(true);
   let measuring = $state(false);
@@ -28,14 +28,14 @@
   let guidedTarget = $state<{ lat: number; lon: number; alt: number } | null>(null);
   let droneTrail: [number, number][] = $state([]);
 
-  let satLayer: L.TileLayer | null = null;
-  let vecLayer: L.TileLayer | null = null;
-  let labelLayer: L.TileLayer | null = null;
-  let measurePts: { marker: L.CircleMarker; ll: L.LatLng }[] = [];
-  let measureLine: L.Polyline | null = null;
-  let measureLabel: L.Marker | null = null;
+  let satLayer: any = null;
+  let vecLayer: any = null;
+  let labelLayer: any = null;
+  let measurePts: any[] = [];
+  let measureLine: any = null;
+  let measureLabel: any = null;
   let measureMode: 'distance' | 'area' = $state<'distance' | 'area'>('distance');
-  let measurePolygon: L.Polygon | null = null;
+  let measurePolygon: any = null;
 
   interface TileSourceDef {
     name: string; sat: string; vec: string; label: string | null;
@@ -102,7 +102,7 @@
     L.control.scale({ metric: true, imperial: false, position: 'bottomright' }).addTo(map);
     map.on('click', onMapClick);
     map.on('contextmenu', onRightClick);
-    map.on('mousemove', (e: L.LeafletMouseEvent) => {
+    map.on('mousemove', (e: any) => {
       const [wlat, wlon] = fromMap(e.latlng.lat, e.latlng.lng);
       mouseCoord = `${wlat.toFixed(6)}, ${wlon.toFixed(6)}`;
     });
@@ -114,7 +114,7 @@
     };
   });
 
-  function onMapClick(e: L.LeafletMouseEvent) {
+  function onMapClick(e: any) {
     const ll = e.latlng;
     if (measuring) { addMeasurePoint(ll); return; }
     if (app.drawingPolygon) {
@@ -138,7 +138,7 @@
     addWaypoint({ lat: wlat, lon: wlon, alt: app.defaultAlt, drop: false, delay: 0, speed: 0, type: 'wp', loiter_param: 0 });
   }
 
-  function onRightClick(e: L.LeafletMouseEvent) {
+  function onRightClick(e: any) {
     e.originalEvent.preventDefault();
     if (!app.drone.connected || !app.drone.armed) return;
     const ll = e.latlng;
@@ -184,17 +184,17 @@
     return `${(m2 / 1e6).toFixed(3)} km²`;
   }
 
-  function addMeasurePoint(ll: L.LatLng) {
+  function addMeasurePoint(ll: any) {
     const cm = L.circleMarker([ll.lat, ll.lng], { radius: 4, color: '#ff5252', fillColor: '#ff5252', fillOpacity: 1 }).addTo(map);
     measurePts.push({ marker: cm, ll });
-    const pts = measurePts.map((p) => [p.ll.lat, p.ll.lng] as [number, number]);
+    const pts = measurePts.map((p: any) => [p.ll.lat, p.ll.lng]);
 
     if (measureMode === 'area') {
       if (measurePolygon) map.removeLayer(measurePolygon);
       if (measureLabel) map.removeLayer(measureLabel);
       if (pts.length >= 3) {
         measurePolygon = L.polygon(pts, { color: '#ff5252', weight: 2, dashArray: '4,4', fillColor: '#ff5252', fillOpacity: 0.1 }).addTo(map);
-        const area = calcPolygonArea(measurePts.map((p) => p.ll));
+        const area = calcPolygonArea(measurePts.map((p: any) => p.ll));
         const center = measurePolygon.getBounds().getCenter();
         measureLabel = L.marker(center, {
           icon: L.divIcon({
@@ -229,7 +229,7 @@
 
   function clearMeasure() {
     measuring = false;
-    measurePts.forEach((p) => map!.removeLayer(p.marker));
+    measurePts.forEach((p: any) => map.removeLayer(p.marker));
     measurePts = [];
     if (measureLine) { map.removeLayer(measureLine); measureLine = null; }
     if (measureLabel) { map.removeLayer(measureLabel); measureLabel = null; }
@@ -243,18 +243,18 @@
     measuring = true;
   }
 
-  let kmlLayers: L.Layer[] = $state([]);
+  let kmlLayers: any[] = $state([]);
 
   function importKmlOverlay() {
     const input = document.createElement('input');
     input.type = 'file'; input.accept = '.kml,.kmz';
-    input.onchange = (e: Event) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
+    input.onchange = (e: any) => {
+      const file = e.target.files[0];
       if (!file) return;
       const reader = new FileReader();
-      reader.onload = (ev: ProgressEvent<FileReader>) => {
+      reader.onload = (ev: any) => {
         try {
-          const doc = new DOMParser().parseFromString(ev.target!.result as string, 'text/xml');
+          const doc = new DOMParser().parseFromString(ev.target.result, 'text/xml');
           let count = 0;
           const placemarks = doc.getElementsByTagName('Placemark');
           for (let i = 0; i < placemarks.length; i++) {
