@@ -46,7 +46,7 @@
     navigator.clipboard.writeText(window.location.href).then(() => {
       copied = true;
       setTimeout(() => { copied = false; }, 2000);
-    });
+    }).catch(() => {});
   }
 </script>
 

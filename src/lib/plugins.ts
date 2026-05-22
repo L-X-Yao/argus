@@ -74,7 +74,7 @@ export function createPluginAPI(): PluginAPI {
     },
 
     showToast(msg: string, level = 'info') {
-      import('./stores.svelte').then(m => m.addToast(msg, level as 'info' | 'warn' | 'error' | 'success'));
+      import('./stores.svelte').then(m => m.addToast(msg, level as 'info' | 'warn' | 'error' | 'success')).catch(() => {});
     },
   };
 }

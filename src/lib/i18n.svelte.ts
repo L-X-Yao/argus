@@ -36,7 +36,7 @@ export function setLocale(l: Locale) {
   i18nState.locale = l;
   try { localStorage.setItem('argus_locale', l); } catch {}
   if (!loadedDicts[l]) {
-    LOCALE_LOADERS[l]().then(mod => { loadedDicts[l] = mod.default; });
+    LOCALE_LOADERS[l]().then(mod => { loadedDicts[l] = mod.default; }).catch(() => {});
   }
   _syncCallback?.(l);
 }
@@ -90,7 +90,7 @@ export function loadLocale() {
     if (saved && VALID_LOCALES.includes(saved as Locale)) {
       i18nState.locale = saved as Locale;
       if (!loadedDicts[saved as Locale]) {
-        LOCALE_LOADERS[saved as Locale]().then(mod => { loadedDicts[saved as Locale] = mod.default; });
+        LOCALE_LOADERS[saved as Locale]().then(mod => { loadedDicts[saved as Locale] = mod.default; }).catch(() => {});
       }
     }
   } catch {}

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { connectWs, sendCommand } from './lib/ws';
-  import { app, loadSettings, saveSettings, isPlane } from './lib/stores.svelte';
+  import { app, loadSettings, saveSettings, isPlane, addToast } from './lib/stores.svelte';
   import { checkAlerts, beep, speak } from './lib/audio';
   import { t, loadLocale, i18nState } from './lib/i18n.svelte';
   import LazyPanelHost from './components/core/LazyPanelHost.svelte';
@@ -48,7 +48,7 @@
 
   $effect(() => {
     if (app.mapMode === '3d' && !Map3DViewModule) {
-      import('./components/map/Map3DView.svelte').then(m => Map3DViewModule = m.default);
+      import('./components/map/Map3DView.svelte').then(m => Map3DViewModule = m.default).catch(() => addToast(t('error.loadFailed'), 'error'));
     }
   });
   $effect(() => {
@@ -61,7 +61,7 @@
         import('./components/core/ChartPanel.svelte'),
       ]).then(([rc, servo, vibe, ekf, chart]) => {
         MonitorMods = { Rc: rc.default, Servo: servo.default, Vibe: vibe.default, Ekf: ekf.default, Chart: chart.default };
-      });
+      }).catch(() => addToast(t('error.loadFailed'), 'error'));
     }
   });
   $effect(() => {
@@ -72,37 +72,37 @@
         import('./components/mission/FencePanel.svelte'),
       ]).then(([mission, survey, fence]) => {
         PlanMods = { Mission: mission.default, Survey: survey.default, Fence: fence.default };
-      });
+      }).catch(() => addToast(t('error.loadFailed'), 'error'));
     }
   });
   $effect(() => {
     if (view === 'params' && !ParamMod) {
-      import('./components/params/ParamPanel.svelte').then(m => ParamMod = m.default);
+      import('./components/params/ParamPanel.svelte').then(m => ParamMod = m.default).catch(() => addToast(t('error.loadFailed'), 'error'));
     }
   });
   $effect(() => {
     if (app.showSettings && !SettingsMod) {
-      import('./components/shared/SettingsPanel.svelte').then(m => SettingsMod = m.default);
+      import('./components/shared/SettingsPanel.svelte').then(m => SettingsMod = m.default).catch(() => addToast(t('error.loadFailed'), 'error'));
     }
   });
   $effect(() => {
     if (showCmdPalette && !CmdPaletteMod) {
-      import('./components/shared/CommandPalette.svelte').then(m => CmdPaletteMod = m.default);
+      import('./components/shared/CommandPalette.svelte').then(m => CmdPaletteMod = m.default).catch(() => addToast(t('error.loadFailed'), 'error'));
     }
   });
   $effect(() => {
     if (app.summaryShown && !FlightSummaryMod) {
-      import('./components/shared/FlightSummary.svelte').then(m => FlightSummaryMod = m.default);
+      import('./components/shared/FlightSummary.svelte').then(m => FlightSummaryMod = m.default).catch(() => addToast(t('error.loadFailed'), 'error'));
     }
   });
   $effect(() => {
     if (app.drone.connected && !app.drone.armed && !PreflightMod) {
-      import('./components/shared/PreflightPanel.svelte').then(m => PreflightMod = m.default);
+      import('./components/shared/PreflightPanel.svelte').then(m => PreflightMod = m.default).catch(() => addToast(t('error.loadFailed'), 'error'));
     }
   });
   $effect(() => {
     if (!app.drone.connected && view === 'fly' && !ReplayMod) {
-      import('./components/tools/ReplayPanel.svelte').then(m => ReplayMod = m.default);
+      import('./components/tools/ReplayPanel.svelte').then(m => ReplayMod = m.default).catch(() => addToast(t('error.loadFailed'), 'error'));
     }
   });
 

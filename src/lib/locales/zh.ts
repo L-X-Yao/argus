@@ -911,6 +911,7 @@ const messages: Record<string, string> = {
   'posSource.posVAgl': '对地高度',
   'posSource.constPos': '定点模式',
   'posSource.uninit': '未初始化',
+  'error.loadFailed': '组件加载失败',
 };
 
 

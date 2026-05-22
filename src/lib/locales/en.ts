@@ -911,6 +911,7 @@ const messages: Record<string, string> = {
   'posSource.posVAgl': 'Pos V AGL',
   'posSource.constPos': 'Const Pos Mode',
   'posSource.uninit': 'Uninitialized',
+  'error.loadFailed': 'Component load failed',
 };
 
 
