@@ -9,6 +9,7 @@ import { onLocaleChange, getLocale, t } from './i18n.svelte';
 
 let socket: WebSocket | null = null;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+let reconnectAttempts = 0;
 
 export function connectWs(): void {
   if (socket && socket.readyState <= 1) return;
@@ -17,6 +18,7 @@ export function connectWs(): void {
 
   ws.onopen = () => {
     setWsConnected(true);
+    reconnectAttempts = 0;
     if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
     sendMessage({ type: 'set_locale', locale: getLocale() });
     onLocaleChange((l) => sendMessage({ type: 'set_locale', locale: l }));
@@ -112,7 +114,9 @@ export function connectWs(): void {
 
 function scheduleReconnect(): void {
   if (reconnectTimer) return;
-  reconnectTimer = setTimeout(() => { reconnectTimer = null; connectWs(); }, 2000);
+  reconnectAttempts++;
+  const delay = Math.min(1000 * Math.pow(1.5, reconnectAttempts), 30000);
+  reconnectTimer = setTimeout(() => { reconnectTimer = null; connectWs(); }, delay);
 }
 
 type OutgoingMessage =

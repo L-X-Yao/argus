@@ -229,6 +229,8 @@ async def api_log():
 
 @app.get('/api/tile/{style}/{z}/{x}/{y}')
 async def api_tile(style: str, z: int, x: int, y: int):
+    if style not in TILE_URLS:
+        return Response(status_code=404, content='unknown tile style')
     global _tile_count
     cache_dir = TILE_CACHE / style / str(z) / str(x)
     cache_file = cache_dir / ('%d.png' % y)
@@ -274,7 +276,12 @@ async def api_terrain_elevation(request: Request):
     for p in points_str.split(';'):
         parts = p.split(',')
         if len(parts) >= 2:
-            points.append((float(parts[0]), float(parts[1])))
+            try:
+                lat, lon = float(parts[0]), float(parts[1])
+                if -90 <= lat <= 90 and -180 <= lon <= 180:
+                    points.append((lat, lon))
+            except ValueError:
+                pass
     elevations = []
     for lat, lon in points:
         elev = await _get_srtm_elevation(lat, lon)
@@ -334,8 +341,11 @@ async def api_tile_bulk_download(request: Request):
     body = await request.json()
     lat_min, lat_max = body.get('lat_min', 0), body.get('lat_max', 0)
     lon_min, lon_max = body.get('lon_min', 0), body.get('lon_max', 0)
-    z_min, z_max = body.get('z_min', 10), min(body.get('z_max', 16), 18)
+    z_min = max(0, min(int(body.get('z_min', 10)), 18))
+    z_max = min(max(z_min, int(body.get('z_max', 16))), 18)
     style = body.get('style', '6')
+    if style not in TILE_URLS:
+        return {'total': 0, 'downloaded': 0, 'skipped': 0, 'truncated': False}
     total = downloaded = skipped = 0
     for z in range(z_min, z_max + 1):
         n = 2 ** z
@@ -387,8 +397,8 @@ async def api_mbtiles_list():
 @app.get('/api/mbtiles/{name}/{z}/{x}/{y}')
 async def api_mbtiles_tile(name: str, z: int, x: int, y: int):
     import sqlite3
-    path = MBTILES_DIR / name
-    if not path.exists() or not name.endswith('.mbtiles'):
+    path = (MBTILES_DIR / name).resolve()
+    if not str(path).startswith(str(MBTILES_DIR.resolve())) or not path.exists() or not name.endswith('.mbtiles'):
         return Response(status_code=404, content='not found')
     tms_y = (1 << z) - 1 - y
     try:
@@ -408,11 +418,12 @@ async def api_mbtiles_tile(name: str, z: int, x: int, y: int):
 async def api_firmware_upload(file: UploadFile):
     if not file.filename or not file.filename.endswith('.apj'):
         return {'ok': False, 'error': 'Only .apj files accepted'}
+    safe_name = Path(file.filename).name
     FIRMWARE_DIR.mkdir(exist_ok=True)
-    dest = FIRMWARE_DIR / file.filename
+    dest = FIRMWARE_DIR / safe_name
     data = await file.read()
     dest.write_bytes(data)
-    return {'ok': True, 'filename': file.filename, 'size': len(data)}
+    return {'ok': True, 'filename': safe_name, 'size': len(data)}
 
 
 @app.get('/api/firmware/list')

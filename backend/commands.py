@@ -62,13 +62,19 @@ def execute(cmd: str, param, link: DroneLink, data: dict | None = None) -> dict 
         takeoff_alt = float(data.get('takeoff_alt', 30))
         if not wps:
             return {'ok': False, 'error': lt('err_no_wp', link.locale)}
+        if len(wps) > 500:
+            return {'ok': False, 'error': 'Mission too large (max 500 WP)'}
         for wp in wps:
-            if abs(wp.get('lat', 0)) < 0.001:
+            lat, lon = wp.get('lat', 0), wp.get('lon', 0)
+            if abs(lat) < 0.001 or not (-90 <= lat <= 90) or not (-180 <= lon <= 180):
+                return {'ok': False, 'error': lt('err_bad_coord', link.locale)}
+            alt = wp.get('alt', 0)
+            if not (-500 <= alt <= 100000):
                 return {'ok': False, 'error': lt('err_bad_coord', link.locale)}
         _upload_mission(link, wps, takeoff_alt)
     elif cmd == 'fence_upload':
         polygon = data.get('polygon', [])
-        if len(polygon) < 3:
+        if len(polygon) < 3 or len(polygon) > 200:
             return {'ok': False, 'error': lt('err_fence_min', link.locale)}
         items = []
         for i, pt in enumerate(polygon):
@@ -86,9 +92,13 @@ def execute(cmd: str, param, link: DroneLink, data: dict | None = None) -> dict 
         vname = lt('vtype_plane' if v == 'plane' else 'vtype_copter' if v == 'copter' else 'vtype_auto', link.locale)
         link.add_event(lt('vtype_set', link.locale) % vname, 'vtype_set')
     elif cmd == 'guided_goto':
-        lat7 = int(float(data.get('lat', 0)) * 1e7)
-        lon7 = int(float(data.get('lon', 0)) * 1e7)
+        lat = float(data.get('lat', 0))
+        lon = float(data.get('lon', 0))
         alt = float(data.get('alt', 30))
+        if not (-90 <= lat <= 90) or not (-180 <= lon <= 180) or not (-500 <= alt <= 100000):
+            return {'ok': False, 'error': lt('err_bad_coord', link.locale)}
+        lat7 = int(lat * 1e7)
+        lon7 = int(lon * 1e7)
         gm = 15 if link.is_plane() else 4
         _send_set_mode(link, gm)
         link.add_event(lt('guided', link.locale) % (lat7 / 1e7, lon7 / 1e7, alt), 'guided')

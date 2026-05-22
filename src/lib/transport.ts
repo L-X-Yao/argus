@@ -19,6 +19,7 @@ import {
 } from './mavlink';
 import { openSerial, serialWrite, serialReadLoop, isWebSerialSupported } from './serial';
 import type { SerialConnection } from './serial';
+import { addToast } from './stores.svelte';
 
 export type TransportMode = 'websocket' | 'serial';
 
@@ -98,7 +99,11 @@ export async function connectSerial(
         dispatchFrame(frame, serial.handlers);
       }
     }).catch((e) => { console.error('[Serial] read loop error', e); }).finally(() => {
+      const wasRunning = serial.running;
       serial.running = false;
+      if (wasRunning) {
+        addToast('Serial connection lost', 'error', 8000);
+      }
     });
 
     return true;
