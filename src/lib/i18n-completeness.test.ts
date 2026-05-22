@@ -12,11 +12,10 @@ const localesDir = resolve(__dir, 'locales');
 function parseLocale(filename: string): Record<string, string> {
   const src = readFileSync(resolve(localesDir, filename), 'utf-8');
   const entries: Record<string, string> = {};
-  // Match 'key': 'value' or "key": "value" patterns
-  const re = /['"]([^'"]+)['"]\s*:\s*['"]([^']*(?:''[^']*)*|[^"]*(?:""[^"]*)*)['"]/g;
+  const re = /['"]([^'"]+)['"]\s*:\s*'((?:[^'\\]|\\.)*)'/g;
   let m;
   while ((m = re.exec(src)) !== null) {
-    entries[m[1]] = m[2];
+    entries[m[1]] = m[2].replace(/\\'/g, "'");
   }
   return entries;
 }

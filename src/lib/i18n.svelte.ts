@@ -84,6 +84,8 @@ export function fmtNumber(n: number, decimals = 1): string {
 const VALID_LOCALES: Locale[] = ['zh', 'en', 'ja', 'ko', 'de', 'fr', 'es', 'pt', 'ru', 'ar'];
 export { VALID_LOCALES };
 
+export const LOCALE_BETA: Set<Locale> = new Set(['ja', 'ko', 'de', 'fr', 'es', 'pt', 'ru', 'ar']);
+
 export function loadLocale() {
   try {
     const saved = localStorage.getItem('argus_locale');

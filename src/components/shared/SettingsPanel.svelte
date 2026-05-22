@@ -1,6 +1,6 @@
 <script lang="ts">
   import { app, saveSettings } from '../../lib/stores.svelte';
-  import { t, i18nState, setLocale, VALID_LOCALES } from '../../lib/i18n.svelte';
+  import { t, i18nState, setLocale, VALID_LOCALES, LOCALE_BETA } from '../../lib/i18n.svelte';
   import type { Locale } from '../../lib/i18n.svelte';
 
   const LOCALE_LABELS: Record<string, string> = {
@@ -133,7 +133,7 @@
                     value={i18nState.locale}
                     onchange={(e) => setLocale((e.target as HTMLSelectElement).value as Locale)}>
               {#each VALID_LOCALES as loc}
-                <option value={loc}>{LOCALE_LABELS[loc] || loc}</option>
+                <option value={loc}>{LOCALE_LABELS[loc] || loc}{LOCALE_BETA.has(loc) ? ' (beta)' : ''}</option>
               {/each}
             </select>
           </div>
