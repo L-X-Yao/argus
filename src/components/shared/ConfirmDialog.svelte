@@ -18,7 +18,9 @@
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm"
        onclick={() => resolveConfirm(false)}>
+    <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
     <div class="bg-card border border-border rounded-xl shadow-2xl p-5 w-[360px] max-w-[90vw]"
+         role="alertdialog" aria-modal="true" aria-labelledby="confirm-msg" tabindex="-1"
          onclick={(e) => e.stopPropagation()}>
       <div class="flex items-start gap-3 mb-4">
         {#if confirmState.danger}
@@ -26,7 +28,7 @@
             <AlertTriangle size={18} class="text-destructive" />
           </div>
         {/if}
-        <p class="text-sm text-foreground whitespace-pre-line leading-relaxed pt-1.5">{confirmState.message}</p>
+        <p id="confirm-msg" class="text-sm text-foreground whitespace-pre-line leading-relaxed pt-1.5">{confirmState.message}</p>
       </div>
       <div class="flex justify-end gap-2">
         <Button variant="outline" size="sm" onclick={() => resolveConfirm(false)}>{t('map.cancel')}</Button>

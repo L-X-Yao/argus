@@ -33,7 +33,7 @@
     {@const Comp = loaded[id]}
     <Comp onclose={() => panels.close(id)} />
   {:else if errors[id]}
-    <div class="fixed top-20 right-4 z-50 p-4 bg-red-900/90 text-red-200 rounded-lg shadow-lg max-w-sm">
+    <div class="fixed top-20 right-4 z-50 p-4 bg-red-900/90 text-red-200 rounded-lg shadow-lg max-w-sm" role="alert">
       <p class="font-semibold text-sm">Failed to load: {id}</p>
       <p class="text-xs mt-1 opacity-75">{errors[id]}</p>
       <div class="flex gap-2 mt-2">

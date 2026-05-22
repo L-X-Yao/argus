@@ -349,7 +349,7 @@
         <Badge variant="destructive" class="text-[10px] font-bold animate-pulse">{t('status.armed')}</Badge>
       {/if}
 
-      <span class="flex items-center gap-0.5" title="Link {app.drone.link_age >= 0 ? app.drone.link_age.toFixed(1) + 's' : '---'} · {msgRate} Hz">
+      <span class="flex items-center gap-0.5" title="Link {app.drone.link_age >= 0 ? app.drone.link_age.toFixed(1) + 's' : '---'} · {msgRate} Hz" aria-label="Link quality {msgRate} Hz">
         <svg width="16" height="12" viewBox="0 0 16 12" class="shrink-0">
           <rect x="0" y="9" width="3" height="3" rx="0.5" fill={linkBars >= 1 ? barColor : '#555'} />
           <rect x="4.5" y="6" width="3" height="6" rx="0.5" fill={linkBars >= 2 ? barColor : '#555'} />
@@ -384,7 +384,7 @@
         {ekfLabel}
       </Badge>
 
-      <span class="{battColor} font-bold tabular-nums flex items-center gap-1" title="{app.drone.voltage.toFixed(2)}V | {app.drone.current.toFixed(1)}A">
+      <span class="{battColor} font-bold tabular-nums flex items-center gap-1" title="{app.drone.voltage.toFixed(2)}V | {app.drone.current.toFixed(1)}A" aria-label="Battery {app.drone.voltage.toFixed(1)}V {app.drone.remaining >= 0 ? app.drone.remaining + '%' : ''}">
         <svg width="22" height="12" viewBox="0 0 22 12" class="shrink-0">
           <rect x="0.5" y="0.5" width="18" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1"/>
           <rect x="19" y="3" width="2.5" height="6" rx="1" fill="currentColor" opacity="0.5"/>
@@ -442,13 +442,14 @@
     {/if}
 
     <Button variant="ghost" size="icon-xs" onclick={() => { app.audioMuted = !app.audioMuted; saveSettings(); }}
-            class={app.audioMuted ? 'opacity-40' : ''} title={app.audioMuted ? 'Unmute' : 'Mute'}>
+            class={app.audioMuted ? 'opacity-40' : ''} title={app.audioMuted ? 'Unmute' : 'Mute'}
+            aria-label={app.audioMuted ? 'Unmute' : 'Mute'}>
       {#if app.audioMuted}<VolumeOff size={14} />{:else}<Volume2 size={14} />{/if}
     </Button>
-    <Button variant="ghost" size="icon-xs" onclick={toggleTheme} title={t('tip.theme')}>
+    <Button variant="ghost" size="icon-xs" onclick={toggleTheme} title={t('tip.theme')} aria-label={t('tip.theme')}>
       {#if app.darkTheme}<Sun size={14} />{:else}<Moon size={14} />{/if}
     </Button>
-    <Button variant="ghost" size="icon-xs" onclick={onSettings} title={t('settings.title')}>
+    <Button variant="ghost" size="icon-xs" onclick={onSettings} title={t('settings.title')} aria-label={t('settings.title')}>
       <Settings size={14} />
     </Button>
   </div>

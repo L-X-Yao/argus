@@ -23,10 +23,11 @@
 <div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center" onclick={onclose}>
   <!-- svelte-ignore a11y_click_events_have_key_events -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="bg-card border border-border rounded-2xl overflow-hidden min-w-[380px] max-h-[80vh] shadow-2xl flex flex-col" onclick={(e) => e.stopPropagation()}>
+  <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
+  <div class="bg-card border border-border rounded-2xl overflow-hidden min-w-[380px] max-h-[80vh] shadow-2xl flex flex-col" role="dialog" aria-modal="true" aria-label={t('settings.title')} tabindex="-1" onclick={(e) => e.stopPropagation()}>
     <div class="bg-gradient-to-r from-primary/20 to-primary/5 px-5 py-3 flex items-center justify-between shrink-0">
       <h3 class="text-base font-bold text-primary">{t('settings.title')}</h3>
-      <Button variant="ghost" size="icon-xs" onclick={onclose}><X size={16} /></Button>
+      <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label="Close"><X size={16} /></Button>
     </div>
 
     <div class="overflow-y-auto px-5 py-3 space-y-4">
