@@ -44,8 +44,8 @@ def send_fence_item_int(link: DroneLink, item: dict) -> None:
 
 def send_mission_item_int(link: DroneLink, wp: dict) -> None:
     frame = 3 if wp['cmd'] in (16, 19, 21, 22, 82) else 2
-    lat7 = int(wp.get('lat', 0) * 1e7)
-    lon7 = int(wp.get('lon', 0) * 1e7)
+    lat7 = int(float(wp.get('lat', 0)) * 1e7)
+    lon7 = int(float(wp.get('lon', 0)) * 1e7)
     p = struct.pack('<ffffiifHHBBBBBB',
                     float(wp.get('p1', 0)), float(wp.get('p2', 0)), 0.0, 0.0,
                     lat7, lon7, float(wp.get('alt', 0)),

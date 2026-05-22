@@ -218,8 +218,14 @@
       <select bind:value={baud}
               class="h-7 px-1 text-xs bg-input border border-border rounded-md text-foreground cursor-pointer"
               title={t('tip.baudRate')}>
+        <option value={9600}>9600</option>
+        <option value={19200}>19200</option>
+        <option value={38400}>38400</option>
         <option value={57600}>57600</option>
         <option value={115200}>115200</option>
+        <option value={230400}>230400</option>
+        <option value={460800}>460800</option>
+        <option value={921600}>921600</option>
       </select>
     {/if}
     <select bind:value={protocol}

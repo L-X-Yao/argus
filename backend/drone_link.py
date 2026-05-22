@@ -150,6 +150,8 @@ class DroneLink:
                     logger.debug('send failed', exc_info=True)
 
     def connect(self, port: str, baudrate: int = 57600, protocol: str = 'auto') -> bool:
+        if self._running:
+            self.disconnect()
         self._protocol = 'standard' if port.startswith('udp:') else protocol
         try:
             self._ser = self._open_port(port, baudrate)
