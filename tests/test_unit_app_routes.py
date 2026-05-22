@@ -104,6 +104,103 @@ class TestMbtiles:
         assert 'files' in r.json()
 
 
+class TestTileProxy:
+    def test_invalid_style_404(self):
+        r = client.get('/api/tile/fakestyle/10/0/0')
+        assert r.status_code == 404
+        assert b'unknown tile style' in r.content
+
+    def test_valid_style_no_network(self):
+        with patch('backend.app.urlreq.urlopen', side_effect=OSError('no network')):
+            r = client.get('/api/tile/osm/1/0/0')
+        assert r.status_code in (200, 404)
+
+
+class TestTerrain:
+    def test_empty_points(self):
+        r = client.get('/api/terrain/elevation?points=')
+        assert r.status_code == 200
+        assert r.json()['elevations'] == []
+
+    def test_no_points_param(self):
+        r = client.get('/api/terrain/elevation')
+        assert r.status_code == 200
+        assert r.json()['elevations'] == []
+
+    def test_invalid_coords_filtered(self):
+        r = client.get('/api/terrain/elevation?points=999,999;abc,def')
+        assert r.status_code == 200
+        assert r.json()['elevations'] == []
+
+    def test_valid_point_returns_one(self):
+        r = client.get('/api/terrain/elevation?points=30.5,120.3')
+        assert r.status_code == 200
+        assert len(r.json()['elevations']) == 1
+
+    def test_multiple_valid_points(self):
+        r = client.get('/api/terrain/elevation?points=30.5,120.3;31.0,121.0')
+        assert r.status_code == 200
+        assert len(r.json()['elevations']) == 2
+
+
+class TestFirmwareUpload:
+    def test_non_apj_rejected(self):
+        r = client.post(
+            '/api/firmware/upload',
+            files={'file': ('test.exe', b'\x00', 'application/octet-stream')},
+        )
+        data = r.json()
+        assert data['ok'] is False
+
+    def test_empty_filename_rejected(self):
+        r = client.post(
+            '/api/firmware/upload',
+            files={'file': ('', b'\x00', 'application/octet-stream')},
+        )
+        data = r.json()
+        assert data.get('ok') is False or 'error' in data or r.status_code >= 400
+
+    def test_valid_apj_accepted(self):
+        from pathlib import Path as P
+        with patch.object(P, 'write_bytes'):
+            r = client.post(
+                '/api/firmware/upload',
+                files={'file': ('test.apj', b'\x00' * 100, 'application/octet-stream')},
+            )
+        data = r.json()
+        assert data['ok'] is True
+        assert data['filename'] == 'test.apj'
+        assert data['size'] == 100
+
+
+class TestFirmwareDownload:
+    def test_missing_url_rejected(self):
+        r = client.post('/api/firmware/download', json={'url': '', 'filename': 'fw.apj'})
+        data = r.json()
+        assert data['ok'] is False
+
+    def test_http_url_rejected(self):
+        r = client.post('/api/firmware/download', json={'url': 'http://example.com/fw.apj', 'filename': 'fw.apj'})
+        data = r.json()
+        assert data['ok'] is False
+        assert 'HTTPS' in data['error']
+
+    def test_non_apj_filename_rejected(self):
+        r = client.post('/api/firmware/download', json={'url': 'https://example.com/fw.bin', 'filename': 'fw.bin'})
+        data = r.json()
+        assert data['ok'] is False
+
+
+class TestMbtilesTraversal:
+    def test_dotdot_rejected(self):
+        r = client.get('/api/mbtiles/../../etc/passwd.mbtiles/0/0/0')
+        assert r.status_code == 404
+
+    def test_nonexistent_file(self):
+        r = client.get('/api/mbtiles/region.mbtiles/10/512/512')
+        assert r.status_code == 404
+
+
 class TestVideo:
     def test_video_capabilities(self):
         r = client.get('/api/video/capabilities')
@@ -123,3 +220,22 @@ class TestVideo:
         assert r.status_code == 200
         data = r.json()
         assert 'error' in data
+
+    def test_video_private_ip_rejected(self):
+        r = client.get('/api/video?url=rtsp://192.168.1.1:554/stream')
+        assert r.status_code == 200
+        data = r.json()
+        assert 'error' in data
+        assert 'Invalid' in data['error']
+
+    def test_video_file_scheme_rejected(self):
+        r = client.get('/api/video?url=file:///etc/passwd')
+        assert r.status_code == 200
+        data = r.json()
+        assert 'error' in data
+
+
+class TestParamMeta:
+    def test_param_meta_returns(self):
+        r = client.get('/api/param_meta')
+        assert r.status_code == 200

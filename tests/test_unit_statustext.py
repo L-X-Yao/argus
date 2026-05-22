@@ -84,9 +84,51 @@ class TestTrailing:
         assert filter_statustext('检查 failed') == '检查 失败'
 
 
+class TestTrailingOnOff:
+    def test_on(self):
+        assert filter_statustext('功能 on') == '功能 开启'
+
+    def test_off(self):
+        assert filter_statustext('功能 off') == '功能 关闭'
+
+    def test_only_first_trailing_applied(self):
+        r = filter_statustext('test enabled')
+        assert r == 'test 已启用'
+
+
+class TestEnglishLocale:
+    def test_brand_only_in_english(self):
+        r = filter_statustext('ArduCopter v4.5.0', locale='en')
+        assert 'ArduCopter' not in r
+        assert 'FC' in r
+
+    def test_no_chinese_in_english(self):
+        r = filter_statustext('Need 3D Fix', locale='en')
+        assert r == 'Need 3D Fix'
+
+    def test_trailing_not_translated_in_english(self):
+        r = filter_statustext('Fence enabled', locale='en')
+        assert r == 'Fence enabled'
+
+    def test_chibios_replaced_in_english(self):
+        r = filter_statustext('ChibiOS v21.11', locale='en')
+        assert 'ChibiOS' not in r
+        assert 'RTOS' in r
+
+
 class TestPassthrough:
     def test_plain_chinese(self):
         assert filter_statustext('准备就绪') == '准备就绪'
 
     def test_imu_prefix(self):
         assert 'IMU0' in filter_statustext('IMU0 accel ok')
+
+    def test_empty_string(self):
+        assert filter_statustext('') == ''
+
+    def test_unknown_message(self):
+        assert filter_statustext('something random') == 'something random'
+
+    def test_substring_replacement(self):
+        r = filter_statustext('NotPreArm')
+        assert 'PreArm' not in r

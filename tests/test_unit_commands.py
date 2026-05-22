@@ -468,3 +468,107 @@ class TestDroneLink:
         assert 'lat' in state
         assert 'voltage' in state
         assert 'flight_summary' in state
+
+
+class TestTakeoffValidation:
+    def test_alt_below_min(self):
+        link = make_link()
+        result = execute('takeoff', None, link, data={'alt': 0.5})
+        assert result is not None
+        assert result['ok'] is False
+
+    def test_alt_above_max(self):
+        link = make_link()
+        result = execute('takeoff', None, link, data={'alt': 1500})
+        assert result is not None
+        assert result['ok'] is False
+
+    def test_valid_alt(self):
+        link = make_link()
+        result = execute('takeoff', None, link, data={'alt': 30})
+        assert result is None
+
+
+class TestMotorTestValidation:
+    def test_motor_index_negative(self):
+        link = make_link()
+        result = execute('motor_test', None, link, data={'motor': -1, 'throttle': 5, 'duration': 2})
+        assert result is not None
+        assert result['ok'] is False
+
+    def test_motor_index_too_high(self):
+        link = make_link()
+        result = execute('motor_test', None, link, data={'motor': 8, 'throttle': 5, 'duration': 2})
+        assert result is not None
+        assert result['ok'] is False
+
+    def test_throttle_too_high(self):
+        link = make_link()
+        result = execute('motor_test', None, link, data={'motor': 0, 'throttle': 150, 'duration': 2})
+        assert result is not None
+        assert result['ok'] is False
+
+    def test_duration_too_long(self):
+        link = make_link()
+        result = execute('motor_test', None, link, data={'motor': 0, 'throttle': 5, 'duration': 60})
+        assert result is not None
+        assert result['ok'] is False
+
+    def test_valid_motor_test(self):
+        link = make_link()
+        result = execute('motor_test', None, link, data={'motor': 0, 'throttle': 10, 'duration': 3})
+        assert result is None
+
+
+class TestGimbalValidation:
+    def test_pitch_out_of_range(self):
+        link = make_link()
+        result = execute('gimbal_angle', None, link, data={'pitch': 100, 'yaw': 0})
+        assert result is not None
+        assert result['ok'] is False
+
+    def test_yaw_out_of_range(self):
+        link = make_link()
+        result = execute('gimbal_angle', None, link, data={'pitch': 0, 'yaw': 200})
+        assert result is not None
+        assert result['ok'] is False
+
+    def test_valid_gimbal(self):
+        link = make_link()
+        result = execute('gimbal_angle', None, link, data={'pitch': -45, 'yaw': 90})
+        assert result is None
+
+
+class TestRcOverride:
+    def test_too_few_channels(self):
+        link = make_link()
+        result = execute('rc_override', None, link, data={'channels': [1500, 1500]})
+        assert result is None
+
+    def test_valid_8_channels(self):
+        link = make_link()
+        channels = [1500] * 8
+        result = execute('rc_override', None, link, data={'channels': channels})
+        assert result is None
+
+
+class TestExecuteDispatch:
+    def test_unknown_command(self):
+        link = make_link()
+        result = execute('nonexistent_xyz', None, link)
+        assert result is None
+
+    def test_exception_caught(self):
+        import backend.commands as cmd_mod
+        link = make_link()
+
+        def raise_err(_l, _p, _d):
+            raise RuntimeError('test')
+
+        cmd_mod._DISPATCH['_test_err'] = raise_err
+        try:
+            result = execute('_test_err', None, link)
+            assert result['ok'] is False
+            assert 'test' in result['error']
+        finally:
+            del cmd_mod._DISPATCH['_test_err']
