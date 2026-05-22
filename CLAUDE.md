@@ -55,13 +55,13 @@ argus/
 │   │   ├── core/             # MapView, StatusBar, ConnectionForm, ControlPanel, EventLog
 │   │   ├── telemetry/        # RcPanel, ServoPanel, VibrationPanel, EkfPanel
 │   │   ├── mission/          # MissionPanel, SurveyPanel, FencePanel
-│   │   ├── setup/            # CalibrationPanel, SetupWizard, MotorTestPanel
+│   │   ├── setup/            # CalibrationPanel, FirmwarePanel, NtripPanel, PositionSourcePanel
 │   │   ├── params/           # ParamPanel, PidPanel, FlightModePanel
-│   │   ├── tools/            # InspectorPanel, ConsolePanel, LogPanel
+│   │   ├── tools/            # InspectorPanel, ConsolePanel, LogPanel, FlightReportPanel
 │   │   ├── map/              # Map3DView, AirspacePanel, OfflineMapPanel
 │   │   ├── vehicle/          # FleetDashboard, GimbalPanel, VideoOverlay
 │   │   ├── planning/         # AiPlannerPanel, SchedulerPanel
-│   │   ├── shared/           # CommandPalette, ConfirmDialog, SettingsPanel
+│   │   ├── shared/           # CommandPalette, ConfirmDialog, SettingsPanel (dialogs only)
 │   │   └── layers/           # DroneLayer, WaypointLayer (map overlays)
 │   ├── lib/                  # Shared libraries
 │   │   ├── panels.svelte.ts  # Panel registry (42 panels, lazy-loaded via LazyPanelHost)

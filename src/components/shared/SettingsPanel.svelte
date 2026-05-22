@@ -10,7 +10,7 @@
   };
   import { gamepad, startGamepad, stopGamepad } from '../../lib/gamepad.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
-  import FirmwarePanel from './FirmwarePanel.svelte';
+  import FirmwarePanel from '../setup/FirmwarePanel.svelte';
   import { X, Volume2, VolumeOff, Mic, MicOff, Sun, Moon, Plane, ShieldAlert, Gauge, Globe, Gamepad2 } from '@lucide/svelte';
 
   let { onclose }: { onclose: () => void } = $props();
