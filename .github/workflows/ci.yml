@@ -24,7 +24,7 @@ jobs:
           cache: npm
 
       - name: Install Python deps
-        run: pip install -e '.[dev]' ruff
+        run: pip install -e '.[dev]'
 
       - name: Install Node deps
         run: npm ci
@@ -32,14 +32,18 @@ jobs:
       - name: Ruff lint
         run: ruff check backend/ scripts/ tests/
 
-      - name: Python tests
-        run: python -m pytest tests/test_unit_*.py -v
+      - name: Python tests with coverage
+        run: python -m pytest tests/test_unit_*.py -v --cov=backend --cov-report=term-missing
 
       - name: TypeScript check
         run: npx svelte-check --tsconfig ./tsconfig.json
 
-      - name: Frontend tests
-        run: npx vitest run
+      - name: Frontend tests with coverage
+        run: npx vitest run --coverage
 
       - name: Build
         run: npm run build
+
+      - name: Security audit
+        run: npm audit --audit-level=high || true
+        continue-on-error: true

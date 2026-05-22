@@ -147,7 +147,7 @@ class DroneLink:
                         self._ser.write(frame)
                     self.sq += 1
                 except Exception:
-                    pass
+                    logger.debug('send failed', exc_info=True)
 
     def connect(self, port: str, baudrate: int = 57600, protocol: str = 'auto') -> bool:
         self._protocol = 'standard' if port.startswith('udp:') else protocol
@@ -161,16 +161,17 @@ class DroneLink:
             self.add_event(lt('connect_fail', self.locale) % e, 'connect_fail')
             return False
         self._running = True
-        self.connected = False
-        self.frame_count = 0
-        self._buf = b''
-        self.sq = 0
-        self.vehicle.vtype_raw = 0
-        self.attitude.home_lat = self.attitude.home_lon = 0.0
-        self.attitude.dist_home = 0.0
-        self.vehicle.armed_time = 0.0
-        self.last_frame_time = 0.0
-        self.start_time = time.time()
+        with self._state_lock:
+            self.connected = False
+            self.frame_count = 0
+            self._buf = b''
+            self.sq = 0
+            self.vehicle.vtype_raw = 0
+            self.attitude.home_lat = self.attitude.home_lon = 0.0
+            self.attitude.dist_home = 0.0
+            self.vehicle.armed_time = 0.0
+            self.last_frame_time = 0.0
+            self.start_time = time.time()
         self._last_port = port
         self._last_baud = baudrate
         self._reconnect_enabled = True
@@ -190,11 +191,12 @@ class DroneLink:
         except Exception:
             pass
         self._ser = None
-        self.connected = False
-        self.vehicle.vtype_raw = 0
-        self.vehicle.force_plane = None
-        self.attitude._prev_pos = None
-        self.mission._mission_pending = False
+        with self._state_lock:
+            self.connected = False
+            self.vehicle.vtype_raw = 0
+            self.vehicle.force_plane = None
+            self.attitude._prev_pos = None
+            self.mission._mission_pending = False
         self._stop_log()
         self.add_event(lt('disconnected', self.locale), 'disconnected')
 
@@ -486,24 +488,24 @@ class DroneLink:
     def _process(self, payload: bytes) -> None:
         if len(payload) < 12 or payload[0] != 0xFD:
             return
-        self.last_frame_time = time.time()
-        self._raw_sysid = payload[5]
         mid = payload[7] | (payload[8] << 8) | (payload[9] << 16)
         p = payload[10:10 + payload[1]]
         pl = payload[1]
-        if self.inspector_enabled:
-            now = time.time()
-            st = self._msg_stats.get(mid)
-            if not st:
-                st = {'name': _MSG_NAMES.get(mid, ''), 'count': 0, 'size': pl, 'times': [], 'last_fields': {}}
-                self._msg_stats[mid] = st
-            st['count'] += 1
-            st['size'] = pl
-            st['times'].append(now)
-            if len(st['times']) > 100:
-                st['times'] = st['times'][-50:]
-        sid = self._raw_sysid
+        sid = payload[5]
         with self._state_lock:
+            self.last_frame_time = time.time()
+            self._raw_sysid = sid
+            if self.inspector_enabled:
+                now = time.time()
+                st = self._msg_stats.get(mid)
+                if not st:
+                    st = {'name': _MSG_NAMES.get(mid, ''), 'count': 0, 'size': pl, 'times': [], 'last_fields': {}}
+                    self._msg_stats[mid] = st
+                st['count'] += 1
+                st['size'] = pl
+                st['times'].append(now)
+                if len(st['times']) > 100:
+                    st['times'] = st['times'][-50:]
             if mid == 33 and pl >= 20:
                 lat = struct.unpack_from('<i', p, 4)[0] / 1e7
                 lon = struct.unpack_from('<i', p, 8)[0] / 1e7

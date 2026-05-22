@@ -10,6 +10,8 @@ import { onLocaleChange, getLocale, t } from './i18n.svelte';
 let socket: WebSocket | null = null;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
 let reconnectAttempts = 0;
+let lastMessageTime = 0;
+let staleCheckTimer: ReturnType<typeof setInterval> | null = null;
 
 export function connectWs(): void {
   if (socket && socket.readyState <= 1) return;
@@ -19,12 +21,21 @@ export function connectWs(): void {
   ws.onopen = () => {
     setWsConnected(true);
     reconnectAttempts = 0;
+    lastMessageTime = Date.now();
     if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+    if (staleCheckTimer) clearInterval(staleCheckTimer);
+    staleCheckTimer = setInterval(() => {
+      if (lastMessageTime > 0 && Date.now() - lastMessageTime > 15000) {
+        console.warn('[WS] connection stale, reconnecting');
+        ws.close();
+      }
+    }, 5000);
     sendMessage({ type: 'set_locale', locale: getLocale() });
     onLocaleChange((l) => sendMessage({ type: 'set_locale', locale: l }));
   };
 
   ws.onmessage = (ev) => {
+    lastMessageTime = Date.now();
     try {
       const msg = JSON.parse(ev.data) as WSMessage;
       switch (msg.type) {
@@ -103,6 +114,7 @@ export function connectWs(): void {
   ws.onclose = () => {
     setWsConnected(false);
     socket = null;
+    if (staleCheckTimer) { clearInterval(staleCheckTimer); staleCheckTimer = null; }
     scheduleReconnect();
   };
 

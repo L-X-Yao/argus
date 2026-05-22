@@ -19,3 +19,10 @@ tile_cache/
 srtm_cache/
 .gcs_token
 .pytest_cache/
+.ruff_cache/
+.env
+.env.*
+.DS_Store
+Thumbs.db
+*.swp
+*~

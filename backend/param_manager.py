@@ -95,8 +95,12 @@ class ParamManager:
         return path
 
     def load_from_file(self, path: str) -> list[str]:
-        with open(path, encoding='utf-8') as f:
-            data = json.load(f)
+        try:
+            with open(path, encoding='utf-8') as f:
+                data = json.load(f)
+        except (json.JSONDecodeError, OSError) as e:
+            self._link.add_event('Param load error: %s' % e, 'param_load_err')
+            return []
         changed = []
         for name, value in data.items():
             current = self.params.get(name)
