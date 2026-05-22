@@ -1,5 +1,4 @@
 """Unit tests for WSManager delta push and state management."""
-import asyncio
 import json
 import sys
 from pathlib import Path

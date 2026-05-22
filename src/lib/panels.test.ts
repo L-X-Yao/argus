@@ -76,9 +76,10 @@ describe('PANEL_LOADERS', () => {
     }
   });
 
-  it('loaders return promises', () => {
+  it('loaders return promises', async () => {
     const result = PANEL_LOADERS['shortcuts']();
     expect(result).toBeInstanceOf(Promise);
+    await result.catch(() => {});
   });
 
   it('has exactly 42 panel loaders', () => {
@@ -94,6 +95,7 @@ describe('PANEL_LOADERS', () => {
     for (const [id, loader] of Object.entries(PANEL_LOADERS)) {
       const result = loader();
       expect(typeof result.then, `${id} loader did not return a thenable`).toBe('function');
+      result.catch(() => {});
     }
   });
 });

@@ -12,6 +12,8 @@
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
+    "ignoreDeprecations": "6.0",
+    "noUncheckedSideEffectImports": false,
     "baseUrl": ".",
     "paths": {
       "$lib": ["./src/lib"],

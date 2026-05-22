@@ -74,11 +74,13 @@ async function freshConnect() {
     close: vi.fn(),
     readyState: 1,
   };
-  const WsMock = vi.fn(() => mockWs) as any;
-  WsMock.OPEN = 1;
-  WsMock.CLOSED = 3;
-  WsMock.CONNECTING = 0;
-  WsMock.CLOSING = 2;
+  class WsMock {
+    static OPEN = 1;
+    static CLOSED = 3;
+    static CONNECTING = 0;
+    static CLOSING = 2;
+    constructor() { return mockWs as unknown as WsMock; }
+  }
   vi.stubGlobal('WebSocket', WsMock);
   const mod = await import('./ws');
   mod.connectWs();

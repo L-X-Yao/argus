@@ -1,4 +1,5 @@
 /// <reference types="leaflet" />
+/// <reference types="node" />
 import type * as LeafletTypes from 'leaflet';
 declare global {
   const L: typeof LeafletTypes;

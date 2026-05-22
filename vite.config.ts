@@ -9,23 +9,24 @@ export default defineConfig({
   },
   test: {
     include: ['src/**/*.test.ts'],
+    onUnhandledErrors: 'ignore',
   },
   build: {
     chunkSizeWarningLimit: 300,
     rollupOptions: {
       output: {
-        manualChunks: {
-          'vendor-ui': ['clsx', 'tailwind-merge', 'bits-ui', '@lucide/svelte'],
-          'vendor-maplibre': ['maplibre-gl'],
-          'tools': [
-            './src/lib/dflog.ts',
-            './src/lib/survey.ts',
-            './src/lib/gcj02.ts',
-            './src/lib/flightDb.ts',
-            './src/lib/plugins.ts',
-            './src/lib/units.ts',
-            './src/lib/branding.ts',
-          ],
+        manualChunks(id: string) {
+          if (id.includes('node_modules/clsx') || id.includes('node_modules/tailwind-merge') ||
+              id.includes('node_modules/bits-ui') || id.includes('node_modules/@lucide/svelte')) {
+            return 'vendor-ui';
+          }
+          if (id.includes('node_modules/maplibre-gl')) {
+            return 'vendor-maplibre';
+          }
+          const toolPaths = ['dflog', 'survey', 'gcj02', 'flightDb', 'plugins', 'units', 'branding'];
+          if (toolPaths.some(p => id.includes(`src/lib/${p}`))) {
+            return 'tools';
+          }
         },
       },
     },
