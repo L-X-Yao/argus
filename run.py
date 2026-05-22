@@ -42,10 +42,18 @@ def main():
     print('  Ctrl+C to stop')
     print('=' * 50)
 
-    webbrowser.open('http://localhost:%d' % args.port)
+    import os
+    if not os.environ.get('ARGUS_NO_BROWSER'):
+        webbrowser.open('http://localhost:%d' % args.port)
 
     try:
         import uvicorn
+        if sys.platform == 'win32':
+            import asyncio
+            import warnings
+            with warnings.catch_warnings():
+                warnings.simplefilter('ignore', DeprecationWarning)
+                asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
         uvicorn.run(
             'backend.app:app',
             host=args.host,

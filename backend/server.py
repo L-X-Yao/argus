@@ -45,6 +45,13 @@ def main():
 
     logging.getLogger('uvicorn.error').setLevel(logging.WARNING)
 
+    if sys.platform == 'win32':
+        import asyncio
+        import warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter('ignore', DeprecationWarning)
+            asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
     uvicorn.run(
         'backend.app:app',
         host=args.host,
