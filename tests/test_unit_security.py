@@ -137,6 +137,7 @@ class TestWsValidationConfig:
 class TestMbtilesPathTraversal:
     def test_dotdot_in_name_rejected(self):
         from fastapi.testclient import TestClient
+
         from backend.app import app
         client = TestClient(app)
         r = client.get('/api/mbtiles/../../etc/passwd.mbtiles/0/0/0')
@@ -144,6 +145,7 @@ class TestMbtilesPathTraversal:
 
     def test_absolute_path_rejected(self):
         from fastapi.testclient import TestClient
+
         from backend.app import app
         client = TestClient(app)
         r = client.get('/api/mbtiles/%2F..%2F..%2Fetc%2Fpasswd.mbtiles/0/0/0')
@@ -156,6 +158,7 @@ class TestMbtilesPathTraversal:
 class TestFirmwareUploadSanitization:
     def test_traversal_filename_sanitized(self):
         from fastapi.testclient import TestClient
+
         from backend.app import app
         client = TestClient(app)
         with patch.object(Path, 'write_bytes'):
@@ -170,6 +173,7 @@ class TestFirmwareUploadSanitization:
 
     def test_non_apj_rejected(self):
         from fastapi.testclient import TestClient
+
         from backend.app import app
         client = TestClient(app)
         r = client.post(

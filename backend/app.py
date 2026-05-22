@@ -107,7 +107,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title='Argus GCS API',
     description='Universal Web Ground Control Station — REST API for MAVLink vehicle control',
-    version='3.3.0',
+    version='3.4.0',
     lifespan=lifespan,
 )
 
@@ -168,7 +168,7 @@ async def api_version():
     except (OSError, subprocess.SubprocessError):
         pass
     return {
-        'version': '3.3.0',
+        'version': '3.4.0',
         'git': git_hash,
         'protocols': ['standard', 'pllink'],
         'vehicles': ['copter', 'plane', 'rover', 'sub'],

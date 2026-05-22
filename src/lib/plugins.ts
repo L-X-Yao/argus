@@ -37,7 +37,7 @@ export function getPanels(): HTMLElement[] { return _panelContainer; }
 
 export function createPluginAPI(): PluginAPI {
   return {
-    version: '3.3.0',
+    version: '3.4.0',
 
     getDroneState() {
       return { ...app.drone };

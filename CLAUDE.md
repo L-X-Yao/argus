@@ -1,14 +1,14 @@
 # Argus GCS
 
 Universal web-based ground control station for MAVLink drones.
-Repo: `github.com/L-X-Yao/argus`, branch: `main`, version: `3.3.0`
+Repo: `github.com/L-X-Yao/argus`, branch: `main`, version: `3.4.0`
 
 ## Tech Stack
 
 - **Frontend**: Svelte 5 (runes) + TypeScript 6 + Vite 8 + Tailwind CSS 4 + Leaflet + MapLibre GL
 - **Backend**: Python 3.10+ + FastAPI + uvicorn + pyserial + websockets
 - **Protocol**: MAVLink v2 (standard + PL-Link wrapper), ArduPilot + PX4
-- **Tests**: pytest (backend, 929 tests), vitest 4 (frontend, 400 tests), Playwright (E2E, 19 specs)
+- **Tests**: pytest (backend, 927 tests), vitest 4 (frontend, 400 tests), Playwright (E2E, 19 specs)
 - **Lint**: ruff (Python), svelte-check (TypeScript/Svelte)
 - **CI**: GitHub Actions — lint → test → type-check → build → E2E
 

@@ -18,7 +18,7 @@ describe('plugins', () => {
 
   it('createPluginAPI returns an object with version and event methods', () => {
     const api = createPluginAPI();
-    expect(api.version).toBe('3.3.0');
+    expect(api.version).toBe('3.4.0');
     expect(typeof api.subscribe).toBe('function');
     expect(typeof api.emit).toBe('function');
   });
