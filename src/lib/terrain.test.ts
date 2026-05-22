@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeAll } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 
 // backend.ts accesses `window` at module scope — stub before import
 vi.stubGlobal('window', { location: { protocol: 'http:', host: 'localhost' } });

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
-  app, loadDownloadedMission, pushUndo, addWaypoint, clearWaypoints,
+  app, loadDownloadedMission, addWaypoint,
 } from './stores.svelte';
 import type { Waypoint } from './types';
 

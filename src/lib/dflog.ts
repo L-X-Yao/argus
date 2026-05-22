@@ -22,10 +22,6 @@ export interface DFLog {
 const HEAD1 = 0xa3;
 const HEAD2 = 0x95;
 
-const FMT_SIZES: Record<string, number> = {
-  b: 1, B: 1, h: 2, H: 2, i: 4, I: 4, f: 4, d: 8, n: 4, N: 16, Z: 64, c: 2, C: 2, e: 4, E: 4, L: 4, M: 1, q: 8, Q: 8,
-};
-
 function readField(dv: DataView, offset: number, fmt: string): [number | string, number] {
   switch (fmt) {
     case 'b': return [dv.getInt8(offset), 1];

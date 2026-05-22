@@ -8,7 +8,7 @@
  */
 
 import { parseFrames, encodeFrame, dispatchFrame } from './mavlink';
-import type { MavFrame, MessageHandlers } from './mavlink';
+import type { MessageHandlers } from './mavlink';
 import {
   encodeHeartbeat,
   encodeCommandLong,

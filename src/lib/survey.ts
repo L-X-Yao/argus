@@ -33,18 +33,6 @@ function rotatePoint(x: number, y: number, angle: number): [number, number] {
   return [x * c - y * s, x * s + y * c];
 }
 
-function lineSegIntersect(
-  ax: number, ay: number, bx: number, by: number,
-  cx: number, cy: number, dx: number, dy: number,
-): [number, number] | null {
-  const denom = (bx - ax) * (dy - cy) - (by - ay) * (dx - cx);
-  if (Math.abs(denom) < 1e-10) return null;
-  const t = ((cx - ax) * (dy - cy) - (cy - ay) * (dx - cx)) / denom;
-  const u = ((cx - ax) * (by - ay) - (cy - ay) * (bx - ax)) / denom;
-  if (t < 0 || t > 1 || u < 0 || u > 1) return null;
-  return [ax + t * (bx - ax), ay + t * (by - ay)];
-}
-
 export function generateSurveyGrid(polygon: Point[], config: SurveyConfig): Waypoint[] {
   if (polygon.length < 3) return [];
   const origin = polygon[0];

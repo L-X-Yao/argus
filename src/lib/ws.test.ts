@@ -87,7 +87,7 @@ async function freshConnect() {
 
 describe('connectWs', () => {
   it('creates a WebSocket and sets connected on open', async () => {
-    const { connectWs } = await freshConnect();
+    await freshConnect();
     mockWs.onopen?.(new Event('open'));
     const { setWsConnected } = await import('./stores.svelte');
     expect(setWsConnected).toHaveBeenCalledWith(true);

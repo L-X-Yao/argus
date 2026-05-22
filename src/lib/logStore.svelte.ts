@@ -21,7 +21,7 @@ export function setLogList(logs: LogEntry[]) {
   logState.list = logs;
 }
 
-export function startDownload(id: number, size: number) {
+export function startDownload(id: number, _size: number) {
   logState.downloading = true;
   logState.downloadId = id;
   logState.progress = 0;
@@ -56,7 +56,7 @@ export function updateDownloadProgress(received: number, total: number) {
   }
 }
 
-export function completeDownload(id: number, b64data: string, size: number) {
+export function completeDownload(id: number, b64data: string, _size: number) {
   logState.downloading = false;
   logState.downloadId = -1;
   logState.progress = 100;

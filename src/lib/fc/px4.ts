@@ -17,16 +17,13 @@ const PX4_MAIN_OFFBOARD = 6;
 const PX4_MAIN_STABILIZED = 7;
 const PX4_MAIN_RATTITUDE = 8;
 
-const PX4_AUTO_READY = 1;
 const PX4_AUTO_TAKEOFF = 2;
 const PX4_AUTO_LOITER = 3;
 const PX4_AUTO_MISSION = 4;
 const PX4_AUTO_RTL = 5;
 const PX4_AUTO_LAND = 6;
-const PX4_AUTO_RTGS = 7;
 const PX4_AUTO_FOLLOW = 8;
 const PX4_AUTO_PRECLAND = 9;
-const PX4_AUTO_VTOL_TAKEOFF = 10;
 
 function px4ModeId(main: number, sub: number = 0): number {
   return (sub << 24) | (main << 16);
