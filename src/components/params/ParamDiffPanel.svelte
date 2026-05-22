@@ -34,13 +34,13 @@
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.param,.txt';
-    input.onchange = (e: any) => {
-      const file = e.target.files[0];
+    input.onchange = (e: Event) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
       fileName = file.name;
       const reader = new FileReader();
-      reader.onload = (ev: any) => {
-        const text: string = ev.target.result;
+      reader.onload = (ev: ProgressEvent<FileReader>) => {
+        const text = ev.target!.result as string;
         fileParams = parseParamFile(text);
         filter = 'diff';
         applied = new Set();
@@ -169,8 +169,8 @@
 
 <svelte:window onkeydown={onKey} />
 
-<div role="presentation" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm"
-     onclick={onclose}>
+<div role="dialog" aria-modal="true" tabindex="-1" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+     onclick={onclose} onkeydown={(e) => { if (e.key === "Escape") onclose(); }}>
   <div class="bg-card border border-border rounded-xl shadow-2xl w-[600px] max-w-[95vw] max-h-[85vh] flex flex-col"
        onclick={(e) => e.stopPropagation()}>
 

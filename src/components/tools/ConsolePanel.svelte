@@ -71,8 +71,8 @@
   });
 </script>
 
-<div role="presentation" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center" onclick={onclose}>
-    <div role="presentation" class="bg-card border border-border rounded-2xl overflow-hidden w-[640px] max-w-[95vw] h-[520px] max-h-[85vh] shadow-2xl flex flex-col" onclick={(e) => e.stopPropagation()}>
+<div role="dialog" aria-modal="true" tabindex="-1" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center" onclick={onclose} onkeydown={(e) => { if (e.key === "Escape") onclose(); }}>
+    <div role="presentation" class="bg-card border border-border rounded-2xl overflow-hidden w-[640px] max-w-[95vw] h-[520px] max-h-[85vh] shadow-2xl flex flex-col" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
 
     <!-- Header -->
     <div class="bg-gradient-to-r from-primary/20 to-primary/5 px-4 py-2.5 flex items-center justify-between shrink-0">

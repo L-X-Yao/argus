@@ -32,16 +32,16 @@
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.bin,.log';
-    input.onchange = (e: any) => {
-      const file = e.target.files[0];
+    input.onchange = (e: Event) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
       const reader = new FileReader();
-      reader.onload = (ev: any) => {
+      reader.onload = (ev: ProgressEvent<FileReader>) => {
         try {
-          log = parseDFLog(ev.target.result);
+          log = parseDFLog(ev.target!.result as ArrayBuffer);
           addToast(`FFT: ${log.messages.length} messages`, 'success');
-        } catch (err: any) {
-          addToast('Parse error: ' + err.message, 'error');
+        } catch (err: unknown) {
+          addToast('Parse error: ' + (err instanceof Error ? err.message : String(err)), 'error');
         }
       };
       reader.readAsArrayBuffer(file);
@@ -278,7 +278,7 @@
   });
 </script>
 
-<div role="presentation" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center" onclick={onclose}>
+<div role="dialog" aria-modal="true" tabindex="-1" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center" onclick={onclose} onkeydown={(e) => { if (e.key === "Escape") onclose(); }}>
   <div class="bg-card border border-border rounded-2xl overflow-hidden w-[750px] max-h-[85vh] shadow-2xl flex flex-col" onclick={(e) => e.stopPropagation()}>
     <div class="bg-gradient-to-r from-primary/20 to-primary/5 px-5 py-3 flex items-center justify-between shrink-0">
       <div class="flex items-center gap-2">

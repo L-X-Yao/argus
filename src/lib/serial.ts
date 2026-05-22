@@ -94,8 +94,8 @@ export async function serialReadLoop(
       if (done) break;
       if (value) onData(value);
     }
-  } catch (e: any) {
-    if (e?.name !== 'AbortError') throw e;
+  } catch (e: unknown) {
+    if (!(e instanceof Error) || e.name !== 'AbortError') throw e;
   } finally {
     reader.releaseLock();
   }

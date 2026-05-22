@@ -9,7 +9,7 @@
 
   let vehicles = $derived(app.drone.vehicles || []);
 
-  function statusColor(v: any): string {
+  function statusColor(v: { armed?: boolean; t?: number }): string {
     if (v.armed) return 'bg-destructive';
     if (Date.now() / 1000 - (v.t || 0) > 5) return 'bg-muted-foreground/30';
     return 'bg-green-500';
@@ -21,8 +21,8 @@
   }
 </script>
 
-<div role="presentation" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
-     onclick={(e) => { if (e.target === e.currentTarget) onclose(); }}>
+<div role="dialog" aria-modal="true" tabindex="-1" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+     onclick={(e) => { if (e.target === e.currentTarget) onclose(); }} onkeydown={(e) => { if (e.key === "Escape") onclose(); }}>
   <div class="bg-card border border-border rounded-xl shadow-2xl w-[500px] max-h-[80vh] flex flex-col overflow-hidden">
     <div class="flex items-center justify-between px-4 py-3 border-b border-border">
       <div class="flex items-center gap-2">

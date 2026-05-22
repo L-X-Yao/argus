@@ -33,7 +33,8 @@
     <div bind:this={dialogEl}
          class="bg-card border border-border rounded-xl shadow-2xl p-5 w-[360px] max-w-[90vw]"
          role="alertdialog" aria-modal="true" aria-labelledby="confirm-msg" tabindex="-1"
-         onclick={(e) => e.stopPropagation()}>
+         onclick={(e) => e.stopPropagation()}
+         onkeydown={(e) => e.stopPropagation()}>
       <div class="flex items-start gap-3 mb-4">
         {#if confirmState.danger}
           <div class="shrink-0 w-9 h-9 rounded-full bg-destructive/15 flex items-center justify-center">

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { app, pushUndo, saveWaypoints, addToast } from '../../lib/stores.svelte';
+  import type { Waypoint } from '../../lib/types';
   import Button from '$lib/components/ui/button/button.svelte';
   import { X, Sparkles, Send, Loader2 } from '@lucide/svelte';
 
@@ -56,7 +57,7 @@
     vehicleType: string;
   }
 
-  function parseLocalCommand(text: string, ctx: PlanContext): { message: string; waypoints?: any[] } | null {
+  function parseLocalCommand(text: string, ctx: PlanContext): { message: string; waypoints?: Waypoint[] } | null {
     const lower = text.toLowerCase();
 
     if (lower.includes('circle') || lower.includes('圆') || lower.includes('环绕')) {
@@ -72,7 +73,7 @@
         const angle = (i / count) * 2 * Math.PI;
         const dlat = radius * Math.cos(angle) / 111320;
         const dlon = radius * Math.sin(angle) / (111320 * Math.cos(center.lat * Math.PI / 180));
-        wps.push({ lat: center.lat + dlat, lon: center.lon + dlon, alt, drop: false, delay: 0, speed: 0, type: 'wp', loiter_param: 0 });
+        wps.push({ lat: center.lat + dlat, lon: center.lon + dlon, alt, drop: false, delay: 0, speed: 0, type: 'wp' as const, loiter_param: 0 });
       }
       return { message: `Generated ${count}-point circle, radius ${radius}m, altitude ${alt}m`, waypoints: wps };
     }
@@ -94,7 +95,7 @@
         for (const y of [y1, y2]) {
           const dlat = y / 111320;
           const dlon = x / (111320 * Math.cos(center.lat * Math.PI / 180));
-          wps.push({ lat: center.lat + dlat, lon: center.lon + dlon, alt, drop: false, delay: 0, speed: 0, type: 'wp', loiter_param: 0 });
+          wps.push({ lat: center.lat + dlat, lon: center.lon + dlon, alt, drop: false, delay: 0, speed: 0, type: 'wp' as const, loiter_param: 0 });
         }
       }
       return { message: `Generated ${w}×${h}m survey grid, ${wps.length} waypoints at ${alt}m`, waypoints: wps };
@@ -129,7 +130,7 @@
   }
 </script>
 
-<div role="presentation" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center" onclick={onclose}>
+<div role="dialog" aria-modal="true" tabindex="-1" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center" onclick={onclose} onkeydown={(e) => { if (e.key === "Escape") onclose(); }}>
   <div class="bg-card border border-border rounded-2xl overflow-hidden w-[550px] max-h-[80vh] shadow-2xl flex flex-col" onclick={(e) => e.stopPropagation()}>
     <div class="bg-gradient-to-r from-purple-500/20 to-primary/5 px-5 py-3 flex items-center justify-between shrink-0">
       <div class="flex items-center gap-2">

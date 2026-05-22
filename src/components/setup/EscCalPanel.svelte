@@ -35,7 +35,7 @@
   ]);
 </script>
 
-<div role="presentation" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center" onclick={onclose}>
+<div role="dialog" aria-modal="true" tabindex="-1" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center" onclick={onclose} onkeydown={(e) => { if (e.key === "Escape") onclose(); }}>
   <div class="bg-card border border-border rounded-2xl overflow-hidden w-[420px] shadow-2xl" onclick={(e) => e.stopPropagation()}>
     <div class="bg-gradient-to-r from-warning/20 to-warning/5 px-5 py-3 flex items-center justify-between">
       <h3 class="text-base font-bold text-warning">{t('esccal.title')}</h3>

@@ -106,13 +106,13 @@
   function loadMission() {
     const input = document.createElement('input');
     input.type = 'file'; input.accept = '.json,.waypoints,.plan';
-    input.onchange = (e: any) => {
-      const file = e.target.files[0];
+    input.onchange = (e: Event) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
       const reader = new FileReader();
-      reader.onload = (ev: any) => {
+      reader.onload = (ev: ProgressEvent<FileReader>) => {
         try {
-          const text: string = ev.target.result;
+          const text = ev.target!.result as string;
           const name = file.name.toLowerCase();
           if (name.endsWith('.waypoints')) {
             handleQgcWaypoints(text);
@@ -156,18 +156,18 @@
   function importKml() {
     const input = document.createElement('input');
     input.type = 'file'; input.accept = '.kml';
-    input.onchange = (e: any) => {
-      const file = e.target.files[0];
+    input.onchange = (e: Event) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
       const reader = new FileReader();
-      reader.onload = (ev: any) => {
+      reader.onload = (ev: ProgressEvent<FileReader>) => {
         try {
-          const wps = parseKmlCoords(ev.target.result, app.defaultAlt);
+          const wps = parseKmlCoords(ev.target!.result as string, app.defaultAlt);
           if (!wps.length) throw new Error('No coordinates');
           pushUndo();
           app.waypoints = wps;
           fitAfterLoad();
-        } catch (err: any) { addToast('KML: ' + err.message, 'error'); }
+        } catch (err: unknown) { addToast('KML: ' + (err instanceof Error ? err.message : String(err)), 'error'); }
       };
       reader.readAsText(file);
     };

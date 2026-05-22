@@ -241,9 +241,10 @@
   }
 </script>
 
-<div role="presentation" class="fixed inset-0 z-[99999] flex items-start justify-center pt-[15vh] bg-black/50 backdrop-blur-sm"
-     onclick={onclose}>
+<div role="dialog" aria-modal="true" tabindex="-1" aria-label={t('cmd.placeholder')} class="fixed inset-0 z-[99999] flex items-start justify-center pt-[15vh] bg-black/50 backdrop-blur-sm"
+     onclick={onclose} onkeydown={(e) => { if (e.key === "Escape") onclose(); }}>
   <div class="w-[520px] max-h-[60vh] bg-card border border-border rounded-xl shadow-2xl flex flex-col overflow-hidden"
+       role="presentation"
        onclick={(e) => e.stopPropagation()} onkeydown={onKeydown}>
     <div class="flex items-center gap-2 px-4 py-3 border-b border-border">
       <Search size={16} class="text-muted-foreground shrink-0" />
@@ -262,11 +263,12 @@
           </div>
           {#each categoryItems as item}
             {@const idx = flatList.indexOf(item)}
-            <!-- svelte-ignore a11y_no_static_element_interactions -->
             <div data-palette-idx={idx}
+                 role="option" tabindex="-1" aria-selected={idx === selectedIdx}
                  class="flex items-center gap-3 px-4 py-2 mx-1 rounded-lg cursor-pointer transition-colors
                    {idx === selectedIdx ? 'bg-primary/10 text-primary' : 'text-foreground hover:bg-muted'}"
                  onclick={() => doExec(item)}
+                 onkeydown={(e) => { if (e.key === 'Enter') doExec(item); }}
                  onmouseenter={() => selectedIdx = idx}>
               <item.icon size={15} class="shrink-0 opacity-60" />
               <span class="flex-1 text-sm truncate">{item.label}</span>

@@ -28,7 +28,7 @@
   import SlideConfirm from './components/shared/SlideConfirm.svelte';
   import CommandPalette from './components/shared/CommandPalette.svelte';
   import ReplayPanel from './components/tools/ReplayPanel.svelte';
-  let Map3DViewModule: any = $state(null);
+  let Map3DViewModule: Component | null = $state(null);
   $effect(() => {
     if (app.mapMode === '3d' && !Map3DViewModule) {
       import('./components/map/Map3DView.svelte').then(m => Map3DViewModule = m.default);

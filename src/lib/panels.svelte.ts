@@ -32,12 +32,11 @@ class PanelRegistry {
 
 export const panels = new PanelRegistry();
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const PANEL_LOADERS: Record<PanelId, () => Promise<{ default: any }>> = {
+export const PANEL_LOADERS: Record<PanelId, () => Promise<{ default: unknown }>> = {
   logPanel:      () => import('../components/tools/LogPanel.svelte'),
   video:         () => import('../components/vehicle/VideoOverlay.svelte'),
   calibration:   () => import('../components/setup/CalibrationPanel.svelte'),
-  shortcuts:     () => Promise.resolve({ default: null as any }),
+  shortcuts:     () => Promise.resolve({ default: null }),
   inspector:     () => import('../components/tools/InspectorPanel.svelte'),
   console:       () => import('../components/tools/ConsolePanel.svelte'),
   motorTest:     () => import('../components/setup/MotorTestPanel.svelte'),

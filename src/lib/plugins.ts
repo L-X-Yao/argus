@@ -11,7 +11,7 @@ export interface PluginManifest {
 
 export interface PluginInstance {
   manifest: PluginManifest;
-  module: any;
+  module: Record<string, unknown>;
   element?: HTMLElement;
   active: boolean;
 }
@@ -74,7 +74,7 @@ export function createPluginAPI(): PluginAPI {
     },
 
     showToast(msg: string, level = 'info') {
-      import('./stores.svelte').then(m => m.addToast(msg, level as any));
+      import('./stores.svelte').then(m => m.addToast(msg, level as 'info' | 'warn' | 'error' | 'success'));
     },
   };
 }
@@ -105,8 +105,8 @@ export function unloadPlugin(name: string) {
   const idx = _plugins.findIndex(p => p.manifest.name === name);
   if (idx >= 0) {
     const p = _plugins[idx];
-    if (p.module.destroy) p.module.destroy();
-    if (p.module.unmount) p.module.unmount();
+    if (typeof p.module.destroy === 'function') (p.module.destroy as () => void)();
+    if (typeof p.module.unmount === 'function') (p.module.unmount as () => void)();
     if (p.element) {
       const pi = _panelContainer.indexOf(p.element);
       if (pi >= 0) _panelContainer.splice(pi, 1);

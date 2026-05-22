@@ -67,15 +67,15 @@ log("Alt: " + drone.alt_rel + "m");
       const fn = new AsyncFunction('drone', 'send', 'wait', 'log', 'waypoints', code);
       await fn(api.drone, api.send, api.wait, api.log, api.waypoints);
       logs.push('[OK] Script completed');
-    } catch (err: any) {
-      logs.push(`[ERROR] ${err.message}`);
+    } catch (err: unknown) {
+      logs.push(`[ERROR] ${err instanceof Error ? err.message : String(err)}`);
     }
     output = [...logs];
     running = false;
   }
 </script>
 
-<div role="presentation" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center" onclick={onclose}>
+<div role="dialog" aria-modal="true" tabindex="-1" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center" onclick={onclose} onkeydown={(e) => { if (e.key === "Escape") onclose(); }}>
   <div class="bg-card border border-border rounded-2xl overflow-hidden w-[700px] max-h-[85vh] shadow-2xl flex flex-col" onclick={(e) => e.stopPropagation()}>
     <div class="bg-gradient-to-r from-green-500/20 to-primary/5 px-5 py-3 flex items-center justify-between shrink-0">
       <div class="flex items-center gap-2">

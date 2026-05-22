@@ -238,12 +238,12 @@
   function importParams() {
     const input = document.createElement('input');
     input.type = 'file'; input.accept = '.param,.txt';
-    input.onchange = (e: any) => {
-      const file = e.target.files[0];
+    input.onchange = (e: Event) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
       const reader = new FileReader();
-      reader.onload = (ev: any) => {
-        const text: string = ev.target.result;
+      reader.onload = (ev: ProgressEvent<FileReader>) => {
+        const text = ev.target!.result as string;
         const existing = new Map(paramState.list.map(p => [p.name, p.value]));
         let changed = 0;
         for (const line of text.split('\n')) {

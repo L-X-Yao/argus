@@ -411,7 +411,7 @@
         </button>
         {#if showVehicles}
                     <div role="presentation" class="absolute top-full right-0 mt-1 bg-card border border-border rounded-lg shadow-xl p-2 z-50 min-w-[200px]"
-               onclick={(e) => e.stopPropagation()}>
+               onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
             {#each app.drone.vehicles as v}
               <div class="flex items-center gap-2 px-2 py-1 text-xs border-b border-border/50 last:border-0">
                 <span class="font-mono font-bold text-primary">#{v.sysid}</span>

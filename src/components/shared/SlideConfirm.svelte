@@ -64,8 +64,8 @@
 <svelte:window onkeydown={(e) => { if (e.key === 'Escape' && slideState.visible) cancelSlide(); }} />
 
 {#if slideState.visible}
-    <div role="presentation" class="slide-backdrop" onclick={cancelSlide}>
-    <div class="slide-container" onclick={(e) => e.stopPropagation()}>
+    <div role="presentation" class="slide-backdrop" onclick={cancelSlide} onkeydown={(e) => { if (e.key === 'Escape') cancelSlide(); }}>
+    <div role="presentation" class="slide-container" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
       <div bind:this={trackEl} class="slide-track">
         <div class="slide-fill" style="width: {progress * 100}%; background: {c.fill}"></div>
         <div class="slide-label" style="color: {c.bg}; opacity: {done ? 1 : 0.5}">
@@ -75,7 +75,8 @@
             {slideState.text}
           {/if}
         </div>
-        <div class="slide-handle"
+        <div class="slide-handle" role="slider" tabindex="0" aria-label={slideState.text}
+             aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress * 100)}
              style="background: {c.bg}; transform: translateX({offsetPx}px); transition: {dragging ? 'none' : 'transform 0.3s ease-out'}"
              onpointerdown={onDown} onpointermove={onMove} onpointerup={onUp} onpointercancel={onUp}>
           {#if done}<Check size={18} />{:else}<ChevronRight size={18} />{/if}

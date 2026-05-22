@@ -37,8 +37,8 @@
   }
 </script>
 
-<div role="presentation" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9999] flex items-center justify-center" onclick={onclose}>
-    <div role="presentation" class="bg-card border border-border rounded-2xl overflow-hidden min-w-[340px] shadow-2xl" onclick={(e) => e.stopPropagation()}>
+<div role="dialog" aria-modal="true" tabindex="-1" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9999] flex items-center justify-center" onclick={onclose} onkeydown={(e) => { if (e.key === "Escape") onclose(); }}>
+    <div role="presentation" class="bg-card border border-border rounded-2xl overflow-hidden min-w-[340px] shadow-2xl" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
     <div class="bg-gradient-to-r from-primary/20 to-primary/5 px-5 py-3 flex items-center justify-between">
       <div>
         <h3 class="text-base font-bold text-primary">{t('summary.title')}</h3>

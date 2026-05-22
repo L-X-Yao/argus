@@ -35,8 +35,8 @@
   let { onclose }: { onclose: () => void } = $props();
 </script>
 
-<div role="presentation" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
-     onclick={(e) => { if (e.target === e.currentTarget) onclose(); }}>
+<div role="dialog" aria-modal="true" tabindex="-1" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+     onclick={(e) => { if (e.target === e.currentTarget) onclose(); }} onkeydown={(e) => { if (e.key === "Escape") onclose(); }}>
   <div class="bg-card border border-border rounded-xl shadow-2xl w-[520px] max-h-[80vh] flex flex-col overflow-hidden">
     <div class="flex items-center justify-between px-4 py-3 border-b border-border">
       <h2 class="text-sm font-semibold text-primary uppercase tracking-wider">{t('log.title')}</h2>

@@ -29,17 +29,17 @@
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.csv,.bin,.log';
-    input.onchange = (e: any) => {
-      const file = e.target.files[0];
+    input.onchange = (e: Event) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
       fileName = file.name;
       if (file.name.endsWith('.bin') || file.name.endsWith('.log')) {
         const reader = new FileReader();
-        reader.onload = (ev: any) => { parseBinLog(ev.target.result as ArrayBuffer); };
+        reader.onload = (ev: ProgressEvent<FileReader>) => { parseBinLog(ev.target!.result as ArrayBuffer); };
         reader.readAsArrayBuffer(file);
       } else {
         const reader = new FileReader();
-        reader.onload = (ev: any) => { parseCSV(ev.target.result as string); };
+        reader.onload = (ev: ProgressEvent<FileReader>) => { parseCSV(ev.target!.result as string); };
         reader.readAsText(file);
       }
     };
