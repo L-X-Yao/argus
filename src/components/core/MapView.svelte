@@ -190,8 +190,8 @@
     const pts = measurePts.map((p) => [p.ll.lat, p.ll.lng] as [number, number]);
 
     if (measureMode === 'area') {
-      if (measurePolygon) map.removeLayer(measurePolygon);
-      if (measureLabel) map.removeLayer(measureLabel);
+      if (measurePolygon) map!.removeLayer(measurePolygon);
+      if (measureLabel) map!.removeLayer(measureLabel);
       if (pts.length >= 3) {
         measurePolygon = L.polygon(pts, { color: '#ff5252', weight: 2, dashArray: '4,4', fillColor: '#ff5252', fillOpacity: 0.1 }).addTo(map!);
         const area = calcPolygonArea(measurePts.map((p) => p.ll));
@@ -204,16 +204,16 @@
           }),
         }).addTo(map!);
       } else if (pts.length >= 2) {
-        if (measureLine) map.removeLayer(measureLine);
+        if (measureLine) map!.removeLayer(measureLine);
         measureLine = L.polyline(pts, { color: '#ff5252', weight: 2, dashArray: '4,4' }).addTo(map!);
       }
     } else {
       if (measurePts.length >= 2) {
         let total = 0;
         for (let i = 1; i < measurePts.length; i++) total += map!.distance(measurePts[i - 1].ll, measurePts[i].ll);
-        if (measureLine) map.removeLayer(measureLine);
+        if (measureLine) map!.removeLayer(measureLine);
         measureLine = L.polyline(pts, { color: '#ff5252', weight: 2, dashArray: '4,4' }).addTo(map!);
-        if (measureLabel) map.removeLayer(measureLabel);
+        if (measureLabel) map!.removeLayer(measureLabel);
         const last = measurePts[measurePts.length - 1].ll;
         const txt = total < 1000 ? `${total.toFixed(0)}m` : `${(total / 1000).toFixed(2)}km`;
         measureLabel = L.marker([last.lat, last.lng], {
@@ -231,9 +231,9 @@
     measuring = false;
     measurePts.forEach((p) => map!.removeLayer(p.marker));
     measurePts = [];
-    if (measureLine) { map.removeLayer(measureLine); measureLine = null; }
-    if (measureLabel) { map.removeLayer(measureLabel); measureLabel = null; }
-    if (measurePolygon) { map.removeLayer(measurePolygon); measurePolygon = null; }
+    if (measureLine) { map!.removeLayer(measureLine); measureLine = null; }
+    if (measureLabel) { map!.removeLayer(measureLabel); measureLabel = null; }
+    if (measurePolygon) { map!.removeLayer(measurePolygon); measurePolygon = null; }
   }
 
   function toggleMeasure(mode: 'distance' | 'area') {
