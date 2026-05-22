@@ -415,7 +415,7 @@
   });
 </script>
 
-<div class="bg-card border border-border rounded-xl p-3 w-72 shrink-0 overflow-hidden flex flex-col">
+<div class="bg-card border border-border rounded-xl p-3 w-72 max-sm:w-full shrink-0 overflow-hidden flex flex-col">
   <div class="flex items-center gap-2 mb-2">
     <h2 class="text-sm font-semibold text-primary uppercase tracking-wider">{t('wp.title')}</h2>
     <span class="text-xs text-muted-foreground">({app.waypoints.length})</span>

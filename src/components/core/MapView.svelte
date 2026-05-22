@@ -107,7 +107,7 @@
       mouseCoord = `${wlat.toFixed(6)}, ${wlon.toFixed(6)}`;
     });
     window.addEventListener('keydown', onKeyDown);
-    setTimeout(() => map!.invalidateSize(), 100);
+    setTimeout(() => map.invalidateSize(), 100);
     return () => {
       window.removeEventListener('keydown', onKeyDown);
       if (map) { map.remove(); map = null; }
@@ -185,15 +185,15 @@
   }
 
   function addMeasurePoint(ll: L.LatLng) {
-    const cm = L.circleMarker([ll.lat, ll.lng], { radius: 4, color: '#ff5252', fillColor: '#ff5252', fillOpacity: 1 }).addTo(map!);
+    const cm = L.circleMarker([ll.lat, ll.lng], { radius: 4, color: '#ff5252', fillColor: '#ff5252', fillOpacity: 1 }).addTo(map);
     measurePts.push({ marker: cm, ll });
     const pts = measurePts.map((p) => [p.ll.lat, p.ll.lng] as [number, number]);
 
     if (measureMode === 'area') {
-      if (measurePolygon) map!.removeLayer(measurePolygon);
-      if (measureLabel) map!.removeLayer(measureLabel);
+      if (measurePolygon) map.removeLayer(measurePolygon);
+      if (measureLabel) map.removeLayer(measureLabel);
       if (pts.length >= 3) {
-        measurePolygon = L.polygon(pts, { color: '#ff5252', weight: 2, dashArray: '4,4', fillColor: '#ff5252', fillOpacity: 0.1 }).addTo(map!);
+        measurePolygon = L.polygon(pts, { color: '#ff5252', weight: 2, dashArray: '4,4', fillColor: '#ff5252', fillOpacity: 0.1 }).addTo(map);
         const area = calcPolygonArea(measurePts.map((p) => p.ll));
         const center = measurePolygon.getBounds().getCenter();
         measureLabel = L.marker(center, {
@@ -202,18 +202,18 @@
             html: `<div style="background:rgba(30,30,30,0.9);color:#ff5252;padding:2px 6px;border-radius:3px;font-size:11px;font-weight:bold;white-space:nowrap">${fmtArea(area)}</div>`,
             iconAnchor: [0, 0],
           }),
-        }).addTo(map!);
+        }).addTo(map);
       } else if (pts.length >= 2) {
-        if (measureLine) map!.removeLayer(measureLine);
-        measureLine = L.polyline(pts, { color: '#ff5252', weight: 2, dashArray: '4,4' }).addTo(map!);
+        if (measureLine) map.removeLayer(measureLine);
+        measureLine = L.polyline(pts, { color: '#ff5252', weight: 2, dashArray: '4,4' }).addTo(map);
       }
     } else {
       if (measurePts.length >= 2) {
         let total = 0;
-        for (let i = 1; i < measurePts.length; i++) total += map!.distance(measurePts[i - 1].ll, measurePts[i].ll);
-        if (measureLine) map!.removeLayer(measureLine);
-        measureLine = L.polyline(pts, { color: '#ff5252', weight: 2, dashArray: '4,4' }).addTo(map!);
-        if (measureLabel) map!.removeLayer(measureLabel);
+        for (let i = 1; i < measurePts.length; i++) total += map.distance(measurePts[i - 1].ll, measurePts[i].ll);
+        if (measureLine) map.removeLayer(measureLine);
+        measureLine = L.polyline(pts, { color: '#ff5252', weight: 2, dashArray: '4,4' }).addTo(map);
+        if (measureLabel) map.removeLayer(measureLabel);
         const last = measurePts[measurePts.length - 1].ll;
         const txt = total < 1000 ? `${total.toFixed(0)}m` : `${(total / 1000).toFixed(2)}km`;
         measureLabel = L.marker([last.lat, last.lng], {
@@ -222,7 +222,7 @@
             html: `<div style="background:rgba(30,30,30,0.9);color:#ff5252;padding:2px 6px;border-radius:3px;font-size:11px;font-weight:bold;white-space:nowrap">${txt}</div>`,
             iconAnchor: [0, -10],
           }),
-        }).addTo(map!);
+        }).addTo(map);
       }
     }
   }
@@ -231,9 +231,9 @@
     measuring = false;
     measurePts.forEach((p) => map!.removeLayer(p.marker));
     measurePts = [];
-    if (measureLine) { map!.removeLayer(measureLine); measureLine = null; }
-    if (measureLabel) { map!.removeLayer(measureLabel); measureLabel = null; }
-    if (measurePolygon) { map!.removeLayer(measurePolygon); measurePolygon = null; }
+    if (measureLine) { map.removeLayer(measureLine); measureLine = null; }
+    if (measureLabel) { map.removeLayer(measureLabel); measureLabel = null; }
+    if (measurePolygon) { map.removeLayer(measurePolygon); measurePolygon = null; }
   }
 
   function toggleMeasure(mode: 'distance' | 'area') {
@@ -275,8 +275,8 @@
             if (pts.length < 2) continue;
             const isPolygon = pm.getElementsByTagName('Polygon').length > 0;
             const layer = isPolygon
-              ? L.polygon(pts, { color: '#e040fb', weight: 2, fillOpacity: 0.1 }).addTo(map!)
-              : L.polyline(pts, { color: '#e040fb', weight: 2 }).addTo(map!);
+              ? L.polygon(pts, { color: '#e040fb', weight: 2, fillOpacity: 0.1 }).addTo(map)
+              : L.polyline(pts, { color: '#e040fb', weight: 2 }).addTo(map);
             const name = pm.getElementsByTagName('name')[0]?.textContent || '';
             if (name) layer.bindTooltip(name, { permanent: false });
             kmlLayers.push(layer);
@@ -291,30 +291,30 @@
   }
 
   function clearKmlOverlay() {
-    kmlLayers.forEach(l => map!.removeLayer(l));
+    kmlLayers.forEach(l => map.removeLayer(l));
     kmlLayers = [];
   }
 
   function toggleMapType() {
     isSat = !isSat;
     if (isSat) {
-      map!.removeLayer(vecLayer!);
-      map!.addLayer(satLayer!);
-      if (labelLayer) map!.addLayer(labelLayer);
+      map.removeLayer(vecLayer);
+      map.addLayer(satLayer);
+      map.addLayer(labelLayer);
     } else {
-      map!.removeLayer(satLayer!);
-      if (labelLayer) map!.removeLayer(labelLayer);
-      map!.addLayer(vecLayer!);
+      map.removeLayer(satLayer);
+      map.removeLayer(labelLayer);
+      map.addLayer(vecLayer);
     }
   }
 
   function fitRoute() {
     const pts = app.waypoints.map(w => toMap(w.lat, w.lon));
-    if (pts.length) map!.fitBounds(L.latLngBounds(pts), { padding: [40, 40] });
+    if (pts.length) map.fitBounds(L.latLngBounds(pts), { padding: [40, 40] });
   }
 
   function centerHome() {
-    if (app.drone.home_lat) map!.setView(toMap(app.drone.home_lat, app.drone.home_lon), 16);
+    if (app.drone.home_lat) map.setView(toMap(app.drone.home_lat, app.drone.home_lon), 16);
   }
 
   function exportTrack() {

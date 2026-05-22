@@ -4,11 +4,11 @@
 
 
   type CoordFn = (lat: number, lon: number) => [number, number];
-  let { map, target = $bindable(null), coord }: { map: any; target: { lat: number; lon: number; alt: number } | null; coord: CoordFn } = $props();
+  let { map, target = $bindable(null), coord }: { map: L.Map; target: { lat: number; lon: number; alt: number } | null; coord: CoordFn } = $props();
 
-  let guidedMarker: any = null;
-  let guidedLine: any = null;
-  let guidedLabel: any = null;
+  let guidedMarker: L.CircleMarker | null = null;
+  let guidedLine: L.Polyline | null = null;
+  let guidedLabel: L.Marker | null = null;
 
   $effect(() => {
     if (guidedMarker) { map.removeLayer(guidedMarker); guidedMarker = null; }

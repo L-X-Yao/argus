@@ -4,11 +4,11 @@
 
 
   type CoordFn = (lat: number, lon: number) => [number, number];
-  let { map, follow, coord }: { map: any; follow: boolean; coord: CoordFn } = $props();
+  let { map, follow, coord }: { map: L.Map; follow: boolean; coord: CoordFn } = $props();
 
-  let marker: any = null;
+  let marker: L.Marker | null = null;
   let trail: [number, number][] = [];
-  let trailLine: any = null;
+  let trailLine: L.Polyline | null = null;
 
   $effect(() => {
     const rp = app.replayPos;

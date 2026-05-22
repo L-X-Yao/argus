@@ -4,10 +4,10 @@
 
 
   type CoordFn = (lat: number, lon: number) => [number, number];
-  let { map, coord }: { map: any; coord: CoordFn } = $props();
+  let { map, coord }: { map: L.Map; coord: CoordFn } = $props();
 
-  let polyLayer: any = null;
-  let vertMarkers: any[] = [];
+  let polyLayer: L.Polygon | L.Polyline | null = null;
+  let vertMarkers: L.CircleMarker[] = [];
 
   $effect(() => {
     vertMarkers.forEach(m => map.removeLayer(m));

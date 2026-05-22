@@ -5,14 +5,14 @@
 
 
   type CoordFn = (lat: number, lon: number) => [number, number];
-  let { map, follow, trail, coord }: { map: any; follow: boolean; trail: [number, number][]; coord: CoordFn } = $props();
+  let { map, follow, trail, coord }: { map: L.Map; follow: boolean; trail: [number, number][]; coord: CoordFn } = $props();
 
-  let droneMarker: any = null;
-  let homeMarker: any = null;
-  let trailLine: any = null;
-  let velocityLine: any = null;
-  let homeLine: any = null;
-  let rangeRing: any = null;
+  let droneMarker: L.Marker | null = null;
+  let homeMarker: L.Marker | null = null;
+  let trailLine: L.Polyline | null = null;
+  let velocityLine: L.Polyline | null = null;
+  let homeLine: L.Polyline | null = null;
+  let rangeRing: L.Circle | null = null;
   let prevLat = 0;
   let prevLon = 0;
 
@@ -104,7 +104,7 @@
     }).addTo(map);
   });
 
-  let otherMarkers: Map<number, any> = new Map();
+  let otherMarkers: Map<number, L.Marker> = new Map();
 
   $effect(() => {
     const vehicles = app.drone.vehicles || [];
@@ -133,7 +133,7 @@
     }
   });
 
-  let adsbMarkers = new Map<number, any>();
+  let adsbMarkers = new Map<number, L.Marker>();
 
   $effect(() => {
     const adsb = app.drone.adsb || [];

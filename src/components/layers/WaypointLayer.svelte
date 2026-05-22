@@ -5,15 +5,15 @@
 
 
   type CoordFn = (lat: number, lon: number) => [number, number];
-  let { map, coord, coordInv }: { map: any; coord: CoordFn; coordInv: CoordFn } = $props();
+  let { map, coord, coordInv }: { map: L.Map; coord: CoordFn; coordInv: CoordFn } = $props();
 
-  let wpMarkers: any[] = [];
-  let wpLine: any = null;
-  let geoCircle: any = null;
-  let activeWpMarker: any = null;
-  let wpDistLabels: any[] = [];
-  let wpPopup: any = null;
-  let focusRing: any = null;
+  let wpMarkers: L.Marker[] = [];
+  let wpLine: L.Polyline | null = null;
+  let geoCircle: L.Circle | null = null;
+  let activeWpMarker: L.CircleMarker | null = null;
+  let wpDistLabels: L.Marker[] = [];
+  let wpPopup: L.Popup | null = null;
+  let focusRing: L.CircleMarker | null = null;
 
   $effect(() => {
     if (activeWpMarker) { map.removeLayer(activeWpMarker); activeWpMarker = null; }
@@ -56,7 +56,7 @@
         app.waypoints[i].lon = wlon;
         saveWaypoints();
       });
-      m.on('click', (e: any) => {
+      m.on('click', (e: L.LeafletMouseEvent) => {
         e.originalEvent?.stopPropagation();
         let segInfo = '';
         if (i > 0) {

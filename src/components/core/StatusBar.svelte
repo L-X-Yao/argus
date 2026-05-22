@@ -254,7 +254,7 @@
 <header class="flex items-center justify-between gap-3 px-3 max-sm:px-1.5 py-1.5 shrink-0 min-w-0 overflow-x-auto scrollbar-hide transition-colors duration-300
   {app.drone.armed ? 'bg-destructive/8 border-b-2 border-destructive/60' : 'bg-card border-b-2 border-border'}">
   <div class="flex items-center gap-2">
-    <span class="text-sm font-bold text-primary tracking-wider">{t('app.name')}</span>
+    <span class="text-sm font-bold text-primary tracking-wider max-sm:hidden">{t('app.name')}</span>
 
     <div class="flex items-center gap-1.5">
       {#if !app.drone.connected}
@@ -342,7 +342,7 @@
     </div>
   </div>
 
-  <div class="flex items-center gap-2 text-xs">
+  <div class="flex items-center gap-2 text-xs max-sm:gap-1 max-sm:text-[10px]">
     {#if app.drone.connected}
       <Badge variant={modeVariant} class="text-xs font-bold">{app.drone.mode}</Badge>
       {#if app.drone.armed}
@@ -362,7 +362,7 @@
         {#if app.linkHistory.length > 3}
           {@const pts = app.linkHistory.slice(-20)}
           {@const maxR = Math.max(...pts.map(p => p.rate), 1)}
-          <svg width="30" height="10" viewBox="0 0 30 10" class="shrink-0 opacity-50">
+          <svg width="30" height="10" viewBox="0 0 30 10" class="shrink-0 opacity-50 max-sm:hidden">
             <polyline fill="none" stroke={barColor} stroke-width="1"
               points={pts.map((p, i) => `${(i / (pts.length - 1)) * 30},${10 - (p.rate / maxR) * 9}`).join(' ')} />
           </svg>
@@ -397,7 +397,7 @@
       </span>
 
       {#if app.drone.fw_version}
-        <span class="text-muted-foreground text-[10px]">{app.drone.fw_version}</span>
+        <span class="text-muted-foreground text-[10px] max-sm:hidden">{app.drone.fw_version}</span>
       {/if}
       {#if app.drone.parse_errors > 0}
         <span class="text-[9px] text-destructive/70 font-mono" title={t('tip.parseErrors')}>E:{app.drone.parse_errors}</span>
