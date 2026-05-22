@@ -29,12 +29,10 @@
 
   // Sync marker
   let mouseX = $state(-1);
-  let markerTime = $state(-1);
   let markerValues = $state<{ label: string; value: number; color: string }[]>([]);
 
   // Table virtual scroll
   let tableScrollTop = $state(0);
-  let tableContainerEl: HTMLDivElement = $state(null!);
   const TABLE_ROW_H = 24;
   const TABLE_VISIBLE = 100;
 
@@ -232,7 +230,6 @@
       // Compute values at cursor
       const cursorFrac = (mouseX - plotLeft_) / plotW_;
       const cursorT = tStart + cursorFrac * tRange;
-      markerTime = cursorT;
       const vals: typeof markerValues = [];
       for (const ch of channelData) {
         // Binary search for nearest time
@@ -443,7 +440,7 @@
                   <span class="w-14 shrink-0">{t('logview.type')}</span>
                   <span class="flex-1">{t('logview.fields')}</span>
                 </div>
-                <div bind:this={tableContainerEl} class="h-[280px] overflow-auto" onscroll={onTableScroll}>
+                <div class="h-[280px] overflow-auto" onscroll={onTableScroll}>
                   <div style="height: {tableMessages.length * TABLE_ROW_H}px; position: relative;">
                     {#each tableVisibleRows as msg, i}
                       <div class="flex px-2 text-[10px] font-mono items-center border-b border-border/30 hover:bg-muted/20"

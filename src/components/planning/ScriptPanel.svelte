@@ -1,7 +1,6 @@
 <script lang="ts">
   import { app, addToast } from '../../lib/stores.svelte';
   import { sendCommand } from '../../lib/ws';
-  import { t } from '../../lib/i18n.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
   import { X, Play, Trash2, Save, FileText } from '@lucide/svelte';
 

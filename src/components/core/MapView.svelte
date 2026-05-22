@@ -308,8 +308,6 @@
     }
   }
 
-  function toggleExpand() { app.mapExpanded = !app.mapExpanded; setTimeout(() => map?.invalidateSize(), 100); }
-
   function fitRoute() {
     const pts = app.waypoints.map(w => toMap(w.lat, w.lon));
     if (pts.length) map.fitBounds(L.latLngBounds(pts), { padding: [40, 40] });

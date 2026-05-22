@@ -61,7 +61,7 @@
 
   $effect(() => {
     // track length to trigger scroll on new lines
-    const _len = inspectorState.consoleLines.length;
+    inspectorState.consoleLines.length;
     if (outputDiv) {
       // defer to allow DOM update
       requestAnimationFrame(() => {

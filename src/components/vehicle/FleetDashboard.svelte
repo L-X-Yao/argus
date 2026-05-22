@@ -3,7 +3,7 @@
   import { sendCommand } from '../../lib/ws';
   import { t } from '../../lib/i18n.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
-  import { X, Radio, Satellite, Shield, Activity } from '@lucide/svelte';
+  import { X, Radio } from '@lucide/svelte';
 
   let { onclose }: { onclose: () => void } = $props();
 

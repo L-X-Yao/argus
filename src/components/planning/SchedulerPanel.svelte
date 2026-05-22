@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { app, addToast } from '../../lib/stores.svelte';
+  import { addToast } from '../../lib/stores.svelte';
   import { sendCommand } from '../../lib/ws';
   import { t } from '../../lib/i18n.svelte';
   import { X, Clock, Calendar, Play, Trash2 } from '@lucide/svelte';

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { app, addToast } from '../../lib/stores.svelte';
+  import { app } from '../../lib/stores.svelte';
   import { t } from '../../lib/i18n.svelte';
   import { X, AlertTriangle, Plane as PlaneIcon } from '@lucide/svelte';
   import Button from '$lib/components/ui/button/button.svelte';

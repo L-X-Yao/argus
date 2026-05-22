@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { app, addToast } from '../../lib/stores.svelte';
+  import { addToast } from '../../lib/stores.svelte';
   import { t } from '../../lib/i18n.svelte';
   import { X, Image, Upload } from '@lucide/svelte';
   import Button from '$lib/components/ui/button/button.svelte';

@@ -10,8 +10,6 @@
 
   let filter = $state('');
   let expandedId = $state<number | null>(null);
-  let filterInput = $state<HTMLInputElement>(null!);
-
   let sorted = $derived.by(() => {
     let msgs = [...inspectorState.messages];
     if (filter) {
@@ -95,7 +93,6 @@
       <div class="relative">
         <Search size={14} class="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground pointer-events-none" />
         <input
-          bind:this={filterInput}
           type="text"
           placeholder={t('inspector.filter')}
           bind:value={filter}

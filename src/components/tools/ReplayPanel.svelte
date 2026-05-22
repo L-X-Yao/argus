@@ -1,7 +1,6 @@
 <script lang="ts">
-  import { app } from '../../lib/stores.svelte';
   import { t } from '../../lib/i18n.svelte';
-  import { parseDFLog, getTimeSeries, type DFLog } from '../../lib/dflog';
+  import { parseDFLog } from '../../lib/dflog';
   import Button from '$lib/components/ui/button/button.svelte';
   import { X, Play, Pause, SkipBack, SkipForward } from '@lucide/svelte';
 
@@ -24,7 +23,6 @@
   let timer: ReturnType<typeof setInterval> | null = null;
 
   let current = $derived(rows.length > 0 && cursor < rows.length ? rows[cursor] : null);
-  let progress = $derived(rows.length > 0 ? (cursor / (rows.length - 1)) * 100 : 0);
   let duration = $derived(rows.length > 0 ? rows[rows.length - 1].t : 0);
 
   function loadFile() {

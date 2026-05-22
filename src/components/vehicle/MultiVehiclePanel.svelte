@@ -1,6 +1,5 @@
 <script lang="ts">
   import { app, addToast } from '../../lib/stores.svelte';
-  import { sendCommand } from '../../lib/ws';
   import { t } from '../../lib/i18n.svelte';
   import { X, Plane, Radio } from '@lucide/svelte';
   import Button from '$lib/components/ui/button/button.svelte';
@@ -13,10 +12,6 @@
 
   let otherVehicles = $derived(
     app.drone.vehicles.filter(v => v.sysid !== activeSysid)
-  );
-
-  let activeVehicle = $derived(
-    app.drone.vehicles.find(v => v.sysid === activeSysid) ?? null
   );
 
   /* ── Mode name helper ── */

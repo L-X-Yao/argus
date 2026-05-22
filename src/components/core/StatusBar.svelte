@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { app, saveSettings, isPlane, addToast } from '../../lib/stores.svelte';
-  import { sendConnect, sendDisconnect, sendCommand } from '../../lib/ws';
+  import { sendConnect, sendDisconnect } from '../../lib/ws';
   import { t } from '../../lib/i18n.svelte';
   import { apiUrl } from '../../lib/backend';
   import { webSerialAvailable, connectSerial, disconnectSerial, isSerialConnected } from '../../lib/transport';

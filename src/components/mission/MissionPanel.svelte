@@ -6,7 +6,6 @@
 
   function fitAfterLoad() { requestAnimationFrame(() => app.fitRouteFlag++); }
   import { sendCommand } from '../../lib/ws';
-  import { toGcj } from '../../lib/gcj02';
   import Button from '$lib/components/ui/button/button.svelte';
 
   let showCircleGen = $state(false);
@@ -92,24 +91,6 @@
     });
     if (uploadTimer) clearTimeout(uploadTimer);
     uploadTimer = setTimeout(() => { uploading = false; uploadTimer = null; }, 3000);
-  }
-
-  async function armAndFly() {
-    if (!app.waypoints.length) return;
-    if (!await showConfirm(t('confirm.armAndFly').replace('{alt}', String(app.defaultAlt)), true)) return;
-    uploadMission();
-    addToast(t('toast.uploading'), 'info', 2000);
-    await new Promise(r => setTimeout(r, 1500));
-    sendCommand('arm');
-    addToast(t('toast.arming'), 'info', 2000);
-    await new Promise(r => setTimeout(r, 2500));
-    if (!app.drone.armed) { addToast(t('toast.armFail'), 'error'); return; }
-    sendCommand('takeoff', undefined, { alt: app.defaultAlt });
-    addToast(`${t('ctrl.takeoff')} ${app.defaultAlt}m...`, 'info', 3000);
-    await new Promise(r => setTimeout(r, 3000));
-    if (app.drone.alt_rel < 1) { addToast(t('toast.takeoffFail'), 'error'); return; }
-    sendCommand('mission_start');
-    addToast(t('toast.missionStart'), 'success');
   }
 
   function saveMission() {
@@ -423,7 +404,7 @@
       // Red highlight segments where waypoint is below ground
       for (let i = 0; i < wps.length; i++) {
         // Find the terrain elevation at this waypoint position
-        const wpElev = tElevs[tPts.findIndex((p, idx) => p.wpIndex === i)] ?? 0;
+        const wpElev = tElevs[tPts.findIndex((p, _idx) => p.wpIndex === i)] ?? 0;
         if (alts[i] < wpElev) {
           const x = (dists[i] / totalD) * w;
           const y = toY(alts[i]);

@@ -1,14 +1,14 @@
 <script lang="ts">
   import { app } from '../../lib/stores.svelte';
-  import { sendCommand, sendConnect, sendDisconnect } from '../../lib/ws';
+  import { sendCommand, sendDisconnect } from '../../lib/ws';
   import { t, i18nState, setLocale } from '../../lib/i18n.svelte';
-  import { isPlane, saveSettings, showSlide, showConfirm } from '../../lib/stores.svelte';
+  import { isPlane, saveSettings, showSlide } from '../../lib/stores.svelte';
   import { paramState } from '../../lib/paramStore.svelte';
   import type { Component } from 'svelte';
   import {
     Plane, MapPinned, Activity, Settings2, Radio, Wrench, Terminal, Search,
     Zap, CornerDownLeft, Play, Pause, ShieldAlert, Upload, Download, Trash2,
-    Sun, Moon, Volume2, VolumeOff, Globe, Mic, MicOff, Gamepad2,
+    Sun, Moon, Volume2, VolumeOff, Globe, Mic, MicOff,
     HardDrive, Video, RotateCcw, Power, Gauge, Navigation, Compass,
     ChevronRight,
   } from '@lucide/svelte';

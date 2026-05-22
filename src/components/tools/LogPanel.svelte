@@ -3,7 +3,6 @@
   import { sendCommand } from '../../lib/ws';
   import { t } from '../../lib/i18n.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
-  import Badge from '$lib/components/ui/badge/badge.svelte';
   import { X } from '@lucide/svelte';
 
   function requestList() {

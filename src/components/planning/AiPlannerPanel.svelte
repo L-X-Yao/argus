@@ -1,7 +1,5 @@
 <script lang="ts">
   import { app, pushUndo, saveWaypoints, addToast } from '../../lib/stores.svelte';
-  import { t } from '../../lib/i18n.svelte';
-  import { apiUrl } from '../../lib/backend';
   import Button from '$lib/components/ui/button/button.svelte';
   import { X, Sparkles, Send, Loader2 } from '@lucide/svelte';
 
@@ -10,7 +8,6 @@
   let prompt = $state('');
   let history: { role: 'user' | 'ai'; text: string }[] = $state([]);
   let loading = $state(false);
-  let apiKey = $state('');
 
   const EXAMPLES = [
     'Plan a rectangular survey at 50m altitude, 200m x 300m, centered on current position',
