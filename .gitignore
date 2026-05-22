@@ -19,6 +19,8 @@ tile_cache/
 srtm_cache/
 .gcs_token
 .pytest_cache/
+.coverage
+coverage/
 .ruff_cache/
 .env
 .env.*
