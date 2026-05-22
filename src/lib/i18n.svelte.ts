@@ -9,6 +9,7 @@ export const i18nState = new I18nState();
 import zh from './locales/zh';
 import en from './locales/en';
 
+let _dictVersion = $state(0);
 const loadedDicts: Partial<Record<Locale, Record<string, string>>> = { zh, en };
 
 const LOCALE_LOADERS: Record<Locale, () => Promise<{ default: Record<string, string> }>> = {
@@ -25,6 +26,7 @@ const LOCALE_LOADERS: Record<Locale, () => Promise<{ default: Record<string, str
 };
 
 function getDict(locale: Locale): Record<string, string> {
+  void _dictVersion;
   return loadedDicts[locale] || zh;
 }
 
@@ -36,7 +38,10 @@ export function setLocale(l: Locale) {
   i18nState.locale = l;
   try { localStorage.setItem('argus_locale', l); } catch {}
   if (!loadedDicts[l]) {
-    LOCALE_LOADERS[l]().then(mod => { loadedDicts[l] = mod.default; }).catch(() => {});
+    LOCALE_LOADERS[l]().then(mod => {
+      loadedDicts[l] = mod.default;
+      _dictVersion++;
+    }).catch(() => {});
   }
   _syncCallback?.(l);
 }
@@ -92,7 +97,10 @@ export function loadLocale() {
     if (saved && VALID_LOCALES.includes(saved as Locale)) {
       i18nState.locale = saved as Locale;
       if (!loadedDicts[saved as Locale]) {
-        LOCALE_LOADERS[saved as Locale]().then(mod => { loadedDicts[saved as Locale] = mod.default; }).catch(() => {});
+        LOCALE_LOADERS[saved as Locale]().then(mod => {
+          loadedDicts[saved as Locale] = mod.default;
+          _dictVersion++;
+        }).catch(() => {});
       }
     }
   } catch {}
