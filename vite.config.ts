@@ -16,6 +16,7 @@ export default defineConfig({
       output: {
         manualChunks: {
           'vendor-ui': ['clsx', 'tailwind-merge', 'bits-ui', '@lucide/svelte'],
+          'vendor-maplibre': ['maplibre-gl'],
           'tools': [
             './src/lib/dflog.ts',
             './src/lib/survey.ts',
