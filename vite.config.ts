@@ -15,8 +15,7 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          'vendor-ui': ['clsx', 'tailwind-merge', 'bits-ui'],
-          'vendor-icons': ['@lucide/svelte'],
+          'vendor-ui': ['clsx', 'tailwind-merge', 'bits-ui', '@lucide/svelte'],
           'tools': [
             './src/lib/dflog.ts',
             './src/lib/survey.ts',

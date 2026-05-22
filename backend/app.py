@@ -497,6 +497,14 @@ if DIST_DIR.exists():
     if (DIST_DIR / 'lib').exists():
         app.mount('/lib', StaticFiles(directory=str(DIST_DIR / 'lib')), name='lib')
 
+    @app.get('/manifest.json')
+    async def manifest():
+        return FileResponse(str(DIST_DIR / 'manifest.json'))
+
+    @app.get('/sw.js')
+    async def service_worker():
+        return FileResponse(str(DIST_DIR / 'sw.js'), media_type='application/javascript')
+
     @app.get('/')
     async def index():
         return FileResponse(str(DIST_DIR / 'index.html'))
