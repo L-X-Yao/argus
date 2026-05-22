@@ -82,7 +82,7 @@
       connecting = true;
       connectTimeout = false;
       savePortHistory();
-      sendConnect(port, baud, protocol);
+      sendConnect(port, Number(baud), protocol);
       if (connectTimer) clearTimeout(connectTimer);
       connectTimer = setTimeout(() => {
         if (connecting && !app.drone.connected) {

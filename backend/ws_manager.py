@@ -71,7 +71,11 @@ class WSManager:
                             'type': 'connect_result', 'ok': False, 'error': 'Invalid port',
                         }))
                         continue
-                    if not isinstance(baud, int) or baud not in cfg.VALID_BAUD_RATES:
+                    try:
+                        baud = int(baud)
+                    except (TypeError, ValueError):
+                        baud = cfg.SERIAL_BAUD
+                    if baud not in cfg.VALID_BAUD_RATES:
                         baud = cfg.SERIAL_BAUD
                     if protocol not in cfg.VALID_PROTOCOLS:
                         protocol = 'auto'
