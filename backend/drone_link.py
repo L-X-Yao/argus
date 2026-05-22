@@ -146,7 +146,7 @@ class DroneLink:
                     else:
                         self._ser.write(frame)
                     self.sq += 1
-                except Exception:
+                except OSError:
                     logger.debug('send failed', exc_info=True)
 
     def connect(self, port: str, baudrate: int = 57600, protocol: str = 'auto') -> bool:
@@ -157,7 +157,7 @@ class DroneLink:
                 self.add_event(lt('udp', self.locale) % port[4:], 'udp')
             elif port.startswith('tcp:'):
                 self.add_event(lt('tcp', self.locale) % port[4:], 'tcp')
-        except Exception as e:
+        except OSError as e:
             self.add_event(lt('connect_fail', self.locale) % e, 'connect_fail')
             return False
         self._running = True
@@ -188,7 +188,7 @@ class DroneLink:
         try:
             if self._ser:
                 self._ser.close()
-        except Exception:
+        except OSError:
             pass
         self._ser = None
         with self._state_lock:
@@ -207,7 +207,7 @@ class DroneLink:
         try:
             if self._ser:
                 self._ser.close()
-        except Exception:
+        except OSError:
             pass
         self._ser = None
         with self._state_lock:
@@ -215,7 +215,7 @@ class DroneLink:
             self._buf = b''
         try:
             self._ser = self._open_port(self._last_port, self._last_baud)
-        except Exception as e:
+        except OSError as e:
             self.add_event(lt('reconnect_err', self.locale) % e, 'reconnect_err')
             return False
         self._running = True
@@ -330,7 +330,7 @@ class DroneLink:
         try:
             if self._logfile:
                 self._logfile.close()
-        except Exception:
+        except OSError:
             pass
         self._logfile = None
 
@@ -360,7 +360,7 @@ class DroneLink:
                    bat.bat_time_remaining if bat.bat_time_remaining > 0 else -1)
             )
             self._logfile.flush()
-        except Exception:
+        except OSError:
             pass
 
     def _open_port(self, port: str, baudrate: int):
@@ -430,14 +430,14 @@ class DroneLink:
                     try:
                         if self._ser:
                             self._ser.close()
-                    except Exception:
+                    except OSError:
                         pass
                     self._buf = b''
                     try:
                         self._ser = self._open_port(self._last_port, self._last_baud)
                         self.sq = 0
                         self.add_event(lt('reconnected', self.locale), 'reconnected')
-                    except Exception:
+                    except OSError:
                         self.add_event(lt('reconnect_fail', self.locale), 'reconnect_fail')
                         time.sleep(cfg.RECONNECT_DELAY)
                     continue
@@ -448,7 +448,7 @@ class DroneLink:
                     if len(self._buf) > 65536:
                         self._buf = self._buf[-32768:]
                         self._parse_errors += 1
-            except Exception:
+            except OSError:
                 time.sleep(0.1)
                 continue
             while len(self._buf) >= 7:
@@ -458,7 +458,7 @@ class DroneLink:
                     self.frame_count += 1
                     try:
                         self._process(payload)
-                    except Exception:
+                    except (struct.error, ValueError, IndexError):
                         self._parse_errors += 1
                         if self._parse_errors == 1 or self._parse_errors % 100 == 0:
                             import traceback
