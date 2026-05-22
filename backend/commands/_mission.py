@@ -50,10 +50,16 @@ def cmd_mission_upload(link: DroneLink, param, data: dict):
     if len(wps) > 500:
         return {'ok': False, 'error': 'Mission too large (max 500 WP)'}
     for wp in wps:
-        lat, lon = wp.get('lat', 0), wp.get('lon', 0)
+        try:
+            lat, lon = float(wp.get('lat', 0)), float(wp.get('lon', 0))
+        except (TypeError, ValueError):
+            return {'ok': False, 'error': lt('err_bad_coord', link.locale)}
         if abs(lat) < 0.001 or not (-90 <= lat <= 90) or not (-180 <= lon <= 180):
             return {'ok': False, 'error': lt('err_bad_coord', link.locale)}
-        alt = wp.get('alt', 0)
+        try:
+            alt = float(wp.get('alt', 0))
+        except (TypeError, ValueError):
+            return {'ok': False, 'error': lt('err_bad_coord', link.locale)}
         if not (-500 <= alt <= 100000):
             return {'ok': False, 'error': lt('err_bad_coord', link.locale)}
     _upload_mission(link, wps, takeoff_alt)
@@ -122,7 +128,7 @@ def _upload_mission(link: DroneLink, waypoints: list, takeoff_alt: float) -> Non
         else:
             nav_cmd = 16
             p1_val = float(wp.get('delay', 0))
-        items.append({'seq': seq, 'cmd': nav_cmd, 'lat': wp['lat'], 'lon': wp['lon'],
+        items.append({'seq': seq, 'cmd': nav_cmd, 'lat': float(wp['lat']), 'lon': float(wp['lon']),
                       'alt': float(wp.get('alt', takeoff_alt)), 'p1': p1_val, 'p2': 0})
         seq += 1
         if wp.get('drop'):

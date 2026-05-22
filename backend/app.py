@@ -375,8 +375,8 @@ async def api_tile_bulk_download(request: Request):
     """Download tiles for a bounding box at specified zoom levels."""
     import math
     body = await request.json()
-    lat_min, lat_max = body.get('lat_min', 0), body.get('lat_max', 0)
-    lon_min, lon_max = body.get('lon_min', 0), body.get('lon_max', 0)
+    lat_min, lat_max = float(body.get('lat_min', 0)), float(body.get('lat_max', 0))
+    lon_min, lon_max = float(body.get('lon_min', 0)), float(body.get('lon_max', 0))
     z_min = max(0, min(int(body.get('z_min', 10)), 18))
     z_max = min(max(z_min, int(body.get('z_max', 16))), 18)
     style = body.get('style', '6')

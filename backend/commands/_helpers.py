@@ -31,8 +31,8 @@ def send_fence_count(link: DroneLink, count: int) -> None:
 
 
 def send_fence_item_int(link: DroneLink, item: dict) -> None:
-    lat7 = int(item.get('lat', 0) * 1e7)
-    lon7 = int(item.get('lon', 0) * 1e7)
+    lat7 = int(float(item.get('lat', 0)) * 1e7)
+    lon7 = int(float(item.get('lon', 0)) * 1e7)
     p = struct.pack('<ffffiifHHBBBBBB',
                     float(item.get('p1', 0)), float(item.get('p2', 0)), 0.0, 0.0,
                     lat7, lon7, float(item.get('alt', 0)),
