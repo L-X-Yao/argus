@@ -1,11 +1,11 @@
 <script lang="ts">
   import { app, pushUndo, undo, deleteWaypoint, clearWaypoints, saveSettings, saveWaypoints, generateCircle, addToast, showConfirm } from '../../lib/stores.svelte';
   import { t } from '../../lib/i18n.svelte';
-  import type { Waypoint } from '../../lib/types';
   import { getElevationProfile, adjustWaypointsForTerrain, interpolateRoute } from '../../lib/terrain';
 
   function fitAfterLoad() { requestAnimationFrame(() => app.fitRouteFlag++); }
   import { sendCommand } from '../../lib/ws';
+  import { parseQgcWaypoints, parseQgcPlan, exportKml as buildKml, parseKmlCoords, segDist, totalDist as calcTotalDist, pointInPoly } from '../../lib/missionIO';
   import Button from '$lib/components/ui/button/button.svelte';
 
   let showCircleGen = $state(false);
@@ -115,9 +115,9 @@
           const text: string = ev.target.result;
           const name = file.name.toLowerCase();
           if (name.endsWith('.waypoints')) {
-            parseQgcWaypoints(text);
+            handleQgcWaypoints(text);
           } else if (name.endsWith('.plan')) {
-            parseQgcPlan(text);
+            handleQgcPlan(text);
           } else {
             const d = JSON.parse(text);
             pushUndo();
@@ -132,46 +132,19 @@
     input.click();
   }
 
-  function parseQgcWaypoints(text: string) {
-    const wps: Waypoint[] = [];
-    for (const line of text.split('\n')) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith('QGC') || trimmed.startsWith('#')) continue;
-      const cols = trimmed.split('\t');
-      if (cols.length < 12) continue;
-      const cmd = parseInt(cols[3]);
-      if (cmd !== 16 && cmd !== 82) continue;
-      const lat = parseFloat(cols[8]), lon = parseFloat(cols[9]), alt = parseFloat(cols[10]);
-      if (Math.abs(lat) < 0.001) continue;
-      wps.push({ lat, lon, alt, drop: false, delay: parseFloat(cols[4]) || 0, speed: 0, type: cmd === 82 ? 'spline' : 'wp', loiter_param: 0 });
-    }
+  function handleQgcWaypoints(text: string) {
     pushUndo();
-    app.waypoints = wps;
+    app.waypoints = parseQgcWaypoints(text);
   }
 
-  function parseQgcPlan(text: string) {
-    const plan = JSON.parse(text);
-    const items = plan?.mission?.items || [];
-    const wps: Waypoint[] = [];
-    for (const item of items) {
-      const cmd = item.command;
-      if (cmd !== 16 && cmd !== 82) continue;
-      const params = item.params || [];
-      const lat = params[4] ?? 0, lon = params[5] ?? 0, alt = params[6] ?? 30;
-      if (Math.abs(lat) < 0.001) continue;
-      wps.push({ lat, lon, alt, drop: false, delay: params[0] || 0, speed: 0, type: cmd === 82 ? 'spline' : 'wp', loiter_param: 0 });
-    }
+  function handleQgcPlan(text: string) {
     pushUndo();
-    app.waypoints = wps;
+    app.waypoints = parseQgcPlan(text);
   }
 
   function exportKml() {
     if (!app.waypoints.length) return;
-    let coords = app.waypoints.map(w => `${w.lon},${w.lat},${w.alt}`).join('\n');
-    const kml = `<?xml version="1.0" encoding="UTF-8"?>
-<kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>Argus Mission</name>
-<Placemark><name>Route</name><LineString><coordinates>${coords}</coordinates></LineString></Placemark>
-</Document></kml>`;
+    const kml = buildKml(app.waypoints);
     const blob = new Blob([kml], { type: 'application/vnd.google-earth.kml+xml' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -189,25 +162,10 @@
       const reader = new FileReader();
       reader.onload = (ev: any) => {
         try {
-          const doc = new DOMParser().parseFromString(ev.target.result, 'text/xml');
-          const coords: any[] = [];
-          const els = doc.getElementsByTagName('coordinates');
-          for (let i = 0; i < els.length; i++) {
-            els[i].textContent!.trim().split(/\s+/).forEach((c: string) => {
-              const p = c.split(',');
-              if (p.length >= 2) {
-                const lon = parseFloat(p[0]), lat = parseFloat(p[1]);
-                const alt = parseFloat(p[2]) || app.defaultAlt;
-                if (Math.abs(lat) > 0.001 && Math.abs(lon) > 0.001)
-                  coords.push({ lat, lon, alt, drop: false, delay: 0 });
-              }
-            });
-          }
-          if (coords.length > 1 && Math.abs(coords[0].lat - coords[coords.length - 1].lat) < 0.00001)
-            coords.pop();
-          if (!coords.length) throw new Error('No coordinates');
+          const wps = parseKmlCoords(ev.target.result, app.defaultAlt);
+          if (!wps.length) throw new Error('No coordinates');
           pushUndo();
-          app.waypoints = coords;
+          app.waypoints = wps;
           fitAfterLoad();
         } catch (err: any) { addToast('KML: ' + err.message, 'error'); }
       };
@@ -217,14 +175,7 @@
   }
 
   function totalDist(): string {
-    let d = 0;
-    for (let i = 1; i < app.waypoints.length; i++) {
-      const a = app.waypoints[i - 1], b = app.waypoints[i];
-      const dlat = (b.lat - a.lat) * 111320;
-      const dlon = (b.lon - a.lon) * 111320 * Math.cos(a.lat * Math.PI / 180);
-      d += Math.sqrt(dlat * dlat + dlon * dlon);
-    }
-    return d < 1000 ? d.toFixed(0) + 'm' : (d / 1000).toFixed(1) + 'km';
+    return calcTotalDist(app.waypoints);
   }
 
   function estimateTime(): string {
@@ -249,11 +200,6 @@
     return d < 1000 ? d.toFixed(0) + 'm' : (d / 1000).toFixed(1) + 'km';
   }
 
-  function segDist(a: any, b: any): number {
-    const dlat = (b.lat - a.lat) * 111320;
-    const dlon = (b.lon - a.lon) * 111320 * Math.cos(a.lat * Math.PI / 180);
-    return Math.sqrt(dlat * dlat + dlon * dlon);
-  }
 
   function validateMission() {
     const issues: string[] = [];
@@ -284,16 +230,6 @@
     }
   }
 
-  function pointInPoly(lat: number, lon: number, poly: { lat: number; lon: number }[]): boolean {
-    let inside = false;
-    for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
-      if ((poly[i].lon > lon) !== (poly[j].lon > lon) &&
-          lat < (poly[j].lat - poly[i].lat) * (lon - poly[i].lon) / (poly[j].lon - poly[i].lon) + poly[i].lat) {
-        inside = !inside;
-      }
-    }
-    return inside;
-  }
 
   let profileCanvas: HTMLCanvasElement = $state(null!);
 
