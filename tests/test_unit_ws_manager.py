@@ -98,7 +98,7 @@ class TestBroadcast:
         mgr = WSManager(link)
         ws_ok = make_ws()
         ws_fail = make_ws()
-        ws_fail.send_text.side_effect = Exception('connection closed')
+        ws_fail.send_text.side_effect = ConnectionError('connection closed')
         mgr._clients = {ws_ok, ws_fail}
         await mgr.broadcast({'type': 'test'})
         assert ws_fail not in mgr._clients

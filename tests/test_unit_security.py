@@ -49,7 +49,7 @@ class TestTileStyleWhitelist:
         from backend.app import app
         client = TestClient(app)
         # Valid style but tile unavailable (no network in test)
-        with patch('backend.app.urlreq.urlopen', side_effect=Exception('no network')):
+        with patch('backend.app.urlreq.urlopen', side_effect=OSError('no network')):
             r = client.get('/api/tile/osm/1/0/0')
         assert r.status_code in (200, 404)  # Either cached or unavailable, not security-blocked
 

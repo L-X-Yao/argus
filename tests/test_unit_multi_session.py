@@ -150,7 +150,7 @@ class TestClientDisconnectIsolation:
         mgr = WSManager(link)
         ws_alive = make_ws()
         ws_dead = make_ws()
-        ws_dead.send_text.side_effect = Exception('connection closed')
+        ws_dead.send_text.side_effect = ConnectionError('connection closed')
         mgr._clients = {ws_alive, ws_dead}
 
         await mgr.broadcast({'type': 'state', 'connected': True})
@@ -168,7 +168,7 @@ class TestClientDisconnectIsolation:
         mgr = WSManager(link)
         ws_alive = make_ws()
         ws_dead = make_ws()
-        ws_dead.send_text.side_effect = Exception('gone')
+        ws_dead.send_text.side_effect = ConnectionError('gone')
         mgr._clients = {ws_alive, ws_dead}
 
         # First broadcast removes dead client
@@ -193,7 +193,7 @@ class TestClientDisconnectIsolation:
         survivors = [make_ws() for _ in range(3)]
         victims = [make_ws() for _ in range(4)]
         for ws in victims:
-            ws.send_text.side_effect = Exception('disconnected')
+            ws.send_text.side_effect = ConnectionError('disconnected')
         mgr._clients = set(survivors + victims)
 
         await mgr.broadcast({'type': 'state', 'test': True})
@@ -435,7 +435,7 @@ class TestRapidMultiClientCommands:
         mgr = WSManager(link)
         ws_pilot = make_ws()
         ws_observer = make_ws()
-        ws_pilot.send_text.side_effect = Exception('pilot disconnected')
+        ws_pilot.send_text.side_effect = ConnectionError('pilot disconnected')
         mgr._clients = {ws_pilot, ws_observer}
         mgr._pilot_ws = ws_pilot
         mgr._roles[id(ws_pilot)] = 'pilot'

@@ -133,7 +133,7 @@ class TestConcurrentClients:
         ok_clients = [make_ws() for _ in range(10)]
         fail_clients = [make_ws() for _ in range(5)]
         for ws in fail_clients:
-            ws.send_text.side_effect = Exception('connection reset')
+            ws.send_text.side_effect = ConnectionError('connection reset')
         mgr._clients = set(ok_clients + fail_clients)
 
         await mgr.broadcast({'type': 'state', 'test': True})
@@ -152,7 +152,7 @@ class TestConcurrentClients:
         ws_ok1 = make_ws()
         ws_ok2 = make_ws()
         ws_fail = make_ws()
-        ws_fail.send_text.side_effect = Exception('broken pipe')
+        ws_fail.send_text.side_effect = ConnectionError('broken pipe')
         mgr._clients = {ws_ok1, ws_ok2, ws_fail}
 
         await mgr.broadcast({'type': 'state', 'connected': False})
@@ -371,7 +371,7 @@ class TestBroadcastUnderLoad:
         async def flaky_send(text):
             call_count[0] += 1
             if call_count[0] == 5:
-                raise Exception('connection dropped')
+                raise ConnectionError('connection dropped')
 
         ws_flaky.send_text = AsyncMock(side_effect=flaky_send)
         mgr._clients = {ws_ok, ws_flaky}

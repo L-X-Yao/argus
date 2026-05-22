@@ -156,7 +156,7 @@ class TestWSManagerConnectDisconnect:
         # Add 100 clients that will fail on send
         for _ in range(100):
             ws = _make_ws()
-            ws.send_text.side_effect = Exception('connection closed')
+            ws.send_text.side_effect = ConnectionError('connection closed')
             mgr._clients.add(ws)
 
         assert mgr.client_count == 100
@@ -177,7 +177,7 @@ class TestWSManagerConnectDisconnect:
             if i % 2 == 0:
                 good_clients.append(ws)
             else:
-                ws.send_text.side_effect = Exception('closed')
+                ws.send_text.side_effect = ConnectionError('closed')
                 bad_clients.append(ws)
             mgr._clients.add(ws)
 

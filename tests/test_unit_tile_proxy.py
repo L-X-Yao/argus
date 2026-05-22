@@ -237,7 +237,7 @@ class TestTileCache:
     def test_network_failure_returns_404(self, tile_cache_dir):
         """If network fetch fails and no cache, return 404."""
         with patch('backend.app.urlreq.urlopen') as mock_urlopen:
-            mock_urlopen.side_effect = Exception('network error')
+            mock_urlopen.side_effect = OSError('network error')
 
             r = client.get('/api/tile/osm/5/10/15')
             assert r.status_code == 404
