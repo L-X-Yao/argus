@@ -6,16 +6,12 @@ import struct
 import sys
 import threading
 import time
-from io import StringIO
 from pathlib import Path
-from unittest.mock import MagicMock, patch, call
-
-import pytest
+from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from backend.drone_link import DroneLink, _CRC_EXTRA, _MSG_NAMES
 from backend.config import cfg
-
+from backend.drone_link import _CRC_EXTRA, _MSG_NAMES, DroneLink
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -692,7 +688,7 @@ class TestDroneLinkLog:
         link._start_log()
         path = link._logfile.name
         link._logfile.flush()
-        with open(path, 'r') as f:
+        with open(path) as f:
             header = f.readline()
         assert header.startswith('time,roll,pitch,yaw,lat,lon')
         link._stop_log()
@@ -718,7 +714,7 @@ class TestDroneLinkLog:
         link._last_log_time = time.time()  # set to now
         link._write_log_line()
         link._logfile.flush()
-        with open(path, 'r') as f:
+        with open(path) as f:
             lines = f.readlines()
         # Only the header line, no data line
         assert len(lines) == 1
@@ -737,7 +733,7 @@ class TestDroneLinkLog:
         link.battery.voltage = 12.6
         link._write_log_line()
         link._logfile.flush()
-        with open(path, 'r') as f:
+        with open(path) as f:
             lines = f.readlines()
         assert len(lines) == 2  # header + 1 data line
         data_line = lines[1]
@@ -1480,7 +1476,7 @@ class TestDroneLinkThreadSafety:
 
         def sender(n):
             try:
-                for i in range(50):
+                for _i in range(50):
                     link.send(b'\xfd\x00\x00')
             except Exception as e:
                 errors.append(str(e))
@@ -1508,7 +1504,7 @@ class TestModuleLevelConstants:
         assert _MSG_NAMES[33] == 'GLOBAL_POSITION_INT'
 
     def test_crc_extra_values_are_ints(self):
-        for mid, ce in _CRC_EXTRA.items():
+        for _mid, ce in _CRC_EXTRA.items():
             assert isinstance(ce, int)
             assert 0 <= ce <= 255
 

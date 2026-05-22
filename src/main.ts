@@ -17,5 +17,21 @@ if ('serviceWorker' in navigator) {
         }
       });
     });
+
+    const sw = reg.active || reg.waiting || reg.installing;
+    if (sw && sw.state === 'activated') {
+      precacheLoadedAssets(sw);
+    } else if (sw) {
+      sw.addEventListener('statechange', () => {
+        if (sw.state === 'activated') precacheLoadedAssets(sw);
+      });
+    }
   }).catch(() => {});
+}
+
+function precacheLoadedAssets(sw: ServiceWorker) {
+  const scripts = [...document.querySelectorAll<HTMLScriptElement>('script[src]')].map(s => s.src);
+  const styles = [...document.querySelectorAll<HTMLLinkElement>('link[rel="stylesheet"]')].map(l => l.href);
+  const urls = [location.href, ...scripts, ...styles].filter(u => u.startsWith(location.origin));
+  sw.postMessage({ type: 'PRECACHE_ASSETS', urls });
 }

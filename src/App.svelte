@@ -9,31 +9,11 @@
   import ControlPanel from './components/core/ControlPanel.svelte';
   import MapView from './components/core/MapView.svelte';
   import EventLog from './components/core/EventLog.svelte';
-  import MissionPanel from './components/mission/MissionPanel.svelte';
-  import FlightSummary from './components/shared/FlightSummary.svelte';
-  import ChartPanel from './components/core/ChartPanel.svelte';
-  import SettingsPanel from './components/shared/SettingsPanel.svelte';
   import ToastContainer from './components/core/ToastContainer.svelte';
-  import PreflightPanel from './components/shared/PreflightPanel.svelte';
   import MissionProgress from './components/mission/MissionProgress.svelte';
-  import SurveyPanel from './components/mission/SurveyPanel.svelte';
-  import FencePanel from './components/mission/FencePanel.svelte';
-  import ParamPanel from './components/params/ParamPanel.svelte';
-  import RcPanel from './components/telemetry/RcPanel.svelte';
-  import VibrationPanel from './components/telemetry/VibrationPanel.svelte';
-  import ServoPanel from './components/telemetry/ServoPanel.svelte';
-  import EkfPanel from './components/telemetry/EkfPanel.svelte';
   import TelemetryOverlay from './components/telemetry/TelemetryOverlay.svelte';
   import ConfirmDialog from './components/shared/ConfirmDialog.svelte';
   import SlideConfirm from './components/shared/SlideConfirm.svelte';
-  import CommandPalette from './components/shared/CommandPalette.svelte';
-  import ReplayPanel from './components/tools/ReplayPanel.svelte';
-  let Map3DViewModule: Component | null = $state(null);
-  $effect(() => {
-    if (app.mapMode === '3d' && !Map3DViewModule) {
-      import('./components/map/Map3DView.svelte').then(m => Map3DViewModule = m.default);
-    }
-  });
   import { showConfirm, showSlide, undo } from './lib/stores.svelte';
   import { migrateLocalStorage } from './lib/migrate';
   import { panels } from './lib/panels.svelte';
@@ -53,6 +33,78 @@
   ));
   let showCmdPalette = $state(false);
   const p = panels;
+
+  let Map3DViewModule: Component | null = $state(null);
+  let MonitorMods: { Rc: Component; Servo: Component; Vibe: Component; Ekf: Component; Chart: Component } | null = $state(null);
+  let PlanMods: { Mission: Component; Survey: Component; Fence: Component } | null = $state(null);
+  let ParamMod: Component | null = $state(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import components have heterogeneous props
+  type DynComp = Component<any>;
+  let SettingsMod: DynComp | null = $state(null);
+  let CmdPaletteMod: DynComp | null = $state(null);
+  let FlightSummaryMod: DynComp | null = $state(null);
+  let PreflightMod: DynComp | null = $state(null);
+  let ReplayMod: DynComp | null = $state(null);
+
+  $effect(() => {
+    if (app.mapMode === '3d' && !Map3DViewModule) {
+      import('./components/map/Map3DView.svelte').then(m => Map3DViewModule = m.default);
+    }
+  });
+  $effect(() => {
+    if (view === 'monitor' && !MonitorMods) {
+      Promise.all([
+        import('./components/telemetry/RcPanel.svelte'),
+        import('./components/telemetry/ServoPanel.svelte'),
+        import('./components/telemetry/VibrationPanel.svelte'),
+        import('./components/telemetry/EkfPanel.svelte'),
+        import('./components/core/ChartPanel.svelte'),
+      ]).then(([rc, servo, vibe, ekf, chart]) => {
+        MonitorMods = { Rc: rc.default, Servo: servo.default, Vibe: vibe.default, Ekf: ekf.default, Chart: chart.default };
+      });
+    }
+  });
+  $effect(() => {
+    if (view === 'plan' && !PlanMods) {
+      Promise.all([
+        import('./components/mission/MissionPanel.svelte'),
+        import('./components/mission/SurveyPanel.svelte'),
+        import('./components/mission/FencePanel.svelte'),
+      ]).then(([mission, survey, fence]) => {
+        PlanMods = { Mission: mission.default, Survey: survey.default, Fence: fence.default };
+      });
+    }
+  });
+  $effect(() => {
+    if (view === 'params' && !ParamMod) {
+      import('./components/params/ParamPanel.svelte').then(m => ParamMod = m.default);
+    }
+  });
+  $effect(() => {
+    if (app.showSettings && !SettingsMod) {
+      import('./components/shared/SettingsPanel.svelte').then(m => SettingsMod = m.default);
+    }
+  });
+  $effect(() => {
+    if (showCmdPalette && !CmdPaletteMod) {
+      import('./components/shared/CommandPalette.svelte').then(m => CmdPaletteMod = m.default);
+    }
+  });
+  $effect(() => {
+    if (app.summaryShown && !FlightSummaryMod) {
+      import('./components/shared/FlightSummary.svelte').then(m => FlightSummaryMod = m.default);
+    }
+  });
+  $effect(() => {
+    if (app.drone.connected && !app.drone.armed && !PreflightMod) {
+      import('./components/shared/PreflightPanel.svelte').then(m => PreflightMod = m.default);
+    }
+  });
+  $effect(() => {
+    if (!app.drone.connected && view === 'fly' && !ReplayMod) {
+      import('./components/tools/ReplayPanel.svelte').then(m => ReplayMod = m.default);
+    }
+  });
 
   onMount(() => {
     migrateLocalStorage();
@@ -161,8 +213,7 @@
   let planCount = $derived(app.waypoints.length);
   let paramProgress = $derived(app.drone.param_fetching);
   let isMobile = $state(false);
-  import { onMount as onMountApp } from 'svelte';
-  onMountApp(() => {
+  onMount(() => {
     const check = () => { isMobile = window.innerWidth < 768; };
     check();
     window.addEventListener('resize', check);
@@ -278,9 +329,9 @@
           </div>
         {/if}
         <MissionProgress />
-        {#if app.drone.connected && !app.drone.armed}
+        {#if app.drone.connected && !app.drone.armed && PreflightMod}
           <div class="absolute bottom-12 right-3 z-[1001] w-[400px] max-h-56 overflow-auto bg-popover/95 backdrop-blur border border-border rounded-xl shadow-lg">
-            <PreflightPanel />
+            <PreflightMod />
           </div>
         {/if}
         <div class="absolute bottom-0 left-0 right-0 z-[1001]" class:max-h-52={flyEventsOpen}>
@@ -303,51 +354,57 @@
     </div>
 
   {:else if view === 'plan'}
-    <div class="flex-1 flex flex-col overflow-auto">
-      <div class="flex max-md:flex-col gap-2 p-2 flex-1 min-h-72">
-        <MapView showHud={false} />
-        <MissionPanel />
+    {#if PlanMods}
+      <div class="flex-1 flex flex-col overflow-auto">
+        <div class="flex max-md:flex-col gap-2 p-2 flex-1 min-h-72">
+          <MapView showHud={false} />
+          <PlanMods.Mission />
+        </div>
+        {#if app.showSurvey}<PlanMods.Survey />{/if}
+        {#if app.showFence}<PlanMods.Fence />{/if}
       </div>
-      {#if app.showSurvey}<SurveyPanel />{/if}
-      {#if app.showFence}<FencePanel />{/if}
-    </div>
+    {/if}
 
   {:else if view === 'monitor'}
-    <div class="flex-1 overflow-auto p-3">
-      <div class="grid grid-cols-3 gap-3 max-lg:grid-cols-2 max-sm:grid-cols-1">
-        <RcPanel />
-        <ServoPanel />
-        <VibrationPanel />
-        <EkfPanel />
-        <div class="max-lg:col-span-2 max-md:col-span-1 col-span-2">
-          <ChartPanel />
+    {#if MonitorMods}
+      <div class="flex-1 overflow-auto p-3">
+        <div class="grid grid-cols-3 gap-3 max-lg:grid-cols-2 max-sm:grid-cols-1">
+          <MonitorMods.Rc />
+          <MonitorMods.Servo />
+          <MonitorMods.Vibe />
+          <MonitorMods.Ekf />
+          <div class="max-lg:col-span-2 max-md:col-span-1 col-span-2">
+            <MonitorMods.Chart />
+          </div>
         </div>
       </div>
-    </div>
+    {/if}
 
   {:else if view === 'params'}
-    <div class="flex-1 flex flex-col overflow-hidden p-3">
-      <ParamPanel />
-    </div>
+    {#if ParamMod}
+      <div class="flex-1 flex flex-col overflow-hidden p-3">
+        <ParamMod />
+      </div>
+    {/if}
   {/if}
 
-  {#if !app.drone.connected && view === 'fly'}
-    <ReplayPanel onposition={(lat, lon, yaw) => app.replayPos = { lat, lon, yaw }} />
+  {#if !app.drone.connected && view === 'fly' && ReplayMod}
+    <ReplayMod onposition={(lat: number, lon: number, yaw: number) => app.replayPos = { lat, lon, yaw }} />
   {/if}
 
   <ToastContainer />
-  {#if app.summaryShown && app.drone.flight_summary}
-    <FlightSummary summary={app.drone.flight_summary} onclose={() => { app.summaryShown = false; sendCommand('clear_summary'); }} />
+  {#if app.summaryShown && app.drone.flight_summary && FlightSummaryMod}
+    <FlightSummaryMod summary={app.drone.flight_summary} onclose={() => { app.summaryShown = false; sendCommand('clear_summary'); }} />
   {/if}
-  {#if app.showSettings}
-    <SettingsPanel onclose={() => app.showSettings = false} />
+  {#if app.showSettings && SettingsMod}
+    <SettingsMod onclose={() => app.showSettings = false} />
   {/if}
   <ConfirmDialog />
   <SlideConfirm />
-  {#if showCmdPalette}
-    <CommandPalette
+  {#if showCmdPalette && CmdPaletteMod}
+    <CmdPaletteMod
       onclose={() => showCmdPalette = false}
-      onnavigate={(v) => { view = v; showCmdPalette = false; }}
+      onnavigate={(v: string) => { view = v as View; showCmdPalette = false; }}
     />
   {/if}
   <LazyPanelHost />

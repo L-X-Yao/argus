@@ -11,7 +11,6 @@ import {
   decodeStatusText,
   decodeParamValue,
   decodeSysStatus,
-  decodeGpsRawInt,
   decodeHomePosition,
   decodeMissionCurrent,
   decodeMissionCount,

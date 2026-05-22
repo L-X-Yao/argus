@@ -109,6 +109,10 @@ self.addEventListener('message', (e) => {
     self.skipWaiting();
   }
 
+  if (e.data && e.data.type === 'PRECACHE_ASSETS') {
+    e.waitUntil(precacheAssets(e.data.urls));
+  }
+
   if (e.data && e.data.type === 'CACHE_TILES') {
     e.waitUntil(prefetchTiles(e.data.urls));
   }
@@ -123,6 +127,21 @@ self.addEventListener('message', (e) => {
     });
   }
 });
+
+async function precacheAssets(urls) {
+  const cache = await caches.open(CACHE_NAME);
+  for (const url of urls) {
+    try {
+      const existing = await cache.match(url);
+      if (!existing) {
+        const resp = await fetch(url, { credentials: 'same-origin' });
+        if (resp.ok) await cache.put(url, resp);
+      }
+    } catch {
+      // skip unreachable assets
+    }
+  }
+}
 
 async function prefetchTiles(urls) {
   const cache = await caches.open(TILE_CACHE);

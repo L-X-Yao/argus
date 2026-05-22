@@ -93,7 +93,8 @@
     </div>
     <div class="px-5 py-3">
       <p class="text-xs text-muted-foreground mb-3">{t('compass3d.hint')}</p>
-      <div class="border border-border rounded-lg overflow-hidden cursor-grab"
+      <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
+      <div class="border border-border rounded-lg overflow-hidden cursor-grab" role="application"
            onmousedown={onMouseDown} onmousemove={onMouseMove} onmouseup={onMouseUp} onmouseleave={onMouseUp}>
         <canvas bind:this={canvasEl} height="300" class="w-full"></canvas>
       </div>
