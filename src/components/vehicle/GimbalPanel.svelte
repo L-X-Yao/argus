@@ -21,8 +21,8 @@
   let roiAlt = $state(app.defaultAlt);
 
   /* ── Live telemetry derived values ── */
-  let livePitch = $derived((app.drone as any).gimbal_pitch ?? null);
-  let liveYaw = $derived((app.drone as any).gimbal_yaw ?? null);
+  let livePitch = $derived(app.drone.gimbal_pitch ?? null);
+  let liveYaw = $derived(app.drone.gimbal_yaw ?? null);
 
   /* ── Gimbal controls ── */
   function sendAngle() {

@@ -115,7 +115,7 @@
     const hfov = arFov * Math.PI / 180;
     const vfov = hfov * (h / w);
     const yawRad = d.yaw * Math.PI / 180;
-    const gimbalP = (d as any).gimbal_pitch ?? arGimbalPitch;
+    const gimbalP = d.gimbal_pitch ?? arGimbalPitch;
     const pitchRad = (d.pitch + gimbalP) * Math.PI / 180;
     for (let i = 0; i < wps.length; i++) {
       const dlat = (wps[i].lat - d.lat) * 111320;

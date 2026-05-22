@@ -19,6 +19,7 @@
     step?: number;
     values?: Record<string, string>;
     bitmask?: Record<string, string>;
+    default?: number;
   }
 
   let meta = $state<Record<string, ParamMeta>>({});
@@ -119,8 +120,8 @@
 
   function hasDefaultDiff(name: string, value: number): boolean {
     const m = meta[name];
-    if (!m || !('default' in m)) return false;
-    return Math.abs(value - (m as any).default) > 1e-6;
+    if (!m || m.default === undefined) return false;
+    return Math.abs(value - m.default!) > 1e-6;
   }
 
   let modifiedCount = $derived(
@@ -215,7 +216,7 @@
     const diffs = paramState.list.filter(p => hasDefaultDiff(p.name, p.value));
     if (!diffs.length) { addToast(t('param.noChange'), 'info'); return; }
     const lines = diffs.map(p => {
-      const def = (meta[p.name] as any)?.default;
+      const def = meta[p.name]?.default;
       return `${p.name}\t${fmtValue(p.value)}\t# default=${def !== undefined ? def : '?'}`;
     }).join('\n');
     const blob = new Blob([`# ${diffs.length} parameters differ from defaults\n${lines}\n`], { type: 'text/plain' });
@@ -305,8 +306,8 @@
           {#if valLabel}<span class="text-[10px] text-primary/70 truncate">{valLabel}</span>{/if}
           {#if hasDefaultDiff(p.name, p.value)}
             <button class="text-[9px] text-muted-foreground/60 hover:text-warning px-0.5 cursor-pointer bg-transparent border-none"
-                    onclick={() => { sendCommand('param_set', undefined, { name: p.name, value: (meta[p.name] as any).default }); modified.add(p.name); modified = new Set(modified); }}
-                    title={t('tip.resetDefault').replace('{v}', String((meta[p.name] as any).default))}>↩</button>
+                    onclick={() => { sendCommand('param_set', undefined, { name: p.name, value: meta[p.name]!.default! }); modified.add(p.name); modified = new Set(modified); }}
+                    title={t('tip.resetDefault').replace('{v}', String(meta[p.name]!.default))}>↩</button>
           {/if}
           {#if rangeStr}<span class="text-[10px] text-muted-foreground/50 ml-auto whitespace-nowrap">[{rangeStr}]</span>{/if}
         </div>
@@ -322,7 +323,7 @@
           {#if units}<span class="text-muted-foreground/60">Units: <span class="text-foreground">{units}</span></span>{/if}
           {#if rangeStr}<span class="text-muted-foreground/60">Range: <span class="text-foreground">{rangeStr}</span></span>{/if}
           {#if meta[p.name]?.step}<span class="text-muted-foreground/60">Step: <span class="text-foreground">{meta[p.name]!.step}</span></span>{/if}
-          {#if 'default' in (meta[p.name] || {})}<span class="text-muted-foreground/60">Default: <span class="text-foreground">{(meta[p.name] as any).default}</span></span>{/if}
+          {#if meta[p.name]?.default !== undefined}<span class="text-muted-foreground/60">Default: <span class="text-foreground">{meta[p.name]!.default}</span></span>{/if}
         </div>
         {#if meta[p.name]?.values}
           <div class="flex flex-wrap gap-1">

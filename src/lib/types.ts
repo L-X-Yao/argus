@@ -57,6 +57,8 @@ export interface DroneState {
   prearm: string[];
   adsb: { icao: number; lat: number; lon: number; alt: number; hdg: number; speed: number; vs: number; callsign: string }[];
   cells: number[];
+  gimbal_pitch: number;
+  gimbal_yaw: number;
 }
 
 export interface FlightSummary {
@@ -92,6 +94,11 @@ export interface Waypoint {
   type: 'wp' | 'loiter_turns' | 'loiter_time' | 'spline';
   loiter_param: number;
   altMode?: AltMode;
+  cmd_servo?: { num: number; pwm: number };
+  cmd_roi?: { lat: number; lon: number; alt: number };
+  cmd_cam_trig?: { dist: number };
+  cmd_yaw?: { deg: number; dir: number };
+  cmd_vtol?: { mode: number };
 }
 
 export interface RallyPoint {
@@ -185,4 +192,6 @@ export const defaultState: DroneState = {
   prearm: [],
   adsb: [],
   cells: [],
+  gimbal_pitch: 0,
+  gimbal_yaw: 0,
 };

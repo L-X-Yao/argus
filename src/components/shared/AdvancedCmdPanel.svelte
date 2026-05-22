@@ -46,17 +46,17 @@
     const cmd = cmdDefs.find(c => c.id === selected)!;
 
     if (selected === 'servo') {
-      (targetWp as any).cmd_servo = { num: servoNum, pwm: servoPwm };
+      targetWp.cmd_servo = { num: servoNum, pwm: servoPwm };
     } else if (selected === 'roi') {
-      (targetWp as any).cmd_roi = { lat: roiLat, lon: roiLon, alt: roiAlt };
+      targetWp.cmd_roi = { lat: roiLat, lon: roiLon, alt: roiAlt };
     } else if (selected === 'cam_trig') {
-      (targetWp as any).cmd_cam_trig = { dist: camDist };
+      targetWp.cmd_cam_trig = { dist: camDist };
     } else if (selected === 'delay') {
       targetWp.delay = delaySec;
     } else if (selected === 'yaw') {
-      (targetWp as any).cmd_yaw = { deg: yawDeg, dir: yawDir === 'cw' ? 1 : -1 };
+      targetWp.cmd_yaw = { deg: yawDeg, dir: yawDir === 'cw' ? 1 : -1 };
     } else if (selected === 'vtol_transition') {
-      (targetWp as any).cmd_vtol = { mode: vtolMode === 'hover' ? 4 : 3 };
+      targetWp.cmd_vtol = { mode: vtolMode === 'hover' ? 4 : 3 };
     }
 
     saveWaypoints();

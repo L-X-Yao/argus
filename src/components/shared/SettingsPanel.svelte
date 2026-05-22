@@ -112,7 +112,7 @@
             <span class="text-sm text-muted-foreground">{t('settings.mapSource')}</span>
             <select class="h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50"
                     value={app.tileSource}
-                    onchange={(e) => { app.tileSource = (e.target as HTMLSelectElement).value; app.mapRegion = (['amap', 'tianditu'].includes(app.tileSource) ? 'china' : 'global') as any; saveSettings(); }}>
+                    onchange={(e) => { app.tileSource = (e.target as HTMLSelectElement).value; app.mapRegion = ['amap', 'tianditu'].includes(app.tileSource) ? 'china' : 'global'; saveSettings(); }}>
               <optgroup label={t('settings.china')}>
                 <option value="amap">{t('map.amap')}</option>
                 <option value="tianditu">{t('map.tianditu')}</option>
