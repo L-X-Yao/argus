@@ -122,7 +122,7 @@ async def health():
 
 
 @app.get('/api/session', tags=['System'])
-async def api_session(request):
+async def api_session(request: Request):
     """Current session info: connected clients, vehicle state."""
     link = request.app.state.link
     mgr = request.app.state.ws_mgr
