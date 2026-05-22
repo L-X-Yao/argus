@@ -46,18 +46,14 @@
   }
 </script>
 
-<!-- svelte-ignore a11y_click_events_have_key_events -->
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center" onclick={onclose}>
-  <!-- svelte-ignore a11y_click_events_have_key_events -->
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="bg-card border border-border rounded-2xl overflow-hidden w-[350px] max-h-[80vh] shadow-2xl flex flex-col" onclick={(e) => e.stopPropagation()}>
+<div role="presentation" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center" onclick={onclose}>
+    <div role="presentation" class="bg-card border border-border rounded-2xl overflow-hidden w-[350px] max-h-[80vh] shadow-2xl flex flex-col" onclick={(e) => e.stopPropagation()}>
     <div class="bg-gradient-to-r from-primary/20 to-primary/5 px-5 py-3 flex items-center justify-between shrink-0">
       <div class="flex items-center gap-2">
         <Crosshair size={16} class="text-primary" />
         <h3 class="text-base font-bold text-primary">{t('poi.title')}</h3>
       </div>
-      <Button variant="ghost" size="icon-xs" onclick={onclose}><X size={16} /></Button>
+      <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label="Close"><X size={16} /></Button>
     </div>
 
     <div class="overflow-y-auto px-5 py-3 space-y-4">

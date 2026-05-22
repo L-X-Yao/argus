@@ -4,22 +4,34 @@
   import Button from '$lib/components/ui/button/button.svelte';
   import { AlertTriangle } from '@lucide/svelte';
 
+  let dialogEl: HTMLDivElement | undefined = $state();
+
+  $effect(() => {
+    if (confirmState.visible && dialogEl) {
+      dialogEl.focus();
+    }
+  });
+
   function onKey(e: KeyboardEvent) {
     if (!confirmState.visible) return;
     if (e.key === 'Enter') { e.preventDefault(); resolveConfirm(true); }
     if (e.key === 'Escape') resolveConfirm(false);
+  }
+
+  function onBackdropKeydown(e: KeyboardEvent) {
+    if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); resolveConfirm(false); }
   }
 </script>
 
 <svelte:window onkeydown={onKey} />
 
 {#if confirmState.visible}
-  <!-- svelte-ignore a11y_click_events_have_key_events -->
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm"
-       onclick={() => resolveConfirm(false)}>
-    <!-- svelte-ignore a11y_no_noninteractive_tabindex -->
-    <div class="bg-card border border-border rounded-xl shadow-2xl p-5 w-[360px] max-w-[90vw]"
+       role="presentation"
+       onclick={() => resolveConfirm(false)}
+       onkeydown={onBackdropKeydown}>
+    <div bind:this={dialogEl}
+         class="bg-card border border-border rounded-xl shadow-2xl p-5 w-[360px] max-w-[90vw]"
          role="alertdialog" aria-modal="true" aria-labelledby="confirm-msg" tabindex="-1"
          onclick={(e) => e.stopPropagation()}>
       <div class="flex items-start gap-3 mb-4">

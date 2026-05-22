@@ -410,9 +410,7 @@
           </Badge>
         </button>
         {#if showVehicles}
-          <!-- svelte-ignore a11y_click_events_have_key_events -->
-          <!-- svelte-ignore a11y_no_static_element_interactions -->
-          <div class="absolute top-full right-0 mt-1 bg-card border border-border rounded-lg shadow-xl p-2 z-50 min-w-[200px]"
+                    <div role="presentation" class="absolute top-full right-0 mt-1 bg-card border border-border rounded-lg shadow-xl p-2 z-50 min-w-[200px]"
                onclick={(e) => e.stopPropagation()}>
             {#each app.drone.vehicles as v}
               <div class="flex items-center gap-2 px-2 py-1 text-xs border-b border-border/50 last:border-0">

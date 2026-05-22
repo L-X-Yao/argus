@@ -231,8 +231,8 @@
       onkeydown={(e) => { if (e.key === 'Enter') startStream(); }}
     />
     {#if streaming}
-      <Button variant="ghost" size="icon-xs" onclick={takeScreenshot} title={t('tip.screenshot')}><Camera size={14} /></Button>
-      <Button variant={arEnabled ? 'default' : 'ghost'} size="icon-xs" onclick={() => arEnabled = !arEnabled} title={t('ar.overlay')}><Crosshair size={14} /></Button>
+      <Button variant="ghost" size="icon-xs" onclick={takeScreenshot} title={t('tip.screenshot')} aria-label={t('tip.screenshot')}><Camera size={14} /></Button>
+      <Button variant={arEnabled ? 'default' : 'ghost'} size="icon-xs" onclick={() => arEnabled = !arEnabled} title={t('ar.overlay')} aria-label={t('ar.overlay')}><Crosshair size={14} /></Button>
       {#if arEnabled}
         <input type="number" bind:value={arFov} min="30" max="120" step="5" title="FOV °"
                class="w-10 h-5 px-1 text-[9px] text-center bg-input border border-border rounded font-mono" />

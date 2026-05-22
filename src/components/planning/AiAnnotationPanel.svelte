@@ -204,9 +204,7 @@
   }
 </script>
 
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<!-- svelte-ignore a11y_click_events_have_key_events -->
-<div class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+<div role="presentation" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
      onclick={(e) => { if (e.target === e.currentTarget) onclose(); }}>
   <div class="bg-card border border-border rounded-xl shadow-2xl w-[600px] max-h-[90vh] flex flex-col overflow-hidden">
 
@@ -216,7 +214,7 @@
         <ScanLine size={16} class="text-primary" />
         <h2 class="text-sm font-semibold text-primary uppercase tracking-wider">{t('aiAnnot.title')}</h2>
       </div>
-      <Button variant="ghost" size="icon-xs" onclick={onclose}><X size={16} /></Button>
+      <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label="Close"><X size={16} /></Button>
     </div>
 
     <div class="flex-1 min-h-0 overflow-y-auto p-4 space-y-3">

@@ -71,12 +71,8 @@
   });
 </script>
 
-<!-- svelte-ignore a11y_click_events_have_key_events -->
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center" onclick={onclose}>
-  <!-- svelte-ignore a11y_click_events_have_key_events -->
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="bg-card border border-border rounded-2xl overflow-hidden w-[640px] max-w-[95vw] h-[520px] max-h-[85vh] shadow-2xl flex flex-col" onclick={(e) => e.stopPropagation()}>
+<div role="presentation" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center" onclick={onclose}>
+    <div role="presentation" class="bg-card border border-border rounded-2xl overflow-hidden w-[640px] max-w-[95vw] h-[520px] max-h-[85vh] shadow-2xl flex flex-col" onclick={(e) => e.stopPropagation()}>
 
     <!-- Header -->
     <div class="bg-gradient-to-r from-primary/20 to-primary/5 px-4 py-2.5 flex items-center justify-between shrink-0">
@@ -85,10 +81,10 @@
         <h3 class="text-base font-bold text-primary">{t('console.title')}</h3>
       </div>
       <div class="flex items-center gap-1">
-        <Button variant="ghost" size="icon-xs" onclick={clearConsole} title={t('inspector.clear')}>
+        <Button variant="ghost" size="icon-xs" onclick={clearConsole} title={t('inspector.clear')} aria-label={t('inspector.clear')}>
           <Trash2 size={14} />
         </Button>
-        <Button variant="ghost" size="icon-xs" onclick={onclose}>
+        <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label="Close">
           <X size={16} />
         </Button>
       </div>
@@ -122,7 +118,7 @@
           placeholder={t('console.placeholder')}
           class="flex-1 bg-transparent border-none outline-none text-emerald-300 font-mono text-xs placeholder:text-emerald-800 caret-emerald-400"
         />
-        <Button variant="ghost" size="icon-xs" onclick={submit}>
+        <Button variant="ghost" size="icon-xs" onclick={submit} aria-label="Send command">
           <Send size={14} class="text-emerald-500" />
         </Button>
       </div>

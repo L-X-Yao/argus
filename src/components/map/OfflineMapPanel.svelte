@@ -67,16 +67,14 @@
   }
 </script>
 
-<!-- svelte-ignore a11y_click_events_have_key_events -->
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center" onclick={onclose}>
+<div role="presentation" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center" onclick={onclose}>
   <div class="bg-card border border-border rounded-2xl overflow-hidden w-[450px] shadow-2xl" onclick={(e) => e.stopPropagation()}>
     <div class="bg-gradient-to-r from-primary/20 to-primary/5 px-5 py-3 flex items-center justify-between">
       <div class="flex items-center gap-2">
         <HardDrive size={16} class="text-primary" />
         <h3 class="text-base font-bold text-primary">{t('offmap.title')}</h3>
       </div>
-      <Button variant="ghost" size="icon-xs" onclick={onclose}><X size={16} /></Button>
+      <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label="Close"><X size={16} /></Button>
     </div>
     <div class="px-5 py-4 space-y-3">
       {#if cacheInfo}

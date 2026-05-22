@@ -75,9 +75,7 @@ log("Alt: " + drone.alt_rel + "m");
   }
 </script>
 
-<!-- svelte-ignore a11y_click_events_have_key_events -->
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center" onclick={onclose}>
+<div role="presentation" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center" onclick={onclose}>
   <div class="bg-card border border-border rounded-2xl overflow-hidden w-[700px] max-h-[85vh] shadow-2xl flex flex-col" onclick={(e) => e.stopPropagation()}>
     <div class="bg-gradient-to-r from-green-500/20 to-primary/5 px-5 py-3 flex items-center justify-between shrink-0">
       <div class="flex items-center gap-2">
@@ -89,7 +87,7 @@ log("Alt: " + drone.alt_rel + "m");
           <Play size={13} class="mr-1" />{running ? 'Running...' : 'Run'}
         </Button>
         <Button variant="outline" size="sm" onclick={saveScript}><Save size={13} class="mr-1" />Save</Button>
-        <Button variant="ghost" size="icon-xs" onclick={onclose}><X size={16} /></Button>
+        <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label="Close"><X size={16} /></Button>
       </div>
     </div>
     <div class="flex flex-1 min-h-0">

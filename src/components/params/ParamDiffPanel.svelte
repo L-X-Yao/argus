@@ -169,9 +169,7 @@
 
 <svelte:window onkeydown={onKey} />
 
-<!-- svelte-ignore a11y_click_events_have_key_events -->
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+<div role="presentation" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm"
      onclick={onclose}>
   <div class="bg-card border border-border rounded-xl shadow-2xl w-[600px] max-w-[95vw] max-h-[85vh] flex flex-col"
        onclick={(e) => e.stopPropagation()}>

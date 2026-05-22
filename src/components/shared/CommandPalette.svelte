@@ -241,9 +241,7 @@
   }
 </script>
 
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<!-- svelte-ignore a11y_click_events_have_key_events -->
-<div class="fixed inset-0 z-[99999] flex items-start justify-center pt-[15vh] bg-black/50 backdrop-blur-sm"
+<div role="presentation" class="fixed inset-0 z-[99999] flex items-start justify-center pt-[15vh] bg-black/50 backdrop-blur-sm"
      onclick={onclose}>
   <div class="w-[520px] max-h-[60vh] bg-card border border-border rounded-xl shadow-2xl flex flex-col overflow-hidden"
        onclick={(e) => e.stopPropagation()} onkeydown={onKeydown}>

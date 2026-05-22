@@ -37,18 +37,14 @@
   }
 </script>
 
-<!-- svelte-ignore a11y_click_events_have_key_events -->
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9999] flex items-center justify-center" onclick={onclose}>
-  <!-- svelte-ignore a11y_click_events_have_key_events -->
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="bg-card border border-border rounded-2xl overflow-hidden min-w-[340px] shadow-2xl" onclick={(e) => e.stopPropagation()}>
+<div role="presentation" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9999] flex items-center justify-center" onclick={onclose}>
+    <div role="presentation" class="bg-card border border-border rounded-2xl overflow-hidden min-w-[340px] shadow-2xl" onclick={(e) => e.stopPropagation()}>
     <div class="bg-gradient-to-r from-primary/20 to-primary/5 px-5 py-3 flex items-center justify-between">
       <div>
         <h3 class="text-base font-bold text-primary">{t('summary.title')}</h3>
         <p class="text-[11px] text-muted-foreground mt-0.5">{t('summary.subtitle')}</p>
       </div>
-      <Button variant="ghost" size="icon-xs" onclick={onclose}><X size={16} /></Button>
+      <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label="Close"><X size={16} /></Button>
     </div>
     <div class="px-5 py-3 grid grid-cols-2 gap-3">
       <div class="flex items-center gap-2.5 py-1.5">

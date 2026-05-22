@@ -113,9 +113,7 @@
   function onWheel(e: WheelEvent) { e.preventDefault(); zoom = Math.max(0.2, Math.min(5, zoom * (e.deltaY > 0 ? 0.9 : 1.1))); }
 </script>
 
-<!-- svelte-ignore a11y_click_events_have_key_events -->
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center" onclick={onclose}>
+<div role="presentation" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center" onclick={onclose}>
   <div class="bg-card border border-border rounded-2xl overflow-hidden w-[700px] shadow-2xl" onclick={(e) => e.stopPropagation()}>
     <div class="bg-gradient-to-r from-primary/20 to-primary/5 px-5 py-3 flex items-center justify-between">
       <div class="flex items-center gap-2">
@@ -123,7 +121,7 @@
         <h3 class="text-base font-bold text-primary">3D Preview</h3>
         <span class="text-xs text-muted-foreground">{wps.length} WP</span>
       </div>
-      <Button variant="ghost" size="icon-xs" onclick={onclose}><X size={16} /></Button>
+      <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label="Close"><X size={16} /></Button>
     </div>
     <div class="px-2 py-2">
       {#if wps.length < 2}

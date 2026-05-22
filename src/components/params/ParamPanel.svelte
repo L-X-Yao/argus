@@ -279,9 +279,7 @@
   <div>
     <div class="flex items-center gap-2 px-2 py-1.5 text-xs border-b border-border/50 hover:bg-muted/50 transition-colors
           {modified.has(p.name) ? 'bg-warning/5' : ''}">
-      <!-- svelte-ignore a11y_click_events_have_key_events -->
-      <!-- svelte-ignore a11y_no_static_element_interactions -->
-      <div class="w-40 shrink-0 cursor-pointer" onclick={() => expandedParam = isExpanded ? null : p.name}>
+            <div role="presentation" class="w-40 shrink-0 cursor-pointer" onclick={() => expandedParam = isExpanded ? null : p.name}>
         <div class="font-bold font-mono text-[11px] leading-tight flex items-center gap-1">
           {#if metaLoaded}<span class="text-[9px] text-muted-foreground/40">{isExpanded ? '▼' : '▶'}</span>{/if}
           {p.name}
@@ -301,9 +299,7 @@
         </div>
       {:else}
         <div class="flex-1 flex items-center gap-1.5 min-w-0">
-          <!-- svelte-ignore a11y_click_events_have_key_events -->
-          <!-- svelte-ignore a11y_no_static_element_interactions -->
-          <div class="font-mono cursor-pointer px-1.5 py-0.5 rounded hover:bg-input transition-colors text-right min-w-[60px] {hasDefaultDiff(p.name, p.value) ? 'text-warning' : ''}"
+                    <div role="presentation" class="font-mono cursor-pointer px-1.5 py-0.5 rounded hover:bg-input transition-colors text-right min-w-[60px] {hasDefaultDiff(p.name, p.value) ? 'text-warning' : ''}"
                onclick={() => startEdit(p)}>{fmtValue(p.value)}</div>
           {#if units}<span class="text-[10px] text-muted-foreground">{units}</span>{/if}
           {#if valLabel}<span class="text-[10px] text-primary/70 truncate">{valLabel}</span>{/if}
@@ -426,9 +422,7 @@
     <div class="flex-1 min-h-0 overflow-y-auto rounded-lg border border-border" onscroll={onScroll}>
       {#if viewMode === 'tree' && treeGroups.length > 0}
         {#each treeGroups as group}
-          <!-- svelte-ignore a11y_click_events_have_key_events -->
-          <!-- svelte-ignore a11y_no_static_element_interactions -->
-          <div class="flex items-center gap-2 px-2 py-1.5 text-xs border-b border-border bg-muted/30 cursor-pointer hover:bg-muted/60 transition-colors"
+                    <div role="presentation" class="flex items-center gap-2 px-2 py-1.5 text-xs border-b border-border bg-muted/30 cursor-pointer hover:bg-muted/60 transition-colors"
                onclick={() => group.expanded = !group.expanded}>
             <span class="text-[10px] text-muted-foreground w-4">{group.expanded ? '▼' : '▶'}</span>
             <span class="font-bold font-mono text-primary text-[11px]">{group.name}</span>

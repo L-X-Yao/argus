@@ -159,12 +159,8 @@
   };
 </script>
 
-<!-- svelte-ignore a11y_click_events_have_key_events -->
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<div class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center" onclick={onclose}>
-  <!-- svelte-ignore a11y_click_events_have_key_events -->
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="bg-card border border-border rounded-2xl overflow-hidden w-[600px] max-h-[85vh] shadow-2xl flex flex-col" onclick={(e) => e.stopPropagation()}>
+<div role="presentation" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center" onclick={onclose}>
+    <div role="presentation" class="bg-card border border-border rounded-2xl overflow-hidden w-[600px] max-h-[85vh] shadow-2xl flex flex-col" onclick={(e) => e.stopPropagation()}>
     <!-- Header -->
     <div class="bg-gradient-to-r from-primary/20 to-primary/5 px-5 py-3 flex items-center justify-between shrink-0">
       <div class="flex items-center gap-2">
@@ -172,10 +168,10 @@
         <h3 class="text-base font-bold text-primary">{t('dashboard.title')}</h3>
       </div>
       <div class="flex items-center gap-1">
-        <Button variant="ghost" size="icon-xs" onclick={() => showPicker = !showPicker}>
+        <Button variant="ghost" size="icon-xs" onclick={() => showPicker = !showPicker} aria-label="Toggle widget picker">
           <Settings2 size={16} />
         </Button>
-        <Button variant="ghost" size="icon-xs" onclick={onclose}><X size={16} /></Button>
+        <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label="Close"><X size={16} /></Button>
       </div>
     </div>
 
@@ -186,9 +182,7 @@
           <div class="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">{t('dashboard.selectWidgets')}</div>
           <div class="grid grid-cols-3 gap-1.5">
             {#each widgets as w}
-              <!-- svelte-ignore a11y_click_events_have_key_events -->
-              <!-- svelte-ignore a11y_no_static_element_interactions -->
-              <div class="flex items-center gap-1.5 px-2 py-1 rounded cursor-pointer hover:bg-muted/50 transition-colors"
+                            <div role="presentation" class="flex items-center gap-1.5 px-2 py-1 rounded cursor-pointer hover:bg-muted/50 transition-colors"
                    onclick={() => toggleWidget(w.id)}>
                 <input type="checkbox" checked={selected.has(w.id)} class="h-3 w-3 accent-primary rounded"
                        onchange={() => toggleWidget(w.id)} />

@@ -64,9 +64,7 @@
 <svelte:window onkeydown={(e) => { if (e.key === 'Escape' && slideState.visible) cancelSlide(); }} />
 
 {#if slideState.visible}
-  <!-- svelte-ignore a11y_click_events_have_key_events -->
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="slide-backdrop" onclick={cancelSlide}>
+    <div role="presentation" class="slide-backdrop" onclick={cancelSlide}>
     <div class="slide-container" onclick={(e) => e.stopPropagation()}>
       <div bind:this={trackEl} class="slide-track">
         <div class="slide-fill" style="width: {progress * 100}%; background: {c.fill}"></div>
