@@ -131,7 +131,7 @@
 </script>
 
 <div role="dialog" aria-modal="true" tabindex="-1" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center" onclick={onclose} onkeydown={(e) => { if (e.key === "Escape") onclose(); }}>
-  <div class="bg-card border border-border rounded-2xl overflow-hidden w-[550px] max-h-[80vh] shadow-2xl flex flex-col" onclick={(e) => e.stopPropagation()}>
+  <div class="bg-card border border-border rounded-2xl overflow-hidden w-[550px] max-h-[80vh] shadow-2xl flex flex-col" role="presentation" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
     <div class="bg-gradient-to-r from-purple-500/20 to-primary/5 px-5 py-3 flex items-center justify-between shrink-0">
       <div class="flex items-center gap-2">
         <Sparkles size={16} class="text-purple-400" />

@@ -83,7 +83,7 @@
              class="w-20 h-5 px-1.5 text-[11px] bg-input border border-border rounded text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/50" />
     </div>
   </div>
-  <div bind:this={logEl} class="bg-background rounded-lg p-2 h-24 overflow-y-auto text-xs font-mono" aria-live="polite" aria-label="Event log">
+  <div bind:this={logEl} class="bg-background rounded-lg p-2 h-24 max-sm:h-16 overflow-y-auto text-xs font-mono" aria-live="polite" aria-label="Event log">
     {#each filtered as ev}
       {@const sev = severity(ev)}
       <div class="flex items-start gap-1.5 py-0.5 px-1 border-b border-border/50 rounded {sevStyle[sev]}">

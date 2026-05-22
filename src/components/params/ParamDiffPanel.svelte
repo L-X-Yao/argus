@@ -172,7 +172,7 @@
 <div role="dialog" aria-modal="true" tabindex="-1" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm"
      onclick={onclose} onkeydown={(e) => { if (e.key === "Escape") onclose(); }}>
   <div class="bg-card border border-border rounded-xl shadow-2xl w-[600px] max-w-[95vw] max-h-[85vh] flex flex-col"
-       onclick={(e) => e.stopPropagation()}>
+       role="presentation" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
 
     <!-- Header -->
     <div class="flex items-center justify-between px-4 pt-4 pb-2">
