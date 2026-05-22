@@ -34,7 +34,7 @@ async def video_stream(url: str = ''):
             try:
                 _active_proc.kill()
                 _active_proc.wait(timeout=3)
-            except Exception:
+            except OSError:
                 pass
 
     async def generate():
@@ -101,7 +101,7 @@ async def video_stop():
             try:
                 _active_proc.kill()
                 _active_proc.wait(timeout=3)
-            except Exception:
+            except OSError:
                 pass
             _active_proc = None
     return {'ok': True}

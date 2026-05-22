@@ -29,7 +29,7 @@ def _open_browser(port: int):
             urllib.request.urlopen('http://127.0.0.1:%d/health' % port, timeout=1)
             webbrowser.open('http://localhost:%d' % port)
             return
-        except Exception:
+        except OSError:
             pass
 
 

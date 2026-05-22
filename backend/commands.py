@@ -88,7 +88,7 @@ def _cmd_mission_start(link: DroneLink, param, data: dict):
     def _delayed():
         try:
             _send_cmd(link, 300)
-        except Exception:
+        except OSError:
             link.add_event('Mission start command failed', 'cmd_ack_fail')
 
     with _timer_lock:

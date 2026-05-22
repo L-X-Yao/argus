@@ -30,7 +30,7 @@ class WSManager:
         for ws in list(self._clients):
             try:
                 await ws.send_text(text)
-            except Exception:
+            except (ConnectionError, RuntimeError):
                 self._clients.discard(ws)
 
     async def handle_client(self, ws: WebSocket) -> None:
@@ -48,7 +48,7 @@ class WSManager:
             for t in done:
                 if t.exception() is not None:
                     pass
-        except Exception:
+        except (ConnectionError, RuntimeError):
             pass
         finally:
             self._clients.discard(ws)
@@ -110,7 +110,7 @@ class WSManager:
                         await ws.send_text(json.dumps({'type': 'cmd_result', **result}))
         except WebSocketDisconnect:
             pass
-        except Exception:
+        except (ConnectionError, RuntimeError):
             logger.warning('receive_loop error', exc_info=True)
 
     async def _push_loop(self, ws: WebSocket) -> None:
@@ -193,5 +193,5 @@ class WSManager:
                 await asyncio.sleep(interval)
         except WebSocketDisconnect:
             pass
-        except Exception:
+        except (ConnectionError, RuntimeError):
             logger.warning('push_loop error', exc_info=True)
