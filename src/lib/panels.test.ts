@@ -81,7 +81,19 @@ describe('PANEL_LOADERS', () => {
     expect(result).toBeInstanceOf(Promise);
   });
 
-  it('has exactly 41 panel loaders', () => {
+  it('has exactly 42 panel loaders', () => {
     expect(Object.keys(PANEL_LOADERS).length).toBe(42);
+  });
+
+  it('shortcuts loader resolves immediately', async () => {
+    const mod = await PANEL_LOADERS.shortcuts();
+    expect(mod).toHaveProperty('default');
+  });
+
+  it('all loaders return thenables', () => {
+    for (const [id, loader] of Object.entries(PANEL_LOADERS)) {
+      const result = loader();
+      expect(typeof result.then, `${id} loader did not return a thenable`).toBe('function');
+    }
   });
 });
