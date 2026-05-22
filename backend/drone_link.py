@@ -141,7 +141,7 @@ class DroneLink:
         with self._lock:
             if self._ser:
                 try:
-                    if self._protocol in ('pllink', 'auto'):
+                    if self._protocol == 'pllink':
                         self._ser.write(ple(frame, self.sq & 0xFF))
                     else:
                         self._ser.write(frame)
