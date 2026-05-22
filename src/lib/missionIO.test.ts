@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseQgcWaypoints, parseQgcPlan, exportKml, parseKmlCoords, segDist, totalDist, pointInPoly } from './missionIO';
+import { parseQgcWaypoints, parseQgcPlan, exportKml, segDist, totalDist, pointInPoly } from './missionIO';
 
 describe('parseQgcWaypoints', () => {
   it('parses valid waypoints', () => {

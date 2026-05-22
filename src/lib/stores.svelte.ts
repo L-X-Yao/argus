@@ -42,6 +42,7 @@ class AppState {
 export const app = new AppState();
 
 export function updateState(s: Partial<DroneState>) {
+  if (s.type !== undefined && s.type !== 'state') return;
   Object.assign(app.drone, s);
 }
 
