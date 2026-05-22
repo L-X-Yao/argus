@@ -69,6 +69,7 @@ class MissionState:
     _dl_total: int = 0
     _dl_items: list = field(default_factory=list)
     _dl_messages: list[dict] = field(default_factory=list)
+    _dl_start_time: float = 0.0
 
 
 @dataclass

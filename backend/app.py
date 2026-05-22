@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import glob
 import os
 import shutil
@@ -7,6 +8,7 @@ import sys
 import urllib.error
 import urllib.request as urlreq
 from contextlib import asynccontextmanager
+from functools import partial
 from pathlib import Path
 
 from fastapi import FastAPI, Request, UploadFile, WebSocket
@@ -26,6 +28,11 @@ DIST_DIR = ROOT_DIR / 'dist'
 TILE_CACHE = ROOT_DIR / 'tile_cache'
 _TILE_MAX = cfg.TILE_CACHE_MAX
 _tile_count = -1
+
+
+async def _aio(fn, *args):
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, partial(fn, *args) if args else fn)
 
 TILE_URLS = {
     '6': 'https://webst01.is.autonavi.com/appmaptile?style=6&x={x}&y={y}&z={z}',
@@ -227,7 +234,8 @@ async def api_ports():
             pass
         return {'ports': ports or ['COM3']}
     else:
-        return {'ports': sorted(glob.glob('/dev/ttyUSB*') + glob.glob('/dev/ttyACM*')) or ['/dev/ttyUSB0']}
+        found = await _aio(lambda: sorted(glob.glob('/dev/ttyUSB*') + glob.glob('/dev/ttyACM*')))
+        return {'ports': found or ['/dev/ttyUSB0']}
 
 
 @app.get('/api/log')
@@ -252,17 +260,18 @@ async def api_tile(style: str, z: int, x: int, y: int):
     cache_dir = TILE_CACHE / style / str(z) / str(x)
     cache_file = cache_dir / ('%d.png' % y)
     if cache_file.exists():
-        return Response(content=cache_file.read_bytes(), media_type='image/png',
+        data = await _aio(cache_file.read_bytes)
+        return Response(content=data, media_type='image/png',
                         headers={'Cache-Control': 'public, max-age=604800'})
     url = TILE_URLS.get(style, TILE_URLS['6']).format(x=x, y=y, z=z)
     try:
         req = urlreq.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        data = urlreq.urlopen(req, timeout=cfg.TILE_DOWNLOAD_TIMEOUT).read()
+        data = await _aio(lambda: urlreq.urlopen(req, timeout=cfg.TILE_DOWNLOAD_TIMEOUT).read())
         if _tile_count < 0:
-            _tile_count = sum(1 for _ in TILE_CACHE.rglob('*.png')) if TILE_CACHE.exists() else 0
+            _tile_count = await _aio(lambda: sum(1 for _ in TILE_CACHE.rglob('*.png')) if TILE_CACHE.exists() else 0)
         if _tile_count < _TILE_MAX:
             cache_dir.mkdir(parents=True, exist_ok=True)
-            cache_file.write_bytes(data)
+            await _aio(cache_file.write_bytes, data)
             _tile_count += 1
         return Response(content=data, media_type='image/png',
                         headers={'Cache-Control': 'public, max-age=604800'})
@@ -274,11 +283,16 @@ async def api_tile(style: str, z: int, x: int, y: int):
 async def api_tile_cache():
     if not TILE_CACHE.exists():
         return {'size': 0, 'count': 0}
-    total = count = 0
-    for f in TILE_CACHE.rglob('*'):
-        if f.is_file():
-            total += f.stat().st_size
-            count += 1
+
+    def _count_cache():
+        total = count = 0
+        for f in TILE_CACHE.rglob('*'):
+            if f.is_file():
+                total += f.stat().st_size
+                count += 1
+        return total, count
+
+    total, count = await _aio(_count_cache)
     return {'size': total, 'count': count}
 
 
@@ -320,21 +334,20 @@ async def _get_srtm_elevation(lat: float, lon: float) -> float:
     cache_file = SRTM_CACHE / fname
     if not cache_file.exists():
         SRTM_CACHE.mkdir(parents=True, exist_ok=True)
-        srtm_count = sum(1 for _ in SRTM_CACHE.glob('*.hgt')) if SRTM_CACHE.exists() else 0
+        srtm_count = await _aio(lambda: sum(1 for _ in SRTM_CACHE.glob('*.hgt')) if SRTM_CACHE.exists() else 0)
         if srtm_count >= cfg.SRTM_CACHE_MAX:
             return 0
         url = 'https://elevation-tiles-prod.s3.amazonaws.com/skadi/%s%02d/%s' % (ns, abs(ilat), fname)
         try:
             req = urlreq.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-            resp = urlreq.urlopen(req, timeout=10)
-            data = resp.read(30 * 1024 * 1024)
+            data = await _aio(lambda: urlreq.urlopen(req, timeout=10).read(30 * 1024 * 1024))
             if len(data) >= 30 * 1024 * 1024:
                 return 0
-            cache_file.write_bytes(data)
+            await _aio(cache_file.write_bytes, data)
         except (OSError, urllib.error.URLError):
             return 0
     try:
-        data = cache_file.read_bytes()
+        data = await _aio(cache_file.read_bytes)
         samples = 1201
         if len(data) == 2884802:
             samples = 1201

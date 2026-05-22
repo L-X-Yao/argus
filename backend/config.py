@@ -45,9 +45,11 @@ class Config:
     # Param metadata
     PARAM_CACHE_TTL: int = 86400 * 7
     PARAM_DOWNLOAD_TIMEOUT: float = 15.0
+    PARAM_FETCH_TIMEOUT: float = 60.0
 
     # Mission
     MISSION_START_DELAY: float = 0.3
+    MISSION_DL_TIMEOUT: float = 30.0
     STREAM_REQUEST_SPACING: float = 0.01
     PARAM_LOAD_SPACING: float = 0.02
 

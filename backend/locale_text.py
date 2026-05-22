@@ -76,6 +76,8 @@ _T = {
     'err_no_log':      ('无活动日志',               'No active log'),
     'err_no_video_url':('未提供视频地址',           'No video URL provided'),
     'err_no_ffmpeg':   ('服务器未安装 ffmpeg',      'ffmpeg not installed on server'),
+    'param_timeout':   ('参数读取超时',             'Parameter fetch timeout'),
+    'mission_dl_timeout': ('任务下载超时',          'Mission download timeout'),
 }
 
 

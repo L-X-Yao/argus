@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import struct
 import threading
+import time
 from typing import TYPE_CHECKING
 
 from ..config import cfg
@@ -78,8 +79,18 @@ def cmd_mission_download(link: DroneLink, param, data: dict):
     link.mission._dl_pending = True
     link.mission._dl_total = 0
     link.mission._dl_items = []
+    link.mission._dl_start_time = time.time()
     link.add_event(lt('mission_dl', link.locale), 'mission_dl')
     link.send(bm(43, struct.pack('<BBB', link.vehicle.sysid, 1, 0), link.sq, 132))
+
+
+def check_mission_dl_timeout(link: DroneLink) -> None:
+    m = link.mission
+    if m._dl_pending and m._dl_start_time > 0:
+        if time.time() - m._dl_start_time > cfg.MISSION_DL_TIMEOUT:
+            m._dl_pending = False
+            m._dl_start_time = 0.0
+            link.add_event(lt('mission_dl_timeout', link.locale), 'mission_dl_timeout')
 
 
 def cmd_rally_upload(link: DroneLink, param, data: dict):

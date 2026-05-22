@@ -111,6 +111,12 @@ class ParamManager:
         self._link.add_event(lt('param_loaded', self._link.locale) % (len(data), len(changed)), 'param_loaded')
         return changed
 
+    def check_timeout(self) -> None:
+        if self.fetching and time.time() - self._fetch_start > cfg.PARAM_FETCH_TIMEOUT:
+            self.fetching = False
+            self._link.add_event(lt('param_timeout', self._link.locale), 'param_timeout')
+            self._messages.append({'type': 'param_timeout'})
+
     def get_status(self) -> dict:
         return {
             'param_count': self.received_count,

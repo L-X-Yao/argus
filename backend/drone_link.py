@@ -470,7 +470,13 @@ class DroneLink:
                 else:
                     break
             self._write_log_line()
+            self.param_mgr.check_timeout()
+            self._check_mission_dl_timeout()
             time.sleep(cfg.MAIN_LOOP_SLEEP)
+
+    def _check_mission_dl_timeout(self) -> None:
+        from .commands._mission import check_mission_dl_timeout
+        check_mission_dl_timeout(self)
 
     def get_inspector_data(self) -> list[dict]:
         now = time.time()
