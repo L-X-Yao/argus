@@ -2,7 +2,7 @@
   import { app, isPlane } from '../../lib/stores.svelte';
   import { t } from '../../lib/i18n.svelte';
 
-  let d = $derived(app.drone);
+  const d = app.drone;
 
   let isAutoMode = $derived(
     isPlane() ? d.mode_id === 10 : d.mode_id === 3

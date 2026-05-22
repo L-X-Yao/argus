@@ -2,7 +2,7 @@
   import { app } from '../../lib/stores.svelte';
   import { t } from '../../lib/i18n.svelte';
 
-  let d = $derived(app.drone);
+  const d = app.drone;
   function fmtTime(s: number): string {
     const m = Math.floor(s / 60), sec = s % 60;
     return `${m}:${sec < 10 ? '0' : ''}${sec}`;

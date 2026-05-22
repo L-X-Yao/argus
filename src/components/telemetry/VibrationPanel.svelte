@@ -76,7 +76,7 @@
     return 'destructive';
   }
 
-  let d = $derived(app.drone);
+  const d = app.drone;
 </script>
 
 <div class="bg-card border border-border rounded-xl p-4">

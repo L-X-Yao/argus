@@ -2,7 +2,7 @@
   import { app } from '../../lib/stores.svelte';
   import { t, i18nState } from '../../lib/i18n.svelte';
 
-  let d = $derived(app.drone);
+  const d = app.drone;
 
   const CX = 150, CY = 86;
   const AHI_R = 60, COMP_R = 74;

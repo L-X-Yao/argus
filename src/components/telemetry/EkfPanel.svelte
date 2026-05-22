@@ -3,7 +3,7 @@
   import Badge from '$lib/components/ui/badge/badge.svelte';
   import { t } from '../../lib/i18n.svelte';
 
-  let d = $derived(app.drone);
+  const d = app.drone;
 
   const FLAG_ATTITUDE       = 0x001;
   const FLAG_VEL_HORIZ      = 0x002;

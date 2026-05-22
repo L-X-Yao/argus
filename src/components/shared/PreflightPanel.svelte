@@ -3,7 +3,7 @@
   import { t } from '../../lib/i18n.svelte';
   import { Check, X as XIcon, Settings2 } from '@lucide/svelte';
 
-  let d = $derived(app.drone);
+  const d = app.drone;
 
   interface CheckItem {
     key: string;

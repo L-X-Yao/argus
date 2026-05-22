@@ -17,7 +17,7 @@
   const BIT_CONST_POS      = 0x080;  // bit 7
   const BIT_UNINITIALIZED  = 0x400;  // bit 10
 
-  let d = $derived(app.drone);
+  const d = app.drone;
 
   type StatusLevel = 'good' | 'warn' | 'bad';
 

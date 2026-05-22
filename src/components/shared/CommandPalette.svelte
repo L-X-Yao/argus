@@ -38,7 +38,7 @@
 
   $effect(() => { inputEl?.focus(); });
 
-  const d = $derived(app.drone);
+  const d = app.drone;
   const connected = $derived(d.connected);
 
   let items = $derived.by((): PaletteItem[] => {
