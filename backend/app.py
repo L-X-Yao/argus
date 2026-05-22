@@ -444,7 +444,14 @@ async def api_firmware_upload(file: UploadFile):
     safe_name = Path(file.filename).name
     FIRMWARE_DIR.mkdir(exist_ok=True)
     dest = FIRMWARE_DIR / safe_name
-    data = await file.read()
+    chunks: list[bytes] = []
+    total = 0
+    while chunk := await file.read(1024 * 1024):
+        total += len(chunk)
+        if total > cfg.FIRMWARE_MAX_SIZE:
+            return {'ok': False, 'error': f'File too large (max {cfg.FIRMWARE_MAX_SIZE // 1024 // 1024} MB)'}
+        chunks.append(chunk)
+    data = b''.join(chunks)
     dest.write_bytes(data)
     return {'ok': True, 'filename': safe_name, 'size': len(data)}
 

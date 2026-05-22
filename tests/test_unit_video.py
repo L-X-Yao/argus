@@ -64,7 +64,7 @@ class TestRtspUrlValidation:
 
     @patch('backend.video._ffmpeg_available', return_value=False)
     def test_no_ffmpeg_returns_error(self, mock_ff, client):
-        r = client.get('/api/video?url=rtsp://192.168.1.100:554/stream')
+        r = client.get('/api/video?url=rtsp://cam.example.com:554/stream')
         assert r.status_code == 200
         data = r.json()
         assert 'error' in data
@@ -80,7 +80,7 @@ class TestRtspUrlValidation:
         mock_proc.wait = MagicMock()
         mock_popen.return_value = mock_proc
 
-        r = client.get('/api/video?url=rtsp://192.168.1.100:554/stream')
+        r = client.get('/api/video?url=rtsp://cam.example.com:554/stream')
         assert r.status_code == 200
 
     @patch('backend.video._ffmpeg_available', return_value=True)
@@ -108,12 +108,12 @@ class TestVideoLifecycle:
         mock_proc.wait = MagicMock()
         mock_popen.return_value = mock_proc
 
-        r = client.get('/api/video?url=rtsp://10.0.0.1/cam')
+        r = client.get('/api/video?url=rtsp://cam.example.com/cam')
         assert r.status_code == 200
         mock_popen.assert_called_once()
         args = mock_popen.call_args[0][0]
         assert args[0] == 'ffmpeg'
-        assert 'rtsp://10.0.0.1/cam' in args
+        assert 'rtsp://cam.example.com/cam' in args
 
     @patch('backend.video._ffmpeg_available', return_value=True)
     @patch('subprocess.Popen')
@@ -125,7 +125,7 @@ class TestVideoLifecycle:
         mock_proc.wait = MagicMock()
         mock_popen.return_value = mock_proc
 
-        client.get('/api/video?url=rtsp://10.0.0.1/cam')
+        client.get('/api/video?url=rtsp://cam.example.com/cam')
         args = mock_popen.call_args[0][0]
         assert '-f' in args
         idx = args.index('-f')
@@ -169,7 +169,7 @@ class TestDuplicateProcessPrevention:
         second_proc.wait = MagicMock()
 
         with patch('subprocess.Popen', return_value=second_proc):
-            client.get('/api/video?url=rtsp://10.0.0.1/new')
+            client.get('/api/video?url=rtsp://cam.example.com/new')
 
         first_proc.kill.assert_called_once()
 

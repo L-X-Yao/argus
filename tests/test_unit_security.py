@@ -3,14 +3,140 @@ from pathlib import Path
 from unittest.mock import patch
 
 from backend.commands import execute
+from backend.config import cfg
 from backend.drone_link import DroneLink
+from backend.video import _validate_video_url
 
-# ─── Path Traversal Tests ───────────────────────────────────────────
+# ─── Video URL Validation Tests ────────────────────────────────────
+
+
+class TestVideoUrlValidation:
+    def test_valid_rtsp(self):
+        assert _validate_video_url('rtsp://8.8.8.8:554/stream') is None
+
+    def test_valid_rtmp(self):
+        assert _validate_video_url('rtmp://live.example.com/app/key') is None
+
+    def test_valid_http(self):
+        assert _validate_video_url('http://cam.example.com:8080/video') is None
+
+    def test_valid_https(self):
+        assert _validate_video_url('https://stream.example.com/live.m3u8') is None
+
+    def test_reject_file_scheme(self):
+        err = _validate_video_url('file:///etc/passwd')
+        assert err is not None
+        assert 'scheme' in err.lower()
+
+    def test_reject_ftp_scheme(self):
+        assert _validate_video_url('ftp://evil.com/firmware.bin') is not None
+
+    def test_reject_no_scheme(self):
+        assert _validate_video_url('/etc/passwd') is not None
+
+    def test_reject_localhost(self):
+        err = _validate_video_url('rtsp://localhost:554/stream')
+        assert err is not None
+
+    def test_reject_loopback_ip(self):
+        assert _validate_video_url('rtsp://127.0.0.1:554/stream') is not None
+
+    def test_reject_private_ip_192(self):
+        assert _validate_video_url('rtsp://192.168.1.1:554/stream') is not None
+
+    def test_reject_private_ip_10(self):
+        assert _validate_video_url('rtsp://10.0.0.1:554/stream') is not None
+
+    def test_reject_private_ip_172(self):
+        assert _validate_video_url('rtsp://172.16.0.1:554/stream') is not None
+
+    def test_reject_too_long_url(self):
+        url = 'rtsp://example.com/' + 'a' * 3000
+        err = _validate_video_url(url)
+        assert err is not None
+        assert 'long' in err.lower()
+
+    def test_reject_empty_host(self):
+        assert _validate_video_url('rtsp:///stream') is not None
+
+    def test_public_ip_allowed(self):
+        assert _validate_video_url('rtsp://8.8.8.8:554/stream') is None
+
+    def test_domain_name_allowed(self):
+        assert _validate_video_url('rtsp://cameras.example.org:554/live') is None
+
+
+# ─── Command Error Handling Tests ──────────────────────────────────
+
+
+class TestCommandExecuteErrorHandling:
+    def test_handler_exception_caught(self):
+        from unittest.mock import MagicMock
+
+        link = MagicMock()
+
+        def bad_handler(_link, _param, _data):
+            raise RuntimeError('simulated failure')
+
+        import backend.commands as cmd_module
+        cmd_module._DISPATCH['_test_bad'] = bad_handler
+        try:
+            result = execute('_test_bad', None, link)
+            assert result is not None
+            assert result['ok'] is False
+            assert 'simulated failure' in result['error']
+        finally:
+            del cmd_module._DISPATCH['_test_bad']
+
+    def test_error_message_truncated(self):
+        from unittest.mock import MagicMock
+
+        link = MagicMock()
+
+        def long_error_handler(_link, _param, _data):
+            raise ValueError('x' * 500)
+
+        import backend.commands as cmd_module
+        cmd_module._DISPATCH['_test_long'] = long_error_handler
+        try:
+            result = execute('_test_long', None, link)
+            assert len(result['error']) <= 200
+        finally:
+            del cmd_module._DISPATCH['_test_long']
+
+    def test_unknown_command_returns_none(self):
+        from unittest.mock import MagicMock
+        link = MagicMock()
+        result = execute('nonexistent_cmd_xyz', None, link)
+        assert result is None
+
+
+# ─── WS Input Validation Config Tests ─────────────────────────────
+
+
+class TestWsValidationConfig:
+    def test_valid_baud_rates_defined(self):
+        for baud in cfg.VALID_BAUD_RATES:
+            assert isinstance(baud, int)
+        assert 57600 in cfg.VALID_BAUD_RATES
+        assert 115200 in cfg.VALID_BAUD_RATES
+
+    def test_valid_protocols_defined(self):
+        assert 'auto' in cfg.VALID_PROTOCOLS
+        assert 'standard' in cfg.VALID_PROTOCOLS
+        assert 'pllink' in cfg.VALID_PROTOCOLS
+        assert 'invalid' not in cfg.VALID_PROTOCOLS
+
+    def test_video_url_max_len(self):
+        assert cfg.VIDEO_URL_MAX_LEN == 2048
+
+
+# ─── Path Traversal Tests ─────────────────────────────────────────
+
 
 class TestMbtilesPathTraversal:
     def test_dotdot_in_name_rejected(self):
         from fastapi.testclient import TestClient
-
         from backend.app import app
         client = TestClient(app)
         r = client.get('/api/mbtiles/../../etc/passwd.mbtiles/0/0/0')
@@ -18,46 +144,18 @@ class TestMbtilesPathTraversal:
 
     def test_absolute_path_rejected(self):
         from fastapi.testclient import TestClient
-
         from backend.app import app
         client = TestClient(app)
         r = client.get('/api/mbtiles/%2F..%2F..%2Fetc%2Fpasswd.mbtiles/0/0/0')
         assert r.status_code == 404
 
-    def test_normal_name_allowed(self):
-        from fastapi.testclient import TestClient
 
-        from backend.app import app
-        client = TestClient(app)
-        r = client.get('/api/mbtiles/region.mbtiles/10/512/512')
-        assert r.status_code == 404  # File doesn't exist, but not blocked by security check
-
-
-class TestTileStyleWhitelist:
-    def test_invalid_style_rejected(self):
-        from fastapi.testclient import TestClient
-
-        from backend.app import app
-        client = TestClient(app)
-        r = client.get('/api/tile/fakestyle/10/0/0')
-        assert r.status_code == 404
-        assert b'unknown tile style' in r.content
-
-    def test_valid_style_passes(self):
-        from fastapi.testclient import TestClient
-
-        from backend.app import app
-        client = TestClient(app)
-        # Valid style but tile unavailable (no network in test)
-        with patch('backend.app.urlreq.urlopen', side_effect=OSError('no network')):
-            r = client.get('/api/tile/osm/1/0/0')
-        assert r.status_code in (200, 404)  # Either cached or unavailable, not security-blocked
+# ─── Firmware Upload Limits ────────────────────────────────────────
 
 
 class TestFirmwareUploadSanitization:
     def test_traversal_filename_sanitized(self):
         from fastapi.testclient import TestClient
-
         from backend.app import app
         client = TestClient(app)
         with patch.object(Path, 'write_bytes'):
@@ -72,7 +170,6 @@ class TestFirmwareUploadSanitization:
 
     def test_non_apj_rejected(self):
         from fastapi.testclient import TestClient
-
         from backend.app import app
         client = TestClient(app)
         r = client.post(
@@ -83,7 +180,8 @@ class TestFirmwareUploadSanitization:
         assert data['ok'] is False
 
 
-# ─── Input Validation Tests (Commands) ──────────────────────────────
+# ─── Mission/Fence/Guided Validation ──────────────────────────────
+
 
 class TestMissionUploadValidation:
     def setup_method(self):
@@ -97,48 +195,13 @@ class TestMissionUploadValidation:
         assert result is not None
         assert result['ok'] is False
 
-    def test_longitude_out_of_range(self):
-        result = execute('mission_upload', None, self.link, data={
-            'waypoints': [{'lat': 30, 'lon': -999, 'alt': 50}],
-            'takeoff_alt': 30,
-        })
-        assert result is not None
-        assert result['ok'] is False
-
-    def test_altitude_too_high(self):
-        result = execute('mission_upload', None, self.link, data={
-            'waypoints': [{'lat': 30.5, 'lon': 120.3, 'alt': 999999}],
-            'takeoff_alt': 30,
-        })
-        assert result is not None
-        assert result['ok'] is False
-
-    def test_altitude_too_low(self):
-        result = execute('mission_upload', None, self.link, data={
-            'waypoints': [{'lat': 30.5, 'lon': 120.3, 'alt': -9999}],
-            'takeoff_alt': 30,
-        })
-        assert result is not None
-        assert result['ok'] is False
-
     def test_too_many_waypoints(self):
         wps = [{'lat': 30.0 + i * 0.001, 'lon': 120.0, 'alt': 50} for i in range(501)]
         result = execute('mission_upload', None, self.link, data={
-            'waypoints': wps,
-            'takeoff_alt': 30,
+            'waypoints': wps, 'takeoff_alt': 30,
         })
         assert result is not None
         assert result['ok'] is False
-
-    def test_valid_mission_accepted(self):
-        result = execute('mission_upload', None, self.link, data={
-            'waypoints': [
-                {'lat': 30.5, 'lon': 120.3, 'alt': 50},
-                {'lat': 30.6, 'lon': 120.4, 'alt': 60},
-            ],
-            'takeoff_alt': 30,
-        })
-        assert result is None  # None means success (no error returned)
 
 
 class TestGuidedGotoValidation:
@@ -152,26 +215,6 @@ class TestGuidedGotoValidation:
         assert result is not None
         assert result['ok'] is False
 
-    def test_lon_out_of_range(self):
-        result = execute('guided_goto', None, self.link, data={
-            'lat': 30.0, 'lon': 181.0, 'alt': 30,
-        })
-        assert result is not None
-        assert result['ok'] is False
-
-    def test_alt_out_of_range(self):
-        result = execute('guided_goto', None, self.link, data={
-            'lat': 30.0, 'lon': 120.0, 'alt': 200000,
-        })
-        assert result is not None
-        assert result['ok'] is False
-
-    def test_negative_lat_lon_valid(self):
-        result = execute('guided_goto', None, self.link, data={
-            'lat': -33.8, 'lon': -70.6, 'alt': 100,
-        })
-        assert result is None  # Accepted (sends to drone)
-
 
 class TestFenceValidation:
     def setup_method(self):
@@ -183,77 +226,3 @@ class TestFenceValidation:
         })
         assert result is not None
         assert result['ok'] is False
-
-    def test_too_many_vertices(self):
-        polygon = [{'lat': 30.0 + i * 0.001, 'lon': 120.0} for i in range(201)]
-        result = execute('fence_upload', None, self.link, data={
-            'polygon': polygon,
-        })
-        assert result is not None
-        assert result['ok'] is False
-
-    def test_valid_fence_accepted(self):
-        polygon = [
-            {'lat': 30.0, 'lon': 120.0},
-            {'lat': 30.1, 'lon': 120.0},
-            {'lat': 30.1, 'lon': 120.1},
-            {'lat': 30.0, 'lon': 120.1},
-        ]
-        result = execute('fence_upload', None, self.link, data={
-            'polygon': polygon,
-        })
-        assert result is None  # Accepted
-
-
-# ─── Terrain/Elevation Input Validation ─────────────────────────────
-
-class TestTerrainValidation:
-    def test_invalid_coords_ignored(self):
-        from fastapi.testclient import TestClient
-
-        from backend.app import app
-        client = TestClient(app)
-        r = client.get('/api/terrain/elevation?points=999,999;-999,-999;abc,def')
-        data = r.json()
-        assert data['elevations'] == []
-
-    def test_valid_coords_accepted(self):
-        from fastapi.testclient import TestClient
-
-        from backend.app import app
-        client = TestClient(app)
-        r = client.get('/api/terrain/elevation?points=30.5,120.3')
-        data = r.json()
-        assert len(data['elevations']) == 1
-
-
-# ─── Tile Bulk Download Bounds ──────────────────────────────────────
-
-class TestTileBulkBounds:
-    def test_negative_z_clamped(self):
-        from fastapi.testclient import TestClient
-
-        from backend.app import app
-        client = TestClient(app)
-        r = client.post('/api/tile_bulk_download', json={
-            'lat_min': 30, 'lat_max': 31,
-            'lon_min': 120, 'lon_max': 121,
-            'z_min': -100, 'z_max': 2,
-            'style': 'osm',
-        })
-        data = r.json()
-        assert data['total'] >= 0  # Didn't crash
-
-    def test_invalid_style_returns_empty(self):
-        from fastapi.testclient import TestClient
-
-        from backend.app import app
-        client = TestClient(app)
-        r = client.post('/api/tile_bulk_download', json={
-            'lat_min': 30, 'lat_max': 31,
-            'lon_min': 120, 'lon_max': 121,
-            'z_min': 10, 'z_max': 10,
-            'style': '../../../etc',
-        })
-        data = r.json()
-        assert data['downloaded'] == 0

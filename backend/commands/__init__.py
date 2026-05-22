@@ -119,5 +119,10 @@ def execute(cmd: str, param, link: DroneLink, data: dict | None = None) -> dict 
     data = data or {}
     handler = _DISPATCH.get(cmd)
     if handler:
-        return handler(link, param, data)
+        try:
+            return handler(link, param, data)
+        except Exception as exc:
+            import logging
+            logging.getLogger(__name__).exception("Command '%s' failed", cmd)
+            return {'ok': False, 'error': str(exc)[:200]}
     return None

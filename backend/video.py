@@ -2,14 +2,43 @@
 from __future__ import annotations
 
 import asyncio
+import ipaddress
 import shutil
 import subprocess
 import threading
+from urllib.parse import urlparse
 
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 
+from .config import cfg
+
 router = APIRouter()
+
+_ALLOWED_SCHEMES = {'rtsp', 'rtmp', 'http', 'https'}
+
+
+def _validate_video_url(url: str) -> str | None:
+    """Validate video URL. Returns error message or None if valid."""
+    if len(url) > cfg.VIDEO_URL_MAX_LEN:
+        return 'URL too long'
+    try:
+        parsed = urlparse(url)
+    except ValueError:
+        return 'Malformed URL'
+    if parsed.scheme not in _ALLOWED_SCHEMES:
+        return 'Only rtsp/rtmp/http/https schemes allowed'
+    host = parsed.hostname or ''
+    if not host:
+        return 'No hostname in URL'
+    try:
+        addr = ipaddress.ip_address(host)
+        if addr.is_private or addr.is_loopback or addr.is_reserved:
+            return 'Private/loopback addresses not allowed'
+    except ValueError:
+        if host in ('localhost', 'localhost.localdomain'):
+            return 'Private/loopback addresses not allowed'
+    return None
 
 _active_proc: subprocess.Popen | None = None
 _proc_lock = threading.Lock()
@@ -26,6 +55,9 @@ async def video_stream(url: str = ''):
 
     if not url:
         return {'error': 'No video URL provided'}
+    url_err = _validate_video_url(url)
+    if url_err:
+        return {'error': f'Invalid video URL: {url_err}'}
     if not _ffmpeg_available():
         return {'error': 'ffmpeg not installed on server'}
 

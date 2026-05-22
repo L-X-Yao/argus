@@ -54,5 +54,10 @@ class Config:
     # Git version
     GIT_HASH_TIMEOUT: float = 2.0
 
+    # Validation
+    VALID_BAUD_RATES: tuple = (9600, 19200, 38400, 57600, 115200, 230400, 460800, 921600)
+    VALID_PROTOCOLS: tuple = ('auto', 'standard', 'pllink')
+    VIDEO_URL_MAX_LEN: int = 2048
+
 
 cfg = Config()

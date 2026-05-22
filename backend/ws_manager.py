@@ -66,6 +66,15 @@ class WSManager:
                     port = msg.get('port', 'tcp:localhost:5770')
                     baud = msg.get('baud', cfg.SERIAL_BAUD)
                     protocol = msg.get('protocol', 'auto')
+                    if not isinstance(port, str) or len(port) > 200 or '\x00' in port:
+                        await ws.send_text(json.dumps({
+                            'type': 'connect_result', 'ok': False, 'error': 'Invalid port',
+                        }))
+                        continue
+                    if not isinstance(baud, int) or baud not in cfg.VALID_BAUD_RATES:
+                        baud = cfg.SERIAL_BAUD
+                    if protocol not in cfg.VALID_PROTOCOLS:
+                        protocol = 'auto'
                     ok = self.link.connect(port, baud, protocol=protocol)
                     await ws.send_text(json.dumps({
                         'type': 'connect_result', 'ok': ok,
@@ -77,7 +86,9 @@ class WSManager:
                         'type': 'connect_result', 'ok': True, 'error': '',
                     }))
                 elif msg_type == 'set_locale':
-                    self.link.locale = msg.get('locale', 'zh')
+                    locale = msg.get('locale', 'zh')
+                    if locale in ('zh', 'en', 'ja', 'ko', 'de', 'fr', 'es', 'pt', 'ru', 'ar'):
+                        self.link.locale = locale
                 elif msg_type == 'set_role':
                     role = msg.get('role', 'observer')
                     self._roles[id(ws)] = role
