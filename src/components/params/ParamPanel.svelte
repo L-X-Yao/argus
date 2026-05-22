@@ -124,9 +124,27 @@
     return Math.abs(value - m.default!) > 1e-6;
   }
 
-  let modifiedCount = $derived(
-    metaLoaded ? paramState.list.filter(p => hasDefaultDiff(p.name, p.value)).length : 0
-  );
+  let categoryCounts = $derived.by(() => {
+    if (paramState.fetching) return {};
+    const counts: Record<string, number> = {};
+    for (const p of paramState.list) {
+      for (const cat of CAT_DEFS) {
+        if (cat.key !== 'all' && cat.match(p.name)) {
+          counts[cat.key] = (counts[cat.key] || 0) + 1;
+        }
+      }
+    }
+    return counts;
+  });
+
+  let modifiedCount = $derived.by(() => {
+    if (!metaLoaded || paramState.fetching) return 0;
+    let n = 0;
+    for (const p of paramState.list) {
+      if (hasDefaultDiff(p.name, p.value)) n++;
+    }
+    return n;
+  });
 
   let filtered = $derived.by(() => {
     const cat = CAT_DEFS.find(c => c.key === category)!;
@@ -393,9 +411,8 @@
             : 'bg-card text-muted-foreground border-border hover:text-foreground hover:bg-muted'}"
                 onclick={() => category = cat.key}>
           <cat.icon size={11} />{t(cat.i18nKey)}
-          {#if cat.key !== 'all' && paramState.list.length > 0}
-            {@const cnt = paramState.list.filter(p => cat.match(p.name)).length}
-            {#if cnt > 0}<span class="text-[9px] opacity-60">{cnt}</span>{/if}
+          {#if cat.key !== 'all' && (categoryCounts[cat.key] ?? 0) > 0}
+            <span class="text-[9px] opacity-60">{categoryCounts[cat.key]}</span>
           {/if}
         </button>
       {/each}
