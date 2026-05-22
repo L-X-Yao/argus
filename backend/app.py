@@ -306,10 +306,16 @@ async def _get_srtm_elevation(lat: float, lon: float) -> float:
     cache_file = SRTM_CACHE / fname
     if not cache_file.exists():
         SRTM_CACHE.mkdir(parents=True, exist_ok=True)
+        srtm_count = sum(1 for _ in SRTM_CACHE.glob('*.hgt')) if SRTM_CACHE.exists() else 0
+        if srtm_count >= cfg.SRTM_CACHE_MAX:
+            return 0
         url = 'https://elevation-tiles-prod.s3.amazonaws.com/skadi/%s%02d/%s' % (ns, abs(ilat), fname)
         try:
             req = urlreq.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-            data = urlreq.urlopen(req, timeout=10).read()
+            resp = urlreq.urlopen(req, timeout=10)
+            data = resp.read(30 * 1024 * 1024)
+            if len(data) >= 30 * 1024 * 1024:
+                return 0
             cache_file.write_bytes(data)
         except Exception:
             return 0
@@ -459,7 +465,8 @@ async def api_firmware_online(board_id: int = 0):
     try:
         url = '%s%s/stable-%s/' % (_FW_BASE, vehicle, board_name)
         req = urlreq.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        html = urlreq.urlopen(req, timeout=10).read().decode('utf-8', errors='replace')
+        resp = urlreq.urlopen(req, timeout=10)
+        html = resp.read(cfg.FIRMWARE_HTML_MAX).decode('utf-8', errors='replace')
         import re
         for m in re.finditer(r'href="([^"]*\.apj)"', html):
             fname = m.group(1)
@@ -489,7 +496,10 @@ async def api_firmware_download(request: Request):
         return {'ok': False, 'error': 'Only HTTPS URLs allowed'}
     try:
         req = urlreq.Request(fw_url, headers={'User-Agent': 'Mozilla/5.0'})
-        data = urlreq.urlopen(req, timeout=60).read()
+        resp = urlreq.urlopen(req, timeout=60)
+        data = resp.read(cfg.FIRMWARE_MAX_SIZE + 1)
+        if len(data) > cfg.FIRMWARE_MAX_SIZE:
+            return {'ok': False, 'error': 'File too large (max %d MB)' % (cfg.FIRMWARE_MAX_SIZE // 1024 // 1024)}
         FIRMWARE_DIR.mkdir(exist_ok=True)
         (FIRMWARE_DIR / filename).write_bytes(data)
         return {'ok': True, 'filename': filename, 'size': len(data)}

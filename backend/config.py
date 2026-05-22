@@ -38,6 +38,9 @@ class Config:
     # Tile cache
     TILE_CACHE_MAX: int = 50000
     TILE_DOWNLOAD_TIMEOUT: float = 10.0
+    SRTM_CACHE_MAX: int = 500
+    FIRMWARE_MAX_SIZE: int = 50 * 1024 * 1024  # 50 MB
+    FIRMWARE_HTML_MAX: int = 1024 * 1024  # 1 MB
 
     # Param metadata
     PARAM_CACHE_TTL: int = 86400 * 7
