@@ -79,6 +79,8 @@
   let connectTimeout = $state(false);
   let showVehicles = $state(false);
 
+  let connectTimer: ReturnType<typeof setTimeout> | null = null;
+
   function toggle() {
     if (app.drone.connected) { sendDisconnect(); }
     else {
@@ -86,16 +88,18 @@
       connectTimeout = false;
       savePortHistory();
       sendConnect(port, baud, protocol);
-      setTimeout(() => {
+      if (connectTimer) clearTimeout(connectTimer);
+      connectTimer = setTimeout(() => {
         if (connecting && !app.drone.connected) {
           connectTimeout = true;
           connecting = false;
         }
+        connectTimer = null;
       }, 8000);
     }
   }
 
-  $effect(() => { if (app.drone.connected) { connecting = false; connectTimeout = false; } });
+  $effect(() => { if (app.drone.connected) { connecting = false; connectTimeout = false; if (connectTimer) { clearTimeout(connectTimer); connectTimer = null; } } });
 
   let linkBars = $derived(
     !app.drone.connected || app.drone.link_age < 0 ? 0 :

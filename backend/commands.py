@@ -14,6 +14,7 @@ if TYPE_CHECKING:
     from .drone_link import DroneLink
 
 _mission_timer: threading.Timer | None = None
+_timer_lock = threading.Lock()
 
 
 def execute(cmd: str, param, link: DroneLink, data: dict | None = None) -> dict | None:
@@ -78,8 +79,6 @@ def _cmd_drop_stop(link: DroneLink, param, data: dict):
 
 def _cmd_mission_start(link: DroneLink, param, data: dict):
     global _mission_timer
-    if _mission_timer:
-        _mission_timer.cancel()
     am = 10 if link.is_plane() else 3
     link.add_event(lt('mission_start', link.locale), 'mission_start')
     _send_set_mode(link, am)
@@ -90,9 +89,12 @@ def _cmd_mission_start(link: DroneLink, param, data: dict):
         except Exception:
             link.add_event('Mission start command failed', 'cmd_ack_fail')
 
-    _mission_timer = threading.Timer(cfg.MISSION_START_DELAY, _delayed)
-    _mission_timer.daemon = True
-    _mission_timer.start()
+    with _timer_lock:
+        if _mission_timer:
+            _mission_timer.cancel()
+        _mission_timer = threading.Timer(cfg.MISSION_START_DELAY, _delayed)
+        _mission_timer.daemon = True
+        _mission_timer.start()
 
 
 def _cmd_mission_clear(link: DroneLink, param, data: dict):
@@ -319,17 +321,27 @@ def _cmd_inject_rtcm(link: DroneLink, param, data: dict):
 
 def _cmd_rc_override(link: DroneLink, param, data: dict):
     channels = data.get('channels', [])
-    if len(channels) >= 8:
+    if not isinstance(channels, list) or len(channels) < 8:
+        return None
+    try:
         p = struct.pack('<BB', link.vehicle.sysid, 1)
         for i in range(8):
             p += struct.pack('<H', max(0, min(65535, int(channels[i]))))
         link.send(bm(70, p, link.sq, 124))
+    except (TypeError, ValueError):
+        return {'ok': False, 'error': 'Invalid channel data'}
 
 
 def _cmd_motor_test(link: DroneLink, param, data: dict):
     motor = int(data.get('motor', 0))
+    if not 0 <= motor <= 7:
+        return {'ok': False, 'error': 'Motor index must be 0-7'}
     throttle = float(data.get('throttle', 5))
+    if not 0 <= throttle <= 100:
+        return {'ok': False, 'error': 'Throttle must be 0-100%'}
     duration = float(data.get('duration', 2))
+    if not 0 < duration <= 30:
+        return {'ok': False, 'error': 'Duration must be 0-30s'}
     link.add_event(lt('motor_test', link.locale) % (motor + 1, throttle), 'motor_test')
     _send_cmd(link, 209, p1=float(motor), p2=0, p3=throttle, p4=duration, p5=1)
 

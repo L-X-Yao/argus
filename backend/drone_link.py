@@ -210,8 +210,9 @@ class DroneLink:
         except Exception:
             pass
         self._ser = None
-        self.connected = False
-        self._buf = b''
+        with self._state_lock:
+            self.connected = False
+            self._buf = b''
         try:
             self._ser = self._open_port(self._last_port, self._last_baud)
         except Exception as e:
@@ -422,7 +423,8 @@ class DroneLink:
                     cmd_module.request_streams(self)
             if self.connected and self.last_frame_time > 0 and now - self.last_frame_time > cfg.LINK_LOST_TIMEOUT:
                 self.add_event(lt('link_lost', self.locale), 'link_lost')
-                self.connected = False
+                with self._state_lock:
+                    self.connected = False
                 if self._reconnect_enabled and self._last_port:
                     self.add_event(lt('reconnecting', self.locale), 'reconnecting')
                     try:

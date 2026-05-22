@@ -108,6 +108,10 @@
     });
     window.addEventListener('keydown', onKeyDown);
     setTimeout(() => map.invalidateSize(), 100);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      if (map) { map.remove(); map = null; }
+    };
   });
 
   function onMapClick(e: any) {

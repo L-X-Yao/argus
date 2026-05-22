@@ -3,6 +3,7 @@
 
   let loaded: Record<string, any> = $state({});
   let errors: Record<string, string> = $state({});
+  let retryCounts: Record<string, number> = $state({});
 
   $effect(() => {
     for (const id of panels._open) {
@@ -19,6 +20,9 @@
   });
 
   function retry(id: string) {
+    const count = (retryCounts[id] || 0) + 1;
+    retryCounts = { ...retryCounts, [id]: count };
+    if (count > 3) return;
     const { [id]: _, ...rest } = errors;
     errors = rest;
   }
@@ -33,7 +37,9 @@
       <p class="font-semibold text-sm">Failed to load: {id}</p>
       <p class="text-xs mt-1 opacity-75">{errors[id]}</p>
       <div class="flex gap-2 mt-2">
-        <button class="text-xs underline hover:text-white" onclick={() => retry(id)}>Retry</button>
+        {#if (retryCounts[id] || 0) < 3}
+          <button class="text-xs underline hover:text-white" onclick={() => retry(id)}>Retry ({3 - (retryCounts[id] || 0)} left)</button>
+        {/if}
         <button class="text-xs underline hover:text-white" onclick={() => panels.close(id)}>Close</button>
       </div>
     </div>
