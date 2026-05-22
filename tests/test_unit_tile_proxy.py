@@ -1,7 +1,5 @@
 """Unit tests for tile proxy routes: URL construction, caching, mbtiles, bulk download."""
 import math
-import os
-import shutil
 import sqlite3
 import sys
 from pathlib import Path
@@ -11,7 +9,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from backend.app import MBTILES_DIR, TILE_CACHE, TILE_SOURCES, TILE_URLS, app
+from backend.app import TILE_SOURCES, TILE_URLS, app
 from backend.drone_link import DroneLink
 from backend.ws_manager import WSManager
 

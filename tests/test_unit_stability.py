@@ -1,10 +1,7 @@
 """Long-running stability tests for backend components."""
-import asyncio
-import json
 import struct
 import sys
 import threading
-import time
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock
 
@@ -138,7 +135,7 @@ class TestWSManagerConnectDisconnect:
         mgr = WSManager(link)
         errors = []
 
-        for i in range(100):
+        for _i in range(100):
             ws = _make_ws()
             try:
                 mgr._clients.add(ws)

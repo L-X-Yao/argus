@@ -2,7 +2,7 @@
 import json
 import sys
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 from fastapi.testclient import TestClient
@@ -336,7 +336,7 @@ class TestHTTPEndpointContracts:
         data = r.json()
         assert isinstance(data, dict)
         # Each provider should have name, sat, vec keys
-        for key, provider in data.items():
+        for _key, provider in data.items():
             assert 'name' in provider
             assert 'sat' in provider
             assert 'vec' in provider

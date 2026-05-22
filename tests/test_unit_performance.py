@@ -9,21 +9,15 @@ import struct
 import threading
 import time
 
-import pytest
-
+from backend.pllink_proto import pld, ple
 from backend.state import (
     AttitudeState,
     BatteryState,
     DiagnosticState,
     GpsState,
-    LogState,
-    MissionState,
     RcServoState,
-    TrafficState,
     VehicleState,
 )
-from backend.pllink_proto import ple, pld, xp, c16, mc, bm
-
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -181,7 +175,7 @@ class TestDeltaComputation:
             link.battery.voltage = 11.0 + (i % 10) * 0.1
             current_state = link.get_state()
             # Compute delta like ws_manager does
-            delta = {k: v for k, v in current_state.items() if prev_state.get(k) != v}
+            _ = {k: v for k, v in current_state.items() if prev_state.get(k) != v}
             prev_state = current_state
         elapsed = time.perf_counter() - start
         assert elapsed < 0.2, f"1000 delta computations took {elapsed:.4f}s (> 200ms)"
@@ -194,7 +188,7 @@ class TestDeltaComputation:
         start = time.perf_counter()
         for _ in range(1000):
             current = link.get_state()
-            delta = {k: v for k, v in current.items() if state.get(k) != v}
+            _ = {k: v for k, v in current.items() if state.get(k) != v}
         elapsed = time.perf_counter() - start
         assert elapsed < 0.2, f"1000 no-change deltas took {elapsed:.4f}s (> 200ms)"
 

@@ -3,9 +3,7 @@
 Tests RTSP URL validation, video start/stop lifecycle, duplicate process
 prevention, cleanup behavior, and capabilities endpoint.
 """
-import subprocess
 import sys
-import threading
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -17,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import backend.video as video_module
 from backend.app import app
 from backend.drone_link import DroneLink
-from backend.video import _ffmpeg_available, _proc_lock, router
+from backend.video import _proc_lock
 from backend.ws_manager import WSManager
 
 

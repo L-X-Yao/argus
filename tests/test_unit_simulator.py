@@ -69,7 +69,7 @@ class TestFrameFormat:
             sim.msg_ekf_status(),
         ]
         for msg in messages:
-            assert msg[0] == 0xFD, f'Frame does not start with 0xFD'
+            assert msg[0] == 0xFD, 'Frame does not start with 0xFD'
 
     def test_frame_minimum_length(self, sim):
         """A MAVLink v2 frame is at least 12 bytes (header + CRC, no payload)."""

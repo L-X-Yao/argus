@@ -6,11 +6,8 @@ Ensures malformed, truncated, and random data does not crash the parser.
 import os
 import struct
 
-import pytest
-
+from backend.drone_link import _CRC_EXTRA, DroneLink
 from backend.pllink_proto import bm, c16, mc, pld, ple, xp
-from backend.drone_link import DroneLink, _CRC_EXTRA
-
 
 # ---------------------------------------------------------------------------
 # Helper

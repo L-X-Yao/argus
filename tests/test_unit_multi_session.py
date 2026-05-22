@@ -1,9 +1,8 @@
 """Unit tests for multi-session concurrency: multiple WebSocket clients, per-client state, isolation."""
-import asyncio
 import json
 import sys
 from pathlib import Path
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 
 import pytest
 

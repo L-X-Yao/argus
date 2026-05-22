@@ -7,17 +7,13 @@ import json
 import struct
 import sys
 import tempfile
-import time
 import xml.etree.ElementTree as ET
 from pathlib import Path
-from unittest.mock import MagicMock, patch
-
-import pytest
+from unittest.mock import MagicMock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from backend.param_manager import ParamManager
-
 
 # --- Helpers ---
 
@@ -124,7 +120,6 @@ class TestKmlImport:
     def _parse_kml(self, kml_text: str) -> list[dict]:
         """Reproduce the KML import logic from MissionPanel.svelte."""
         root = ET.fromstring(kml_text)
-        ns = {'kml': KML_NAMESPACE}
         coords = []
         for el in root.iter(f'{{{KML_NAMESPACE}}}coordinates'):
             text = el.text.strip() if el.text else ''
@@ -300,7 +295,7 @@ class TestParamFileExport:
         # Populate some params
         names = ['BATT_CAPACITY', 'ARMING_CHECK', 'ACRO_YAW_P']
         values = [5000.0, 1.0, 4.5]
-        for i, (name, val) in enumerate(zip(names, values)):
+        for i, (name, val) in enumerate(zip(names, values, strict=True)):
             p = _param_value_payload(name, val, i, 3)
             mgr.handle_param_value(p, len(p))
 
@@ -308,7 +303,7 @@ class TestParamFileExport:
             path = f.name
 
         mgr.save_to_file(path)
-        with open(path, 'r') as f:
+        with open(path) as f:
             data = json.load(f)
 
         assert 'BATT_CAPACITY' in data
@@ -329,7 +324,7 @@ class TestParamFileExport:
             path = f.name
 
         mgr.save_to_file(path)
-        with open(path, 'r') as f:
+        with open(path) as f:
             data = json.load(f)
 
         keys = list(data.keys())
@@ -407,7 +402,7 @@ class TestParamFileImport:
         # Pre-populate with existing params
         names = ['BATT_CAPACITY', 'ARMING_CHECK']
         values = [5000.0, 1.0]
-        for i, (name, val) in enumerate(zip(names, values)):
+        for i, (name, val) in enumerate(zip(names, values, strict=True)):
             p = _param_value_payload(name, val, i, 2)
             mgr.handle_param_value(p, len(p))
 
@@ -517,6 +512,4 @@ class TestFirmwareUploadValidation:
 
 def _validate_firmware_filename(filename: str | None) -> bool:
     """Reproduce the firmware upload validation from app.py."""
-    if not filename or not filename.endswith('.apj'):
-        return False
-    return True
+    return bool(filename and filename.endswith('.apj'))
