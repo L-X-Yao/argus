@@ -1,5 +1,17 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { fmtAlt, fmtSpeed, fmtDist, fmtVs, setUnitSystem, altUnit, speedUnit, distUnit } from './units';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { fmtAlt, fmtSpeed, fmtDist, fmtVs, setUnitSystem, getUnitSystem, loadUnitSystem, altUnit, speedUnit, distUnit, vsUnit } from './units';
+
+function makeStorage(): Storage {
+  const store = new Map<string, string>();
+  return {
+    getItem: (k: string) => store.get(k) ?? null,
+    setItem: (k: string, v: string) => { store.set(k, v); },
+    removeItem: (k: string) => { store.delete(k); },
+    clear: () => store.clear(),
+    get length() { return store.size; },
+    key: (i: number) => [...store.keys()][i] ?? null,
+  };
+}
 
 describe('units — metric', () => {
   beforeEach(() => setUnitSystem('metric'));
@@ -34,6 +46,7 @@ describe('units — metric', () => {
     expect(altUnit()).toBe('m');
     expect(speedUnit()).toBe('m/s');
     expect(distUnit()).toBe('km');
+    expect(vsUnit()).toBe('m/s');
   });
 });
 
@@ -70,5 +83,99 @@ describe('units — imperial', () => {
     expect(altUnit()).toBe('ft');
     expect(speedUnit()).toBe('mph');
     expect(distUnit()).toBe('mi');
+    expect(vsUnit()).toBe('ft/min');
+  });
+});
+
+describe('units — negative and edge values', () => {
+  beforeEach(() => setUnitSystem('metric'));
+
+  it('fmtAlt handles negative altitude', () => {
+    expect(fmtAlt(-5)).toBe('-5.0');
+  });
+
+  it('fmtSpeed handles very small speed', () => {
+    expect(fmtSpeed(0.01)).toBe('0.0');
+  });
+
+  it('fmtDist at exact boundary 1000m', () => {
+    expect(fmtDist(1000)).toBe('1.0 km');
+  });
+
+  it('fmtDist at 999.9m stays in meters', () => {
+    expect(fmtDist(999.9)).toBe('1000 m');
+  });
+
+  it('fmtVs handles zero', () => {
+    expect(fmtVs(0)).toBe('0.0');
+  });
+
+  it('fmtVs handles negative descent rate', () => {
+    setUnitSystem('imperial');
+    // -2 m/s * 196.85 = -394 ft/min
+    expect(fmtVs(-2)).toBe('-394');
+  });
+});
+
+describe('units — imperial distance boundary', () => {
+  beforeEach(() => setUnitSystem('imperial'));
+
+  it('fmtDist at boundary between feet and miles', () => {
+    // 0.1 mi = 160.9m, so at 160m should be feet (0.099 mi < 0.1)
+    const result = fmtDist(160);
+    expect(result).toContain('ft');
+    // At 165m, 0.103 mi >= 0.1 → miles
+    const result2 = fmtDist(165);
+    expect(result2).toContain('mi');
+  });
+
+  it('fmtDist at zero', () => {
+    const result = fmtDist(0);
+    expect(result).toContain('ft');
+    expect(result).toBe('0 ft');
+  });
+});
+
+describe('getUnitSystem / setUnitSystem', () => {
+  beforeEach(() => {
+    vi.stubGlobal('localStorage', makeStorage());
+  });
+
+  it('getUnitSystem returns current system', () => {
+    setUnitSystem('metric');
+    expect(getUnitSystem()).toBe('metric');
+    setUnitSystem('imperial');
+    expect(getUnitSystem()).toBe('imperial');
+  });
+
+  it('setUnitSystem persists to localStorage', () => {
+    setUnitSystem('imperial');
+    expect(localStorage.getItem('argus_units')).toBe('imperial');
+    setUnitSystem('metric');
+    expect(localStorage.getItem('argus_units')).toBe('metric');
+  });
+});
+
+describe('loadUnitSystem', () => {
+  beforeEach(() => {
+    vi.stubGlobal('localStorage', makeStorage());
+    setUnitSystem('metric');
+  });
+
+  it('loads imperial from localStorage', () => {
+    localStorage.setItem('argus_units', 'imperial');
+    loadUnitSystem();
+    expect(getUnitSystem()).toBe('imperial');
+  });
+
+  it('stays metric when localStorage has no value', () => {
+    loadUnitSystem();
+    expect(getUnitSystem()).toBe('metric');
+  });
+
+  it('stays metric when localStorage has unknown value', () => {
+    localStorage.setItem('argus_units', 'nautical');
+    loadUnitSystem();
+    expect(getUnitSystem()).toBe('metric');
   });
 });

@@ -63,4 +63,52 @@ describe('clearParams', () => {
     expect(paramState.total).toBe(0);
     expect(paramState.fetching).toBe(false);
   });
+
+  it('clears nameIndex so subsequent batches start fresh', () => {
+    handleParamBatch([{ name: 'OLD', value: 1, ptype: 9, index: 0, total: 1, received: 1 }]);
+    clearParams();
+    handleParamBatch([{ name: 'NEW', value: 2, ptype: 9, index: 0, total: 1, received: 1 }]);
+    expect(paramState.list.length).toBe(1);
+    expect(paramState.list[0].name).toBe('NEW');
+  });
+});
+
+describe('handleParamBatch edge cases', () => {
+  it('ignores empty batch array', () => {
+    handleParamBatch([]);
+    expect(paramState.list.length).toBe(0);
+    expect(paramState.total).toBe(0);
+    expect(paramState.fetching).toBe(false);
+  });
+
+  it('sets fetching false when received equals total', () => {
+    handleParamBatch([{ name: 'A', value: 1, ptype: 9, index: 0, total: 1, received: 1 }]);
+    expect(paramState.fetching).toBe(false);
+  });
+
+  it('handles multiple batches accumulating params', () => {
+    handleParamBatch([{ name: 'A', value: 1, ptype: 9, index: 0, total: 3, received: 1 }]);
+    handleParamBatch([
+      { name: 'B', value: 2, ptype: 9, index: 1, total: 3, received: 2 },
+      { name: 'C', value: 3, ptype: 9, index: 2, total: 3, received: 3 },
+    ]);
+    expect(paramState.list.length).toBe(3);
+    expect(paramState.received).toBe(3);
+    expect(paramState.fetching).toBe(false);
+  });
+});
+
+describe('handleParamsComplete edge cases', () => {
+  it('rebuilds nameIndex after sort so updateSingleParam still works', () => {
+    handleParamBatch([
+      { name: 'Z_PARAM', value: 10, ptype: 9, index: 0, total: 2, received: 1 },
+      { name: 'A_PARAM', value: 20, ptype: 9, index: 1, total: 2, received: 2 },
+    ]);
+    handleParamsComplete();
+    // After sort, A_PARAM is at index 0, Z_PARAM at index 1
+    updateSingleParam('Z_PARAM', 99);
+    expect(paramState.list[1].value).toBe(99);
+    updateSingleParam('A_PARAM', 88);
+    expect(paramState.list[0].value).toBe(88);
+  });
 });

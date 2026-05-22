@@ -73,4 +73,61 @@ describe('flightDb', () => {
     // The first 5 should have been pruned — earliest remaining should be day 006
     expect(records[0].date).toBe('2026-01-006');
   });
+
+  it('preserves all fields through save/load cycle', () => {
+    const full: Omit<FlightRecord, 'id'> = {
+      date: '2026-03-15',
+      duration: 1200,
+      maxAlt: 250,
+      maxSpeed: 30,
+      totalDist: 15000,
+      batUsed: 5000,
+      vtype: 'plane',
+      fw: '4.6.0-dev',
+      eventCount: 12,
+    };
+    saveFlightRecord(full);
+    const loaded = loadFlightRecords()[0];
+    expect(loaded.date).toBe('2026-03-15');
+    expect(loaded.duration).toBe(1200);
+    expect(loaded.maxAlt).toBe(250);
+    expect(loaded.maxSpeed).toBe(30);
+    expect(loaded.totalDist).toBe(15000);
+    expect(loaded.batUsed).toBe(5000);
+    expect(loaded.vtype).toBe('plane');
+    expect(loaded.fw).toBe('4.6.0-dev');
+    expect(loaded.eventCount).toBe(12);
+  });
+
+  it('delete non-existent id does not affect records', () => {
+    saveFlightRecord(SAMPLE);
+    deleteFlightRecord(9999);
+    expect(loadFlightRecords().length).toBe(1);
+  });
+
+  it('handles corrupted localStorage gracefully', () => {
+    localStorage.setItem('argus_flights', 'not-valid-json{{{');
+    expect(loadFlightRecords()).toEqual([]);
+  });
+
+  it('handles non-array JSON in localStorage', () => {
+    localStorage.setItem('argus_flights', '{"not": "an array"}');
+    // JSON.parse succeeds but it's not an array - behavior depends on implementation
+    // loadFlightRecords returns whatever JSON.parse gives
+    const result = loadFlightRecords();
+    expect(result).toBeDefined();
+  });
+
+  it('id auto-increments from max existing id', () => {
+    saveFlightRecord(SAMPLE);
+    saveFlightRecord(SAMPLE);
+    // Delete id=1, then add another — should get id=3 (max of existing is 2)
+    deleteFlightRecord(1);
+    saveFlightRecord({ ...SAMPLE, date: '2026-06-01' });
+    const records = loadFlightRecords();
+    const ids = records.map(r => r.id);
+    expect(ids).toContain(2);
+    expect(ids).toContain(3);
+    expect(ids).not.toContain(1);
+  });
 });

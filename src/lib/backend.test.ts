@@ -36,4 +36,32 @@ describe('backend URL resolver', () => {
     expect(API_BASE).toBe('http://127.0.0.1:8100');
     expect(getWsUrl()).toBe('ws://127.0.0.1:8100/ws');
   });
+
+  it('apiUrl resolves full URL in Tauri mode', async () => {
+    vi.stubGlobal('window', {
+      __TAURI_INTERNALS__: {},
+      location: { protocol: 'https:', host: 'tauri.localhost' },
+    });
+    const { apiUrl } = await import('./backend');
+    expect(apiUrl('/api/ports')).toBe('http://127.0.0.1:8100/api/ports');
+    expect(apiUrl('/api/connect')).toBe('http://127.0.0.1:8100/api/connect');
+  });
+
+  it('isTauri is false when __TAURI_INTERNALS__ absent', async () => {
+    vi.stubGlobal('window', { location: { protocol: 'http:', host: 'localhost:8100' } });
+    const { isTauri } = await import('./backend');
+    expect(isTauri).toBe(false);
+  });
+
+  it('getWsUrl with non-standard port', async () => {
+    vi.stubGlobal('window', { location: { protocol: 'http:', host: 'myhost:8100' } });
+    const { getWsUrl } = await import('./backend');
+    expect(getWsUrl()).toBe('ws://myhost:8100/ws');
+  });
+
+  it('apiUrl works with nested paths', async () => {
+    vi.stubGlobal('window', { location: { protocol: 'http:', host: 'localhost:5173' } });
+    const { apiUrl } = await import('./backend');
+    expect(apiUrl('/api/v2/mission/upload')).toBe('/api/v2/mission/upload');
+  });
 });
