@@ -45,7 +45,7 @@
     } else {
       droneMarker.setLatLng([glat, glon]);
       const el = droneMarker.getElement();
-      if (el) { const a = el.querySelector('.drone-arrow'); if (a) a.style.transform = `rotate(${app.drone.yaw}deg)`; }
+      if (el) { const a = el.querySelector('.drone-arrow'); if (a) (a as HTMLElement).style.transform = `rotate(${app.drone.yaw}deg)`; }
     }
 
     if (velocityLine) { map.removeLayer(velocityLine); velocityLine = null; }
@@ -119,7 +119,7 @@
       if (existing) {
         existing.setLatLng([glat, glon]);
         const el = existing.getElement();
-        if (el) { const a = el.querySelector('.drone-arrow'); if (a) a.style.transform = `rotate(${v.hdg}deg)`; }
+        if (el) { const a = el.querySelector('.drone-arrow'); if (a) (a as HTMLElement).style.transform = `rotate(${v.hdg}deg)`; }
       } else {
         const color = v.armed ? '#ef4444' : '#888';
         const icon = L.divIcon({
@@ -163,7 +163,7 @@
 
   onDestroy(() => {
     [droneMarker, homeMarker, trailLine, velocityLine, homeLine, rangeRing]
-      .filter(Boolean).forEach(l => map.removeLayer(l));
+      .filter(Boolean).forEach(l => map.removeLayer(l!));
     otherMarkers.forEach(m => map.removeLayer(m));
     adsbMarkers.forEach(m => map.removeLayer(m));
   });

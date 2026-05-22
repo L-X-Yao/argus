@@ -132,7 +132,7 @@
   onDestroy(() => {
     wpMarkers.forEach(m => map.removeLayer(m));
     wpDistLabels.forEach(l => map.removeLayer(l));
-    [wpLine, geoCircle, activeWpMarker, focusRing].filter(Boolean).forEach(l => map.removeLayer(l));
+    [wpLine, geoCircle, activeWpMarker, focusRing].filter(Boolean).forEach(l => map.removeLayer(l!));
     if (wpPopup) map.closePopup(wpPopup);
   });
 </script>

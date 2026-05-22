@@ -29,7 +29,7 @@
     } else {
       marker.setLatLng([glat, glon]);
       const el = marker.getElement();
-      if (el) { const a = el.querySelector('.drone-arrow'); if (a) a.style.transform = `rotate(${rp.yaw}deg)`; }
+      if (el) { const a = el.querySelector('.drone-arrow'); if (a) (a as HTMLElement).style.transform = `rotate(${rp.yaw}deg)`; }
     }
     trail.push([glat, glon]);
     if (trail.length > 3000) trail.splice(0, trail.length - 2000);

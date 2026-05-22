@@ -20,7 +20,7 @@
   let { showHud = true }: { showHud?: boolean } = $props();
 
   let mapEl: HTMLDivElement;
-  let map = $state<any>(null);
+  let map = $state<L.Map | null>(null);
   let follow = $state(true);
   let isSat = $state(true);
   let measuring = $state(false);
@@ -28,14 +28,14 @@
   let guidedTarget = $state<{ lat: number; lon: number; alt: number } | null>(null);
   let droneTrail: [number, number][] = $state([]);
 
-  let satLayer: any = null;
-  let vecLayer: any = null;
-  let labelLayer: any = null;
-  let measurePts: any[] = [];
-  let measureLine: any = null;
-  let measureLabel: any = null;
+  let satLayer: L.TileLayer | null = null;
+  let vecLayer: L.TileLayer | null = null;
+  let labelLayer: L.TileLayer | null = null;
+  let measurePts: { marker: L.CircleMarker; ll: L.LatLng }[] = [];
+  let measureLine: L.Polyline | null = null;
+  let measureLabel: L.Marker | null = null;
   let measureMode: 'distance' | 'area' = $state<'distance' | 'area'>('distance');
-  let measurePolygon: any = null;
+  let measurePolygon: L.Polygon | null = null;
 
   interface TileSourceDef {
     name: string; sat: string; vec: string; label: string | null;
@@ -69,17 +69,17 @@
   function applyTileSource() {
     if (!map) return;
     const src = curSource();
-    if (satLayer) map.removeLayer(satLayer);
-    if (labelLayer) map.removeLayer(labelLayer);
-    if (vecLayer) map.removeLayer(vecLayer);
+    if (satLayer) map!.removeLayer(satLayer!);
+    if (labelLayer) map!.removeLayer(labelLayer!);
+    if (vecLayer) map!.removeLayer(vecLayer!);
     satLayer = L.tileLayer(tileUrl(src.sat), { maxZoom: 18 });
     vecLayer = L.tileLayer(tileUrl(src.vec), { maxZoom: 18 });
     labelLayer = src.label ? L.tileLayer(tileUrl(src.label), { maxZoom: 18 }) : null;
     if (isSat) {
-      satLayer.addTo(map);
-      if (labelLayer) labelLayer.addTo(map);
+      satLayer.addTo(map!);
+      if (labelLayer) labelLayer.addTo(map!);
     } else {
-      vecLayer.addTo(map);
+      vecLayer.addTo(map!);
     }
   }
 
@@ -96,25 +96,25 @@
     const src = curSource();
     prevTileSource = app.tileSource;
     map = L.map(mapEl, { zoomControl: true, attributionControl: false }).setView([34.258, 108.942], 15);
-    satLayer = L.tileLayer(tileUrl(src.sat), { maxZoom: 18 }).addTo(map);
+    satLayer = L.tileLayer(tileUrl(src.sat), { maxZoom: 18 }).addTo(map!);
     labelLayer = src.label ? L.tileLayer(tileUrl(src.label), { maxZoom: 18 }).addTo(map) : null;
     vecLayer = L.tileLayer(tileUrl(src.vec), { maxZoom: 18 });
-    L.control.scale({ metric: true, imperial: false, position: 'bottomright' }).addTo(map);
+    L.control.scale({ metric: true, imperial: false, position: 'bottomright' }).addTo(map!);
     map.on('click', onMapClick);
     map.on('contextmenu', onRightClick);
-    map.on('mousemove', (e: any) => {
+    map.on('mousemove', (e: L.LeafletMouseEvent) => {
       const [wlat, wlon] = fromMap(e.latlng.lat, e.latlng.lng);
       mouseCoord = `${wlat.toFixed(6)}, ${wlon.toFixed(6)}`;
     });
     window.addEventListener('keydown', onKeyDown);
-    setTimeout(() => map.invalidateSize(), 100);
+    setTimeout(() => map!.invalidateSize(), 100);
     return () => {
       window.removeEventListener('keydown', onKeyDown);
       if (map) { map.remove(); map = null; }
     };
   });
 
-  function onMapClick(e: any) {
+  function onMapClick(e: L.LeafletMouseEvent) {
     const ll = e.latlng;
     if (measuring) { addMeasurePoint(ll); return; }
     if (app.drawingPolygon) {
@@ -138,7 +138,7 @@
     addWaypoint({ lat: wlat, lon: wlon, alt: app.defaultAlt, drop: false, delay: 0, speed: 0, type: 'wp', loiter_param: 0 });
   }
 
-  function onRightClick(e: any) {
+  function onRightClick(e: L.LeafletMouseEvent) {
     e.originalEvent.preventDefault();
     if (!app.drone.connected || !app.drone.armed) return;
     const ll = e.latlng;
@@ -184,17 +184,17 @@
     return `${(m2 / 1e6).toFixed(3)} km²`;
   }
 
-  function addMeasurePoint(ll: any) {
-    const cm = L.circleMarker([ll.lat, ll.lng], { radius: 4, color: '#ff5252', fillColor: '#ff5252', fillOpacity: 1 }).addTo(map);
+  function addMeasurePoint(ll: L.LatLng) {
+    const cm = L.circleMarker([ll.lat, ll.lng], { radius: 4, color: '#ff5252', fillColor: '#ff5252', fillOpacity: 1 }).addTo(map!);
     measurePts.push({ marker: cm, ll });
-    const pts = measurePts.map((p: any) => [p.ll.lat, p.ll.lng]);
+    const pts = measurePts.map((p) => [p.ll.lat, p.ll.lng] as [number, number]);
 
     if (measureMode === 'area') {
       if (measurePolygon) map.removeLayer(measurePolygon);
       if (measureLabel) map.removeLayer(measureLabel);
       if (pts.length >= 3) {
-        measurePolygon = L.polygon(pts, { color: '#ff5252', weight: 2, dashArray: '4,4', fillColor: '#ff5252', fillOpacity: 0.1 }).addTo(map);
-        const area = calcPolygonArea(measurePts.map((p: any) => p.ll));
+        measurePolygon = L.polygon(pts, { color: '#ff5252', weight: 2, dashArray: '4,4', fillColor: '#ff5252', fillOpacity: 0.1 }).addTo(map!);
+        const area = calcPolygonArea(measurePts.map((p) => p.ll));
         const center = measurePolygon.getBounds().getCenter();
         measureLabel = L.marker(center, {
           icon: L.divIcon({
@@ -202,17 +202,17 @@
             html: `<div style="background:rgba(30,30,30,0.9);color:#ff5252;padding:2px 6px;border-radius:3px;font-size:11px;font-weight:bold;white-space:nowrap">${fmtArea(area)}</div>`,
             iconAnchor: [0, 0],
           }),
-        }).addTo(map);
+        }).addTo(map!);
       } else if (pts.length >= 2) {
         if (measureLine) map.removeLayer(measureLine);
-        measureLine = L.polyline(pts, { color: '#ff5252', weight: 2, dashArray: '4,4' }).addTo(map);
+        measureLine = L.polyline(pts, { color: '#ff5252', weight: 2, dashArray: '4,4' }).addTo(map!);
       }
     } else {
       if (measurePts.length >= 2) {
         let total = 0;
-        for (let i = 1; i < measurePts.length; i++) total += map.distance(measurePts[i - 1].ll, measurePts[i].ll);
+        for (let i = 1; i < measurePts.length; i++) total += map!.distance(measurePts[i - 1].ll, measurePts[i].ll);
         if (measureLine) map.removeLayer(measureLine);
-        measureLine = L.polyline(pts, { color: '#ff5252', weight: 2, dashArray: '4,4' }).addTo(map);
+        measureLine = L.polyline(pts, { color: '#ff5252', weight: 2, dashArray: '4,4' }).addTo(map!);
         if (measureLabel) map.removeLayer(measureLabel);
         const last = measurePts[measurePts.length - 1].ll;
         const txt = total < 1000 ? `${total.toFixed(0)}m` : `${(total / 1000).toFixed(2)}km`;
@@ -222,14 +222,14 @@
             html: `<div style="background:rgba(30,30,30,0.9);color:#ff5252;padding:2px 6px;border-radius:3px;font-size:11px;font-weight:bold;white-space:nowrap">${txt}</div>`,
             iconAnchor: [0, -10],
           }),
-        }).addTo(map);
+        }).addTo(map!);
       }
     }
   }
 
   function clearMeasure() {
     measuring = false;
-    measurePts.forEach((p: any) => map.removeLayer(p.marker));
+    measurePts.forEach((p) => map!.removeLayer(p.marker));
     measurePts = [];
     if (measureLine) { map.removeLayer(measureLine); measureLine = null; }
     if (measureLabel) { map.removeLayer(measureLabel); measureLabel = null; }
@@ -243,18 +243,18 @@
     measuring = true;
   }
 
-  let kmlLayers: any[] = $state([]);
+  let kmlLayers: L.Layer[] = $state([]);
 
   function importKmlOverlay() {
     const input = document.createElement('input');
     input.type = 'file'; input.accept = '.kml,.kmz';
-    input.onchange = (e: any) => {
-      const file = e.target.files[0];
+    input.onchange = (e: Event) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
       const reader = new FileReader();
-      reader.onload = (ev: any) => {
+      reader.onload = (ev: ProgressEvent<FileReader>) => {
         try {
-          const doc = new DOMParser().parseFromString(ev.target.result, 'text/xml');
+          const doc = new DOMParser().parseFromString(ev.target!.result as string, 'text/xml');
           let count = 0;
           const placemarks = doc.getElementsByTagName('Placemark');
           for (let i = 0; i < placemarks.length; i++) {
@@ -275,8 +275,8 @@
             if (pts.length < 2) continue;
             const isPolygon = pm.getElementsByTagName('Polygon').length > 0;
             const layer = isPolygon
-              ? L.polygon(pts, { color: '#e040fb', weight: 2, fillOpacity: 0.1 }).addTo(map)
-              : L.polyline(pts, { color: '#e040fb', weight: 2 }).addTo(map);
+              ? L.polygon(pts, { color: '#e040fb', weight: 2, fillOpacity: 0.1 }).addTo(map!)
+              : L.polyline(pts, { color: '#e040fb', weight: 2 }).addTo(map!);
             const name = pm.getElementsByTagName('name')[0]?.textContent || '';
             if (name) layer.bindTooltip(name, { permanent: false });
             kmlLayers.push(layer);
@@ -291,30 +291,30 @@
   }
 
   function clearKmlOverlay() {
-    kmlLayers.forEach(l => map.removeLayer(l));
+    kmlLayers.forEach(l => map!.removeLayer(l));
     kmlLayers = [];
   }
 
   function toggleMapType() {
     isSat = !isSat;
     if (isSat) {
-      map.removeLayer(vecLayer);
-      map.addLayer(satLayer);
-      map.addLayer(labelLayer);
+      map!.removeLayer(vecLayer!);
+      map!.addLayer(satLayer!);
+      map!.addLayer(labelLayer!);
     } else {
-      map.removeLayer(satLayer);
-      map.removeLayer(labelLayer);
-      map.addLayer(vecLayer);
+      map!.removeLayer(satLayer!);
+      map!.removeLayer(labelLayer!);
+      map!.addLayer(vecLayer!);
     }
   }
 
   function fitRoute() {
     const pts = app.waypoints.map(w => toMap(w.lat, w.lon));
-    if (pts.length) map.fitBounds(L.latLngBounds(pts), { padding: [40, 40] });
+    if (pts.length) map!.fitBounds(L.latLngBounds(pts), { padding: [40, 40] });
   }
 
   function centerHome() {
-    if (app.drone.home_lat) map.setView(toMap(app.drone.home_lat, app.drone.home_lon), 16);
+    if (app.drone.home_lat) map!.setView(toMap(app.drone.home_lat, app.drone.home_lon), 16);
   }
 
   function exportTrack() {

@@ -44,6 +44,6 @@
   });
 
   onDestroy(() => {
-    [guidedMarker, guidedLine, guidedLabel].filter(Boolean).forEach(l => map.removeLayer(l));
+    [guidedMarker, guidedLine, guidedLabel].filter(Boolean).forEach(l => map.removeLayer(l!));
   });
 </script>
