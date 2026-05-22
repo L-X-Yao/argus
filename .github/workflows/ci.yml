@@ -77,7 +77,7 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: Run E2E smoke tests
-        run: npx playwright test --project=chromium tests/e2e/smoke.spec.ts tests/e2e/navigation.spec.ts
+        run: npx playwright test --config=tests/playwright.config.ts --project=chromium tests/e2e/smoke.spec.ts tests/e2e/navigation.spec.ts
         env:
           ARGUS_NO_BROWSER: '1'
 

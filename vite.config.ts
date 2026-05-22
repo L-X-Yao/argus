@@ -1,6 +1,6 @@
 import path from 'path';
 import { defineConfig } from 'vite';
-import { svelte } from '@sveltejs/vite-plugin-svelte';
+import { svelte, vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 import tailwindcss from '@tailwindcss/vite';
 
 export default defineConfig({
@@ -31,7 +31,7 @@ export default defineConfig({
       },
     },
   },
-  plugins: [tailwindcss(), svelte()],
+  plugins: [tailwindcss(), svelte({ preprocess: vitePreprocess() })],
   resolve: {
     alias: {
       $lib: path.resolve('./src/lib'),
