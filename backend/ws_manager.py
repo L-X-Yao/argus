@@ -13,6 +13,24 @@ from .locale_text import lt
 
 logger = logging.getLogger(__name__)
 
+_VALID_LOCALES = frozenset(('zh', 'en', 'ja', 'ko', 'de', 'fr', 'es', 'pt', 'ru', 'ar'))
+
+
+def validate_port(port) -> bool:
+    return isinstance(port, str) and len(port) <= 200 and '\x00' not in port
+
+
+def sanitize_baud(baud) -> int:
+    try:
+        baud = int(baud)
+    except (TypeError, ValueError):
+        return cfg.SERIAL_BAUD
+    return baud if baud in cfg.VALID_BAUD_RATES else cfg.SERIAL_BAUD
+
+
+def sanitize_protocol(protocol) -> str:
+    return protocol if protocol in cfg.VALID_PROTOCOLS else 'auto'
+
 
 class WSManager:
     def __init__(self, link: DroneLink):
@@ -66,19 +84,13 @@ class WSManager:
                     port = msg.get('port', 'tcp:localhost:5770')
                     baud = msg.get('baud', cfg.SERIAL_BAUD)
                     protocol = msg.get('protocol', 'auto')
-                    if not isinstance(port, str) or len(port) > 200 or '\x00' in port:
+                    if not validate_port(port):
                         await ws.send_text(json.dumps({
                             'type': 'connect_result', 'ok': False, 'error': 'Invalid port',
                         }))
                         continue
-                    try:
-                        baud = int(baud)
-                    except (TypeError, ValueError):
-                        baud = cfg.SERIAL_BAUD
-                    if baud not in cfg.VALID_BAUD_RATES:
-                        baud = cfg.SERIAL_BAUD
-                    if protocol not in cfg.VALID_PROTOCOLS:
-                        protocol = 'auto'
+                    baud = sanitize_baud(baud)
+                    protocol = sanitize_protocol(protocol)
                     ok = self.link.connect(port, baud, protocol=protocol)
                     await ws.send_text(json.dumps({
                         'type': 'connect_result', 'ok': ok,
@@ -91,7 +103,7 @@ class WSManager:
                     }))
                 elif msg_type == 'set_locale':
                     locale = msg.get('locale', 'zh')
-                    if locale in ('zh', 'en', 'ja', 'ko', 'de', 'fr', 'es', 'pt', 'ru', 'ar'):
+                    if locale in _VALID_LOCALES:
                         self.link.locale = locale
                 elif msg_type == 'set_role':
                     role = msg.get('role', 'observer')

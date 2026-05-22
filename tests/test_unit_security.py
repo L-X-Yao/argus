@@ -114,21 +114,52 @@ class TestCommandExecuteErrorHandling:
 # ─── WS Input Validation Config Tests ─────────────────────────────
 
 
-class TestWsValidationConfig:
-    def test_valid_baud_rates_defined(self):
-        for baud in cfg.VALID_BAUD_RATES:
-            assert isinstance(baud, int)
-        assert 57600 in cfg.VALID_BAUD_RATES
-        assert 115200 in cfg.VALID_BAUD_RATES
+class TestWsInputSanitization:
+    """Test the actual parsing functions, not just config values."""
 
-    def test_valid_protocols_defined(self):
-        assert 'auto' in cfg.VALID_PROTOCOLS
-        assert 'standard' in cfg.VALID_PROTOCOLS
-        assert 'pllink' in cfg.VALID_PROTOCOLS
-        assert 'invalid' not in cfg.VALID_PROTOCOLS
+    def test_baud_as_int(self):
+        from backend.ws_manager import sanitize_baud
+        assert sanitize_baud(57600) == 57600
+        assert sanitize_baud(115200) == 115200
 
-    def test_video_url_max_len(self):
-        assert cfg.VIDEO_URL_MAX_LEN == 2048
+    def test_baud_as_string(self):
+        from backend.ws_manager import sanitize_baud
+        assert sanitize_baud('57600') == 57600
+        assert sanitize_baud('115200') == 115200
+
+    def test_baud_as_float(self):
+        from backend.ws_manager import sanitize_baud
+        assert sanitize_baud(57600.0) == 57600
+
+    def test_baud_invalid_falls_back(self):
+        from backend.ws_manager import sanitize_baud
+        assert sanitize_baud('garbage') == cfg.SERIAL_BAUD
+        assert sanitize_baud(None) == cfg.SERIAL_BAUD
+        assert sanitize_baud(12345) == cfg.SERIAL_BAUD
+
+    def test_port_valid(self):
+        from backend.ws_manager import validate_port
+        assert validate_port('tcp:localhost:5770') is True
+        assert validate_port('/dev/ttyUSB0') is True
+        assert validate_port('COM3') is True
+
+    def test_port_invalid(self):
+        from backend.ws_manager import validate_port
+        assert validate_port('x' * 300) is False
+        assert validate_port(12345) is False
+        assert validate_port('bad\x00port') is False
+
+    def test_protocol_valid(self):
+        from backend.ws_manager import sanitize_protocol
+        assert sanitize_protocol('auto') == 'auto'
+        assert sanitize_protocol('standard') == 'standard'
+        assert sanitize_protocol('pllink') == 'pllink'
+
+    def test_protocol_invalid_falls_back(self):
+        from backend.ws_manager import sanitize_protocol
+        assert sanitize_protocol('invalid') == 'auto'
+        assert sanitize_protocol('') == 'auto'
+        assert sanitize_protocol(None) == 'auto'
 
 
 # ─── Path Traversal Tests ─────────────────────────────────────────
