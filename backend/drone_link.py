@@ -152,7 +152,12 @@ class DroneLink:
     def connect(self, port: str, baudrate: int = 57600, protocol: str = 'auto') -> bool:
         if self._running:
             self.disconnect()
-        self._protocol = 'standard' if port.startswith('udp:') else protocol
+        if port.startswith('udp:'):
+            self._protocol = 'standard'
+        elif port.startswith('tcp:') and protocol == 'auto':
+            self._protocol = 'standard'
+        else:
+            self._protocol = protocol
         try:
             self._ser = self._open_port(port, baudrate)
             if port.startswith('udp:'):
