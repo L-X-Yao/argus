@@ -1,7 +1,7 @@
 // KO translations
 const messages: Record<string, string> = {
   'app.name': 'Argus',
-  'app.subtitle': '지상 관제 스테이션',
+  'app.subtitle': '지상 관제 시스템',
   'tab.fly': '비행',
   'tab.plan': '계획',
   'tab.monitor': '모니터',
@@ -173,7 +173,7 @@ const messages: Record<string, string> = {
   'wp.loiterTime': '선회 시간',
   'wp.waypoint': '웨이포인트',
   'wp.spline': '스플라인',
-  'welcome.subtitle': '지상 관제 스테이션',
+  'welcome.subtitle': '지상 관제 시스템',
   'welcome.hint': '위에 연결 주소를 입력하고 "연결"을 클릭하세요',
   'welcome.shortcuts': '단축키',
   'welcome.settings': '설정',
