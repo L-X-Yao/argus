@@ -483,6 +483,10 @@ async def api_firmware_download(request: Request):
     filename = body.get('filename', 'firmware.apj')
     if not fw_url or not filename.endswith('.apj'):
         return {'ok': False, 'error': 'Invalid params'}
+    from urllib.parse import urlparse
+    parsed = urlparse(fw_url)
+    if parsed.scheme != 'https' or not parsed.hostname:
+        return {'ok': False, 'error': 'Only HTTPS URLs allowed'}
     try:
         req = urlreq.Request(fw_url, headers={'User-Agent': 'Mozilla/5.0'})
         data = urlreq.urlopen(req, timeout=60).read()

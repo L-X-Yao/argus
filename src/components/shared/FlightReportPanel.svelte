@@ -43,6 +43,7 @@
   }
 
   /* ── Export report ── */
+  let exportTimer: ReturnType<typeof setTimeout> | null = null;
   let exporting = $state(false);
 
   function exportReport() {
@@ -95,7 +96,8 @@
     a.click();
     URL.revokeObjectURL(a.href);
 
-    setTimeout(() => { exporting = false; }, 1000);
+    if (exportTimer) clearTimeout(exportTimer);
+    exportTimer = setTimeout(() => { exporting = false; exportTimer = null; }, 1000);
   }
 </script>
 

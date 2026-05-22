@@ -118,8 +118,9 @@
     focusRing = L.circleMarker([glat, glon], {
       radius: 20, color: '#ffa726', fillColor: 'transparent', weight: 3, dashArray: '4,4',
     }).addTo(map);
-    setTimeout(() => { if (focusRing) { map.removeLayer(focusRing); focusRing = null; } }, 2000);
+    const focusTimer = setTimeout(() => { if (focusRing) { map.removeLayer(focusRing); focusRing = null; } }, 2000);
     app.focusWp = -1;
+    return () => clearTimeout(focusTimer);
   });
 
   $effect(() => {

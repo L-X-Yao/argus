@@ -77,6 +77,13 @@
     window.removeEventListener('mouseup', onDragEnd);
   }
 
+  $effect(() => {
+    return () => {
+      window.removeEventListener('mousemove', onDragMove);
+      window.removeEventListener('mouseup', onDragEnd);
+    };
+  });
+
   let videoImg: HTMLImageElement | null = $state(null);
 
   function takeScreenshot() {

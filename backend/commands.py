@@ -60,6 +60,8 @@ def _cmd_mode(link: DroneLink, param, data: dict):
 
 def _cmd_takeoff(link: DroneLink, param, data: dict):
     alt = float(data.get('alt', 30))
+    if not 1 <= alt <= 1000:
+        return {'ok': False, 'error': 'Takeoff altitude must be 1-1000m'}
     link.add_event(lt('takeoff', link.locale) % alt, 'takeoff')
     _send_cmd(link, 22, p7=alt)
 
@@ -241,9 +243,13 @@ def _cmd_param_save(link: DroneLink, param, data: dict):
 
 def _cmd_param_load(link: DroneLink, param, data: dict):
     path = data.get('path', '')
-    if path:
-        changed = link.param_mgr.load_from_file(path)
-        return {'ok': True, 'changed': changed}
+    if not path:
+        return None
+    from pathlib import Path
+    if Path(path).suffix != '.json':
+        return {'ok': False, 'error': 'Only .json parameter files allowed'}
+    changed = link.param_mgr.load_from_file(path)
+    return {'ok': True, 'changed': changed}
 
 
 # --- Logs ---
@@ -357,12 +363,16 @@ def _cmd_motor_test_stop(link: DroneLink, param, data: dict):
 def _cmd_gimbal_angle(link: DroneLink, param, data: dict):
     pitch = float(data.get('pitch', 0))
     yaw = float(data.get('yaw', 0))
+    if not -90 <= pitch <= 90 or not -180 <= yaw <= 180:
+        return {'ok': False, 'error': 'Gimbal angle out of range'}
     _send_cmd(link, 205, p1=pitch, p4=yaw)
 
 
 def _cmd_gimbal_rate(link: DroneLink, param, data: dict):
     pitch_rate = float(data.get('pitch_rate', 0))
     yaw_rate = float(data.get('yaw_rate', 0))
+    if not -100 <= pitch_rate <= 100 or not -100 <= yaw_rate <= 100:
+        return {'ok': False, 'error': 'Gimbal rate out of range'}
     p = struct.pack('<ffffffBBB', 0, 0, 0, float(pitch_rate * 100), 0, float(yaw_rate * 100),
                     link.vehicle.sysid, 1, 2)
     link.send(bm(282, p, link.sq, 0))
@@ -382,6 +392,8 @@ def _cmd_camera_video_stop(link: DroneLink, param, data: dict):
 
 def _cmd_camera_zoom(link: DroneLink, param, data: dict):
     zoom_val = float(data.get('zoom', 1))
+    if not 0.1 <= zoom_val <= 100:
+        return {'ok': False, 'error': 'Zoom must be 0.1-100'}
     _send_cmd(link, 531, p1=1, p2=zoom_val)
 
 
@@ -389,6 +401,8 @@ def _cmd_do_set_roi(link: DroneLink, param, data: dict):
     lat = float(data.get('lat', 0))
     lon = float(data.get('lon', 0))
     alt = float(data.get('alt', 0))
+    if not (-90 <= lat <= 90) or not (-180 <= lon <= 180):
+        return {'ok': False, 'error': lt('err_bad_coord', link.locale)}
     _send_cmd(link, 201, p5=lat, p6=lon, p7=alt)
 
 

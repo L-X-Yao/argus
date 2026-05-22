@@ -54,14 +54,20 @@ class UdpWrapper:
 def open_port(port: str, baudrate: int):
     if port.startswith('udp:'):
         parts = port[4:].split(':')
-        if len(parts) == 2:
-            host, udp_port = parts[0], int(parts[1])
-        else:
-            host, udp_port = '', int(parts[0])
+        try:
+            if len(parts) == 2:
+                host, udp_port = parts[0], int(parts[1])
+            else:
+                host, udp_port = '', int(parts[0])
+        except ValueError:
+            raise OSError('Invalid UDP port: %s' % port)
         return UdpWrapper(udp_port, host)
     elif port.startswith('tcp:'):
         parts = port[4:].split(':')
-        host, tcp_port = parts[0], int(parts[1])
+        try:
+            host, tcp_port = parts[0], int(parts[1])
+        except (ValueError, IndexError):
+            raise OSError('Invalid TCP address: %s' % port)
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.settimeout(cfg.TCP_CONNECT_TIMEOUT)
         sock.connect((host, tcp_port))

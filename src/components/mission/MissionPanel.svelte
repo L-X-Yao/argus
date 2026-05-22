@@ -80,6 +80,7 @@
     [app.waypoints[i], app.waypoints[j]] = [app.waypoints[j], app.waypoints[i]];
   }
 
+  let uploadTimer: ReturnType<typeof setTimeout> | null = null;
   let uploading = $state(false);
   function uploadMission() {
     if (!app.waypoints.length || uploading) return;
@@ -89,7 +90,8 @@
       waypoints: app.waypoints,
       takeoff_alt: app.defaultAlt,
     });
-    setTimeout(() => { uploading = false; }, 3000);
+    if (uploadTimer) clearTimeout(uploadTimer);
+    uploadTimer = setTimeout(() => { uploading = false; uploadTimer = null; }, 3000);
   }
 
   async function armAndFly() {
