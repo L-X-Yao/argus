@@ -58,6 +58,11 @@
   let replayMarker: maplibregl.Marker | null = null;
   let replayTrail: [number, number][] = [];
 
+  // ADSB traffic markers — one per icao. Same Map<icao, Marker> pattern as
+  // DroneLayer.svelte:136-162 with HTML titles for hover info (maplibre
+  // markers don't have a built-in bindTooltip equivalent).
+  const adsbMarkers = new Map<number, maplibregl.Marker>();
+
   // Measure mode: distance (polyline) or area (polygon). All state local to
   // this view — clear on ESC or by clicking the same mode button twice.
   let measuring = $state(false);
@@ -408,6 +413,8 @@
     measureVertMarkers = [];
     if (measureLabel) { measureLabel.remove(); measureLabel = null; }
     if (replayMarker) { replayMarker.remove(); replayMarker = null; }
+    adsbMarkers.forEach((m) => m.remove());
+    adsbMarkers.clear();
     if (map) map.remove();
   });
 
@@ -717,6 +724,56 @@
         geometry: { type: 'LineString', coordinates: replayTrail },
         properties: {},
       });
+    }
+  });
+
+  /* ── ADSB traffic — mirrors DroneLayer.svelte:136-162 ───────────────── */
+  $effect(() => {
+    if (!map) return;
+    const adsb = app.drone.adsb || [];
+    const seen = new Set<number>();
+    for (const a of adsb) {
+      seen.add(a.icao);
+      const [mlat, mlon] = toMap(a.lat, a.lon);
+      const existing = adsbMarkers.get(a.icao);
+      const title = `${a.callsign || 'ADSB'} | ${a.alt.toFixed(0)}m | ${a.speed.toFixed(0)}m/s`;
+      if (existing) {
+        existing.setLngLat([mlon, mlat]);
+        const el = existing.getElement() as HTMLElement;
+        const arrow = el.querySelector('.adsb-arrow') as HTMLElement | null;
+        if (arrow) arrow.style.transform = `rotate(${a.hdg}deg)`;
+        el.title = title;
+        continue;
+      }
+      // Yellow triangle aircraft + callsign label above. Same colors and
+      // shape as DroneLayer.svelte:148-153.
+      const el = document.createElement('div');
+      el.style.cssText = 'position:relative;width:20px;height:20px';
+      el.title = title;
+      const arrow = document.createElement('div');
+      arrow.className = 'adsb-arrow';
+      arrow.style.cssText = `transform:rotate(${a.hdg}deg);transform-origin:center`;
+      const svg = createSvgElement(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="-10 -10 20 20" width="20" height="20">' +
+        '<polygon points="0,-8 -5,6 0,3 5,6" fill="#ffc107" stroke="#333" stroke-width="0.5"/></svg>',
+      );
+      arrow.appendChild(svg);
+      el.appendChild(arrow);
+      const label = document.createElement('div');
+      label.style.cssText = 'position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-size:8px;color:#ffc107;font-weight:bold;white-space:nowrap;text-shadow:0 0 2px #000';
+      label.textContent = a.callsign || a.icao.toString(16);
+      el.appendChild(label);
+
+      const m = new maplibregl.Marker({ element: el, rotationAlignment: 'map' })
+        .setLngLat([mlon, mlat]).addTo(map!);
+      adsbMarkers.set(a.icao, m);
+    }
+    // Remove markers for ICAOs no longer in the traffic list.
+    for (const [icao, m] of adsbMarkers) {
+      if (!seen.has(icao)) {
+        m.remove();
+        adsbMarkers.delete(icao);
+      }
     }
   });
 

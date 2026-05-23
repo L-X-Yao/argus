@@ -477,7 +477,7 @@
 | 341 | 航点聚焦+航线适配 | ✅ᵗ | focusWp→map.setView+2s橙色临时环, fitRouteFlag→fitBounds自适应缩放 |
 | 342 | ADSB交通标记渲染 | ✅ᵗ | 黄色箭头图标, 呼号/ICAO标签, tooltip(高度/速度), 过期自动清理 |
 | 343 | 多机标记渲染 | ✅ᵗ | 各机SysID标签, 解锁=红/未解锁=灰, 航向旋转, DroneLayer渲染 |
-| 344 | 3D任务视图交互 | ✅ᵗ | MapLibre GL 默认交互控制 + 点击空地添加航点 (guidedMode+armed 时改发 guided_goto, 右键带 confirm 对话框) + 可拖拽编号 marker (drag→保存新坐标) + marker 点击弹出气泡含删除按钮 + 围栏/测绘多边形渲染与点击绘制 (与 2D Fence/SurveyLayer 颜色一致) + 测距/测面工具 (距离用 segDist, 面积用 survey.polygonArea) + ESC 清当前 measure/guidedMode/绘制态; 与 2D WaypointLayer/FenceLayer/SurveyLayer/MapView 行为完全一致, GCJ-02 反向变换避免坐标偏移 |
+| 344 | 3D任务视图交互 | ✅ᵗ | MapLibre GL 默认交互控制 + 点击空地添加航点 (guidedMode+armed 时改发 guided_goto, 右键带 confirm 对话框) + 可拖拽编号 marker (drag→保存新坐标) + marker 点击弹出气泡含删除按钮 + 围栏/测绘多边形渲染与点击绘制 + 测距/测面工具 + ESC 清当前 measure/guidedMode/绘制态 + 飞行日志回放层 (replayPos 驱动的橙色箭头+轨迹) + ADSB 流量层 (Map<icao, Marker>, 黄色三角+呼号标签); 与 2D WaypointLayer/FenceLayer/SurveyLayer/ReplayLayer/DroneLayer ADSB 行为完全一致, GCJ-02 反向变换避免坐标偏移 |
 
 ---
 
