@@ -81,8 +81,33 @@
 
   let uploadTimer: ReturnType<typeof setTimeout> | null = null;
   let uploading = $state(false);
+  // High-water-mark on app.events for the in-flight upload — see $effect below.
+  let _uploadEventSeq = $state(0);
+
+  // Ack-driven completion: backend emits mission_ack_ok / mission_ack_fail
+  // via ws.ts when MISSION_ACK arrives from the FC. The hard 3s timer the
+  // previous implementation used could fire before or after the real ack,
+  // leaving the upload button unresponsive (slow ack) or letting the user
+  // double-upload mid-flight (fast ack). We still keep an 8s fallback for
+  // the case where the ack never arrives (link drop).
+  $effect(() => {
+    if (!uploading) return;
+    for (let i = app.events.length - 1; i >= 0; i--) {
+      const ev = app.events[i];
+      if (ev.seq !== undefined && ev.seq <= _uploadEventSeq) break;
+      if (ev.event_type === 'mission_ack_ok' || ev.event_type === 'mission_ack_fail') {
+        uploading = false;
+        if (uploadTimer) { clearTimeout(uploadTimer); uploadTimer = null; }
+        return;
+      }
+    }
+  });
+
   function uploadMission() {
     if (!app.waypoints.length || uploading) return;
+    _uploadEventSeq = app.events.length > 0
+      ? (app.events[app.events.length - 1].seq ?? 0)
+      : 0;
     uploading = true;
     addToast(t('toast.uploading'), 'info', 3000);
     sendCommand('mission_upload', undefined, {
@@ -90,7 +115,7 @@
       takeoff_alt: app.defaultAlt,
     });
     if (uploadTimer) clearTimeout(uploadTimer);
-    uploadTimer = setTimeout(() => { uploading = false; uploadTimer = null; }, 3000);
+    uploadTimer = setTimeout(() => { uploading = false; uploadTimer = null; }, 8000);
   }
 
   function saveMission() {

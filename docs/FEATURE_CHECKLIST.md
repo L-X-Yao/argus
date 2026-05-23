@@ -776,6 +776,7 @@
 | 13 | ~~mbtiles 路径校验 startswith 可绕过~~ | ✅ | 2026-05 修复: Path.relative_to + basename 检查 |
 | 14 | ~~UDP _remote 可被劫持~~ | ✅ | 2026-05 修复: 只在原 peer 静默 >30s 后才接受新源 |
 | 15 | ~~.gitignore 误把 src/components/params/ 排除~~ | ✅ | 2026-05 修复: 改为 `/params/` 锚定根目录; 4 个 Svelte 组件入库 |
+| 16 | ConnectionForm 串口/WS 双传输冲突 | ⚠️ | F-39: 若用户同时激活 WS 代理与 WebSerial, 两条 transport 都会直接写 app.drone.* 字段, 后写入的覆盖前者。生产场景几乎不会触发 (任一 transport 都需要主动点击连接), 但缺少互斥锁。修复方向: 添加 `activeTransport` 标志或在 serial 连接时强制断开 WS。来源: docs/audits/audit_frontend.md F-39 |
 
 ---
 

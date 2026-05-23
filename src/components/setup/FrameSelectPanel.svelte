@@ -58,10 +58,15 @@
   let selectedClass = $state(1);
   let selectedType  = $state(1);
 
-  /* ── Load current values from paramState ── */
-
+  /* ── Load current values from paramState (one-shot) ── */
+  // paramState.list grows across multiple PARAM_BATCH frames during the
+  // initial fetch (~10s, 700-1000 params). A naive $effect would re-fire
+  // on every batch and clobber the user's selection mid-stream. Matches
+  // the _loaded guard used by sibling panels (FlightModePanel, PidPanel).
+  let _loaded = $state(false);
   $effect(() => {
-    if (!paramsAvailable) return;
+    if (!paramsAvailable || _loaded) return;
+    _loaded = true;
     selectedClass = getParam('FRAME_CLASS', 1);
     selectedType  = getParam('FRAME_TYPE', 1);
   });
