@@ -64,7 +64,7 @@ class TestRtspUrlValidation:
 
     @patch('backend.video._ffmpeg_available', return_value=False)
     def test_no_ffmpeg_returns_error(self, mock_ff, client):
-        r = client.get('/api/video?url=rtsp://cam.example.com:554/stream')
+        r = client.get('/api/video?url=rtsp://8.8.8.8:554/stream')
         assert r.status_code == 200
         data = r.json()
         assert 'error' in data
@@ -80,7 +80,7 @@ class TestRtspUrlValidation:
         mock_proc.wait = MagicMock()
         mock_popen.return_value = mock_proc
 
-        r = client.get('/api/video?url=rtsp://cam.example.com:554/stream')
+        r = client.get('/api/video?url=rtsp://8.8.8.8:554/stream')
         assert r.status_code == 200
 
     @patch('backend.video._ffmpeg_available', return_value=True)
@@ -93,7 +93,7 @@ class TestRtspUrlValidation:
         mock_proc.wait = MagicMock()
         mock_popen.return_value = mock_proc
 
-        r = client.get('/api/video?url=http://example.com/live.m3u8')
+        r = client.get('/api/video?url=http://8.8.8.8/live.m3u8')
         assert r.status_code == 200
 
 
@@ -108,12 +108,12 @@ class TestVideoLifecycle:
         mock_proc.wait = MagicMock()
         mock_popen.return_value = mock_proc
 
-        r = client.get('/api/video?url=rtsp://cam.example.com/cam')
+        r = client.get('/api/video?url=rtsp://8.8.8.8/cam')
         assert r.status_code == 200
         mock_popen.assert_called_once()
         args = mock_popen.call_args[0][0]
         assert args[0] == 'ffmpeg'
-        assert 'rtsp://cam.example.com/cam' in args
+        assert 'rtsp://8.8.8.8/cam' in args
 
     @patch('backend.video._ffmpeg_available', return_value=True)
     @patch('subprocess.Popen')
@@ -125,7 +125,7 @@ class TestVideoLifecycle:
         mock_proc.wait = MagicMock()
         mock_popen.return_value = mock_proc
 
-        client.get('/api/video?url=rtsp://cam.example.com/cam')
+        client.get('/api/video?url=rtsp://8.8.8.8/cam')
         args = mock_popen.call_args[0][0]
         assert '-f' in args
         idx = args.index('-f')
@@ -169,7 +169,7 @@ class TestDuplicateProcessPrevention:
         second_proc.wait = MagicMock()
 
         with patch('subprocess.Popen', return_value=second_proc):
-            client.get('/api/video?url=rtsp://cam.example.com/new')
+            client.get('/api/video?url=rtsp://8.8.8.8/new')
 
         first_proc.kill.assert_called_once()
 

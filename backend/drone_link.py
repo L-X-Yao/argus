@@ -486,12 +486,34 @@ class DroneLink:
 
     def _next_frame(self):
         if self._protocol == 'auto' and len(self._buf) >= 2:
-            if self._buf[0] == 0x50 and self._buf[1] == 0x4C:
+            # Search the buffer for the first occurrence of either magic
+            # sequence (rather than locking based on byte[0] alone). Auditor
+            # W7: if the very first bytes received are noise (a partial
+            # MAVLink frame caught mid-stream, USB enumeration garbage,
+            # etc.) the old one-shot detect locked to the wrong protocol
+            # permanently — only full disconnect/reconnect could recover.
+            scan_len = min(len(self._buf) - 1, 256)
+            pllink_idx = -1
+            for i in range(scan_len):
+                if self._buf[i] == 0x50 and self._buf[i + 1] == 0x4C:
+                    pllink_idx = i
+                    break
+            std_idx = self._buf.find(b'\xfd')
+            if std_idx > scan_len:
+                std_idx = -1
+            if pllink_idx >= 0 and (std_idx < 0 or pllink_idx <= std_idx):
+                self._buf = self._buf[pllink_idx:]
                 self._protocol = 'pllink'
                 self.add_event(lt('proto_pllink', self.locale), 'proto_pllink')
-            else:
+            elif std_idx >= 0:
+                self._buf = self._buf[std_idx:]
                 self._protocol = 'standard'
                 self.add_event(lt('proto_std', self.locale), 'proto_std')
+            else:
+                # Neither magic found in the first 256 bytes — drop them
+                # and wait for more. (Otherwise we'd spin parsing garbage.)
+                self._buf = self._buf[scan_len:]
+                return None, 0
         if self._protocol == 'pllink':
             return pld(self._buf)
         return self._parse_mavlink_frame()

@@ -268,7 +268,13 @@ async def api_tile(style: str, z: int, x: int, y: int):
     url = TILE_URLS.get(style, TILE_URLS['6']).format(x=x, y=y, z=z)
     try:
         req = urlreq.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        data = await _aio(lambda: urlreq.urlopen(req, timeout=cfg.TILE_DOWNLOAD_TIMEOUT).read())
+        # Cap tile size at 2MB — a single PNG tile should be ~50-200KB.
+        # Without this a malicious or misbehaving tile server could stream
+        # gigabytes and exhaust disk.
+        _TILE_MAX_BYTES = 2 * 1024 * 1024
+        data = await _aio(lambda: urlreq.urlopen(req, timeout=cfg.TILE_DOWNLOAD_TIMEOUT).read(_TILE_MAX_BYTES + 1))
+        if len(data) > _TILE_MAX_BYTES:
+            return Response(status_code=502, content='Tile too large')
         if _tile_count < 0:
             _tile_count = await _aio(lambda: sum(1 for _ in TILE_CACHE.rglob('*.png')) if TILE_CACHE.exists() else 0)
         if _tile_count < _TILE_MAX:
@@ -578,7 +584,11 @@ async def api_firmware_download(request: Request):
         target.write_bytes(data)
         return {'ok': True, 'filename': filename, 'size': len(data)}
     except (OSError, urllib.error.URLError) as e:
-        return {'ok': False, 'error': str(e)}
+        # Don't leak server paths / internal URLError reasons to the client.
+        # Log the detail server-side for the operator.
+        import logging
+        logging.getLogger('gcs').warning('firmware download failed: %s', e)
+        return {'ok': False, 'error': 'Download failed (check server logs)'}
 
 
 if DIST_DIR.exists():

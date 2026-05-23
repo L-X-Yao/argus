@@ -1,4 +1,5 @@
 """Security regression tests — adversarial inputs on API endpoints and commands."""
+import socket
 from pathlib import Path
 from unittest.mock import patch
 
@@ -6,6 +7,15 @@ from backend.commands import execute
 from backend.config import cfg
 from backend.drone_link import DroneLink
 from backend.video import _validate_video_url
+
+
+# Test env DNS may map *.example.com to a private placeholder (DHCP/captive
+# resolver behavior on some networks), which the post-audit DNS-based SSRF
+# guard correctly blocks. Mock getaddrinfo so the "domain names are allowed"
+# tests are independent of the test runner's network.
+def _mock_public_dns(host, *args, **kwargs):
+    return [(socket.AF_INET, socket.SOCK_STREAM, 0, '', ('8.8.8.8', 0))]
+
 
 # ─── Video URL Validation Tests ────────────────────────────────────
 
@@ -15,13 +25,16 @@ class TestVideoUrlValidation:
         assert _validate_video_url('rtsp://8.8.8.8:554/stream') is None
 
     def test_valid_rtmp(self):
-        assert _validate_video_url('rtmp://live.example.com/app/key') is None
+        with patch('socket.getaddrinfo', side_effect=_mock_public_dns):
+            assert _validate_video_url('rtmp://live.example.com/app/key') is None
 
     def test_valid_http(self):
-        assert _validate_video_url('http://cam.example.com:8080/video') is None
+        with patch('socket.getaddrinfo', side_effect=_mock_public_dns):
+            assert _validate_video_url('http://cam.example.com:8080/video') is None
 
     def test_valid_https(self):
-        assert _validate_video_url('https://stream.example.com/live.m3u8') is None
+        with patch('socket.getaddrinfo', side_effect=_mock_public_dns):
+            assert _validate_video_url('https://stream.example.com/live.m3u8') is None
 
     def test_reject_file_scheme(self):
         err = _validate_video_url('file:///etc/passwd')
@@ -63,7 +76,18 @@ class TestVideoUrlValidation:
         assert _validate_video_url('rtsp://8.8.8.8:554/stream') is None
 
     def test_domain_name_allowed(self):
-        assert _validate_video_url('rtsp://cameras.example.org:554/live') is None
+        with patch('socket.getaddrinfo', side_effect=_mock_public_dns):
+            assert _validate_video_url('rtsp://cameras.example.org:554/live') is None
+
+    def test_hostname_resolving_to_loopback_blocked(self):
+        """Regression: pre-audit code only blocked the literal 'localhost';
+        an attacker-controlled DNS name that resolves to 127.0.0.1 is now
+        rejected too (SSRF via DNS rebinding)."""
+        def _mock_loopback_dns(host, *args, **kwargs):
+            return [(socket.AF_INET, socket.SOCK_STREAM, 0, '', ('127.0.0.1', 0))]
+        with patch('socket.getaddrinfo', side_effect=_mock_loopback_dns):
+            err = _validate_video_url('rtsp://attacker-controlled.example/cam')
+            assert err is not None
 
 
 # ─── Command Error Handling Tests ──────────────────────────────────

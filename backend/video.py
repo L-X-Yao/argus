@@ -18,6 +18,13 @@ router = APIRouter()
 _ALLOWED_SCHEMES = {'rtsp', 'rtmp', 'http', 'https'}
 
 
+def _is_private_or_special(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
+    return (
+        ip.is_private or ip.is_loopback or ip.is_reserved
+        or ip.is_link_local or ip.is_multicast
+    )
+
+
 def _validate_video_url(url: str) -> str | None:
     """Validate video URL. Returns error message or None if valid."""
     if len(url) > cfg.VIDEO_URL_MAX_LEN:
@@ -31,13 +38,31 @@ def _validate_video_url(url: str) -> str | None:
     host = parsed.hostname or ''
     if not host:
         return 'No hostname in URL'
+    # Try IP literal first; if that fails, resolve the hostname via DNS and
+    # check the result. Previously a hostname like `internal-server.lan`
+    # that resolved to 127.0.0.1 / 169.254.169.254 (AWS metadata) would
+    # slip past the IP-literal check entirely.
     try:
         addr = ipaddress.ip_address(host)
-        if addr.is_private or addr.is_loopback or addr.is_reserved:
+        if _is_private_or_special(addr):
             return 'Private/loopback addresses not allowed'
+        return None
     except ValueError:
-        if host in ('localhost', 'localhost.localdomain'):
-            return 'Private/loopback addresses not allowed'
+        pass
+    if host in ('localhost', 'localhost.localdomain'):
+        return 'Private/loopback addresses not allowed'
+    import socket as _socket
+    try:
+        addrs = _socket.getaddrinfo(host, None)
+    except _socket.gaierror:
+        return 'Cannot resolve hostname'
+    for _fam, *_rest, sockaddr in addrs:
+        try:
+            resolved = ipaddress.ip_address(sockaddr[0])
+        except ValueError:
+            continue
+        if _is_private_or_special(resolved):
+            return 'Resolves to a private/loopback/reserved address'
     return None
 
 _active_proc: subprocess.Popen | None = None
@@ -90,6 +115,10 @@ async def video_stream(url: str = ''):
         loop = asyncio.get_event_loop()
         try:
             buf = b''
+            # If the upstream isn't MJPEG (e.g. mis-configured URL), the
+            # JPEG markers never appear and `buf += chunk` grows forever.
+            # Cap at ~8MB and reset to recover.
+            _MAX_BUF = 8 * 1024 * 1024
             while True:
                 chunk = await loop.run_in_executor(
                     None, proc.stdout.read, 4096  # type: ignore[union-attr]
@@ -97,6 +126,10 @@ async def video_stream(url: str = ''):
                 if not chunk:
                     break
                 buf += chunk
+                if len(buf) > _MAX_BUF:
+                    # Keep only the trailing 64KB in case a partial header
+                    # is in there.
+                    buf = buf[-65536:]
                 # Extract complete JPEG frames (FF D8 … FF D9).
                 while True:
                     start = buf.find(b'\xff\xd8')
