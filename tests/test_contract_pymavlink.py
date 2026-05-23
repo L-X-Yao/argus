@@ -724,6 +724,57 @@ class TestOutgoingMoreCommands:
         assert msg.param3 == 45.0
         assert msg.param7 == 2.0  # MAV_MOUNT_MODE_MAVLINK_TARGETING
 
+    def test_gimbal_pitchyaw_angle_mode(self):
+        # AP_Mount.cpp:396 — if pitch & yaw are non-NaN, set_angle_target wins
+        # over the rate branch regardless of what rates were sent.
+        import math
+        link = FakeLink()
+        commands.execute('gimbal_pitchyaw', None, link, {'pitch': -45, 'yaw': 60})
+        msg = _decode_one(link.captured[0])
+        assert msg.get_msgId() == mavlink.MAVLINK_MSG_ID_COMMAND_INT  # 75
+        assert msg.command == mavlink.MAV_CMD_DO_GIMBAL_MANAGER_PITCHYAW  # 1000
+        assert msg.param1 == -45.0
+        assert msg.param2 == 60.0
+        assert math.isnan(msg.param3) and math.isnan(msg.param4)
+        assert msg.x == 0  # flags
+        assert msg.z == 0.0  # primary gimbal instance
+
+    def test_gimbal_pitchyaw_rate_mode(self):
+        # AP_Mount.cpp:405 — when angles are NaN but rates are finite,
+        # the handler picks set_rate_target.
+        import math
+        link = FakeLink()
+        commands.execute('gimbal_pitchyaw', None, link,
+                         {'pitch_rate': 30, 'yaw_rate': -20})
+        msg = _decode_one(link.captured[0])
+        assert msg.command == mavlink.MAV_CMD_DO_GIMBAL_MANAGER_PITCHYAW
+        assert math.isnan(msg.param1) and math.isnan(msg.param2)
+        assert msg.param3 == 30.0
+        assert msg.param4 == -20.0
+
+    def test_gimbal_pitchyaw_retract_flag(self):
+        # AP_Mount.cpp:382 — RETRACT (1) short-circuits before angle/rate.
+        # packet.x is the flags slot; pymavlink decodes it as the int32 x field.
+        link = FakeLink()
+        commands.execute('gimbal_pitchyaw', None, link, {'flags': 1})
+        msg = _decode_one(link.captured[0])
+        assert msg.command == mavlink.MAV_CMD_DO_GIMBAL_MANAGER_PITCHYAW
+        assert msg.x == 1  # GIMBAL_MANAGER_FLAGS_RETRACT
+
+    def test_gimbal_pitchyaw_instance_in_z(self):
+        # AP_Mount.cpp:369 reads packet.z as the gimbal device id.
+        link = FakeLink()
+        commands.execute('gimbal_pitchyaw', None, link,
+                         {'pitch': 0, 'yaw': 0, 'instance': 2})
+        msg = _decode_one(link.captured[0])
+        assert msg.z == 2.0
+
+    def test_gimbal_pitchyaw_out_of_range(self):
+        link = FakeLink()
+        result = commands.execute('gimbal_pitchyaw', None, link, {'pitch': 200, 'yaw': 0})
+        assert result is not None and result.get('ok') is False
+        assert not link.captured  # no frame sent
+
     def test_camera_video_start(self):
         link = FakeLink()
         commands.execute('camera_video_start', None, link)

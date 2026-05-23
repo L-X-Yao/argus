@@ -17,6 +17,27 @@ def send_cmd(link: DroneLink, command: int, p1=0, p2=0, p3=0, p4=0, p5=0, p6=0, 
     link.send(bm(76, payload, link.sq, 152))
 
 
+def send_cmd_int(link: DroneLink, command: int,
+                 p1: float = 0.0, p2: float = 0.0, p3: float = 0.0, p4: float = 0.0,
+                 x: int = 0, y: int = 0, z: float = 0.0,
+                 frame: int = 0) -> None:
+    # COMMAND_INT (msg 75, CRC_EXTRA 158). Use this instead of send_cmd when
+    # the handler reads x/y/z as type-specific slots (scaled lat/lon int32,
+    # or reinterpreted as bitfield) rather than as param5/6/7 floats — e.g.
+    # AP_Mount::handle_command_do_gimbal_manager_pitchyaw at
+    # libraries/AP_Mount/AP_Mount.cpp:363 reads packet.x as a uint32
+    # GIMBAL_MANAGER_FLAGS bitfield, packet.z as the gimbal device id.
+    payload = struct.pack(
+        '<ffffiifHBBBBB',
+        float(p1), float(p2), float(p3), float(p4),
+        int(x), int(y), float(z),
+        command,
+        link.vehicle.sysid, 1,
+        frame, 0, 0,
+    )
+    link.send(bm(75, payload, link.sq, 158))
+
+
 def send_set_mode(link: DroneLink, mode: int) -> None:
     payload = struct.pack('<IBB', mode, link.vehicle.sysid, 0x01)
     link.send(bm(11, payload, link.sq, 89))

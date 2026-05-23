@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import base64
+import math
 import struct
 from typing import TYPE_CHECKING
 
 from ..locale_text import lt
 from ..pllink_proto import bm
-from ._helpers import send_cmd, send_serial_control
+from ._helpers import send_cmd, send_cmd_int, send_serial_control
 
 if TYPE_CHECKING:
     from ..drone_link import DroneLink
@@ -139,6 +140,57 @@ def cmd_gimbal_angle(link: DroneLink, param, data: dict):
     if not -90 <= pitch <= 90 or not -180 <= yaw <= 180:
         return {'ok': False, 'error': 'Gimbal angle out of range'}
     send_cmd(link, 205, p1=pitch, p3=yaw, p7=2)
+
+
+# Replaces the broken gimbal_rate path removed in the 2026-05 audit (msg 282
+# encoded as 27 bytes vs the required 35). The handler is
+# AP_Mount::handle_command_do_gimbal_manager_pitchyaw at
+# libraries/AP_Mount/AP_Mount.cpp:363-417 and branches in this exact order:
+#   (a) if isnan(pitch_angle) && isnan(yaw_angle) is FALSE  → set_angle_target
+#   (b) else if isnan(pitch_rate) && isnan(yaw_rate) is FALSE → set_rate_target
+#   (c) else if all four NaN → set_yaw_lock(YAW_LOCK_flag)
+# packet.x (int32 slot in COMMAND_INT) is read as uint32 flags
+# (RETRACT=1, NEUTRAL=2, YAW_LOCK=16); packet.z (float slot) is cast to
+# uint8 instance number (0 = primary gimbal).
+_GIMBAL_FLAG_RETRACT = 1
+_GIMBAL_FLAG_NEUTRAL = 2
+_GIMBAL_FLAG_YAW_LOCK = 16
+
+
+def cmd_gimbal_pitchyaw(link: DroneLink, param, data: dict):
+    def _f(key: str) -> float:
+        v = data.get(key)
+        if v is None:
+            return float('nan')
+        try:
+            return float(v)
+        except (TypeError, ValueError):
+            return float('nan')
+
+    pitch = _f('pitch')
+    yaw = _f('yaw')
+    pitch_rate = _f('pitch_rate')
+    yaw_rate = _f('yaw_rate')
+
+    for name, v, lo, hi in (
+        ('pitch', pitch, -90.0, 90.0),
+        ('yaw', yaw, -180.0, 180.0),
+        ('pitch_rate', pitch_rate, -180.0, 180.0),
+        ('yaw_rate', yaw_rate, -180.0, 180.0),
+    ):
+        if not math.isnan(v) and not (lo <= v <= hi):
+            return {'ok': False, 'error': f'{name} out of range'}
+
+    flags = int(data.get('flags', 0))
+    if not -0x80000000 <= flags <= 0x7FFFFFFF:
+        return {'ok': False, 'error': 'flags must fit in int32'}
+    instance = int(data.get('instance', 0))
+    if not 0 <= instance <= 6:
+        return {'ok': False, 'error': 'Gimbal instance out of range'}
+
+    send_cmd_int(link, 1000,
+                 p1=pitch, p2=yaw, p3=pitch_rate, p4=yaw_rate,
+                 x=flags, y=0, z=float(instance), frame=0)
 
 
 def cmd_camera_trigger(link: DroneLink, param, data: dict):

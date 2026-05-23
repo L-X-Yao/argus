@@ -5,7 +5,7 @@
 [![CI](https://github.com/L-X-Yao/argus/actions/workflows/ci.yml/badge.svg)](https://github.com/L-X-Yao/argus/actions/workflows/ci.yml)
 ![Version](https://img.shields.io/badge/version-3.4.0-blue.svg)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-![Tests](https://img.shields.io/badge/tests-1451%20passing-brightgreen.svg)
+![Tests](https://img.shields.io/badge/tests-1456%20passing-brightgreen.svg)
 ![i18n](https://img.shields.io/badge/i18n-10%20languages-orange.svg)
 
 <!-- TODO: add a hero screenshot (map + HUD + telemetry overlay).
@@ -108,7 +108,7 @@ Open Argus in Chrome/Edge → click the **USB** button → pick your flight cont
 │  Python Backend (FastAPI + uvicorn)     │
 │  24 modules, 3.5K lines                 │
 │  MAVLink dispatch + 31 message handlers │
-│  49 commands, tile/video/firmware API   │
+│  50 commands, tile/video/firmware API   │
 ├─────────────────────────────────────────┤
 │          ↕ MAVLink v2                   │
 │  TCP / UDP / Serial / PL-Link           │
@@ -130,13 +130,13 @@ Open Argus in Chrome/Edge → click the **USB** button → pick your flight cont
 | `src/lib/survey.ts` | Survey patterns (grid, crosshatch, spiral, orbit) |
 | `src/lib/i18n.svelte.ts` | 10-language i18n with RTL support |
 | `backend/drone_link.py` | MAVLink connection, frame parsing, state management |
-| `backend/commands/` | 49 command handlers (arm, mode, mission, calibration, gimbal, NTRIP, etc.) |
+| `backend/commands/` | 50 command handlers (arm, mode, mission, calibration, gimbal, NTRIP, etc.) |
 | `backend/config.py` | Centralized configuration (all timeouts/ports/rates) |
 
 ## Development
 
 ```bash
-# Backend unit + contract tests (1,032 tests)
+# Backend unit + contract tests (1,037 tests)
 python -m pytest tests/test_unit_*.py tests/test_contract_*.py -v
 
 # Frontend unit tests (419 tests)
@@ -172,6 +172,7 @@ npm run build
 - Multi-language UI (10 locales + RTL)
 - Tauri v2 desktop packaging
 - Dual-transport mutex (WS backend ↔ WebSerial, defended at the store layer)
+- Gimbal pitch/yaw via MAV_CMD_DO_GIMBAL_MANAGER_PITCHYAW (angle + rate + retract/neutral)
 
 **🚧 In progress / partial**
 

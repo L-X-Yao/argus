@@ -275,7 +275,7 @@
 | 181 | 电机测试 (motor_test) | ✅ | 真机"电机测试: #1 @ 5%" |
 | 182 | 电机停止 (motor_test_stop) | ✅ᵗ | 代码逻辑验证 |
 | 183 | 云台角度控制 (gimbal_angle) | ⚠️ | 命令可发送, 需云台硬件 |
-| 184 | 云台速率控制 (gimbal_rate) | ❌ | 2026-05 audit 发现原 payload 损坏 (27 字节 vs msg 282 需 35 字节)。前端无调用方, 后端已移除骨架。重新实现需走 MAV_CMD_DO_GIMBAL_MANAGER_PITCHYAW(1000) 或 msg 287, 此时新增 `cmd_gimbal_pitchyaw`，不要复用旧名 |
+| 184 | 云台速率/收回/中位 (gimbal_pitchyaw) | ⚠️ | 2026-05-23 重实现: 走 MAV_CMD_DO_GIMBAL_MANAGER_PITCHYAW(1000) via COMMAND_INT (msg 75), 字节级 pymavlink 契约测试覆盖三种模式 (角度/速率/flags-only) + instance + 越界。需云台硬件验证 set_rate_target / set_mode(RETRACT/NEUTRAL) 实际执行。AP 引用: libraries/AP_Mount/AP_Mount.cpp:363-417 |
 | 185 | 相机快门 (camera_trigger) | ⚠️ | 命令可发送, 需相机 |
 | 186 | 录像开始 (camera_video_start) | ⚠️ | 命令可发送 |
 | 187 | 录像停止 (camera_video_stop) | ⚠️ | 命令可发送 |
@@ -768,7 +768,7 @@
 | 5 | ~~云台遥测无接收 handler~~ | ✅ | 已修复: 新增 handle_mount_status (msg 158) |
 | 6 | ~~高级命令后端未实现上传~~ | ✅ | 已修复: _upload_mission() 处理 5 种 cmd_* 字段 |
 | 7 | PX4 支持基本未实现 | ❌ | 前端 `src/lib/fc/` PX4 adapter scaffolded 但无 production import; 后端不读 HEARTBEAT.autopilot byte。详见 `CLAUDE.md ## PX4 Status` |
-| 8 | gimbal_rate 命令无法工作 | ❌ | 见 #184 — 骨架已删除, `KNOWN_BACKEND_ORPHANS` 已更新; 重新实现需新增 `cmd_gimbal_pitchyaw` 走 MAV_CMD 1000 或 msg 287 |
+| 8 | ~~gimbal_rate 命令无法工作~~ | ✅ᵗ | 已修复 (#184): 新增 `cmd_gimbal_pitchyaw` 走 MAV_CMD_DO_GIMBAL_MANAGER_PITCHYAW(1000) via COMMAND_INT, 5 个 pymavlink 字节级契约测试通过; 前端 GimbalPanel 加 Rate 模式 + Retract/Neutral 按钮 |
 | 9 | tests/test_integration.py 32 个失败 | ⚠️ | 2026-05 audit 分类: A=真 bug已修, B=sim协议bug已修, C=过期测试已修, D=预xfail。剩余看 docs/audits/audit_remaining.md |
 | 10 | ~~MAVLink 2 zero-trim 不容忍~~ | ✅ | 2026-05 修复: 所有 handler 新增 `_pad()` helper, 容忍 trailing-zero trimmed payload (FC 发的 trailing-zero 字段不再读到 0)。commit 102a05e |
 | 11 | ~~observer 客户端可发危险指令~~ | ✅ | 2026-05 修复: ws_manager.command 分支检查 pilot 角色, 否则拒绝 |
@@ -796,7 +796,7 @@
 
 | 测试类型 | 数量 | 工具 |
 |----------|------|------|
-| 后端单元 + 契约测试 | **1032** | pytest |
+| 后端单元 + 契约测试 | **1037** | pytest |
 | 前端单元测试 | **419** | vitest |
 | E2E 测试 | 19 specs | Playwright |
 | 真机 WS 测试 | 25 项 | Python websockets |

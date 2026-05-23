@@ -10,6 +10,7 @@
   /* ── Gimbal angle state ── */
   let pitch = $state(0);
   let yaw = $state(0);
+  let rateMode = $state(false);
 
   /* ── Camera state ── */
   let recording = $state(false);
@@ -26,15 +27,37 @@
 
   /* ── Gimbal controls ── */
   function sendAngle() {
-    sendCommand('gimbal_angle', undefined, { pitch, yaw });
-    addToast(`${t('gimbal.angle')}: P=${pitch} Y=${yaw}`, 'info', 2000);
+    if (rateMode) {
+      sendCommand('gimbal_pitchyaw', undefined, { pitch_rate: pitch, yaw_rate: yaw });
+      addToast(`${t('gimbal.rate')}: P=${pitch}°/s Y=${yaw}°/s`, 'info', 2000);
+    } else {
+      sendCommand('gimbal_angle', undefined, { pitch, yaw });
+      addToast(`${t('gimbal.angle')}: P=${pitch} Y=${yaw}`, 'info', 2000);
+    }
   }
 
   function centerGimbal() {
     pitch = 0;
     yaw = 0;
-    sendCommand('gimbal_angle', undefined, { pitch: 0, yaw: 0 });
+    if (rateMode) {
+      sendCommand('gimbal_pitchyaw', undefined, { pitch_rate: 0, yaw_rate: 0 });
+    } else {
+      sendCommand('gimbal_angle', undefined, { pitch: 0, yaw: 0 });
+    }
     addToast(t('gimbal.centered'), 'info', 2000);
+  }
+
+  function retractGimbal() {
+    // GIMBAL_MANAGER_FLAGS_RETRACT = 1; AP_Mount.cpp:382 short-circuits to
+    // set_mode(MAV_MOUNT_MODE_RETRACT) regardless of pitch/yaw payload.
+    sendCommand('gimbal_pitchyaw', undefined, { flags: 1 });
+    addToast(t('gimbal.retract'), 'info', 2000);
+  }
+
+  function neutralGimbal() {
+    // GIMBAL_MANAGER_FLAGS_NEUTRAL = 2; AP_Mount.cpp:387.
+    sendCommand('gimbal_pitchyaw', undefined, { flags: 2 });
+    addToast(t('gimbal.neutral'), 'info', 2000);
   }
 
   /* ── Camera controls ── */
@@ -110,19 +133,25 @@
 
       <!-- Gimbal angle control -->
       <div class="space-y-2">
-        <div class="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">{t('gimbal.angleControl')}</div>
+        <div class="flex items-center justify-between">
+          <div class="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">{t('gimbal.angleControl')}</div>
+          <label class="flex items-center gap-1.5 text-[11px] cursor-pointer select-none">
+            <input type="checkbox" bind:checked={rateMode} class="accent-primary cursor-pointer" />
+            <span class="text-muted-foreground">{t('gimbal.rateMode')}</span>
+          </label>
+        </div>
         <div class="space-y-1.5">
           <div class="flex items-center gap-2">
             <label for="gimbal-pitch" class="text-xs text-muted-foreground w-14 shrink-0">{t('gimbal.pitch')}</label>
-            <input id="gimbal-pitch" type="range" min="-90" max="30" step="1" bind:value={pitch}
+            <input id="gimbal-pitch" type="range" min={rateMode ? -90 : -90} max={rateMode ? 90 : 30} step="1" bind:value={pitch}
                    class="flex-1 h-1.5 accent-primary" />
-            <span class="text-xs font-mono text-foreground w-10 text-right">{pitch}°</span>
+            <span class="text-xs font-mono text-foreground w-12 text-right">{pitch}{rateMode ? '°/s' : '°'}</span>
           </div>
           <div class="flex items-center gap-2">
             <label for="gimbal-yaw" class="text-xs text-muted-foreground w-14 shrink-0">{t('gimbal.yaw')}</label>
             <input id="gimbal-yaw" type="range" min="-180" max="180" step="1" bind:value={yaw}
                    class="flex-1 h-1.5 accent-primary" />
-            <span class="text-xs font-mono text-foreground w-10 text-right">{yaw}°</span>
+            <span class="text-xs font-mono text-foreground w-12 text-right">{yaw}{rateMode ? '°/s' : '°'}</span>
           </div>
         </div>
         <div class="flex gap-2">
@@ -131,6 +160,14 @@
           </Button>
           <Button variant="outline" size="sm" class="gap-1" onclick={centerGimbal}>
             <RotateCcw size={13} />{t('gimbal.center')}
+          </Button>
+        </div>
+        <div class="flex gap-2">
+          <Button variant="outline" size="sm" class="flex-1 text-xs" onclick={retractGimbal}>
+            {t('gimbal.retract')}
+          </Button>
+          <Button variant="outline" size="sm" class="flex-1 text-xs" onclick={neutralGimbal}>
+            {t('gimbal.neutral')}
           </Button>
         </div>
       </div>
