@@ -439,7 +439,12 @@
 | SW 扩展 | 3 | 0 | 3 | 0 | 0 | 0 |
 | 运行环境/平台 | 4 | 1 | 3 | 0 | 0 | 0 |
 | 设置面板详情 | 3 | 0 | 3 | 0 | 0 | 0 |
-| **合计** | **390** | **73** | **293** | **15** | **8** | **1** |
+| 状态栏详情 | 7 | 0 | 7 | 0 | 0 | 0 |
+| 地图视图扩展 | 5 | 0 | 5 | 0 | 0 | 0 |
+| 插件API扩展 | 4 | 0 | 4 | 0 | 0 | 0 |
+| MAVLink协议细节 | 3 | 0 | 3 | 0 | 0 | 0 |
+| 数据存储细节 | 3 | 0 | 3 | 0 | 0 | 0 |
+| **合计** | **412** | **73** | **315** | **15** | **8** | **1** |
 
 ---
 
@@ -819,6 +824,63 @@
 | 388 | 默认航点速度设置 | ✅ᵗ | 1-30 m/s 步长1, 新航点默认速度, 持久化到argus_settings |
 | 389 | 围栏半径设置 | ✅ᵗ | 0-10000m, 围栏圆形半径, 持久化到argus_settings |
 | 390 | 构建日期显示 | ✅ᵗ | __BUILD_DATE__ 编译时间戳, 设置面板底部版本信息旁 |
+
+---
+
+## 五十二、状态栏详情
+
+| # | 功能 | 状态 | 验证方式 |
+|---|------|------|----------|
+| 391 | 链路质量趋势图 | ✅ᵗ | StatusBar: 20点SVG sparkline, linkHistory消息率历史, 120条滚动缓冲 |
+| 392 | 消息率(Hz)显示 | ✅ᵗ | 2秒采样间隔, 帧数差值÷时间计算, 实时刷新 |
+| 393 | EKF状态徽章 | ✅ᵗ | 绿/黄/红色点: vel/posH/posV/compass方差阈值+EKF_CONST_POS/UNINITIALIZED标志, tooltip详情 |
+| 394 | 模式徽章颜色 | ✅ᵗ | 紧急模式(6/9/11/17/20/21)→destructive红, 手动模式→secondary灰, 其他→primary |
+| 395 | 电池剩余时间显示 | ✅ᵗ | bat_time_remaining格式化: ≥3600→~Xh Ym, <3600→~Xm, 不可用时隐藏 |
+| 396 | 解析错误计数显示 | ✅ᵗ | parse_errors>0时StatusBar显示E:<count>红色标记 |
+| 397 | 状态栏多机下拉 | ✅ᵗ | vehicles.length>0时+N徽章, 展开显示sysid/armed/alt列表 |
+
+---
+
+## 五十三、地图视图扩展
+
+| # | 功能 | 状态 | 验证方式 |
+|---|------|------|----------|
+| 398 | 右键引导飞行 | ✅ᵗ | MapView右键菜单→确认对话框→guided_goto(lat, lon, alt), 需连接+解锁+GUIDED |
+| 399 | 罗盘玫瑰图 | ✅ᵗ | SVG罗盘+航向针旋转到当前heading, N/S/E/W标签, 地图右下角叠加 |
+| 400 | 定位Home按钮 | ✅ᵗ | 地图飞到home_lat/home_lon, 需Home已设置 |
+| 401 | 深色模式瓦片滤镜 | ✅ᵗ | darkTheme时CSS filter: brightness(0.7) contrast(1.1) saturate(0.8) 应用到地图瓦片 |
+| 402 | 飞行轨迹导出KML | ✅ᵗ | droneTrail坐标序列导出为KML LineString文件, Blob下载 |
+
+---
+
+## 五十四、插件API扩展
+
+| # | 功能 | 状态 | 验证方式 |
+|---|------|------|----------|
+| 403 | Plugin getWaypoints() | ✅ᵗ | 返回当前航点列表深拷贝, 供插件读取航线数据 |
+| 404 | Plugin emit(event, data) | ✅ᵗ | 自定义事件总线+window.dispatchEvent(CustomEvent('argus:<event>')) |
+| 405 | Plugin showToast/removePanel | ✅ᵗ | 插件显示Toast通知(msg+level), 注销已添加面板元素 |
+| 406 | Plugin生命周期 | ✅ᵗ | init→mount→destroy→unmount 4钩子, unloadPlugin(name)运行时卸载 |
+
+---
+
+## 五十五、MAVLink 协议细节
+
+| # | 功能 | 状态 | 验证方式 |
+|---|------|------|----------|
+| 407 | MAVLink v2 签名解析 | ✅ᵗ | codec.ts: incompat_flags & 0x01时帧长+13字节签名, 正确计算总帧长 |
+| 408 | CRC_EXTRA 校验 | ✅ᵗ | 每消息ID对应CRC extra字节, CRC不匹配→跳过帧+0xFD重同步 |
+| 409 | 流式帧解析器 | ✅ᵗ | parseFrames()跨chunk部分帧缓冲, 返回未消费remainder供下次调用 |
+
+---
+
+## 五十六、数据存储细节
+
+| # | 功能 | 状态 | 验证方式 |
+|---|------|------|----------|
+| 410 | 飞行记录上限 | ✅ᵗ | flightDb: 200条上限, saveFlightRecord超出时自动裁剪最旧记录 |
+| 411 | 参数存储优化 | ✅ᵗ | paramStore: name→index O(1) upsert, 完成后alphabetical排序重建索引 |
+| 412 | SW自动更新激活 | ✅ᵗ | main.ts: 检测到新SW时立即postMessage('skipWaiting'), 无需用户确认自动激活 |
 
 ---
 
