@@ -29,6 +29,11 @@ export interface DroneState {
   wp: number;
   vtype: string;
   vtype_raw: number;
+  // MAV_AUTOPILOT enum byte from HEARTBEAT — 3 = ArduPilot, 12 = PX4,
+  // 0 = unknown (not yet seen). Surfaced so the FC-adapter layer in
+  // src/lib/fc/ can branch on autopilot stack. See CLAUDE.md ## PX4 Status
+  // for why the rest of the codebase still assumes ArduPilot.
+  autopilot: number;
   mode_btns: [number, string][];
   link_age: number;
   bat_time: number;
@@ -198,7 +203,7 @@ export const defaultState: DroneState = {
   gs: 0, airspeed: 0, throttle: 0, climb: 0, vz: 0, hdg: 0, dist_home: 0, flight_time: 0,
   voltage: 0, current: 0, remaining: -1,
   gps_fix: '---', gps_fix_raw: 0, gps_sats: 0, wp: 0,
-  vtype: '', vtype_raw: 0, mode_btns: [],
+  vtype: '', vtype_raw: 0, autopilot: 0, mode_btns: [],
   link_age: -1, bat_time: -1,
   home_lat: 0, home_lon: 0, parse_errors: 0,
   flight_summary: null, log_active: false,

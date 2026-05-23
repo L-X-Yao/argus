@@ -5,7 +5,7 @@
 [![CI](https://github.com/L-X-Yao/argus/actions/workflows/ci.yml/badge.svg)](https://github.com/L-X-Yao/argus/actions/workflows/ci.yml)
 ![Version](https://img.shields.io/badge/version-3.4.0-blue.svg)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-![Tests](https://img.shields.io/badge/tests-1524%20passing-brightgreen.svg)
+![Tests](https://img.shields.io/badge/tests-1527%20passing-brightgreen.svg)
 ![i18n](https://img.shields.io/badge/i18n-10%20languages-orange.svg)
 
 <!-- TODO: add a hero screenshot (map + HUD + telemetry overlay).
@@ -136,7 +136,7 @@ Open Argus in Chrome/Edge → click the **USB** button → pick your flight cont
 ## Development
 
 ```bash
-# Backend unit + contract tests (1,037 tests)
+# Backend unit + contract tests (1,040 tests)
 python -m pytest tests/test_unit_*.py tests/test_contract_*.py -v
 
 # Frontend unit tests (487 tests)

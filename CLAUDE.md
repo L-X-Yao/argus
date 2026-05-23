@@ -8,7 +8,7 @@ Repo: `github.com/L-X-Yao/argus`, branch: `main`, version: `3.4.0`
 - **Frontend**: Svelte 5 (runes) + TypeScript 6 + Vite 8 + Tailwind CSS 4 + Leaflet + MapLibre GL
 - **Backend**: Python 3.10+ + FastAPI + uvicorn + pyserial + websockets
 - **Protocol**: MAVLink v2 (standard + PL-Link wrapper). **ArduPilot is the only production-tested target.** PX4 support is partially scaffolded in `src/lib/fc/` but unwired — see `## PX4 Status` below.
-- **Tests**: pytest (backend + contract, 1037 tests), vitest 4 (frontend, 487 tests), Playwright (E2E, 19 specs). Current verification status per feature: `docs/FEATURE_CHECKLIST.md`. Don't-refactor decisions: `docs/protocol_design.md`.
+- **Tests**: pytest (backend + contract, 1040 tests), vitest 4 (frontend, 487 tests), Playwright (E2E, 19 specs). Current verification status per feature: `docs/FEATURE_CHECKLIST.md`. Don't-refactor decisions: `docs/protocol_design.md`.
 - **Lint**: ruff (Python), svelte-check (TypeScript/Svelte)
 - **CI**: GitHub Actions — lint → test → type-check → build → E2E
 
@@ -27,7 +27,7 @@ npm run dev                    # Or: separate frontend dev server on :5173
 npm run build                  # Production build → dist/
 npx svelte-check               # Type check (must be 0 errors 0 warnings)
 npx vitest run                 # Frontend tests (487)
-python -m pytest tests/test_unit_*.py tests/test_contract_*.py -v  # Backend tests (1037)
+python -m pytest tests/test_unit_*.py tests/test_contract_*.py -v  # Backend tests (1040)
 ruff check backend/ scripts/ tests/       # Python lint
 ```
 
@@ -104,9 +104,9 @@ Types: `feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `ci:`, `chore:`
 
 ## PX4 Status
 
-Despite the README's "ArduPilot + PX4" framing, only ArduPilot is wired end-to-end. The frontend `src/lib/fc/` adapter system has working PX4 mode tables and unit tests, but **no production code path imports `px4Adapter`**. The backend never reads the `autopilot` byte from HEARTBEAT (only `type` and `base_mode`), so it cannot distinguish ArduPilot from PX4 at all. All flight-mode strings, mode buttons, calibration messages, and parameter behaviors assume ArduPilot. A real PX4 vehicle connecting today would render every mode as `MODE%d`, fail every calibration handshake (the magic numbers like `21196`, `42424-42426` are AP-private), and not understand `RTL`/`mission_start`/`takeoff` integer enums.
+Despite the README's "ArduPilot + PX4" framing, only ArduPilot is wired end-to-end. The frontend `src/lib/fc/` adapter system has working PX4 mode tables and unit tests, but **no production code path imports `px4Adapter`**. As of the 2026-05-24 Phase P commit, the backend DOES read the `autopilot` byte from HEARTBEAT (offset 5) and surfaces it as `vehicle.autopilot` + `drone.autopilot` in the WebSocket state. **That's the only PX4 wiring that exists** — nothing branches on it yet. All flight-mode strings, mode buttons, calibration messages, and parameter behaviors still assume ArduPilot. A real PX4 vehicle connecting today would correctly report `drone.autopilot === 12` to the frontend, but would still render every mode as `MODE%d`, fail every calibration handshake (the magic numbers like `21196`, `42424-42426` are AP-private), and not understand `RTL`/`mission_start`/`takeoff` integer enums.
 
-If the user asks for PX4 support, that is greenfield work — quote weeks not days. Do not assume any PX4 path "should just work."
+If the user asks for PX4 support, that is greenfield work — quote weeks not days. The autopilot byte is a foothold, not a feature. Do not assume any PX4 path "should just work."
 
 ## Protocol Code Discipline
 

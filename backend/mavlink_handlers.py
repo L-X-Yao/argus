@@ -35,6 +35,18 @@ def handle_heartbeat(p: bytes, pl: int, link: DroneLink) -> None:
     v.mode = p[0] | (p[1] << 8) | (p[2] << 16) | (p[3] << 24)
     old_vtype = v.vtype_raw
     v.vtype_raw = p[4]
+    # HEARTBEAT.autopilot byte (offset 5). The FC advertises its autopilot
+    # stack once at boot and the value is stable afterwards. We filter out:
+    #   - 0 (GENERIC, uninitialized — keep our default of 0)
+    #   - 8 (INVALID — GCS components and pure data-link relays send this;
+    #        latching on it would corrupt the FC's value if a GCS heartbeat
+    #        arrives after the FC's)
+    # Any other non-zero value is treated as an FC identifier and latched.
+    # See CLAUDE.md ## PX4 Status for why the rest of the codebase still
+    # assumes ArduPilot regardless. MAV_AUTOPILOT enum: 3=ArduPilot, 12=PX4.
+    ap = p[5]
+    if ap > 0 and ap != 8 and ap != v.autopilot:
+        v.autopilot = ap
     if old_vtype != v.vtype_raw and v.vtype_raw > 0:
         link.add_event(lt('vehicle_type', link.locale) % link._get_vehicle_info()[2], 'vehicle_type')
     new_armed = bool(p[6] & 0x80)

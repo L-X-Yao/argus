@@ -52,7 +52,7 @@ class TestThreadSafety:
             'gs', 'airspeed', 'throttle', 'climb', 'vz', 'hdg',
             'dist_home', 'flight_time', 'voltage',
             'current', 'remaining', 'gps_fix', 'gps_fix_raw', 'gps_sats',
-            'wp', 'vtype', 'vtype_raw', 'mode_btns', 'link_age', 'bat_time',
+            'wp', 'vtype', 'vtype_raw', 'autopilot', 'mode_btns', 'link_age', 'bat_time',
             'home_lat', 'home_lon', 'parse_errors', 'flight_summary',
             'log_active', 'fw_version', 'fw_git', 'board_id', 'rc',
             'rc_rssi', 'vibe', 'vibe_clip', 'servo', 'ekf_vel', 'ekf_pos_h',

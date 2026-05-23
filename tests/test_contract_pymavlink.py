@@ -425,6 +425,49 @@ class TestIncomingHandlers:
         assert link.vehicle.vtype_raw == 2
         assert link.vehicle.armed is True
 
+    def test_heartbeat_records_autopilot_byte_ardupilot(self):
+        # ArduPilot HEARTBEAT (autopilot=3 = MAV_AUTOPILOT_ARDUPILOTMEGA).
+        # The handler latches this on first non-zero observation; subsequent
+        # GCS/ADSB heartbeats with autopilot=8 (INVALID) must not overwrite.
+        from backend.mavlink_handlers import handle_heartbeat
+        link = FakeLink()
+        msg = mavlink.MAVLink_heartbeat_message(
+            type=2, autopilot=3, base_mode=0, system_status=4,
+            mavlink_version=3, custom_mode=0,
+        )
+        payload, pl = _encode_payload(msg)
+        link._raw_sysid = 1
+        handle_heartbeat(payload, pl, link)
+        assert link.vehicle.autopilot == 3
+
+    def test_heartbeat_records_autopilot_byte_px4(self):
+        from backend.mavlink_handlers import handle_heartbeat
+        link = FakeLink()
+        msg = mavlink.MAVLink_heartbeat_message(
+            type=2, autopilot=12, base_mode=0, system_status=4,
+            mavlink_version=3, custom_mode=0,
+        )
+        payload, pl = _encode_payload(msg)
+        link._raw_sysid = 1
+        handle_heartbeat(payload, pl, link)
+        assert link.vehicle.autopilot == 12  # MAV_AUTOPILOT_PX4
+
+    def test_heartbeat_invalid_autopilot_does_not_overwrite(self):
+        # A GCS / data-link relay heartbeat (autopilot=8 = INVALID) must not
+        # clobber the FC's previously-latched value. The handler explicitly
+        # filters 8 — see comment above the latch in handle_heartbeat.
+        from backend.mavlink_handlers import handle_heartbeat
+        link = FakeLink()
+        link.vehicle.autopilot = 3  # FC seen earlier
+        msg = mavlink.MAVLink_heartbeat_message(
+            type=6, autopilot=8, base_mode=0, system_status=4,  # GCS
+            mavlink_version=3, custom_mode=0,
+        )
+        payload, pl = _encode_payload(msg)
+        link._raw_sysid = 1
+        handle_heartbeat(payload, pl, link)
+        assert link.vehicle.autopilot == 3  # FC value preserved
+
     def test_heartbeat_disarmed(self):
         from backend.mavlink_handlers import handle_heartbeat
         link = FakeLink()

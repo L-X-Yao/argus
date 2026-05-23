@@ -360,6 +360,7 @@ class DroneLink:
             'wp': m.wp_seq,
             'vtype': vn,
             'vtype_raw': v.vtype_raw,
+            'autopilot': v.autopilot,
             'mode_btns': btns,
             'link_age': round(time.time() - self.last_frame_time, 1) if self.connected and self.last_frame_time > 0 else -1,
             'bat_time': bat.bat_time_remaining if bat.bat_time_remaining > 0 else -1,

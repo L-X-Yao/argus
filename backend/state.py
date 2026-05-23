@@ -54,6 +54,13 @@ class VehicleState:
     armed: bool = False
     armed_time: float = 0.0
     vtype_raw: int = 0
+    # HEARTBEAT.autopilot byte (MAV_AUTOPILOT enum). 0 = MAV_AUTOPILOT_GENERIC
+    # (uninitialized — we use 0 as "not yet seen"), 3 = MAV_AUTOPILOT_ARDUPILOTMEGA,
+    # 12 = MAV_AUTOPILOT_PX4. Anything else gets treated as ArduPilot for now —
+    # the FC adapter system in src/lib/fc/ has PX4 mode tables but the rest of
+    # the codebase (calibration handshakes, MAV_CMD enums, parameter semantics)
+    # assumes ArduPilot. See CLAUDE.md ## PX4 Status.
+    autopilot: int = 0
     force_plane: bool | None = None
     sysid: int = 1
     fw_version: str = ''
