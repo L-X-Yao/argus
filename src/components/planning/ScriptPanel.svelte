@@ -4,7 +4,14 @@
   import Button from '$lib/components/ui/button/button.svelte';
   import { X, Play, Trash2, Save, FileText } from '@lucide/svelte';
 
-  let { onclose }: { onclose: () => void } = $props();
+  let { onclose: _onclose }: { onclose: () => void } = $props();
+  let _aborted = $state(false);
+
+  function onclose() {
+    _aborted = true;
+    running = false;
+    _onclose();
+  }
 
   let code = $state(`// Argus Script Engine
 // Available API:
@@ -53,10 +60,15 @@ log("Alt: " + drone.alt_rel + "m");
       drone: Object.freeze({ ...app.drone }),
       waypoints: Object.freeze([...app.waypoints]),
       send: (cmd: string, data?: Record<string, unknown>) => {
+        if (_aborted) throw new Error('Script aborted');
         sendCommand(cmd, undefined, data);
         logs.push(`[CMD] ${cmd} ${JSON.stringify(data || {})}`);
       },
-      wait: (ms: number) => new Promise(resolve => setTimeout(resolve, Math.min(ms, 10000))),
+      wait: (ms: number) => new Promise((resolve, reject) => {
+        const timer = setTimeout(resolve, Math.min(ms, 10000));
+        const check = setInterval(() => { if (_aborted) { clearTimeout(timer); clearInterval(check); reject(new Error('Script aborted')); } }, 100);
+        setTimeout(() => clearInterval(check), Math.min(ms, 10000) + 200);
+      }),
       log: (msg: string) => { logs.push(String(msg)); output = [...logs]; },
     };
 

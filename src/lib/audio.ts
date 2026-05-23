@@ -48,7 +48,7 @@ let altInit = false;
 let descentNext = Infinity;
 let ascentIdx = 0;
 
-const RTL_MODES = ['返航', '旋翼返航', '智能返航', '降落', '旋翼降落', 'RTL', 'Q-RTL', 'Smart RTL', 'Land', 'Q-Land'];
+const RTL_MODES = ['返航', '旋翼返航', '智能返航', '降落', '旋翼降落', 'RTL', 'Q-RTL', 'Smart RTL', 'Land', 'Q-Land', 'Return'];
 
 function s(zh: string, en: string): string {
   return i18nState.locale === 'en' ? en : zh;
@@ -81,15 +81,15 @@ export function checkAlerts(connected: boolean, armed: boolean, remaining: numbe
   prevMode = mode;
 
   if (remaining >= 0) {
-    if (remaining < 10 && batWarnLevel < 3 && armed) {
+    if (remaining <= 10 && batWarnLevel < 3 && armed) {
       beep(200, 800, 5, 100);
       speak(s('电量严重不足，请立即返航', 'Critical battery, return now'));
       batWarnLevel = 3;
-    } else if (remaining < 20 && batWarnLevel < 2) {
+    } else if (remaining <= 20 && batWarnLevel < 2) {
       beep(300, 500, 3, 200);
       speak(s('低电量警告', 'Low battery warning'));
       batWarnLevel = 2;
-    } else if (remaining < 30 && batWarnLevel < 1 && armed) {
+    } else if (remaining <= 30 && batWarnLevel < 1 && armed) {
       beep(400, 400, 2, 200);
       speak(s('电量百分之三十，注意返航', 'Battery thirty percent, plan return'));
       batWarnLevel = 1;
@@ -107,7 +107,7 @@ export function checkAlerts(connected: boolean, armed: boolean, remaining: numbe
   checkAltCallouts(app.drone.alt_rel, armed);
 
   const wp = app.drone.wp;
-  if (wp > prevWp && prevWp >= 2 && armed) {
+  if (wp > prevWp && prevWp >= 1 && armed) {
     speak(t('audio.waypoint').replace('{n}', String(prevWp - 1)));
   }
   prevWp = armed ? wp : 0;

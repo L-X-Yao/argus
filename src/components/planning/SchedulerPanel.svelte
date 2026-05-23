@@ -104,7 +104,7 @@
   function runNow(sched: Schedule) {
     sched.status = 'active';
     persist();
-    sendCommand('start_mission');
+    sendCommand('mission_start');
     addToast(t('sched.started'), 'success');
   }
 

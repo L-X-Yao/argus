@@ -41,7 +41,7 @@
     app.drone.remaining < 40 ? 'text-warning' : 'text-success'
   );
 
-  const EMERGENCY_MODE_IDS = new Set([6, 9, 11, 17, 20, 21]);
+  const EMERGENCY_MODE_IDS = new Set([6, 9, 11, 20, 21]);
   const MANUAL_MODE_IDS_COPTER = new Set([0, 1, 13, 14]);
   const MANUAL_MODE_IDS_PLANE = new Set([0, 2, 4]);
   let modeVariant = $derived.by((): 'default' | 'secondary' | 'destructive' => {

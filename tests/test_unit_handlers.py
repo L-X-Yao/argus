@@ -355,9 +355,10 @@ class TestRcChannels:
     def test_parses_channels_and_rssi(self):
         link = make_link()
         vals = [1000 + i * 50 for i in range(16)]
-        p = struct.pack('<IB', 1000, 16) + struct.pack('<16H', *vals)
-        # pad to 42 bytes: current = 4+1+32 = 37, need 42 => 5 more, byte 41 = rssi
-        p += b'\x00' * 4 + struct.pack('<B', 220)
+        # Wire order: time_boot_ms(u32) + chan1-18(u16×18) + chancount(u8) + rssi(u8)
+        p = struct.pack('<I', 1000) + struct.pack('<16H', *vals)
+        p += struct.pack('<HH', 0, 0)  # chan17, chan18
+        p += struct.pack('<BB', 16, 220)  # chancount, rssi
         handle_rc_channels(p, len(p), link)
         assert link.rc_servo.rc_channels == vals
         assert link.rc_servo.rc_rssi == 220
@@ -402,7 +403,7 @@ class TestEkfStatus:
 class TestVfrHud:
     def test_parses_vfr_hud(self):
         link = make_link()
-        p = struct.pack('<ffhHff', 15.5, 12.3, 180, 45, 100.0, 2.5)
+        p = struct.pack('<ffffhH', 15.5, 12.3, 100.0, 2.5, 180, 45)
         handle_vfr_hud(p, len(p), link)
         assert abs(link.attitude.airspeed - 15.5) < 0.01
         assert link.attitude.throttle == 45
@@ -435,10 +436,10 @@ class TestMountStatus:
 
 
 class TestEkfDispatchRegistration:
-    def test_ekf_registered_at_335_not_74(self):
+    def test_ekf_registered_at_193(self):
         from backend.mavlink_handlers import mavlink_dispatch
-        assert 335 in mavlink_dispatch._handlers
-        assert mavlink_dispatch._handlers[335] == handle_ekf_status
+        assert 193 in mavlink_dispatch._handlers
+        assert mavlink_dispatch._handlers[193] == handle_ekf_status
 
     def test_vfr_hud_registered_at_74(self):
         from backend.mavlink_handlers import mavlink_dispatch
@@ -490,13 +491,18 @@ class TestAutopilotVersion:
         fw_ver = (major << 24) | (minor << 16) | (patch << 8) | 0
         board = 56
         git_hash = b'\xab\xcd\xef\x12\x34\x56\x78\x00'
-        p = struct.pack('<Q', 0)               # capabilities (8 bytes)
-        p += struct.pack('<I', fw_ver)         # fw_version at offset 8
-        p += struct.pack('<I', 0)              # middleware_version at offset 12
-        p += struct.pack('<I', 0)              # os_version at offset 16
-        p += struct.pack('<I', board)          # board_version at offset 20
-        p += git_hash                          # git hash at offset 24-31
-        p += struct.pack('<I', 0)              # padding to reach 36 bytes
+        # Wire order: capabilities(u64) + uid(u64) + flight_sw_version(u32) +
+        # middleware_sw_version(u32) + os_sw_version(u32) + board_version(u32) +
+        # flight_custom_version(u8[8]) + ...
+        p = struct.pack('<Q', 0)               # capabilities at offset 0
+        p += struct.pack('<Q', 0)              # uid at offset 8
+        p += struct.pack('<I', fw_ver)         # flight_sw_version at offset 16
+        p += struct.pack('<I', 0)              # middleware at offset 20
+        p += struct.pack('<I', 0)              # os at offset 24
+        p += struct.pack('<I', board)          # board_version at offset 28
+        p += struct.pack('<I', 0)              # vendor_id etc at offset 32
+        p += git_hash                          # flight_custom_version at offset 36
+        p += struct.pack('<I', 0)              # padding to reach 48 bytes
         handle_autopilot_version(p, len(p), link)
         assert link.vehicle.fw_version == 'v4.5.3'
         assert link.vehicle.board_id == 56
@@ -761,12 +767,16 @@ class TestMissionRequest:
 class TestAdsbVehicle:
     def test_adds_vehicle(self):
         link = make_link_connected()
+        # Wire order: ICAO(u32) + lat(i32) + lon(i32) + alt(i32) + heading(u16) +
+        # hor_velocity(u16) + ver_velocity(i16) + flags(u16) + squawk(u16) +
+        # altitude_type(u8) + callsign(char[9]) + emitter_type(u8) + tslc(u8)
         p = struct.pack('<I', 0xABCDEF)
         p += struct.pack('<ii', int(30.5 * 1e7), int(120.3 * 1e7))
-        p += struct.pack('<i', 5000 * 1000)       # alt mm
+        p += struct.pack('<i', 5000 * 1000)
         p += struct.pack('<HHh', 18000, 25000, -500)
-        p += b'TEST\x00\x00\x00\x00\x00'          # callsign 9 bytes
-        p += b'\x00' * 7                           # remaining to reach 38
+        p += struct.pack('<HHB', 0, 0, 0)  # flags, squawk, altitude_type
+        p += b'TEST\x00\x00\x00\x00\x00'  # callsign at offset 27
+        p += struct.pack('<BB', 0, 0)      # emitter_type, tslc
         handle_adsb_vehicle(p, len(p), link)
         assert 0xABCDEF in link.traffic._adsb_vehicles
         v = link.traffic._adsb_vehicles[0xABCDEF]
@@ -792,8 +802,8 @@ class TestSerialControl:
     def test_appends_console(self):
         link = make_link_connected()
         text = b'Hello Console'
-        p = b'\x00' * 4                       # device, flags, timeout, baudrate
-        p += bytes([len(text)])                # count
+        # Wire order: baudrate(u32) + timeout(u16) + device(u8) + flags(u8) + count(u8) + data
+        p = struct.pack('<IHBBB', 0, 0, 10, 0x06, len(text))
         p += text + b'\x00' * (70 - len(text))
         handle_serial_control(p, len(p), link)
         assert 'Hello Console' in ''.join(link._console_buf)
@@ -802,7 +812,7 @@ class TestSerialControl:
         link = make_link_connected()
         link._console_buf = ['x'] * 501
         text = b'Y'
-        p = b'\x00' * 4 + bytes([1]) + text + b'\x00' * 69
+        p = struct.pack('<IHBBB', 0, 0, 10, 0x06, 1) + text + b'\x00' * 69
         handle_serial_control(p, len(p), link)
         assert len(link._console_buf) <= 251
 

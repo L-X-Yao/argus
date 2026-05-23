@@ -2,7 +2,6 @@
 import base64
 import json
 import sys
-import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -193,18 +192,23 @@ class TestCommandExecute:
 
     def test_param_load(self):
         link = make_link()
-        # pre-populate a param so load_from_file detects a change
         link.param_mgr.params = {
             'ARMING_CHECK': {'name': 'ARMING_CHECK', 'value': 1.0, 'type': 9, 'index': 0},
         }
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
-            json.dump({'ARMING_CHECK': 0.0}, f)
-            tmp_path = f.name
-        result = execute('param_load', None, link, data={'path': tmp_path})
+        params_dir = Path(__file__).resolve().parent.parent / 'params'
+        params_dir.mkdir(exist_ok=True)
+        tmp_path = params_dir / 'test_load.json'
+        tmp_path.write_text(json.dumps({'ARMING_CHECK': 0.0}))
+        result = execute('param_load', None, link, data={'path': str(tmp_path)})
         assert result is not None and result['ok']
         assert 'ARMING_CHECK' in result['changed']
-        import os
-        os.remove(tmp_path)
+        tmp_path.unlink()
+
+    def test_param_load_path_traversal(self):
+        link = make_link()
+        result = execute('param_load', None, link, data={'path': '/etc/passwd.json'})
+        assert result is not None and not result['ok']
+        assert 'params directory' in result['error']
 
     def test_log_list(self):
         link = make_link()
@@ -322,7 +326,7 @@ class TestInjectRtcm:
         raw_data = b'\xAA' * 250
         b64 = base64.b64encode(raw_data).decode()
         execute('inject_rtcm', None, link, data={'data': b64})
-        assert link._ser.write.call_count >= 3  # 250/110 = 3 chunks
+        assert link._ser.write.call_count >= 2  # 250/180 = 2 chunks
 
     def test_inject_rtcm_empty(self):
         link = make_link()

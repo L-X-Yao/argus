@@ -43,7 +43,7 @@ def send_fence_item_int(link: DroneLink, item: dict) -> None:
 
 
 def send_mission_item_int(link: DroneLink, wp: dict) -> None:
-    frame = 3 if wp['cmd'] in (16, 19, 21, 22, 82) else 2
+    frame = 3 if wp['cmd'] in (16, 18, 19, 21, 22, 82) else 2
     lat7 = int(float(wp.get('lat', 0)) * 1e7)
     lon7 = int(float(wp.get('lon', 0)) * 1e7)
     p = struct.pack('<ffffiifHHBBBBBB',
@@ -59,7 +59,7 @@ def send_mission_item_int(link: DroneLink, wp: dict) -> None:
 def send_serial_control(link: DroneLink, text: str) -> None:
     data = (text + '\n').encode('ascii', 'replace')[:70]
     flags = 0x06
-    p = struct.pack('<BBHB', 10, flags, 0, len(data))
+    p = struct.pack('<IHBBB', 0, 0, 10, flags, len(data))
     p += data + b'\x00' * (70 - len(data))
     link.send(bm(126, p, link.sq, 220))
 

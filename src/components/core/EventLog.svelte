@@ -30,7 +30,7 @@
     let list = app.events;
     if (sevFilter === 'error') list = list.filter(e => severity(e) === 'critical' || severity(e) === 'error');
     else if (sevFilter === 'warn') list = list.filter(e => severity(e) !== 'info' && severity(e) !== 'ok');
-    if (filter) list = list.filter(e => e.text.includes(filter) || e.time.includes(filter));
+    if (filter) { const lf = filter.toLowerCase(); list = list.filter(e => e.text.toLowerCase().includes(lf) || e.time.includes(filter)); }
     return list;
   });
 

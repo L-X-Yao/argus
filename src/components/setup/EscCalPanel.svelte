@@ -5,10 +5,20 @@
   import Button from '$lib/components/ui/button/button.svelte';
   import { X, AlertTriangle, ChevronRight } from '@lucide/svelte';
 
-  let { onclose }: { onclose: () => void } = $props();
+  let { onclose: _onclose }: { onclose: () => void } = $props();
 
   let step = $state(0);
   const connected = $derived(app.drone.connected);
+
+  function safeClose() {
+    if (step > 0 && step < 5) {
+      const channels = Array(8).fill(0);
+      sendCommand('rc_override', undefined, { channels });
+    }
+    step = 0;
+    _onclose();
+  }
+  const onclose = safeClose;
 
   function setMax() {
     const channels = Array(8).fill(2000);

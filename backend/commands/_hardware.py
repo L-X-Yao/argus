@@ -25,6 +25,8 @@ def cmd_guided_goto(link: DroneLink, param, data: dict):
     lat = float(data.get('lat', 0))
     lon = float(data.get('lon', 0))
     alt = float(data.get('alt', 30))
+    if abs(lat) < 0.001 and abs(lon) < 0.001:
+        return {'ok': False, 'error': lt('err_bad_coord', link.locale)}
     if not (-90 <= lat <= 90) or not (-180 <= lon <= 180) or not (-500 <= alt <= 100000):
         return {'ok': False, 'error': lt('err_bad_coord', link.locale)}
     lat7 = int(lat * 1e7)
@@ -36,11 +38,11 @@ def cmd_guided_goto(link: DroneLink, param, data: dict):
     p = struct.pack('<IiifffffffffHBBB',
                     0, lat7, lon7, alt, 0, 0, 0, 0, 0, 0, 0, 0,
                     0x0FF8, link.vehicle.sysid, 1, 6)
-    link.send(bm(84, p, link.sq, 5))
+    link.send(bm(86, p, link.sq, 5))
 
 
 def cmd_switch_vehicle(link: DroneLink, param, data: dict):
-    new_sysid = int(data.get('sysid', 1))
+    new_sysid = int(param) if param is not None else int(data.get('sysid', 1))
     link.active_sysid = new_sysid
     link.vehicle.sysid = new_sysid
     link.add_event(lt('vehicle_switch', link.locale) % new_sysid, 'vehicle_switch')
@@ -77,16 +79,16 @@ def cmd_inject_rtcm(link: DroneLink, param, data: dict):
     if not rtcm_data:
         return
     raw = base64.b64decode(rtcm_data)
-    for i in range(0, len(raw), 110):
-        chunk = raw[i:i + 110]
+    for i in range(0, len(raw), 180):
+        chunk = raw[i:i + 180]
         flags = 0x01
         if i == 0:
             flags |= 0x04
-        if i + 110 >= len(raw):
+        if i + 180 >= len(raw):
             flags |= 0x08
-        p = struct.pack('<BBHB', 0, flags, len(chunk), len(chunk))
-        p += chunk + b'\x00' * (110 - len(chunk))
-        link.send(bm(233, p, link.sq, 0))
+        p = struct.pack('<BB', flags, len(chunk))
+        p += chunk + b'\x00' * (180 - len(chunk))
+        link.send(bm(233, p, link.sq, 35))
 
 
 # --- RC / Motor ---
@@ -96,9 +98,10 @@ def cmd_rc_override(link: DroneLink, param, data: dict):
     if not isinstance(channels, list) or len(channels) < 8:
         return None
     try:
-        p = struct.pack('<BB', link.vehicle.sysid, 1)
+        p = b''
         for i in range(8):
             p += struct.pack('<H', max(0, min(65535, int(channels[i]))))
+        p += struct.pack('<BB', link.vehicle.sysid, 1)
         link.send(bm(70, p, link.sq, 124))
     except (TypeError, ValueError):
         return {'ok': False, 'error': 'Invalid channel data'}
@@ -130,7 +133,7 @@ def cmd_gimbal_angle(link: DroneLink, param, data: dict):
     yaw = float(data.get('yaw', 0))
     if not -90 <= pitch <= 90 or not -180 <= yaw <= 180:
         return {'ok': False, 'error': 'Gimbal angle out of range'}
-    send_cmd(link, 205, p1=pitch, p4=yaw)
+    send_cmd(link, 205, p1=pitch, p3=yaw, p7=2)
 
 
 def cmd_gimbal_rate(link: DroneLink, param, data: dict):
@@ -140,7 +143,7 @@ def cmd_gimbal_rate(link: DroneLink, param, data: dict):
         return {'ok': False, 'error': 'Gimbal rate out of range'}
     p = struct.pack('<ffffffBBB', 0, 0, 0, float(pitch_rate * 100), 0, float(yaw_rate * 100),
                     link.vehicle.sysid, 1, 2)
-    link.send(bm(282, p, link.sq, 0))
+    link.send(bm(282, p, link.sq, 123))
 
 
 def cmd_camera_trigger(link: DroneLink, param, data: dict):
@@ -168,4 +171,4 @@ def cmd_do_set_roi(link: DroneLink, param, data: dict):
     alt = float(data.get('alt', 0))
     if not (-90 <= lat <= 90) or not (-180 <= lon <= 180):
         return {'ok': False, 'error': lt('err_bad_coord', link.locale)}
-    send_cmd(link, 201, p5=lat, p6=lon, p7=alt)
+    send_cmd(link, 201, p1=3, p5=lat, p6=lon, p7=alt)

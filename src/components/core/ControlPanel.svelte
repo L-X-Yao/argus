@@ -21,7 +21,7 @@
     const plane = isPlane();
     if ((plane ? PLANE_RTL : COPTER_RTL).has(m) || (plane ? PLANE_LAND : COPTER_LAND).has(m)) return 'returning';
     if ((plane ? PLANE_AUTO : COPTER_AUTO).has(m)) return 'mission';
-    if (d.alt_rel < 2 && d.gs < 1) return 'ground';
+    if (d.alt_rel >= 0 && d.alt_rel < 2 && d.gs < 1) return 'ground';
     return 'flying';
   });
 
