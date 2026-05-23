@@ -33,13 +33,31 @@
   }
 
   const accelOrients: OrientDef[] = [
-    { id: 'level',     label: 'cal.orientLevel',    hint: 'cal.hintLevel',    img: `${API_BASE}/images/cal/VehicleDown.png`,       keywords: ['level', 'Level', '水平'] },
-    { id: 'nose_up',   label: 'cal.orientNoseUp',   hint: 'cal.hintNoseUp',   img: `${API_BASE}/images/cal/VehicleTailDown.png`,   keywords: ['nose up', 'Nose Up', 'UP', '机头朝上', 'nose-up'] },
-    { id: 'nose_down', label: 'cal.orientNoseDown',  hint: 'cal.hintNoseDown',  img: `${API_BASE}/images/cal/VehicleNoseDown.png`,   keywords: ['nose down', 'Nose Down', 'DOWN', '机头朝下', 'nose-down'] },
-    { id: 'left',      label: 'cal.orientLeft',     hint: 'cal.hintLeft',     img: `${API_BASE}/images/cal/VehicleLeft.png`,       keywords: ['left', 'Left', '左侧'] },
-    { id: 'right',     label: 'cal.orientRight',    hint: 'cal.hintRight',    img: `${API_BASE}/images/cal/VehicleRight.png`,      keywords: ['right', 'Right', '右侧'] },
-    { id: 'back',      label: 'cal.orientBack',     hint: 'cal.hintBack',     img: `${API_BASE}/images/cal/VehicleUpsideDown.png`, keywords: ['back', 'Back', 'inverted', '倒置', '翻转'] },
+    { id: 'level',     label: 'cal.orientLevel',    hint: 'cal.hintLevel',    img: `${API_BASE}/images/cal/VehicleDown.png`,       keywords: [] },
+    { id: 'nose_up',   label: 'cal.orientNoseUp',   hint: 'cal.hintNoseUp',   img: `${API_BASE}/images/cal/VehicleTailDown.png`,   keywords: [] },
+    { id: 'nose_down', label: 'cal.orientNoseDown',  hint: 'cal.hintNoseDown',  img: `${API_BASE}/images/cal/VehicleNoseDown.png`,   keywords: [] },
+    { id: 'left',      label: 'cal.orientLeft',     hint: 'cal.hintLeft',     img: `${API_BASE}/images/cal/VehicleLeft.png`,       keywords: [] },
+    { id: 'right',     label: 'cal.orientRight',    hint: 'cal.hintRight',    img: `${API_BASE}/images/cal/VehicleRight.png`,      keywords: [] },
+    { id: 'back',      label: 'cal.orientBack',     hint: 'cal.hintBack',     img: `${API_BASE}/images/cal/VehicleUpsideDown.png`, keywords: [] },
   ];
+
+  // Order matters: "upside/inverted" must match before "up" to avoid misidentification
+  const orientPatterns: [RegExp, AccelStep][] = [
+    [/upside|inverted|倒置|翻转/i, 'back'],
+    [/\bback\b/i, 'back'],
+    [/nose[\s-]*down|机头朝下/i, 'nose_down'],
+    [/nose[\s-]*up|机头朝上/i, 'nose_up'],
+    [/\bleft\b|左侧/i, 'left'],
+    [/\bright\b|右侧/i, 'right'],
+    [/\blevel\b|水平/i, 'level'],
+  ];
+
+  function detectOrientation(text: string): AccelStep | null {
+    for (const [re, id] of orientPatterns) {
+      if (re.test(text)) return id;
+    }
+    return null;
+  }
 
   let selected = $state<CalType>('compass');
   let calibrating = $state(false);
@@ -85,46 +103,25 @@
     lastParsedCount = evts.length;
 
     for (const ev of newEvts) {
-      const t = ev.text;
+      const txt = ev.text;
 
       if (selected === 'accel') {
-        /* Detect "Place vehicle XXX" or orientation completion messages */
-        const placeMatch = t.match(/Place\s+vehicle\s+(\w+)/i);
-        if (placeMatch) {
-          /* Mark previous active as done */
+        const orient = detectOrientation(txt);
+        const isPlace = /place|放置|请将/i.test(txt);
+        const isDone = /完成|complete|done|success|成功/i.test(txt);
+
+        if (orient && isPlace) {
           if (accelActive && accelSteps[accelActive] === 'active') {
             accelSteps[accelActive] = 'done';
           }
-          /* Find which orientation is requested */
-          const word = placeMatch[1].toLowerCase();
-          for (const o of accelOrients) {
-            if (o.keywords.some(k => k.toLowerCase() === word || word.includes(k.toLowerCase()))) {
-              accelSteps[o.id] = 'active';
-              accelActive = o.id;
-              break;
-            }
-          }
+          accelSteps[orient] = 'active';
+          accelActive = orient;
+        } else if (orient && isDone) {
+          accelSteps[orient] = 'done';
+          if (accelActive === orient) accelActive = null;
         }
 
-        /* Detect Chinese orientation prompts */
-        for (const o of accelOrients) {
-          if (o.keywords.some(k => t.includes(k))) {
-            if (t.includes('完成') || t.includes('complete') || t.includes('Complete') || t.includes('done') || t.includes('Done')) {
-              accelSteps[o.id] = 'done';
-              if (accelActive === o.id) accelActive = null;
-            } else if (t.includes('Place') || t.includes('放置') || t.includes('请将')) {
-              if (accelActive && accelActive !== o.id && accelSteps[accelActive] === 'active') {
-                accelSteps[accelActive] = 'done';
-              }
-              accelSteps[o.id] = 'active';
-              accelActive = o.id;
-            }
-          }
-        }
-
-        /* Detect overall calibration success/failure */
-        if (t.includes('Accel') && (t.includes('success') || t.includes('成功') || t.includes('complete') || t.includes('done'))) {
-          /* Mark all remaining as done */
+        if (/accel/i.test(txt) && isDone) {
           for (const o of accelOrients) {
             if (accelSteps[o.id] !== 'done') accelSteps[o.id] = 'done';
           }
@@ -134,23 +131,21 @@
       }
 
       if (selected === 'compass') {
-        if (t.includes('Compass') || t.includes('罗盘') || t.includes('Rotate') || t.includes('旋转') || t.includes('校准')) {
+        if (/compass|罗盘|rotate|旋转|校准/i.test(txt)) {
           compassMsgCount++;
-          /* FC typically sends ~30+ messages during compass cal */
           compassProgress = Math.min(95, Math.round(compassMsgCount * 3));
         }
-        if (t.includes('success') || t.includes('成功') || t.includes('complete') || t.includes('Complete')) {
+        if (/success|成功|complete/i.test(txt)) {
           compassProgress = 100;
           calibrating = false;
         }
       }
 
-      /* Gyro/Level/Baro: auto-detect completion */
       if ((selected === 'gyro' || selected === 'level' || selected === 'baro') &&
-          (t.includes('success') || t.includes('成功') || t.includes('complete') || t.includes('Complete') || t.includes('done'))) {
+          /success|成功|complete|done/i.test(txt)) {
         calibrating = false;
       }
-      if (t.includes('FAILED') || t.includes('失败')) {
+      if (/FAILED|失败/.test(txt)) {
         calibrating = false;
       }
     }
@@ -222,7 +217,8 @@
               {selected === ct.id
                 ? 'bg-primary text-primary-foreground shadow-sm'
                 : 'bg-secondary text-secondary-foreground hover:bg-muted'}"
-            onclick={() => { selected = ct.id; }}
+            onclick={() => { if (!calibrating) selected = ct.id; }}
+            disabled={calibrating}
           >
             <ct.icon size={13} />{t(ct.labelKey)}
           </button>
