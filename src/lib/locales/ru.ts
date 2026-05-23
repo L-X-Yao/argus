@@ -124,7 +124,6 @@ const messages: Record<string, string> = {
   'ntrip.stop': 'Отключить NTRIP',
   'ntrip.stopped': 'NTRIP отключен',
   'ntrip.started': 'NTRIP подключен',
-  'ntrip.failed': 'Подключение NTRIP не удалось',
   'ntrip.connecting': 'Подключение...',
   'ntrip.username': 'Имя пользователя',
   'ntrip.password': 'Пароль',

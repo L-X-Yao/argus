@@ -124,7 +124,6 @@ const messages: Record<string, string> = {
   'ntrip.stop': 'NTRIP trennen',
   'ntrip.stopped': 'NTRIP getrennt',
   'ntrip.started': 'NTRIP verbunden',
-  'ntrip.failed': 'NTRIP-Verbindung fehlgeschlagen',
   'ntrip.connecting': 'Verbinde...',
   'ntrip.username': 'Benutzername',
   'ntrip.password': 'Passwort',
