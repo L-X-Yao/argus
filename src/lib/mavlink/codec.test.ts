@@ -24,6 +24,7 @@ import {
   encodeParamSet,
   encodeRequestDataStream,
   dispatchFrame,
+  decodeServoOutput,
 } from './messages';
 
 // ---------------------------------------------------------------------------
@@ -667,5 +668,61 @@ describe('dispatchFrame', () => {
     const frame = makeMavFrame(0, encodeHeartbeat());
     // No handlers -- should not throw
     expect(() => dispatchFrame(frame, {})).not.toThrow();
+  });
+
+  // MAVLink 2 zero-trim: senders strip trailing zero bytes. Decoders that
+  // read at fixed offsets must tolerate this. Regression: previously a
+  // command_ack with result=0 (ACCEPTED) trimmed to 2 bytes would throw
+  // RangeError trying to read offset 2.
+  it('zero-pads a trimmed COMMAND_ACK payload before decoding', () => {
+    // Construct a frame where the payload was trimmed to 2 bytes
+    // (command=400 → 0x90 0x01, result=0 trimmed).
+    const trimmed = new Uint8Array([0x90, 0x01]);
+    const frame = makeMavFrame(77, trimmed);
+    let observedResult: number | undefined;
+    expect(() => dispatchFrame(frame, {
+      onCommandAck: (msg) => {
+        observedResult = msg.result;
+        expect(msg.command).toBe(400);
+      },
+    })).not.toThrow();
+    expect(observedResult).toBe(0);
+  });
+
+  it('zero-pads a trimmed MISSION_ACK to read type at offset 2', () => {
+    // After MAVLink 2 trim, target_system=255, target_component=1, type=0
+    // could come through as a 2-byte payload.
+    const trimmed = new Uint8Array([255, 1]);
+    const frame = makeMavFrame(47, trimmed);
+    let observedType: number | undefined;
+    expect(() => dispatchFrame(frame, {
+      onMissionAck: (msg) => { observedType = msg.type; },
+    })).not.toThrow();
+    expect(observedType).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// decodeServoOutput regression — servos 9-16 used to be off by one byte
+// because the decoder treated all 16 outputs as contiguous, ignoring the
+// `port` byte at offset 20 that the wire layout places between the
+// servo1-8 block and the servo9-16 extension block.
+// ---------------------------------------------------------------------------
+
+describe('decodeServoOutput regression', () => {
+  it('reads servo9-16 from offsets 21..36 (after the port byte)', () => {
+    // Build a 37-byte payload:
+    //   0..3  time_usec=0
+    //   4..19 servo1..8 = 1000..1007
+    //   20    port = 99
+    //   21..36 servo9..16 = 2000..2007
+    const buf = new Uint8Array(37);
+    const dv = new DataView(buf.buffer);
+    for (let i = 0; i < 8; i++) dv.setUint16(4 + i * 2, 1000 + i, true);
+    dv.setUint8(20, 99);
+    for (let i = 0; i < 8; i++) dv.setUint16(21 + i * 2, 2000 + i, true);
+    const result = decodeServoOutput(dv);
+    expect(result.outputs.slice(0, 8)).toEqual([1000, 1001, 1002, 1003, 1004, 1005, 1006, 1007]);
+    expect(result.outputs.slice(8, 16)).toEqual([2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007]);
   });
 });
