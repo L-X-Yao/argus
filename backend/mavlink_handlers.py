@@ -201,6 +201,7 @@ def handle_mag_cal_report(p: bytes, pl: int, link: DroneLink) -> None:
     link._mag_cal_pct = -1
     if cal_status == 4:
         link.add_event(lt('mag_cal_done', link.locale), 'cal_compass')
+        link.add_event(lt('mag_cal_reboot', link.locale), 'cal_compass')
     else:
         link.add_event(lt('mag_cal_fail', link.locale), 'cal_compass')
 

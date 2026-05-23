@@ -51,7 +51,6 @@ def cmd_cal_accel_next(link: DroneLink, param, data: dict):
 
 def cmd_cal_cancel(link: DroneLink, param, data: dict):
     link.add_event(lt('cal_cancel', link.locale), 'cal_cancel')
-    send_cmd(link, 241)
     send_cmd(link, 42426, p1=0)
 
 

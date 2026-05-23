@@ -45,6 +45,7 @@ _T = {
     'mag_cal_pct':     ('罗盘校准 %d%%',             'Compass calibration %d%%'),
     'mag_cal_done':    ('罗盘校准完成',              'Compass calibration complete'),
     'mag_cal_fail':    ('罗盘校准失败',              'Compass calibration FAILED'),
+    'mag_cal_reboot':  ('请重启飞控以使罗盘校准生效', 'Reboot the FC to apply compass calibration'),
     'param_reading':   ('参数: 正在读取...',        'Params: reading...'),
     'param_done':      ('参数: %d 个已读取 (%.1fs)', 'Params: %d read (%.1fs)'),
     'param_set':       ('参数: %s → %.4g',          'Param: %s → %.4g'),

@@ -24,13 +24,24 @@
   type View = 'fly' | 'plan' | 'monitor' | 'params';
   let view = $state<View>('fly');
   let flyEventsOpen = $state(false);
-  let seenEventCount = $state(0);
+  // Identity-based marker (time|text) survives backend/frontend events-array trim.
+  // A length cursor would go stale once `app.events` shrinks via stores.svelte.ts:62.
+  let lastSeenKey = $state('');
   let controlsOpen = $state(false);
-  let unseenEvents = $derived(app.events.length - seenEventCount);
+  let unseenStartIdx = $derived.by(() => {
+    if (!lastSeenKey) return 0;
+    const idx = app.events.findIndex(e => `${e.time}|${e.text}` === lastSeenKey);
+    return idx < 0 ? 0 : idx + 1;
+  });
+  let unseenEvents = $derived(Math.max(0, app.events.length - unseenStartIdx));
   const URGENT_TYPES = new Set(['rtl', 'force_disarm', 'cmd_ack_fail', 'mission_ack_fail', 'fence_ack_fail', 'link_lost', 'connect_fail']);
-  let hasUrgentEvent = $derived(unseenEvents > 0 && app.events.slice(-unseenEvents).some(
+  let hasUrgentEvent = $derived(unseenEvents > 0 && app.events.slice(unseenStartIdx).some(
     e => URGENT_TYPES.has(e.event_type) || e.text.includes('!!!')
   ));
+  function markEventsSeen() {
+    const last = app.events[app.events.length - 1];
+    lastSeenKey = last ? `${last.time}|${last.text}` : '';
+  }
   let showCmdPalette = $state(false);
   const p = panels;
 
@@ -339,7 +350,7 @@
           <!-- svelte-ignore a11y_no_static_element_interactions -->
           <div class="backdrop-blur flex items-center justify-center gap-1 py-1 text-[11px] cursor-pointer border-t hover:text-primary transition-colors
             {hasUrgentEvent ? 'bg-destructive/15 border-destructive/40 text-destructive animate-pulse' : 'bg-card/90 border-border text-muted-foreground'}"
-               onclick={() => { flyEventsOpen = !flyEventsOpen; if (flyEventsOpen) seenEventCount = app.events.length; }}>
+               onclick={() => { flyEventsOpen = !flyEventsOpen; if (flyEventsOpen) markEventsSeen(); }}>
             {t('event.title')} ({app.events.length})
             {#if unseenEvents > 0 && !flyEventsOpen}
               <span class="px-1.5 py-px rounded-full text-[10px] font-bold {hasUrgentEvent ? 'bg-destructive text-white' : 'bg-primary text-primary-foreground'}">{unseenEvents}</span>

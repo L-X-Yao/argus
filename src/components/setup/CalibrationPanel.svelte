@@ -67,11 +67,26 @@
 
   const calPattern = /校准|calibrat|cal |gyro|compass|accel|baro|level|place|rotate|orientation|complete|success|完成|成功|失败|failed|progress/i;
 
+  // Type-specific keyword sets. Used to reject events that clearly belong to a
+  // *different* cal type than the currently selected one, so that a stale
+  // "罗盘校准完成" event can't trip the gyro-cal completion detector right after
+  // the user switches tabs.
+  const calTypeKeywords: Record<CalType, RegExp> = {
+    compass: /compass|罗盘|\bmag\b/i,
+    accel:   /accel|加速度/i,
+    gyro:    /gyro|陀螺/i,
+    level:   /\blevel\b|水平|trim/i,
+    baro:    /baro|气压|barometer|pressure/i,
+  };
+
   function eventInRun(ev: { time: string; text: string }): boolean {
     if (!calRunStartTime) return false;
     if (ev.time < calRunStartTime) return false;
     if (!calPattern.test(ev.text)) return false;
     if (/^指令应答:|^Command:/i.test(ev.text)) return false;
+    for (const k of Object.keys(calTypeKeywords) as CalType[]) {
+      if (k !== selected && calTypeKeywords[k].test(ev.text)) return false;
+    }
     return true;
   }
 
