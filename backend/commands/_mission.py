@@ -77,6 +77,7 @@ def cmd_fence_upload(link: DroneLink, param, data: dict):
         })
     link.mission._fence_items = items
     link.mission._fence_pending = True
+    link.mission._fence_ul_start_time = time.time()
     send_fence_count(link, len(items))
     link.add_event(lt('fence_upload', link.locale) % len(polygon), 'fence_upload')
 
@@ -92,11 +93,27 @@ def cmd_mission_download(link: DroneLink, param, data: dict):
 
 def check_mission_dl_timeout(link: DroneLink) -> None:
     m = link.mission
+    now = time.time()
+    timeout = cfg.MISSION_DL_TIMEOUT
     if m._dl_pending and m._dl_start_time > 0:
-        if time.time() - m._dl_start_time > cfg.MISSION_DL_TIMEOUT:
+        if now - m._dl_start_time > timeout:
             m._dl_pending = False
             m._dl_start_time = 0.0
             link.add_event(lt('mission_dl_timeout', link.locale), 'mission_dl_timeout')
+    # Upload watchdogs: if the FC never requests the next item, the pending
+    # flag would zombie forever (and a follow-up upload would be misrouted).
+    if m._mission_pending and m._mission_ul_start_time > 0 and now - m._mission_ul_start_time > timeout:
+        m._mission_pending = False
+        m._mission_ul_start_time = 0.0
+        link.add_event(lt('mission_ack_fail', link.locale) % 99, 'mission_ack_fail')
+    if m._fence_pending and m._fence_ul_start_time > 0 and now - m._fence_ul_start_time > timeout:
+        m._fence_pending = False
+        m._fence_ul_start_time = 0.0
+        link.add_event(lt('fence_ack_fail', link.locale) % 99, 'fence_ack_fail')
+    if m._rally_pending and m._rally_ul_start_time > 0 and now - m._rally_ul_start_time > timeout:
+        m._rally_pending = False
+        m._rally_ul_start_time = 0.0
+        link.add_event(lt('mission_ack_fail', link.locale) % 99, 'mission_ack_fail')
 
 
 def cmd_rally_upload(link: DroneLink, param, data: dict):
@@ -184,6 +201,7 @@ def _upload_mission(link: DroneLink, waypoints: list, takeoff_alt: float) -> Non
         if wp.get('drop'):
             s2 += 1
     m._mission_pending = True
+    m._mission_ul_start_time = time.time()
     send_mission_count(link, len(items))
     drop_n = sum(1 for w in waypoints if w.get('drop'))
     link.add_event(lt('mission_upload', link.locale) % (len(waypoints), drop_n, takeoff_alt))
@@ -208,6 +226,7 @@ def _upload_rally(link: DroneLink, points: list) -> None:
     m = link.mission
     m._rally_items = items
     m._rally_pending = True
+    m._rally_ul_start_time = time.time()
     count = len(items)
     link.send(bm(44, struct.pack('<HBB', count, link.vehicle.sysid, 1) + bytes([2]), link.sq, 221))
     link.add_event(lt('rally_uploaded', link.locale) % count, 'rally_uploaded')

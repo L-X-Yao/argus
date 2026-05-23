@@ -46,6 +46,10 @@ class Config:
     PARAM_CACHE_TTL: int = 86400 * 7
     PARAM_DOWNLOAD_TIMEOUT: float = 15.0
     PARAM_FETCH_TIMEOUT: float = 60.0
+    # If no PARAM_VALUE has been seen for this many seconds during a fetch,
+    # but total_count > received, assume packet loss and start re-requesting
+    # missing indices individually via PARAM_REQUEST_READ (msg 20).
+    PARAM_GAP_FILL_DELAY: float = 2.0
 
     # Mission
     MISSION_START_DELAY: float = 0.3

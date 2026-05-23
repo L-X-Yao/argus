@@ -395,15 +395,33 @@ def handle_mission_item_int(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 1 or not m._dl_pending:
         return
     p = _pad(p, 37)
+    # MISSION_ITEM_INT (73) wire layout (sorted by size):
+    #   0..3   p1 (float), 4..7   p2 (float)
+    #   8..11  p3 (float), 12..15 p4 (float)
+    #   16..19 x=lat*1e7 (i32), 20..23 y=lon*1e7 (i32)
+    #   24..27 z=alt (float)
+    #   28..29 seq (u16), 30..31 cmd (u16)
+    #   32 target_system, 33 target_component, 34 frame
+    #   35 current, 36 autocontinue
+    #   ext: 37 mission_type
     p1 = struct.unpack_from('<f', p, 0)[0]
     p2 = struct.unpack_from('<f', p, 4)[0]
+    p3 = struct.unpack_from('<f', p, 8)[0]
+    p4 = struct.unpack_from('<f', p, 12)[0]
     lat = struct.unpack_from('<i', p, 16)[0] / 1e7
     lon = struct.unpack_from('<i', p, 20)[0] / 1e7
     alt = struct.unpack_from('<f', p, 24)[0]
     seq = struct.unpack_from('<H', p, 28)[0]
     cmd = struct.unpack_from('<H', p, 30)[0]
+    frame = p[34]
+    current = p[35]
+    autocontinue = p[36]
     if seq < m._dl_total:
-        m._dl_items[seq] = {'seq': seq, 'cmd': cmd, 'lat': lat, 'lon': lon, 'alt': alt, 'p1': p1, 'p2': p2}
+        m._dl_items[seq] = {
+            'seq': seq, 'cmd': cmd, 'lat': lat, 'lon': lon, 'alt': alt,
+            'p1': p1, 'p2': p2, 'p3': p3, 'p4': p4,
+            'frame': frame, 'current': current, 'autocontinue': autocontinue,
+        }
     if seq + 1 < m._dl_total:
         _request_dl_item(link, seq + 1)
     else:
@@ -419,7 +437,14 @@ def handle_mission_item_int(p: bytes, pl: int, link: DroneLink) -> None:
                 wps.append({'lat': item['lat'], 'lon': item['lon'], 'alt': item['alt'],
                             'drop': False, 'delay': item['p1'] if item['cmd'] == 16 else 0,
                             'speed': pending_speed, 'type': wtype,
-                            'loiter_param': item['p1'] if item['cmd'] in (18, 19) else 0})
+                            'loiter_param': item['p1'] if item['cmd'] in (18, 19) else 0,
+                            # Preserve fields the previous round-trip dropped.
+                            # AP_Mission stores these per-item; re-uploading
+                            # without them changes plane acceptance radius /
+                            # loiter radius / yaw constraints.
+                            'p3': item.get('p3', 0), 'p4': item.get('p4', 0),
+                            'frame': item.get('frame', 3),
+                            'autocontinue': item.get('autocontinue', 1)})
                 pending_speed = 0.0
             elif item['cmd'] == 181 and wps:
                 wps[-1]['drop'] = True
@@ -447,12 +472,15 @@ def handle_mission_request(p: bytes, pl: int, link: DroneLink) -> None:
     if mission_type == 1 and m._fence_pending:
         if seq < len(m._fence_items):
             cmd_mod.send_fence_item_int(link, m._fence_items[seq])
+            m._fence_ul_start_time = time.time()  # FC is making progress
     elif mission_type == 2 and m._rally_pending:
         if seq < len(m._rally_items):
             cmd_mod.send_rally_item_int(link, m._rally_items[seq])
+            m._rally_ul_start_time = time.time()
     elif mission_type == 0 and m._mission_pending:
         if seq < len(m._mission_items):
             cmd_mod.send_mission_item_int(link, m._mission_items[seq])
+            m._mission_ul_start_time = time.time()
 
 
 def handle_mission_ack(p: bytes, pl: int, link: DroneLink) -> None:
@@ -466,15 +494,18 @@ def handle_mission_ack(p: bytes, pl: int, link: DroneLink) -> None:
     m = link.mission
     if mission_type == 1 and m._fence_pending:
         m._fence_pending = False
+        m._fence_ul_start_time = 0.0
         link.add_event((lt('fence_ack_ok', link.locale) if mtype == 0 else lt('fence_ack_fail', link.locale) % mtype),
                        'fence_ack_ok' if mtype == 0 else 'fence_ack_fail')
     elif mission_type == 2 and m._rally_pending:
         m._rally_pending = False
+        m._rally_ul_start_time = 0.0
         # No fence_ack_ok/fail-equivalent for rally; reuse mission text.
         link.add_event((lt('mission_ack_ok', link.locale) if mtype == 0 else lt('mission_ack_fail', link.locale) % mtype),
                        'mission_ack_ok' if mtype == 0 else 'mission_ack_fail')
     elif mission_type == 0 and m._mission_pending:
         m._mission_pending = False
+        m._mission_ul_start_time = 0.0
         link.add_event((lt('mission_ack_ok', link.locale) if mtype == 0 else lt('mission_ack_fail', link.locale) % mtype),
                        'mission_ack_ok' if mtype == 0 else 'mission_ack_fail')
 

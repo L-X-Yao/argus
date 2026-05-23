@@ -776,6 +776,18 @@ class TestOutgoingMoreCommands:
         # cmd_guided_goto may send multiple — last should be SET_POSITION_TARGET_GLOBAL_INT
         assert msg.get_msgId() == mavlink.MAVLINK_MSG_ID_SET_POSITION_TARGET_GLOBAL_INT  # 86
 
+    def test_param_request_read_for_gap_fill(self):
+        """ParamManager._request_one builds msg 20 to recover a missing
+        index after the initial PARAM_REQUEST_LIST burst loses packets."""
+        from backend.param_manager import ParamManager
+        link = FakeLink()
+        mgr = ParamManager(link)
+        mgr._request_one(42)
+        msg = _decode_one(link.captured[0])
+        assert msg.get_msgId() == mavlink.MAVLINK_MSG_ID_PARAM_REQUEST_READ  # 20
+        assert msg.param_index == 42
+        assert msg.target_system == 1
+
 
 # ─────────────────────────────────────────────────────────────────────────
 # CRC_EXTRA conformance

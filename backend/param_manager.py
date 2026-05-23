@@ -28,6 +28,13 @@ class ParamManager:
         self.fetching = False
         self._fetch_start = 0.0
         self._complete_emitted = False
+        # Indices we've seen. After the initial PARAM_REQUEST_LIST burst
+        # completes (no new params for `PARAM_GAP_FILL_DELAY`), we scan for
+        # gaps and re-request the missing ones individually via msg 20
+        # (PARAM_REQUEST_READ).
+        self._received_indices: set[int] = set()
+        self._last_value_time = 0.0
+        self._gap_fill_attempts: dict[int, int] = {}  # index -> retry count
         self._messages: list[dict] = []  # kept for backward compat with ws_manager cursor
 
     def request_all(self) -> None:
@@ -37,6 +44,9 @@ class ParamManager:
         self.fetching = True
         self._complete_emitted = False
         self._fetch_start = time.time()
+        self._last_value_time = self._fetch_start
+        self._received_indices.clear()
+        self._gap_fill_attempts.clear()
         # Drop stale messages so the next ws_manager cursor doesn't replay
         # values from a previous (now invalidated) fetch.
         self._messages.clear()
@@ -44,6 +54,17 @@ class ParamManager:
         from .pllink_proto import bm
         payload = struct.pack('<BB', self._link.vehicle.sysid, 1)
         self._link.send(bm(21, payload, self._link.sq, 159))
+
+    def _request_one(self, index: int) -> None:
+        # MAV PARAM_REQUEST_READ msg id 20, CRC extra 214.
+        # Wire layout (sorted by size):
+        #   0..1   param_index (int16)
+        #   2      target_system (u8)
+        #   3      target_component (u8)
+        #   4..19  param_id (char[16]) — empty when looking up by index
+        from .pllink_proto import bm
+        payload = struct.pack('<hBB', index, self._link.vehicle.sysid, 1) + b'\x00' * 16
+        self._link.send(bm(20, payload, self._link.sq, 214))
 
     def handle_param_value(self, p: bytes, pl: int) -> None:
         if pl < 1:
@@ -60,8 +81,14 @@ class ParamManager:
         if not name:
             return
 
+        self._last_value_time = time.time()
         if self.total_count < 0:
             self.total_count = count
+        # Index 0xFFFF is what AP sends for replies to PARAM_REQUEST_READ
+        # (since the user looked up by name). Don't add it to received_indices,
+        # but still count the param.
+        if index != 0xFFFF:
+            self._received_indices.add(index)
 
         if name not in self.params:
             self.received_count += 1
@@ -137,10 +164,32 @@ class ParamManager:
         return changed
 
     def check_timeout(self) -> None:
-        if self.fetching and time.time() - self._fetch_start > cfg.PARAM_FETCH_TIMEOUT:
+        if not self.fetching:
+            return
+        now = time.time()
+        # If we've been waiting `PARAM_GAP_FILL_DELAY` seconds since the last
+        # PARAM_VALUE but still don't have everything, the FC either finished
+        # streaming with packet loss OR has stopped responding entirely.
+        # Fill known gaps with PARAM_REQUEST_READ (msg 20). Each missing
+        # index gets up to 3 retries.
+        gap_delay = getattr(cfg, 'PARAM_GAP_FILL_DELAY', 2.0)
+        max_retries = 3
+        if self.total_count > 0 and now - self._last_value_time > gap_delay:
+            missing = [i for i in range(self.total_count) if i not in self._received_indices]
+            # Throttle: only send up to 10 per cycle so we don't flood the FC.
+            for i in missing[:10]:
+                attempts = self._gap_fill_attempts.get(i, 0)
+                if attempts >= max_retries:
+                    continue
+                self._gap_fill_attempts[i] = attempts + 1
+                self._request_one(i)
+            self._last_value_time = now  # back off until next tick
+
+        if now - self._fetch_start > cfg.PARAM_FETCH_TIMEOUT:
             self.fetching = False
+            n_missing = max(0, (self.total_count or 0) - len(self._received_indices))
             self._link.add_event(lt('param_timeout', self._link.locale), 'param_timeout')
-            self._messages.append({'type': 'param_timeout'})
+            self._messages.append({'type': 'param_timeout', 'missing': n_missing})
 
     def get_status(self) -> dict:
         return {

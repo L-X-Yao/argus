@@ -117,14 +117,28 @@ def cmd_param_load(link: DroneLink, param, data: dict):
 # --- Logs ---
 
 def cmd_log_list(link: DroneLink, param, data: dict):
+    # ArduPilot's AP_Logger rejects LOG_REQUEST_LIST when armed
+    # (AP_Logger_MAVLinkLogTransfer.cpp:40). Surface that to the UI as a
+    # typed error instead of the user seeing only a generic statustext.
+    if link.vehicle.armed:
+        return {'ok': False, 'error': lt('err_no_log_armed', link.locale)}
+    if link.log_dl._log_download_id != -1:
+        return {'ok': False, 'error': lt('err_log_busy', link.locale)}
     link.log_dl._log_list = []
     link.send(bm(117, struct.pack('<HHBB', 0, 0xFFFF, link.vehicle.sysid, 1), link.sq, 128))
     link.add_event(lt('log_list_req', link.locale), 'log_list_req')
 
 
 def cmd_log_download(link: DroneLink, param, data: dict):
+    if link.vehicle.armed:
+        return {'ok': False, 'error': lt('err_no_log_armed', link.locale)}
     log_id = int(data.get('id', 0))
     lg = link.log_dl
+    # A second download while one is in flight would silently corrupt both:
+    # AP_Logger rejects the new request and we'd overwrite the in-progress
+    # buffer (auditor finding C3). Refuse explicitly.
+    if lg._log_download_id != -1:
+        return {'ok': False, 'error': lt('err_log_busy', link.locale)}
     log_entry = next((l for l in lg._log_list if l['id'] == log_id), None)
     if not log_entry:
         return {'ok': False, 'error': lt('err_log_not_found', link.locale)}
@@ -139,5 +153,11 @@ def cmd_log_download(link: DroneLink, param, data: dict):
 
 def cmd_log_cancel(link: DroneLink, param, data: dict):
     link.send(bm(122, struct.pack('<BB', link.vehicle.sysid, 1), link.sq, 203))
-    link.log_dl._log_download_id = -1
+    lg = link.log_dl
+    lg._log_download_id = -1
+    # Free the buffer (auditor finding C6) — could be ~100MB after a partial
+    # download of a large dataflash log.
+    lg._log_download_data = bytearray()
+    lg._log_download_size = 0
+    lg._log_download_ofs = 0
     link.add_event(lt('log_dl_cancel', link.locale), 'log_dl_cancel')

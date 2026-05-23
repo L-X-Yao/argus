@@ -70,6 +70,12 @@ class MissionState:
     _fence_pending: bool = False
     _rally_items: list[dict] = field(default_factory=list)
     _rally_pending: bool = False
+    # Upload-side watchdogs (one per pending kind). If the FC never requests
+    # an item we re-queued, the pending flag would zombie forever — drone_link
+    # main loop calls check_*_upload_timeout to clear them.
+    _mission_ul_start_time: float = 0.0
+    _fence_ul_start_time: float = 0.0
+    _rally_ul_start_time: float = 0.0
     _dl_pending: bool = False
     _dl_total: int = 0
     _dl_items: list = field(default_factory=list)

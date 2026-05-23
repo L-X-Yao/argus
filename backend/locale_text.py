@@ -78,6 +78,8 @@ _T = {
     'vehicle_switch':    ('切换控制: sysid=%d',       'Switch control: sysid=%d'),
     'err_connect':     ('无法连接',                 'Connection failed'),
     'err_no_log':      ('无活动日志',               'No active log'),
+    'err_no_log_armed':('飞控已解锁，无法访问日志',   'Cannot access logs while armed'),
+    'err_log_busy':    ('日志下载正在进行中，请先取消', 'Log download in progress; cancel first'),
     'err_no_video_url':('未提供视频地址',           'No video URL provided'),
     'err_no_ffmpeg':   ('服务器未安装 ffmpeg',      'ffmpeg not installed on server'),
     'param_timeout':   ('参数读取超时',             'Parameter fetch timeout'),
