@@ -29,6 +29,7 @@ import {
   encodeMissionRequestList,
   encodeMissionRequestInt,
   encodeMissionAck,
+  encodeCommandAck,
   encodeLogRequestList,
   encodeLogRequestData,
   encodeLogRequestEnd,
@@ -778,6 +779,28 @@ describe('message encoders', () => {
   it('decodeMissionCount round-trips via encodeMissionCount', () => {
     const mc = encodeMissionCount(1, 1, 17);
     expect(decodeMissionCount(new DataView(mc.buffer)).count).toBe(17);
+  });
+
+  it('encodeCommandAck produces 3-byte payload (AccelCal advance protocol)', () => {
+    // AP_AccelCal.cpp:367-393 — packet.command must be ≤ 6 (NOT MAV_CMD value
+    // 42429) and packet.result must equal MAV_RESULT_TEMPORARILY_REJECTED(1).
+    // We mirror QGC: command=0, result=1. Wire format byte-checks below.
+    const ack = encodeCommandAck(0, 1);
+    expect(ack.length).toBe(3);
+    expect(ack[0]).toBe(0);  // command byte 0 (uint16 LE)
+    expect(ack[1]).toBe(0);  // command byte 1
+    expect(ack[2]).toBe(1);  // result = TEMPORARILY_REJECTED
+  });
+
+  it('encodeCommandAck round-trips via decodeCommandAck after zero-padding', () => {
+    // decodeCommandAck expects the full 10-byte layout; MAVLink 2 trim-aware
+    // receivers (including AP) zero-pad. Verify we read back the same fields.
+    const ack = encodeCommandAck(3, 1);  // a MAVProxy-style ACK
+    const padded = new Uint8Array(10);
+    padded.set(ack);
+    const decoded = decodeCommandAck(new DataView(padded.buffer));
+    expect(decoded.command).toBe(3);
+    expect(decoded.result).toBe(1);
   });
 
   it('LOG_DATA decoder slices payload data to count bytes', () => {

@@ -3,15 +3,15 @@
   import { sendCommand } from '../../lib/ws';
   import {
     isSerialConnected, serialCalCompass, serialCalCompassAccept, serialCalCancel,
-    serialCalGyro, serialCalLevel, serialCalBaro,
+    serialCalGyro, serialCalLevel, serialCalBaro, serialCalAccel, serialCalAccelNext,
   } from '../../lib/transport';
   import { API_BASE } from '../../lib/backend';
   import { t } from '../../lib/i18n.svelte';
 
-  // Branch dispatch between WS backend and direct WebSerial. Accel cal stays
-  // on the WS path for now — its advance protocol (cmd_cal_accel_next) needs
-  // the AP_AccelCal ACK reinterpretation pinned to ArduPilot source per
-  // protocol_design.md and is queued for a separate phase.
+  // Branch dispatch between WS backend and direct WebSerial. Both paths
+  // produce identical wire bytes — the WebSerial impls mirror backend
+  // commands in backend/commands/_setup.py. accel_next in particular uses
+  // the AP_AccelCal ACK reinterpretation cited in protocol_design.md #1.
   function dispatchCal(cmd: string): void {
     if (!isSerialConnected()) { sendCommand(cmd); return; }
     switch (cmd) {
@@ -21,7 +21,9 @@
       case 'cal_gyro':           serialCalGyro();           return;
       case 'cal_level':          serialCalLevel();          return;
       case 'cal_baro':           serialCalBaro();           return;
-      default:                   sendCommand(cmd);          return;  // cal_accel, cal_accel_next
+      case 'cal_accel':          serialCalAccel();          return;
+      case 'cal_accel_next':     serialCalAccelNext();      return;
+      default:                   sendCommand(cmd);          return;
     }
   }
   import Button from '$lib/components/ui/button/button.svelte';
@@ -328,7 +330,7 @@
             {#if ao}
               <div class="p-2.5 rounded-lg bg-primary/10 border border-primary/20 mb-3 flex items-center justify-between gap-2">
                 <p class="text-xs text-primary font-medium">{t(ao.hint)}，{t('cal.holdStill')}</p>
-                <Button variant="default" size="sm" class="shrink-0" onclick={() => sendCommand('cal_accel_next')}>
+                <Button variant="default" size="sm" class="shrink-0" onclick={() => dispatchCal('cal_accel_next')}>
                   <ChevronRight size={14} class="mr-1" />{t('cal.accelNext')}
                 </Button>
               </div>

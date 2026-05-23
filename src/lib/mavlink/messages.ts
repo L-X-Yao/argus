@@ -704,6 +704,28 @@ export function encodeMissionClearAll(
 }
 
 /**
+ * COMMAND_ACK (msg 77, normally RECEIVED from FC). This encoder exists only
+ * for one use case: the AccelCal "advance to next orientation" protocol,
+ * where the GCS sends a COMMAND_ACK *back to the FC* with semantics the
+ * MAVLink spec does not document. The handler is at
+ * libraries/AP_AccelCal/AP_AccelCal.cpp:367-393 — it requires
+ *   packet.command <= 6              (NOT the MAV_CMD value 42429)
+ *   packet.result == TEMPORARILY_REJECTED(1)  (NOT ACCEPTED(0))
+ * QGC sends command=0, result=1 — we mirror that. Do NOT "fix" this to
+ * look like a normal ACK; it will silently break accel calibration.
+ *
+ * Backend mirror: backend/commands/_setup.py:cmd_cal_accel_next at
+ * backend/commands/_setup.py:47-58. Same payload, same 3-byte trim.
+ */
+export function encodeCommandAck(command: number, result: number): Uint8Array {
+  const buf = new Uint8Array(3);
+  const dv = new DataView(buf.buffer);
+  dv.setUint16(0, command, true);
+  dv.setUint8(2, result);
+  return buf;
+}
+
+/**
  * MISSION_REQUEST_LIST (msg 43, 3-byte payload). Asks the FC to start a
  * mission download — it responds with MISSION_COUNT (44).
  */

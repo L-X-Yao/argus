@@ -15,6 +15,7 @@ export {
   encodeMissionRequestList,
   encodeMissionRequestInt,
   encodeMissionAck,
+  encodeCommandAck,
   encodeLogRequestList,
   encodeLogRequestData,
   encodeLogRequestEnd,

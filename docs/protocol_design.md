@@ -31,7 +31,14 @@ So `command` is a 0-6 index (0=any/QGC, 1-6=specific pose), and `result`
 must be `MAV_RESULT_TEMPORARILY_REJECTED = 1`. QGroundControl and
 MissionPlanner do the same thing. See `backend/commands/_setup.py`.
 
-**Cited:** Commit `2f93a6d` and `6a42c47`.
+**Frontend mirror:** WebSerial direct mode bypasses the Python backend and
+needs the same wire bytes — implemented at `src/lib/transport.ts:serialCalAccelNext`
+via the `encodeCommandAck(0, 1)` helper in `src/lib/mavlink/messages.ts`.
+Both call sites carry the citation comment; both call sites must stay in
+sync if the AP handler ever changes.
+
+**Cited:** Commit `2f93a6d`, `6a42c47`, and the Phase F WebSerial accel
+calibration commit that added the frontend mirror.
 
 ---
 

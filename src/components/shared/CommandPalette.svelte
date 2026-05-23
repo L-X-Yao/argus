@@ -3,7 +3,7 @@
   import { sendCommand, sendDisconnect } from '../../lib/ws';
   import {
     isSerialConnected, serialDownloadMission, serialClearMission,
-    serialCalCompass, serialCalGyro, serialCalLevel,
+    serialCalCompass, serialCalGyro, serialCalLevel, serialCalAccel,
   } from '../../lib/transport';
   import { t, i18nState, setLocale } from '../../lib/i18n.svelte';
   import { isPlane, saveSettings, showSlide } from '../../lib/stores.svelte';
@@ -99,7 +99,7 @@
       { id: 'cal-compass', label: t('cal.compass'), category: t('cal.title'), icon: Compass,
         handler: () => { openPanel('calibration'); isSerialConnected() ? serialCalCompass() : sendCommand('cal_compass'); }, available: connected },
       { id: 'cal-accel', label: t('cal.accel'), category: t('cal.title'), icon: Gauge,
-        handler: () => { openPanel('calibration'); sendCommand('cal_accel'); }, available: connected },
+        handler: () => { openPanel('calibration'); isSerialConnected() ? serialCalAccel() : sendCommand('cal_accel'); }, available: connected },
       { id: 'cal-gyro', label: t('cal.gyro'), category: t('cal.title'), icon: RotateCcw,
         handler: () => { openPanel('calibration'); isSerialConnected() ? serialCalGyro() : sendCommand('cal_gyro'); }, available: connected },
       { id: 'cal-level', label: t('cal.level'), category: t('cal.title'), icon: Navigation,

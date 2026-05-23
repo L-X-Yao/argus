@@ -25,6 +25,7 @@ import {
   encodeLogRequestList,
   encodeLogRequestData,
   encodeLogRequestEnd,
+  encodeCommandAck,
 } from './mavlink';
 import { openSerial, serialWrite, serialReadLoop, isWebSerialSupported } from './serial';
 import type { SerialConnection } from './serial';
@@ -591,6 +592,34 @@ export function serialCalBaro(): void {
   if (!isSerialConnected()) return;
   // MAV_CMD_PREFLIGHT_CALIBRATION (241), p3=1 = ground pressure cal.
   serialSendCommandLong(241, 0, 0, 1, 0, 0, 0, 0);
+}
+
+/**
+ * Accel calibration uses a TWO-PHASE protocol. Phase 1 (serialCalAccel) is
+ * a standard COMMAND_LONG. Phase 2 (serialCalAccelNext) is NOT — it abuses
+ * COMMAND_ACK (msg 77) with field semantics that contradict the MAVLink
+ * spec. Anyone "cleaning up" the wire by sending MAV_CMD_ACCELCAL_VEHICLE_POS
+ * (42429) or result=MAV_RESULT_ACCEPTED(0) will silently break accel cal.
+ *
+ * See [[feedback-protocol-discipline]] and protocol_design.md #1 — this is
+ * the canonical example of FC-coupled code that looks wrong but is correct.
+ */
+export function serialCalAccel(): void {
+  if (!isSerialConnected()) return;
+  // MAV_CMD_PREFLIGHT_CALIBRATION (241), p5=1 = accel cal. Matches backend
+  // cmd_cal_accel at backend/commands/_setup.py:27-29.
+  serialSendCommandLong(241, 0, 0, 0, 0, 1, 0, 0);
+}
+
+export function serialCalAccelNext(): void {
+  if (!isSerialConnected()) return;
+  // AP_AccelCal::handle_command_ack (libraries/AP_AccelCal/AP_AccelCal.cpp:
+  // 366-393) hijacks COMMAND_ACK with private semantics:
+  //   if (packet.command > 6)                        return;  // not a MAV_CMD value
+  //   if (packet.result != TEMPORARILY_REJECTED(1))  return;  // result MUST be 1
+  // QGC sends command=0, result=1; we mirror QGC. Backend equivalent at
+  // backend/commands/_setup.py:cmd_cal_accel_next (lines 47-58).
+  sendSerialFrame(77, encodeCommandAck(0, 1));
 }
 
 /* ── Log list + download state machines (WebSerial direct mode) ─────────
