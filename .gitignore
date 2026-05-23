@@ -11,7 +11,10 @@ src-tauri/binaries/
 src-tauri/gen/
 build/
 param_cache/
-params/
+# Anchor to repo root only — without the leading slash this matched
+# src/components/params/ too, silently making major Svelte components
+# (PidPanel, FlightModePanel, AutoTunePanel, PowerCalPanel) untracked.
+/params/
 firmware/
 logs/
 mbtiles/
