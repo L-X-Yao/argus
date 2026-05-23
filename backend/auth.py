@@ -40,6 +40,11 @@ def verify_token(provided: str) -> bool:
     expected = _load_token()
     if not expected:
         return True
+    # hmac.compare_digest raises TypeError on non-str/bytes input (e.g. null,
+    # int, list from a malformed JSON body). Reject those upfront as invalid
+    # rather than letting the 500 leak.
+    if not isinstance(provided, (str, bytes)):
+        return False
     return hmac.compare_digest(provided, expected)
 
 
@@ -51,7 +56,11 @@ async def auth_middleware(request: Request, call_next):
     if not auth_required():
         return await call_next(request)
     path = request.url.path
-    if path in ('/health', '/', '/index.html') or path.startswith('/assets') or path.startswith('/lib') or path.startswith('/images'):
+    # `/sw.js` and `/manifest.json` MUST be reachable without an Authorization
+    # header — browsers don't send auth on service-worker installs or manifest
+    # fetches, and a 401 here breaks PWA install/refresh entirely.
+    if path in ('/health', '/', '/index.html', '/sw.js', '/manifest.json') or \
+       path.startswith('/assets') or path.startswith('/lib') or path.startswith('/images'):
         return await call_next(request)
     if path == '/api/auth/login':
         return await call_next(request)

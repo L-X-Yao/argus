@@ -8,7 +8,19 @@ def _env(key: str, default, cast=None):
     val = os.environ.get(key)
     if val is None:
         return default
-    return (cast or type(default))(val)
+    cast_fn = cast or type(default)
+    try:
+        return cast_fn(val)
+    except (ValueError, TypeError):
+        # Bad env var (e.g. ARGUS_PORT=abc) used to crash at module import
+        # before logging was configured, leaving the operator with a bare
+        # traceback. Fall back to the default and log a warning so the
+        # process still starts.
+        import logging
+        logging.getLogger('gcs').warning(
+            'Invalid value for %s=%r; falling back to default %r', key, val, default,
+        )
+        return default
 
 
 class Config:

@@ -162,6 +162,11 @@ class DroneLink:
                     self.sq += 1
                 except OSError:
                     logger.debug('send failed', exc_info=True)
+                except ValueError:
+                    # bm() raises ValueError for payload >255 bytes — a
+                    # programming error caller-side, but we must not let it
+                    # crash the link thread.
+                    logger.warning('refusing to send malformed frame', exc_info=True)
 
     def connect(self, port: str, baudrate: int = 57600, protocol: str = 'auto') -> bool:
         if self._running:

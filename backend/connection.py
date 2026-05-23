@@ -29,13 +29,29 @@ class UdpWrapper:
         self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self._sock.settimeout(cfg.UDP_READ_TIMEOUT)
         self._sock.bind((host or '', port))
-        self._remote = None
+        self._remote: tuple | None = None
+        # Track when we last heard from _remote. If a different sender appears
+        # while the current peer has been silent for `_PEER_HIJACK_GUARD`
+        # seconds we follow the new peer (legitimate FC IP change). Otherwise
+        # the new sender is ignored — an attacker can't inject one packet to
+        # divert outbound commands to themselves (auditor finding).
+        self._remote_last_seen: float = 0.0
+        self._PEER_HIJACK_GUARD: float = 30.0
 
     def read(self, n: int) -> bytes:
         try:
+            import time as _t
             data, addr = self._sock.recvfrom(n)
-            if not self._remote:
+            now = _t.monotonic()
+            if self._remote is None or (
+                addr != self._remote and (now - self._remote_last_seen) > self._PEER_HIJACK_GUARD
+            ):
                 self._remote = addr
+            elif addr != self._remote:
+                # Same socket, different sender, current peer still active —
+                # drop. Either a misdirected packet or an attempted hijack.
+                return b''
+            self._remote_last_seen = now
             return data
         except (TimeoutError, OSError):
             return b''

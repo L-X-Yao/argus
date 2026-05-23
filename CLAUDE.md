@@ -7,7 +7,7 @@ Repo: `github.com/L-X-Yao/argus`, branch: `main`, version: `3.4.0`
 
 - **Frontend**: Svelte 5 (runes) + TypeScript 6 + Vite 8 + Tailwind CSS 4 + Leaflet + MapLibre GL
 - **Backend**: Python 3.10+ + FastAPI + uvicorn + pyserial + websockets
-- **Protocol**: MAVLink v2 (standard + PL-Link wrapper), ArduPilot + PX4
+- **Protocol**: MAVLink v2 (standard + PL-Link wrapper). **ArduPilot is the only production-tested target.** PX4 support is partially scaffolded in `src/lib/fc/` but unwired — see `## PX4 Status` below.
 - **Tests**: pytest (backend, 946 tests), vitest 4 (frontend, 400 tests), Playwright (E2E, 19 specs)
 - **Lint**: ruff (Python), svelte-check (TypeScript/Svelte)
 - **CI**: GitHub Actions — lint → test → type-check → build → E2E
@@ -101,6 +101,12 @@ Types: `feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `ci:`, `chore:`
 - **Config**: `backend/config.py` centralized constants + `ARGUS_*` env var overrides
 - **PWA**: Service worker with app shell precache, tile cache (5000 entries LRU), push notifications
 - **White-label**: `branding.ts` drives app name/theme
+
+## PX4 Status
+
+Despite the README's "ArduPilot + PX4" framing, only ArduPilot is wired end-to-end. The frontend `src/lib/fc/` adapter system has working PX4 mode tables and unit tests, but **no production code path imports `px4Adapter`**. The backend never reads the `autopilot` byte from HEARTBEAT (only `type` and `base_mode`), so it cannot distinguish ArduPilot from PX4 at all. All flight-mode strings, mode buttons, calibration messages, and parameter behaviors assume ArduPilot. A real PX4 vehicle connecting today would render every mode as `MODE%d`, fail every calibration handshake (the magic numbers like `21196`, `42424-42426` are AP-private), and not understand `RTL`/`mission_start`/`takeoff` integer enums.
+
+If the user asks for PX4 support, that is greenfield work — quote weeks not days. Do not assume any PX4 path "should just work."
 
 ## Protocol Code Discipline
 

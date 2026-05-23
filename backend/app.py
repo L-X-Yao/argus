@@ -111,10 +111,12 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-_cors_origins = os.environ.get(
-    'ARGUS_CORS_ORIGINS',
-    'http://localhost:5173,http://localhost:8100,http://127.0.0.1:5173,http://127.0.0.1:8100',
-).split(',')
+_cors_origins = [
+    s.strip() for s in os.environ.get(
+        'ARGUS_CORS_ORIGINS',
+        'http://localhost:5173,http://localhost:8100,http://127.0.0.1:5173,http://127.0.0.1:8100',
+    ).split(',') if s.strip()
+]
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins,
@@ -377,6 +379,12 @@ async def api_tile_bulk_download(request: Request):
     body = await request.json()
     lat_min, lat_max = float(body.get('lat_min', 0)), float(body.get('lat_max', 0))
     lon_min, lon_max = float(body.get('lon_min', 0)), float(body.get('lon_max', 0))
+    # Web Mercator is undefined at the poles (tan(90°) is infinite, cos(90°)
+    # is zero). Clamp to the usable range so a request with lat=±90 doesn't
+    # raise ZeroDivisionError mid-loop.
+    _MERC_LAT = 85.05112878
+    lat_min = max(-_MERC_LAT, min(_MERC_LAT, lat_min))
+    lat_max = max(-_MERC_LAT, min(_MERC_LAT, lat_max))
     z_min = max(0, min(int(body.get('z_min', 10)), 18))
     z_max = min(max(z_min, int(body.get('z_max', 16))), 18)
     style = body.get('style', '6')
