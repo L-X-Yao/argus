@@ -101,3 +101,14 @@ Types: `feat:`, `fix:`, `refactor:`, `test:`, `docs:`, `ci:`, `chore:`
 - **Config**: `backend/config.py` centralized constants + `ARGUS_*` env var overrides
 - **PWA**: Service worker with app shell precache, tile cache (5000 entries LRU), push notifications
 - **White-label**: `branding.ts` drives app name/theme
+
+## Protocol Code Discipline
+
+Anything coupled to ArduPilot/PX4 behavior — MAVLink commands, ACKs, message field offsets, CRC extras, calibration handshakes, mode IDs, parameter semantics — **cite the upstream source file:line in a code comment**. Do not infer from the MAVLink spec alone.
+
+Why: flight controllers regularly hijack generic MAVLink fields for private protocols, and "what the spec says" diverges from "what the FC actually does". Two real examples this repo got bitten by:
+
+- **Accel cal advance ACK**: `AP_AccelCal::handle_command_ack` (libraries/AP_AccelCal/AP_AccelCal.cpp:367-398) overrides COMMAND_ACK's `command` and `result` fields entirely — requires `command ≤ 6` (NOT the MAV_CMD value 42429) and `result == 1 / TEMPORARILY_REJECTED` (NOT ACCEPTED). See `backend/commands/_setup.py:cmd_cal_accel_next` for the citation pattern.
+- **Compass cal progress**: Sent via binary MAG_CAL_PROGRESS (msg 191) and MAG_CAL_REPORT (msg 192), not STATUSTEXT. See `backend/mavlink_handlers.py:handle_mag_cal_progress`.
+
+Workflow when implementing or debugging FC-coupled code: report → **stop guessing** → fetch the AP/PX4 source (`raw.githubusercontent.com/ArduPilot/ardupilot/master/...` or via WebFetch) → quote the exact condition in a comment above your implementation → implement to match. Unit tests that mock the FC will pass either way — only the real source pins the truth.
