@@ -1,11 +1,11 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { app, addWaypoint, deleteWaypoint, saveWaypoints, addToast } from '../../lib/stores.svelte';
+  import { app, addWaypoint, deleteWaypoint, saveWaypoints, addToast, showConfirm } from '../../lib/stores.svelte';
   import { sendCommand } from '../../lib/ws';
   import { toGcj, toWgs } from '../../lib/gcj02';
   import { t, i18nState } from '../../lib/i18n.svelte';
   import { API_BASE } from '../../lib/backend';
-  import { Ruler, Square, ShieldAlert, X as XIcon } from '@lucide/svelte';
+  import { Ruler, Square, ShieldAlert, Grid3x3, X as XIcon } from '@lucide/svelte';
   import { segDist } from '../../lib/missionIO';
   import { polygonArea } from '../../lib/survey';
   import maplibregl from 'maplibre-gl';
@@ -49,6 +49,9 @@
   // Fence vertex markers (rendered as small dots; the fill/line is a GeoJSON
   // layer added once in onMount). Rebuilt every time app.fencePolygon changes.
   let fenceVertMarkers: maplibregl.Marker[] = [];
+  // Survey polygon vertex markers — same pattern, purple instead of red.
+  // Mirrors src/components/layers/SurveyLayer.svelte.
+  let surveyVertMarkers: maplibregl.Marker[] = [];
 
   // Measure mode: distance (polyline) or area (polygon). All state local to
   // this view — clear on ESC or by clicking the same mode button twice.
@@ -202,17 +205,41 @@
         source: 'measure',
         paint: { 'line-color': '#ff5252', 'line-width': 2, 'line-dasharray': [2, 2] },
       });
+
+      // Survey polygon — purple, mirrors SurveyLayer.svelte. Used by
+      // SurveyPanel to feed into the grid generator.
+      map!.addSource('survey', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
+      });
+      map!.addLayer({
+        id: 'survey-fill',
+        type: 'fill',
+        source: 'survey',
+        filter: ['==', '$type', 'Polygon'],
+        paint: { 'fill-color': '#ab47bc', 'fill-opacity': 0.12 },
+      });
+      map!.addLayer({
+        id: 'survey-line',
+        type: 'line',
+        source: 'survey',
+        paint: { 'line-color': '#ab47bc', 'line-width': 2, 'line-dasharray': [3, 2] },
+      });
     });
 
     // Map click: same priority order as MapView.svelte:118-140 —
-    // measure → fence draw → guided goto → addWaypoint. Note the GCJ
-    // inverse-transform so China-tile providers don't store shifted
-    // coordinates in app.waypoints / app.fencePolygon.
+    // measure → survey draw → fence draw → guided goto → addWaypoint.
+    // Note the GCJ inverse-transform so China-tile providers don't store
+    // shifted coordinates in app.waypoints / app.fencePolygon / surveyPolygon.
     map.on('click', (e) => {
       const { lat: mlat, lng: mlon } = e.lngLat;
       const [wlat, wlon] = fromMap(mlat, mlon);
       if (measuring) {
         addMeasurePoint(wlat, wlon);
+        return;
+      }
+      if (app.drawingPolygon) {
+        app.surveyPolygon = [...app.surveyPolygon, { lat: wlat, lon: wlon }];
         return;
       }
       if (app.drawingFence) {
@@ -230,13 +257,33 @@
       });
     });
 
+    // Right-click: guided-goto with confirm dialog. Mirrors MapView.svelte:
+    // onRightClick. maplibre emits 'contextmenu' on right-click; the original
+    // browser context menu is suppressed by the canvas element's own handler.
+    map.on('contextmenu', (e) => {
+      if (!app.drone.connected || !app.drone.armed) return;
+      const [wlat, wlon] = fromMap(e.lngLat.lat, e.lngLat.lng);
+      const msg = `${t('confirm.guidedGoto')}\n${wlat.toFixed(5)}, ${wlon.toFixed(5)}\n${t('ctrl.altitude')}: ${app.defaultAlt}m`;
+      showConfirm(msg).then((ok) => {
+        if (!ok) return;
+        sendCommand('guided_goto', undefined, { lat: wlat, lon: wlon, alt: app.defaultAlt });
+        addToast(`${t('map.guided')} → ${wlat.toFixed(5)}, ${wlon.toFixed(5)}`, 'info');
+      });
+    });
+
     window.addEventListener('keydown', onKeyDown);
   });
 
+  // ESC behaviors mirror MapView.svelte:onKeyDown (lines 156-167):
+  // clear in-flight measure, draw-modes, guided mode. Does NOT clear the
+  // already-committed polygons (fencePolygon / surveyPolygon) on ESC — same
+  // as 2D, those go away only via the explicit Clear buttons / panel UI.
   function onKeyDown(e: KeyboardEvent) {
     if (e.key !== 'Escape') return;
     if (measuring) clearMeasure();
-    if (app.drawingFence) { app.drawingFence = false; app.fencePolygon = []; }
+    if (app.guidedMode) app.guidedMode = false;
+    if (app.drawingFence) app.drawingFence = false;
+    if (app.drawingPolygon) app.drawingPolygon = false;
   }
 
   function toggleMeasure(mode: 'distance' | 'area') {
@@ -317,6 +364,13 @@
     app.drawingFence = !app.drawingFence;
   }
 
+  function toggleSurveyDraw() {
+    // Same toggle-only pattern as fence — SurveyPanel manages the polygon
+    // lifecycle and grid generation; the map button just enters/leaves
+    // drawing mode without destroying the existing polygon.
+    app.drawingPolygon = !app.drawingPolygon;
+  }
+
   function clearFence() {
     app.drawingFence = false;
     app.fencePolygon = [];
@@ -331,6 +385,8 @@
     if (wpPopup) { wpPopup.remove(); wpPopup = null; }
     fenceVertMarkers.forEach((m) => m.remove());
     fenceVertMarkers = [];
+    surveyVertMarkers.forEach((m) => m.remove());
+    surveyVertMarkers = [];
     measureVertMarkers.forEach((m) => m.remove());
     measureVertMarkers = [];
     if (measureLabel) { measureLabel.remove(); measureLabel = null; }
@@ -552,6 +608,50 @@
     });
   });
 
+  /* ── Survey polygon rendering — mirrors SurveyLayer.svelte ─────────────
+   * Same dispose+rebuild pattern as fence. Purple instead of red. First
+   * vertex inverted (white-filled) marks the polygon start direction.
+   */
+  $effect(() => {
+    if (!map || !map.isStyleLoaded()) return;
+    const src = map.getSource('survey') as maplibregl.GeoJSONSource | undefined;
+    if (!src) return;
+
+    surveyVertMarkers.forEach((m) => m.remove());
+    surveyVertMarkers = [];
+
+    const verts = app.surveyPolygon;
+    if (verts.length === 0) {
+      src.setData({ type: 'FeatureCollection', features: [] });
+      return;
+    }
+    const lonLats: [number, number][] = verts.map((p) => {
+      const [mlat, mlon] = toMap(p.lat, p.lon);
+      return [mlon, mlat];
+    });
+    if (lonLats.length >= 3) {
+      const ring = [...lonLats, lonLats[0]];
+      src.setData({
+        type: 'Feature',
+        geometry: { type: 'Polygon', coordinates: [ring] },
+        properties: {},
+      });
+    } else {
+      src.setData({
+        type: 'Feature',
+        geometry: { type: 'LineString', coordinates: lonLats },
+        properties: {},
+      });
+    }
+    lonLats.forEach((pt, i) => {
+      const el = document.createElement('div');
+      el.style.cssText = `width:10px;height:10px;border-radius:50%;background:${i === 0 ? '#fff' : '#ab47bc'};border:2px solid #ab47bc;box-shadow:0 0 3px rgba(0,0,0,0.6)`;
+      surveyVertMarkers.push(
+        new maplibregl.Marker({ element: el }).setLngLat(pt).addTo(map!),
+      );
+    });
+  });
+
   // Tile-source switching: swap the raster source URL when app.tileSource
   // changes. Mirrors MapView.svelte:applyTileSource — re-creating layers
   // is the canonical maplibre pattern since setStyle() would nuke the
@@ -597,7 +697,11 @@
             onclick={toggleFenceDraw} title={t('map.fence')}>
       <ShieldAlert size={13} />{t('map.fence')}
     </button>
-    {#if app.fencePolygon.length > 0 || measuring}
+    <button class="map-btn {app.drawingPolygon ? '!text-purple-400 !border-purple-400' : ''}"
+            onclick={toggleSurveyDraw} title={t('map.survey')}>
+      <Grid3x3 size={13} />{t('map.survey')}
+    </button>
+    {#if app.fencePolygon.length > 0 || app.surveyPolygon.length > 0 || measuring}
       <button class="map-btn" onclick={() => { clearMeasure(); clearFence(); }} title="Clear">
         <XIcon size={13} />
       </button>
