@@ -104,6 +104,7 @@
 
     for (const ev of newEvts) {
       const txt = ev.text;
+      if (/^指令应答:|^Command:/i.test(txt)) continue;
 
       if (selected === 'accel') {
         const orient = detectOrientation(txt);
