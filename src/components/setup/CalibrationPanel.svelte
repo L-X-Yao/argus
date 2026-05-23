@@ -88,16 +88,17 @@
     app.events.filter(e => calPattern.test(e.text)).slice(-20)
   );
 
-  /* Track last-seen event count to detect new events */
-  let lastParsedCount = $state(0);
+  /* Track position in source app.events to detect new events */
+  let lastEventTotal = $state(0);
 
   /* Parse accel/compass progress from events */
   $effect(() => {
     if (!calibrating) return;
-    const evts = calEvents;
-    if (evts.length <= lastParsedCount) return;
-    const newEvts = evts.slice(lastParsedCount);
-    lastParsedCount = evts.length;
+    const total = app.events.length;
+    if (total <= lastEventTotal) return;
+    const newEvts = app.events.slice(lastEventTotal).filter(e => calPattern.test(e.text));
+    lastEventTotal = total;
+    if (newEvts.length === 0) return;
 
     for (const ev of newEvts) {
       if (!calibrating) break;
@@ -158,7 +159,7 @@
     const ct = calTypes.find(c => c.id === selected);
     if (!ct) return;
     calibrating = true;
-    lastParsedCount = calEvents.length;
+    lastEventTotal = app.events.length;
     if (selected === 'accel') resetAccelSteps();
     if (selected === 'compass') { compassProgress = 0; compassMsgCount = 0; }
     sendCommand(ct.cmd);
