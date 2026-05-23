@@ -131,6 +131,33 @@ def _upload_mission(link: DroneLink, waypoints: list, takeoff_alt: float) -> Non
         items.append({'seq': seq, 'cmd': nav_cmd, 'lat': float(wp['lat']), 'lon': float(wp['lon']),
                       'alt': float(wp.get('alt', takeoff_alt)), 'p1': p1_val, 'p2': 0})
         seq += 1
+        servo = wp.get('cmd_servo')
+        if servo:
+            items.append({'seq': seq, 'cmd': 183, 'lat': 0, 'lon': 0, 'alt': 0,
+                          'p1': int(servo.get('num', 1)), 'p2': float(servo.get('pwm', 1500))})
+            seq += 1
+        roi = wp.get('cmd_roi')
+        if roi:
+            items.append({'seq': seq, 'cmd': 201, 'lat': float(roi.get('lat', 0)),
+                          'lon': float(roi.get('lon', 0)), 'alt': float(roi.get('alt', 0)),
+                          'p1': 0, 'p2': 0})
+            seq += 1
+        cam = wp.get('cmd_cam_trig')
+        if cam:
+            items.append({'seq': seq, 'cmd': 206, 'lat': 0, 'lon': 0, 'alt': 0,
+                          'p1': float(cam.get('dist', 0)), 'p2': 0})
+            seq += 1
+        yaw = wp.get('cmd_yaw')
+        if yaw:
+            items.append({'seq': seq, 'cmd': 115, 'lat': 0, 'lon': 0, 'alt': 0,
+                          'p1': float(yaw.get('deg', 0)), 'p2': 0,
+                          'p3': float(yaw.get('dir', 1)), 'p4': 0})
+            seq += 1
+        vtol = wp.get('cmd_vtol')
+        if vtol:
+            items.append({'seq': seq, 'cmd': 3000, 'lat': 0, 'lon': 0, 'alt': 0,
+                          'p1': int(vtol.get('mode', 4)), 'p2': 0})
+            seq += 1
         if wp.get('drop'):
             items.append({'seq': seq, 'cmd': 181, 'lat': 0, 'lon': 0, 'alt': 0, 'p1': 0, 'p2': 0})
             seq += 1
@@ -144,6 +171,16 @@ def _upload_mission(link: DroneLink, waypoints: list, takeoff_alt: float) -> Non
             s2 += 1
         m._seq_to_wp[s2] = i
         s2 += 1
+        if wp.get('cmd_servo'):
+            s2 += 1
+        if wp.get('cmd_roi'):
+            s2 += 1
+        if wp.get('cmd_cam_trig'):
+            s2 += 1
+        if wp.get('cmd_yaw'):
+            s2 += 1
+        if wp.get('cmd_vtol'):
+            s2 += 1
         if wp.get('drop'):
             s2 += 1
     m._mission_pending = True

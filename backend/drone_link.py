@@ -51,8 +51,8 @@ _CRC_EXTRA = {
     40: 230, 42: 28, 43: 132, 44: 221, 46: 11, 47: 153, 51: 196, 65: 118,
     70: 124, 73: 38, 74: 20, 77: 143, 83: 22, 85: 143, 87: 5, 105: 93,
     116: 76, 117: 128, 118: 56, 119: 116, 120: 134, 125: 203, 126: 220,
-    136: 1, 147: 154, 148: 178, 163: 127, 168: 1, 178: 47, 233: 35,
-    241: 90, 242: 104, 246: 184, 253: 83, 310: 28, 311: 95,
+    136: 1, 147: 154, 148: 178, 158: 134, 163: 127, 168: 1, 178: 47, 233: 35,
+    241: 90, 242: 104, 246: 184, 253: 83, 310: 28, 311: 95, 335: 71,
 }
 
 _MSG_NAMES = {
@@ -67,9 +67,10 @@ _MSG_NAMES = {
     105: 'HIGHRES_IMU', 116: 'SCALED_IMU2', 117: 'LOG_REQUEST_LIST',
     118: 'LOG_ENTRY', 119: 'LOG_REQUEST_DATA', 120: 'LOG_DATA',
     125: 'POWER_STATUS', 126: 'SERIAL_CONTROL', 136: 'TERRAIN_REPORT',
-    147: 'BATTERY_STATUS', 148: 'AUTOPILOT_VERSION', 163: 'AHRS',
-    168: 'WIND', 178: 'AHRS2', 241: 'VIBRATION', 242: 'HOME_POSITION',
+    147: 'BATTERY_STATUS', 148: 'AUTOPILOT_VERSION', 158: 'MOUNT_STATUS',
+    163: 'AHRS', 168: 'WIND', 178: 'AHRS2', 241: 'VIBRATION', 242: 'HOME_POSITION',
     253: 'STATUSTEXT', 310: 'UAVCAN_NODE_STATUS', 311: 'UAVCAN_NODE_INFO',
+    335: 'EKF_STATUS_REPORT',
 }
 
 
@@ -279,6 +280,9 @@ class DroneLink:
             'alt_rel': round(a.alt_rel, 1),
             'alt_msl': round(a.alt_msl, 1),
             'gs': round(a.gs, 1),
+            'airspeed': round(a.airspeed, 1),
+            'throttle': a.throttle,
+            'climb': round(a.climb, 1),
             'vz': round(-a.vz, 1),
             'hdg': round(a.hdg, 0),
             'dist_home': round(a.dist_home, 0),
@@ -316,6 +320,8 @@ class DroneLink:
             'wind_dir': round(d.wind_dir, 1),
             'wind_speed': round(d.wind_speed, 1),
             'terrain_alt': round(d.terrain_alt, 1),
+            'gimbal_pitch': round(d.gimbal_pitch, 1),
+            'gimbal_yaw': round(d.gimbal_yaw, 1),
             **self.param_mgr.get_status(),
             'vehicles': [veh for veh in self._vehicles.values()
                          if veh.get('lat', 0) != 0 and veh['sysid'] != v.sysid

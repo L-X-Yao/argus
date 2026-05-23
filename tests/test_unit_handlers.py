@@ -30,12 +30,14 @@ from backend.mavlink_handlers import (
     handle_mission_item_int,
     handle_mission_item_reached,
     handle_mission_request,
+    handle_mount_status,
     handle_rc_channels,
     handle_serial_control,
     handle_servo_output,
     handle_statustext,
     handle_sys_status,
     handle_terrain_report,
+    handle_vfr_hud,
     handle_vibration,
     handle_wind,
 )
@@ -392,6 +394,61 @@ class TestEkfStatus:
         assert abs(link.diagnostic.ekf_pos_v_var - 0.3) < 0.001
         assert abs(link.diagnostic.ekf_compass_var - 0.4) < 0.001
         assert link.diagnostic.ekf_flags == 0x01FF
+
+
+# ── VFR_HUD ──────────────────────────────────────────────────────────────────
+
+
+class TestVfrHud:
+    def test_parses_vfr_hud(self):
+        link = make_link()
+        p = struct.pack('<ffhHff', 15.5, 12.3, 180, 45, 100.0, 2.5)
+        handle_vfr_hud(p, len(p), link)
+        assert abs(link.attitude.airspeed - 15.5) < 0.01
+        assert link.attitude.throttle == 45
+        assert abs(link.attitude.climb - 2.5) < 0.01
+
+    def test_short_payload_ignored(self):
+        link = make_link()
+        handle_vfr_hud(b'\x00' * 19, 19, link)
+        assert link.attitude.airspeed == 0.0
+
+
+# ── Mount Status ─────────────────────────────────────────────────────────────
+
+
+class TestMountStatus:
+    def test_parses_gimbal_angles(self):
+        link = make_link()
+        p = struct.pack('<iii', -4500, 0, 9000)
+        handle_mount_status(p, len(p), link)
+        assert abs(link.diagnostic.gimbal_pitch - (-45.0)) < 0.01
+        assert abs(link.diagnostic.gimbal_yaw - 90.0) < 0.01
+
+    def test_short_payload_ignored(self):
+        link = make_link()
+        handle_mount_status(b'\x00' * 11, 11, link)
+        assert link.diagnostic.gimbal_pitch == 0.0
+
+
+# ── EKF dispatch registration ────────────────────────────────────────────────
+
+
+class TestEkfDispatchRegistration:
+    def test_ekf_registered_at_335_not_74(self):
+        from backend.mavlink_handlers import mavlink_dispatch
+        assert 335 in mavlink_dispatch._handlers
+        assert mavlink_dispatch._handlers[335] == handle_ekf_status
+
+    def test_vfr_hud_registered_at_74(self):
+        from backend.mavlink_handlers import mavlink_dispatch
+        assert 74 in mavlink_dispatch._handlers
+        assert mavlink_dispatch._handlers[74] == handle_vfr_hud
+
+    def test_mount_status_registered_at_158(self):
+        from backend.mavlink_handlers import mavlink_dispatch
+        assert 158 in mavlink_dispatch._handlers
+        assert mavlink_dispatch._handlers[158] == handle_mount_status
 
 
 # ── Terrain Report ───────────────────────────────────────────────────────────

@@ -49,14 +49,16 @@ class TestThreadSafety:
         expected = {
             'type', 'connected', 'frames', 'mode', 'mode_id', 'armed',
             'roll', 'pitch', 'yaw', 'lat', 'lon', 'alt_rel', 'alt_msl',
-            'gs', 'vz', 'hdg', 'dist_home', 'flight_time', 'voltage',
+            'gs', 'airspeed', 'throttle', 'climb', 'vz', 'hdg',
+            'dist_home', 'flight_time', 'voltage',
             'current', 'remaining', 'gps_fix', 'gps_fix_raw', 'gps_sats',
             'wp', 'vtype', 'vtype_raw', 'mode_btns', 'link_age', 'bat_time',
             'home_lat', 'home_lon', 'parse_errors', 'flight_summary',
             'log_active', 'fw_version', 'fw_git', 'board_id', 'rc',
             'rc_rssi', 'vibe', 'vibe_clip', 'servo', 'ekf_vel', 'ekf_pos_h',
             'ekf_pos_v', 'ekf_compass', 'ekf_flags', 'wind_dir', 'wind_speed',
-            'terrain_alt', 'vehicles', 'prearm', 'adsb', 'cells',
+            'terrain_alt', 'gimbal_pitch', 'gimbal_yaw',
+            'vehicles', 'prearm', 'adsb', 'cells',
             'param_count', 'param_total', 'param_fetching',
         }
         assert state.keys() == expected

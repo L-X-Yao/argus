@@ -407,6 +407,67 @@ class TestMissionUpload:
         assert any('任务' in e['text'] for e in link.events)
 
 
+    def test_advcmd_servo_uploaded(self):
+        link = make_link()
+        wps = [{'lat': 34.258, 'lon': 108.942, 'alt': 30,
+                'cmd_servo': {'num': 9, 'pwm': 1100}}]
+        execute('mission_upload', None, link, data={'waypoints': wps, 'takeoff_alt': 30})
+        items = link.mission._mission_items
+        cmds = [it['cmd'] for it in items]
+        assert 183 in cmds
+        servo_item = [it for it in items if it['cmd'] == 183][0]
+        assert servo_item['p1'] == 9
+        assert servo_item['p2'] == 1100.0
+
+    def test_advcmd_cam_trig_uploaded(self):
+        link = make_link()
+        wps = [{'lat': 34.258, 'lon': 108.942, 'alt': 30,
+                'cmd_cam_trig': {'dist': 25}}]
+        execute('mission_upload', None, link, data={'waypoints': wps, 'takeoff_alt': 30})
+        cmds = [it['cmd'] for it in link.mission._mission_items]
+        assert 206 in cmds
+
+    def test_advcmd_yaw_uploaded_with_direction(self):
+        link = make_link()
+        wps = [{'lat': 34.258, 'lon': 108.942, 'alt': 30,
+                'cmd_yaw': {'deg': 90, 'dir': -1}}]
+        execute('mission_upload', None, link, data={'waypoints': wps, 'takeoff_alt': 30})
+        items = link.mission._mission_items
+        yaw_item = [it for it in items if it['cmd'] == 115][0]
+        assert yaw_item['p1'] == 90.0
+        assert yaw_item['p3'] == -1.0
+
+    def test_advcmd_vtol_uploaded(self):
+        link = make_link()
+        wps = [{'lat': 34.258, 'lon': 108.942, 'alt': 30,
+                'cmd_vtol': {'mode': 3}}]
+        execute('mission_upload', None, link, data={'waypoints': wps, 'takeoff_alt': 30})
+        cmds = [it['cmd'] for it in link.mission._mission_items]
+        assert 3000 in cmds
+
+    def test_advcmd_roi_uses_coordinates(self):
+        link = make_link()
+        wps = [{'lat': 34.258, 'lon': 108.942, 'alt': 30,
+                'cmd_roi': {'lat': 34.26, 'lon': 108.95, 'alt': 50}}]
+        execute('mission_upload', None, link, data={'waypoints': wps, 'takeoff_alt': 30})
+        items = link.mission._mission_items
+        roi_item = [it for it in items if it['cmd'] == 201][0]
+        assert abs(roi_item['lat'] - 34.26) < 0.001
+        assert abs(roi_item['lon'] - 108.95) < 0.001
+        assert roi_item['alt'] == 50.0
+
+    def test_advcmd_seq_to_wp_mapping(self):
+        link = make_link()
+        wps = [
+            {'lat': 34.258, 'lon': 108.942, 'alt': 30, 'cmd_servo': {'num': 1, 'pwm': 1500}},
+            {'lat': 34.259, 'lon': 108.943, 'alt': 30},
+        ]
+        execute('mission_upload', None, link, data={'waypoints': wps, 'takeoff_alt': 30})
+        s2w = link.mission._seq_to_wp
+        assert 0 in s2w.values()
+        assert 1 in s2w.values()
+
+
 class TestDroneLinkLog:
     def test_start_stop_log(self):
         link = make_link()

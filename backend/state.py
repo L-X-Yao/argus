@@ -16,6 +16,9 @@ class AttitudeState:
     vy: float = 0.0
     vz: float = 0.0
     gs: float = 0.0
+    airspeed: float = 0.0
+    throttle: int = 0
+    climb: float = 0.0
     hdg: float = 0.0
     home_lat: float = 0.0
     home_lon: float = 0.0
@@ -89,6 +92,8 @@ class DiagnosticState:
     wind_dir: float = 0.0
     wind_speed: float = 0.0
     terrain_alt: float = -1.0
+    gimbal_pitch: float = 0.0
+    gimbal_yaw: float = 0.0
 
 
 @dataclass

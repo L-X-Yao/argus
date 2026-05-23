@@ -64,7 +64,7 @@
 | 35 | RC 通道 (16路) | ✅ | 真机 RC_CHANNELS 处理 |
 | 36 | 舵机输出 (16路) | ✅ | 真机 SERVO_OUTPUT_RAW 处理 |
 | 37 | 振动 (X/Y/Z + clip) | ✅ | 真机 VIBRATION 处理 |
-| 38 | EKF 状态 (方差+标志) | ❌ | **BUG**: handle_ekf_status 注册在 msg ID 74(VFR_HUD) 而非 193(EKF_STATUS_REPORT), 数据永远不更新 |
+| 38 | EKF 状态 (方差+标志) | ✅ᵗ | 已修复: handle_ekf_status 注册在 msg ID 335(EKF_STATUS_REPORT), 单元测试验证 |
 | 39 | 地形高度 | ✅ | 真机 TERRAIN_REPORT 处理 |
 | 40 | 风速/风向 | ✅ᵗ | handler 已实现, 真机无风传感器 |
 | 41 | RSSI 信号强度 | ✅ | 真机 RC_CHANNELS 中的 rssi 字段 |
@@ -79,11 +79,11 @@
 | 50 | 当前航点序号 (wp_seq) | ✅ | 真机 MISSION_CURRENT msg42, 任务进度条显示当前航点 |
 | 51 | MAVLink 解析错误计数 | ✅ᵗ | parse_errors累计统计, 链路质量诊断 |
 | 52 | CSV日志活跃指示 | ✅ᵗ | log_active状态字段, 飞行中CSV日志记录状态 |
-| 53 | 云台角度回传 | ❌ | 前端类型定义存在 gimbal_pitch/gimbal_yaw 字段, 但后端无 MOUNT_STATUS/GIMBAL_DEVICE_ATTITUDE_STATUS 接收handler, 字段永远为0 |
+| 53 | 云台角度回传 | ✅ᵗ | 已修复: handle_mount_status(msg 158)解析pitch/yaw centideg, 推送gimbal_pitch/gimbal_yaw |
 | 54 | 固件Git哈希+板卡ID | ✅ | 真机 AUTOPILOT_VERSION: fw_git(8字符哈希) + board_id(硬件ID) |
-| 55 | 空速 (airspeed) | ❌ | 后端无 VFR_HUD handler (msg74 被错误注册为 EKF), WebSerial 直连路径可解码但后端代理路径不推送 |
-| 56 | 油门百分比 (throttle) | ❌ | 同 #55, 后端 state 无 throttle 字段, 不推送到 WS 客户端 |
-| 57 | 爬升率 (climb) | ❌ | 同 #55, 后端 state 无 climb 字段, 不推送到 WS 客户端 |
+| 55 | 空速 (airspeed) | ✅ᵗ | 已修复: handle_vfr_hud(msg 74)解码airspeed, 后端state+WS推送 |
+| 56 | 油门百分比 (throttle) | ✅ᵗ | 已修复: handle_vfr_hud(msg 74)解码throttle 0-100%, 后端state+WS推送 |
+| 57 | 爬升率 (climb) | ✅ᵗ | 已修复: handle_vfr_hud(msg 74)解码climb m/s, 后端state+WS推送 |
 | 58 | RC通道18路 | ✅ᵗ | WebSerial解码18路(非16路), 修正#20 |
 
 ---
@@ -167,12 +167,12 @@
 | 110 | 盘旋定时 (loiter_time) | ✅ᵗ | 航点类型+loiter_param 支持 |
 | 111 | 盘旋定圈 (loiter_turns) | ✅ᵗ | 航点类型+loiter_param 支持 |
 | 112 | 延时航点 (delay) | ✅ᵗ | AdvCmdPanel delay 秒数设置 |
-| 113 | 舵机动作 (servo) | ⚠️ | AdvCmdPanel 前端设置 cmd_servo, 但后端 _upload_mission() 不处理此字段, 不会上传到飞控 |
-| 114 | 相机触发 (cam_trigger) | ⚠️ | AdvCmdPanel 前端设置 cmd_cam_trig, 但后端 _upload_mission() 不处理此字段 |
-| 115 | 偏航朝向 (yaw) | ⚠️ | AdvCmdPanel 前端设置 cmd_yaw, 但后端 _upload_mission() 不处理此字段 |
-| 116 | VTOL 过渡 (vtol_transition) | ⚠️ | AdvCmdPanel 前端设置 cmd_vtol, 但后端 _upload_mission() 不处理此字段 |
+| 113 | 舵机动作 (servo) | ✅ᵗ | 已修复: _upload_mission()处理cmd_servo→MAV_CMD 183(DO_SET_SERVO), 单元测试验证 |
+| 114 | 相机触发 (cam_trigger) | ✅ᵗ | 已修复: _upload_mission()处理cmd_cam_trig→MAV_CMD 206(DO_SET_CAM_TRIGG_DIST) |
+| 115 | 偏航朝向 (yaw) | ✅ᵗ | 已修复: _upload_mission()处理cmd_yaw→MAV_CMD 115(CONDITION_YAW), p3=direction |
+| 116 | VTOL 过渡 (vtol_transition) | ✅ᵗ | 已修复: _upload_mission()处理cmd_vtol→MAV_CMD 3000(DO_VTOL_TRANSITION) |
 | 117 | 投掷标记 (drop) | ✅ᵗ | 航点 drop 布尔标记 |
-| 118 | 高级命令附加模式 | ⚠️ | 6种MAV_CMD前端UI存在, 但仅delay(112)被后端上传处理, 其余5种(servo/roi/cam/yaw/vtol)后端忽略 |
+| 118 | 高级命令附加模式 | ✅ᵗ | 已修复: 6种MAV_CMD(183/201/206/112/115/3000)全部后端上传, pushUndo()支持 |
 
 ---
 
@@ -723,11 +723,11 @@
 | 类别 | 总数 | ✅ 真机 | ✅ᵗ 测试 | ⚠️ 部分 | 🔒 不可测 | ❌ 缺失 |
 |------|------|---------|----------|---------|----------|---------|
 | 连接与通信 | 26 | 3 | 20 | 2 | 0 | 1 |
-| 遥测数据 | 32 | 20 | 7 | 0 | 0 | 5 |
+| 遥测数据 | 32 | 20 | 12 | 0 | 0 | 0 |
 | 状态推送与WS协议 | 7 | 3 | 4 | 0 | 0 | 0 |
 | 飞行状态计算 | 5 | 3 | 2 | 0 | 0 | 0 |
 | 参数管理 | 18 | 6 | 12 | 0 | 0 | 0 |
-| 任务与航点 | 30 | 5 | 19 | 6 | 0 | 0 |
+| 任务与航点 | 30 | 5 | 25 | 0 | 0 | 0 |
 | 飞行控制 | 18 | 1 | 6 | 5 | 6 | 0 |
 | 校准 | 9 | 2 | 3 | 4 | 0 | 0 |
 | 设置与配置面板 | 21 | 0 | 21 | 0 | 0 | 0 |
@@ -751,7 +751,7 @@
 | 桌面应用与部署 | 10 | 3 | 7 | 0 | 0 | 0 |
 | 手柄 / 回放 / 预检 | 12 | 0 | 12 | 0 | 0 | 0 |
 | 图表与可视化 | 6 | 0 | 6 | 0 | 0 | 0 |
-| **合计** | **499** | **77** | **383** | **24** | **8** | **7** |
+| **合计** | **499** | **77** | **394** | **18** | **8** | **2** |
 
 ---
 
@@ -761,10 +761,10 @@
 |---|------|------|------|
 | 1 | NtripPanel 缺少后端 handler | ❌ | 前端发送 ntrip_start/ntrip_stop, 后端无对应处理函数 |
 | 2 | WebSerial 未真机验证 | ⚠️ | 需 Chrome/Edge + USB 直连浏览器, Linux 环境未测试 |
-| 3 | EKF handler 注册错误消息 ID | ❌ | handle_ekf_status 注册在 msg 74(VFR_HUD) 而非 193(EKF_STATUS_REPORT), EKF数据永远不更新 |
-| 4 | VFR_HUD 数据后端不解析 | ❌ | msg 74 被错误占用, airspeed/throttle/climb 字段不存在于后端 state |
-| 5 | 云台遥测无接收 handler | ❌ | gimbal_pitch/gimbal_yaw 字段定义存在但后端无 MOUNT_STATUS 等接收处理 |
-| 6 | 高级命令后端未实现上传 | ⚠️ | AdvCmdPanel servo/cam_trig/yaw/vtol 前端UI存在, 后端 _upload_mission() 不处理这些字段 |
+| 3 | ~~EKF handler 注册错误消息 ID~~ | ✅ | 已修复: 注册到 msg 335, 新增 VFR_HUD handler (msg 74) |
+| 4 | ~~VFR_HUD 数据后端不解析~~ | ✅ | 已修复: 新增 handle_vfr_hud, state 增加 airspeed/throttle/climb |
+| 5 | ~~云台遥测无接收 handler~~ | ✅ | 已修复: 新增 handle_mount_status (msg 158) |
+| 6 | ~~高级命令后端未实现上传~~ | ✅ | 已修复: _upload_mission() 处理 5 种 cmd_* 字段 |
 
 ---
 
@@ -772,7 +772,7 @@
 
 | 测试类型 | 数量 | 工具 |
 |----------|------|------|
-| 后端单元测试 | 929 | pytest |
+| 后端单元测试 | 945 | pytest |
 | 前端单元测试 | 400+ | vitest |
 | E2E 测试 | 19 specs | Playwright |
 | 真机 WS 测试 | 25 项 | Python websockets |

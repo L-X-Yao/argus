@@ -219,6 +219,16 @@ def handle_vibration(p: bytes, pl: int, link: DroneLink) -> None:
     d.vibe_clip2 = struct.unpack_from('<I', p, 28)[0]
 
 
+def handle_vfr_hud(p: bytes, pl: int, link: DroneLink) -> None:
+    if pl < 20:
+        return
+    airspeed, gs, heading, throttle, alt, climb = struct.unpack_from('<ffhHff', p)
+    a = link.attitude
+    a.airspeed = airspeed
+    a.throttle = throttle
+    a.climb = climb
+
+
 def handle_ekf_status(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 22:
         return
@@ -230,6 +240,15 @@ def handle_ekf_status(p: bytes, pl: int, link: DroneLink) -> None:
     d.ekf_compass_var = comp
     d.ekf_terrain_var = terr
     d.ekf_flags = flags
+
+
+def handle_mount_status(p: bytes, pl: int, link: DroneLink) -> None:
+    if pl < 12:
+        return
+    pitch_cdeg, _roll_cdeg, yaw_cdeg = struct.unpack_from('<iii', p)
+    d = link.diagnostic
+    d.gimbal_pitch = pitch_cdeg / 100.0
+    d.gimbal_yaw = yaw_cdeg / 100.0
 
 
 def handle_terrain_report(p: bytes, pl: int, link: DroneLink) -> None:
@@ -470,7 +489,9 @@ def init_handlers() -> None:
     mavlink_dispatch.register(36, handle_servo_output)
     mavlink_dispatch.register(65, handle_rc_channels)
     mavlink_dispatch.register(241, handle_vibration)
-    mavlink_dispatch.register(74, handle_ekf_status)
+    mavlink_dispatch.register(74, handle_vfr_hud)
+    mavlink_dispatch.register(335, handle_ekf_status)
+    mavlink_dispatch.register(158, handle_mount_status)
     mavlink_dispatch.register(136, handle_terrain_report)
     mavlink_dispatch.register(168, handle_wind)
     mavlink_dispatch.register(22, handle_param_value)

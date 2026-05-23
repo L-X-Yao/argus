@@ -47,7 +47,8 @@ def send_mission_item_int(link: DroneLink, wp: dict) -> None:
     lat7 = int(float(wp.get('lat', 0)) * 1e7)
     lon7 = int(float(wp.get('lon', 0)) * 1e7)
     p = struct.pack('<ffffiifHHBBBBBB',
-                    float(wp.get('p1', 0)), float(wp.get('p2', 0)), 0.0, 0.0,
+                    float(wp.get('p1', 0)), float(wp.get('p2', 0)),
+                    float(wp.get('p3', 0)), float(wp.get('p4', 0)),
                     lat7, lon7, float(wp.get('alt', 0)),
                     wp['seq'], wp['cmd'],
                     link.vehicle.sysid, 1, frame,
