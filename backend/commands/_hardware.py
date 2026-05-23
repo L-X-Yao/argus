@@ -141,18 +141,6 @@ def cmd_gimbal_angle(link: DroneLink, param, data: dict):
     send_cmd(link, 205, p1=pitch, p3=yaw, p7=2)
 
 
-def cmd_gimbal_rate(link: DroneLink, param, data: dict):
-    # Previous implementation built a malformed GIMBAL_MANAGER_SET_ATTITUDE
-    # (msg 282) payload — 27 bytes with `<ffffffBBB`, but the message requires
-    # 35 bytes with `<I ffff fff BBB` (flags as u32, then q[4], then
-    # angular_velocity x/y/z). pitch_rate was packed into q[2] and yaw_rate
-    # into angular_velocity_x. To avoid sending garbage to the FC, this is now
-    # a no-op. Wire it up properly via MAV_CMD_DO_GIMBAL_MANAGER_PITCHYAW
-    # (cmd 1000) or GIMBAL_MANAGER_SET_PITCHYAW (msg 287) when needed.
-    _ = link, param, data
-    return {'ok': False, 'error': 'cmd_gimbal_rate disabled (broken payload — see _hardware.py)'}
-
-
 def cmd_camera_trigger(link: DroneLink, param, data: dict):
     # MAV_CMD_DO_DIGICAM_CONTROL (203): param5 = shoot command (1 = trigger).
     # Sending all zeros is a no-op — AP_Camera ignores it. See AP_Camera.cpp's

@@ -77,6 +77,11 @@ export interface DroneEvent {
   time: string;
   text: string;
   event_type: string;
+  // Monotonic counter assigned by backend.add_event. Survives the events ring
+  // buffer trim (see drone_link.py:_events_emitted_total) so frontend code
+  // that watches new events can use a high-water-mark cursor instead of array
+  // index, which would shift on trim.
+  seq?: number;
 }
 
 export interface ConnectResult {

@@ -22,7 +22,7 @@
 
 | # | 功能 | 状态 | 验证方式 |
 |---|------|------|----------|
-| 1 | NtripPanel 缺少后端 handler | ❌ | 前端发送 ntrip_start/ntrip_stop, 后端无对应处理函数 |
+| 1 | NTRIP 客户端 (rtk corrections) | ✅ᵗ | backend/commands/_ntrip.py: HTTP/1.0 GET + Basic auth, 解析 ICY 200 OK 或 HTTP 200, 流式 RTCM → GPS_RTCM_DATA(233)。单元测试覆盖 validation + lifecycle |
 | 2 | WebSerial 未真机验证 | ⚠️ | 需 Chrome/Edge + USB 直连浏览器, Linux 环境未测试 |
 | 3 | UDP 连接 | ✅ᵗ | 模拟器 udp:14550 验证 |
 | 4 | MAVLink v2 标准协议 | ✅ | 真机 auto 检测为 standard |
@@ -275,7 +275,7 @@
 | 181 | 电机测试 (motor_test) | ✅ | 真机"电机测试: #1 @ 5%" |
 | 182 | 电机停止 (motor_test_stop) | ✅ᵗ | 代码逻辑验证 |
 | 183 | 云台角度控制 (gimbal_angle) | ⚠️ | 命令可发送, 需云台硬件 |
-| 184 | 云台速率控制 (gimbal_rate) | ❌ | 2026-05 audit 发现：原 payload 是 27 字节但 msg 282(GIMBAL_MANAGER_SET_ATTITUDE) 需要 35 字节, pitch_rate 错放进 q[2]。前端无调用方, 已禁用返回错误。需要重新实现走 MAV_CMD_DO_GIMBAL_MANAGER_PITCHYAW(1000) 或 msg 287。commit 2f93a6d |
+| 184 | 云台速率控制 (gimbal_rate) | ❌ | 2026-05 audit 发现原 payload 损坏 (27 字节 vs msg 282 需 35 字节)。前端无调用方, 后端已移除骨架。重新实现需走 MAV_CMD_DO_GIMBAL_MANAGER_PITCHYAW(1000) 或 msg 287, 此时新增 `cmd_gimbal_pitchyaw`，不要复用旧名 |
 | 185 | 相机快门 (camera_trigger) | ⚠️ | 命令可发送, 需相机 |
 | 186 | 录像开始 (camera_video_start) | ⚠️ | 命令可发送 |
 | 187 | 录像停止 (camera_video_stop) | ⚠️ | 命令可发送 |
@@ -367,7 +367,7 @@
 | 252 | FencePanel (围栏面板) | ✅ | 真机围栏上传验证 |
 | 253 | CalibrationPanel (校准) | ✅ | 真机陀螺仪校准 |
 | 254 | FirmwarePanel (固件) | ✅ᵗ | 上传/列表端点测试 |
-| 255 | NtripPanel (NTRIP) | ❌ | 前端有 UI, 后端缺少 ntrip_start/stop handler |
+| 255 | NtripPanel (NTRIP) | ✅ᵗ | 前后端打通: backend/commands/_ntrip.py 实现 ntrip_start/stop, mocked socket 单元测试覆盖 ICY/HTTP/401/stop_event 路径 |
 | 256 | PositionSourcePanel (定位源) | ✅ᵗ | 面板注册存在 |
 | 257 | ParamPanel (参数面板) | ✅ | Playwright 1317 参数加载, 0 long task |
 | 258 | PidPanel (PID调参) | ✅ᵗ | 面板注册存在 |
@@ -761,14 +761,14 @@
 
 | # | 问题 | 状态 | 说明 |
 |---|------|------|------|
-| 1 | NtripPanel 缺少后端 handler | ❌ | 前端发送 ntrip_start/ntrip_stop, 后端无对应处理函数。Contract 测试已 allowlist (`tests/test_contract_commands.py::KNOWN_FRONTEND_ORPHANS`) |
+| 1 | ~~NtripPanel 缺少后端 handler~~ | ✅ | 已实现 (#1 总表)。`KNOWN_FRONTEND_ORPHANS` 已清空 |
 | 2 | WebSerial 未真机验证 | ⚠️ | 需 Chrome/Edge + USB 直连浏览器, Linux 环境未测试 |
 | 3 | ~~EKF handler 注册错误消息 ID~~ | ✅ | 已修复: 注册到 msg 335, 新增 VFR_HUD handler (msg 74) |
 | 4 | ~~VFR_HUD 数据后端不解析~~ | ✅ | 已修复: 新增 handle_vfr_hud, state 增加 airspeed/throttle/climb |
 | 5 | ~~云台遥测无接收 handler~~ | ✅ | 已修复: 新增 handle_mount_status (msg 158) |
 | 6 | ~~高级命令后端未实现上传~~ | ✅ | 已修复: _upload_mission() 处理 5 种 cmd_* 字段 |
 | 7 | PX4 支持基本未实现 | ❌ | 前端 `src/lib/fc/` PX4 adapter scaffolded 但无 production import; 后端不读 HEARTBEAT.autopilot byte。详见 `CLAUDE.md ## PX4 Status` |
-| 8 | gimbal_rate 命令无法工作 | ❌ | 见 #184 — 已禁用, 重新实现需 MAV_CMD_DO_GIMBAL_MANAGER_PITCHYAW(1000) 或 msg 287 |
+| 8 | gimbal_rate 命令无法工作 | ❌ | 见 #184 — 骨架已删除, `KNOWN_BACKEND_ORPHANS` 已更新; 重新实现需新增 `cmd_gimbal_pitchyaw` 走 MAV_CMD 1000 或 msg 287 |
 | 9 | tests/test_integration.py 32 个失败 | ⚠️ | 2026-05 audit 分类: A=真 bug已修, B=sim协议bug已修, C=过期测试已修, D=预xfail。剩余看 docs/audits/audit_remaining.md |
 | 10 | ~~MAVLink 2 zero-trim 不容忍~~ | ✅ | 2026-05 修复: 所有 handler 新增 `_pad()` helper, 容忍 trailing-zero trimmed payload (FC 发的 trailing-zero 字段不再读到 0)。commit 102a05e |
 | 11 | ~~observer 客户端可发危险指令~~ | ✅ | 2026-05 修复: ws_manager.command 分支检查 pilot 角色, 否则拒绝 |

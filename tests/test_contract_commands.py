@@ -47,16 +47,11 @@ def _frontend_sendcommand_literals() -> set[str]:
 # Known orphan sets — each entry is a bug we know about. The assertions below
 # require the orphan sets to match these EXACTLY, so new orphans fail loud and
 # fixed ones force us to remove the allowlist entry (no silent rot).
-KNOWN_FRONTEND_ORPHANS: set[str] = {
-    # NtripPanel.svelte calls these but no backend handler exists — NTRIP feature
-    # is wired in the UI but the backend never received its implementation.
-    'ntrip_start',
-    'ntrip_stop',
-}
+KNOWN_FRONTEND_ORPHANS: set[str] = set()
 KNOWN_BACKEND_ORPHANS: set[str] = {
-    # Dispatch entries with no frontend caller. Either dead code or features
-    # plumbed only on the backend. Each should be deleted or wired up.
-    'gimbal_rate',
+    # Dispatch entries with no frontend caller. Kept because either NTRIP-side
+    # infrastructure (inject_rtcm), planned UI work (param_load, rally_upload),
+    # or sim/headless override (set_vtype) depends on them being available.
     'inject_rtcm',
     'param_load',
     'rally_upload',

@@ -85,6 +85,9 @@ _T = {
     'err_no_ffmpeg':   ('服务器未安装 ffmpeg',      'ffmpeg not installed on server'),
     'param_timeout':   ('参数读取超时',             'Parameter fetch timeout'),
     'mission_dl_timeout': ('任务下载超时',          'Mission download timeout'),
+    'ntrip_connected':   ('NTRIP 已连接: %s',         'NTRIP connected: %s'),
+    'ntrip_disconnected':('NTRIP 已断开',              'NTRIP disconnected'),
+    'ntrip_error':       ('NTRIP 错误: %s',            'NTRIP error: %s'),
 }
 
 

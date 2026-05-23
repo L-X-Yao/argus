@@ -20,7 +20,6 @@ from ._hardware import (
     cmd_clear_summary,
     cmd_do_set_roi,
     cmd_gimbal_angle,
-    cmd_gimbal_rate,
     cmd_guided_goto,
     cmd_inject_rtcm,
     cmd_inspector_toggle,
@@ -46,6 +45,7 @@ from ._mission import (
     cmd_mission_upload,
     cmd_rally_upload,
 )
+from ._ntrip import cmd_ntrip_start, cmd_ntrip_stop
 from ._setup import (
     cmd_cal_accel,
     cmd_cal_accel_next,
@@ -107,11 +107,12 @@ _DISPATCH = {
     'inspector_toggle': cmd_inspector_toggle,
     'serial_control': cmd_serial_control,
     'inject_rtcm': cmd_inject_rtcm,
+    'ntrip_start': cmd_ntrip_start,
+    'ntrip_stop': cmd_ntrip_stop,
     'rc_override': cmd_rc_override,
     'motor_test': cmd_motor_test,
     'motor_test_stop': cmd_motor_test_stop,
     'gimbal_angle': cmd_gimbal_angle,
-    'gimbal_rate': cmd_gimbal_rate,
     'camera_trigger': cmd_camera_trigger,
     'camera_video_start': cmd_camera_video_start,
     'camera_video_stop': cmd_camera_video_stop,

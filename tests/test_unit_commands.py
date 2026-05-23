@@ -285,16 +285,6 @@ class TestGimbal:
         execute('gimbal_angle', None, link, data={'pitch': -30, 'yaw': 90})
         assert link._ser.write.called
 
-    def test_gimbal_rate_disabled(self):
-        # gimbal_rate is currently a no-op: the previous implementation built
-        # a malformed GIMBAL_MANAGER_SET_ATTITUDE payload. It returns an error
-        # and does NOT touch the wire.
-        link = make_link()
-        result = execute('gimbal_rate', None, link, data={'pitch_rate': 10, 'yaw_rate': 5})
-        assert result is not None
-        assert result.get('ok') is False
-        assert not link._ser.write.called
-
 
 class TestCamera:
     def test_camera_trigger(self):
@@ -651,3 +641,158 @@ class TestExecuteDispatch:
             assert 'test' in result['error']
         finally:
             del cmd_mod._DISPATCH['_test_err']
+
+
+class TestNtripValidation:
+    def test_missing_host_rejected(self):
+        link = make_link()
+        r = execute('ntrip_start', None, link, data={'port': 2101, 'mountpoint': 'M'})
+        assert r and r['ok'] is False and 'host' in r['error'].lower()
+
+    def test_bad_port_rejected(self):
+        link = make_link()
+        r = execute('ntrip_start', None, link, data={
+            'host': 'rtk.example.com', 'port': 99999, 'mountpoint': 'M',
+        })
+        assert r and r['ok'] is False and 'port' in r['error'].lower()
+
+    def test_port_not_int_rejected(self):
+        link = make_link()
+        r = execute('ntrip_start', None, link, data={
+            'host': 'rtk.example.com', 'port': 'not-a-number', 'mountpoint': 'M',
+        })
+        assert r and r['ok'] is False
+
+    def test_missing_mountpoint_rejected(self):
+        link = make_link()
+        r = execute('ntrip_start', None, link, data={
+            'host': 'rtk.example.com', 'port': 2101,
+        })
+        assert r and r['ok'] is False and 'mountpoint' in r['error'].lower()
+
+    def test_crlf_injection_rejected(self):
+        # Request smuggling defense: any field interpolated into the HTTP
+        # request must reject CR/LF.
+        link = make_link()
+        r = execute('ntrip_start', None, link, data={
+            'host': 'rtk.example.com', 'port': 2101,
+            'mountpoint': 'A\r\nX-Injected: yes',
+        })
+        assert r and r['ok'] is False
+
+    def test_stop_when_idle_is_noop(self):
+        link = make_link()
+        assert link.ntrip_thread is None
+        execute('ntrip_stop', None, link)  # must not raise
+        assert link.ntrip_thread is None
+
+
+class TestNtripLoop:
+    """End-to-end mock of the NTRIP client thread without a real socket."""
+
+    def _make_fake_socket(self, header: bytes, body_chunks: list[bytes]):
+        """Return a mock socket that yields header then body_chunks then EOF."""
+        from unittest.mock import MagicMock
+        sock = MagicMock()
+        chunks = iter([header, *body_chunks])
+
+        def recv(_n):
+            try:
+                return next(chunks)
+            except StopIteration:
+                return b''
+        sock.recv.side_effect = recv
+        return sock
+
+    def test_icy_response_streams_rtcm(self, monkeypatch):
+        """ICY 200 OK header → body bytes get injected as GPS_RTCM_DATA."""
+        import socket as socket_mod
+        import threading
+
+        from backend.commands import _ntrip
+
+        # Fake socket: ICY header + 200 bytes of fake RTCM (one full chunk + 20).
+        header = b'ICY 200 OK\r\nServer: NTRIP Foo\r\n\r\n'
+        body = b'\xd3' + b'\x00' * 199  # 200 bytes starting with RTCM3 preamble
+        sock = self._make_fake_socket(header, [body])
+        monkeypatch.setattr(socket_mod, 'create_connection', lambda *a, **kw: sock)
+
+        link = make_link()
+        link._ser.reset_mock()
+
+        stop_event = threading.Event()
+        t = threading.Thread(
+            target=_ntrip._ntrip_loop,
+            args=(link, 'h', 1, 'M', 'u', 'p', stop_event),
+            daemon=True,
+        )
+        t.start()
+        t.join(timeout=3)
+        assert not t.is_alive(), 'ntrip loop should exit when recv returns EOF'
+
+        # Should have sent at least one MAVLink frame containing the 0xFD prefix
+        # (standard MAVLink 2 magic) or the PL-Link wrapper byte.
+        assert link._ser.write.called
+        # Connected + disconnected event traces.
+        event_types = [e['event_type'] for e in link.events]
+        assert 'ntrip_connected' in event_types
+        assert 'ntrip_disconnected' in event_types
+
+    def test_bad_response_records_error(self, monkeypatch):
+        import socket as socket_mod
+        import threading
+
+        from backend.commands import _ntrip
+
+        header = b'HTTP/1.0 401 Unauthorized\r\n\r\n'
+        sock = self._make_fake_socket(header, [])
+        monkeypatch.setattr(socket_mod, 'create_connection', lambda *a, **kw: sock)
+
+        link = make_link()
+        stop_event = threading.Event()
+        t = threading.Thread(
+            target=_ntrip._ntrip_loop,
+            args=(link, 'h', 1, 'M', 'u', 'p', stop_event),
+            daemon=True,
+        )
+        t.start()
+        t.join(timeout=3)
+
+        event_types = [e['event_type'] for e in link.events]
+        assert 'ntrip_error' in event_types
+
+    def test_stop_event_breaks_loop(self, monkeypatch):
+        """stop_event.set() during streaming makes the loop exit on next recv."""
+        import socket as socket_mod
+        import threading
+        import time
+
+        from backend.commands import _ntrip
+
+        header = b'ICY 200 OK\r\n\r\n'
+        from unittest.mock import MagicMock
+        sock = MagicMock()
+        # First recv returns header; thereafter return small RTCM chunks
+        # indefinitely so the loop is steady-state when stop_event fires.
+        calls = {'n': 0}
+
+        def fake_recv(_n):
+            calls['n'] += 1
+            return header if calls['n'] == 1 else b'\xd3' * 50
+
+        sock.recv.side_effect = fake_recv
+
+        monkeypatch.setattr(socket_mod, 'create_connection', lambda *a, **kw: sock)
+
+        link = make_link()
+        stop_event = threading.Event()
+        t = threading.Thread(
+            target=_ntrip._ntrip_loop,
+            args=(link, 'h', 1, 'M', 'u', 'p', stop_event),
+            daemon=True,
+        )
+        t.start()
+        time.sleep(0.1)  # let it loop a few times
+        stop_event.set()
+        t.join(timeout=5)
+        assert not t.is_alive(), 'stop_event should break the recv loop'

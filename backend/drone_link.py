@@ -115,6 +115,12 @@ class DroneLink:
         # Exponential backoff counter for the in-loop silent reconnect path
         # (auditor W1). Resets to 0 on a successful reconnect.
         self._reconnect_attempts: int = 0
+        # NTRIP client thread + stop signal (set by cmd_ntrip_start, cleared by
+        # cmd_ntrip_stop or the thread itself on exit). Lives independent of
+        # the FC link thread, but disconnect() kills it because the corrections
+        # are useless without an active GPS_RTCM_DATA path to a connected FC.
+        self.ntrip_thread: threading.Thread | None = None
+        self.ntrip_stop: threading.Event | None = None
         self.param_mgr = ParamManager(self)
 
         self.attitude = AttitudeState()
@@ -250,6 +256,10 @@ class DroneLink:
     def disconnect(self) -> None:
         self._running = False
         self._reconnect_enabled = False
+        # Signal NTRIP thread to exit (if running). Don't join — the thread
+        # is a daemon with a 2s recv timeout, it will tear down on its own.
+        if self.ntrip_stop is not None:
+            self.ntrip_stop.set()
         if self._thread:
             self._thread.join(timeout=3)
         try:

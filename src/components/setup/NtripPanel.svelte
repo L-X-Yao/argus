@@ -14,8 +14,28 @@
   let password = $state('');
   let connected = $state(false);
   let connecting = $state(false);
-  let bytesInjected = $state(0);
   let rtkFixType = $derived(app.drone.gps_fix_raw);
+
+  // Ack-driven connection state: backend emits ntrip_connected /
+  // ntrip_disconnected / ntrip_error events from the client thread. We don't
+  // trust the click-side optimistic flip — if auth fails or the caster rejects
+  // us, the optimistic "connected=true" would stay forever.
+  let _lastEventSeq = $state(0);
+  $effect(() => {
+    for (let i = app.events.length - 1; i >= 0; i--) {
+      const ev = app.events[i];
+      if (ev.seq !== undefined && ev.seq <= _lastEventSeq) break;
+      if (ev.event_type === 'ntrip_connected') {
+        connected = true; connecting = false;
+      } else if (ev.event_type === 'ntrip_disconnected') {
+        connected = false; connecting = false;
+      } else if (ev.event_type === 'ntrip_error') {
+        connected = false; connecting = false;
+        addToast(ev.text, 'error');
+      }
+    }
+    _lastEventSeq = app.events.length > 0 ? (app.events[app.events.length - 1].seq ?? 0) : 0;
+  });
 
   function rtkStatusLabel(): string {
     if (rtkFixType >= 6) return 'RTK Fixed';
@@ -34,22 +54,17 @@
   async function toggleNtrip() {
     if (connected) {
       sendCommand('ntrip_stop');
-      connected = false;
       addToast(t('ntrip.stopped'), 'info');
       return;
     }
     connecting = true;
-    try {
-      sendCommand('ntrip_start', undefined, {
-        host, port, mountpoint, username, password,
-      });
-      connected = true;
-      addToast(t('ntrip.started'), 'success');
-    } catch {
-      addToast(t('ntrip.failed'), 'error');
-    } finally {
-      connecting = false;
-    }
+    sendCommand('ntrip_start', undefined, {
+      host, port, mountpoint, username, password,
+    });
+    addToast(t('ntrip.started'), 'info');
+    // connected flips true only when backend emits 'ntrip_connected' event;
+    // see the $effect above. If the caster rejects (bad auth, no mountpoint),
+    // we receive 'ntrip_error' instead and connecting clears back to false.
   }
 
   function saveConfig() {
@@ -111,12 +126,6 @@
         <Radio size={14} />
         {connected ? t('ntrip.stop') : connecting ? t('ntrip.connecting') : t('ntrip.start')}
       </Button>
-
-      {#if connected}
-        <div class="text-center text-[11px] text-muted-foreground">
-          RTCM → FC: {(bytesInjected / 1024).toFixed(1)} KB
-        </div>
-      {/if}
 
       <div class="text-[10px] text-muted-foreground/50 text-center">
         {t('ntrip.hint')}
