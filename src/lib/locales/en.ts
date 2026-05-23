@@ -487,6 +487,8 @@ const messages: Record<string, string> = {
   'conn.serialConnected': 'USB direct connected',
   'conn.serialDisconnected': 'USB disconnected',
   'conn.serialFailed': 'USB connection failed',
+  'conn.serialBusy': 'Disconnect USB direct first to use the network link',
+  'conn.wsBusy': 'Disconnect the network link first to use USB direct',
   'prearm.title': 'Prearm Checks',
   'prearm.pass': 'Pass',
   'prearm.fail': 'Fail',

@@ -19,7 +19,7 @@ import {
 } from './mavlink';
 import { openSerial, serialWrite, serialReadLoop, isWebSerialSupported } from './serial';
 import type { SerialConnection } from './serial';
-import { addToast } from './stores.svelte';
+import { addToast, app } from './stores.svelte';
 
 export type TransportMode = 'websocket' | 'serial';
 
@@ -103,6 +103,9 @@ export async function connectSerial(
       serial.running = false;
       if (wasRunning) {
         addToast('Serial connection lost', 'error', 8000);
+        // Release the transport mutex so the user can switch to WS without
+        // having to click the (now-stale) USB button first.
+        if (app.activeTransport === 'serial') app.activeTransport = 'none';
       }
     });
 

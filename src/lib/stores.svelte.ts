@@ -5,6 +5,12 @@ class AppState {
   drone: DroneState = $state({ ...defaultState });
   events: DroneEvent[] = $state([]);
   wsConnected: boolean = $state(false);
+  // Which transport owns the FC link right now. 'ws' = via backend (TCP/UDP/
+  // serial over the FastAPI proxy). 'serial' = via WebSerial directly in the
+  // browser. Mutex: only one may write drone fields at a time; the button-
+  // level gate in ConnectionForm refuses to start the inactive transport
+  // until the active one disconnects. See known issue #16 in FEATURE_CHECKLIST.
+  activeTransport: 'none' | 'ws' | 'serial' = $state('none');
   waypoints: Waypoint[] = $state([]);
   undoStack: Waypoint[][] = $state([]);
   defaultAlt: number = $state(30);
@@ -43,7 +49,17 @@ export const app = new AppState();
 
 export function updateState(s: Partial<DroneState>) {
   if (s.type !== undefined && s.type !== 'state') return;
+  // Defense in depth: if WebSerial is the active transport, drone fields are
+  // owned by the serial callbacks in ConnectionForm.svelte. A stale WS state
+  // arriving (backend slow to release, or a transport-switch race) must not
+  // overwrite them. Button-level gate prevents this normally; this catches
+  // it if the gate is bypassed.
+  if (app.activeTransport === 'serial') return;
   Object.assign(app.drone, s);
+  // FC link gone — release the lock so the user can switch transports.
+  if (app.activeTransport === 'ws' && s.connected === false) {
+    app.activeTransport = 'none';
+  }
 }
 
 const PLANE_VTYPE_RAW = new Set([1, 19, 20, 21, 22, 23, 24, 25]);

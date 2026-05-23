@@ -32,6 +32,10 @@ beforeEach(() => {
 });
 
 describe('updateState', () => {
+  beforeEach(() => {
+    app.activeTransport = 'none';
+  });
+
   it('merges partial state', () => {
     updateState({ connected: true, roll: 15.5 } as any);
     expect(app.drone.connected).toBe(true);
@@ -42,6 +46,33 @@ describe('updateState', () => {
     app.drone = { ...app.drone, voltage: 12.0 } as any;
     updateState({ roll: 5 } as any);
     expect(app.drone.voltage).toBe(12.0);
+  });
+
+  it('rejects updates when serial transport is active', () => {
+    // WebSerial owns drone fields; stale WS state must not race.
+    app.drone = { ...app.drone, roll: 1.0, voltage: 11.1 } as any;
+    app.activeTransport = 'serial';
+    updateState({ roll: 999, voltage: 99.9 } as any);
+    expect(app.drone.roll).toBe(1.0);
+    expect(app.drone.voltage).toBe(11.1);
+  });
+
+  it('allows updates when ws transport is active', () => {
+    app.activeTransport = 'ws';
+    updateState({ roll: 42 } as any);
+    expect(app.drone.roll).toBe(42);
+  });
+
+  it('releases ws lock when backend reports disconnected', () => {
+    app.activeTransport = 'ws';
+    updateState({ connected: false } as any);
+    expect(app.activeTransport).toBe('none');
+  });
+
+  it('does NOT release lock on transient state without connected field', () => {
+    app.activeTransport = 'ws';
+    updateState({ roll: 10 } as any);
+    expect(app.activeTransport).toBe('ws');
   });
 });
 

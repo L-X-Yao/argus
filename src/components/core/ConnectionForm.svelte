@@ -79,6 +79,13 @@
   function toggle() {
     if (app.drone.connected) { sendDisconnect(); }
     else {
+      // Mutex: USB-direct mode owns drone state; reject WS connect while it's
+      // active (see updateState in stores.svelte for the matching defense).
+      if (app.activeTransport === 'serial' || isSerialConnected()) {
+        addToast(t('conn.serialBusy'), 'error');
+        return;
+      }
+      app.activeTransport = 'ws';
       connecting = true;
       connectTimeout = false;
       savePortHistory();
@@ -88,6 +95,9 @@
         if (connecting && !app.drone.connected) {
           connectTimeout = true;
           connecting = false;
+          // Connect attempt failed — release the lock so the user can retry
+          // or switch transports.
+          if (!app.drone.connected) app.activeTransport = 'none';
         }
         connectTimer = null;
       }, 8000);
@@ -100,9 +110,17 @@
   async function toggleSerial() {
     if (isSerialConnected()) {
       await disconnectSerial();
+      app.activeTransport = 'none';
       addToast(t('conn.serialDisconnected'), 'info');
       return;
     }
+    // Mutex: WS-backend mode owns drone state; reject serial connect while
+    // a backend FC link is up.
+    if (app.activeTransport === 'ws' || app.drone.connected) {
+      addToast(t('conn.wsBusy'), 'error');
+      return;
+    }
+    app.activeTransport = 'serial';
     serialConnecting = true;
     try {
       const ok = await connectSerial(115200, {
@@ -158,9 +176,13 @@
           addEvent({ type: 'event', time: new Date().toLocaleTimeString(), text: msg.text, event_type: 'statustext' });
         },
       });
-      if (!ok) addToast(t('conn.serialFailed'), 'error');
+      if (!ok) {
+        addToast(t('conn.serialFailed'), 'error');
+        app.activeTransport = 'none';
+      }
     } catch {
       addToast(t('conn.serialFailed'), 'error');
+      app.activeTransport = 'none';
     } finally {
       serialConnecting = false;
     }

@@ -487,6 +487,8 @@ const messages: Record<string, string> = {
   'conn.serialConnected': 'USB 直连成功',
   'conn.serialDisconnected': 'USB 已断开',
   'conn.serialFailed': 'USB 连接失败',
+  'conn.serialBusy': '请先断开 USB 直连再使用网络连接',
+  'conn.wsBusy': '请先断开网络连接再使用 USB 直连',
   'prearm.title': '解锁前检查',
   'prearm.pass': '通过',
   'prearm.fail': '未通过',
