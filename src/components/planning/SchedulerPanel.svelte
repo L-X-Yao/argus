@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { addToast } from '../../lib/stores.svelte';
+  import { addToast, showConfirm } from '../../lib/stores.svelte';
   import { sendCommand } from '../../lib/ws';
   import { t } from '../../lib/i18n.svelte';
   import { X, Clock, Calendar, Play, Trash2 } from '@lucide/svelte';
@@ -101,7 +101,12 @@
     }
   }
 
-  function runNow(sched: Schedule) {
+  async function runNow(sched: Schedule) {
+    // mission_start is a dangerous command (starts the AUTO mission immediately
+    // on an armed vehicle). Require an explicit confirm — every other call
+    // path to mission_start in the codebase guards on confirm/showConfirm.
+    const ok = await showConfirm(t('sched.confirmRun') || 'Start mission now?', true);
+    if (!ok) return;
     sched.status = 'active';
     persist();
     sendCommand('mission_start');

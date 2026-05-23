@@ -889,6 +889,7 @@ const messages: Record<string, string> = {
   'sched.timeRequired': 'Select a start time',
   'sched.started': 'Mission started',
   'sched.runNow': 'Run Now',
+  'sched.confirmRun': 'Start mission immediately?',
   'sched.empty': 'No scheduled missions',
   'sched.hint': 'Schedule recurring missions (drone-in-a-box). Actual automated execution requires a backend daemon.',
   'sched.status.pending': 'Pending',

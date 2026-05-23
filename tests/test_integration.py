@@ -193,11 +193,15 @@ class TestCommands:
                 assert armed_state['armed']
 
                 await ws.send(json.dumps({'type': 'command', 'cmd': 'disarm'}))
+                # Delta-push only includes fields that changed, so the disarm
+                # delta carries armed=False explicitly. Filter on `'armed' in m`
+                # to ignore intermediate deltas missing the field.
                 disarmed_state = await recv_until(
-                    ws, lambda m: m.get('type') == 'state' and not m.get('armed'),
+                    ws, lambda m: (m.get('type') == 'state' and 'armed' in m
+                                   and m['armed'] is False),
                     timeout=8,
                 )
-                assert not disarmed_state['armed']
+                assert disarmed_state['armed'] is False
             finally:
                 await ws.send(json.dumps({'type': 'disconnect'}))
                 await asyncio.sleep(0.5)
@@ -585,14 +589,28 @@ class TestOnboardLog:
                 await ws.send(json.dumps({
                     'type': 'command', 'cmd': 'log_download', 'id': 3,
                 }))
-                msg = await recv_until(
-                    ws, lambda m: m.get('type') == 'log_complete',
-                    timeout=20,
-                )
-                assert msg['id'] == 3
-                assert msg['size'] == 900
+                # New log-download protocol: chunks stream as log_chunk messages
+                # (base64 in .data), then a final log_complete with size only
+                # (no data). Accumulate the chunks to validate the full payload.
                 import base64
-                data = base64.b64decode(msg['data'])
+                chunks: dict[int, bytes] = {}
+                done = None
+                deadline = asyncio.get_event_loop().time() + 20
+                while asyncio.get_event_loop().time() < deadline:
+                    try:
+                        raw = await asyncio.wait_for(ws.recv(), timeout=2)
+                        m = json.loads(raw)
+                    except asyncio.TimeoutError:
+                        continue
+                    if m.get('type') == 'log_chunk':
+                        chunks[m['ofs']] = base64.b64decode(m['data'])
+                    elif m.get('type') == 'log_complete':
+                        done = m
+                        break
+                assert done is not None, 'never received log_complete'
+                assert done['id'] == 3
+                assert done['size'] == 900
+                data = b''.join(chunks[ofs] for ofs in sorted(chunks))
                 assert len(data) == 900
             finally:
                 await ws.send(json.dumps({'type': 'disconnect'}))
@@ -636,10 +654,15 @@ class TestDataStreams:
             ws = await ws_connect(ws_url)
             try:
                 await ensure_connected(ws, ws_url, sim_port, timeout=20)
+                # Wait for a state push that includes BOTH rc and rc_rssi —
+                # delta pushes only carry changed fields, so we want either the
+                # first push that includes rc (whichever came in first) or a
+                # full-sync push (every 10th).
                 state = await recv_until(
                     ws, lambda m: (m.get('type') == 'state' and
                                    len(m.get('rc', [])) >= 4 and
-                                   m['rc'][0] > 0),
+                                   m['rc'][0] > 0 and
+                                   'rc_rssi' in m),
                     timeout=15,
                 )
                 assert len(state['rc']) >= 8
@@ -657,10 +680,14 @@ class TestDataStreams:
             ws = await ws_connect(ws_url)
             try:
                 await ensure_connected(ws, ws_url, sim_port, timeout=20)
+                # Delta-push only includes changed fields. Wait for a push that
+                # has both 'vibe' (always present since values are random) and
+                # 'vibe_clip' (only changes if clipping counter ticks).
                 state = await recv_until(
                     ws, lambda m: (m.get('type') == 'state' and
                                    len(m.get('vibe', [])) == 3 and
-                                   m['vibe'][0] > 0),
+                                   m['vibe'][0] > 0 and
+                                   'vibe_clip' in m),
                     timeout=15,
                 )
                 assert state['vibe'][0] > 0
@@ -938,8 +965,11 @@ class TestVzConvention:
             ws = await ws_connect(ws_url)
             try:
                 await ensure_connected(ws, ws_url, sim_port)
+                # Wait for a state push that actually carries vz (delta pushes
+                # only include changed fields; vz is the changing one when the
+                # sim is in motion).
                 state = await recv_until(
-                    ws, lambda m: m.get('type') == 'state' and m.get('connected'),
+                    ws, lambda m: m.get('type') == 'state' and 'vz' in m,
                     timeout=10,
                 )
                 assert 'vz' in state
@@ -1125,5 +1155,9 @@ class TestVersionApi:
         r = httpx.get(f'{backend_url}/api/tile_sources')
         assert r.status_code == 200
         data = r.json()
-        assert 'china' in data
-        assert 'global' in data
+        # tile_sources is a dict of {source_id: {name, region, ...}}; sources
+        # are tagged with region='china' or region='global'. Make sure at least
+        # one of each exists so map-source switching has options.
+        regions = {entry.get('region') for entry in data.values()}
+        assert 'china' in regions
+        assert 'global' in regions

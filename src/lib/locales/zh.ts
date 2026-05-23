@@ -889,6 +889,7 @@ const messages: Record<string, string> = {
   'sched.timeRequired': '请选择开始时间',
   'sched.started': '任务已启动',
   'sched.runNow': '立即执行',
+  'sched.confirmRun': '确认立即开始任务？',
   'sched.empty': '暂无调度任务',
   'sched.hint': '调度定时任务（无人机机库场景），实际自动执行需后端守护进程',
   'sched.status.pending': '待执行',
