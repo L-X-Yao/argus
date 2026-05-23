@@ -110,6 +110,8 @@ class DroneLink:
         self._console_buf: list[str] = []
         self._prearm_messages: list[str] = []
         self._unknown_msg_ids: dict[int, int] = {}  # msg_id -> drop count (fail-loud throttle)
+        # Monotonic event counter (see add_event) — ws_manager tracks this.
+        self._events_emitted_total: int = 0
         self.param_mgr = ParamManager(self)
 
         self.attitude = AttitudeState()
@@ -136,7 +138,16 @@ class DroneLink:
             self._ws_queue = self._ws_queue[-1000:]
 
     def add_event(self, text: str, event_type: str = '') -> None:
-        self.events.append({'time': time.strftime('%H:%M:%S'), 'text': text, 'event_type': event_type})
+        # Monotonic counter — ws_manager uses this rather than the array index
+        # so a trim (100 → 50 below) doesn't shift the cursor and cause
+        # duplicate-event spam to every connected client.
+        self._events_emitted_total += 1
+        self.events.append({
+            'time': time.strftime('%H:%M:%S'),
+            'text': text,
+            'event_type': event_type,
+            'seq': self._events_emitted_total,
+        })
         if len(self.events) > 100:
             self.events = self.events[-50:]
 
@@ -188,6 +199,39 @@ class DroneLink:
         self._thread.start()
         return True
 
+    def _reset_session_state(self) -> None:
+        """Clear all per-session state. Called from both the user-driven
+        disconnect path AND the in-loop silent reconnect path (auditor C1+C2:
+        only the user path was clearing zombies, so an FC drop-then-reconnect
+        would leak fence/rally/download pending flags + a 100MB log buffer
+        + never re-issue stream requests because frame_count was non-zero)."""
+        with self._state_lock:
+            self.connected = False
+            self.vehicle.vtype_raw = 0
+            self.vehicle.force_plane = None
+            self.attitude._prev_pos = None
+            self.attitude._home_set = False
+            # Force a re-fire of request_streams() on the next heartbeat by
+            # zeroing frame_count (the gate is `frame_count < 3`). Without
+            # this, the FC's stream subscriptions silently lapse after a
+            # transport reset and the UI freezes.
+            self.frame_count = 0
+            self.last_frame_time = 0.0
+            self.mission._mission_pending = False
+            self.mission._fence_pending = False
+            self.mission._rally_pending = False
+            self.mission._dl_pending = False
+            self.mission._dl_start_time = 0.0
+            self.mission._mission_ul_start_time = 0.0
+            self.mission._fence_ul_start_time = 0.0
+            self.mission._rally_ul_start_time = 0.0
+            self.log_dl._log_download_id = -1
+            self.log_dl._log_download_size = 0
+            self.log_dl._log_download_data = bytearray()
+            self.log_dl._log_download_ofs = 0
+            self.log_dl._log_emit_ofs = 0
+            self._prearm_messages = []
+
     def disconnect(self) -> None:
         self._running = False
         self._reconnect_enabled = False
@@ -199,28 +243,7 @@ class DroneLink:
         except OSError:
             pass
         self._ser = None
-        with self._state_lock:
-            self.connected = False
-            self.vehicle.vtype_raw = 0
-            self.vehicle.force_plane = None
-            self.attitude._prev_pos = None
-            # Clear ALL pending mission/fence/download flags so zombies don't
-            # poison state on reconnect (auditor finding: only _mission_pending
-            # was being cleared, so a half-finished fence upload or mission
-            # download would resume in a broken state).
-            self.mission._mission_pending = False
-            self.mission._fence_pending = False
-            self.mission._rally_pending = False
-            self.mission._dl_pending = False
-            self.mission._dl_start_time = 0.0
-            # Log download in flight: drop the buffer (~100MB possible) and
-            # reset the id so the next session starts clean.
-            self.log_dl._log_download_id = -1
-            self.log_dl._log_download_size = 0
-            self.log_dl._log_download_data = bytearray()
-            self.log_dl._log_download_ofs = 0
-            # PreArm dedup list — flight controller will re-emit on reconnect.
-            self._prearm_messages = []
+        self._reset_session_state()
         self._stop_log()
         self.add_event(lt('disconnected', self.locale), 'disconnected')
 
@@ -435,7 +458,11 @@ class DroneLink:
                 # The "handler exists but CRC_EXTRA missing" bug class — which
                 # this used to catch at runtime — is covered statically by
                 # tests/test_contract_handlers_crc.py.
-                self._unknown_msg_ids[mid] = self._unknown_msg_ids.get(mid, 0) + 1
+                # Cap dict size at 256 distinct ids so a noisy serial line that
+                # generates random sync errors can't grow this unboundedly.
+                if len(self._unknown_msg_ids) < 256 or mid in self._unknown_msg_ids:
+                    self._unknown_msg_ids[mid] = self._unknown_msg_ids.get(mid, 0) + 1
+                self._parse_errors += 1
                 return None, 1
             calc_crc = self._mavlink_crc16(crc_data + bytes([crc_extra]))
             if calc_crc != expected_crc:
@@ -465,8 +492,10 @@ class DroneLink:
                     cmd_module.request_streams(self)
             if self.connected and self.last_frame_time > 0 and now - self.last_frame_time > cfg.LINK_LOST_TIMEOUT:
                 self.add_event(lt('link_lost', self.locale), 'link_lost')
-                with self._state_lock:
-                    self.connected = False
+                # Clear pending uploads / log buffer / etc. — same hygiene as
+                # user-driven disconnect (auditor C1). Also resets frame_count
+                # so request_streams() re-fires on the next heartbeat (C2).
+                self._reset_session_state()
                 if self._reconnect_enabled and self._last_port:
                     self.add_event(lt('reconnecting', self.locale), 'reconnecting')
                     try:
@@ -522,18 +551,22 @@ class DroneLink:
         check_mission_dl_timeout(self)
 
     def get_inspector_data(self) -> list[dict]:
+        # _msg_stats is mutated by _process() under _state_lock; iterating it
+        # without the lock from the asyncio push thread races with the link
+        # thread and can raise RuntimeError("dictionary changed size during
+        # iteration") when the FC sends a new msg id (auditor finding C6).
         now = time.time()
         result = []
-        for mid, st in sorted(self._msg_stats.items()):
-            times = st.get('times', [])
-            times = [t for t in times if now - t < self._msg_stats_window]
-            st['times'] = times
-            hz = len(times) / self._msg_stats_window if times else 0
-            result.append({
-                'id': mid, 'name': st.get('name', ''),
-                'hz': round(hz, 1), 'count': st.get('count', 0),
-                'size': st.get('size', 0), 'last_fields': st.get('last_fields', {}),
-            })
+        with self._state_lock:
+            for mid, st in sorted(self._msg_stats.items()):
+                times = [t for t in st.get('times', []) if now - t < self._msg_stats_window]
+                st['times'] = times
+                hz = len(times) / self._msg_stats_window if times else 0
+                result.append({
+                    'id': mid, 'name': st.get('name', ''),
+                    'hz': round(hz, 1), 'count': st.get('count', 0),
+                    'size': st.get('size', 0), 'last_fields': st.get('last_fields', {}),
+                })
         return result
 
     def _process(self, payload: bytes) -> None:

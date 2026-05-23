@@ -521,13 +521,38 @@ async def api_firmware_online(board_id: int = 0):
 async def api_firmware_download(request: Request):
     body = await request.json()
     fw_url = body.get('url', '')
-    filename = body.get('filename', 'firmware.apj')
-    if not fw_url or not filename.endswith('.apj'):
+    raw_filename = body.get('filename', 'firmware.apj')
+    if not fw_url:
+        return {'ok': False, 'error': 'Invalid params'}
+    # Strip any path components from the supplied filename — only the basename
+    # is allowed. Auditor: previous code accepted "../../etc/passwd" and the
+    # `endswith('.apj')` check is satisfied by any string ending with `.apj`
+    # regardless of intervening separators (path traversal).
+    from pathlib import Path as _Path
+    filename = _Path(raw_filename).name
+    if not filename.endswith('.apj') or filename in ('', '.', '..'):
         return {'ok': False, 'error': 'Invalid params'}
     from urllib.parse import urlparse
     parsed = urlparse(fw_url)
     if parsed.scheme != 'https' or not parsed.hostname:
         return {'ok': False, 'error': 'Only HTTPS URLs allowed'}
+    # SSRF guard: reject hosts that resolve to private/loopback/link-local IPs.
+    # Without this, /api/firmware/download is a generic HTTPS proxy that lets
+    # callers probe internal network resources (auditor finding).
+    import ipaddress
+    import socket as _socket
+    try:
+        addrs = _socket.getaddrinfo(parsed.hostname, None)
+    except _socket.gaierror:
+        return {'ok': False, 'error': 'Cannot resolve host'}
+    for _fam, *_rest, sockaddr in addrs:
+        ip_str = sockaddr[0]
+        try:
+            ip = ipaddress.ip_address(ip_str)
+        except ValueError:
+            continue
+        if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast:
+            return {'ok': False, 'error': 'Refusing to fetch from internal address'}
     try:
         req = urlreq.Request(fw_url, headers={'User-Agent': 'Mozilla/5.0'})
         resp = urlreq.urlopen(req, timeout=60)
@@ -535,7 +560,14 @@ async def api_firmware_download(request: Request):
         if len(data) > cfg.FIRMWARE_MAX_SIZE:
             return {'ok': False, 'error': 'File too large (max %d MB)' % (cfg.FIRMWARE_MAX_SIZE // 1024 // 1024)}
         FIRMWARE_DIR.mkdir(exist_ok=True)
-        (FIRMWARE_DIR / filename).write_bytes(data)
+        # Final defense-in-depth: assert the resolved path stays inside
+        # FIRMWARE_DIR. relative_to() raises ValueError if not.
+        target = (FIRMWARE_DIR / filename).resolve()
+        try:
+            target.relative_to(FIRMWARE_DIR.resolve())
+        except ValueError:
+            return {'ok': False, 'error': 'Invalid filename'}
+        target.write_bytes(data)
         return {'ok': True, 'filename': filename, 'size': len(data)}
     except (OSError, urllib.error.URLError) as e:
         return {'ok': False, 'error': str(e)}

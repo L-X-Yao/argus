@@ -354,6 +354,8 @@ class TestReceiveLoop:
         link = DroneLink()
         mgr = WSManager(link)
         ws = make_ws()
+        # Implicit-pilot path: single connected client with no role set.
+        mgr._clients.add(ws)
         msg = json.dumps({'type': 'command', 'cmd': 'arm', 'param': None})
         ws.receive_text.side_effect = [msg, WebSocketDisconnect()]
         with patch('backend.ws_manager.commands.execute',
@@ -367,11 +369,33 @@ class TestReceiveLoop:
         assert sent['ok'] is True
 
     @pytest.mark.asyncio
+    async def test_observer_command_rejected(self):
+        """When multiple clients are connected and this ws has no pilot role,
+        commands must be rejected so an observer can't arm/takeoff."""
+        link = DroneLink()
+        mgr = WSManager(link)
+        ws_observer = make_ws()
+        ws_pilot = make_ws()
+        mgr._clients.add(ws_observer)
+        mgr._clients.add(ws_pilot)
+        mgr._pilot_ws = ws_pilot
+        mgr._roles[id(ws_pilot)] = 'pilot'
+        msg = json.dumps({'type': 'command', 'cmd': 'arm', 'param': None})
+        ws_observer.receive_text.side_effect = [msg, WebSocketDisconnect()]
+        with patch('backend.ws_manager.commands.execute') as mock_exec:
+            await mgr._receive_loop(ws_observer)
+            mock_exec.assert_not_called()
+        sent = json.loads(ws_observer.send_text.call_args[0][0])
+        assert sent['type'] == 'cmd_result' and sent['ok'] is False
+
+    @pytest.mark.asyncio
     async def test_command_returns_none(self):
         """When commands.execute returns None, no cmd_result is sent."""
         link = DroneLink()
         mgr = WSManager(link)
         ws = make_ws()
+        # Single connected client → implicit pilot, command dispatch allowed.
+        mgr._clients.add(ws)
         msg = json.dumps({'type': 'command', 'cmd': 'unknown_cmd', 'param': None})
         ws.receive_text.side_effect = [msg, WebSocketDisconnect()]
         with patch('backend.ws_manager.commands.execute', return_value=None):
@@ -754,32 +778,37 @@ class TestPushLoop:
         await mgr._push_loop(ws)
 
     @pytest.mark.asyncio
-    async def test_event_cursor_reset_on_shrink(self):
-        """Event cursor resets when events list shrinks (e.g., trimmed)."""
+    async def test_event_cursor_tracks_monotonic_seq(self):
+        """The push cursor uses _events_emitted_total (monotonic), not the
+        array index — so a trim of self.events doesn't cause replays."""
         link = DroneLink()
         mgr = WSManager(link)
         ws = make_ws()
-        # Pre-populate events so cursor starts high
+        # Pre-populate events so cursor starts high (5 events emitted total).
         for i in range(5):
             link.add_event(f'event {i}')
+        assert link._events_emitted_total == 5
         call_count = 0
 
         async def fake_sleep(_interval):
             nonlocal call_count
             call_count += 1
             if call_count == 1:
-                # Simulate event list being trimmed (e.g. from 5 to 2)
-                link.events = [{'time': '00:00', 'text': 'new', 'event_type': ''}]
+                # Add a 6th event AND simulate an unrelated trim of the array.
+                link.add_event('event new')
+                # Trim simulation: drop the oldest entries the way add_event's
+                # cap rule would (but events still keeps the latest seq).
+                link.events = link.events[-2:]
             if call_count >= 2:
                 raise WebSocketDisconnect()
 
         with patch('backend.ws_manager.asyncio.sleep', side_effect=fake_sleep):
             await mgr._push_loop(ws)
 
-        # The push loop should still work after the cursor reset
         all_msgs = [json.loads(c[0][0]) for c in ws.send_text.call_args_list]
         event_msgs = [m for m in all_msgs if m.get('type') == 'event']
-        assert any(m['text'] == 'new' for m in event_msgs)
+        # The new event must arrive exactly once (no replays of older events).
+        assert sum(1 for m in event_msgs if m['text'] == 'event new') == 1
 
     @pytest.mark.asyncio
     async def test_dl_cursor_reset_on_shrink(self):

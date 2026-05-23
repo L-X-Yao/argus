@@ -48,7 +48,12 @@ class WSManager:
         for ws in list(self._clients):
             try:
                 await ws.send_text(text)
-            except (ConnectionError, RuntimeError):
+            except Exception:
+                # WebSocketDisconnect inherits from Exception, not from any
+                # of the legacy stdlib network errors — catching it specifically
+                # would require importing the WS-impl class. A bare Exception
+                # here is correct because broadcast() failures should never
+                # take down the receive_loop of another (still-healthy) client.
                 self._clients.discard(ws)
 
     async def handle_client(self, ws: WebSocket) -> None:
@@ -70,6 +75,12 @@ class WSManager:
             pass
         finally:
             self._clients.discard(ws)
+            # Clear this client's role + pilot reference so the next observer
+            # to call request_handoff doesn't auto-promote because the dead
+            # ws is no longer `in self._clients` (auditor finding).
+            self._roles.pop(id(ws), None)
+            if self._pilot_ws is ws:
+                self._pilot_ws = None
 
     async def _receive_loop(self, ws: WebSocket) -> None:
         try:
@@ -130,6 +141,24 @@ class WSManager:
                             await ws.send_text(json.dumps({'type': 'handoff_released'}))
                             break
                 elif msg_type == 'command':
+                    # Observer clients must not be able to control the
+                    # vehicle. Auditor finding: previously every connected
+                    # client could call commands.execute() — meaning a
+                    # passive viewer could arm/takeoff. Reject unless this ws
+                    # holds the pilot role (the implicit-pilot fallback
+                    # below covers the single-client case where no role has
+                    # been set yet).
+                    role = self._roles.get(id(ws))
+                    is_implicit_pilot = (
+                        self._pilot_ws is None and role is None and
+                        self.client_count == 1
+                    )
+                    if role != 'pilot' and not is_implicit_pilot:
+                        await ws.send_text(json.dumps({
+                            'type': 'cmd_result', 'ok': False,
+                            'error': lt('err_observer_no_cmd', self.link.locale),
+                        }))
+                        continue
                     cmd = msg.get('cmd', '')
                     param = msg.get('param')
                     result = commands.execute(cmd, param, self.link, data=msg)
@@ -141,7 +170,11 @@ class WSManager:
             logger.warning('receive_loop error', exc_info=True)
 
     async def _push_loop(self, ws: WebSocket) -> None:
-        event_cursor = len(self.link.events)
+        # Use the monotonic emitted-count as our cursor for events. The array
+        # itself is trimmed (100 → 50) periodically, so an index-based cursor
+        # ended up replaying or dropping events depending on the cursor's
+        # position at trim time (auditor drone_link C5).
+        event_seq_cursor = self.link._events_emitted_total
         param_cursor = len(self.link.param_mgr._messages)
         dl_cursor = len(self.link.mission._dl_messages)
         log_cursor = len(self.link.log_dl._log_messages)
@@ -162,20 +195,23 @@ class WSManager:
                     last_sent.update(state)
                 with self.link._state_lock:
                     events = list(self.link.events)
+                    events_total = self.link._events_emitted_total
                     dlmsg = list(self.link.mission._dl_messages)
                     logmsg = list(self.link.log_dl._log_messages)
                     pmsg = list(self.link.param_mgr._messages)
-                if event_cursor > len(events):
-                    event_cursor = 0
-                if len(events) > event_cursor:
-                    for ev in events[event_cursor:]:
-                        await ws.send_text(json.dumps({
-                            'type': 'event',
-                            'time': ev['time'],
-                            'text': ev['text'],
-                            'event_type': ev.get('event_type', ''),
-                        }))
-                    event_cursor = len(events)
+                # Send any events with seq > our last-sent seq. The array may
+                # have trimmed older entries; if cursor < oldest-available
+                # seq, we accept the loss (the trimmed events are gone).
+                if events_total > event_seq_cursor:
+                    for ev in events:
+                        if ev.get('seq', 0) > event_seq_cursor:
+                            await ws.send_text(json.dumps({
+                                'type': 'event',
+                                'time': ev['time'],
+                                'text': ev['text'],
+                                'event_type': ev.get('event_type', ''),
+                            }))
+                    event_seq_cursor = events_total
                 if dl_cursor > len(dlmsg):
                     dl_cursor = 0
                 if len(dlmsg) > dl_cursor:
