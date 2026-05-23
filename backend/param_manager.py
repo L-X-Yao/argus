@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import math
 import struct
 import time
 from pathlib import Path
@@ -14,6 +15,10 @@ if TYPE_CHECKING:
     from .drone_link import DroneLink
 
 
+def _pad(p: bytes, n: int) -> bytes:
+    return p if len(p) >= n else p + b'\x00' * (n - len(p))
+
+
 class ParamManager:
     def __init__(self, link: DroneLink):
         self._link = link
@@ -22,6 +27,7 @@ class ParamManager:
         self.received_count = 0
         self.fetching = False
         self._fetch_start = 0.0
+        self._complete_emitted = False
         self._messages: list[dict] = []  # kept for backward compat with ws_manager cursor
 
     def request_all(self) -> None:
@@ -29,20 +35,30 @@ class ParamManager:
         self.total_count = -1
         self.received_count = 0
         self.fetching = True
+        self._complete_emitted = False
         self._fetch_start = time.time()
+        # Drop stale messages so the next ws_manager cursor doesn't replay
+        # values from a previous (now invalidated) fetch.
+        self._messages.clear()
         self._link.add_event(lt('param_reading', self._link.locale), 'param_reading')
         from .pllink_proto import bm
         payload = struct.pack('<BB', self._link.vehicle.sysid, 1)
         self._link.send(bm(21, payload, self._link.sq, 159))
 
     def handle_param_value(self, p: bytes, pl: int) -> None:
-        if pl < 25:
+        if pl < 1:
             return
+        p = _pad(p, 25)
         value = struct.unpack_from('<f', p, 0)[0]
         count = struct.unpack_from('<H', p, 4)[0]
         index = struct.unpack_from('<H', p, 6)[0]
         name = bytes(p[8:24]).split(b'\x00')[0].decode('ascii', 'replace')
         ptype = p[24]
+        # An empty name means the frame is garbage / all-zero — refuse to
+        # poison the params dict with a {"": ...} entry that would show up
+        # as a blank row in the UI.
+        if not name:
+            return
 
         if self.total_count < 0:
             self.total_count = count
@@ -60,18 +76,27 @@ class ParamManager:
             'index': index, 'total': self.total_count,
             'received': self.received_count,
         })
+        # Cap message buffer on every append (not just on completion) so a
+        # stuck/incomplete fetch can't grow unbounded.
+        if len(self._messages) > 2000:
+            self._messages = self._messages[-1000:]
 
-        if self.received_count >= self.total_count > 0:
+        if self.received_count >= self.total_count > 0 and not self._complete_emitted:
+            self._complete_emitted = True
             self.fetching = False
             elapsed = time.time() - self._fetch_start
             self._link.add_event(lt('param_done', self._link.locale) % (self.received_count, elapsed), 'param_done')
             self._messages.append({
                 'type': 'params_complete', 'count': self.received_count,
             })
-            if len(self._messages) > 2000:
-                self._messages = self._messages[-1000:]
 
     def set_param(self, name: str, value: float) -> None:
+        # AP silently rejects NaN/Inf and we'd have no way to retry. Validate
+        # caller side so the UI sees an immediate error rather than the
+        # parameter "appearing to set" then unchanged on the next read.
+        if math.isnan(value) or math.isinf(value):
+            self._link.add_event('Param: rejected NaN/Inf for %s' % name, 'param_set_fail')
+            return
         param = self.params.get(name)
         ptype = param['type'] if param else 9
         from .pllink_proto import bm

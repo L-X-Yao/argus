@@ -103,8 +103,15 @@ def cmd_param_load(link: DroneLink, param, data: dict):
         return {'ok': False, 'error': 'Path must be within params directory'}
     if p.suffix != '.json':
         return {'ok': False, 'error': 'Only .json parameter files allowed'}
-    changed = link.param_mgr.load_from_file(str(p))
-    return {'ok': True, 'changed': changed}
+    # load_from_file iterates with `time.sleep(PARAM_LOAD_SPACING)` between
+    # sends to avoid overrunning the FC's param queue. For a 1000-param file
+    # that's ~20s of blocking — and commands.execute() is called from inside
+    # the async websocket receive loop, so a sync sleep would freeze the
+    # event loop for that whole window. Spawn a daemon thread; progress
+    # surfaces via the param_set events streamed back over the same ws.
+    import threading
+    threading.Thread(target=link.param_mgr.load_from_file, args=(str(p),), daemon=True).start()
+    return {'ok': True, 'started': True}
 
 
 # --- Logs ---

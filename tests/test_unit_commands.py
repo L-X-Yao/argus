@@ -200,8 +200,17 @@ class TestCommandExecute:
         tmp_path = params_dir / 'test_load.json'
         tmp_path.write_text(json.dumps({'ARMING_CHECK': 0.0}))
         result = execute('param_load', None, link, data={'path': str(tmp_path)})
-        assert result is not None and result['ok']
-        assert 'ARMING_CHECK' in result['changed']
+        # cmd_param_load now runs the actual load in a background thread to
+        # avoid blocking the asyncio event loop with time.sleep iterations.
+        assert result is not None and result['ok'] is True
+        assert result.get('started') is True
+        # Give the worker a moment to apply the change.
+        import time as _t
+        for _ in range(20):
+            if link._ser.write.called:
+                break
+            _t.sleep(0.05)
+        assert link._ser.write.called
         tmp_path.unlink()
 
     def test_param_load_path_traversal(self):

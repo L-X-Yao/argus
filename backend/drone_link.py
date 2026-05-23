@@ -204,7 +204,22 @@ class DroneLink:
             self.vehicle.vtype_raw = 0
             self.vehicle.force_plane = None
             self.attitude._prev_pos = None
+            # Clear ALL pending mission/fence/download flags so zombies don't
+            # poison state on reconnect (auditor finding: only _mission_pending
+            # was being cleared, so a half-finished fence upload or mission
+            # download would resume in a broken state).
             self.mission._mission_pending = False
+            self.mission._fence_pending = False
+            self.mission._dl_pending = False
+            self.mission._dl_start_time = 0.0
+            # Log download in flight: drop the buffer (~100MB possible) and
+            # reset the id so the next session starts clean.
+            self.log_dl._log_download_id = -1
+            self.log_dl._log_download_size = 0
+            self.log_dl._log_download_data = bytearray()
+            self.log_dl._log_download_ofs = 0
+            # PreArm dedup list — flight controller will re-emit on reconnect.
+            self._prearm_messages = []
         self._stop_log()
         self.add_event(lt('disconnected', self.locale), 'disconnected')
 

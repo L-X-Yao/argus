@@ -539,11 +539,29 @@ def handle_log_data(p: bytes, pl: int, link: DroneLink) -> None:
     ofs, log_id, count = struct.unpack_from('<IHB', p, 0)
     if log_id != lg._log_download_id:
         return
+    # FC documents count=0 as EOF / error per MAVLink common.xml: previously
+    # this fell through to `end = ofs + 0 = ofs`; with end < size we re-
+    # requested forever in a tight loop (LOG_REQUEST_DATA never receives data
+    # because the source log is gone or unreadable).
+    if count == 0:
+        link.add_event(lt('log_dl_done', link.locale) % (log_id, ofs // 1024), 'log_dl_done')
+        lg._log_messages.append({
+            'type': 'log_complete',
+            'id': log_id,
+            'data': '',
+            'size': ofs,
+            'truncated': True,
+        })
+        lg._log_download_id = -1
+        return
     data = p[7:7 + count]
     end = ofs + count
     if end <= lg._log_download_size:
         lg._log_download_data[ofs:end] = data
-    lg._log_download_ofs = end
+    # Use max() so an out-of-order or duplicate chunk doesn't rewind progress
+    # and trigger re-requesting already-received bytes (auditor finding C2).
+    lg._log_download_ofs = max(lg._log_download_ofs, end)
+    end = lg._log_download_ofs
     if not hasattr(link, '_log_progress_counter'):
         link._log_progress_counter = 0
     link._log_progress_counter += 1

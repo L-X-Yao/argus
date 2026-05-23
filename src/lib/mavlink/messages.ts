@@ -208,10 +208,18 @@ export function decodeRcChannels(p: DataView): RcChannels {
 }
 
 export function decodeServoOutput(p: DataView): ServoOutput {
+  // SERVO_OUTPUT_RAW (36) wire layout (MAVLink 2, sorted by size):
+  //   time_usec(u32, 0..3), servo1..8 raw(u16, 4..19), port(u8, 20),
+  //   extensions: servo9..16 raw(u16, 21..36).
+  // servo9-16 sit AFTER the port byte, not contiguous with servo1-8.
   const outputs: number[] = [];
-  for (let i = 0; i < 16 && (4 + i * 2 + 1) < p.byteLength; i++) {
+  for (let i = 0; i < 8 && (4 + i * 2 + 1) < p.byteLength; i++) {
     outputs.push(p.getUint16(4 + i * 2, true));
   }
+  for (let i = 0; i < 8 && (21 + i * 2 + 1) < p.byteLength; i++) {
+    outputs.push(p.getUint16(21 + i * 2, true));
+  }
+  while (outputs.length < 16) outputs.push(0);
   return { outputs };
 }
 
@@ -380,28 +388,45 @@ export function encodeRequestDataStream(
 }
 
 /**
- * Dispatch a decoded frame to the appropriate handler.
+ * Pad a DataView's underlying payload to at least `minBytes` with trailing zeros.
+ * MAVLink 2 senders may zero-trim trailing zero bytes; receivers must treat
+ * the missing bytes as zero. Without this, decoders calling getUint16(2) etc.
+ * on a trimmed payload throw RangeError. Returns a fresh DataView that the
+ * decoder can read from at any offset up to minBytes-1.
+ */
+function padPayload(p: DataView, minBytes: number): DataView {
+  if (p.byteLength >= minBytes) return p;
+  const padded = new Uint8Array(minBytes);
+  padded.set(new Uint8Array(p.buffer, p.byteOffset, p.byteLength));
+  return new DataView(padded.buffer);
+}
+
+/**
+ * Dispatch a decoded frame to the appropriate handler. Each msg id is paired
+ * with the maximum byte offset its decoder reads, so we zero-pad up to that
+ * size before invoking the decoder.
  */
 export function dispatchFrame(frame: MavFrame, handlers: Partial<MessageHandlers>): void {
+  const pl = frame.payload;
   switch (frame.msgId) {
-    case 0:   handlers.onHeartbeat?.(decodeHeartbeat(frame.payload), frame); break;
-    case 1:   handlers.onSysStatus?.(decodeSysStatus(frame.payload), frame); break;
-    case 24:  handlers.onGpsRawInt?.(decodeGpsRawInt(frame.payload), frame); break;
-    case 30:  handlers.onAttitude?.(decodeAttitude(frame.payload), frame); break;
-    case 33:  handlers.onGlobalPositionInt?.(decodeGlobalPositionInt(frame.payload), frame); break;
-    case 65:  handlers.onRcChannels?.(decodeRcChannels(frame.payload), frame); break;
-    case 36:  handlers.onServoOutput?.(decodeServoOutput(frame.payload), frame); break;
-    case 74:  handlers.onVfrHud?.(decodeVfrHud(frame.payload), frame); break;
-    case 22:  handlers.onParamValue?.(decodeParamValue(frame.payload), frame); break;
-    case 77:  handlers.onCommandAck?.(decodeCommandAck(frame.payload), frame); break;
-    case 42:  handlers.onMissionCurrent?.(decodeMissionCurrent(frame.payload), frame); break;
-    case 47:  handlers.onMissionAck?.(decodeMissionAck(frame.payload), frame); break;
-    case 44:  handlers.onMissionCount?.(decodeMissionCount(frame.payload), frame); break;
-    case 73:  handlers.onMissionItemInt?.(decodeMissionItemInt(frame.payload), frame); break;
-    case 242: handlers.onHomePosition?.(decodeHomePosition(frame.payload), frame); break;
-    case 241: handlers.onVibration?.(decodeVibration(frame.payload), frame); break;
-    case 168: handlers.onWind?.(decodeWind(frame.payload), frame); break;
-    case 253: handlers.onStatusText?.(decodeStatusText(frame.payload), frame); break;
+    case 0:   handlers.onHeartbeat?.(decodeHeartbeat(padPayload(pl, 9)), frame); break;
+    case 1:   handlers.onSysStatus?.(decodeSysStatus(padPayload(pl, 31)), frame); break;
+    case 24:  handlers.onGpsRawInt?.(decodeGpsRawInt(padPayload(pl, 30)), frame); break;
+    case 30:  handlers.onAttitude?.(decodeAttitude(padPayload(pl, 28)), frame); break;
+    case 33:  handlers.onGlobalPositionInt?.(decodeGlobalPositionInt(padPayload(pl, 28)), frame); break;
+    case 65:  handlers.onRcChannels?.(decodeRcChannels(padPayload(pl, 42)), frame); break;
+    case 36:  handlers.onServoOutput?.(decodeServoOutput(padPayload(pl, 37)), frame); break;
+    case 74:  handlers.onVfrHud?.(decodeVfrHud(padPayload(pl, 20)), frame); break;
+    case 22:  handlers.onParamValue?.(decodeParamValue(padPayload(pl, 25)), frame); break;
+    case 77:  handlers.onCommandAck?.(decodeCommandAck(padPayload(pl, 10)), frame); break;
+    case 42:  handlers.onMissionCurrent?.(decodeMissionCurrent(padPayload(pl, 2)), frame); break;
+    case 47:  handlers.onMissionAck?.(decodeMissionAck(padPayload(pl, 4)), frame); break;
+    case 44:  handlers.onMissionCount?.(decodeMissionCount(padPayload(pl, 4)), frame); break;
+    case 73:  handlers.onMissionItemInt?.(decodeMissionItemInt(padPayload(pl, 38)), frame); break;
+    case 242: handlers.onHomePosition?.(decodeHomePosition(padPayload(pl, 60)), frame); break;
+    case 241: handlers.onVibration?.(decodeVibration(padPayload(pl, 32)), frame); break;
+    case 168: handlers.onWind?.(decodeWind(padPayload(pl, 12)), frame); break;
+    case 253: handlers.onStatusText?.(decodeStatusText(padPayload(pl, 51)), frame); break;
     default:  handlers.onUnknown?.(frame); break;
   }
 }
