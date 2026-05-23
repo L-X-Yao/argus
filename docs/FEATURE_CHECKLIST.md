@@ -31,7 +31,7 @@
 | 9 | 重连时协议重置 | ✅ᵗ | 代码修复 + 测试验证 |
 | 10 | WebSerial 浏览器直连 | ⚠️ | 需 Chrome/Edge + USB, 代码存在但未真机验证 |
 | 11 | 多客户端支持 | ✅ᵗ | WS 推送测试验证多客户端接收 |
-| 12 | WS 自动重连 | ✅ᵗ | ws.ts 指数退避 1s→30s 上限 |
+| 12 | WS 自动重连 | ✅ᵗ | ws.ts 指数退避 1.5s→30s 上限 (1000×1.5^n, 首次1500ms) |
 | 13 | WS 连接保活检测 | ✅ᵗ | 15 秒无消息判定 stale, 主动重连 |
 | 14 | WebSerial MAVLink编解码 | ✅ᵗ | transport.ts: MAVLink v2帧编码/解码/CRC, 自动SysID/CompID检测, 帧序号管理 |
 | 15 | WebSerial 指令支持 | ✅ᵗ | arm/disarm/mode/RTL/param_set/param_request_all 全部通过USB直连, 绕过Python后端 |
@@ -45,7 +45,7 @@
 | 23 | CRC_EXTRA 校验 | ✅ᵗ | 每消息ID对应CRC extra字节, CRC不匹配→跳过帧+0xFD重同步 |
 | 24 | 流式帧解析器 | ✅ᵗ | parseFrames()跨chunk部分帧缓冲, 返回未消费remainder供下次调用 |
 | 25 | WSS/WS 协议自动选择 | ✅ᵗ | HTTPS时自动用wss://, HTTP时用ws://, Tauri时用ws://127.0.0.1:8100 |
-| 26 | 数据流请求配置 | ✅ᵗ | 9种消息: 姿态/位置/GPS@250ms, 系统/任务/振动/VFR@1s, 舵机/RC@500ms, SET_MESSAGE_INTERVAL(terrain) |
+| 26 | 数据流请求配置 | ✅ᵗ | 9种消息: 姿态/位置/GPS@250ms, 系统/任务/振动/VFR_HUD@1s, 舵机/RC@500ms, SET_MESSAGE_INTERVAL请求msg148(AUTOPILOT_VERSION) |
 
 ---
 
@@ -64,7 +64,7 @@
 | 35 | RC 通道 (16路) | ✅ | 真机 RC_CHANNELS 处理 |
 | 36 | 舵机输出 (16路) | ✅ | 真机 SERVO_OUTPUT_RAW 处理 |
 | 37 | 振动 (X/Y/Z + clip) | ✅ | 真机 VIBRATION 处理 |
-| 38 | EKF 状态 (方差+标志) | ✅ | 真机 EKF_STATUS 处理 |
+| 38 | EKF 状态 (方差+标志) | ❌ | **BUG**: handle_ekf_status 注册在 msg ID 74(VFR_HUD) 而非 193(EKF_STATUS_REPORT), 数据永远不更新 |
 | 39 | 地形高度 | ✅ | 真机 TERRAIN_REPORT 处理 |
 | 40 | 风速/风向 | ✅ᵗ | handler 已实现, 真机无风传感器 |
 | 41 | RSSI 信号强度 | ✅ | 真机 RC_CHANNELS 中的 rssi 字段 |
@@ -79,11 +79,11 @@
 | 50 | 当前航点序号 (wp_seq) | ✅ | 真机 MISSION_CURRENT msg42, 任务进度条显示当前航点 |
 | 51 | MAVLink 解析错误计数 | ✅ᵗ | parse_errors累计统计, 链路质量诊断 |
 | 52 | CSV日志活跃指示 | ✅ᵗ | log_active状态字段, 飞行中CSV日志记录状态 |
-| 53 | 云台角度回传 | ✅ᵗ | gimbal_pitch/gimbal_yaw 遥测字段, 云台面板实时显示 |
+| 53 | 云台角度回传 | ❌ | 前端类型定义存在 gimbal_pitch/gimbal_yaw 字段, 但后端无 MOUNT_STATUS/GIMBAL_DEVICE_ATTITUDE_STATUS 接收handler, 字段永远为0 |
 | 54 | 固件Git哈希+板卡ID | ✅ | 真机 AUTOPILOT_VERSION: fw_git(8字符哈希) + board_id(硬件ID) |
-| 55 | 空速 (airspeed) | ✅ᵗ | VFR_HUD msg74解码, 区别于地速(gs) |
-| 56 | 油门百分比 (throttle) | ✅ᵗ | VFR_HUD msg74解码, 0-100% |
-| 57 | 爬升率 (climb) | ✅ᵗ | VFR_HUD msg74解码, m/s |
+| 55 | 空速 (airspeed) | ❌ | 后端无 VFR_HUD handler (msg74 被错误注册为 EKF), WebSerial 直连路径可解码但后端代理路径不推送 |
+| 56 | 油门百分比 (throttle) | ❌ | 同 #55, 后端 state 无 throttle 字段, 不推送到 WS 客户端 |
+| 57 | 爬升率 (climb) | ❌ | 同 #55, 后端 state 无 climb 字段, 不推送到 WS 客户端 |
 | 58 | RC通道18路 | ✅ᵗ | WebSerial解码18路(非16路), 修正#20 |
 
 ---
@@ -151,7 +151,7 @@
 | 94 | 任务下载超时 (30s) | ✅ᵗ | check_mission_dl_timeout 测试 |
 | 95 | 坐标验证 (float 转换) | ✅ᵗ | 单元测试 string/None 输入 |
 | 96 | 航点数量限制 (500) | ✅ᵗ | _mission.py 验证逻辑 |
-| 97 | 航线撤销/重做 | ✅ᵗ | pushUndo/undo 逻辑验证 |
+| 97 | 航线撤销 | ✅ᵗ | pushUndo/undo 逻辑验证 (仅撤销, 无重做功能) |
 | 98 | 航线圆形生成 | ✅ᵗ | generateCircle 逻辑验证 |
 | 99 | QGC 航点导入 (.waypoints) | ✅ᵗ | parseQgcWaypoints 测试 |
 | 100 | QGC Plan 导入 (.plan) | ✅ᵗ | parseQgcPlan 测试 |
@@ -167,12 +167,12 @@
 | 110 | 盘旋定时 (loiter_time) | ✅ᵗ | 航点类型+loiter_param 支持 |
 | 111 | 盘旋定圈 (loiter_turns) | ✅ᵗ | 航点类型+loiter_param 支持 |
 | 112 | 延时航点 (delay) | ✅ᵗ | AdvCmdPanel delay 秒数设置 |
-| 113 | 舵机动作 (servo) | ✅ᵗ | AdvCmdPanel 舵机通道+PWM 值 |
-| 114 | 相机触发 (cam_trigger) | ✅ᵗ | AdvCmdPanel 航点相机触发 |
-| 115 | 偏航朝向 (yaw) | ✅ᵗ | AdvCmdPanel 航向角度设置 |
-| 116 | VTOL 过渡 (vtol_transition) | ✅ᵗ | AdvCmdPanel 固定翼/多旋翼切换 |
+| 113 | 舵机动作 (servo) | ⚠️ | AdvCmdPanel 前端设置 cmd_servo, 但后端 _upload_mission() 不处理此字段, 不会上传到飞控 |
+| 114 | 相机触发 (cam_trigger) | ⚠️ | AdvCmdPanel 前端设置 cmd_cam_trig, 但后端 _upload_mission() 不处理此字段 |
+| 115 | 偏航朝向 (yaw) | ⚠️ | AdvCmdPanel 前端设置 cmd_yaw, 但后端 _upload_mission() 不处理此字段 |
+| 116 | VTOL 过渡 (vtol_transition) | ⚠️ | AdvCmdPanel 前端设置 cmd_vtol, 但后端 _upload_mission() 不处理此字段 |
 | 117 | 投掷标记 (drop) | ✅ᵗ | 航点 drop 布尔标记 |
-| 118 | 高级命令附加模式 | ✅ᵗ | 6种MAV_CMD(183/201/206/112/115/3000)附加到已有航点, pushUndo()支持 |
+| 118 | 高级命令附加模式 | ⚠️ | 6种MAV_CMD前端UI存在, 但仅delay(112)被后端上传处理, 其余5种(servo/roi/cam/yaw/vtol)后端忽略 |
 
 ---
 
@@ -222,9 +222,9 @@
 | # | 功能 | 状态 | 验证方式 |
 |---|------|------|----------|
 | 146 | MotorTestPanel (电机测试面板) | ✅ᵗ | 8电机视觉网格, 油门(0-100%)/时长(0.5-5s)滑块, 倒计时动画, Quad X参考图, 安全警告 |
-| 147 | RcCalibPanel (RC校准向导) | ✅ᵗ | 3步: ①居中记录trim+实时柱状图 ②全行程min/max(≥300PWM) ③写入32参数(RC1-8 MIN/MAX/TRIM/REVERSED) |
+| 147 | RcCalibPanel (RC校准向导) | ✅ᵗ | 3步: ①居中记录trim+实时柱状图 ②全行程min/max(>300PWM) ③写入32参数(RC1-8 MIN/MAX/TRIM/REVERSED) |
 | 148 | EscCalPanel (电调校准向导) | ✅ᵗ | 5步ESC校准: max油门PWM2000→min油门PWM1000→释放, rc_override 8通道, 安全警告 |
-| 149 | FrameSelectPanel (机架选择面板) | ✅ᵗ | 机架类型视觉选择(Quad/Hex/Octa/Tri/Plane/Rover/Sub), 子类型(+/X/V/H/Y6F), FRAME_CLASS/FRAME_TYPE参数 |
+| 149 | FrameSelectPanel (机架选择面板) | ✅ᵗ | 8种机架类型(Quad/Hex/Octa/OctaQuad/TriY×2/Single/Plane), 子类型(+/X/V/H/Y6F), FRAME_CLASS/FRAME_TYPE参数 |
 | 150 | FailsafeConfigPanel (失效保护配置) | ✅ᵗ | 4类: 电池(电压/mAh阈值)/RC丢失(PWM阈值)/GCS丢失/EKF(方差阈值), 动作(None/RTL/Land/SmartRTL/Continue/AltHold) |
 | 151 | PowerCalPanel (电源校准面板) | ✅ᵗ | 电压倍率自动计算(实测/报告), 电流系数(BATT_AMP_PERVLT), 电芯数(1S-14S), 实时电压/电流/剩余显示 |
 | 152 | PoiPanel (兴趣点面板) | ✅ᵗ | ROI坐标手动输入(lat/lon/alt), 从当前无人机位置预填, 设置/清除ROI, do_set_roi命令 |
@@ -239,7 +239,7 @@
 | 161 | AutoTune轴选择 | ✅ᵗ | All/Roll/Pitch/Yaw选择→AUTOTUNE_AXES参数, AUTOTUNE_AGGR激进度显示 |
 | 162 | 飞行模式6槽PWM映射 | ✅ᵗ | FLTMODE1-6对应6段PWM范围(1-1230/1231-1360/...), 下拉选择器, 活跃槽脉冲高亮 |
 | 163 | 定位源置信度面板 | ✅ᵗ | GPS+EKF+罗盘+光流综合置信度(good/warn/bad), 光流从EKF标志推导(REL无ABS) |
-| 164 | 默认航点速度设置 | ✅ᵗ | 1-30 m/s 步长1, 新航点默认速度, 持久化到argus_settings |
+| 164 | 默认航点速度设置 | ✅ᵗ | 1-30 m/s 步长0.5, 新航点默认速度, 持久化到argus_settings |
 | 165 | 围栏半径设置 | ✅ᵗ | 0-10000m, 围栏圆形半径, 持久化到argus_settings |
 | 166 | 构建日期显示 | ✅ᵗ | __BUILD_DATE__ 编译时间戳, 设置面板底部版本信息旁 |
 
@@ -317,7 +317,7 @@
 | 218 | /api/auth/login | ✅ᵗ | token 验证测试 |
 | 219 | /api/auth/status | ✅ᵗ | 端点测试 |
 | 220 | /api/auth/generate | ✅ᵗ | token 生成测试 |
-| 221 | 在线固件浏览 | ✅ᵗ | /api/firmware/online?board_id=X查询可用版本(版本/日期/大小列表) |
+| 221 | 在线固件浏览 | ✅ᵗ | /api/firmware/online?board_id=X查询可用版本(版本列表, date/size字段为占位空值) |
 | 222 | 在线固件下载 | ✅ᵗ | /api/firmware/download下载到服务器, HTTPS限制 |
 
 ---
@@ -339,7 +339,7 @@
 | 233 | X-Content-Type-Options: nosniff | ✅ᵗ | app.py 安全响应头中间件 |
 | 234 | X-Frame-Options: DENY | ✅ᵗ | 防止 iframe 嵌入 |
 | 235 | Referrer-Policy | ✅ᵗ | strict-origin-when-cross-origin |
-| 236 | WebSocket Origin 校验 | ✅ᵗ | ws_manager.py 拒绝非白名单 origin |
+| 236 | WebSocket Origin 校验 | ✅ᵗ | app.py websocket_endpoint 拒绝非白名单 origin |
 | 237 | 环境变量配置覆盖 | ✅ᵗ | ARGUS_HOST/ARGUS_PORT/ARGUS_CORS_ORIGINS |
 | 238 | 品牌CSS注入XSS防护 | ✅ᵗ | primaryColor: 长度<100, 正则拒绝expression/url()/javascript/;{} |
 | 239 | 视频URL长度限制 | ✅ᵗ | VIDEO_URL_MAX_LEN: 2048字符, 超长URL拒绝 |
@@ -356,12 +356,12 @@
 | 243 | ControlPanel (控制面板) | ✅ | Playwright 模式按钮可见 |
 | 244 | EventLog (事件日志) | ✅ | 真机事件推送验证 |
 | 245 | TelemetryOverlay (遥测叠加) | ✅ | Playwright 数据显示 |
-| 246 | RcPanel (RC面板) | ✅ᵗ | 面板注册 + 数据绑定验证 |
-| 247 | ServoPanel (舵机面板) | ✅ᵗ | 面板注册 + 数据绑定验证 |
-| 248 | VibrationPanel (振动面板) | ✅ᵗ | 面板注册 + Canvas 渲染 |
-| 249 | EkfPanel (EKF面板) | ✅ᵗ | 面板注册 + 标志位解析 |
+| 246 | RcPanel (RC面板) | ✅ᵗ | App.svelte 视图级懒加载 (非 panel registry) + 数据绑定验证 |
+| 247 | ServoPanel (舵机面板) | ✅ᵗ | App.svelte 视图级懒加载 (非 panel registry) + 数据绑定验证 |
+| 248 | VibrationPanel (振动面板) | ✅ᵗ | App.svelte 视图级懒加载 (非 panel registry) + Canvas 渲染 |
+| 249 | EkfPanel (EKF面板) | ✅ᵗ | App.svelte 视图级懒加载 (非 panel registry) + 标志位解析 |
 | 250 | MissionPanel (任务面板) | ✅ᵗ | 航点编辑 + 导入导出 |
-| 251 | SurveyPanel (测区面板) | ✅ᵗ | 面板注册存在 |
+| 251 | SurveyPanel (测区面板) | ✅ᵗ | App.svelte 视图级懒加载 (非 panel registry) |
 | 252 | FencePanel (围栏面板) | ✅ | 真机围栏上传验证 |
 | 253 | CalibrationPanel (校准) | ✅ | 真机陀螺仪校准 |
 | 254 | FirmwarePanel (固件) | ✅ᵗ | 上传/列表端点测试 |
@@ -370,21 +370,21 @@
 | 257 | ParamPanel (参数面板) | ✅ | Playwright 1317 参数加载, 0 long task |
 | 258 | PidPanel (PID调参) | ✅ᵗ | 面板注册存在 |
 | 259 | FlightModePanel (飞行模式) | ✅ᵗ | ArduPilot/PX4 模式列表验证 |
-| 260 | InspectorPanel (消息检查器) | ✅ | 真机 inspector_enable 发送 |
+| 260 | InspectorPanel (消息检查器) | ✅ | 真机 inspector_toggle 命令发送 |
 | 261 | ConsolePanel (控制台) | ✅ | 真机"ver"命令发送 |
 | 262 | LogPanel (日志面板) | ✅ | 真机 log_list 发送 |
 | 263 | FlightReportPanel (飞行报告) | ✅ᵗ | flightDb 存储逻辑 |
-| 264 | Map3DView (3D地图) | ✅ᵗ | 面板注册 + MapLibre GL 集成 |
+| 264 | Map3DView (3D地图) | ✅ᵗ | App.svelte mapMode='3d' 按需加载 (mission3d PanelId 为独立的 Mission3DPanel), MapLibre GL 集成 |
 | 265 | AirspacePanel (空域) | ✅ᵗ | 50 机场数据库验证 |
 | 266 | OfflineMapPanel (离线地图) | ✅ᵗ | bulk_download 端点测试 |
 | 267 | FleetDashboard (机群) | ✅ᵗ | 面板注册存在 |
-| 268 | GimbalPanel (云台) | ✅ᵗ | gimbal_angle/rate 命令验证 |
+| 268 | GimbalPanel (云台) | ✅ᵗ | 仅 gimbal_angle 命令 (前端未使用 gimbal_rate) |
 | 269 | VideoOverlay (视频叠加) | ✅ᵗ | video 端点 + SSRF 防护测试 |
 | 270 | AiPlannerPanel (AI规划) | ✅ᵗ | 面板注册存在 |
 | 271 | SchedulerPanel (调度器) | ✅ᵗ | 面板注册存在 |
 | 272 | CommandPalette (命令面板) | ✅ᵗ | Ctrl+K 快捷键验证 |
 | 273 | ConfirmDialog (确认对话框) | ✅ᵗ | showConfirm 逻辑验证 |
-| 274 | SettingsPanel (设置面板) | ✅ᵗ | 语言/主题/单位 切换验证 |
+| 274 | SettingsPanel (设置面板) | ✅ᵗ | 语言/主题 切换验证 (单位切换 UI 不在此面板) |
 | 275 | DroneLayer (飞行器图层) | ✅ᵗ | 地图叠加层注册 |
 | 276 | WaypointLayer (航点图层) | ✅ᵗ | 地图叠加层注册 |
 | 277 | ParamDiffPanel (参数对比) | ✅ᵗ | 面板注册存在 |
@@ -392,7 +392,7 @@
 | 279 | OverlapCalcPanel (重叠计算) | ✅ᵗ | 面板注册存在 |
 | 280 | AutoTunePanel (自动调参) | ✅ᵗ | 面板注册存在 |
 | 281 | SetupWizard (设置向导) | ✅ᵗ | 面板注册存在 |
-| 282 | 懒加载面板重试 | ✅ᵗ | 动态导入失败→Toast通知+最多3次重试, shortcuts面板排除渲染 |
+| 282 | 懒加载面板重试 | ✅ᵗ | 动态导入失败→内联红色错误卡片(非Toast)+最多3次重试, shortcuts面板排除渲染 |
 
 ---
 
@@ -430,7 +430,7 @@
 | 303 | 动态资源预缓存 | ✅ᵗ | PRECACHE_ASSETS消息: 应用可发送URL列表要求SW预缓存 |
 | 304 | 缓存统计查询 | ✅ᵗ | GET_CACHE_STATS/CACHE_STATS消息: 返回app缓存条数+tile缓存条数+tile上限 |
 | 305 | 旧缓存自动清理 | ✅ᵗ | activate事件: 删除非当前版本app缓存+非tile缓存, 保留tile数据 |
-| 306 | SW自动更新激活 | ✅ᵗ | main.ts: 检测到新SW时立即postMessage('skipWaiting'), 无需用户确认自动激活 |
+| 306 | SW自动更新激活 | ✅ᵗ | sw.js install事件内直接调用self.skipWaiting()自动激活 (main.ts的postMessage在activated后为no-op) |
 
 ---
 
@@ -457,13 +457,13 @@
 | 323 | 集结点地图显示 | ✅ᵗ | rallyPoints + showRally 状态控制, 集结点标记在地图上显示 |
 | 324 | 回放轨迹图层 (ReplayLayer) | ✅ᵗ | ReplayLayer.svelte: CSV日志回放时显示飞行轨迹+当前位置+航向标记 |
 | 325 | 引导模式目标选择 | ✅ᵗ | guidedMode状态切换, 地图点击发送guided_goto, GuidedLayer显示目标+连线 |
-| 326 | 右键引导飞行 | ✅ᵗ | MapView右键菜单→确认对话框→guided_goto(lat, lon, alt), 需连接+解锁+GUIDED |
-| 327 | 罗盘玫瑰图 | ✅ᵗ | SVG罗盘+航向针旋转到当前heading, N/S/E/W标签, 地图右下角叠加 |
+| 326 | 右键引导飞行 | ✅ᵗ | MapView右键菜单→确认对话框→guided_goto(lat, lon, alt), 需连接+解锁 (不检查当前模式) |
+| 327 | 罗盘玫瑰图 | ✅ᵗ | SVG罗盘+航向针旋转到当前heading, N/S/E/W标签, 地图右上角叠加 (top-12 right-3) |
 | 328 | 定位Home按钮 | ✅ᵗ | 地图飞到home_lat/home_lon, 需Home已设置 |
-| 329 | 深色模式瓦片滤镜 | ✅ᵗ | darkTheme时CSS filter: brightness(0.7) contrast(1.1) saturate(0.8) 应用到地图瓦片 |
+| 329 | 深色模式瓦片滤镜 | ✅ᵗ | darkTheme时CSS filter: brightness(0.75) contrast(1.1) saturate(0.85) 应用到地图瓦片 |
 | 330 | 飞行轨迹导出KML | ✅ᵗ | droneTrail坐标序列导出为KML LineString文件, Blob下载 |
 | 331 | 电池航程圈 | ✅ᵗ | Home为圆心, 半径=剩余时间×速度×0.5-60s安全余量, 绿/黄/红颜色编码 |
-| 332 | 速度矢量线 | ✅ᵗ | 航向方向绿色虚线, 长度按地速缩放(max 200px), gs>0.5时显示 |
+| 332 | 速度矢量线 | ✅ᵗ | 航向方向绿色虚线, 长度按地速缩放(max 200m, 非像素), gs>0.5时显示 |
 | 333 | Home返航连线 | ✅ᵗ | Home到无人机橙色虚线, dist_home>5m时显示 |
 | 334 | 飞行轨迹缓冲 | ✅ᵗ | 2000点LRU轨迹, 超出时裁剪到1500点 |
 | 335 | 航段距离标注 | ✅ᵗ | 连续航点间中段距离标签, m/km自动格式化 |
@@ -475,7 +475,7 @@
 | 341 | 航点聚焦+航线适配 | ✅ᵗ | focusWp→map.setView+2s橙色临时环, fitRouteFlag→fitBounds自适应缩放 |
 | 342 | ADSB交通标记渲染 | ✅ᵗ | 黄色箭头图标, 呼号/ICAO标签, tooltip(高度/速度), 过期自动清理 |
 | 343 | 多机标记渲染 | ✅ᵗ | 各机SysID标签, 解锁=红/未解锁=灰, 航向旋转, DroneLayer渲染 |
-| 344 | 3D任务视图交互 | ✅ᵗ | 鼠标拖拽旋转+滚轮缩放(0.2x-5x), 投掷航点橙色, 地面网格+高度竖线+北标N |
+| 344 | 3D任务视图交互 | ✅ᵗ | MapLibre GL 默认交互控制, 航点统一蓝色圆点(#1565c0), 无自定义网格/高度线/北标 |
 
 ---
 
@@ -494,7 +494,7 @@
 | 353 | 上下文感知+双语 | ✅ᵗ | 使用当前无人机位置/Home/默认高度速度/机型, 中英文关键词, Chat风格UI+历史 |
 | 354 | 离线地图自动框选 | ✅ᵗ | 连接时以无人机位置±0.05°自动填充边界框, 瓦片估算(≤5000), 3样式(卫星/矢量/OSM) |
 | 355 | 调度器客户端限制 | ✅ᵗ | 纯前端调度无后端定时器, once/daily/weekly/custom(1-720h), autoArm, argus_mission_*来源 |
-| 356 | 空域禁飞检测 | ✅ᵗ | 50中国机场Haversine排序, 3级半径(4.5/6/8.5km), 进入禁飞区红色警告, argus_airspace持久化 |
+| 356 | 空域禁飞检测 | ✅ᵗ | 51中国机场Haversine排序, 3级半径(4.5/6/8.5km), 进入禁飞区红色警告, argus_airspace持久化 |
 | 357 | 机群仪表盘颜色 | ✅ᵗ | 红(解锁)/灰(心跳>5s)/绿(已连接未解锁), 活跃机遥测卡片+其他机Switch按钮 |
 
 ---
@@ -518,11 +518,11 @@
 
 | # | 功能 | 状态 | 验证方式 |
 |---|------|------|----------|
-| 366 | HUD 仪表盘 (HudOverlay) | ✅ᵗ | SVG 人工地平仪 + 罗盘 + 速度/高度标尺, Canvas 渲染 |
+| 366 | HUD 仪表盘 (HudOverlay) | ✅ᵗ | SVG 人工地平仪 + 罗盘 + 速度/高度标尺, 纯 SVG 渲染 (非 Canvas) |
 | 367 | 任务进度条 (MissionProgress) | ✅ᵗ | 自动模式下显示当前航点/总航点/剩余距离/预计时间 |
 | 368 | 地图浮动控制 (MapControls) | ✅ᵗ | 全屏地图时显示返航/悬停/强制上锁按钮+遥测摘要 |
 | 369 | 引导目标标记 (GuidedLayer) | ✅ᵗ | GUIDED 模式目标点+连线+距离标签地图叠加 |
-| 370 | 围栏编辑图层 (FenceLayer) | ✅ᵗ | 围栏多边形绘制/编辑/顶点拖拽地图叠加 |
+| 370 | 围栏编辑图层 (FenceLayer) | ✅ᵗ | 围栏多边形绘制/编辑地图叠加 (静态顶点标记, 无拖拽) |
 | 371 | 测区编辑图层 (SurveyLayer) | ✅ᵗ | 测区多边形绘制/编辑地图叠加 |
 | 372 | 飞行摘要弹窗 (FlightSummary) | ✅ᵗ | 降落后弹出时长/高度/速度/距离/电量统计 |
 | 373 | 人工地平仪 | ✅ᵗ | 俯仰梯(±30°, 5°刻度, 虚线/实线), 天空/地面着色, 滚转旋转 |
@@ -541,7 +541,7 @@
 | 379 | 音频提示音生成 | ✅ᵗ | audio.ts AudioContext 合成, 频率/时长/重复/间隔可配 |
 | 380 | 语音播报 (TTS) | ✅ᵗ | SpeechSynthesis 解锁/上锁/返航/连接丢失/EKF 异常语音提示 |
 | 381 | 连接状态音效 | ✅ᵗ | 连接/断开/重连 不同音调模式 |
-| 382 | 电池低压警报 | ✅ᵗ | 电压低于阈值触发音频+语音 |
+| 382 | 电池低电量警报 | ✅ᵗ | 电池剩余百分比(remaining)低于阈值触发音频+语音 (非电压) |
 | 383 | 高度语音播报 | ✅ᵗ | 下降9级(50/40/30/20/10/8/6/4/2m)+上升5级(10/20/30/50/100m), 0.2m滞后防抖 |
 | 384 | 航点到达播报 | ✅ᵗ | wp_seq变化时语音"航点N到达", 中英文自动切换 |
 | 385 | 3级电池警报 | ✅ᵗ | <30%(2响400Hz)/<20%(3响300Hz)/<10%(5响200Hz), 每级不同语音消息 |
@@ -565,7 +565,7 @@
 | 396 | 面板懒加载 (42面板) | ✅ᵗ | LazyPanelHost 逻辑验证 |
 | 397 | 视图懒加载 (4视图) | ✅ᵗ | App.svelte 动态导入 |
 | 398 | Toast严重级分类 | ✅ᵗ | ws.ts: armed→warn/5s, disarmed→success, connect→success, disconnect→info, RTL→error/8s, cmd_fail→error/5s |
-| 399 | 紧急事件检测 | ✅ᵗ | URGENT_TYPES: rtl/force_disarm/cmd_ack_fail/mission_ack_fail/fence_ack_fail/link_lost → 事件栏红色闪烁+脉冲徽章 |
+| 399 | 紧急事件检测 | ✅ᵗ | URGENT_TYPES: rtl/force_disarm/cmd_ack_fail/mission_ack_fail/fence_ack_fail/link_lost/connect_fail (7种) → 事件栏红色闪烁+脉冲徽章 |
 | 400 | 命令ACK双语显示 | ✅ᵗ | 7种命令名(起飞/模式/继电器/校准/任务/解锁/引导) + 6种结果(成功/暂拒/拒绝/不支持/进行中/已取消) |
 | 401 | PreArm消息收集 | ✅ᵗ | STATUSTEXT中"PreArm:"/"Arm:"前缀截取, ≤20条去重收集, 超出FIFO裁剪到10条 |
 | 402 | 动态浏览器标题 | ✅ᵗ | 连接: "Argus — 模式 | 电压V | GPS", [!!]remaining<10或EKF异常, [!]remaining<20或link_age>3s |
@@ -580,7 +580,7 @@
 | 411 | 消息率(Hz)显示 | ✅ᵗ | 2秒采样间隔, 帧数差值÷时间计算, 实时刷新 |
 | 412 | EKF状态徽章 | ✅ᵗ | 绿/黄/红色点: vel/posH/posV/compass方差阈值+EKF_CONST_POS/UNINITIALIZED标志, tooltip详情 |
 | 413 | 模式徽章颜色 | ✅ᵗ | 紧急模式(6/9/11/17/20/21)→destructive红, 手动模式→secondary灰, 其他→primary |
-| 414 | 电池剩余时间显示 | ✅ᵗ | bat_time_remaining格式化: ≥3600→~Xh Ym, <3600→~Xm, 不可用时隐藏 |
+| 414 | 电池剩余时间显示 | ✅ᵗ | bat_time 字段格式化: ≥3600→~Xh Ym, <3600→~Xm, 不可用时隐藏 |
 | 415 | 解析错误计数显示 | ✅ᵗ | parse_errors>0时StatusBar显示E:<count>红色标记 |
 | 416 | 状态栏多机下拉 | ✅ᵗ | vehicles.length>0时+N徽章, 展开显示sysid/armed/alt列表 |
 | 417 | 50+命令项8类 | ✅ᵗ | 导航/飞行/任务/参数/校准/工具/设置/连接, 模糊搜索过滤 |
@@ -596,11 +596,11 @@
 | 420 | 连接配置文件 (profiles) | ✅ᵗ | argus_profiles: 保存/加载/删除连接预设 (端口+波特率+协议) |
 | 421 | 端口历史 (port_history) | ✅ᵗ | argus_port_history: 最近 10 个端口 |
 | 422 | 航线数据持久化 | ✅ᵗ | argus_waypoints: 航点列表本地保存 |
-| 423 | 设置持久化 | ✅ᵗ | argus_settings: 高度/速度/围栏/主题/音频/语言/单位 |
+| 423 | 设置持久化 | ✅ᵗ | argus_settings: 高度/速度/围栏/主题/音频/区域/瓦片源 (语言→argus_locale, 单位→argus_units 独立存储) |
 | 424 | 预检检查单自定义 | ✅ᵗ | argus_preflight_config: 自定义检查项 |
 | 425 | 地图标注持久化 | ✅ᵗ | argus_annotations: 名称/备注/经纬度 |
 | 426 | 手柄映射持久化 | ✅ᵗ | argus_gamepad_map: 通道映射+死区 |
-| 427 | 调度任务持久化 | ✅ᵗ | argus_scheduler: 定时任务列表 |
+| 427 | 调度任务持久化 | ✅ᵗ | argus_schedules: 定时任务列表 |
 | 428 | localStorage品牌迁移 | ✅ᵗ | migrate.ts: 21静态key + 动态前缀key(ai_annotations_*/mission_*) pllink_*→argus_* 非破坏性迁移 |
 | 429 | NTRIP 配置持久化 | ✅ᵗ | argus_ntrip: host/port/mountpoint/username, NtripPanel加载时自动恢复 |
 | 430 | 飞手姓名持久化 | ✅ᵗ | argus_pilot_name: FlightReportPanel飞行报告飞手标识, 跨会话保持 |
@@ -620,21 +620,21 @@
 
 | # | 功能 | 状态 | 验证方式 |
 |---|------|------|----------|
-| 440 | ArduPilot 旋翼 (27模式) | ✅ᵗ | ardupilot.ts 模式表验证 |
+| 440 | ArduPilot 旋翼 (25模式) | ✅ᵗ | ardupilot.ts COPTER_MODES 25条目 (最高mode ID=27, 有空位) |
 | 441 | ArduPilot 固定翼 (23模式) | ✅ | 真机 vtype=1, 模式切换验证 |
 | 442 | PX4 (15+模式) | ✅ᵗ | px4.ts 模式表验证 |
 | 443 | 机型自动识别 | ✅ | 真机 HEARTBEAT vtype_raw=1 |
 | 444 | 机型手动强制 | ✅ᵗ | set_vtype 命令验证 |
-| 445 | Rover 模式 (10种) | ✅ᵗ | Manual/Acro/Steering/Hold/Loiter/Follow/SmartRTL/Auto/RTL/Guided (constants.py 中英双语) |
-| 446 | Sub 模式 (8种) | ✅ᵗ | Stabilize/Acro/AltHold/Manual/Guided/PosHold/Auto/Surface (constants.py 中英双语) |
+| 445 | Rover 模式 (9种) | ✅ᵗ | Manual/Acro/Steering/Hold/Follow/Auto/RTL/SmartRTL/Guided (constants.py 中英双语, 无Loiter) |
+| 446 | Sub 模式 (9种) | ✅ᵗ | Stabilize/Acro/DepthHold/Manual/Guided/Circle/PosHold/Auto/Surface (constants.py 中英双语) |
 | 447 | VTOL/QuadPlane 模式 | ✅ᵗ | Q-Stabilize/Q-Hover/Q-Loiter/Q-Land/Q-RTL (constants.py Plane部分, 固定翼VTOL过渡) |
-| 448 | GPS定位类型标签 | ✅ᵗ | No Fix/2D/3D/DGPS/RTK Float/RTK Fixed 中英双语 (constants.py GPS_FIX_NAMES) |
-| 449 | 模式快捷按钮集 | ✅ᵗ | 每种机型预选模式子集: 旋翼6/固定翼6/地面车5/水下5, 键盘1-9快速切换 |
-| 450 | ArduPilot固定翼25模式 | ✅ᵗ | 含Thermal(24)+Loiter-to-QLand(25), 修正#222的23模式 |
+| 448 | GPS定位类型标签 | ✅ᵗ | No Fix/2D/3D/DGPS/RTK Float/RTK Fixed 中英双语 (constants.py FIX_NAMES/FIX_NAMES_EN) |
+| 449 | 模式快捷按钮集 | ✅ᵗ | 每种机型预选模式子集: 前端旋翼8/固定翼8 (ardupilot.ts), 后端旋翼6/固定翼8 (constants.py), 键盘1-9快速切换 |
+| 450 | ArduPilot固定翼23模式 | ✅ᵗ | 含Thermal(ID 24)+Loiter-to-QLand(ID 25), mode ID有空位故总数为23 |
 | 451 | PX4精确着陆模式 | ✅ᵗ | PX4_AUTO_PRECLAND=9, 自动精确着陆 |
 | 452 | PX4跟随模式 | ✅ᵗ | PX4_AUTO_FOLLOW=8, 跟随目标飞行 |
 | 453 | 模式类别分类 | ✅ᵗ | manual/assisted/auto/emergency四类, 驱动StatusBar模式徽章颜色 |
-| 454 | 模式快捷按钮8个 | ✅ᵗ | 旋翼8/固定翼8个预选模式, 修正#350的6个 |
+| 454 | 模式快捷按钮8个 | ✅ᵗ | 前端 COPTER_BTNS=8/PLANE_BTNS=8 (ardupilot.ts), 后端 COPTER_BTNS_EN=6 (constants.py 不一致) |
 
 ---
 
@@ -676,11 +676,11 @@
 | 472 | Tauri 桌面打包 (Windows MSI/NSIS) | ✅ᵗ | src-tauri/tauri.conf.json 配置验证 |
 | 473 | 启动器 run.py (--sim/--host/--port) | ✅ | 真机 python run.py 启动验证 |
 | 474 | Windows 打包脚本 | ✅ᵗ | scripts/build_package.py 存在 |
-| 475 | 模拟器 (sim_pllink.py) | ✅ | --sim 模式验证, 1317 参数模拟 |
+| 475 | 模拟器 (sim_pllink.py) | ✅ | --sim 模式验证, 41 参数模拟 (真机1317为FC参数总数) |
 | 476 | 链路丢失超时 (5s) | ✅ᵗ | LINK_LOST_TIMEOUT: 5秒无心跳判定链路丢失, 触发事件+语音 |
 | 477 | 参数元数据缓存TTL | ✅ᵗ | PARAM_CACHE_TTL: 7天本地JSON缓存, 无网络时graceful fallback |
 | 478 | SRTM 高程缓存 | ✅ᵗ | SRTM_CACHE_MAX: 500条内存缓存, ~11m分辨率 |
-| 479 | 自动打开浏览器 | ✅ | run.py/server.py: /health轮询(≤30次,9s)后webbrowser.open |
+| 479 | 自动打开浏览器 | ✅ | server.py: /health轮询(≤30次,0.3s间隔)后webbrowser.open; run.py直接调用webbrowser.open |
 | 480 | ARGUS_NO_BROWSER 环境变量 | ✅ᵗ | 设置后抑制自动打开浏览器, headless/服务器部署用 |
 | 481 | Tauri运行时检测 | ✅ᵗ | __TAURI_INTERNALS__检测: Tauri时API→127.0.0.1:8100, 浏览器时API→相对路径 |
 
@@ -690,8 +690,8 @@
 
 | # | 功能 | 状态 | 验证方式 |
 |---|------|------|----------|
-| 482 | 手柄/摇杆控制 (Gamepad API) | ✅ᵗ | gamepad.svelte.ts: 20Hz 轮询, 8 通道映射, 死区校准, rc_override |
-| 483 | 手柄映射持久化 | ✅ᵗ | localStorage argus_gamepad_config |
+| 482 | 手柄/摇杆控制 (Gamepad API) | ✅ᵗ | gamepad.svelte.ts: rAF轮询(~60Hz)+50ms发送节流, 4通道主动映射(roll/pitch/throttle/yaw)+4零值, 死区校准, rc_override |
+| 483 | 手柄映射持久化 | ✅ᵗ | localStorage argus_gamepad_map |
 | 484 | 日志回放 (ReplayPanel) | ✅ᵗ | CSV 日志播放, 播放/暂停/进度条/倍速, ReplayLayer 地图轨迹 |
 | 485 | 起飞前检查单 (PreflightPanel) | ✅ᵗ | 连接且未解锁时自动弹出, 自定义检查项 localStorage |
 | 486 | 飞行摘要弹窗 | ✅ᵗ | 降落后自动弹出时长/高度/速度/距离/电量统计 |
@@ -711,7 +711,7 @@
 |---|------|------|----------|
 | 494 | 遥测时序图表 (ChartPanel) | ✅ᵗ | 高度/速度/垂直速度/电池/电流/振动 Canvas 渲染 |
 | 495 | 航线高度剖面图 | ✅ᵗ | MissionPanel profileCanvas 地形+航线高度可视化 |
-| 496 | 链路质量历史图 | ✅ᵗ | StatusBar linkHistory 消息率/延迟图表 |
+| 496 | 链路质量历史图 | ✅ᵗ | StatusBar linkHistory SVG sparkline 仅绘制消息率(rate), 延迟(age)仅tooltip显示 |
 | 497 | 日志数据图表查看器 | ✅ᵗ | LogViewerPanel 多通道图表+缩放+表格+统计+CSV 导出 |
 | 498 | FFT 频谱分析 | ✅ᵗ | FFTPanel 振动/信号频域分析 |
 | 499 | 3D 罗盘可视化 | ✅ᵗ | Compass3DPanel 磁力计样本 3D 显示, 2000 样本, 鼠标旋转 |
@@ -723,11 +723,11 @@
 | 类别 | 总数 | ✅ 真机 | ✅ᵗ 测试 | ⚠️ 部分 | 🔒 不可测 | ❌ 缺失 |
 |------|------|---------|----------|---------|----------|---------|
 | 连接与通信 | 26 | 3 | 20 | 2 | 0 | 1 |
-| 遥测数据 | 32 | 21 | 11 | 0 | 0 | 0 |
+| 遥测数据 | 32 | 20 | 7 | 0 | 0 | 5 |
 | 状态推送与WS协议 | 7 | 3 | 4 | 0 | 0 | 0 |
 | 飞行状态计算 | 5 | 3 | 2 | 0 | 0 | 0 |
 | 参数管理 | 18 | 6 | 12 | 0 | 0 | 0 |
-| 任务与航点 | 30 | 5 | 24 | 1 | 0 | 0 |
+| 任务与航点 | 30 | 5 | 19 | 6 | 0 | 0 |
 | 飞行控制 | 18 | 1 | 6 | 5 | 6 | 0 |
 | 校准 | 9 | 2 | 3 | 4 | 0 | 0 |
 | 设置与配置面板 | 21 | 0 | 21 | 0 | 0 | 0 |
@@ -751,7 +751,7 @@
 | 桌面应用与部署 | 10 | 3 | 7 | 0 | 0 | 0 |
 | 手柄 / 回放 / 预检 | 12 | 0 | 12 | 0 | 0 | 0 |
 | 图表与可视化 | 6 | 0 | 6 | 0 | 0 | 0 |
-| **合计** | **499** | **78** | **392** | **19** | **8** | **2** |
+| **合计** | **499** | **77** | **383** | **24** | **8** | **7** |
 
 ---
 
@@ -761,6 +761,10 @@
 |---|------|------|------|
 | 1 | NtripPanel 缺少后端 handler | ❌ | 前端发送 ntrip_start/ntrip_stop, 后端无对应处理函数 |
 | 2 | WebSerial 未真机验证 | ⚠️ | 需 Chrome/Edge + USB 直连浏览器, Linux 环境未测试 |
+| 3 | EKF handler 注册错误消息 ID | ❌ | handle_ekf_status 注册在 msg 74(VFR_HUD) 而非 193(EKF_STATUS_REPORT), EKF数据永远不更新 |
+| 4 | VFR_HUD 数据后端不解析 | ❌ | msg 74 被错误占用, airspeed/throttle/climb 字段不存在于后端 state |
+| 5 | 云台遥测无接收 handler | ❌ | gimbal_pitch/gimbal_yaw 字段定义存在但后端无 MOUNT_STATUS 等接收处理 |
+| 6 | 高级命令后端未实现上传 | ⚠️ | AdvCmdPanel servo/cam_trig/yaw/vtol 前端UI存在, 后端 _upload_mission() 不处理这些字段 |
 
 ---
 
