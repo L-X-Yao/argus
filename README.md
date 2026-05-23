@@ -5,7 +5,7 @@
 [![CI](https://github.com/L-X-Yao/argus/actions/workflows/ci.yml/badge.svg)](https://github.com/L-X-Yao/argus/actions/workflows/ci.yml)
 ![Version](https://img.shields.io/badge/version-3.4.0-blue.svg)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-![Tests](https://img.shields.io/badge/tests-1512%20passing-brightgreen.svg)
+![Tests](https://img.shields.io/badge/tests-1520%20passing-brightgreen.svg)
 ![i18n](https://img.shields.io/badge/i18n-10%20languages-orange.svg)
 
 <!-- TODO: add a hero screenshot (map + HUD + telemetry overlay).
@@ -91,7 +91,7 @@ The simulator (`scripts/sim_pllink.py`) emits realistic telemetry (GPS at Xi'an,
 
 ### WebSerial (no backend at all)
 
-Open Argus in Chrome/Edge → click the **USB** button → pick your flight controller. Telemetry + arm/disarm/mode/RTL/param-read+write + **mission upload + mission download + mission clear + log list/download + all 5 calibration types** flow directly via WebSerial and the built-in TypeScript MAVLink v2 codec. For firmware upload, run the Python backend.
+Open Argus in Chrome/Edge → click the **USB** button → pick your flight controller. Telemetry + arm/disarm/mode/RTL/param-read+write + **mission upload/download/clear + fence upload + log list/download + all 5 calibration types** flow directly via WebSerial and the built-in TypeScript MAVLink v2 codec. For firmware upload, run the Python backend.
 
 ## Architecture
 
@@ -139,7 +139,7 @@ Open Argus in Chrome/Edge → click the **USB** button → pick your flight cont
 # Backend unit + contract tests (1,037 tests)
 python -m pytest tests/test_unit_*.py tests/test_contract_*.py -v
 
-# Frontend unit tests (475 tests)
+# Frontend unit tests (483 tests)
 npx vitest run
 
 # Type check (must be 0 errors, 0 warnings)
@@ -167,7 +167,7 @@ npm run build
 **✅ Recently shipped**
 
 - WebSerial direct USB connection (telemetry + arm/disarm/mode/RTL/param)
-- WebSerial mission upload + download + clear (full MISSION_REQUEST_LIST/COUNT/REQUEST_INT/ITEM/ACK handshake in transport.ts)
+- WebSerial mission upload + download + clear + fence upload (full MISSION_REQUEST_LIST/COUNT/REQUEST_INT/ITEM/ACK handshake in transport.ts, mission_type parameterized for fence)
 - WebSerial log list + binary download (LOG_REQUEST_LIST/ENTRY/REQUEST_DATA/DATA, streaming chunks)
 - WebSerial compass/gyro/level/baro calibration (MAG_CAL_PROGRESS/REPORT binary events bridged to CalibrationPanel's event-stream UI)
 - WebSerial accel calibration (AP_AccelCal ACK reinterpretation: COMMAND_ACK with command=0, result=TEMPORARILY_REJECTED — see protocol_design.md #1)

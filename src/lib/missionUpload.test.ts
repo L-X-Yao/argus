@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { buildMissionItems, validateMissionWaypoints, missionItemsToWaypoints } from './missionUpload';
+import {
+  buildMissionItems, validateMissionWaypoints, missionItemsToWaypoints,
+  buildFenceItems, validateFencePolygon,
+} from './missionUpload';
 import type { RawMissionItem } from './missionUpload';
 import type { Waypoint } from './types';
 
@@ -235,5 +238,53 @@ describe('missionItemsToWaypoints', () => {
 
   it('returns empty list for an empty input', () => {
     expect(missionItemsToWaypoints([])).toEqual([]);
+  });
+});
+
+describe('buildFenceItems', () => {
+  it('produces N items with cmd=5001, frame=3, p1=N, autocontinue=1', () => {
+    const poly = [
+      { lat: 30, lon: 120 }, { lat: 31, lon: 120 }, { lat: 31, lon: 121 },
+    ];
+    const items = buildFenceItems(poly);
+    expect(items.length).toBe(3);
+    items.forEach((item, i) => {
+      expect(item.command).toBe(5001);
+      expect(item.frame).toBe(3);
+      expect(item.p1).toBe(3);           // total vertex count
+      expect(item.autocontinue).toBe(1);
+      expect(item.current).toBe(0);      // first vertex is NOT current=1 for fence
+      expect(item.seq).toBe(i);
+    });
+    expect(items[0].x).toBe(300000000);
+    expect(items[2].y).toBe(1210000000);
+  });
+
+  it('returns empty for empty polygon', () => {
+    expect(buildFenceItems([])).toEqual([]);
+  });
+});
+
+describe('validateFencePolygon', () => {
+  it('rejects < 3 vertices', () => {
+    expect(validateFencePolygon([]).ok).toBe(false);
+    expect(validateFencePolygon([{ lat: 30, lon: 120 }, { lat: 31, lon: 121 }]).ok).toBe(false);
+  });
+
+  it('rejects > 200 vertices', () => {
+    const big = Array.from({ length: 201 }, (_, i) => ({ lat: 30 + i * 0.001, lon: 120 }));
+    expect(validateFencePolygon(big).ok).toBe(false);
+  });
+
+  it('rejects out-of-range coordinates', () => {
+    expect(validateFencePolygon([
+      { lat: 91, lon: 120 }, { lat: 31, lon: 121 }, { lat: 32, lon: 122 },
+    ]).ok).toBe(false);
+  });
+
+  it('accepts a typical 3-vertex polygon', () => {
+    expect(validateFencePolygon([
+      { lat: 30, lon: 120 }, { lat: 31, lon: 121 }, { lat: 30.5, lon: 121.5 },
+    ]).ok).toBe(true);
   });
 });

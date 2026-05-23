@@ -71,6 +71,7 @@ vi.mock('./logStore.svelte', () => ({
 import {
   connectSerial, disconnectSerial,
   serialUploadMission, serialDownloadMission,
+  serialUploadFence,
   serialLogList, serialLogDownload,
   serialCalCompass,
 } from './transport';
@@ -228,6 +229,47 @@ describe('serialUploadMission', () => {
     const result = await serialUploadMission(wps, 30);
     expect(result.ok).toBe(false);
     expect(result.error).toMatch(/download/i);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// Fence upload (Phase K) — same protocol as mission, mission_type=1
+// ─────────────────────────────────────────────────────────────────────────
+
+describe('serialUploadFence', () => {
+  it('sends MISSION_COUNT with mission_type=1 and items with command=5001', async () => {
+    const poly = [
+      { lat: 30, lon: 120 }, { lat: 31, lon: 120 },
+      { lat: 31, lon: 121 }, { lat: 30, lon: 121 },
+    ];
+    const promise = serialUploadFence(poly);
+    // First write: MISSION_COUNT (msg 44). Decode it and verify mission_type
+    // extension byte. With non-zero mission_type the payload is 5 bytes.
+    const count = findWrite(44)!;
+    // MAVLink 2 frame header is 10 bytes; payload follows. Payload[0..1]=count,
+    // [2]=tgt_sys, [3]=tgt_comp, [4]=mission_type.
+    expect(count[10 + 4]).toBe(1);   // FENCE
+    // Now drive the state machine through the 4-vertex upload.
+    for (let seq = 0; seq < 4; seq++) {
+      writes.length = 0;
+      inject(fcFrame(51, encodeMissionRequestInt(1, 1, seq, 1)));
+      const item = findWrite(73);
+      expect(item, `seq=${seq}`).toBeDefined();
+      // Verify cmd=5001 (NAV_FENCE_POLYGON_VERTEX_INCLUSION) at offset 10+30.
+      const cmd = item![10 + 30] | (item![10 + 31] << 8);
+      expect(cmd).toBe(5001);
+      // mission_type extension at offset 10+37 must be 1 (FENCE).
+      expect(item![10 + 37]).toBe(1);
+    }
+    writes.length = 0;
+    inject(fcFrame(47, encodeMissionAck(1, 1, 0, 1)));
+    await expect(promise).resolves.toEqual({ ok: true });
+  });
+
+  it('rejects polygons with < 3 vertices', async () => {
+    const res = await serialUploadFence([{ lat: 30, lon: 120 }, { lat: 31, lon: 121 }]);
+    expect(res.ok).toBe(false);
+    expect(res.error).toMatch(/3 vertices/i);
   });
 });
 

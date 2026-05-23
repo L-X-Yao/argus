@@ -31,7 +31,10 @@ import { openSerial, serialWrite, serialReadLoop, isWebSerialSupported } from '.
 import type { SerialConnection } from './serial';
 import { addToast, addEvent, app } from './stores.svelte';
 import { t } from './i18n.svelte';
-import { buildMissionItems, validateMissionWaypoints, missionItemsToWaypoints } from './missionUpload';
+import {
+  buildMissionItems, buildFenceItems, missionItemsToWaypoints,
+  validateMissionWaypoints, validateFencePolygon,
+} from './missionUpload';
 import type { MissionItem, RawMissionItem } from './missionUpload';
 import type { Waypoint } from './types';
 import {
@@ -328,6 +331,9 @@ export function serialGimbalPitchYaw(data: {
 
 interface UploadState {
   items: MissionItem[];
+  missionType: number;   // 0=MISSION, 1=FENCE, 2=RALLY — passed through on
+                         // MISSION_COUNT + each MISSION_ITEM_INT so the FC's
+                         // AP_Mission/AP_Fence routes the upload correctly.
   resolve: (result: { ok: boolean; error?: string }) => void;
   itemTimer: ReturnType<typeof setTimeout> | null;
   overallTimer: ReturnType<typeof setTimeout> | null;
@@ -357,7 +363,7 @@ function _onMissionRequest(seq: number): void {
   sendSerialFrame(73, encodeMissionItemInt(
     serial.targetSysId, serial.targetCompId,
     item.seq, item.command, item.frame,
-    item.current, item.autocontinue, 0,  // missionType 0 = MAV_MISSION_TYPE_MISSION
+    item.current, item.autocontinue, upload.missionType,
     item.p1, item.p2, item.p3, item.p4,
     item.x, item.y, item.z,
   ));
@@ -382,6 +388,23 @@ export function isSerialMissionUploading(): boolean {
   return upload?.pending === true;
 }
 
+function _startUpload(items: MissionItem[], missionType: number): Promise<{ ok: boolean; error?: string }> {
+  return new Promise((resolve) => {
+    upload = {
+      items, missionType, resolve,
+      itemTimer: null,
+      overallTimer: setTimeout(() => {
+        _resolveUpload({ ok: false, error: 'Mission upload timed out (30s overall)' });
+      }, 30000),
+      pending: true,
+      lastSeq: -1,
+    };
+    sendSerialFrame(44, encodeMissionCount(
+      serial.targetSysId, serial.targetCompId, items.length, missionType,
+    ));
+  });
+}
+
 export async function serialUploadMission(
   waypoints: Waypoint[], takeoffAlt: number,
 ): Promise<{ ok: boolean; error?: string }> {
@@ -391,23 +414,25 @@ export async function serialUploadMission(
 
   const validation = validateMissionWaypoints(waypoints);
   if (!validation.ok) return validation;
+  return _startUpload(buildMissionItems(waypoints, takeoffAlt), 0);
+}
 
-  const items = buildMissionItems(waypoints, takeoffAlt);
+/**
+ * Fence polygon upload. Same protocol as a mission upload but with
+ * mission_type=1 (MAV_MISSION_TYPE_FENCE) on both MISSION_COUNT and every
+ * MISSION_ITEM_INT, so AP_Fence routes the upload to the fence buffer
+ * instead of the mission buffer. Mirrors backend cmd_fence_upload.
+ */
+export async function serialUploadFence(
+  polygon: { lat: number; lon: number }[],
+): Promise<{ ok: boolean; error?: string }> {
+  if (!isSerialConnected()) return { ok: false, error: 'Not connected via serial' };
+  if (upload?.pending) return { ok: false, error: 'Another upload is in progress' };
+  if (download.pending) return { ok: false, error: 'A mission download is in progress' };
 
-  return new Promise((resolve) => {
-    upload = {
-      items, resolve,
-      itemTimer: null,
-      overallTimer: setTimeout(() => {
-        _resolveUpload({ ok: false, error: 'Mission upload timed out (30s overall)' });
-      }, 30000),
-      pending: true,
-      lastSeq: -1,
-    };
-    sendSerialFrame(44, encodeMissionCount(
-      serial.targetSysId, serial.targetCompId, items.length, 0,
-    ));
-  });
+  const validation = validateFencePolygon(polygon);
+  if (!validation.ok) return validation;
+  return _startUpload(buildFenceItems(polygon), 1);
 }
 
 export function serialClearMission(): void {

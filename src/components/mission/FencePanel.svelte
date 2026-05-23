@@ -1,6 +1,7 @@
 <script lang="ts">
   import { app, addToast } from '../../lib/stores.svelte';
   import { sendCommand } from '../../lib/ws';
+  import { isSerialConnected, serialUploadFence } from '../../lib/transport';
   import { t } from '../../lib/i18n.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
   import Badge from '$lib/components/ui/badge/badge.svelte';
@@ -64,8 +65,22 @@
 
   function uploadFence() {
     if (app.fencePolygon.length < 3) { addToast(t('fence.min3'), 'error'); return; }
-    sendCommand('fence_upload', undefined, { polygon: app.fencePolygon });
     addToast(t('fence.uploading'), 'info');
+    if (isSerialConnected()) {
+      // WebSerial direct: run the MISSION protocol with mission_type=1 in
+      // transport.ts. The WS path goes through backend which emits
+      // fence_ack_ok/fail events that ws.ts handles to set fenceUploaded.
+      serialUploadFence(app.fencePolygon).then((res) => {
+        if (res.ok) {
+          app.fenceUploaded = true;
+          addToast(t('fence.uploaded') ?? 'Fence uploaded', 'success');
+        } else {
+          addToast(`${t('fence.uploading')}: ${res.error}`, 'error', 5000);
+        }
+      });
+      return;
+    }
+    sendCommand('fence_upload', undefined, { polygon: app.fencePolygon });
   }
 
   function exportKml() {

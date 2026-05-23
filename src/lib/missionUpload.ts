@@ -101,6 +101,43 @@ export function buildMissionItems(waypoints: Waypoint[], takeoffAlt: number): Mi
   return items;
 }
 
+/**
+ * Fence polygon items: MAV_CMD_NAV_FENCE_POLYGON_VERTEX_INCLUSION (5001).
+ * Mirrors backend/commands/_mission.py:cmd_fence_upload and the wire shape
+ * built by backend/commands/_helpers.py:send_fence_item_int (frame=3,
+ * current=0, autocontinue=1, p1=total vertex count).
+ *
+ * Only the inclusion-polygon variant is implemented. AP also accepts
+ * exclusion polygons (5002) and circular fences (5003/5004) but the
+ * existing FencePanel only emits inclusion polygons.
+ */
+export function buildFenceItems(polygon: { lat: number; lon: number }[]): MissionItem[] {
+  const n = polygon.length;
+  return polygon.map((pt, i) => ({
+    seq: i,
+    command: 5001,
+    frame: 3,
+    current: 0,
+    autocontinue: 1,
+    p1: n,    // total vertex count (read by AP_Fence to size the polygon)
+    p2: 0, p3: 0, p4: 0,
+    x: Math.trunc(pt.lat * 1e7),
+    y: Math.trunc(pt.lon * 1e7),
+    z: 0,
+  }));
+}
+
+export function validateFencePolygon(polygon: { lat: number; lon: number }[]): { ok: true } | { ok: false; error: string } {
+  if (polygon.length < 3) return { ok: false, error: 'Fence needs at least 3 vertices' };
+  if (polygon.length > 200) return { ok: false, error: 'Fence too large (max 200 vertices)' };
+  for (const p of polygon) {
+    const lat = Number(p.lat), lon = Number(p.lon);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return { ok: false, error: 'Invalid fence coordinates' };
+    if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return { ok: false, error: 'Invalid fence coordinates' };
+  }
+  return { ok: true };
+}
+
 export function validateMissionWaypoints(waypoints: Waypoint[]): { ok: true } | { ok: false; error: string } {
   if (waypoints.length === 0) return { ok: false, error: 'No waypoints' };
   if (waypoints.length > 500) return { ok: false, error: 'Mission too large (max 500 WP)' };
