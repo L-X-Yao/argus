@@ -276,10 +276,15 @@ class TestGimbal:
         execute('gimbal_angle', None, link, data={'pitch': -30, 'yaw': 90})
         assert link._ser.write.called
 
-    def test_gimbal_rate(self):
+    def test_gimbal_rate_disabled(self):
+        # gimbal_rate is currently a no-op: the previous implementation built
+        # a malformed GIMBAL_MANAGER_SET_ATTITUDE payload. It returns an error
+        # and does NOT touch the wire.
         link = make_link()
-        execute('gimbal_rate', None, link, data={'pitch_rate': 10, 'yaw_rate': 5})
-        assert link._ser.write.called
+        result = execute('gimbal_rate', None, link, data={'pitch_rate': 10, 'yaw_rate': 5})
+        assert result is not None
+        assert result.get('ok') is False
+        assert not link._ser.write.called
 
 
 class TestCamera:

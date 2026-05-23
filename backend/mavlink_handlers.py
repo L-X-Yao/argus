@@ -13,6 +13,20 @@ if TYPE_CHECKING:
     from .drone_link import DroneLink
 
 
+def _pad(p: bytes, n: int) -> bytes:
+    """Return p zero-padded to at least n bytes.
+
+    MAVLink 2 senders may zero-trim trailing zero bytes from a payload to save
+    bandwidth; receivers are required to treat the trimmed bytes as zero. Our
+    handlers read named fields by offset and would either crash on a short
+    buffer or return early on a strict `pl < N` check. Calling `_pad` before
+    unpacking lets each handler read at any offset up to n without worrying
+    about the wire-level truncation. `pl` still reflects the original size, so
+    conditional reads on extension fields remain correct.
+    """
+    return p if len(p) >= n else p + b'\x00' * (n - len(p))
+
+
 def handle_heartbeat(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 7:
         return
@@ -162,8 +176,11 @@ _ACK_RESULTS_ZH = {0: '成功', 1: '暂时拒绝', 2: '拒绝', 3: '不支持', 
 _ACK_RESULTS_EN = {0: 'success', 1: 'temporarily rejected', 2: 'denied', 3: 'unsupported', 4: 'in progress', 5: 'cancelled'}
 
 def handle_command_ack(p: bytes, pl: int, link: DroneLink) -> None:
-    if pl < 3:
+    # Min check 2: command at 0-1. result (offset 2) reads 0 (ACCEPTED) when
+    # the byte was trimmed.
+    if pl < 2:
         return
+    p = _pad(p, 3)
     import struct
     cmd_id = struct.unpack_from('<H', p, 0)[0]
     result = p[2]
@@ -192,8 +209,11 @@ def handle_mag_cal_progress(p: bytes, pl: int, link: DroneLink) -> None:
 
 
 def handle_mag_cal_report(p: bytes, pl: int, link: DroneLink) -> None:
-    if pl < 44:
+    # cal_status at offset 42. autosaved (43) and the orientation extension
+    # fields commonly trim down to pl=43 when autosaved=0.
+    if pl < 43:
         return
+    p = _pad(p, 44)
     if getattr(link, '_mag_cal_done', False):
         return
     cal_status = p[42]
@@ -227,8 +247,11 @@ def handle_statustext(p: bytes, pl: int, link: DroneLink) -> None:
 
 
 def handle_servo_output(p: bytes, pl: int, link: DroneLink) -> None:
-    if pl < 21:
+    # Min check 6 (servo1 last byte). Trim could drop port (offset 20) and the
+    # extension servo9-16 if those values are all zero.
+    if pl < 6:
         return
+    p = _pad(p, 37)
     rc = link.rc_servo
     rc.servo_out = [struct.unpack_from('<H', p, 4 + i * 2)[0] for i in range(8)]
     if pl >= 37:
@@ -245,8 +268,11 @@ def handle_rc_channels(p: bytes, pl: int, link: DroneLink) -> None:
 
 
 def handle_vibration(p: bytes, pl: int, link: DroneLink) -> None:
-    if pl < 32:
+    # Min check 12: vibration_x first useful field. Trim can drop trailing
+    # clipping counters when they're zero.
+    if pl < 12:
         return
+    p = _pad(p, 32)
     d = link.diagnostic
     d.vibe_x = struct.unpack_from('<f', p, 8)[0]
     d.vibe_y = struct.unpack_from('<f', p, 12)[0]
@@ -257,8 +283,12 @@ def handle_vibration(p: bytes, pl: int, link: DroneLink) -> None:
 
 
 def handle_vfr_hud(p: bytes, pl: int, link: DroneLink) -> None:
-    if pl < 20:
+    # Min check 4 (airspeed): MAVLink 2 zero-trim can shrink this from the
+    # nominal 20 bytes down to as little as 4 when throttle/heading/climb are
+    # zero.
+    if pl < 4:
         return
+    p = _pad(p, 20)
     airspeed, gs, alt, climb, heading, throttle = struct.unpack_from('<ffffhH', p)
     a = link.attitude
     a.airspeed = airspeed
@@ -399,8 +429,11 @@ def handle_mission_request(p: bytes, pl: int, link: DroneLink) -> None:
 
 
 def handle_mission_ack(p: bytes, pl: int, link: DroneLink) -> None:
-    if pl < 3:
+    # Min check 1: target_system. type (offset 2) reads 0=ACCEPTED from
+    # zero-padded buffer if trimmed.
+    if pl < 1:
         return
+    p = _pad(p, 4)
     mtype = p[2]
     mission_type = p[3] if pl >= 4 else 0
     m = link.mission
