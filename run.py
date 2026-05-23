@@ -47,7 +47,20 @@ def main():
         webbrowser.open('http://localhost:%d' % args.port)
 
     try:
+        import logging  # noqa: I001
+
         import uvicorn
+
+        class _ShutdownFilter(logging.Filter):
+            def filter(self, record):
+                if record.exc_info and record.exc_info[1]:
+                    name = type(record.exc_info[1]).__name__
+                    if name in ('CancelledError', 'KeyboardInterrupt'):
+                        return False
+                return True
+
+        logging.getLogger('uvicorn.error').addFilter(_ShutdownFilter())
+
         if sys.platform == 'win32':
             import asyncio
             import warnings
