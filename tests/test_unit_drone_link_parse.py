@@ -84,6 +84,31 @@ class TestParseMavlinkFrame:
         assert result[0] == 0xFD
         assert result[7] == 0  # msg_id
 
+    def test_unknown_msg_id_dropped(self):
+        """Fail-loud: msg_id not in _CRC_EXTRA should drop the frame and bump
+        the unknown-id counter (so missing entries surface in logs)."""
+        link = DroneLink()
+        unknown_id = 9999
+        assert unknown_id not in _CRC_EXTRA
+        header = bytes([
+            9, 0, 0, 0,
+            1, 1,
+            unknown_id & 0xFF, (unknown_id >> 8) & 0xFF, (unknown_id >> 16) & 0xFF,
+        ])
+        payload = b'\x00' * 9
+        link._buf = b'\xfd' + header + payload + b'\x00\x00'
+        result, skip = link._parse_mavlink_frame()
+        assert result is None
+        assert skip == 1
+        assert link._unknown_msg_ids.get(unknown_id) == 1
+
+    def test_mag_cal_msg_ids_have_crc_extra(self):
+        """Regression: msg 191 (MAG_CAL_PROGRESS) and 192 (MAG_CAL_REPORT) were
+        previously missing from _CRC_EXTRA, which let frames slip through
+        without CRC verification."""
+        assert _CRC_EXTRA.get(191) == 92
+        assert _CRC_EXTRA.get(192) == 36
+
 
 class TestNextFrame:
     def test_auto_detects_standard(self):

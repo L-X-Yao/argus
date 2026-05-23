@@ -51,8 +51,9 @@ _CRC_EXTRA = {
     40: 230, 42: 28, 43: 132, 44: 221, 46: 11, 47: 153, 51: 196, 65: 118,
     70: 124, 73: 38, 74: 20, 77: 143, 83: 22, 85: 143, 87: 5, 105: 93,
     116: 76, 117: 128, 118: 56, 119: 116, 120: 134, 125: 203, 126: 220,
-    136: 1, 147: 154, 148: 178, 158: 134, 163: 127, 168: 1, 178: 47, 233: 35,
-    193: 71, 241: 90, 242: 104, 246: 184, 253: 83, 310: 28, 311: 95,
+    136: 1, 147: 154, 148: 178, 158: 134, 163: 127, 168: 1, 178: 47,
+    191: 92, 192: 36, 193: 71, 233: 35,
+    241: 90, 242: 104, 246: 184, 253: 83, 310: 28, 311: 95,
 }
 
 _MSG_NAMES = {
@@ -108,6 +109,7 @@ class DroneLink:
         self._msg_stats_window = 5.0
         self._console_buf: list[str] = []
         self._prearm_messages: list[str] = []
+        self._unknown_msg_ids: dict[int, int] = {}  # msg_id -> drop count (fail-loud throttle)
         self.param_mgr = ParamManager(self)
 
         self.attitude = AttitudeState()
@@ -406,9 +408,19 @@ class DroneLink:
             expected_crc = buf[crc_offset] | (buf[crc_offset + 1] << 8)
             crc_data = bytes(buf[1:10 + payload_len])
             mid = buf[7] | (buf[8] << 8) | (buf[9] << 16)
-            crc_extra = _CRC_EXTRA.get(mid, 0)
+            crc_extra = _CRC_EXTRA.get(mid)
+            if crc_extra is None:
+                # Fail-loud: unknown msg id means we can't verify CRC or trust the
+                # payload offsets. Drop the frame and warn (throttled) so the
+                # missing entry shows up in logs the first time it's seen and
+                # again every 1000 occurrences.
+                n = self._unknown_msg_ids.get(mid, 0) + 1
+                self._unknown_msg_ids[mid] = n
+                if n == 1 or n % 1000 == 0:
+                    logger.warning('Unknown MAVLink msg id %d (count=%d) - dropping frame; add to _CRC_EXTRA', mid, n)
+                return None, 1
             calc_crc = self._mavlink_crc16(crc_data + bytes([crc_extra]))
-            if calc_crc != expected_crc and crc_extra != 0:
+            if calc_crc != expected_crc:
                 return None, 1
         return bytes(buf[:frame_len]), frame_len
 
