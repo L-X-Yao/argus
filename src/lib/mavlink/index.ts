@@ -12,6 +12,9 @@ export {
   encodeMissionCount,
   encodeMissionItemInt,
   encodeMissionClearAll,
+  encodeLogRequestList,
+  encodeLogRequestData,
+  encodeLogRequestEnd,
 } from './messages';
 export type {
   MessageHandlers,

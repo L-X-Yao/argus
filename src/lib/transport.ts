@@ -19,6 +19,9 @@ import {
   encodeMissionCount,
   encodeMissionItemInt,
   encodeMissionClearAll,
+  encodeLogRequestList,
+  encodeLogRequestData,
+  encodeLogRequestEnd,
 } from './mavlink';
 import { openSerial, serialWrite, serialReadLoop, isWebSerialSupported } from './serial';
 import type { SerialConnection } from './serial';
@@ -26,6 +29,11 @@ import { addToast, app } from './stores.svelte';
 import { buildMissionItems, validateMissionWaypoints } from './missionUpload';
 import type { MissionItem } from './missionUpload';
 import type { Waypoint } from './types';
+import {
+  logState, setLogList, startDownload,
+  appendLogChunkBinary, updateDownloadProgress, completeDownload, cancelDownload,
+} from './logStore.svelte';
+import type { LogEntry as LogEntryShape } from './logStore.svelte';
 
 export type TransportMode = 'websocket' | 'serial';
 
@@ -115,6 +123,14 @@ export async function connectSerial(
             _onMissionAck(type);
           }
         }
+        // Log list / download state machines listen on LOG_ENTRY (118) and
+        // LOG_DATA (120). Internal intercept first; external dispatch still
+        // runs so user handlers see the frames if registered.
+        if (logSession.listPending && frame.msgId === 118) {
+          _onLogEntry(frame.payload);
+        } else if (logSession.dlPending && frame.msgId === 120) {
+          _onLogData(frame.payload);
+        }
         dispatchFrame(frame, serial.handlers);
       }
     }).catch((e) => { console.error('[Serial] read loop error', e); }).finally(() => {
@@ -131,6 +147,10 @@ export async function connectSerial(
       if (upload?.pending) {
         _resolveUpload({ ok: false, error: 'Serial link lost mid-upload' });
       }
+      // Tear down any in-flight log operation so its watchdog doesn't
+      // fire spuriously after disconnect.
+      if (logSession.listPending) _resolveLogList({ ok: false, error: 'Serial link lost' });
+      if (logSession.dlPending) _abortLogDownload('Serial link lost mid-download');
     });
 
     return true;
@@ -322,4 +342,188 @@ export function serialClearMission(): void {
   sendSerialFrame(45, encodeMissionClearAll(
     serial.targetSysId, serial.targetCompId, 0,
   ));
+}
+
+/* ── Log list + download state machines (WebSerial direct mode) ─────────
+ *
+ * List: GCS → LOG_REQUEST_LIST (117). FC streams LOG_ENTRY (118) per log; the
+ *       entry with id == last_log_num signals end-of-list and resolves the
+ *       promise.
+ * Download: GCS → LOG_REQUEST_DATA (119) with (ofs, count=4500). FC streams
+ *           LOG_DATA (120) chunks ≤90 bytes. Matches backend's per-chunk
+ *           re-request loop at backend/mavlink_handlers.py:660 so the FC
+ *           sees an identical request cadence. count==0 in a LOG_DATA is
+ *           AP_Logger's "EOF / log unreadable" signal — finalize as truncated.
+ * Cancel:  GCS → LOG_REQUEST_END (122). Aborts any in-flight download.
+ */
+
+const LOG_CHUNK_BYTES = 90 * 50;  // matches backend cmd_log_download
+
+interface LogSessionState {
+  listPending: boolean;
+  listResolve: ((r: { ok: boolean; error?: string }) => void) | null;
+  listTimer: ReturnType<typeof setTimeout> | null;
+  listEntries: LogEntryShape[];
+
+  dlPending: boolean;
+  dlResolve: ((r: { ok: boolean; error?: string }) => void) | null;
+  dlTimer: ReturnType<typeof setTimeout> | null;
+  dlId: number;
+  dlSize: number;
+  dlOfs: number;
+}
+
+const logSession: LogSessionState = {
+  listPending: false, listResolve: null, listTimer: null, listEntries: [],
+  dlPending: false, dlResolve: null, dlTimer: null, dlId: -1, dlSize: 0, dlOfs: 0,
+};
+
+function _resolveLogList(result: { ok: boolean; error?: string }): void {
+  if (!logSession.listPending) return;
+  logSession.listPending = false;
+  if (logSession.listTimer) { clearTimeout(logSession.listTimer); logSession.listTimer = null; }
+  const r = logSession.listResolve;
+  logSession.listResolve = null;
+  if (r) r(result);
+}
+
+function _onLogEntry(p: DataView): void {
+  if (p.byteLength < 14) return;
+  const entry: LogEntryShape = {
+    time_utc: p.getUint32(0, true),
+    size: p.getUint32(4, true),
+    id: p.getUint16(8, true),
+    // num_logs at offset 10 (uint16) is informational; last_log_num at 12 is
+    // what we actually check.
+  };
+  const lastLogNum = p.getUint16(12, true);
+  logSession.listEntries.push(entry);
+  // Reset the watchdog every time a new entry shows up — slow FCs can take
+  // tens of seconds to list 100+ logs.
+  if (logSession.listTimer) clearTimeout(logSession.listTimer);
+  logSession.listTimer = setTimeout(() => {
+    _resolveLogList({ ok: false, error: 'FC stopped sending LOG_ENTRY' });
+  }, 5000);
+  if (entry.id === lastLogNum) {
+    setLogList([...logSession.listEntries]);
+    _resolveLogList({ ok: true });
+  }
+}
+
+function _abortLogDownload(error: string): void {
+  if (!logSession.dlPending) return;
+  logSession.dlPending = false;
+  if (logSession.dlTimer) { clearTimeout(logSession.dlTimer); logSession.dlTimer = null; }
+  cancelDownload();
+  const r = logSession.dlResolve;
+  logSession.dlResolve = null;
+  if (r) r({ ok: false, error });
+}
+
+function _finishLogDownload(truncated: boolean): void {
+  if (!logSession.dlPending) return;
+  const id = logSession.dlId;
+  const size = logSession.dlOfs;
+  logSession.dlPending = false;
+  if (logSession.dlTimer) { clearTimeout(logSession.dlTimer); logSession.dlTimer = null; }
+  // Pass empty b64 — the streaming chunks already populated logState._chunks;
+  // completeDownload assembles + triggers the browser download.
+  completeDownload(id, undefined, size);
+  const r = logSession.dlResolve;
+  logSession.dlResolve = null;
+  if (r) r({ ok: !truncated, error: truncated ? 'Download truncated (count=0 from FC)' : undefined });
+}
+
+function _onLogData(p: DataView): void {
+  if (p.byteLength < 7) return;
+  const ofs = p.getUint32(0, true);
+  const logId = p.getUint16(4, true);
+  const count = p.getUint8(6);
+  if (logId !== logSession.dlId) return;
+  // FC count==0 is the AP_Logger "EOF / unreadable log" sentinel — see
+  // backend handle_log_data at backend/mavlink_handlers.py:631.
+  if (count === 0) {
+    _finishLogDownload(true);
+    return;
+  }
+  const data = new Uint8Array(p.buffer, p.byteOffset + 7, Math.min(count, p.byteLength - 7));
+  appendLogChunkBinary(logId, ofs, data);
+  const end = ofs + data.length;
+  if (end > logSession.dlOfs) logSession.dlOfs = end;
+  updateDownloadProgress(logSession.dlOfs, logSession.dlSize);
+
+  if (logSession.dlTimer) clearTimeout(logSession.dlTimer);
+  logSession.dlTimer = setTimeout(() => {
+    _abortLogDownload('FC stopped sending LOG_DATA');
+  }, 5000);
+
+  if (logSession.dlOfs >= logSession.dlSize) {
+    _finishLogDownload(false);
+    return;
+  }
+  // Mirror backend's per-chunk re-request — AP_Logger treats duplicate
+  // LOG_REQUEST_DATA as harmless and won't retransmit already-acked chunks.
+  const remaining = logSession.dlSize - logSession.dlOfs;
+  const next = Math.min(LOG_CHUNK_BYTES, remaining);
+  sendSerialFrame(119, encodeLogRequestData(
+    serial.targetSysId, serial.targetCompId,
+    logId, logSession.dlOfs, next,
+  ));
+}
+
+export function isSerialLogBusy(): boolean {
+  return logSession.listPending || logSession.dlPending;
+}
+
+export async function serialLogList(): Promise<{ ok: boolean; error?: string }> {
+  if (!isSerialConnected()) return { ok: false, error: 'Not connected via serial' };
+  if (logSession.listPending || logSession.dlPending) {
+    return { ok: false, error: 'Another log operation is in progress' };
+  }
+  return new Promise((resolve) => {
+    logSession.listPending = true;
+    logSession.listResolve = resolve;
+    logSession.listEntries = [];
+    logSession.listTimer = setTimeout(() => {
+      _resolveLogList({ ok: false, error: 'LOG_REQUEST_LIST timed out (no LOG_ENTRY in 5s)' });
+    }, 5000);
+    sendSerialFrame(117, encodeLogRequestList(
+      serial.targetSysId, serial.targetCompId, 0, 0xFFFF,
+    ));
+  });
+}
+
+export async function serialLogDownload(id: number): Promise<{ ok: boolean; error?: string }> {
+  if (!isSerialConnected()) return { ok: false, error: 'Not connected via serial' };
+  if (logSession.listPending || logSession.dlPending) {
+    return { ok: false, error: 'Another log operation is in progress' };
+  }
+  const entry = logState.list.find((e) => e.id === id);
+  if (!entry) return { ok: false, error: 'Log not in list — request the list first' };
+  if (entry.size === 0) return { ok: false, error: 'Log is empty' };
+
+  startDownload(id, entry.size);
+  return new Promise((resolve) => {
+    logSession.dlPending = true;
+    logSession.dlResolve = resolve;
+    logSession.dlId = id;
+    logSession.dlSize = entry.size;
+    logSession.dlOfs = 0;
+    logSession.dlTimer = setTimeout(() => {
+      _abortLogDownload('LOG_REQUEST_DATA timed out (no LOG_DATA in 5s)');
+    }, 5000);
+    const chunk = Math.min(LOG_CHUNK_BYTES, entry.size);
+    sendSerialFrame(119, encodeLogRequestData(
+      serial.targetSysId, serial.targetCompId, id, 0, chunk,
+    ));
+  });
+}
+
+export function serialLogCancel(): void {
+  if (!isSerialConnected()) return;
+  sendSerialFrame(122, encodeLogRequestEnd(
+    serial.targetSysId, serial.targetCompId,
+  ));
+  if (logSession.dlPending) _abortLogDownload('Cancelled');
+  if (logSession.listPending) _resolveLogList({ ok: false, error: 'Cancelled' });
 }

@@ -26,8 +26,13 @@ import {
   encodeMissionCount,
   encodeMissionItemInt,
   encodeMissionClearAll,
+  encodeLogRequestList,
+  encodeLogRequestData,
+  encodeLogRequestEnd,
   decodeMissionItemInt,
   decodeMissionRequest,
+  decodeLogEntry,
+  decodeLogData,
   dispatchFrame,
   decodeServoOutput,
 } from './messages';
@@ -665,6 +670,78 @@ describe('message encoders', () => {
     const req = decodeMissionRequest(dv);
     expect(req.seq).toBe(42);
     expect(req.missionType).toBe(2);
+  });
+
+  it('encodeLogRequestList produces 6-byte payload matching backend layout', () => {
+    // Matches backend: struct.pack('<HHBB', 0, 0xFFFF, sysid, 1)
+    const rl = encodeLogRequestList(1, 1);
+    expect(rl.length).toBe(6);
+    const dv = new DataView(rl.buffer);
+    expect(dv.getUint16(0, true)).toBe(0);
+    expect(dv.getUint16(2, true)).toBe(0xFFFF);
+    expect(dv.getUint8(4)).toBe(1);
+    expect(dv.getUint8(5)).toBe(1);
+  });
+
+  it('encodeLogRequestList honors custom start/end', () => {
+    const rl = encodeLogRequestList(1, 1, 5, 10);
+    const dv = new DataView(rl.buffer);
+    expect(dv.getUint16(0, true)).toBe(5);
+    expect(dv.getUint16(2, true)).toBe(10);
+  });
+
+  it('encodeLogRequestData produces 12-byte payload with correct field layout', () => {
+    // Matches backend: struct.pack('<IIHBB', ofs, count, log_id, sysid, 1)
+    const rd = encodeLogRequestData(1, 1, 7, 8192, 4500);
+    expect(rd.length).toBe(12);
+    const dv = new DataView(rd.buffer);
+    expect(dv.getUint32(0, true)).toBe(8192);    // ofs
+    expect(dv.getUint32(4, true)).toBe(4500);    // count
+    expect(dv.getUint16(8, true)).toBe(7);       // id
+    expect(dv.getUint8(10)).toBe(1);
+    expect(dv.getUint8(11)).toBe(1);
+  });
+
+  it('encodeLogRequestEnd produces 2-byte payload', () => {
+    const re = encodeLogRequestEnd(1, 1);
+    expect(re.length).toBe(2);
+    expect(re[0]).toBe(1);
+    expect(re[1]).toBe(1);
+  });
+
+  it('LOG_ENTRY decoder reads time_utc/size/id/last_log_num at correct offsets', () => {
+    // Build a 14-byte LOG_ENTRY payload by hand to confirm the offsets the
+    // decoder uses match the wire format.
+    const buf = new Uint8Array(14);
+    const dv = new DataView(buf.buffer);
+    dv.setUint32(0, 1700000000, true);  // time_utc
+    dv.setUint32(4, 524288, true);      // size (512KB)
+    dv.setUint16(8, 3, true);           // id
+    dv.setUint16(10, 5, true);          // num_logs
+    dv.setUint16(12, 5, true);          // last_log_num
+    const entry = decodeLogEntry(dv);
+    expect(entry.timeUtc).toBe(1700000000);
+    expect(entry.size).toBe(524288);
+    expect(entry.id).toBe(3);
+    expect(entry.numLogs).toBe(5);
+    expect(entry.lastLogNum).toBe(5);
+  });
+
+  it('LOG_DATA decoder slices payload data to count bytes', () => {
+    // Build a 97-byte LOG_DATA payload with count=42 and known data.
+    const buf = new Uint8Array(97);
+    const dv = new DataView(buf.buffer);
+    dv.setUint32(0, 1024, true);   // ofs
+    dv.setUint16(4, 7, true);      // id
+    dv.setUint8(6, 42);            // count
+    for (let i = 0; i < 42; i++) buf[7 + i] = i + 1;
+    const data = decodeLogData(dv);
+    expect(data.ofs).toBe(1024);
+    expect(data.id).toBe(7);
+    expect(data.count).toBe(42);
+    expect(data.data.length).toBe(42);
+    expect(data.data[0]).toBe(1);
+    expect(data.data[41]).toBe(42);
   });
 });
 

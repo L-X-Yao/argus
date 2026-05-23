@@ -49,6 +49,17 @@ export function appendLogChunk(id: number, ofs: number, b64data: string) {
   logState._chunks.push({ ofs, bytes: _decodeB64(b64data) });
 }
 
+/** WebSerial direct-mode path: LOG_DATA bytes arrive as raw Uint8Array, no
+ *  base64 round-trip. Mirrors appendLogChunk but skips the atob() decode. */
+export function appendLogChunkBinary(id: number, ofs: number, bytes: Uint8Array) {
+  if (id !== logState.downloadId) return;
+  // Copy so the underlying ArrayBuffer can be reused by the transport's
+  // read buffer without corrupting accumulated chunks.
+  const owned = new Uint8Array(bytes.length);
+  owned.set(bytes);
+  logState._chunks.push({ ofs, bytes: owned });
+}
+
 export function updateDownloadProgress(received: number, total: number) {
   logState.downloadedBytes = received;
   if (total > 0) {

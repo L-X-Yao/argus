@@ -1,20 +1,40 @@
 <script lang="ts">
   import { logState, startDownload, cancelDownload } from '../../lib/logStore.svelte';
   import { sendCommand } from '../../lib/ws';
+  import { isSerialConnected, serialLogList, serialLogDownload, serialLogCancel } from '../../lib/transport';
+  import { addToast } from '../../lib/stores.svelte';
   import { t } from '../../lib/i18n.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
   import { X } from '@lucide/svelte';
 
   function requestList() {
+    if (isSerialConnected()) {
+      serialLogList().then((res) => {
+        if (!res.ok) addToast(`${t('log.fetchList')}: ${res.error}`, 'error', 4000);
+      });
+      return;
+    }
     sendCommand('log_list');
   }
 
   function downloadLog(id: number, size: number) {
+    if (isSerialConnected()) {
+      // serialLogDownload calls startDownload internally; calling it twice
+      // would clear _chunks mid-stream.
+      serialLogDownload(id).then((res) => {
+        if (!res.ok) addToast(`${t('log.download')}: ${res.error}`, 'error', 4000);
+      });
+      return;
+    }
     startDownload(id, size);
     sendCommand('log_download', undefined, { id });
   }
 
   function cancel() {
+    if (isSerialConnected()) {
+      serialLogCancel();
+      return;
+    }
     sendCommand('log_cancel');
     cancelDownload();
   }

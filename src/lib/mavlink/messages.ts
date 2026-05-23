@@ -704,6 +704,53 @@ export function encodeMissionClearAll(
 }
 
 /**
+ * LOG_REQUEST_LIST (msg 117, 6-byte payload). Asks the FC for log inventory.
+ * The FC streams a LOG_ENTRY (msg 118) per log file in the range [start, end];
+ * the entry with id == last_log_num signals end-of-list. Pass start=0,
+ * end=0xFFFF to request the full inventory.
+ */
+export function encodeLogRequestList(
+  targetSys: number, targetComp: number, start: number = 0, end: number = 0xFFFF,
+): Uint8Array {
+  const buf = new Uint8Array(6);
+  const dv = new DataView(buf.buffer);
+  dv.setUint16(0, start, true);
+  dv.setUint16(2, end, true);
+  dv.setUint8(4, targetSys);
+  dv.setUint8(5, targetComp);
+  return buf;
+}
+
+/**
+ * LOG_REQUEST_DATA (msg 119, 12-byte payload). Requests a byte range of a
+ * specific log. The FC responds with one or more LOG_DATA (msg 120) chunks,
+ * each ≤ 90 bytes. count is the maximum total bytes to send back; backend
+ * uses 90*50 = 4500 as the per-request window (see send_cmd in
+ * backend/commands/_setup.py:cmd_log_download).
+ */
+export function encodeLogRequestData(
+  targetSys: number, targetComp: number,
+  id: number, ofs: number, count: number,
+): Uint8Array {
+  const buf = new Uint8Array(12);
+  const dv = new DataView(buf.buffer);
+  dv.setUint32(0, ofs, true);
+  dv.setUint32(4, count, true);
+  dv.setUint16(8, id, true);
+  dv.setUint8(10, targetSys);
+  dv.setUint8(11, targetComp);
+  return buf;
+}
+
+/**
+ * LOG_REQUEST_END (msg 122, 2-byte payload). Tells the FC to stop streaming
+ * any in-flight log data — used as the "cancel" path during a download.
+ */
+export function encodeLogRequestEnd(targetSys: number, targetComp: number): Uint8Array {
+  return new Uint8Array([targetSys, targetComp]);
+}
+
+/**
  * Pad a DataView's underlying payload to at least `minBytes` with trailing zeros.
  * MAVLink 2 senders may zero-trim trailing zero bytes; receivers must treat
  * the missing bytes as zero. Without this, decoders calling getUint16(2) etc.
