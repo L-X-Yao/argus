@@ -5,6 +5,9 @@
   import { toGcj, toWgs } from '../../lib/gcj02';
   import { t, i18nState } from '../../lib/i18n.svelte';
   import { API_BASE } from '../../lib/backend';
+  import { Ruler, Square, ShieldAlert, X as XIcon } from '@lucide/svelte';
+  import { segDist } from '../../lib/missionIO';
+  import { polygonArea } from '../../lib/survey';
   import maplibregl from 'maplibre-gl';
   import 'maplibre-gl/dist/maplibre-gl.css';
 
@@ -42,6 +45,44 @@
   // pattern (Leaflet markers + dragend → saveWaypoints).
   let wpMarkers: maplibregl.Marker[] = [];
   let wpPopup: maplibregl.Popup | null = null;
+
+  // Fence vertex markers (rendered as small dots; the fill/line is a GeoJSON
+  // layer added once in onMount). Rebuilt every time app.fencePolygon changes.
+  let fenceVertMarkers: maplibregl.Marker[] = [];
+
+  // Measure mode: distance (polyline) or area (polygon). All state local to
+  // this view — clear on ESC or by clicking the same mode button twice.
+  let measuring = $state(false);
+  let measureMode = $state<'distance' | 'area'>('distance');
+  let measurePts: { lat: number; lon: number }[] = [];
+  let measureVertMarkers: maplibregl.Marker[] = [];
+  let measureLabel: maplibregl.Marker | null = null;
+
+  // Distance + area math: reuse the shared helpers (lib/missionIO.segDist
+  // and lib/survey.polygonArea) — both already covered by vitest. fmtDist /
+  // fmtArea stay local for visual consistency with 2D MapView's measure
+  // labels (it inlines the same format strings).
+  function fmtDist(m: number): string {
+    return m < 1000 ? `${m.toFixed(0)}m` : `${(m / 1000).toFixed(2)}km`;
+  }
+  function fmtArea(m2: number): string {
+    if (m2 < 10000) return `${m2.toFixed(0)} m²`;
+    if (m2 < 1e6) return `${(m2 / 10000).toFixed(2)} ha`;
+    return `${(m2 / 1e6).toFixed(3)} km²`;
+  }
+
+  function labelMarker(lonLat: [number, number], text: string, color: string): maplibregl.Marker {
+    const el = document.createElement('div');
+    el.style.cssText = `background:rgba(30,30,30,0.9);color:${color};padding:2px 6px;border-radius:3px;font-size:11px;font-weight:bold;white-space:nowrap;pointer-events:none`;
+    el.textContent = text;
+    return new maplibregl.Marker({ element: el, anchor: 'top' }).setLngLat(lonLat).addTo(map!);
+  }
+
+  function vertexMarker(lonLat: [number, number], color: string): maplibregl.Marker {
+    const el = document.createElement('div');
+    el.style.cssText = `width:10px;height:10px;border-radius:50%;background:${color};border:2px solid #fff;box-shadow:0 0 3px rgba(0,0,0,0.6)`;
+    return new maplibregl.Marker({ element: el }).setLngLat(lonLat).addTo(map!);
+  }
 
   function createSvgElement(svgMarkup: string): SVGSVGElement {
     const parser = new DOMParser();
@@ -119,14 +160,62 @@
         source: 'trail',
         paint: { 'line-color': '#4fc3f7', 'line-width': 2, 'line-opacity': 0.7 },
       });
+
+      // Fence: red fill + dashed border (matches 2D FenceLayer.svelte color
+      // convention). Polygon when ≥3 verts, polyline when 2.
+      map!.addSource('fence', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
+      });
+      map!.addLayer({
+        id: 'fence-fill',
+        type: 'fill',
+        source: 'fence',
+        filter: ['==', '$type', 'Polygon'],
+        paint: { 'fill-color': '#f44336', 'fill-opacity': 0.1 },
+      });
+      map!.addLayer({
+        id: 'fence-line',
+        type: 'line',
+        source: 'fence',
+        paint: { 'line-color': '#f44336', 'line-width': 2, 'line-dasharray': [3, 2] },
+      });
+
+      // Measure overlay: line for distance + polygon for area.
+      map!.addSource('measure', {
+        type: 'geojson',
+        data: { type: 'FeatureCollection', features: [] },
+      });
+      map!.addLayer({
+        id: 'measure-fill',
+        type: 'fill',
+        source: 'measure',
+        filter: ['==', '$type', 'Polygon'],
+        paint: { 'fill-color': '#ff5252', 'fill-opacity': 0.1 },
+      });
+      map!.addLayer({
+        id: 'measure-line',
+        type: 'line',
+        source: 'measure',
+        paint: { 'line-color': '#ff5252', 'line-width': 2, 'line-dasharray': [2, 2] },
+      });
     });
 
-    // Map click: guided-goto (when armed + guidedMode) or add waypoint.
-    // Mirrors MapView.svelte:118-140 — note the GCJ inverse-transform so
-    // China-tile providers don't store shifted coordinates in app.waypoints.
+    // Map click: same priority order as MapView.svelte:118-140 —
+    // measure → fence draw → guided goto → addWaypoint. Note the GCJ
+    // inverse-transform so China-tile providers don't store shifted
+    // coordinates in app.waypoints / app.fencePolygon.
     map.on('click', (e) => {
       const { lat: mlat, lng: mlon } = e.lngLat;
       const [wlat, wlon] = fromMap(mlat, mlon);
+      if (measuring) {
+        addMeasurePoint(wlat, wlon);
+        return;
+      }
+      if (app.drawingFence) {
+        app.fencePolygon = [...app.fencePolygon, { lat: wlat, lon: wlon }];
+        return;
+      }
       if (app.guidedMode && app.drone.connected && app.drone.armed) {
         sendCommand('guided_goto', undefined, { lat: wlat, lon: wlon, alt: app.defaultAlt });
         addToast(`${t('map.guided')} → ${wlat.toFixed(5)}, ${wlon.toFixed(5)}`, 'info');
@@ -137,14 +226,113 @@
         drop: false, delay: 0, speed: 0, type: 'wp', loiter_param: 0,
       });
     });
+
+    window.addEventListener('keydown', onKeyDown);
   });
 
+  function onKeyDown(e: KeyboardEvent) {
+    if (e.key !== 'Escape') return;
+    if (measuring) clearMeasure();
+    if (app.drawingFence) { app.drawingFence = false; app.fencePolygon = []; }
+  }
+
+  function toggleMeasure(mode: 'distance' | 'area') {
+    if (measuring && measureMode === mode) { clearMeasure(); return; }
+    clearMeasure();
+    measureMode = mode;
+    measuring = true;
+  }
+
+  function clearMeasure() {
+    measuring = false;
+    measurePts = [];
+    measureVertMarkers.forEach((m) => m.remove());
+    measureVertMarkers = [];
+    if (measureLabel) { measureLabel.remove(); measureLabel = null; }
+    const src = map?.getSource('measure') as maplibregl.GeoJSONSource | undefined;
+    if (src) src.setData({ type: 'FeatureCollection', features: [] });
+  }
+
+  function addMeasurePoint(wlat: number, wlon: number) {
+    measurePts.push({ lat: wlat, lon: wlon });
+    const lonLats: [number, number][] = measurePts.map((p) => {
+      const [mlat, mlon] = toMap(p.lat, p.lon);
+      return [mlon, mlat];
+    });
+    measureVertMarkers.push(vertexMarker(lonLats[lonLats.length - 1], '#ff5252'));
+
+    const src = map?.getSource('measure') as maplibregl.GeoJSONSource | undefined;
+    if (!src) return;
+
+    if (measureLabel) { measureLabel.remove(); measureLabel = null; }
+
+    if (measureMode === 'area') {
+      if (lonLats.length >= 3) {
+        const ring = [...lonLats, lonLats[0]];  // closed
+        src.setData({
+          type: 'Feature',
+          geometry: { type: 'Polygon', coordinates: [ring] },
+          properties: {},
+        });
+        const area = polygonArea(measurePts);
+        // Center label at polygon centroid (mean of vertices — good enough
+        // for typical small areas).
+        const cLon = lonLats.reduce((s, p) => s + p[0], 0) / lonLats.length;
+        const cLat = lonLats.reduce((s, p) => s + p[1], 0) / lonLats.length;
+        measureLabel = labelMarker([cLon, cLat], fmtArea(area), '#ff5252');
+      } else if (lonLats.length >= 2) {
+        src.setData({
+          type: 'Feature',
+          geometry: { type: 'LineString', coordinates: lonLats },
+          properties: {},
+        });
+      }
+    } else {
+      if (lonLats.length >= 2) {
+        src.setData({
+          type: 'Feature',
+          geometry: { type: 'LineString', coordinates: lonLats },
+          properties: {},
+        });
+        let total = 0;
+        for (let i = 1; i < measurePts.length; i++) {
+          total += segDist(measurePts[i - 1], measurePts[i]);
+        }
+        measureLabel = labelMarker(
+          lonLats[lonLats.length - 1], fmtDist(total), '#ff5252',
+        );
+      }
+    }
+  }
+
+  function toggleFenceDraw() {
+    if (app.drawingFence) {
+      // Confirm-toggle: leaving draw mode keeps the polygon as-is so user
+      // can hand it to FencePanel for upload (matches 2D behavior).
+      app.drawingFence = false;
+    } else {
+      app.drawingFence = true;
+      app.fencePolygon = [];
+    }
+  }
+
+  function clearFence() {
+    app.drawingFence = false;
+    app.fencePolygon = [];
+  }
+
   onDestroy(() => {
+    window.removeEventListener('keydown', onKeyDown);
     if (droneMarker) droneMarker.remove();
     if (homeMarker) homeMarker.remove();
     wpMarkers.forEach((m) => m.remove());
     wpMarkers = [];
     if (wpPopup) { wpPopup.remove(); wpPopup = null; }
+    fenceVertMarkers.forEach((m) => m.remove());
+    fenceVertMarkers = [];
+    measureVertMarkers.forEach((m) => m.remove());
+    measureVertMarkers = [];
+    if (measureLabel) { measureLabel.remove(); measureLabel = null; }
     if (map) map.remove();
   });
 
@@ -304,6 +492,56 @@
       wpMarkers.push(m);
     });
   });
+
+  /* ── Fence rendering ────────────────────────────────────────────────────
+   * Mirrors src/components/layers/FenceLayer.svelte (the 2D path). Polygon
+   * fill when ≥3 vertices, polyline when 2, plus per-vertex marker (first
+   * vertex white-filled to mark the start). Re-runs on fencePolygon edits.
+   */
+  $effect(() => {
+    if (!map || !map.isStyleLoaded()) return;
+    const src = map.getSource('fence') as maplibregl.GeoJSONSource | undefined;
+    if (!src) return;
+
+    fenceVertMarkers.forEach((m) => m.remove());
+    fenceVertMarkers = [];
+
+    const verts = app.fencePolygon;
+    if (verts.length === 0) {
+      src.setData({ type: 'FeatureCollection', features: [] });
+      return;
+    }
+
+    const lonLats: [number, number][] = verts.map((p) => {
+      const [mlat, mlon] = toMap(p.lat, p.lon);
+      return [mlon, mlat];
+    });
+
+    if (lonLats.length >= 3) {
+      const ring = [...lonLats, lonLats[0]];
+      src.setData({
+        type: 'Feature',
+        geometry: { type: 'Polygon', coordinates: [ring] },
+        properties: {},
+      });
+    } else {
+      src.setData({
+        type: 'Feature',
+        geometry: { type: 'LineString', coordinates: lonLats },
+        properties: {},
+      });
+    }
+
+    lonLats.forEach((pt, i) => {
+      // First vertex inverted (white-filled) to mark the polygon start,
+      // matching 2D FenceLayer.svelte:34.
+      const el = document.createElement('div');
+      el.style.cssText = `width:10px;height:10px;border-radius:50%;background:${i === 0 ? '#fff' : '#f44336'};border:2px solid #f44336;box-shadow:0 0 3px rgba(0,0,0,0.6)`;
+      fenceVertMarkers.push(
+        new maplibregl.Marker({ element: el }).setLngLat(pt).addTo(map!),
+      );
+    });
+  });
 </script>
 
 <div class="relative flex-1 min-w-0">
@@ -314,6 +552,24 @@
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
       3D {t('map.satellite')}
     </div>
+
+    <button class="map-btn {measuring && measureMode === 'distance' ? '!text-red-400 !border-red-400' : ''}"
+            onclick={() => toggleMeasure('distance')} title={t('map.measure')}>
+      <Ruler size={13} />{t('map.measure')}
+    </button>
+    <button class="map-btn {measuring && measureMode === 'area' ? '!text-red-400 !border-red-400' : ''}"
+            onclick={() => toggleMeasure('area')} title={t('map.area')}>
+      <Square size={13} />{t('map.area')}
+    </button>
+    <button class="map-btn {app.drawingFence ? '!text-red-400 !border-red-400' : ''}"
+            onclick={toggleFenceDraw} title={t('map.fence')}>
+      <ShieldAlert size={13} />{t('map.fence')}
+    </button>
+    {#if app.fencePolygon.length > 0 || measuring}
+      <button class="map-btn" onclick={() => { clearMeasure(); clearFence(); }} title="Clear">
+        <XIcon size={13} />
+      </button>
+    {/if}
   </div>
 
   {#if app.drone.connected}

@@ -172,6 +172,7 @@ npm run build
 - WebSerial compass/gyro/level/baro calibration (MAG_CAL_PROGRESS/REPORT binary events bridged to CalibrationPanel's event-stream UI)
 - WebSerial accel calibration (AP_AccelCal ACK reinterpretation: COMMAND_ACK with command=0, result=TEMPORARILY_REJECTED — see protocol_design.md #1)
 - 3D map waypoint editing (click-to-add, drag-to-move, marker popup with delete — matches 2D WaypointLayer behavior)
+- 3D map fence drawing + distance/area measure (reuses lib/missionIO.segDist + lib/survey.polygonArea, ESC cancels)
 - NTRIP RTK client (HTTP/1.0 + ICY-200, RTCM streaming via msg 233)
 - Compass / accel / gyro calibration with binary progress (MAG_CAL_PROGRESS / REPORT)
 - Multi-language UI (10 locales + RTL)
@@ -182,7 +183,6 @@ npm run build
 **🚧 In progress / partial**
 
 - WebSerial firmware upload (APJ parsing + reboot-to-bootloader + bootloader protocol)
-- 3D map feature parity with 2D (waypoint editing ✓, fences + measurement still pending)
 - PX4 end-to-end wiring (frontend adapter exists; backend never reads HEARTBEAT.autopilot byte)
 - Real-hardware verification sweep for the remaining calibration types (level, baro, simple-accel)
 
