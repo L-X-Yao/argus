@@ -181,17 +181,23 @@ def handle_command_ack(p: bytes, pl: int, link: DroneLink) -> None:
 def handle_mag_cal_progress(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 17:
         return
+    if getattr(link, '_mag_cal_done', False):
+        return
     pct = p[16]
     prev = getattr(link, '_mag_cal_pct', -1)
-    if (pct // 5) != (prev // 5):
+    if pct > prev:
         link._mag_cal_pct = pct
-        link.add_event(lt('mag_cal_pct', link.locale) % pct, 'cal_compass')
+        if (pct // 5) != (prev // 5):
+            link.add_event(lt('mag_cal_pct', link.locale) % pct, 'cal_compass')
 
 
 def handle_mag_cal_report(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 44:
         return
+    if getattr(link, '_mag_cal_done', False):
+        return
     cal_status = p[42]
+    link._mag_cal_done = True
     link._mag_cal_pct = -1
     if cal_status == 4:
         link.add_event(lt('mag_cal_done', link.locale), 'cal_compass')
@@ -228,7 +234,7 @@ def handle_servo_output(p: bytes, pl: int, link: DroneLink) -> None:
 def handle_rc_channels(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 42:
         return
-    link.rc_servo.rc_channels = [struct.unpack_from('<H', p, 5 + i * 2)[0] for i in range(16)]
+    link.rc_servo.rc_channels = [struct.unpack_from('<H', p, 4 + i * 2)[0] for i in range(16)]
     link.rc_servo.rc_rssi = p[41]
 
 
@@ -247,7 +253,7 @@ def handle_vibration(p: bytes, pl: int, link: DroneLink) -> None:
 def handle_vfr_hud(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 20:
         return
-    airspeed, gs, heading, throttle, alt, climb = struct.unpack_from('<ffhHff', p)
+    airspeed, gs, alt, climb, heading, throttle = struct.unpack_from('<ffffhH', p)
     a = link.attitude
     a.airspeed = airspeed
     a.throttle = throttle
@@ -295,14 +301,14 @@ def handle_param_value(p: bytes, pl: int, link: DroneLink) -> None:
 
 
 def handle_autopilot_version(p: bytes, pl: int, link: DroneLink) -> None:
-    if pl < 36:
+    if pl < 44:
         return
-    fw_ver = struct.unpack_from('<I', p, 8)[0]
+    fw_ver = struct.unpack_from('<I', p, 16)[0]
     major = (fw_ver >> 24) & 0xFF
     minor = (fw_ver >> 16) & 0xFF
     patch = (fw_ver >> 8) & 0xFF
-    board = struct.unpack_from('<I', p, 20)[0]
-    git_bytes = bytes(p[24:32])
+    board = struct.unpack_from('<I', p, 28)[0]
+    git_bytes = bytes(p[36:44])
     git = ''.join('%02x' % b for b in git_bytes if b != 0)[:8]
     v = link.vehicle
     v.fw_version = 'v%d.%d.%d' % (major, minor, patch)
@@ -349,8 +355,8 @@ def handle_mission_item_int(p: bytes, pl: int, link: DroneLink) -> None:
         for item in items:
             if item['cmd'] == 178:
                 pending_speed = item.get('p2', 0)
-            elif item['cmd'] in (16, 18, 19) and item['seq'] > 0:
-                wtype = 'loiter_turns' if item['cmd'] == 18 else ('loiter_time' if item['cmd'] == 19 else 'wp')
+            elif item['cmd'] in (16, 18, 19, 82) and item['seq'] > 0:
+                wtype = 'loiter_turns' if item['cmd'] == 18 else ('loiter_time' if item['cmd'] == 19 else ('spline' if item['cmd'] == 82 else 'wp'))
                 wps.append({'lat': item['lat'], 'lon': item['lon'], 'alt': item['alt'],
                             'drop': False, 'delay': item['p1'] if item['cmd'] == 16 else 0,
                             'speed': pending_speed, 'type': wtype,
@@ -435,7 +441,7 @@ def handle_adsb_vehicle(p: bytes, pl: int, link: DroneLink) -> None:
     hdg = struct.unpack_from('<H', p, 16)[0] / 100.0
     hor_vel = struct.unpack_from('<H', p, 18)[0] / 100.0
     ver_vel = struct.unpack_from('<h', p, 20)[0] / 100.0
-    callsign = bytes(p[22:31]).split(b'\x00')[0].decode('ascii', 'replace').strip()
+    callsign = bytes(p[27:36]).split(b'\x00')[0].decode('ascii', 'replace').strip()
     tr = link.traffic
     tr._adsb_vehicles[icao] = {
         'icao': icao, 'lat': round(lat, 7), 'lon': round(lon, 7),
@@ -450,9 +456,9 @@ def handle_adsb_vehicle(p: bytes, pl: int, link: DroneLink) -> None:
 def handle_serial_control(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 10:
         return
-    count = p[4]
+    count = p[8]
     if count > 0 and count <= 70:
-        text = bytes(p[5:5 + count]).decode('ascii', 'replace')
+        text = bytes(p[9:9 + count]).decode('ascii', 'replace')
         link._console_buf.append(text)
         if len(link._console_buf) > 500:
             link._console_buf = link._console_buf[-250:]
@@ -515,7 +521,7 @@ def init_handlers() -> None:
     mavlink_dispatch.register(65, handle_rc_channels)
     mavlink_dispatch.register(241, handle_vibration)
     mavlink_dispatch.register(74, handle_vfr_hud)
-    mavlink_dispatch.register(335, handle_ekf_status)
+    mavlink_dispatch.register(193, handle_ekf_status)
     mavlink_dispatch.register(158, handle_mount_status)
     mavlink_dispatch.register(136, handle_terrain_report)
     mavlink_dispatch.register(168, handle_wind)

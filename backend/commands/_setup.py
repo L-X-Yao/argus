@@ -15,6 +15,8 @@ if TYPE_CHECKING:
 
 def cmd_cal_compass(link: DroneLink, param, data: dict):
     link.add_event(lt('cal_compass', link.locale), 'cal_compass')
+    link._mag_cal_pct = -1
+    link._mag_cal_done = False
     send_cmd(link, 42424, p1=0, p2=0, p3=0, p4=0)
 
 
@@ -76,9 +78,13 @@ def cmd_param_load(link: DroneLink, param, data: dict):
     if not path:
         return None
     from pathlib import Path
-    if Path(path).suffix != '.json':
+    p = Path(path).resolve()
+    params_dir = Path(__file__).resolve().parent.parent.parent / 'params'
+    if not str(p).startswith(str(params_dir)):
+        return {'ok': False, 'error': 'Path must be within params directory'}
+    if p.suffix != '.json':
         return {'ok': False, 'error': 'Only .json parameter files allowed'}
-    changed = link.param_mgr.load_from_file(path)
+    changed = link.param_mgr.load_from_file(str(p))
     return {'ok': True, 'changed': changed}
 
 
@@ -106,6 +112,6 @@ def cmd_log_download(link: DroneLink, param, data: dict):
 
 
 def cmd_log_cancel(link: DroneLink, param, data: dict):
-    link.send(bm(126, struct.pack('<BB', link.vehicle.sysid, 1), link.sq, 203))
+    link.send(bm(122, struct.pack('<BB', link.vehicle.sysid, 1), link.sq, 203))
     link.log_dl._log_download_id = -1
     link.add_event(lt('log_dl_cancel', link.locale), 'log_dl_cancel')

@@ -82,13 +82,10 @@
   let compassMsgCount = $state(0);
 
   /* ── Event filtering ── */
-  const calKeywords = ['校准', 'calibrat', 'Calibrat', 'cal ', 'Cal ', 'Gyro', 'Compass',
-    'Accel', 'Baro', 'Level', 'Place vehicle', 'Place', 'Rotate', 'orientation',
-    'complete', 'Complete', 'success', 'Success', '完成', '成功', '失败', 'FAILED',
-    'progress', 'Progress'];
+  const calPattern = /校准|calibrat|cal |gyro|compass|accel|baro|level|place|rotate|orientation|complete|success|完成|成功|失败|failed|progress/i;
 
   let calEvents = $derived(
-    app.events.filter(e => calKeywords.some(k => e.text.includes(k))).slice(-20)
+    app.events.filter(e => calPattern.test(e.text)).slice(-20)
   );
 
   /* Track last-seen event count to detect new events */
@@ -103,6 +100,7 @@
     lastParsedCount = evts.length;
 
     for (const ev of newEvts) {
+      if (!calibrating) break;
       const txt = ev.text;
       if (/^指令应答:|^Command:/i.test(txt)) continue;
 
@@ -150,7 +148,7 @@
           /success|成功|complete|done/i.test(txt)) {
         calibrating = false;
       }
-      if (/FAILED|失败/.test(txt)) {
+      if (/failed|失败/i.test(txt)) {
         calibrating = false;
       }
     }
