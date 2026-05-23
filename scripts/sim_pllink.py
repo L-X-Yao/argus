@@ -677,14 +677,39 @@ def serve(port):
         buf = b''
         sq = 0
         last_hb = last_att = last_gps = last_sys = last_wp = last_rc = last_ekf = 0
+        # Auto-detect peer protocol from the first parsed frame so we can speak
+        # the same dialect back. Previously the sim only emitted PL-Link
+        # XOR-framed messages, which broke any GCS that connected over TCP with
+        # protocol=auto (the backend forces TCP+auto → standard, so it never
+        # parsed our reply). Detecting on first inbound frame keeps both modes
+        # working from a single sim binary.
+        client_proto = None
 
         def tx(frame):
             nonlocal sq
             try:
-                conn.sendall(ple(frame, sq & 0xFF))
+                if client_proto == 'standard':
+                    conn.sendall(frame)
+                else:
+                    conn.sendall(ple(frame, sq & 0xFF))
                 sq += 1
             except Exception:
                 raise ConnectionError
+
+        def parse_standard_frame(b):
+            if len(b) < 12 or b[0] != 0xFD:
+                # Skip leading garbage byte
+                idx = b.find(b'\xfd')
+                if idx < 0:
+                    return None, len(b)
+                if idx > 0:
+                    return None, idx
+                return None, 0
+            plen = b[1]
+            frame_len = 12 + plen
+            if len(b) < frame_len:
+                return None, 0
+            return bytes(b[:frame_len]), frame_len
 
         try:
             while True:
@@ -698,8 +723,18 @@ def serve(port):
                 except TimeoutError:
                     pass
 
-                while len(buf) >= 7:
-                    payload, consumed = pld(buf)
+                # Detect protocol from the first 1-2 bytes of received traffic
+                if client_proto is None and len(buf) >= 2:
+                    if buf[0] == 0x50 and buf[1] == 0x4C:
+                        client_proto = 'pllink'
+                    elif buf[0] == 0xFD:
+                        client_proto = 'standard'
+
+                while len(buf) >= (7 if client_proto != 'standard' else 12):
+                    if client_proto == 'standard':
+                        payload, consumed = parse_standard_frame(buf)
+                    else:
+                        payload, consumed = pld(buf)
                     if payload:
                         buf = buf[consumed:]
                         for resp in sim.handle_mavlink(payload):
