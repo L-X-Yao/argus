@@ -23,6 +23,7 @@ location; they were copied here verbatim and not re-edited.
 | `audit_modules.md` | connection/ws_manager/app/auth/video sweep | 5 critical (security), 23 medium. **Critical + most medium fixed.** |
 | `audit_edges.md` | Specific partial findings (equator, NAV_SPLINE, VTOL takeoff, etc.) | 5 real bugs, 3 fixed in-place, 2 documented. |
 | `audit_frontend.md` | Svelte 5 components/stores reactivity + lifecycle | 40+ findings, 10 fixed in-place. |
+| `audit_remaining.md` | sim_pllink + build scripts + run.py + test_integration triage + remaining app.py routes | 6 critical + 10 medium + 7 low. **19 fixed in-place** including sim protocol auto-detect, mbtiles path traversal, PyInstaller hidden-import for `backend.commands._*`. |
 
 ## What's still open
 

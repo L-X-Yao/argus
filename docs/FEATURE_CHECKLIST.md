@@ -147,7 +147,7 @@
 | 90 | 任务下载 (mission_download) | ✅ | 真机返回"任务下载完成: 3 航点" |
 | 91 | 任务清除 (mission_clear) | ✅ | 真机验证 |
 | 92 | 围栏上传 (fence_upload) | ✅ | 真机 4 顶点上传, ACK 成功 |
-| 93 | 集结点上传 (rally_upload) | ⚠️ | 命令已发送, 未验证 FC 端存储 |
+| 93 | 集结点上传 (rally_upload) | ✅ᵗ | 2026-05 修复: 改用标准 MISSION 握手 (COUNT→REQUEST→ITEM×N→ACK)。之前直接 blast item 被 AP 拒绝。新增 `_rally_pending` + `send_rally_item_int`。commit e21f01b |
 | 94 | 任务下载超时 (30s) | ✅ᵗ | check_mission_dl_timeout 测试 |
 | 95 | 坐标验证 (float 转换) | ✅ᵗ | 单元测试 string/None 输入 |
 | 96 | 航点数量限制 (500) | ✅ᵗ | _mission.py 验证逻辑 |
@@ -206,13 +206,13 @@
 | # | 功能 | 状态 | 验证方式 |
 |---|------|------|----------|
 | 137 | 陀螺仪校准 (cal_gyro) | ✅ | 真机"开始陀螺仪校准 (请保持静止)..." |
-| 138 | 罗盘校准 (cal_compass) | ⚠️ | 命令可发送, 需旋转飞控 |
-| 139 | 加速度计校准 (cal_accel) | ⚠️ | 命令可发送, 需多方位放置 |
+| 138 | 罗盘校准 (cal_compass) | ✅ | 2026-05 真机端到端验证: 改用 MAV_CMD_DO_START_MAG_CAL(42424), 新增 MAG_CAL_PROGRESS/REPORT handler, 完成自动 accept(42425), 重启提示。commit e2efd90+9572d35+9b6276a |
+| 139 | 加速度计校准 (cal_accel) | ✅ | 2026-05 真机端到端验证: 6 姿态依次推进 + Calibration successful。**核心发现**: AP_AccelCal::handle_command_ack 私有协议 — command 必须 ≤6 (非 MAV_CMD), result 必须 == MAV_RESULT_TEMPORARILY_REJECTED(1) (非 ACCEPTED)。commit 6a42c47 |
 | 140 | 水平校准 (cal_level) | ⚠️ | 命令可发送 |
 | 141 | 气压计校准 (cal_baro) | ⚠️ | 命令可发送 |
 | 142 | 取消校准 (cal_cancel) | ✅ | 真机验证 |
 | 143 | 加速度计6方向校准向导 | ✅ᵗ | 已修复: 正则重写为有序regex匹配(upside>back>nose_down>nose_up>left>right>level), 大小写不敏感, 校准中禁止切换标签。待真机验证 |
-| 144 | 罗盘校准SVG进度 | ⚠️ | SVG圆弧渲染正确, 但进度为估算值(~3%/消息), 后端无MAG_CAL_PROGRESS(msg191)handler, 无真实百分比数据 |
+| 144 | 罗盘校准SVG进度 | ✅ | 2026-05 修复: 新增 handle_mag_cal_progress(msg191) + handle_mag_cal_report(msg192), CRC_EXTRA 表补 191:92/192:36。前端进度从假估算改为读真实 completion_pct。真机 0%→96% 平滑推进。commit 2f93a6d |
 | 145 | 校准事件关键词过滤 | ✅ᵗ | 已修复: 全部改为case-insensitive regex匹配, 20+关键词, 最近20条滚动 |
 
 ---
@@ -273,7 +273,7 @@
 | 181 | 电机测试 (motor_test) | ✅ | 真机"电机测试: #1 @ 5%" |
 | 182 | 电机停止 (motor_test_stop) | ✅ᵗ | 代码逻辑验证 |
 | 183 | 云台角度控制 (gimbal_angle) | ⚠️ | 命令可发送, 需云台硬件 |
-| 184 | 云台速率控制 (gimbal_rate) | ⚠️ | 命令可发送 |
+| 184 | 云台速率控制 (gimbal_rate) | ❌ | 2026-05 audit 发现：原 payload 是 27 字节但 msg 282(GIMBAL_MANAGER_SET_ATTITUDE) 需要 35 字节, pitch_rate 错放进 q[2]。前端无调用方, 已禁用返回错误。需要重新实现走 MAV_CMD_DO_GIMBAL_MANAGER_PITCHYAW(1000) 或 msg 287。commit 2f93a6d |
 | 185 | 相机快门 (camera_trigger) | ⚠️ | 命令可发送, 需相机 |
 | 186 | 录像开始 (camera_video_start) | ⚠️ | 命令可发送 |
 | 187 | 录像停止 (camera_video_stop) | ⚠️ | 命令可发送 |
@@ -759,21 +759,42 @@
 
 | # | 问题 | 状态 | 说明 |
 |---|------|------|------|
-| 1 | NtripPanel 缺少后端 handler | ❌ | 前端发送 ntrip_start/ntrip_stop, 后端无对应处理函数 |
+| 1 | NtripPanel 缺少后端 handler | ❌ | 前端发送 ntrip_start/ntrip_stop, 后端无对应处理函数。Contract 测试已 allowlist (`tests/test_contract_commands.py::KNOWN_FRONTEND_ORPHANS`) |
 | 2 | WebSerial 未真机验证 | ⚠️ | 需 Chrome/Edge + USB 直连浏览器, Linux 环境未测试 |
 | 3 | ~~EKF handler 注册错误消息 ID~~ | ✅ | 已修复: 注册到 msg 335, 新增 VFR_HUD handler (msg 74) |
 | 4 | ~~VFR_HUD 数据后端不解析~~ | ✅ | 已修复: 新增 handle_vfr_hud, state 增加 airspeed/throttle/climb |
 | 5 | ~~云台遥测无接收 handler~~ | ✅ | 已修复: 新增 handle_mount_status (msg 158) |
 | 6 | ~~高级命令后端未实现上传~~ | ✅ | 已修复: _upload_mission() 处理 5 种 cmd_* 字段 |
+| 7 | PX4 支持基本未实现 | ❌ | 前端 `src/lib/fc/` PX4 adapter scaffolded 但无 production import; 后端不读 HEARTBEAT.autopilot byte。详见 `CLAUDE.md ## PX4 Status` |
+| 8 | gimbal_rate 命令无法工作 | ❌ | 见 #184 — 已禁用, 重新实现需 MAV_CMD_DO_GIMBAL_MANAGER_PITCHYAW(1000) 或 msg 287 |
+| 9 | tests/test_integration.py 32 个失败 | ⚠️ | 2026-05 audit 分类: A=真 bug已修, B=sim协议bug已修, C=过期测试已修, D=预xfail。剩余看 docs/audits/audit_remaining.md |
+| 10 | ~~MAVLink 2 zero-trim 不容忍~~ | ✅ | 2026-05 修复: 所有 handler 新增 `_pad()` helper, 容忍 trailing-zero trimmed payload (FC 发的 trailing-zero 字段不再读到 0)。commit 102a05e |
+| 11 | ~~observer 客户端可发危险指令~~ | ✅ | 2026-05 修复: ws_manager.command 分支检查 pilot 角色, 否则拒绝 |
+| 12 | ~~firmware download 路径穿越 + SSRF~~ | ✅ | 2026-05 修复: Path.relative_to + DNS 解析后检查私有 IP |
+| 13 | ~~mbtiles 路径校验 startswith 可绕过~~ | ✅ | 2026-05 修复: Path.relative_to + basename 检查 |
+| 14 | ~~UDP _remote 可被劫持~~ | ✅ | 2026-05 修复: 只在原 peer 静默 >30s 后才接受新源 |
+| 15 | ~~.gitignore 误把 src/components/params/ 排除~~ | ✅ | 2026-05 修复: 改为 `/params/` 锚定根目录; 4 个 Svelte 组件入库 |
 
 ---
+
+## 2026-05-23 协议层 audit 圆满收尾
+
+- 11 份 audit 报告归档在 `docs/audits/`，README 索引每个区域的 fix 状态
+- `docs/protocol_design.md` 记录 10 条 "看起来错但其实对" 的 load-bearing 设计决策（防止未来误改）
+- 新增 5 套契约测试 (`tests/test_contract_*.py`) 永久护栏:
+  - 命令名 frontend↔backend 一致性
+  - 状态字段 _build_state↔DroneState 一致性
+  - handler ↔ CRC_EXTRA 一致性
+  - byte-level vs pymavlink 真值表
+  - locale key 完整性
+- CLAUDE.md 新增 `## Protocol Code Discipline` 规则: FC 协议代码必须引上游源码 file:line
 
 ## 测试基础设施
 
 | 测试类型 | 数量 | 工具 |
 |----------|------|------|
-| 后端单元测试 | 945 | pytest |
-| 前端单元测试 | 400+ | vitest |
+| 后端单元 + 契约测试 | **1024** | pytest |
+| 前端单元测试 | **415** | vitest |
 | E2E 测试 | 19 specs | Playwright |
 | 真机 WS 测试 | 25 项 | Python websockets |
 | 真机浏览器测试 | 7 秒参数加载 | Playwright headless |

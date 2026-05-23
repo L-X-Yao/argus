@@ -39,6 +39,11 @@ python3 -m PyInstaller \
     --hidden-import backend.drone_link \
     --hidden-import backend.ws_manager \
     --hidden-import backend.commands \
+    --hidden-import backend.commands._flight \
+    --hidden-import backend.commands._mission \
+    --hidden-import backend.commands._setup \
+    --hidden-import backend.commands._hardware \
+    --hidden-import backend.commands._helpers \
     --hidden-import backend.mavlink_handlers \
     --hidden-import backend.mavlink_dispatch \
     --hidden-import backend.param_manager \

@@ -447,8 +447,20 @@ async def api_mbtiles_list():
 @app.get('/api/mbtiles/{name}/{z}/{x}/{y}')
 async def api_mbtiles_tile(name: str, z: int, x: int, y: int):
     import sqlite3
+
+    # Auditor M8: `str.startswith(str(parent))` accepts sibling dirs that share
+    # a prefix (e.g. .../mbtiles_evil/foo). Use Path.relative_to which only
+    # passes for true parent-child containment. Also strip to basename so a
+    # supplied name containing '..' segments can't escape.
+    from pathlib import Path as _Path
+    if _Path(name).name != name or not name.endswith('.mbtiles'):
+        return Response(status_code=404, content='not found')
     path = (MBTILES_DIR / name).resolve()
-    if not str(path).startswith(str(MBTILES_DIR.resolve())) or not path.exists() or not name.endswith('.mbtiles'):
+    try:
+        path.relative_to(MBTILES_DIR.resolve())
+    except ValueError:
+        return Response(status_code=404, content='not found')
+    if not path.exists():
         return Response(status_code=404, content='not found')
     tms_y = (1 << z) - 1 - y
     try:
