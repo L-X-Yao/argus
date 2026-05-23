@@ -47,9 +47,11 @@ from ._mission import (
 )
 from ._setup import (
     cmd_cal_accel,
+    cmd_cal_accel_next,
     cmd_cal_baro,
     cmd_cal_cancel,
     cmd_cal_compass,
+    cmd_cal_compass_accept,
     cmd_cal_gyro,
     cmd_cal_level,
     cmd_log_cancel,
@@ -85,7 +87,9 @@ _DISPATCH = {
     'switch_vehicle': cmd_switch_vehicle,
     'clear_summary': cmd_clear_summary,
     'cal_compass': cmd_cal_compass,
+    'cal_compass_accept': cmd_cal_compass_accept,
     'cal_accel': cmd_cal_accel,
+    'cal_accel_next': cmd_cal_accel_next,
     'cal_gyro': cmd_cal_gyro,
     'cal_level': cmd_cal_level,
     'cal_baro': cmd_cal_baro,

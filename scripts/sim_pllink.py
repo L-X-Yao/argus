@@ -538,19 +538,25 @@ class Simulator:
             state = 'ON' if params[1] > 0.5 else 'OFF'
             print('  [SIM] 继电器 %s' % state)
             resp.append(self.msg_command_ack(181, 0))
+        elif cmd == 42424:
+            print('  [SIM] 罗盘校准 (onboard)')
+            resp.append(self.msg_command_ack(42424, 0))
+            self._status_queue.append('Compass calibration started')
+            self._status_queue.append('Rotate vehicle...')
+            self._status_queue.append('Compass calibration complete')
+        elif cmd == 42425:
+            print('  [SIM] 接受罗盘校准')
+            resp.append(self.msg_command_ack(42425, 0))
+        elif cmd == 42426:
+            print('  [SIM] 取消罗盘校准')
+            resp.append(self.msg_command_ack(42426, 0))
         elif cmd == 241:
-            p1, p2, p3, _, p5 = params[0], params[1], params[2], params[3], params[4]
+            p1, _, p3, _, p5 = params[0], params[1], params[2], params[3], params[4]
             if p1 > 0.5:
                 print('  [SIM] 陀螺仪校准')
                 resp.append(self.msg_command_ack(241, 0))
                 self._status_queue.append('Gyro calibration started')
                 self._status_queue.append('Gyro calibration complete')
-            elif p2 > 0.5:
-                print('  [SIM] 罗盘校准')
-                resp.append(self.msg_command_ack(241, 0))
-                self._status_queue.append('Compass calibration started')
-                self._status_queue.append('Rotate vehicle...')
-                self._status_queue.append('Compass calibration complete')
             elif p3 > 0.5:
                 print('  [SIM] 气压计校准')
                 resp.append(self.msg_command_ack(241, 0))

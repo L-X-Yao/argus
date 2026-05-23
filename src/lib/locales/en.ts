@@ -337,6 +337,7 @@ const messages: Record<string, string> = {
   'cal.messages': 'Calibration Messages',
   'cal.noMessages': 'No calibration messages',
   'cal.inProgress': 'Calibration in progress...',
+  'cal.accelNext': 'Confirm Placement',
   'cal.start': 'Start Calibration',
   'cal.cancel': 'Cancel',
   'cal.connectFirst': 'Connect to vehicle first',

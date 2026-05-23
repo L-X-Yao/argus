@@ -5,7 +5,7 @@
   import { t } from '../../lib/i18n.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
   import Badge from '$lib/components/ui/badge/badge.svelte';
-  import { X, Compass, Move3d, RotateCw, AlignHorizontalSpaceAround, Thermometer } from '@lucide/svelte';
+  import { X, Compass, Move3d, RotateCw, AlignHorizontalSpaceAround, Thermometer, ChevronRight } from '@lucide/svelte';
   import type { Component } from 'svelte';
 
   let { onclose }: { onclose: () => void } = $props();
@@ -138,6 +138,7 @@
         if (/success|成功|complete/i.test(txt)) {
           compassProgress = 100;
           calibrating = false;
+          sendCommand('cal_compass_accept');
         }
       }
 
@@ -267,12 +268,15 @@
             {/each}
           </div>
 
-          <!-- Current step hint -->
+          <!-- Current step hint + confirm button -->
           {#if calibrating && accelActive}
             {@const ao = accelOrients.find(o => o.id === accelActive)}
             {#if ao}
-              <div class="p-2.5 rounded-lg bg-primary/10 border border-primary/20 mb-3">
+              <div class="p-2.5 rounded-lg bg-primary/10 border border-primary/20 mb-3 flex items-center justify-between gap-2">
                 <p class="text-xs text-primary font-medium">{t(ao.hint)}，{t('cal.holdStill')}</p>
+                <Button variant="default" size="sm" class="shrink-0" onclick={() => sendCommand('cal_accel_next')}>
+                  <ChevronRight size={14} class="mr-1" />{t('cal.accelNext')}
+                </Button>
               </div>
             {/if}
           {:else if !calibrating}

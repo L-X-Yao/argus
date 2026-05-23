@@ -15,7 +15,11 @@ if TYPE_CHECKING:
 
 def cmd_cal_compass(link: DroneLink, param, data: dict):
     link.add_event(lt('cal_compass', link.locale), 'cal_compass')
-    send_cmd(link, 241, p2=1)
+    send_cmd(link, 42424, p1=0, p2=0, p3=0, p4=0)
+
+
+def cmd_cal_compass_accept(link: DroneLink, param, data: dict):
+    send_cmd(link, 42425, p1=0)
 
 
 def cmd_cal_accel(link: DroneLink, param, data: dict):
@@ -38,9 +42,15 @@ def cmd_cal_baro(link: DroneLink, param, data: dict):
     send_cmd(link, 241, p3=1)
 
 
+def cmd_cal_accel_next(link: DroneLink, param, data: dict):
+    payload = struct.pack('<HB', 1, 0)
+    link.send(bm(77, payload, link.sq, 143))
+
+
 def cmd_cal_cancel(link: DroneLink, param, data: dict):
     link.add_event(lt('cal_cancel', link.locale), 'cal_cancel')
     send_cmd(link, 241)
+    send_cmd(link, 42426, p1=0)
 
 
 # --- Parameters ---

@@ -151,10 +151,12 @@ def handle_mission_item_reached(p: bytes, pl: int, link: DroneLink) -> None:
 _CMD_NAMES_ZH = {
     22: '起飞', 176: '模式', 181: '继电器', 241: '校准', 300: '任务开始',
     400: '解锁/锁定', 410: '引导',
+    42424: '罗盘校准', 42425: '接受罗盘校准', 42426: '取消罗盘校准',
 }
 _CMD_NAMES_EN = {
     22: 'Takeoff', 176: 'Mode', 181: 'Relay', 241: 'Calibration', 300: 'Mission Start',
     400: 'Arm/Disarm', 410: 'Guided',
+    42424: 'Compass Cal', 42425: 'Accept Compass Cal', 42426: 'Cancel Compass Cal',
 }
 _ACK_RESULTS_ZH = {0: '成功', 1: '暂时拒绝', 2: '拒绝', 3: '不支持', 4: '进行中', 5: '已取消'}
 _ACK_RESULTS_EN = {0: 'success', 1: 'temporarily rejected', 2: 'denied', 3: 'unsupported', 4: 'in progress', 5: 'cancelled'}

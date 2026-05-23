@@ -337,6 +337,7 @@ const messages: Record<string, string> = {
   'cal.messages': '校准消息',
   'cal.noMessages': '暂无校准消息',
   'cal.inProgress': '校准进行中...',
+  'cal.accelNext': '确认放置',
   'cal.start': '开始校准',
   'cal.cancel': '取消',
   'cal.connectFirst': '请先连接飞控',
