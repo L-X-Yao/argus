@@ -28,8 +28,9 @@ def _pad(p: bytes, n: int) -> bytes:
 
 
 def handle_heartbeat(p: bytes, pl: int, link: DroneLink) -> None:
-    if pl < 7:
+    if pl < 1:
         return
+    p = _pad(p, 9)
     v = link.vehicle
     v.mode = p[0] | (p[1] << 8) | (p[2] << 16) | (p[3] << 24)
     old_vtype = v.vtype_raw
@@ -64,8 +65,9 @@ def handle_heartbeat(p: bytes, pl: int, link: DroneLink) -> None:
 
 
 def handle_attitude(p: bytes, pl: int, link: DroneLink) -> None:
-    if pl < 16:
+    if pl < 1:
         return
+    p = _pad(p, 16)
     a = link.attitude
     a.roll = struct.unpack_from('<f', p, 4)[0] * 57.2958
     a.pitch = struct.unpack_from('<f', p, 8)[0] * 57.2958
@@ -75,8 +77,9 @@ def handle_attitude(p: bytes, pl: int, link: DroneLink) -> None:
 
 
 def handle_global_position_int(p: bytes, pl: int, link: DroneLink) -> None:
-    if pl < 20:
+    if pl < 1:
         return
+    p = _pad(p, 28)
     a = link.attitude
     a.lat = struct.unpack_from('<i', p, 4)[0] / 1e7
     a.lon = struct.unpack_from('<i', p, 8)[0] / 1e7
@@ -113,8 +116,9 @@ def handle_global_position_int(p: bytes, pl: int, link: DroneLink) -> None:
 
 
 def handle_sys_status(p: bytes, pl: int, link: DroneLink) -> None:
-    if pl < 16:
+    if pl < 1:
         return
+    p = _pad(p, 31)
     bat = link.battery
     bat.voltage = (p[14] | (p[15] << 8)) / 1000.0
     if pl >= 18:
@@ -133,21 +137,24 @@ def handle_sys_status(p: bytes, pl: int, link: DroneLink) -> None:
 
 
 def handle_gps_raw_int(p: bytes, pl: int, link: DroneLink) -> None:
-    if pl < 29:
+    if pl < 1:
         return
+    p = _pad(p, 30)
     link.gps.gps_fix = p[28]
-    link.gps.gps_sats = p[29] if pl > 29 else 0
+    link.gps.gps_sats = p[29]
 
 
 def handle_mission_current(p: bytes, pl: int, link: DroneLink) -> None:
-    if pl < 2:
+    if pl < 1:
         return
+    p = _pad(p, 2)
     link.mission.wp_seq = p[0] | (p[1] << 8)
 
 
 def handle_home_position(p: bytes, pl: int, link: DroneLink) -> None:
-    if pl < 20:
+    if pl < 1:
         return
+    p = _pad(p, 20)
     hlat = struct.unpack_from('<i', p, 0)[0] / 1e7
     hlon = struct.unpack_from('<i', p, 4)[0] / 1e7
     if abs(hlat) > 0.001:
@@ -156,8 +163,9 @@ def handle_home_position(p: bytes, pl: int, link: DroneLink) -> None:
 
 
 def handle_mission_item_reached(p: bytes, pl: int, link: DroneLink) -> None:
-    if pl < 2:
+    if pl < 1:
         return
+    p = _pad(p, 2)
     seq = p[0] | (p[1] << 8)
     link.add_event(lt('wp_reached', link.locale) % seq, 'wp_reached')
 
@@ -196,8 +204,9 @@ def handle_command_ack(p: bytes, pl: int, link: DroneLink) -> None:
 
 
 def handle_mag_cal_progress(p: bytes, pl: int, link: DroneLink) -> None:
-    if pl < 17:
+    if pl < 1:
         return
+    p = _pad(p, 17)
     if getattr(link, '_mag_cal_done', False):
         return
     pct = p[16]
@@ -261,8 +270,9 @@ def handle_servo_output(p: bytes, pl: int, link: DroneLink) -> None:
 
 
 def handle_rc_channels(p: bytes, pl: int, link: DroneLink) -> None:
-    if pl < 42:
+    if pl < 6:
         return
+    p = _pad(p, 42)
     link.rc_servo.rc_channels = [struct.unpack_from('<H', p, 4 + i * 2)[0] for i in range(16)]
     link.rc_servo.rc_rssi = p[41]
 
@@ -297,8 +307,9 @@ def handle_vfr_hud(p: bytes, pl: int, link: DroneLink) -> None:
 
 
 def handle_ekf_status(p: bytes, pl: int, link: DroneLink) -> None:
-    if pl < 22:
+    if pl < 1:
         return
+    p = _pad(p, 22)
     vel, pos_h, pos_v, comp, terr, flags = struct.unpack_from('<fffffH', p)
     d = link.diagnostic
     d.ekf_vel_var = vel
@@ -310,8 +321,9 @@ def handle_ekf_status(p: bytes, pl: int, link: DroneLink) -> None:
 
 
 def handle_mount_status(p: bytes, pl: int, link: DroneLink) -> None:
-    if pl < 12:
+    if pl < 1:
         return
+    p = _pad(p, 12)
     pitch_cdeg, _roll_cdeg, yaw_cdeg = struct.unpack_from('<iii', p)
     d = link.diagnostic
     d.gimbal_pitch = pitch_cdeg / 100.0
@@ -319,14 +331,22 @@ def handle_mount_status(p: bytes, pl: int, link: DroneLink) -> None:
 
 
 def handle_terrain_report(p: bytes, pl: int, link: DroneLink) -> None:
-    if pl < 16:
+    # TERRAIN_REPORT (136) wire layout (MAVLink 2, sorted by size):
+    #   lat (i32, 0..3), lon (i32, 4..7), terrain_height (float, 8..11),
+    #   current_height (float, 12..15), spacing (u16, 16..17),
+    #   pending (u16, 18..19), loaded (u16, 20..21).
+    # We want terrain_height (ground elevation) for "terrain altitude" display,
+    # not current_height (vehicle altitude above the ground).
+    if pl < 1:
         return
-    link.diagnostic.terrain_alt = struct.unpack_from('<f', p, 12)[0]
+    p = _pad(p, 16)
+    link.diagnostic.terrain_alt = struct.unpack_from('<f', p, 8)[0]
 
 
 def handle_wind(p: bytes, pl: int, link: DroneLink) -> None:
-    if pl < 12:
+    if pl < 1:
         return
+    p = _pad(p, 12)
     direction, speed, _ = struct.unpack_from('<fff', p)
     link.diagnostic.wind_dir = direction % 360
     link.diagnostic.wind_speed = speed
@@ -337,8 +357,9 @@ def handle_param_value(p: bytes, pl: int, link: DroneLink) -> None:
 
 
 def handle_autopilot_version(p: bytes, pl: int, link: DroneLink) -> None:
-    if pl < 44:
+    if pl < 1:
         return
+    p = _pad(p, 44)
     fw_ver = struct.unpack_from('<I', p, 16)[0]
     major = (fw_ver >> 24) & 0xFF
     minor = (fw_ver >> 16) & 0xFF
@@ -355,8 +376,9 @@ def handle_autopilot_version(p: bytes, pl: int, link: DroneLink) -> None:
 
 def handle_mission_count(p: bytes, pl: int, link: DroneLink) -> None:
     m = link.mission
-    if pl < 3 or not m._dl_pending:
+    if pl < 1 or not m._dl_pending:
         return
+    p = _pad(p, 3)
     count = struct.unpack_from('<H', p, 0)[0]
     m._dl_total = count
     m._dl_items = [None] * count
@@ -370,8 +392,9 @@ def handle_mission_count(p: bytes, pl: int, link: DroneLink) -> None:
 
 def handle_mission_item_int(p: bytes, pl: int, link: DroneLink) -> None:
     m = link.mission
-    if pl < 37 or not m._dl_pending:
+    if pl < 1 or not m._dl_pending:
         return
+    p = _pad(p, 37)
     p1 = struct.unpack_from('<f', p, 0)[0]
     p2 = struct.unpack_from('<f', p, 4)[0]
     lat = struct.unpack_from('<i', p, 16)[0] / 1e7
@@ -414,10 +437,11 @@ def _request_dl_item(link: DroneLink, seq: int) -> None:
 
 
 def handle_mission_request(p: bytes, pl: int, link: DroneLink) -> None:
-    if pl < 2:
+    if pl < 1:
         return
+    p = _pad(p, 5)
     seq = p[0] | (p[1] << 8)
-    mission_type = p[4] if pl >= 5 else 0
+    mission_type = p[4]
     m = link.mission
     from . import commands as cmd_mod
     if mission_type == 1 and m._fence_pending:
@@ -448,8 +472,9 @@ def handle_mission_ack(p: bytes, pl: int, link: DroneLink) -> None:
 
 
 def handle_log_entry(p: bytes, pl: int, link: DroneLink) -> None:
-    if pl < 14:
+    if pl < 1:
         return
+    p = _pad(p, 14)
     time_utc, size, log_id, num_logs, last_log_num = struct.unpack_from('<IIHHH', p, 0)
     lg = link.log_dl
     lg._log_list.append({'id': log_id, 'size': size, 'time_utc': time_utc})
@@ -459,8 +484,9 @@ def handle_log_entry(p: bytes, pl: int, link: DroneLink) -> None:
 
 
 def handle_battery_status(p: bytes, pl: int, link: DroneLink) -> None:
-    if pl < 36:
+    if pl < 10:
         return
+    p = _pad(p, 36)
     cells = []
     for i in range(10):
         v = struct.unpack_from('<H', p, 10 + i * 2)[0]
@@ -471,8 +497,9 @@ def handle_battery_status(p: bytes, pl: int, link: DroneLink) -> None:
 
 
 def handle_adsb_vehicle(p: bytes, pl: int, link: DroneLink) -> None:
-    if pl < 38:
+    if pl < 1:
         return
+    p = _pad(p, 38)
     icao = struct.unpack_from('<I', p, 0)[0]
     lat = struct.unpack_from('<i', p, 4)[0] / 1e7
     lon = struct.unpack_from('<i', p, 8)[0] / 1e7
@@ -493,8 +520,9 @@ def handle_adsb_vehicle(p: bytes, pl: int, link: DroneLink) -> None:
 
 
 def handle_serial_control(p: bytes, pl: int, link: DroneLink) -> None:
-    if pl < 10:
+    if pl < 9:
         return
+    p = _pad(p, 79)
     count = p[8]
     if count > 0 and count <= 70:
         text = bytes(p[9:9 + count]).decode('ascii', 'replace')
@@ -506,6 +534,7 @@ def handle_serial_control(p: bytes, pl: int, link: DroneLink) -> None:
 def handle_log_data(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 7:
         return
+    p = _pad(p, 97)
     lg = link.log_dl
     ofs, log_id, count = struct.unpack_from('<IHB', p, 0)
     if log_id != lg._log_download_id:

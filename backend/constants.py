@@ -1,24 +1,44 @@
+"""Vehicle mode tables. Each entry maps ArduPilot's custom_mode integer to a
+display name. Verified against `ArduCopter/mode.h`, `ArduPlane/mode.h`,
+`Rover/mode.h`, `ArduSub/mode.h` (May 2026 master).
+
+Adding modes here doesn't enable them — it's only how we *display* an
+incoming HEARTBEAT.custom_mode value. Missing entries fall back to "MODE%d".
+"""
+
+# Copter — ArduCopter/mode.h `enum class Number`
 COPTER_MODES = {
     0: '自稳', 1: '特技', 2: '定高', 3: '自动', 4: '引导',
-    5: '悬停', 6: '返航', 7: '绕圈', 9: '降落', 16: '定点', 21: '智能返航',
+    5: '悬停', 6: '返航', 7: '绕圈', 8: '定点旧', 9: '降落',
+    11: '漂移', 13: '运动', 14: '甩飞', 15: '随我',
+    16: '定点', 17: '刹停', 18: '空速校准', 19: '避障',
+    20: '引导无导航', 21: '智能返航', 22: '飞越',
+    23: '跟随', 24: '起飞', 25: '自动返航', 26: '翻转',
+    27: '手动油门定高', 28: '蛇形',
 }
 PLANE_MODES = {
-    0: '手动', 1: '绕圈', 2: '自稳', 5: '辅助A', 6: '辅助B', 7: '巡航',
-    10: '自动', 11: '返航', 12: '盘旋', 15: '引导',
+    0: '手动', 1: '绕圈', 2: '自稳', 3: '训练', 4: '特技',
+    5: '辅助A', 6: '辅助B', 7: '巡航', 8: '自动调参',
+    10: '自动', 11: '返航', 12: '盘旋', 13: '起飞', 14: '空速校准',
+    15: '引导', 16: '初始化',
     17: '旋翼自稳', 18: '旋翼悬停', 19: '旋翼定点', 20: '旋翼降落', 21: '旋翼返航',
+    22: '旋翼自调', 23: '旋翼特技', 24: '热气流', 25: '盘旋至定点',
 }
 ROVER_MODES = {
-    0: '手动', 1: '特技', 3: '转向', 4: '固定', 5: '跟随',
-    10: '自动', 11: '返航', 12: '智能返航', 15: '引导',
+    0: '手动', 1: '特技', 3: '转向', 4: '固定', 5: '悬停',
+    6: '跟随', 7: '简单', 8: '停靠', 9: '环线',
+    10: '自动', 11: '返航', 12: '智能返航', 15: '引导', 16: '初始化',
 }
 SUB_MODES = {
     0: '自稳', 1: '特技', 2: '定深', 3: '自动', 4: '引导',
     7: '绕圈', 9: '水面', 16: '定点', 19: '手动',
+    20: '电机检测', 21: '地形跟随',
 }
 COPTER_BTNS = [[0, '自稳'], [2, '定高'], [5, '悬停'], [3, '自动'], [6, '返航'], [9, '降落']]
 PLANE_BTNS = [
+    [0, '手动'], [10, '自动'], [11, '返航'], [12, '盘旋'],
     [19, '旋翼定点'], [18, '旋翼悬停'], [17, '旋翼自稳'],
-    [10, '自动'], [21, '旋翼返航'], [20, '旋翼降落'], [12, '盘旋'], [11, '返航'],
+    [21, '旋翼返航'], [20, '旋翼降落'],
 ]
 ROVER_BTNS = [[0, '手动'], [4, '固定'], [10, '自动'], [15, '引导'], [11, '返航']]
 SUB_BTNS = [[0, '自稳'], [2, '定深'], [16, '定点'], [3, '自动'], [4, '引导']]
@@ -26,25 +46,36 @@ FIX_NAMES = {0: '无定位', 1: '无定位', 2: '2D', 3: '3D', 4: '差分', 5: '
 
 COPTER_MODES_EN = {
     0: 'Stabilize', 1: 'Acro', 2: 'Alt Hold', 3: 'Auto', 4: 'Guided',
-    5: 'Loiter', 6: 'RTL', 7: 'Circle', 9: 'Land', 16: 'PosHold', 21: 'Smart RTL',
+    5: 'Loiter', 6: 'RTL', 7: 'Circle', 8: 'PosHold', 9: 'Land',
+    11: 'Drift', 13: 'Sport', 14: 'Flip', 15: 'AutoTune',
+    16: 'PosHoldOld', 17: 'Brake', 18: 'Throw', 19: 'AvoidADSB',
+    20: 'GuidedNoGPS', 21: 'Smart RTL', 22: 'FlowHold',
+    23: 'Follow', 24: 'ZigZag', 25: 'SystemID', 26: 'Heli_Autorotate',
+    27: 'Auto RTL', 28: 'Turtle',
 }
 PLANE_MODES_EN = {
-    0: 'Manual', 1: 'Circle', 2: 'Stabilize', 5: 'FBW-A', 6: 'FBW-B', 7: 'Cruise',
-    10: 'Auto', 11: 'RTL', 12: 'Loiter', 15: 'Guided',
+    0: 'Manual', 1: 'Circle', 2: 'Stabilize', 3: 'Training', 4: 'Acro',
+    5: 'FBW-A', 6: 'FBW-B', 7: 'Cruise', 8: 'AutoTune',
+    10: 'Auto', 11: 'RTL', 12: 'Loiter', 13: 'Takeoff', 14: 'AvoidADSB',
+    15: 'Guided', 16: 'Initialising',
     17: 'Q-Stabilize', 18: 'Q-Hover', 19: 'Q-Loiter', 20: 'Q-Land', 21: 'Q-RTL',
+    22: 'QAutoTune', 23: 'QAcro', 24: 'Thermal', 25: 'Loiter2Q',
 }
 ROVER_MODES_EN = {
-    0: 'Manual', 1: 'Acro', 3: 'Steering', 4: 'Hold', 5: 'Follow',
-    10: 'Auto', 11: 'RTL', 12: 'Smart RTL', 15: 'Guided',
+    0: 'Manual', 1: 'Acro', 3: 'Steering', 4: 'Hold', 5: 'Loiter',
+    6: 'Follow', 7: 'Simple', 8: 'Dock', 9: 'Circle',
+    10: 'Auto', 11: 'RTL', 12: 'Smart RTL', 15: 'Guided', 16: 'Initialising',
 }
 SUB_MODES_EN = {
     0: 'Stabilize', 1: 'Acro', 2: 'Depth Hold', 3: 'Auto', 4: 'Guided',
     7: 'Circle', 9: 'Surface', 16: 'PosHold', 19: 'Manual',
+    20: 'Motor Detect', 21: 'Surftrak',
 }
 COPTER_BTNS_EN = [[0, 'Stabilize'], [2, 'Alt Hold'], [5, 'Loiter'], [3, 'Auto'], [6, 'RTL'], [9, 'Land']]
 PLANE_BTNS_EN = [
+    [0, 'Manual'], [10, 'Auto'], [11, 'RTL'], [12, 'Loiter'],
     [19, 'Q-Loiter'], [18, 'Q-Hover'], [17, 'Q-Stabilize'],
-    [10, 'Auto'], [21, 'Q-RTL'], [20, 'Q-Land'], [12, 'Loiter'], [11, 'RTL'],
+    [21, 'Q-RTL'], [20, 'Q-Land'],
 ]
 ROVER_BTNS_EN = [[0, 'Manual'], [4, 'Hold'], [10, 'Auto'], [15, 'Guided'], [11, 'RTL']]
 SUB_BTNS_EN = [[0, 'Stabilize'], [2, 'Depth Hold'], [16, 'PosHold'], [3, 'Auto'], [4, 'Guided']]

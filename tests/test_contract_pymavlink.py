@@ -410,6 +410,372 @@ class TestIncomingHandlers:
         handle_mission_ack(payload, pl, link)
         assert link.mission._mission_pending is False
 
+    def test_heartbeat_armed_flag(self):
+        from backend.mavlink_handlers import handle_heartbeat
+        link = FakeLink()
+        msg = mavlink.MAVLink_heartbeat_message(
+            type=2, autopilot=3, base_mode=0x81, system_status=4,
+            mavlink_version=3, custom_mode=5,
+        )
+        payload, pl = _encode_payload(msg)
+        # Setting raw_sysid so handle_heartbeat copies it
+        link._raw_sysid = 1
+        handle_heartbeat(payload, pl, link)
+        assert link.vehicle.mode == 5
+        assert link.vehicle.vtype_raw == 2
+        assert link.vehicle.armed is True
+
+    def test_heartbeat_disarmed(self):
+        from backend.mavlink_handlers import handle_heartbeat
+        link = FakeLink()
+        link.vehicle.armed = True  # was armed, now becoming disarmed
+        link.vehicle.armed_time = 1.0
+        msg = mavlink.MAVLink_heartbeat_message(
+            type=2, autopilot=3, base_mode=0x00, system_status=4,
+            mavlink_version=3, custom_mode=5,
+        )
+        payload, pl = _encode_payload(msg)
+        link._raw_sysid = 1
+        handle_heartbeat(payload, pl, link)
+        assert link.vehicle.armed is False
+
+    def test_home_position(self):
+        from backend.mavlink_handlers import handle_home_position
+        link = FakeLink()
+        msg = mavlink.MAVLink_home_position_message(
+            latitude=340000000, longitude=-1184000000, altitude=100000,
+            x=0, y=0, z=0, q=[1.0, 0.0, 0.0, 0.0],
+            approach_x=0, approach_y=0, approach_z=0, time_usec=0,
+        )
+        payload, pl = _encode_payload(msg)
+        handle_home_position(payload, pl, link)
+        assert link.attitude.home_lat == pytest.approx(34.0, abs=1e-5)
+        assert link.attitude.home_lon == pytest.approx(-118.4, abs=1e-5)
+
+    def test_mission_current(self):
+        from backend.mavlink_handlers import handle_mission_current
+        link = FakeLink()
+        msg = mavlink.MAVLink_mission_current_message(seq=42)
+        payload, pl = _encode_payload(msg)
+        handle_mission_current(payload, pl, link)
+        assert link.mission.wp_seq == 42
+
+    def test_mission_item_reached(self):
+        from backend.mavlink_handlers import handle_mission_item_reached
+        link = FakeLink()
+        msg = mavlink.MAVLink_mission_item_reached_message(seq=7)
+        payload, pl = _encode_payload(msg)
+        handle_mission_item_reached(payload, pl, link)
+        assert any('7' in e['text'] for e in link.events)
+
+    def test_rc_channels(self):
+        from backend.mavlink_handlers import handle_rc_channels
+        link = FakeLink()
+        msg = mavlink.MAVLink_rc_channels_message(
+            time_boot_ms=0, chancount=8,
+            chan1_raw=1500, chan2_raw=1501, chan3_raw=1502, chan4_raw=1503,
+            chan5_raw=1504, chan6_raw=1505, chan7_raw=1506, chan8_raw=1507,
+            chan9_raw=0, chan10_raw=0, chan11_raw=0, chan12_raw=0,
+            chan13_raw=0, chan14_raw=0, chan15_raw=0, chan16_raw=0,
+            chan17_raw=0, chan18_raw=0, rssi=200,
+        )
+        payload, pl = _encode_payload(msg)
+        handle_rc_channels(payload, pl, link)
+        assert link.rc_servo.rc_channels[0] == 1500
+        assert link.rc_servo.rc_channels[7] == 1507
+        assert link.rc_servo.rc_rssi == 200
+
+    def test_ekf_status(self):
+        from backend.mavlink_handlers import handle_ekf_status
+        link = FakeLink()
+        msg = mavlink.MAVLink_ekf_status_report_message(
+            flags=0x1F, velocity_variance=0.1, pos_horiz_variance=0.2,
+            pos_vert_variance=0.3, compass_variance=0.4, terrain_alt_variance=0.5,
+        )
+        payload, pl = _encode_payload(msg)
+        handle_ekf_status(payload, pl, link)
+        assert link.diagnostic.ekf_vel_var == pytest.approx(0.1, abs=0.001)
+        assert link.diagnostic.ekf_pos_h_var == pytest.approx(0.2, abs=0.001)
+        assert link.diagnostic.ekf_compass_var == pytest.approx(0.4, abs=0.001)
+        assert link.diagnostic.ekf_flags == 0x1F
+
+    def test_mount_status(self):
+        from backend.mavlink_handlers import handle_mount_status
+        link = FakeLink()
+        msg = mavlink.MAVLink_mount_status_message(
+            target_system=1, target_component=1,
+            pointing_a=-4500, pointing_b=0, pointing_c=9000,
+        )
+        payload, pl = _encode_payload(msg)
+        handle_mount_status(payload, pl, link)
+        assert link.diagnostic.gimbal_pitch == pytest.approx(-45.0, abs=0.01)
+        assert link.diagnostic.gimbal_yaw == pytest.approx(90.0, abs=0.01)
+
+    def test_terrain_report(self):
+        from backend.mavlink_handlers import handle_terrain_report
+        link = FakeLink()
+        msg = mavlink.MAVLink_terrain_report_message(
+            lat=0, lon=0, spacing=100, terrain_height=125.5, current_height=120.0,
+            pending=0, loaded=10,
+        )
+        payload, pl = _encode_payload(msg)
+        handle_terrain_report(payload, pl, link)
+        assert link.diagnostic.terrain_alt == pytest.approx(125.5, abs=0.01)
+
+    def test_wind(self):
+        from backend.mavlink_handlers import handle_wind
+        link = FakeLink()
+        msg = mavlink.MAVLink_wind_message(
+            direction=270.0, speed=5.5, speed_z=0.0,
+        )
+        payload, pl = _encode_payload(msg)
+        handle_wind(payload, pl, link)
+        assert link.diagnostic.wind_dir == pytest.approx(270.0, abs=0.01)
+        assert link.diagnostic.wind_speed == pytest.approx(5.5, abs=0.01)
+
+    def test_autopilot_version(self):
+        from backend.mavlink_handlers import handle_autopilot_version
+        link = FakeLink()
+        # firmware version encoded as major<<24 | minor<<16 | patch<<8
+        # for ArduCopter 4.5.3 → 0x04050300
+        fw_ver = (4 << 24) | (5 << 16) | (3 << 8)
+        msg = mavlink.MAVLink_autopilot_version_message(
+            capabilities=0, flight_sw_version=fw_ver, middleware_sw_version=0,
+            os_sw_version=0, board_version=12345,
+            flight_custom_version=b'\x12\x34\x56\x78\x9a\xbc\xde\xf0',
+            middleware_custom_version=bytes(8), os_custom_version=bytes(8),
+            vendor_id=0, product_id=0, uid=0, uid2=bytes(18),
+        )
+        payload, pl = _encode_payload(msg)
+        handle_autopilot_version(payload, pl, link)
+        assert link.vehicle.fw_version == 'v4.5.3'
+        assert link.vehicle.board_id == 12345
+
+    def test_mission_item_int_waypoint(self):
+        """seq=0 is reserved for HOME position; only seq>=1 counts as a real
+        waypoint (handle_mission_item_int line filters `seq > 0`). So this
+        test sends two items: HOME at seq=0, NAV_WAYPOINT at seq=1."""
+        from backend.mavlink_handlers import handle_mission_item_int
+        link = FakeLink()
+        link.mission._dl_pending = True
+        link.mission._dl_total = 2
+        link.mission._dl_items = [None, None]
+        # HOME placeholder (seq=0 — most fields ignored by Argus)
+        home = mavlink.MAVLink_mission_item_int_message(
+            target_system=255, target_component=1,
+            seq=0, frame=3, command=16, current=1, autocontinue=1,
+            param1=0, param2=0, param3=0, param4=0,
+            x=0, y=0, z=0, mission_type=0,
+        )
+        payload, pl = _encode_payload(home)
+        handle_mission_item_int(payload, pl, link)
+        # Now the waypoint at seq=1
+        wp_msg = mavlink.MAVLink_mission_item_int_message(
+            target_system=255, target_component=1,
+            seq=1, frame=3, command=16, current=0, autocontinue=1,
+            param1=0, param2=0, param3=0, param4=0,
+            x=340000000, y=-1184000000, z=100.0,
+            mission_type=0,
+        )
+        payload, pl = _encode_payload(wp_msg)
+        handle_mission_item_int(payload, pl, link)
+        assert link.mission._dl_pending is False
+        last = link.mission._dl_messages[-1]
+        assert last['type'] == 'mission_downloaded'
+        assert len(last['waypoints']) == 1
+        wp = last['waypoints'][0]
+        assert wp['lat'] == pytest.approx(34.0, abs=1e-5)
+        assert wp['lon'] == pytest.approx(-118.4, abs=1e-5)
+        assert wp['type'] == 'wp'
+
+    def test_log_entry(self):
+        from backend.mavlink_handlers import handle_log_entry
+        link = FakeLink()
+        msg = mavlink.MAVLink_log_entry_message(
+            id=5, num_logs=1, last_log_num=5, time_utc=1700000000, size=102400,
+        )
+        payload, pl = _encode_payload(msg)
+        handle_log_entry(payload, pl, link)
+        assert len(link.log_dl._log_list) == 1
+        assert link.log_dl._log_list[0]['id'] == 5
+        assert link.log_dl._log_list[0]['size'] == 102400
+
+    def test_log_data(self):
+        from backend.mavlink_handlers import handle_log_data
+        link = FakeLink()
+        link.log_dl._log_download_id = 5
+        link.log_dl._log_download_size = 1000
+        link.log_dl._log_download_data = bytearray(1000)
+        link.log_dl._log_download_ofs = 0
+        chunk = bytes(range(90))
+        msg = mavlink.MAVLink_log_data_message(
+            id=5, ofs=0, count=90, data=list(chunk) + [0] * (90 - len(chunk)),
+        )
+        payload, pl = _encode_payload(msg)
+        handle_log_data(payload, pl, link)
+        assert link.log_dl._log_download_data[:90] == chunk
+
+    def test_param_value(self):
+        # param_manager is the entry point; handle_param_value forwards.
+        link = FakeLink()
+        # Mock param_mgr to capture
+        class FakeParamMgr:
+            def __init__(self):
+                self.calls = []
+            def handle_param_value(self, p, pl):
+                self.calls.append((bytes(p), pl))
+            def request_all(self):
+                pass
+            def set_param(self, *a):
+                pass
+            def get_status(self):
+                return {'param_count': 0, 'param_total': 0, 'param_fetching': False}
+            def check_timeout(self):
+                pass
+            def save_to_file(self):
+                return ''
+        link.param_mgr = FakeParamMgr()
+        from backend.mavlink_handlers import handle_param_value
+        msg = mavlink.MAVLink_param_value_message(
+            param_id=b'BATT_CAPACITY', param_value=5300.0, param_type=9,
+            param_count=700, param_index=42,
+        )
+        payload, pl = _encode_payload(msg)
+        handle_param_value(payload, pl, link)
+        assert len(link.param_mgr.calls) == 1
+
+
+# ─────────────────────────────────────────────────────────────────────────
+# More outgoing commands
+# ─────────────────────────────────────────────────────────────────────────
+
+
+class TestOutgoingMoreCommands:
+    def test_mode(self):
+        link = FakeLink()
+        # cmd_mode takes the mode as `param`, not data
+        commands.execute('mode', 5, link)
+        msg = _decode_one(link.captured[0])
+        assert msg.get_msgId() == mavlink.MAVLINK_MSG_ID_SET_MODE
+        assert msg.custom_mode == 5
+
+    def test_mission_start(self):
+        link = FakeLink()
+        commands.execute('mission_start', None, link)
+        # cmd_mission_start first sends SET_MODE(AUTO) then a delayed MISSION_START.
+        # Synchronously we only see the SET_MODE.
+        msg = _decode_one(link.captured[0])
+        assert msg.get_msgId() == mavlink.MAVLINK_MSG_ID_SET_MODE
+        # Copter AUTO is mode 3, Plane AUTO is mode 10. FakeLink.is_plane() returns False.
+        assert msg.custom_mode == 3
+
+    def test_mission_clear(self):
+        link = FakeLink()
+        commands.execute('mission_clear', None, link)
+        msg = _decode_one(link.captured[0])
+        assert msg.get_msgId() == mavlink.MAVLINK_MSG_ID_MISSION_CLEAR_ALL  # 45
+
+    def test_log_list(self):
+        link = FakeLink()
+        commands.execute('log_list', None, link)
+        msg = _decode_one(link.captured[0])
+        assert msg.get_msgId() == mavlink.MAVLINK_MSG_ID_LOG_REQUEST_LIST  # 117
+        assert msg.start == 0
+        assert msg.end == 0xFFFF
+
+    def test_log_cancel(self):
+        link = FakeLink()
+        commands.execute('log_cancel', None, link)
+        msg = _decode_one(link.captured[0])
+        assert msg.get_msgId() == mavlink.MAVLINK_MSG_ID_LOG_REQUEST_END  # 122
+
+    def test_log_download(self):
+        link = FakeLink()
+        # Need an entry first
+        link.log_dl._log_list = [{'id': 3, 'size': 5000, 'time_utc': 0}]
+        commands.execute('log_download', None, link, {'id': 3})
+        # First frame is LOG_REQUEST_DATA
+        msg = _decode_one(link.captured[0])
+        assert msg.get_msgId() == mavlink.MAVLINK_MSG_ID_LOG_REQUEST_DATA  # 119
+        assert msg.id == 3
+
+    def test_motor_test_one_based(self):
+        """Regression: cmd_motor_test must send 1-based motor index, not 0-based."""
+        link = FakeLink()
+        commands.execute('motor_test', None, link, {'motor': 0, 'throttle': 5, 'duration': 2})
+        msg = _decode_one(link.captured[0])
+        assert msg.command == mavlink.MAV_CMD_DO_MOTOR_TEST  # 209
+        assert msg.param1 == 1.0  # 0+1 → 1-based
+
+    def test_camera_trigger_sends_p5_1(self):
+        """Regression: cmd_camera_trigger must send param5=1 to actually trigger."""
+        link = FakeLink()
+        commands.execute('camera_trigger', None, link)
+        msg = _decode_one(link.captured[0])
+        assert msg.command == mavlink.MAV_CMD_DO_DIGICAM_CONTROL  # 203
+        assert msg.param5 == 1.0
+
+    def test_gimbal_angle(self):
+        link = FakeLink()
+        commands.execute('gimbal_angle', None, link, {'pitch': -30, 'yaw': 45})
+        msg = _decode_one(link.captured[0])
+        assert msg.command == mavlink.MAV_CMD_DO_MOUNT_CONTROL  # 205
+        assert msg.param1 == -30.0
+        assert msg.param3 == 45.0
+        assert msg.param7 == 2.0  # MAV_MOUNT_MODE_MAVLINK_TARGETING
+
+    def test_camera_video_start(self):
+        link = FakeLink()
+        commands.execute('camera_video_start', None, link)
+        msg = _decode_one(link.captured[0])
+        assert msg.command == mavlink.MAV_CMD_VIDEO_START_CAPTURE  # 2500
+
+    def test_camera_video_stop(self):
+        link = FakeLink()
+        commands.execute('camera_video_stop', None, link)
+        msg = _decode_one(link.captured[0])
+        assert msg.command == mavlink.MAV_CMD_VIDEO_STOP_CAPTURE  # 2501
+
+    def test_camera_zoom(self):
+        link = FakeLink()
+        commands.execute('camera_zoom', None, link, {'zoom': 50})
+        msg = _decode_one(link.captured[0])
+        assert msg.command == mavlink.MAV_CMD_SET_CAMERA_ZOOM  # 531
+        assert msg.param2 == 50.0
+
+    def test_do_set_roi(self):
+        link = FakeLink()
+        commands.execute('do_set_roi', None, link, {'lat': 34.0, 'lon': -118.4, 'alt': 100})
+        msg = _decode_one(link.captured[0])
+        assert msg.command == mavlink.MAV_CMD_DO_SET_ROI  # 201
+
+    def test_reboot(self):
+        link = FakeLink()
+        commands.execute('reboot', None, link)
+        msg = _decode_one(link.captured[0])
+        assert msg.command == mavlink.MAV_CMD_PREFLIGHT_REBOOT_SHUTDOWN  # 246
+        assert msg.param1 == 1.0  # reboot autopilot
+
+    def test_reboot_bootloader(self):
+        link = FakeLink()
+        commands.execute('reboot_bootloader', None, link)
+        msg = _decode_one(link.captured[0])
+        assert msg.command == mavlink.MAV_CMD_PREFLIGHT_REBOOT_SHUTDOWN
+        assert msg.param1 == 3.0  # reboot to bootloader
+
+    def test_drop_relay_on(self):
+        link = FakeLink()
+        commands.execute('drop', None, link)
+        msg = _decode_one(link.captured[0])
+        assert msg.command == mavlink.MAV_CMD_DO_SET_RELAY  # 181
+
+    def test_guided_goto(self):
+        link = FakeLink()
+        commands.execute('guided_goto', None, link, {'lat': 34.0, 'lon': -118.4, 'alt': 100})
+        msg = _decode_one(link.captured[-1])
+        # cmd_guided_goto may send multiple — last should be SET_POSITION_TARGET_GLOBAL_INT
+        assert msg.get_msgId() == mavlink.MAVLINK_MSG_ID_SET_POSITION_TARGET_GLOBAL_INT  # 86
+
 
 # ─────────────────────────────────────────────────────────────────────────
 # CRC_EXTRA conformance

@@ -95,7 +95,11 @@ def cmd_param_load(link: DroneLink, param, data: dict):
     from pathlib import Path
     p = Path(path).resolve()
     params_dir = Path(__file__).resolve().parent.parent.parent / 'params'
-    if not str(p).startswith(str(params_dir)):
+    # Use is_relative_to instead of string-prefix: the prefix check is bypassed
+    # by sibling dirs that happen to share a prefix (e.g. /argus/params_evil/...)
+    try:
+        p.relative_to(params_dir)
+    except ValueError:
         return {'ok': False, 'error': 'Path must be within params directory'}
     if p.suffix != '.json':
         return {'ok': False, 'error': 'Only .json parameter files allowed'}

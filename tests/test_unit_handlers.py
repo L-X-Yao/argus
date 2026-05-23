@@ -88,10 +88,11 @@ class TestHeartbeat:
         assert link.vehicle.flight_summary is not None
         assert 'duration' in link.vehicle.flight_summary
 
-    def test_too_short_payload_ignored(self):
+    def test_empty_payload_ignored(self):
+        # Per MAVLink 2 zero-trim, a truncated heartbeat is processed
+        # zero-padded. Only an entirely empty payload (pl=0) is dropped.
         link = make_link()
-        p = bytearray(5)
-        handle_heartbeat(p, len(p), link)
+        handle_heartbeat(b'', 0, link)
         assert link.connected is False
 
     def test_vehicle_type_detected(self):
@@ -457,8 +458,17 @@ class TestEkfDispatchRegistration:
 
 class TestTerrainReport:
     def test_parses_terrain_alt(self):
+        # TERRAIN_REPORT (136) wire layout sorted by field size:
+        #   lat(i32, 0), lon(i32, 4), terrain_height(f, 8),
+        #   current_height(f, 12), spacing(u16, 16), pending(u16, 18),
+        #   loaded(u16, 20). The previous test used a 2-byte gap between
+        #   the int32s and the float (i.e. <iiHHf) which placed the float
+        #   at offset 12 (current_height) — masking the original handler
+        #   bug that also read offset 12. Use correct wire order here.
         link = make_link()
-        p = struct.pack('<iiHHf', int(34.0 * 1e7), int(108.0 * 1e7), 100, 0, 456.78)
+        p = struct.pack('<iiffHHH',
+                        int(34.0 * 1e7), int(108.0 * 1e7),
+                        456.78, 0.0, 100, 0, 0)
         handle_terrain_report(p, len(p), link)
         assert abs(link.diagnostic.terrain_alt - 456.78) < 0.01
 
