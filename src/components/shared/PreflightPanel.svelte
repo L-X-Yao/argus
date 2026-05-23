@@ -48,7 +48,7 @@
       { key: 'gps', name: t('check.gps'), ok: gpsOk, detail: `${d.gps_fix}`, critical: true },
       { key: 'sats', name: t('check.sats'), ok: d.gps_sats >= 10, detail: `${d.gps_sats} (>=10)`, critical: true },
       { key: 'batV', name: t('check.batV'), ok: d.voltage > 22, detail: `${d.voltage.toFixed(1)}V`, critical: true },
-      { key: 'batPct', name: t('check.batPct'), ok: d.remaining > 30 || d.remaining < 0, detail: d.remaining >= 0 ? `${d.remaining}%` : '---', critical: true },
+      { key: 'batPct', name: t('check.batPct'), ok: d.remaining >= 30 || d.remaining < 0, detail: d.remaining >= 0 ? `${d.remaining}%` : '---', critical: true },
       { key: 'home', name: t('check.home'), ok: d.home_lat !== 0, detail: d.home_lat !== 0 ? `${d.home_lat.toFixed(5)}, ${d.home_lon.toFixed(5)}` : '---', critical: true },
       { key: 'link', name: t('check.link'), ok: d.connected && d.link_age >= 0 && d.link_age < 2, detail: d.connected ? `${d.link_age.toFixed(1)}s` : '---', critical: true },
       { key: 'nav', name: t('check.nav'), ok: !(d.ekf_flags & 0x480) && Math.max(d.ekf_vel, d.ekf_pos_h, d.ekf_pos_v, d.ekf_compass) < 1.0,

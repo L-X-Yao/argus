@@ -49,6 +49,7 @@ export function generateSurveyGrid(polygon: Point[], config: SurveyConfig): Wayp
 
   const lines: [number, number][][] = [];
   const spacing = config.spacing;
+  if (spacing <= 0) return [];
   const overshoot = config.overshoot;
 
   for (let y = minY + spacing / 2; y < maxY; y += spacing) {

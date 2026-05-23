@@ -198,6 +198,6 @@ def _upload_rally(link: DroneLink, points: list) -> None:
         alt = float(pt.get('alt', 100))
         p = struct.pack('<ffffiifHHBBBBBB',
                         0.0, 0.0, 0.0, 0.0, lat7, lon7, alt,
-                        i, 5100, link.vehicle.sysid, 1, 3, 0, 2, 0)
+                        i, 5100, link.vehicle.sysid, 1, 3, 0, 1, 2)
         link.send(bm(73, p, link.sq, 38))
     link.add_event(lt('rally_uploaded', link.locale) % count, 'rally_uploaded')

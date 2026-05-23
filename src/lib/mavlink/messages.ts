@@ -191,19 +191,19 @@ export function decodeVfrHud(p: DataView): VfrHud {
   return {
     airspeed: p.getFloat32(0, true),
     groundspeed: p.getFloat32(4, true),
-    heading: p.getInt16(8, true),
-    throttle: p.getUint16(10, true),
-    alt: p.getFloat32(12, true),
-    climb: p.getFloat32(16, true),
+    alt: p.getFloat32(8, true),
+    climb: p.getFloat32(12, true),
+    heading: p.getInt16(16, true),
+    throttle: p.getUint16(18, true),
   };
 }
 
 export function decodeRcChannels(p: DataView): RcChannels {
-  const chancount = p.getUint8(4);
   const channels: number[] = [];
-  for (let i = 0; i < 18 && (5 + i * 2 + 1) < p.byteLength; i++) {
-    channels.push(p.getUint16(5 + i * 2, true));
+  for (let i = 0; i < 18 && (4 + i * 2 + 1) < p.byteLength; i++) {
+    channels.push(p.getUint16(4 + i * 2, true));
   }
+  const chancount = p.byteLength > 40 ? p.getUint8(40) : 0;
   return { chancount, channels, rssi: p.byteLength > 41 ? p.getUint8(41) : 0 };
 }
 
@@ -225,7 +225,7 @@ export function decodeStatusText(p: DataView): StatusText {
 }
 
 export function decodeParamValue(p: DataView): ParamValue {
-  const bytes = new Uint8Array(p.buffer, p.byteOffset + 4, 16);
+  const bytes = new Uint8Array(p.buffer, p.byteOffset + 8, 16);
   let end = bytes.indexOf(0);
   if (end < 0) end = 16;
   const paramId = new TextDecoder().decode(bytes.slice(0, end));
@@ -233,8 +233,8 @@ export function decodeParamValue(p: DataView): ParamValue {
     paramValue: p.getFloat32(0, true),
     paramId,
     paramType: p.getUint8(24),
-    paramCount: p.getUint16(20, true),
-    paramIndex: p.getUint16(22, true),
+    paramCount: p.getUint16(4, true),
+    paramIndex: p.getUint16(6, true),
   };
 }
 
@@ -247,7 +247,7 @@ export function decodeMissionCurrent(p: DataView): MissionCurrent {
 }
 
 export function decodeMissionAck(p: DataView): MissionAck {
-  return { type: p.getUint8(0) };
+  return { type: p.getUint8(2) };
 }
 
 export function decodeMissionCount(p: DataView): MissionCount {

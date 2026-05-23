@@ -61,9 +61,9 @@
     const lower = text.toLowerCase();
 
     if (lower.includes('circle') || lower.includes('圆') || lower.includes('环绕')) {
-      const radiusMatch = lower.match(/(\d+)\s*m?\s*(radius|半径)/i) || lower.match(/(radius|半径)\s*(\d+)/i);
-      const radius = radiusMatch ? parseInt(radiusMatch[1] || radiusMatch[2]) : 100;
-      const countMatch = lower.match(/(\d+)\s*(waypoint|点|wp)/i);
+      const radiusMatch = lower.match(/(\d+)\s*m?\s*(?:radius|半径)/i) || lower.match(/(?:radius|半径)\s*(\d+)/i);
+      const radius = radiusMatch ? parseInt(radiusMatch[1]) : 100;
+      const countMatch = lower.match(/(\d+)[\s-]*(waypoint|point|点|wp)/i);
       const count = countMatch ? parseInt(countMatch[1]) : 8;
       const altMatch = lower.match(/(\d+)\s*m?\s*(alt|高度|altitude)/i);
       const alt = altMatch ? parseInt(altMatch[1]) : ctx.defaultAlt;
@@ -79,7 +79,7 @@
     }
 
     if (lower.includes('survey') || lower.includes('测绘') || lower.includes('grid') || lower.includes('网格')) {
-      const dimMatch = lower.match(/(\d+)\s*[mx×]\s*(\d+)/);
+      const dimMatch = lower.match(/(\d+)\s*m?\s*[x×]\s*(\d+)/);
       const w = dimMatch ? parseInt(dimMatch[1]) : 200;
       const h = dimMatch ? parseInt(dimMatch[2]) : 200;
       const altMatch = lower.match(/(\d+)\s*m?\s*(alt|高度|altitude)/i);

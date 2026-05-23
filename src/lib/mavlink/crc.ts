@@ -36,8 +36,8 @@ export const CRC_EXTRA: Record<number, number> = {
   22: 220,   // PARAM_VALUE
   23: 168,   // PARAM_SET
   24: 24,    // GPS_RAW_INT
-  27: 160,   // RAW_IMU
-  29: 46,    // SCALED_PRESSURE
+  27: 144,   // RAW_IMU
+  29: 115,   // SCALED_PRESSURE
   30: 39,    // ATTITUDE
   33: 104,   // GLOBAL_POSITION_INT
   35: 244,   // RC_CHANNELS_RAW
@@ -48,7 +48,7 @@ export const CRC_EXTRA: Record<number, number> = {
   42: 28,    // MISSION_CURRENT
   43: 132,   // MISSION_REQUEST_LIST
   44: 221,   // MISSION_COUNT
-  45: 198,   // MISSION_CLEAR_ALL
+  45: 232,   // MISSION_CLEAR_ALL
   46: 11,    // MISSION_ITEM_REACHED
   47: 153,   // MISSION_ACK
   51: 196,   // MISSION_REQUEST_INT
@@ -58,12 +58,13 @@ export const CRC_EXTRA: Record<number, number> = {
   70: 124,   // RC_CHANNELS_OVERRIDE
   73: 38,    // MISSION_ITEM_INT
   74: 20,    // VFR_HUD
-  75: 152,   // COMMAND_INT
-  76: 143,   // COMMAND_LONG
+  75: 158,   // COMMAND_INT
+  76: 152,   // COMMAND_LONG
   77: 143,   // COMMAND_ACK
   83: 22,    // ATTITUDE_TARGET
-  85: 143,   // POSITION_TARGET_LOCAL_NED
-  87: 5,     // POSITION_TARGET_GLOBAL_INT
+  85: 140,   // POSITION_TARGET_LOCAL_NED
+  87: 150,   // POSITION_TARGET_GLOBAL_INT
+  193: 71,   // EKF_STATUS_REPORT
   105: 93,   // HIGHRES_IMU
   116: 76,   // SCALED_IMU2
   117: 128,  // LOG_REQUEST_LIST
