@@ -176,6 +176,27 @@ def handle_command_ack(p: bytes, pl: int, link: DroneLink) -> None:
     link.add_event(lt('cmd_ack', link.locale) % (cmd_name, result_text), etype)
 
 
+def handle_mag_cal_progress(p: bytes, pl: int, link: DroneLink) -> None:
+    if pl < 17:
+        return
+    pct = p[16]
+    prev = getattr(link, '_mag_cal_pct', -1)
+    if (pct // 5) != (prev // 5):
+        link._mag_cal_pct = pct
+        link.add_event(lt('mag_cal_pct', link.locale) % pct, 'cal_compass')
+
+
+def handle_mag_cal_report(p: bytes, pl: int, link: DroneLink) -> None:
+    if pl < 44:
+        return
+    cal_status = p[42]
+    link._mag_cal_pct = -1
+    if cal_status == 4:
+        link.add_event(lt('mag_cal_done', link.locale), 'cal_compass')
+    else:
+        link.add_event(lt('mag_cal_fail', link.locale), 'cal_compass')
+
+
 def handle_statustext(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 2:
         return
@@ -507,4 +528,6 @@ def init_handlers() -> None:
     mavlink_dispatch.register(120, handle_log_data)
     mavlink_dispatch.register(126, handle_serial_control)
     mavlink_dispatch.register(246, handle_adsb_vehicle)
+    mavlink_dispatch.register(191, handle_mag_cal_progress)
+    mavlink_dispatch.register(192, handle_mag_cal_report)
     mavlink_dispatch.register(147, handle_battery_status)

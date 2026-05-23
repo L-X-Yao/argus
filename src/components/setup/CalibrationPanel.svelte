@@ -132,11 +132,14 @@
       }
 
       if (selected === 'compass') {
-        if (/compass|罗盘|rotate|旋转|校准/i.test(txt)) {
+        const pctMatch = txt.match(/(\d+)%/);
+        if (pctMatch) {
+          compassProgress = Math.min(95, parseInt(pctMatch[1]));
+        } else if (/compass|罗盘|rotate|旋转/i.test(txt)) {
           compassMsgCount++;
           compassProgress = Math.min(95, Math.round(compassMsgCount * 3));
         }
-        if (/success|成功|complete/i.test(txt)) {
+        if (/complete|完成/i.test(txt) && !pctMatch) {
           compassProgress = 100;
           calibrating = false;
           sendCommand('cal_compass_accept');
