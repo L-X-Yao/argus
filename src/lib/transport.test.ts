@@ -72,7 +72,7 @@ import {
   connectSerial, disconnectSerial,
   serialUploadMission, serialDownloadMission,
   serialUploadFence,
-  serialLogList, serialLogDownload,
+  serialLogList, serialLogDownload, serialLogCancel,
   serialCalCompass,
 } from './transport';
 import { encodeFrame } from './mavlink/codec';
@@ -394,6 +394,71 @@ describe('serialCalCompass + MAG_CAL events', () => {
 // ─────────────────────────────────────────────────────────────────────────
 // Disconnect cleanup
 // ─────────────────────────────────────────────────────────────────────────
+
+// ─────────────────────────────────────────────────────────────────────────
+// Watchdogs (fake-timers). The heartbeat setInterval set up in connectSerial
+// was registered BEFORE useFakeTimers, so it stays on the real clock and
+// won't pollute our writes during fake-time advancement.
+// ─────────────────────────────────────────────────────────────────────────
+
+describe('upload watchdogs', () => {
+  beforeEach(() => { vi.useFakeTimers(); });
+  afterEach(() => { vi.useRealTimers(); });
+
+  const oneWp = () => [{
+    lat: 30, lon: 120, alt: 50, drop: false, delay: 0, speed: 0,
+    type: 'wp' as const, loiter_param: 0,
+  }];
+
+  it('30s overall watchdog rejects upload when FC sends no MISSION_REQUEST', async () => {
+    const promise = serialUploadMission(oneWp(), 30);
+    // No FC frame injected. Advance just past the 30s overall timeout.
+    await vi.advanceTimersByTimeAsync(30001);
+    const res = await promise;
+    expect(res.ok).toBe(false);
+    expect(res.error).toMatch(/timed out|30s/i);
+  });
+
+  it('5s per-item watchdog fires when FC stops requesting mid-upload', async () => {
+    const promise = serialUploadMission(oneWp(), 30);
+    // FC sends the first request — this arms the 5s per-item timer.
+    inject(fcFrame(51, encodeMissionRequestInt(1, 1, 0)));
+    // No further FC traffic. The per-item watchdog should fire.
+    await vi.advanceTimersByTimeAsync(5001);
+    const res = await promise;
+    expect(res.ok).toBe(false);
+    expect(res.error).toMatch(/stopped requesting|seq 0/i);
+  });
+
+  it('per-item timer resets on each MISSION_REQUEST so a slow-but-steady FC succeeds', async () => {
+    const promise = serialUploadMission(oneWp(), 30);
+    // Drip 4 requests with 4s between each — under 5s per-item, so the
+    // watchdog never fires. Then send the ACK.
+    for (let seq = 0; seq < 4; seq++) {
+      inject(fcFrame(51, encodeMissionRequestInt(1, 1, seq)));
+      await vi.advanceTimersByTimeAsync(4000);
+    }
+    inject(fcFrame(47, encodeMissionAck(1, 1, 0)));
+    await expect(promise).resolves.toEqual({ ok: true });
+  });
+});
+
+describe('log cancel', () => {
+  it('serialLogCancel sends LOG_REQUEST_END (msg 122) and aborts the download', async () => {
+    // Pre-seed the log list so serialLogDownload(7) finds the entry.
+    type LogList = Array<{ id: number; size: number; time_utc: number }>;
+    (logStoreMock.logState as unknown as { list: LogList }).list = [
+      { id: 7, size: 1024, time_utc: 0 },
+    ];
+    const promise = serialLogDownload(7);
+    writes.length = 0;
+    serialLogCancel();
+    expect(countWrites(122)).toBe(1);
+    const res = await promise;
+    expect(res.ok).toBe(false);
+    expect(res.error).toMatch(/cancel/i);
+  });
+});
 
 describe('disconnect cleanup', () => {
   it('serialUploadMission rejects pending promise on disconnect', async () => {

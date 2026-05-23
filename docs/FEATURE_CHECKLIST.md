@@ -797,7 +797,7 @@
 | 测试类型 | 数量 | 工具 |
 |----------|------|------|
 | 后端单元 + 契约测试 | **1037** | pytest |
-| 前端单元测试 | **483** | vitest |
+| 前端单元测试 | **487** | vitest |
 | E2E 测试 | 19 specs | Playwright |
 | 真机 WS 测试 | 25 项 | Python websockets |
 | 真机浏览器测试 | 7 秒参数加载 | Playwright headless |
