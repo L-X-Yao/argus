@@ -9,6 +9,9 @@ export {
   encodeParamRequestList,
   encodeParamSet,
   encodeRequestDataStream,
+  encodeMissionCount,
+  encodeMissionItemInt,
+  encodeMissionClearAll,
 } from './messages';
 export type {
   MessageHandlers,

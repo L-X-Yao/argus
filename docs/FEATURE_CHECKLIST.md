@@ -36,7 +36,7 @@
 | 12 | WS 自动重连 | ✅ᵗ | ws.ts 指数退避 1.5s→30s 上限 (1000×1.5^n, 首次1500ms) |
 | 13 | WS 连接保活检测 | ✅ᵗ | 15 秒无消息判定 stale, 主动重连 |
 | 14 | WebSerial MAVLink编解码 | ✅ᵗ | transport.ts: MAVLink v2帧编码/解码/CRC, 自动SysID/CompID检测, 帧序号管理 |
-| 15 | WebSerial 指令支持 | ✅ᵗ | arm/disarm/mode/RTL/param_set/param_request_all 全部通过USB直连, 绕过Python后端 |
+| 15 | WebSerial 指令支持 | ✅ᵗ | arm/disarm/mode/RTL/param_set/param_request_all + **mission_upload** (MISSION_COUNT→REQUEST→ITEM→ACK 状态机) 全部通过USB直连, 绕过Python后端 |
 | 16 | WebSerial 心跳+数据流 | ✅ᵗ | 1Hz GCS心跳发送, MAVLink数据流请求(REQUEST_DATA_STREAM), 缓冲区累积+帧拆分 |
 | 17 | WebSerial USB设备过滤 | ✅ᵗ | serial.ts: STM32 Bootloader/STMicro/Pixhawk(3DR)/Holybro/CubePilot/Arduino vendor过滤, 5种波特率 |
 | 18 | 连接超时 (8秒) | ✅ᵗ | 客户端8秒超时计时器, 超时后自动断开+错误提示 |
@@ -797,7 +797,7 @@
 | 测试类型 | 数量 | 工具 |
 |----------|------|------|
 | 后端单元 + 契约测试 | **1037** | pytest |
-| 前端单元测试 | **419** | vitest |
+| 前端单元测试 | **443** | vitest |
 | E2E 测试 | 19 specs | Playwright |
 | 真机 WS 测试 | 25 项 | Python websockets |
 | 真机浏览器测试 | 7 秒参数加载 | Playwright headless |

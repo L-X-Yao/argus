@@ -163,6 +163,8 @@ const messages: Record<string, string> = {
   'toast.logList': 'Found {n} onboard logs',
   'toast.logDone': 'Log #{n} download complete',
   'toast.uploading': 'Uploading mission...',
+  'toast.missionOk': 'Mission uploaded',
+  'toast.missionFail': 'Mission upload failed',
   'toast.arming': 'Arming...',
   'toast.armFail': 'Arm failed — check preflight',
   'toast.takeoffFail': 'Takeoff failed — altitude not rising',

@@ -627,6 +627,83 @@ export function encodeRequestDataStream(
 }
 
 /**
+ * MISSION_COUNT (msg 44, 4-byte payload). Sent by the GCS to start an upload;
+ * the FC then requests each item with MISSION_REQUEST(_INT) (msg 40/51) and
+ * acknowledges the batch with MISSION_ACK (msg 47).
+ *
+ * missionType: 0 = MAV_MISSION_TYPE_MISSION, 1 = FENCE, 2 = RALLY.
+ */
+export function encodeMissionCount(
+  targetSys: number, targetComp: number, count: number, missionType: number = 0,
+): Uint8Array {
+  const buf = new Uint8Array(4);
+  const dv = new DataView(buf.buffer);
+  dv.setUint16(0, count, true);
+  dv.setUint8(2, targetSys);
+  dv.setUint8(3, targetComp);
+  // missionType is an extension byte appended by MAVLink 2 — only send it
+  // when non-zero so the trim-friendly wire matches the backend's 4-byte
+  // packing (see backend/commands/_helpers.py:send_mission_count).
+  if (missionType !== 0) {
+    const ext = new Uint8Array(5);
+    ext.set(buf);
+    ext[4] = missionType;
+    return ext;
+  }
+  return buf;
+}
+
+/**
+ * MISSION_ITEM_INT (msg 73, 38-byte payload). Wire layout matches the
+ * pymavlink ordering and the backend's send_mission_item_int helper at
+ * backend/commands/_helpers.py:59.
+ *
+ * frame: 3 = GLOBAL_RELATIVE_ALT_INT for nav waypoints (cmd 16/18/19/21/22/82),
+ *        2 = MISSION for everything else (delays / servo / ROI / cam_trig / yaw).
+ * current: 1 only on seq 0 (the home item), 0 otherwise.
+ */
+export function encodeMissionItemInt(
+  targetSys: number, targetComp: number,
+  seq: number, command: number, frame: number,
+  current: number, autocontinue: number, missionType: number,
+  p1: number, p2: number, p3: number, p4: number,
+  x: number, y: number, z: number,
+): Uint8Array {
+  const buf = new Uint8Array(38);
+  const dv = new DataView(buf.buffer);
+  dv.setFloat32(0, p1, true);
+  dv.setFloat32(4, p2, true);
+  dv.setFloat32(8, p3, true);
+  dv.setFloat32(12, p4, true);
+  dv.setInt32(16, x, true);
+  dv.setInt32(20, y, true);
+  dv.setFloat32(24, z, true);
+  dv.setUint16(28, seq, true);
+  dv.setUint16(30, command, true);
+  dv.setUint8(32, targetSys);
+  dv.setUint8(33, targetComp);
+  dv.setUint8(34, frame);
+  dv.setUint8(35, current);
+  dv.setUint8(36, autocontinue);
+  dv.setUint8(37, missionType);
+  return buf;
+}
+
+/**
+ * MISSION_CLEAR_ALL (msg 45, 2- or 3-byte payload). Wipes the on-FC mission
+ * for the given mission type before starting a fresh upload (or just to
+ * abandon an in-progress one).
+ */
+export function encodeMissionClearAll(
+  targetSys: number, targetComp: number, missionType: number = 0,
+): Uint8Array {
+  if (missionType !== 0) {
+    return new Uint8Array([targetSys, targetComp, missionType]);
+  }
+  return new Uint8Array([targetSys, targetComp]);
+}
+
+/**
  * Pad a DataView's underlying payload to at least `minBytes` with trailing zeros.
  * MAVLink 2 senders may zero-trim trailing zero bytes; receivers must treat
  * the missing bytes as zero. Without this, decoders calling getUint16(2) etc.

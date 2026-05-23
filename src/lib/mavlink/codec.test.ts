@@ -23,6 +23,11 @@ import {
   encodeParamRequestList,
   encodeParamSet,
   encodeRequestDataStream,
+  encodeMissionCount,
+  encodeMissionItemInt,
+  encodeMissionClearAll,
+  decodeMissionItemInt,
+  decodeMissionRequest,
   dispatchFrame,
   decodeServoOutput,
 } from './messages';
@@ -587,6 +592,79 @@ describe('message encoders', () => {
     expect(dv.getUint8(3)).toBe(1);          // targetComp
     expect(dv.getUint8(4)).toBe(2);          // streamId
     expect(dv.getUint8(5)).toBe(1);          // startStop
+  });
+
+  it('encodeMissionCount default mission type → 4 bytes (trim-friendly)', () => {
+    const mc = encodeMissionCount(1, 1, 42);
+    expect(mc.length).toBe(4);
+    const dv = new DataView(mc.buffer);
+    expect(dv.getUint16(0, true)).toBe(42);
+    expect(dv.getUint8(2)).toBe(1);
+    expect(dv.getUint8(3)).toBe(1);
+  });
+
+  it('encodeMissionCount appends extension byte when non-zero', () => {
+    const mc = encodeMissionCount(1, 1, 3, 2);   // mission_type=2 (RALLY)
+    expect(mc.length).toBe(5);
+    expect(mc[4]).toBe(2);
+  });
+
+  it('encodeMissionItemInt produces 38-byte payload with correct field layout', () => {
+    const mi = encodeMissionItemInt(
+      1, 1,
+      5, 16, 3,           // seq, command (NAV_WAYPOINT), frame (REL_ALT)
+      0, 1, 0,            // current, autocontinue, missionType
+      0, 0, 0, 0,         // p1..p4
+      300000000, 1200000000, 50.5,  // x=30°*1e7, y=120°*1e7, alt=50.5m
+    );
+    expect(mi.length).toBe(38);
+    const dv = new DataView(mi.buffer);
+    expect(dv.getInt32(16, true)).toBe(300000000);   // lat int32
+    expect(dv.getInt32(20, true)).toBe(1200000000);  // lon int32
+    expect(dv.getFloat32(24, true)).toBeCloseTo(50.5, 2);
+    expect(dv.getUint16(28, true)).toBe(5);
+    expect(dv.getUint16(30, true)).toBe(16);
+    expect(dv.getUint8(32)).toBe(1);
+    expect(dv.getUint8(33)).toBe(1);
+    expect(dv.getUint8(34)).toBe(3);
+  });
+
+  it('encodeMissionItemInt round-trips via decodeMissionItemInt', () => {
+    const mi = encodeMissionItemInt(
+      1, 1, 7, 22, 3, 0, 1, 0,
+      0, 0, 0, 0, -120000000, 450000000, 30,
+    );
+    const decoded = decodeMissionItemInt(new DataView(mi.buffer));
+    expect(decoded.seq).toBe(7);
+    expect(decoded.command).toBe(22);
+    expect(decoded.frame).toBe(3);
+    expect(decoded.x).toBe(-120000000);
+    expect(decoded.y).toBe(450000000);
+    expect(decoded.z).toBeCloseTo(30, 2);
+  });
+
+  it('encodeMissionClearAll defaults to 2-byte (no mission type extension)', () => {
+    const ca = encodeMissionClearAll(1, 1);
+    expect(ca.length).toBe(2);
+    expect(ca[0]).toBe(1);
+    expect(ca[1]).toBe(1);
+  });
+
+  it('encodeMissionClearAll appends extension byte when type set', () => {
+    const ca = encodeMissionClearAll(1, 1, 2);
+    expect(ca.length).toBe(3);
+    expect(ca[2]).toBe(2);
+  });
+
+  it('decodeMissionRequest extracts seq and missionType', () => {
+    // Build a 5-byte MISSION_REQUEST_INT payload manually.
+    const buf = new Uint8Array(5);
+    const dv = new DataView(buf.buffer);
+    dv.setUint16(0, 42, true);
+    dv.setUint8(4, 2);  // mission_type=RALLY
+    const req = decodeMissionRequest(dv);
+    expect(req.seq).toBe(42);
+    expect(req.missionType).toBe(2);
   });
 });
 

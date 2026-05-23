@@ -5,6 +5,7 @@
 
   function fitAfterLoad() { requestAnimationFrame(() => app.fitRouteFlag++); }
   import { sendCommand } from '../../lib/ws';
+  import { isSerialConnected, serialUploadMission } from '../../lib/transport';
   import { parseQgcWaypoints, parseQgcPlan, exportKml as buildKml, parseKmlCoords, segDist, totalDist as calcTotalDist, pointInPoly } from '../../lib/missionIO';
   import Button from '$lib/components/ui/button/button.svelte';
 
@@ -110,6 +111,21 @@
       : 0;
     uploading = true;
     addToast(t('toast.uploading'), 'info', 3000);
+    // WebSerial direct mode runs its own state machine in transport.ts and
+    // resolves a promise; the WS path goes through the backend which emits
+    // mission_ack_ok / mission_ack_fail events that the $effect above watches.
+    if (isSerialConnected()) {
+      if (uploadTimer) { clearTimeout(uploadTimer); uploadTimer = null; }
+      serialUploadMission(app.waypoints, app.defaultAlt).then((res) => {
+        uploading = false;
+        if (res.ok) {
+          addToast(t('toast.missionOk'), 'success', 3000);
+        } else {
+          addToast(`${t('toast.missionFail')}: ${res.error}`, 'error', 5000);
+        }
+      });
+      return;
+    }
     sendCommand('mission_upload', undefined, {
       waypoints: app.waypoints,
       takeoff_alt: app.defaultAlt,
