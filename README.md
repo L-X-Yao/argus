@@ -4,7 +4,9 @@ Universal web-based ground control station for MAVLink drones.
 
 ## Vision
 
-Argus aims to be the first truly universal **web GCS** — one interface that works with any MAVLink vehicle (ArduPilot, PX4), on any platform (browser, desktop, tablet), in any language (10 supported). No install, no native dependencies, just open a URL and fly.
+Argus aims to be a truly universal **web GCS** — one interface for MAVLink drones, on any platform (browser, desktop, tablet), in any language (10 supported). No install, no native dependencies, just open a URL and fly.
+
+> Status: ArduPilot is the production-tested target today. PX4 has frontend adapter scaffolding in `src/lib/fc/` but is not yet wired end-to-end — see `CLAUDE.md ## PX4 Status`.
 
 ### Why another GCS?
 
@@ -21,7 +23,7 @@ Argus fills the gap: **open-source + web-native + protocol-agnostic + white-labe
 | Category | Features |
 |---|---|
 | **Connections** | TCP / UDP / Serial / WebSerial (browser-direct USB) |
-| **Protocols** | ArduPilot + PX4 (auto-detect via FC adapter layer) |
+| **Protocols** | MAVLink v2 (ArduPilot production-tested; PX4 adapter scaffolded, unwired) |
 | **Vehicles** | Copter, Plane, VTOL, Rover, Sub |
 | **Map** | 8 tile sources (Amap, Google, OSM, Esri, CartoDB, Tianditu) + 3D terrain (MapLibre GL) |
 | **Mission** | WP / Spline / Loiter / Survey grid / Crosshatch / Spiral / Orbit |
@@ -49,7 +51,7 @@ npm install
 npm run dev          # http://localhost:5173
 
 # Backend
-pip install fastapi uvicorn pyserial websockets
+pip install -e .     # Uses pyproject.toml — pulls all required deps
 python run.py        # API at http://localhost:8100
 ```
 
@@ -70,9 +72,9 @@ sim_vehicle.py -v ArduCopter --out=udp:127.0.0.1:14550
 # Or click the "SITL" quick-connect button
 ```
 
-### 4. WebSerial (no backend needed)
+### 4. WebSerial (no backend needed for telemetry + basic control)
 
-Open Argus in Chrome/Edge → click the **USB** button → select your flight controller from the browser prompt. Telemetry flows directly via WebSerial + the built-in TypeScript MAVLink v2 codec.
+Open Argus in Chrome/Edge → click the **USB** button → select your flight controller from the browser prompt. Full telemetry and a subset of commands (arm/disarm/mode/RTL/param read+write) flow directly via WebSerial + the built-in TypeScript MAVLink v2 codec. For mission upload/download, calibration wizards, firmware upload, and log download, run the Python backend.
 
 ### 5. Production build
 
@@ -94,9 +96,9 @@ python run.py        # Serves dist/ + API on :8100
 │          ↕ WebSocket (JSON delta push)  │
 ├─────────────────────────────────────────┤
 │  Python Backend (FastAPI + uvicorn)     │
-│  23 modules, 3.5K lines                │
-│  MAVLink dispatch + 27 message handlers │
-│  46 commands, tile/video/firmware API   │
+│  24 modules, 3.5K lines                │
+│  MAVLink dispatch + 31 message handlers │
+│  49 commands, tile/video/firmware API   │
 ├─────────────────────────────────────────┤
 │          ↕ MAVLink v2                   │
 │  TCP / UDP / Serial / PL-Link           │
@@ -110,7 +112,7 @@ python run.py        # Serves dist/ + API on :8100
 | Module | Description |
 |---|---|
 | `src/lib/mavlink/` | Pure TypeScript MAVLink v2 encoder/decoder with CRC validation |
-| `src/lib/fc/` | Flight controller adapter (ArduPilot + PX4 mode/command mapping) |
+| `src/lib/fc/` | Flight controller adapter (ArduPilot wired; PX4 mode tables exist but production code does not import them yet) |
 | `src/lib/transport.ts` | Dual-mode transport (WebSocket backend vs WebSerial direct) |
 | `src/lib/serial.ts` | Web Serial API wrapper with FC USB vendor filters |
 | `src/lib/terrain.ts` | SRTM elevation queries for terrain-following missions |
