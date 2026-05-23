@@ -210,15 +210,20 @@ def handle_statustext(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 2:
         return
     text = bytes(p[1:51]).split(b'\x00')[0].decode('ascii', 'replace').strip()
-    if text:
-        if text.startswith('PreArm:') or text.startswith('Arm:'):
-            msg = text.split(':', 1)[1].strip()
-            if msg not in link._prearm_messages:
-                link._prearm_messages.append(msg)
-                if len(link._prearm_messages) > 20:
-                    link._prearm_messages = link._prearm_messages[-10:]
-        text = filter_statustext(text, link.locale)
-        link.add_event(('%s: %s' % ('FC' if link.locale == 'en' else '飞控', text)), 'statustext')
+    if not text:
+        return
+    if text.startswith('PreArm:') or text.startswith('Arm:'):
+        msg = text.split(':', 1)[1].strip()
+        # PreArm checks run every ~5s and re-emit the same warnings until the
+        # condition is fixed. Dedup against _prearm_messages so the event log
+        # gets one entry per distinct cause, not one every cycle.
+        if msg in link._prearm_messages:
+            return
+        link._prearm_messages.append(msg)
+        if len(link._prearm_messages) > 20:
+            link._prearm_messages = link._prearm_messages[-10:]
+    text = filter_statustext(text, link.locale)
+    link.add_event(('%s: %s' % ('FC' if link.locale == 'en' else '飞控', text)), 'statustext')
 
 
 def handle_servo_output(p: bytes, pl: int, link: DroneLink) -> None:

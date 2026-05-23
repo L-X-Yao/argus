@@ -67,26 +67,11 @@
 
   const calPattern = /校准|calibrat|cal |gyro|compass|accel|baro|level|place|rotate|orientation|complete|success|完成|成功|失败|failed|progress/i;
 
-  // Type-specific keyword sets. Used to reject events that clearly belong to a
-  // *different* cal type than the currently selected one, so that a stale
-  // "罗盘校准完成" event can't trip the gyro-cal completion detector right after
-  // the user switches tabs.
-  const calTypeKeywords: Record<CalType, RegExp> = {
-    compass: /compass|罗盘|\bmag\b/i,
-    accel:   /accel|加速度/i,
-    gyro:    /gyro|陀螺/i,
-    level:   /\blevel\b|水平|trim/i,
-    baro:    /baro|气压|barometer|pressure/i,
-  };
-
   function eventInRun(ev: { time: string; text: string }): boolean {
     if (!calRunStartTime) return false;
     if (ev.time < calRunStartTime) return false;
     if (!calPattern.test(ev.text)) return false;
     if (/^指令应答:|^Command:/i.test(ev.text)) return false;
-    for (const k of Object.keys(calTypeKeywords) as CalType[]) {
-      if (k !== selected && calTypeKeywords[k].test(ev.text)) return false;
-    }
     return true;
   }
 
@@ -197,17 +182,17 @@
     }
   });
 
-  function nowHMS(offsetSec = 1): string {
-    const d = new Date(Date.now() - offsetSec * 1000);
-    return d.toTimeString().slice(0, 8);
+  function nowHMS(): string {
+    return new Date().toTimeString().slice(0, 8);
   }
 
   function startCal() {
     const ct = calTypes.find(c => c.id === selected);
     if (!ct) return;
-    // Mark BEFORE sending so the backend's "开始..." event is included in the run.
-    // -1s offset tolerates minor clock skew between frontend and backend.
-    calRunStartTime = nowHMS(1);
+    // Mark BEFORE sending; backend's "开始..." event arrives microseconds later
+    // with time >= now, captured by the >= comparison in eventInRun. No backward
+    // offset — that would let events from a just-cancelled prior cal leak in.
+    calRunStartTime = nowHMS();
     calibrating = true;
     sendCommand(ct.cmd);
   }
