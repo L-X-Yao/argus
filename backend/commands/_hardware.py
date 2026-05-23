@@ -108,6 +108,10 @@ def cmd_rc_override(link: DroneLink, param, data: dict):
 
 
 def cmd_motor_test(link: DroneLink, param, data: dict):
+    # UI sends `motor` as a 0-based index (matching its 0..7 loop), but
+    # ArduPilot's MOTOR_TEST handler (GCS_MAVLink_Copter.cpp:702) requires
+    # param1 to be the **1-based** motor sequence number — motor 0 is rejected
+    # as invalid. Convert here.
     motor = int(data.get('motor', 0))
     if not 0 <= motor <= 7:
         return {'ok': False, 'error': 'Motor index must be 0-7'}
@@ -118,11 +122,12 @@ def cmd_motor_test(link: DroneLink, param, data: dict):
     if not 0 < duration <= 30:
         return {'ok': False, 'error': 'Duration must be 0-30s'}
     link.add_event(lt('motor_test', link.locale) % (motor + 1, throttle), 'motor_test')
-    send_cmd(link, 209, p1=float(motor), p2=0, p3=throttle, p4=duration, p5=1)
+    send_cmd(link, 209, p1=float(motor + 1), p2=0, p3=throttle, p4=duration, p5=1)
 
 
 def cmd_motor_test_stop(link: DroneLink, param, data: dict):
-    for i in range(8):
+    # 1-based motor sequence numbers, see cmd_motor_test.
+    for i in range(1, 9):
         send_cmd(link, 209, p1=float(i), p2=0, p3=0, p4=0, p5=1)
 
 
@@ -149,7 +154,10 @@ def cmd_gimbal_rate(link: DroneLink, param, data: dict):
 
 
 def cmd_camera_trigger(link: DroneLink, param, data: dict):
-    send_cmd(link, 203)
+    # MAV_CMD_DO_DIGICAM_CONTROL (203): param5 = shoot command (1 = trigger).
+    # Sending all zeros is a no-op — AP_Camera ignores it. See AP_Camera.cpp's
+    # MAV_CMD_DO_DIGICAM_CONTROL case for the param decoding.
+    send_cmd(link, 203, p5=1)
 
 
 def cmd_camera_video_start(link: DroneLink, param, data: dict):

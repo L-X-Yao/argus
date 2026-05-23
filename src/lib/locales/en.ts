@@ -243,6 +243,7 @@ const messages: Record<string, string> = {
   'telem.flight': 'FLT',
   'telem.aspd': 'ASPD',
   'telem.thr': 'THR',
+  'telem.battery': 'BAT',
   'chart.title': 'Real-time Charts',
   'chart.empty': 'Connect to display live data',
   'chart.alt': 'Altitude (m)',
