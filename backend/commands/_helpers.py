@@ -79,16 +79,27 @@ def send_serial_control(link: DroneLink, text: str) -> None:
 
 
 def send_heartbeat(link: DroneLink) -> None:
-    payload = struct.pack('<IBBBBB', 0, 6, 8, 0, 0, 3)
+    # custom_mode=0, type=MAV_TYPE_GCS (6), autopilot=MAV_AUTOPILOT_INVALID (8),
+    # base_mode=0, system_status=MAV_STATE_ACTIVE (4), mavlink_version=3.
+    # Convention is for a healthy GCS to report MAV_STATE_ACTIVE; previously
+    # we sent system_status=0 (MAV_STATE_UNINIT) which some FC monitoring
+    # tools display as "GCS not ready".
+    payload = struct.pack('<IBBBBB', 0, 6, 8, 0, 4, 3)
     link.send(bm(0, payload, link.sq, 50))
 
 
 def request_streams(link: DroneLink) -> None:
+    # Per-message stream rate, in microseconds. ATTITUDE (30) and
+    # GLOBAL_POSITION_INT (33) drive every animated UI element — old
+    # rate of 250000us = 4Hz made the heading needle / position arrow
+    # visibly stutter, and they were redrawn TWICE between updates by
+    # the 5Hz ws push. 100000us = 10Hz matches Mission Planner /
+    # QGroundControl defaults.
     streams = [
-        (30, 250000), (33, 250000), (24, 250000),
+        (30, 100000), (33, 100000), (24, 250000),
         (1, 1000000), (42, 1000000),
         (36, 500000), (65, 500000), (241, 1000000),
-        (74, 1000000),
+        (74, 500000),
     ]
     for mid, interval in streams:
         payload = struct.pack('<fffffffHBBB',

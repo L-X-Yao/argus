@@ -112,6 +112,9 @@ class DroneLink:
         self._unknown_msg_ids: dict[int, int] = {}  # msg_id -> drop count (fail-loud throttle)
         # Monotonic event counter (see add_event) — ws_manager tracks this.
         self._events_emitted_total: int = 0
+        # Exponential backoff counter for the in-loop silent reconnect path
+        # (auditor W1). Resets to 0 on a successful reconnect.
+        self._reconnect_attempts: int = 0
         self.param_mgr = ParamManager(self)
 
         self.attitude = AttitudeState()
@@ -236,6 +239,13 @@ class DroneLink:
             self.log_dl._log_download_ofs = 0
             self.log_dl._log_emit_ofs = 0
             self._prearm_messages = []
+        # param_mgr's `fetching` flag could otherwise stay True forever if a
+        # PARAM_REQUEST_LIST was in flight when the link dropped (auditor W2)
+        # — drops the pending state without re-clearing the params cache.
+        if self.param_mgr.fetching:
+            self.param_mgr.fetching = False
+            self.param_mgr._fetch_start = 0.0
+            self.param_mgr._complete_emitted = False
 
     def disconnect(self) -> None:
         self._running = False
@@ -513,10 +523,18 @@ class DroneLink:
                     try:
                         self._ser = self._open_port(self._last_port, self._last_baud)
                         self.sq = 0
+                        self._reconnect_attempts = 0
                         self.add_event(lt('reconnected', self.locale), 'reconnected')
                     except OSError:
+                        # Exponential backoff capped at 60s. Auditor W1:
+                        # without this the loop spun on a permanently-bad
+                        # port (cable unplugged, host firewalled) at the
+                        # fixed RECONNECT_DELAY cadence forever, masking
+                        # any other diagnostic the operator might check.
+                        self._reconnect_attempts += 1
+                        delay = min(cfg.RECONNECT_DELAY * (2 ** min(self._reconnect_attempts, 5)), 60.0)
                         self.add_event(lt('reconnect_fail', self.locale), 'reconnect_fail')
-                        time.sleep(cfg.RECONNECT_DELAY)
+                        time.sleep(delay)
                     continue
             try:
                 data = self._ser.read(1024)
