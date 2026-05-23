@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { app } from '../../lib/stores.svelte';
+  import { app, loadDownloadedMission, addToast } from '../../lib/stores.svelte';
   import { sendCommand, sendDisconnect } from '../../lib/ws';
+  import { isSerialConnected, serialDownloadMission, serialClearMission } from '../../lib/transport';
   import { t, i18nState, setLocale } from '../../lib/i18n.svelte';
   import { isPlane, saveSettings, showSlide } from '../../lib/stores.svelte';
   import { paramState } from '../../lib/paramStore.svelte';
@@ -69,9 +70,23 @@
       { id: 'mission-upload', label: t('wp.upload'), category: t('ctrl.mission'), icon: Upload,
         handler: () => onnavigate('plan'), available: true },
       { id: 'mission-download', label: t('ctrl.downloadMission'), category: t('ctrl.mission'), icon: Download,
-        handler: () => sendCommand('mission_download'), available: connected },
+        handler: () => {
+          if (isSerialConnected()) {
+            serialDownloadMission().then((res) => {
+              if (res.ok && res.waypoints) {
+                loadDownloadedMission(res.waypoints);
+                addToast(`${t('ctrl.downloadMission')}: ${res.waypoints.length}`, 'success', 3000);
+              } else if (!res.ok) {
+                addToast(`${t('ctrl.downloadMission')}: ${res.error}`, 'error', 4000);
+              }
+            });
+          } else {
+            sendCommand('mission_download');
+          }
+        }, available: connected },
       { id: 'mission-clear', label: t('ctrl.clearMission'), category: t('ctrl.mission'), icon: Trash2,
-        handler: () => sendCommand('mission_clear'), available: connected },
+        handler: () => isSerialConnected() ? serialClearMission() : sendCommand('mission_clear'),
+        available: connected },
 
       { id: 'param-read', label: t('param.readAll'), category: t('param.title'), icon: Download,
         handler: () => { onnavigate('params'); sendCommand('param_request_all'); }, available: connected },

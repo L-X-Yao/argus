@@ -26,6 +26,9 @@ import {
   encodeMissionCount,
   encodeMissionItemInt,
   encodeMissionClearAll,
+  encodeMissionRequestList,
+  encodeMissionRequestInt,
+  encodeMissionAck,
   encodeLogRequestList,
   encodeLogRequestData,
   encodeLogRequestEnd,
@@ -725,6 +728,56 @@ describe('message encoders', () => {
     expect(entry.id).toBe(3);
     expect(entry.numLogs).toBe(5);
     expect(entry.lastLogNum).toBe(5);
+  });
+
+  it('encodeMissionRequestList produces 3-byte payload', () => {
+    const rl = encodeMissionRequestList(1, 1);
+    expect(rl.length).toBe(3);
+    expect(rl[0]).toBe(1);
+    expect(rl[1]).toBe(1);
+    expect(rl[2]).toBe(0);   // default mission_type=MISSION
+  });
+
+  it('encodeMissionRequestList honors non-zero mission type', () => {
+    const rl = encodeMissionRequestList(1, 1, 2);  // RALLY
+    expect(rl[2]).toBe(2);
+  });
+
+  it('encodeMissionRequestInt produces 5-byte payload with seq at offset 0', () => {
+    const ri = encodeMissionRequestInt(1, 1, 42);
+    expect(ri.length).toBe(5);
+    const dv = new DataView(ri.buffer);
+    expect(dv.getUint16(0, true)).toBe(42);
+    expect(dv.getUint8(2)).toBe(1);
+    expect(dv.getUint8(3)).toBe(1);
+    expect(dv.getUint8(4)).toBe(0);
+  });
+
+  it('encodeMissionRequestInt round-trips via decodeMissionRequest', () => {
+    const ri = encodeMissionRequestInt(1, 1, 7, 1);  // FENCE
+    const req = decodeMissionRequest(new DataView(ri.buffer));
+    expect(req.seq).toBe(7);
+    expect(req.missionType).toBe(1);
+  });
+
+  it('encodeMissionAck default 3-byte payload (no mission_type extension)', () => {
+    const ack = encodeMissionAck(1, 1, 0);  // ACCEPTED
+    expect(ack.length).toBe(3);
+    // decodeMissionAck reads `type` at offset 2.
+    const padded = new Uint8Array(4);
+    padded.set(ack);
+    expect(decodeMissionAck(new DataView(padded.buffer)).type).toBe(0);
+  });
+
+  it('encodeMissionAck appends mission_type when non-zero', () => {
+    const ack = encodeMissionAck(1, 1, 0, 2);
+    expect(ack.length).toBe(4);
+    expect(ack[3]).toBe(2);
+  });
+
+  it('decodeMissionCount round-trips via encodeMissionCount', () => {
+    const mc = encodeMissionCount(1, 1, 17);
+    expect(decodeMissionCount(new DataView(mc.buffer)).count).toBe(17);
   });
 
   it('LOG_DATA decoder slices payload data to count bytes', () => {

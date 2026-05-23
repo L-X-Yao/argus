@@ -1,6 +1,7 @@
 <script lang="ts">
-  import { app, showConfirm, showSlide, addToast, saveSettings, isPlane } from '../../lib/stores.svelte';
+  import { app, showConfirm, showSlide, addToast, saveSettings, isPlane, loadDownloadedMission } from '../../lib/stores.svelte';
   import { sendCommand } from '../../lib/ws';
+  import { isSerialConnected, serialDownloadMission, serialClearMission } from '../../lib/transport';
   import { t } from '../../lib/i18n.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
   import { Plane, ShieldCheck, CircleStop, ArrowDown, CornerDownLeft, Play, Pause, Package, ChevronUp, ChevronDown } from '@lucide/svelte';
@@ -74,8 +75,21 @@
       {/each}
     </div>
     <div class="text-[11px] text-muted-foreground font-semibold mt-1 tracking-wide uppercase">{t('ctrl.mission')}</div>
-    <Button variant="outline" size="sm" class="w-full" onclick={() => sendCommand('mission_download')}>{t('ctrl.downloadMission')}</Button>
-    <Button variant="outline" size="sm" class="w-full" onclick={async () => { if (await showConfirm(t('ctrl.clearMission') + '?')) sendCommand('mission_clear'); }}>{t('ctrl.clearMission')}</Button>
+    <Button variant="outline" size="sm" class="w-full" onclick={() => {
+      if (isSerialConnected()) {
+        serialDownloadMission().then((res) => {
+          if (res.ok && res.waypoints) {
+            loadDownloadedMission(res.waypoints);
+            addToast(`${t('ctrl.downloadMission')}: ${res.waypoints.length}`, 'success', 3000);
+          } else if (!res.ok) {
+            addToast(`${t('ctrl.downloadMission')}: ${res.error}`, 'error', 4000);
+          }
+        });
+      } else {
+        sendCommand('mission_download');
+      }
+    }}>{t('ctrl.downloadMission')}</Button>
+    <Button variant="outline" size="sm" class="w-full" onclick={async () => { if (await showConfirm(t('ctrl.clearMission') + '?')) (isSerialConnected() ? serialClearMission() : sendCommand('mission_clear')); }}>{t('ctrl.clearMission')}</Button>
 
   {:else if phase === 'ground'}
     <div class="flex gap-1">

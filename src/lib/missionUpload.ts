@@ -114,3 +114,69 @@ export function validateMissionWaypoints(waypoints: Waypoint[]): { ok: true } | 
   }
   return { ok: true };
 }
+
+/**
+ * Raw mission item shape received over the wire — keep the on-FC field
+ * structure so the conversion to Waypoint[] can be unit-tested in isolation
+ * from the transport state machine.
+ */
+export interface RawMissionItem {
+  seq: number;
+  cmd: number;
+  lat: number;
+  lon: number;
+  alt: number;
+  p1: number;
+  p2: number;
+  p3: number;
+  p4: number;
+  frame: number;
+  current: number;
+  autocontinue: number;
+}
+
+/**
+ * Inverse of buildMissionItems: collapse a downloaded mission's raw items
+ * back into the operator-visible Waypoint[] the UI works with. Mirrors
+ * backend/mavlink_handlers.py:handle_mission_item_int (lines 438-459) byte
+ * for byte — same cmd handling, same DO_CHANGE_SPEED carry, same drop-relay
+ * coalescing onto the preceding waypoint, same skip rules for HOME / TAKEOFF
+ * / RTL / SERVO / ROI / CAM_TRIG / YAW / VTOL.
+ */
+export function missionItemsToWaypoints(items: RawMissionItem[]): Waypoint[] {
+  const wps: Waypoint[] = [];
+  let pendingSpeed = 0;
+  // Iterate in seq order so DO_CHANGE_SPEED applied before a WP attaches to
+  // that WP and not the previous one.
+  const sorted = [...items].sort((a, b) => a.seq - b.seq);
+  for (const item of sorted) {
+    if (item.cmd === 178) {
+      pendingSpeed = item.p2;
+      continue;
+    }
+    // The HOME item (seq=0) and the various DO_* / NAV_TAKEOFF / NAV_RTL
+    // items don't become Waypoints in the UI. Only the nav-WP family does.
+    if ((item.cmd === 16 || item.cmd === 18 || item.cmd === 19 || item.cmd === 82) && item.seq > 0) {
+      const wtype: Waypoint['type'] =
+        item.cmd === 18 ? 'loiter_turns' :
+        item.cmd === 19 ? 'loiter_time' :
+        item.cmd === 82 ? 'spline' : 'wp';
+      wps.push({
+        lat: item.lat,
+        lon: item.lon,
+        alt: item.alt,
+        drop: false,
+        delay: item.cmd === 16 ? item.p1 : 0,
+        speed: pendingSpeed,
+        type: wtype,
+        loiter_param: (item.cmd === 18 || item.cmd === 19) ? item.p1 : 0,
+      });
+      pendingSpeed = 0;
+    } else if (item.cmd === 181 && wps.length > 0) {
+      // DO_SET_RELAY immediately after a WP → backend marks that WP's
+      // drop=true on download to round-trip the upload-side attachment.
+      wps[wps.length - 1].drop = true;
+    }
+  }
+  return wps;
+}

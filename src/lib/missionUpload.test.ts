@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { buildMissionItems, validateMissionWaypoints } from './missionUpload';
+import { buildMissionItems, validateMissionWaypoints, missionItemsToWaypoints } from './missionUpload';
+import type { RawMissionItem } from './missionUpload';
 import type { Waypoint } from './types';
 
 const baseWp = (over: Partial<Waypoint> = {}): Waypoint => ({
@@ -149,5 +150,90 @@ describe('validateMissionWaypoints', () => {
   it('accepts a normal waypoint', () => {
     const r = validateMissionWaypoints([baseWp()]);
     expect(r.ok).toBe(true);
+  });
+});
+
+const rawItem = (over: Partial<RawMissionItem> = {}): RawMissionItem => ({
+  seq: 0, cmd: 16, lat: 0, lon: 0, alt: 0,
+  p1: 0, p2: 0, p3: 0, p4: 0,
+  frame: 3, current: 0, autocontinue: 1,
+  ...over,
+});
+
+describe('missionItemsToWaypoints', () => {
+  it('round-trips buildMissionItems output back to the same Waypoint list', () => {
+    const input: Waypoint[] = [
+      baseWp({ lat: 30, lon: 120 }),
+      baseWp({ lat: 31, lon: 121, type: 'loiter_turns', loiter_param: 5 }),
+    ];
+    const built = buildMissionItems(input, 30);
+    // Lift built items into the RawMissionItem shape: backend stores x/y as
+    // int32 *1e7, but missionItemsToWaypoints expects lat/lon already in degrees.
+    const raw: RawMissionItem[] = built.map((m) => ({
+      seq: m.seq, cmd: m.command,
+      lat: m.x / 1e7, lon: m.y / 1e7, alt: m.z,
+      p1: m.p1, p2: m.p2, p3: m.p3, p4: m.p4,
+      frame: m.frame, current: m.current, autocontinue: m.autocontinue,
+    }));
+    const out = missionItemsToWaypoints(raw);
+    expect(out.length).toBe(2);
+    expect(out[0].lat).toBeCloseTo(30, 5);
+    expect(out[0].type).toBe('wp');
+    expect(out[1].lat).toBeCloseTo(31, 5);
+    expect(out[1].type).toBe('loiter_turns');
+    expect(out[1].loiter_param).toBe(5);
+  });
+
+  it('skips HOME (seq=0 cmd=16) and TAKEOFF (cmd=22) and RTL (cmd=20)', () => {
+    const raw: RawMissionItem[] = [
+      rawItem({ seq: 0, cmd: 16 }),             // HOME — skipped
+      rawItem({ seq: 1, cmd: 22, alt: 30 }),    // TAKEOFF — skipped (cmd not in nav set)
+      rawItem({ seq: 2, cmd: 16, lat: 30, lon: 120, alt: 50 }),  // WP
+      rawItem({ seq: 3, cmd: 20 }),             // RTL — skipped (cmd not in nav set)
+    ];
+    const out = missionItemsToWaypoints(raw);
+    expect(out.length).toBe(1);
+    expect(out[0].lat).toBeCloseTo(30, 5);
+  });
+
+  it('attaches DO_CHANGE_SPEED to the next nav waypoint, not previous', () => {
+    const raw: RawMissionItem[] = [
+      rawItem({ seq: 0, cmd: 16 }),                                    // HOME
+      rawItem({ seq: 1, cmd: 22, alt: 30 }),                          // TAKEOFF
+      rawItem({ seq: 2, cmd: 16, lat: 30, lon: 120, alt: 50 }),       // WP1 (no speed)
+      rawItem({ seq: 3, cmd: 178, p1: 1, p2: 12 }),                   // DO_CHANGE_SPEED 12
+      rawItem({ seq: 4, cmd: 16, lat: 31, lon: 121, alt: 50 }),       // WP2 (speed=12)
+    ];
+    const out = missionItemsToWaypoints(raw);
+    expect(out.length).toBe(2);
+    expect(out[0].speed).toBe(0);
+    expect(out[1].speed).toBe(12);
+  });
+
+  it('coalesces DO_SET_RELAY (181) immediately after a WP onto wp.drop=true', () => {
+    const raw: RawMissionItem[] = [
+      rawItem({ seq: 0, cmd: 16 }),
+      rawItem({ seq: 1, cmd: 22, alt: 30 }),
+      rawItem({ seq: 2, cmd: 16, lat: 30, lon: 120 }),
+      rawItem({ seq: 3, cmd: 181 }),  // DO_SET_RELAY → drop on previous WP
+      rawItem({ seq: 4, cmd: 20 }),
+    ];
+    const out = missionItemsToWaypoints(raw);
+    expect(out.length).toBe(1);
+    expect(out[0].drop).toBe(true);
+  });
+
+  it('handles out-of-order seq values by sorting first', () => {
+    const raw: RawMissionItem[] = [
+      rawItem({ seq: 2, cmd: 16, lat: 30, lon: 120 }),
+      rawItem({ seq: 0, cmd: 16 }),
+      rawItem({ seq: 1, cmd: 22 }),
+    ];
+    const out = missionItemsToWaypoints(raw);
+    expect(out.length).toBe(1);
+  });
+
+  it('returns empty list for an empty input', () => {
+    expect(missionItemsToWaypoints([])).toEqual([]);
   });
 });

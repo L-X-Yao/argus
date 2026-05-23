@@ -19,6 +19,9 @@ import {
   encodeMissionCount,
   encodeMissionItemInt,
   encodeMissionClearAll,
+  encodeMissionRequestList,
+  encodeMissionRequestInt,
+  encodeMissionAck,
   encodeLogRequestList,
   encodeLogRequestData,
   encodeLogRequestEnd,
@@ -26,8 +29,8 @@ import {
 import { openSerial, serialWrite, serialReadLoop, isWebSerialSupported } from './serial';
 import type { SerialConnection } from './serial';
 import { addToast, app } from './stores.svelte';
-import { buildMissionItems, validateMissionWaypoints } from './missionUpload';
-import type { MissionItem } from './missionUpload';
+import { buildMissionItems, validateMissionWaypoints, missionItemsToWaypoints } from './missionUpload';
+import type { MissionItem, RawMissionItem } from './missionUpload';
 import type { Waypoint } from './types';
 import {
   logState, setLogList, startDownload,
@@ -123,6 +126,13 @@ export async function connectSerial(
             _onMissionAck(type);
           }
         }
+        // Mission download state machine listens on MISSION_COUNT (44) and
+        // MISSION_ITEM_INT (73). Upload and download are mutually exclusive,
+        // so the order of these intercepts doesn't matter.
+        if (download.pending) {
+          if (frame.msgId === 44) _onMissionCountDl(frame.payload);
+          else if (frame.msgId === 73) _onMissionItemIntDl(frame.payload);
+        }
         // Log list / download state machines listen on LOG_ENTRY (118) and
         // LOG_DATA (120). Internal intercept first; external dispatch still
         // runs so user handlers see the frames if registered.
@@ -146,6 +156,9 @@ export async function connectSerial(
       // MissionPanel doesn't wait the full 30s timeout.
       if (upload?.pending) {
         _resolveUpload({ ok: false, error: 'Serial link lost mid-upload' });
+      }
+      if (download.pending) {
+        _resolveDownload({ ok: false, error: 'Serial link lost mid-download' });
       }
       // Tear down any in-flight log operation so its watchdog doesn't
       // fire spuriously after disconnect.
@@ -342,6 +355,127 @@ export function serialClearMission(): void {
   sendSerialFrame(45, encodeMissionClearAll(
     serial.targetSysId, serial.targetCompId, 0,
   ));
+}
+
+/* ── Mission DOWNLOAD state machine (WebSerial direct mode) ─────────────
+ *
+ * GCS → MISSION_REQUEST_LIST (43)
+ * FC  → MISSION_COUNT (44)
+ * GCS → MISSION_REQUEST_INT (51) for each seq 0..count-1
+ * FC  → MISSION_ITEM_INT (73) for each
+ * GCS → MISSION_ACK (47, type=0) on completion
+ *
+ * Mirrors backend handle_mission_count / handle_mission_item_int /
+ * _request_dl_item in backend/mavlink_handlers.py. The items→Waypoint
+ * collapse runs through missionItemsToWaypoints so the on-screen layout
+ * matches a backend-mediated download for the same FC state.
+ */
+
+interface DownloadState {
+  pending: boolean;
+  resolve: ((r: { ok: boolean; error?: string; waypoints?: Waypoint[] }) => void) | null;
+  items: (RawMissionItem | null)[];
+  total: number;
+  timer: ReturnType<typeof setTimeout> | null;
+}
+
+const download: DownloadState = {
+  pending: false, resolve: null, items: [], total: 0, timer: null,
+};
+
+function _resetDownloadTimer(): void {
+  if (download.timer) clearTimeout(download.timer);
+  download.timer = setTimeout(() => {
+    _resolveDownload({ ok: false, error: 'Mission download stalled (no FC reply in 5s)' });
+  }, 5000);
+}
+
+function _resolveDownload(result: { ok: boolean; error?: string; waypoints?: Waypoint[] }): void {
+  if (!download.pending) return;
+  download.pending = false;
+  if (download.timer) { clearTimeout(download.timer); download.timer = null; }
+  download.items = [];
+  download.total = 0;
+  const r = download.resolve;
+  download.resolve = null;
+  if (r) r(result);
+}
+
+function _onMissionCountDl(p: DataView): void {
+  if (!download.pending) return;
+  if (p.byteLength < 2) return;
+  const count = p.getUint16(0, true);
+  download.total = count;
+  download.items = new Array(count).fill(null);
+  if (count === 0) {
+    // FC has no mission. Send the ACK so we don't leak the request, and
+    // resolve with an empty waypoint list.
+    sendSerialFrame(47, encodeMissionAck(serial.targetSysId, serial.targetCompId, 0, 0));
+    _resolveDownload({ ok: true, waypoints: [] });
+    return;
+  }
+  sendSerialFrame(51, encodeMissionRequestInt(
+    serial.targetSysId, serial.targetCompId, 0, 0,
+  ));
+  _resetDownloadTimer();
+}
+
+function _onMissionItemIntDl(p: DataView): void {
+  if (!download.pending) return;
+  if (p.byteLength < 37) return;
+  // MISSION_ITEM_INT layout (matches decodeMissionItemInt at messages.ts:345
+  // and backend handle_mission_item_int at mavlink_handlers.py:402-427).
+  const p1 = p.getFloat32(0, true);
+  const p2 = p.getFloat32(4, true);
+  const p3 = p.getFloat32(8, true);
+  const p4 = p.getFloat32(12, true);
+  const x = p.getInt32(16, true);
+  const y = p.getInt32(20, true);
+  const z = p.getFloat32(24, true);
+  const seq = p.getUint16(28, true);
+  const cmd = p.getUint16(30, true);
+  const frame = p.getUint8(34);
+  const current = p.getUint8(35);
+  const autocontinue = p.getUint8(36);
+
+  if (seq < download.total) {
+    download.items[seq] = {
+      seq, cmd,
+      lat: x / 1e7, lon: y / 1e7, alt: z,
+      p1, p2, p3, p4,
+      frame, current, autocontinue,
+    };
+  }
+
+  if (seq + 1 < download.total) {
+    sendSerialFrame(51, encodeMissionRequestInt(
+      serial.targetSysId, serial.targetCompId, seq + 1, 0,
+    ));
+    _resetDownloadTimer();
+  } else {
+    // Final item received — send the MISSION_ACK and collapse to Waypoints.
+    sendSerialFrame(47, encodeMissionAck(serial.targetSysId, serial.targetCompId, 0, 0));
+    const items: RawMissionItem[] = download.items.filter((i): i is RawMissionItem => i !== null);
+    const waypoints = missionItemsToWaypoints(items);
+    _resolveDownload({ ok: true, waypoints });
+  }
+}
+
+export async function serialDownloadMission(): Promise<{ ok: boolean; error?: string; waypoints?: Waypoint[] }> {
+  if (!isSerialConnected()) return { ok: false, error: 'Not connected via serial' };
+  if (download.pending) return { ok: false, error: 'Another mission download is in progress' };
+  if (upload?.pending) return { ok: false, error: 'A mission upload is in progress' };
+
+  return new Promise((resolve) => {
+    download.pending = true;
+    download.resolve = resolve;
+    download.items = [];
+    download.total = 0;
+    _resetDownloadTimer();
+    sendSerialFrame(43, encodeMissionRequestList(
+      serial.targetSysId, serial.targetCompId, 0,
+    ));
+  });
 }
 
 /* ── Log list + download state machines (WebSerial direct mode) ─────────

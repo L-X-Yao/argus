@@ -704,6 +704,51 @@ export function encodeMissionClearAll(
 }
 
 /**
+ * MISSION_REQUEST_LIST (msg 43, 3-byte payload). Asks the FC to start a
+ * mission download — it responds with MISSION_COUNT (44).
+ */
+export function encodeMissionRequestList(
+  targetSys: number, targetComp: number, missionType: number = 0,
+): Uint8Array {
+  if (missionType !== 0) {
+    return new Uint8Array([targetSys, targetComp, missionType]);
+  }
+  return new Uint8Array([targetSys, targetComp, 0]);
+}
+
+/**
+ * MISSION_REQUEST_INT (msg 51, 5-byte payload). Asks the FC for a specific
+ * mission item by seq. Layout matches backend's _request_dl_item at
+ * backend/mavlink_handlers.py:468 → <HBBB>.
+ */
+export function encodeMissionRequestInt(
+  targetSys: number, targetComp: number, seq: number, missionType: number = 0,
+): Uint8Array {
+  const buf = new Uint8Array(5);
+  const dv = new DataView(buf.buffer);
+  dv.setUint16(0, seq, true);
+  dv.setUint8(2, targetSys);
+  dv.setUint8(3, targetComp);
+  dv.setUint8(4, missionType);
+  return buf;
+}
+
+/**
+ * MISSION_ACK (msg 47, 3 or 4-byte payload). Sent by the GCS to acknowledge
+ * the end of a mission download (type=0 = MAV_MISSION_ACCEPTED). Matches the
+ * backend's send at handle_mission_item_int line 465 — <BBB>.
+ */
+export function encodeMissionAck(
+  targetSys: number, targetComp: number,
+  type: number = 0, missionType: number = 0,
+): Uint8Array {
+  if (missionType !== 0) {
+    return new Uint8Array([targetSys, targetComp, type, missionType]);
+  }
+  return new Uint8Array([targetSys, targetComp, type]);
+}
+
+/**
  * LOG_REQUEST_LIST (msg 117, 6-byte payload). Asks the FC for log inventory.
  * The FC streams a LOG_ENTRY (msg 118) per log file in the range [start, end];
  * the entry with id == last_log_num signals end-of-list. Pass start=0,
