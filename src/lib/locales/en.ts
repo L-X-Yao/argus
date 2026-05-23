@@ -241,6 +241,8 @@ const messages: Record<string, string> = {
   'telem.dist': 'DIST',
   'telem.hdg': 'HDG',
   'telem.flight': 'FLT',
+  'telem.aspd': 'ASPD',
+  'telem.thr': 'THR',
   'chart.title': 'Real-time Charts',
   'chart.empty': 'Connect to display live data',
   'chart.alt': 'Altitude (m)',

@@ -241,6 +241,8 @@ const messages: Record<string, string> = {
   'telem.dist': '距离',
   'telem.hdg': '航向',
   'telem.flight': '飞行',
+  'telem.aspd': '空速',
+  'telem.thr': '油门',
   'chart.title': '实时图表',
   'chart.empty': '连接后显示实时数据曲线',
   'chart.alt': '高度 (m)',

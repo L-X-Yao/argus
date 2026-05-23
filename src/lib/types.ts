@@ -13,6 +13,9 @@ export interface DroneState {
   alt_rel: number;
   alt_msl: number;
   gs: number;
+  airspeed: number;
+  throttle: number;
+  climb: number;
   vz: number;
   hdg: number;
   dist_home: number;
@@ -176,7 +179,7 @@ export const defaultState: DroneState = {
   mode: '---', mode_id: 0, armed: false,
   roll: 0, pitch: 0, yaw: 0,
   lat: 0, lon: 0, alt_rel: 0, alt_msl: 0,
-  gs: 0, vz: 0, hdg: 0, dist_home: 0, flight_time: 0,
+  gs: 0, airspeed: 0, throttle: 0, climb: 0, vz: 0, hdg: 0, dist_home: 0, flight_time: 0,
   voltage: 0, current: 0, remaining: -1,
   gps_fix: '---', gps_fix_raw: 0, gps_sats: 0, wp: 0,
   vtype: '', vtype_raw: 0, mode_btns: [],
