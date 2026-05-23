@@ -53,6 +53,11 @@
   // Mirrors src/components/layers/SurveyLayer.svelte.
   let surveyVertMarkers: maplibregl.Marker[] = [];
 
+  // Replay layer state: a single orange-triangle marker + trail polyline,
+  // driven by app.replayPos. Mirrors src/components/layers/ReplayLayer.svelte.
+  let replayMarker: maplibregl.Marker | null = null;
+  let replayTrail: [number, number][] = [];
+
   // Measure mode: distance (polyline) or area (polygon). All state local to
   // this view — clear on ESC or by clicking the same mode button twice.
   let measuring = $state(false);
@@ -204,6 +209,18 @@
         type: 'line',
         source: 'measure',
         paint: { 'line-color': '#ff5252', 'line-width': 2, 'line-dasharray': [2, 2] },
+      });
+
+      // Replay trail: orange polyline driven by app.replayPos updates.
+      map!.addSource('replay-trail', {
+        type: 'geojson',
+        data: { type: 'Feature', geometry: { type: 'LineString', coordinates: [] }, properties: {} },
+      });
+      map!.addLayer({
+        id: 'replay-trail-line',
+        type: 'line',
+        source: 'replay-trail',
+        paint: { 'line-color': '#ffa726', 'line-width': 2, 'line-opacity': 0.6 },
       });
 
       // Survey polygon — purple, mirrors SurveyLayer.svelte. Used by
@@ -390,6 +407,7 @@
     measureVertMarkers.forEach((m) => m.remove());
     measureVertMarkers = [];
     if (measureLabel) { measureLabel.remove(); measureLabel = null; }
+    if (replayMarker) { replayMarker.remove(); replayMarker = null; }
     if (map) map.remove();
   });
 
@@ -650,6 +668,56 @@
         new maplibregl.Marker({ element: el }).setLngLat(pt).addTo(map!),
       );
     });
+  });
+
+  /* ── Replay layer — mirrors ReplayLayer.svelte ────────────────────────
+   * Driven by app.replayPos ({lat, lon, yaw} | null). When non-null, render
+   * an orange triangle rotated by yaw + a trail polyline. When null, tear
+   * everything down. Trail caps at 3000 points (same as 2D).
+   */
+  $effect(() => {
+    if (!map || !map.isStyleLoaded()) return;
+    const rp = app.replayPos;
+    const trailSrc = map.getSource('replay-trail') as maplibregl.GeoJSONSource | undefined;
+
+    if (!rp) {
+      if (replayMarker) { replayMarker.remove(); replayMarker = null; }
+      replayTrail = [];
+      if (trailSrc) {
+        trailSrc.setData({
+          type: 'Feature', geometry: { type: 'LineString', coordinates: [] }, properties: {},
+        });
+      }
+      return;
+    }
+
+    const [mlat, mlon] = toMap(rp.lat, rp.lon);
+    if (!replayMarker) {
+      const el = document.createElement('div');
+      el.style.cssText = 'width:28px;height:28px;transform-origin:center';
+      // Orange arrow SVG — same shape as 2D ReplayLayer.svelte:23-27.
+      const svg = createSvgElement(
+        '<svg xmlns="http://www.w3.org/2000/svg" viewBox="-12 -12 24 24" width="28" height="28">' +
+        '<polygon points="0,-10 -7,8 0,4 7,8" fill="#ffa726" stroke="white" stroke-width="1"/></svg>',
+      );
+      el.appendChild(svg);
+      el.style.transform = `rotate(${rp.yaw}deg)`;
+      replayMarker = new maplibregl.Marker({ element: el, rotationAlignment: 'map' })
+        .setLngLat([mlon, mlat]).addTo(map);
+    } else {
+      replayMarker.setLngLat([mlon, mlat]);
+      (replayMarker.getElement() as HTMLElement).style.transform = `rotate(${rp.yaw}deg)`;
+    }
+
+    replayTrail.push([mlon, mlat]);
+    if (replayTrail.length > 3000) replayTrail = replayTrail.slice(-2000);
+    if (trailSrc) {
+      trailSrc.setData({
+        type: 'Feature',
+        geometry: { type: 'LineString', coordinates: replayTrail },
+        properties: {},
+      });
+    }
   });
 
   // Tile-source switching: swap the raster source URL when app.tileSource
