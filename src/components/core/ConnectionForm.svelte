@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { app, addToast } from '../../lib/stores.svelte';
+  import { app, addToast, addEvent } from '../../lib/stores.svelte';
   import { sendConnect, sendDisconnect } from '../../lib/ws';
   import { t } from '../../lib/i18n.svelte';
   import { apiUrl } from '../../lib/backend';
@@ -153,7 +153,9 @@
           app.drone.home_lon = msg.lon;
         },
         onStatusText: (msg) => {
-          app.events.push({ type: 'event', time: new Date().toLocaleTimeString(), text: msg.text, event_type: 'statustext' });
+          // Use addEvent so the 200-entry cap in stores.svelte applies; a direct
+          // push would let serial-mode events grow unbounded.
+          addEvent({ type: 'event', time: new Date().toLocaleTimeString(), text: msg.text, event_type: 'statustext' });
         },
       });
       if (!ok) addToast(t('conn.serialFailed'), 'error');

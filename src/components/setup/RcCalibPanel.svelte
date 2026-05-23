@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import { app, addToast } from '../../lib/stores.svelte';
   import { sendCommand } from '../../lib/ws';
   import { t } from '../../lib/i18n.svelte';
@@ -26,11 +27,15 @@
     if (step !== 2) return;
     const rc = app.drone.rc;
     if (!rc || rc.length < CH_COUNT) return;
-    for (let i = 0; i < CH_COUNT; i++) {
-      const v = rc[i];
-      if (v < minValues[i]) minValues[i] = v;
-      if (v > maxValues[i]) maxValues[i] = v;
-    }
+    // untrack so the read/write loop on minValues/maxValues doesn't repeatedly
+    // re-trigger this effect on the same rc snapshot.
+    untrack(() => {
+      for (let i = 0; i < CH_COUNT; i++) {
+        const v = rc[i];
+        if (v < minValues[i]) minValues[i] = v;
+        if (v > maxValues[i]) maxValues[i] = v;
+      }
+    });
   });
 
   let allRangeOk = $derived(

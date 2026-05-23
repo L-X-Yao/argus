@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { app, addToast } from '../../lib/stores.svelte';
   import { apiUrl } from '../../lib/backend';
   import { t } from '../../lib/i18n.svelte';
@@ -18,11 +19,10 @@
   let result = $state<{ total: number; downloaded: number; skipped: number } | null>(null);
   let cacheInfo = $state<{ size: number; count: number } | null>(null);
 
-  $effect(() => {
+  // Snapshot drone position once on mount instead of via $effect, so the user's
+  // manually-edited bounding box isn't clobbered by every telemetry frame.
+  onMount(() => {
     fetch(apiUrl('/api/tile_cache')).then(r => r.json()).then(d => cacheInfo = d).catch(() => {});
-  });
-
-  $effect(() => {
     if (app.drone.lat !== 0) {
       latMin = app.drone.lat - 0.05;
       latMax = app.drone.lat + 0.05;

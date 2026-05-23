@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte';
   import { app, isPlane } from '../../lib/stores.svelte';
   import { sendCommand } from '../../lib/ws';
   import { t } from '../../lib/i18n.svelte';
@@ -69,6 +70,10 @@
     2: 'BL (3)',
     3: 'BR (4)',
   };
+
+  // Stop motors and clear intervals if the panel unmounts mid-spin so the
+  // backend doesn't keep a motor running and we don't leak setInterval timers.
+  onDestroy(stopAll);
 </script>
 
 <style>

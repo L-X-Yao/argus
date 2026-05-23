@@ -601,10 +601,19 @@ class DroneLink:
         # thread and can raise RuntimeError("dictionary changed size during
         # iteration") when the FC sends a new msg id (auditor finding C6).
         now = time.time()
+        # Drop msg ids that haven't been seen for >5x the stats window —
+        # otherwise old/transient mids (e.g. a one-off MAG_CAL_REPORT) stick
+        # in the inspector forever (auditor N3, small leak).
+        STALE_AGE = self._msg_stats_window * 5
         result = []
         with self._state_lock:
-            for mid, st in sorted(self._msg_stats.items()):
+            for mid in sorted(self._msg_stats):
+                st = self._msg_stats[mid]
                 times = [t for t in st.get('times', []) if now - t < self._msg_stats_window]
+                last_seen = st.get('last_seen', 0)
+                if not times and last_seen and now - last_seen > STALE_AGE:
+                    del self._msg_stats[mid]
+                    continue
                 st['times'] = times
                 hz = len(times) / self._msg_stats_window if times else 0
                 result.append({
@@ -628,10 +637,11 @@ class DroneLink:
                 now = time.time()
                 st = self._msg_stats.get(mid)
                 if not st:
-                    st = {'name': _MSG_NAMES.get(mid, ''), 'count': 0, 'size': pl, 'times': [], 'last_fields': {}}
+                    st = {'name': _MSG_NAMES.get(mid, ''), 'count': 0, 'size': pl, 'times': [], 'last_fields': {}, 'last_seen': 0.0}
                     self._msg_stats[mid] = st
                 st['count'] += 1
                 st['size'] = pl
+                st['last_seen'] = now
                 st['times'].append(now)
                 if len(st['times']) > 100:
                     st['times'] = st['times'][-50:]

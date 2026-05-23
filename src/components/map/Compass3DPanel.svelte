@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from 'svelte';
   import { app } from '../../lib/stores.svelte';
   import { sendCommand } from '../../lib/ws';
   import { t } from '../../lib/i18n.svelte';
@@ -19,8 +20,11 @@
     if (!d.connected) return;
     const raw = d.vibe;
     if (raw[0] === 0 && raw[1] === 0 && raw[2] === 0) return;
-    samples.push({ x: raw[0], y: raw[1], z: raw[2] });
-    if (samples.length > 2000) samples.splice(0, samples.length - 1500);
+    // untrack the sample mutation so the effect isn't dirtied by its own write
+    untrack(() => {
+      samples.push({ x: raw[0], y: raw[1], z: raw[2] });
+      if (samples.length > 2000) samples.splice(0, samples.length - 1500);
+    });
   });
 
   $effect(() => {

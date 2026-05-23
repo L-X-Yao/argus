@@ -107,8 +107,9 @@
       mouseCoord = `${wlat.toFixed(6)}, ${wlon.toFixed(6)}`;
     });
     window.addEventListener('keydown', onKeyDown);
-    setTimeout(() => map!.invalidateSize(), 100);
+    const invalidateTimer = setTimeout(() => { if (map) map.invalidateSize(); }, 100);
     return () => {
+      clearTimeout(invalidateTimer);
       window.removeEventListener('keydown', onKeyDown);
       if (map) { map.remove(); map = null; }
     };

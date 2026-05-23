@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onDestroy } from 'svelte';
+  import { onDestroy, untrack } from 'svelte';
   import { app, saveWaypoints } from '../../lib/stores.svelte';
   import { i18nState } from '../../lib/i18n.svelte';
 
@@ -119,7 +119,9 @@
       radius: 20, color: '#ffa726', fillColor: 'transparent', weight: 3, dashArray: '4,4',
     }).addTo(map);
     const focusTimer = setTimeout(() => { if (focusRing) { map.removeLayer(focusRing); focusRing = null; } }, 2000);
-    app.focusWp = -1;
+    // Reset focusWp via untrack so this write doesn't dirty the effect and
+    // trigger an immediate cleanup that would clear the just-created timer.
+    untrack(() => { app.focusWp = -1; });
     return () => clearTimeout(focusTimer);
   });
 
