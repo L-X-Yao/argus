@@ -24,6 +24,7 @@ location; they were copied here verbatim and not re-edited.
 | `audit_edges.md` | Specific partial findings (equator, NAV_SPLINE, VTOL takeoff, etc.) | 5 real bugs, 3 fixed in-place, 2 documented. |
 | `audit_frontend.md` | Svelte 5 components/stores reactivity + lifecycle | 40+ findings, 10 fixed in-place. |
 | `audit_remaining.md` | sim_pllink + build scripts + run.py + test_integration triage + remaining app.py routes | 6 critical + 10 medium + 7 low. **19 fixed in-place** including sim protocol auto-detect, mbtiles path traversal, PyInstaller hidden-import for `backend.commands._*`. |
+| `sitl_validation_2026-05-24.md` | End-to-end check against real ArduCopter SITL v4.6.3 — telemetry, mission round-trip, command pipeline, params, fence, Phase P WS propagation, PLKJ-mimic rendering | **7 PASS, 1 partial (full mission flight), 4 blocked on USB**. Real-AP corroboration for the protocol assertions that the unit suite makes under mocks. |
 
 ## What's still open
 

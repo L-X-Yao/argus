@@ -792,6 +792,13 @@
   - locale key 完整性
 - CLAUDE.md 新增 `## Protocol Code Discipline` 规则: FC 协议代码必须引上游源码 file:line
 
+## 2026-05-24 真 SITL 端到端验证
+
+- `docs/audits/sitl_validation_2026-05-24.md` — 在真 ArduCopter SITL v4.6.3 上跑通 7 条关键路径:
+  - 后端 TCP 基线遥测、Mission 上传/下载字节对齐、Arm/Mode/Takeoff/RTL 命令链、1398 参数读取+SET 回写、Fence mission_type=1 上传、Phase P WS autopilot 字段 1s 内到达前端、PLKJ-mimic FC (autopilot=1, type=0) 渲染
+- 个别命令全部在真 AP 上 PASS — 之前只有 mock 测试做断言
+- 仍 hardware-blocked: WebSerial 直连真飞控、5 种校准、firmware 上传 (VMware USB passthrough kernel-unstable)
+
 ## 测试基础设施
 
 | 测试类型 | 数量 | 工具 |
