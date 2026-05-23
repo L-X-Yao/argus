@@ -47,15 +47,23 @@
   $effect(() => {
     if (!paramsAvailable) return;
     battEnable  = getParam('FS_BATT_ENABLE', 0);
-    battAction  = getParam('FS_BATT_ENABLE', 0);
+    // Audit F-18: was reading FS_BATT_ENABLE for both — the action selector
+    // displayed the same value as the enable toggle. Correct param is
+    // BATT_FS_LOW_ACT (Copter) / BATT_FS_LOW_ACT (Plane, 4.x).
+    battAction  = getParam('BATT_FS_LOW_ACT', 0);
     battVoltage = getParam('FS_BATT_VOLTAGE', 10.5);
     battMah     = getParam('FS_BATT_MAH', 0);
 
     rcEnable    = getParam('FS_THR_ENABLE', 0);
+    // FS_THR_ENABLE is itself the action enum (0=disabled, 1=Always RTL,
+    // 2=Continue with Mission, 3=Always Land, 4=SmartRTL or RTL, ...).
+    // Use the same value for the action selector; the UI then maps it to
+    // a label via rcActions.
     rcAction    = getParam('FS_THR_ENABLE', 0);
     rcPwm       = getParam('FS_THR_VALUE', 975);
 
     gcsEnable   = getParam('FS_GCS_ENABLE', 0);
+    // FS_GCS_ENABLE is the action enum same as FS_THR_ENABLE.
     gcsAction   = getParam('FS_GCS_ENABLE', 0);
 
     ekfAction   = getParam('FS_EKF_ACTION', 0);

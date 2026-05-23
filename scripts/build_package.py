@@ -107,12 +107,17 @@ def build():
     # ── 4. Copy backend + protocol ──
     print('[4/5] Copying application files')
     be_dst = build_dir / 'backend'
-    be_dst.mkdir()
-    for f in (SCRIPT_DIR / 'backend').glob('*.py'):
-        shutil.copy2(f, be_dst / f.name)
+    # Copy the entire backend tree so subpackages (e.g. backend/commands/)
+    # are included. The previous `glob('*.py')` only matched top-level .py
+    # files, which meant the packaged zip was missing the commands package
+    # and the backend crashed at import time inside the .bat launcher.
+    shutil.copytree(SCRIPT_DIR / 'backend', be_dst,
+                    ignore=shutil.ignore_patterns('__pycache__', '*.pyc'))
 
-    shutil.copy2(SCRIPT_DIR / 'backend' / 'server.py', build_dir / 'backend' / 'server.py')
-    sim_src = SCRIPT_DIR / 'sim_pllink.py'
+    # sim_pllink.py lives under scripts/, not at the repo root. Without the
+    # correct path the sim launcher .bat tried to run a file that wasn't in
+    # the zip.
+    sim_src = SCRIPT_DIR / 'scripts' / 'sim_pllink.py'
     if sim_src.exists():
         shutil.copy2(sim_src, build_dir / 'sim_pllink.py')
 

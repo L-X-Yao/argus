@@ -32,7 +32,22 @@ def main():
             [sys.executable, str(SIM_SCRIPT), '5770'],
             cwd=str(ROOT_DIR),
         )
-        time.sleep(1)
+        # Poll for the sim TCP port instead of a blind sleep — on slow boxes
+        # the previous `time.sleep(1)` could let the backend start before the
+        # sim bound its listener, producing a confusing first connect failure.
+        import socket
+        deadline = time.time() + 5.0
+        while time.time() < deadline:
+            try:
+                s = socket.create_connection(('127.0.0.1', 5770), timeout=0.3)
+                s.close()
+                break
+            except OSError:
+                if sim_proc.poll() is not None:
+                    print('[SIM] simulator exited unexpectedly (code %d)' % sim_proc.returncode)
+                    sim_proc = None
+                    break
+                time.sleep(0.1)
 
     print('=' * 50)
     print('  Argus GCS')
@@ -78,7 +93,13 @@ def main():
     finally:
         if sim_proc:
             sim_proc.terminate()
-            sim_proc.wait()
+            try:
+                sim_proc.wait(timeout=5)
+            except subprocess.TimeoutExpired:
+                # SIGTERM ignored — sim is wedged inside socket recv. Force-kill
+                # so the launcher doesn't hang on Ctrl+C.
+                sim_proc.kill()
+                sim_proc.wait()
 
 
 if __name__ == '__main__':

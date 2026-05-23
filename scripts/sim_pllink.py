@@ -269,10 +269,15 @@ class Simulator:
         ch[2] = 1200 + int(300 * (1 + math.sin(self.t * 0.1)) / 2) if self.armed else 1000
         ch[3] = 1500 + int(30 * math.sin(self.t * 0.2))
         ch[4] = 1800 if self.armed else 1000
-        p = struct.pack('<IB', int(self.t * 1000), 16)
+        # Wire-sorted RC_CHANNELS layout: time_boot_ms(u32) at 0-3, chan1..chan18
+        # (u16 x 18) at 4-39, chancount(u8) at 40, rssi(u8) at 41 = 42 bytes.
+        # Previous code put chancount right after time, shifting all channels by
+        # one byte and producing junk values when the backend (correctly) read
+        # chan1 at offset 4.
+        p = struct.pack('<I', int(self.t * 1000))
         for c in ch:
             p += struct.pack('<H', c)
-        p += struct.pack('<B', 255)
+        p += struct.pack('<BB', 16, 255)
         return bm(65, p, self.sq, 118)
 
     def msg_servo_output(self):
@@ -337,7 +342,11 @@ class Simulator:
 
     def msg_terrain_report(self):
         terrain_msl = 400.0 + random.uniform(-2, 2)
-        current_height = max(0, self.alt_rel + random.uniform(-0.5, 0.5))
+        # `self.alt` is alt-above-home (we publish it as relative_alt in
+        # msg_global_pos), and there is no separate self.alt_rel attribute.
+        # The previous reference raised AttributeError if anyone wired this
+        # message into the broadcast loop.
+        current_height = max(0, self.alt + random.uniform(-0.5, 0.5))
         p = struct.pack('<iiffHHH',
             int(self.lat * 1e7), int(self.lon * 1e7),
             terrain_msl, current_height, 100, 0, 100)
@@ -377,12 +386,19 @@ class Simulator:
     def msg_autopilot_version(self):
         fw_ver = (4 << 24) | (5 << 16) | (7 << 8) | 255
         git_hash = b'a1b2c3d4'
-        p = struct.pack('<Q', 0xFFFF)
-        p += struct.pack('<III', fw_ver, 0, 0)
-        p += struct.pack('<I', 56)
-        p += git_hash + bytes(8) + bytes(8)
-        p += struct.pack('<HH', 0, 0)
-        p += struct.pack('<Q', 0x1234567890ABCDEF)
+        # MAVLink 2 wire-sorted layout (largest first):
+        #   capabilities(Q @0), uid(Q @8), flight_sw(I @16), middleware_sw(I @20),
+        #   os_sw(I @24), board_version(I @28), vendor_id(H @32), product_id(H @34),
+        #   flight_custom_version[8] (@36), middleware_custom_version[8] (@44),
+        #   os_custom_version[8] (@52). Total 60 bytes (no extensions sent).
+        # Previous code placed flight_sw_version at offset 8 (UID slot) so the
+        # backend (which correctly reads offset 16) saw "0" and reported
+        # firmware v0.0.0 in sim mode.
+        p = struct.pack('<Q', 0xFFFF)                       # 0-7   capabilities
+        p += struct.pack('<Q', 0x1234567890ABCDEF)          # 8-15  uid
+        p += struct.pack('<IIII', fw_ver, 0, 0, 56)         # 16-31 flight/middle/os/board
+        p += struct.pack('<HH', 0, 0)                       # 32-35 vendor, product
+        p += git_hash + bytes(8) + bytes(8)                 # 36-59 3x 8-byte custom_version
         return bm(148, p, self.sq, 178)
 
     def msg_mission_item_int(self, wp):
@@ -719,6 +735,7 @@ def serve(port):
                 if now - last_ekf >= 1.0:
                     tx(sim.msg_ekf_status())
                     tx(sim.msg_wind())
+                    tx(sim.msg_vfr_hud())
                     last_ekf = now
 
                 if now - last_wp >= 1.0:
