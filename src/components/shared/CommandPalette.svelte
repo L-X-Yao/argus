@@ -1,7 +1,10 @@
 <script lang="ts">
   import { app, loadDownloadedMission, addToast } from '../../lib/stores.svelte';
   import { sendCommand, sendDisconnect } from '../../lib/ws';
-  import { isSerialConnected, serialDownloadMission, serialClearMission } from '../../lib/transport';
+  import {
+    isSerialConnected, serialDownloadMission, serialClearMission,
+    serialCalCompass, serialCalGyro, serialCalLevel,
+  } from '../../lib/transport';
   import { t, i18nState, setLocale } from '../../lib/i18n.svelte';
   import { isPlane, saveSettings, showSlide } from '../../lib/stores.svelte';
   import { paramState } from '../../lib/paramStore.svelte';
@@ -94,13 +97,13 @@
         handler: () => onnavigate('params'), available: paramState.list.length > 0 },
 
       { id: 'cal-compass', label: t('cal.compass'), category: t('cal.title'), icon: Compass,
-        handler: () => { openPanel('calibration'); sendCommand('cal_compass'); }, available: connected },
+        handler: () => { openPanel('calibration'); isSerialConnected() ? serialCalCompass() : sendCommand('cal_compass'); }, available: connected },
       { id: 'cal-accel', label: t('cal.accel'), category: t('cal.title'), icon: Gauge,
         handler: () => { openPanel('calibration'); sendCommand('cal_accel'); }, available: connected },
       { id: 'cal-gyro', label: t('cal.gyro'), category: t('cal.title'), icon: RotateCcw,
-        handler: () => { openPanel('calibration'); sendCommand('cal_gyro'); }, available: connected },
+        handler: () => { openPanel('calibration'); isSerialConnected() ? serialCalGyro() : sendCommand('cal_gyro'); }, available: connected },
       { id: 'cal-level', label: t('cal.level'), category: t('cal.title'), icon: Navigation,
-        handler: () => { openPanel('calibration'); sendCommand('cal_level'); }, available: connected },
+        handler: () => { openPanel('calibration'); isSerialConnected() ? serialCalLevel() : sendCommand('cal_level'); }, available: connected },
 
       { id: 'tool-inspector', label: t('cmd.inspector'), category: t('cmd.catTools'), icon: Search,
         handler: () => openPanel('inspector'), available: true },

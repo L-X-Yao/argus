@@ -91,7 +91,7 @@ The simulator (`scripts/sim_pllink.py`) emits realistic telemetry (GPS at Xi'an,
 
 ### WebSerial (no backend at all)
 
-Open Argus in Chrome/Edge → click the **USB** button → pick your flight controller. Telemetry + arm/disarm/mode/RTL/param-read+write + **mission upload + mission download + mission clear + log list/download** flow directly via WebSerial and the built-in TypeScript MAVLink v2 codec. For calibration wizards and firmware upload, run the Python backend.
+Open Argus in Chrome/Edge → click the **USB** button → pick your flight controller. Telemetry + arm/disarm/mode/RTL/param-read+write + **mission upload + mission download + mission clear + log list/download + compass/gyro/level/baro calibration** flow directly via WebSerial and the built-in TypeScript MAVLink v2 codec. For accel calibration (private ACK protocol) and firmware upload, run the Python backend.
 
 ## Architecture
 
@@ -169,6 +169,7 @@ npm run build
 - WebSerial direct USB connection (telemetry + arm/disarm/mode/RTL/param)
 - WebSerial mission upload + download + clear (full MISSION_REQUEST_LIST/COUNT/REQUEST_INT/ITEM/ACK handshake in transport.ts)
 - WebSerial log list + binary download (LOG_REQUEST_LIST/ENTRY/REQUEST_DATA/DATA, streaming chunks)
+- WebSerial compass/gyro/level/baro calibration (MAG_CAL_PROGRESS/REPORT binary events bridged to CalibrationPanel's event-stream UI)
 - NTRIP RTK client (HTTP/1.0 + ICY-200, RTCM streaming via msg 233)
 - Compass / accel / gyro calibration with binary progress (MAG_CAL_PROGRESS / REPORT)
 - Multi-language UI (10 locales + RTL)
@@ -178,7 +179,7 @@ npm run build
 
 **🚧 In progress / partial**
 
-- WebSerial command coverage expansion (calibration wizards, firmware upload)
+- WebSerial command coverage expansion (accel calibration ACK protocol, firmware upload)
 - 3D map feature parity with 2D (waypoint editing, fences, measurement)
 - PX4 end-to-end wiring (frontend adapter exists; backend never reads HEARTBEAT.autopilot byte)
 - Real-hardware verification sweep for the remaining calibration types (level, baro, simple-accel)

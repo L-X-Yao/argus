@@ -1,8 +1,29 @@
 <script lang="ts">
   import { app } from '../../lib/stores.svelte';
   import { sendCommand } from '../../lib/ws';
+  import {
+    isSerialConnected, serialCalCompass, serialCalCompassAccept, serialCalCancel,
+    serialCalGyro, serialCalLevel, serialCalBaro,
+  } from '../../lib/transport';
   import { API_BASE } from '../../lib/backend';
   import { t } from '../../lib/i18n.svelte';
+
+  // Branch dispatch between WS backend and direct WebSerial. Accel cal stays
+  // on the WS path for now — its advance protocol (cmd_cal_accel_next) needs
+  // the AP_AccelCal ACK reinterpretation pinned to ArduPilot source per
+  // protocol_design.md and is queued for a separate phase.
+  function dispatchCal(cmd: string): void {
+    if (!isSerialConnected()) { sendCommand(cmd); return; }
+    switch (cmd) {
+      case 'cal_compass':        serialCalCompass();        return;
+      case 'cal_compass_accept': serialCalCompassAccept();  return;
+      case 'cal_cancel':         serialCalCancel();         return;
+      case 'cal_gyro':           serialCalGyro();           return;
+      case 'cal_level':          serialCalLevel();          return;
+      case 'cal_baro':           serialCalBaro();           return;
+      default:                   sendCommand(cmd);          return;  // cal_accel, cal_accel_next
+    }
+  }
   import Button from '$lib/components/ui/button/button.svelte';
   import Badge from '$lib/components/ui/badge/badge.svelte';
   import { X, Compass, Move3d, RotateCw, AlignHorizontalSpaceAround, Thermometer, ChevronRight } from '@lucide/svelte';
@@ -172,7 +193,7 @@
     if (selected === 'compass') {
       if (compassParsed.done) {
         calibrating = false;
-        sendCommand('cal_compass_accept');
+        dispatchCal('cal_compass_accept');
       } else if (compassParsed.failed) {
         calibrating = false;
       }
@@ -197,11 +218,11 @@
     // offset — that would let events from a just-cancelled prior cal leak in.
     calRunStartTime = nowHMS();
     calibrating = true;
-    sendCommand(ct.cmd);
+    dispatchCal(ct.cmd);
   }
 
   function cancelCal() {
-    sendCommand('cal_cancel');
+    dispatchCal('cal_cancel');
     calibrating = false;
     calRunStartTime = '';
   }

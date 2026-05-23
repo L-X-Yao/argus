@@ -28,7 +28,8 @@ import {
 } from './mavlink';
 import { openSerial, serialWrite, serialReadLoop, isWebSerialSupported } from './serial';
 import type { SerialConnection } from './serial';
-import { addToast, app } from './stores.svelte';
+import { addToast, addEvent, app } from './stores.svelte';
+import { t } from './i18n.svelte';
 import { buildMissionItems, validateMissionWaypoints, missionItemsToWaypoints } from './missionUpload';
 import type { MissionItem, RawMissionItem } from './missionUpload';
 import type { Waypoint } from './types';
@@ -141,6 +142,12 @@ export async function connectSerial(
         } else if (logSession.dlPending && frame.msgId === 120) {
           _onLogData(frame.payload);
         }
+        // Compass cal progress: translate binary MAG_CAL_PROGRESS (191) and
+        // MAG_CAL_REPORT (192) into the same locale-aware event-stream
+        // entries the backend emits, so the existing CalibrationPanel
+        // regex heuristic (compassParsed) keeps working unchanged.
+        if (frame.msgId === 191) _onMagCalProgress(frame.payload);
+        else if (frame.msgId === 192) _onMagCalReport(frame.payload);
         dispatchFrame(frame, serial.handlers);
       }
     }).catch((e) => { console.error('[Serial] read loop error', e); }).finally(() => {
@@ -476,6 +483,114 @@ export async function serialDownloadMission(): Promise<{ ok: boolean; error?: st
       serial.targetSysId, serial.targetCompId, 0,
     ));
   });
+}
+
+/* ── Compass calibration (WebSerial direct mode) ─────────────────────────
+ *
+ * GCS → MAV_CMD_DO_START_MAG_CAL (42424) via COMMAND_LONG
+ * FC  → MAG_CAL_PROGRESS (191) at ~10Hz with pct byte at offset 16
+ * FC  → MAG_CAL_REPORT (192) once per compass with cal_status at offset 42
+ *        (cal_status == 4 = MAG_CAL_SUCCESS, anything else = failed)
+ * GCS → MAV_CMD_DO_ACCEPT_MAG_CAL (42425) when done, or
+ *       MAV_CMD_DO_CANCEL_MAG_CAL (42426) to abort
+ *
+ * Mirrors backend's handle_mag_cal_progress / handle_mag_cal_report at
+ * backend/mavlink_handlers.py:215-244 exactly — same dedup (5% bucket,
+ * one-shot done flag) so the events sent to addEvent() match what the
+ * WS-mediated path would have produced. CalibrationPanel's compassParsed
+ * regex matches both locales.
+ */
+
+interface MagCalState {
+  pct: number;     // last %% emitted, -1 = none
+  done: boolean;   // one-shot to avoid double "complete" or progress-after-done
+}
+
+const magCal: MagCalState = { pct: -1, done: false };
+
+function _resetMagCal(): void {
+  magCal.pct = -1;
+  magCal.done = false;
+}
+
+function _onMagCalProgress(p: DataView): void {
+  if (p.byteLength < 17 || magCal.done) return;
+  const pct = p.getUint8(16);
+  // Emit only when crossing a new 5% bucket — same filter as backend
+  // handle_mag_cal_progress (mavlink_handlers.py:223-226). Prevents 200+
+  // events flooding the log over a 30s cal.
+  if (pct > magCal.pct && Math.floor(pct / 5) !== Math.floor(magCal.pct / 5)) {
+    magCal.pct = pct;
+    addEvent({
+      type: 'event',
+      time: new Date().toLocaleTimeString(),
+      text: t('cal.s.compassPct').replace('{pct}', String(pct)),
+      event_type: 'cal_compass',
+    });
+  } else if (pct > magCal.pct) {
+    magCal.pct = pct;  // track the value so the next bucket cross fires
+  }
+}
+
+function _onMagCalReport(p: DataView): void {
+  // MAG_CAL_REPORT is 44 bytes; pl=43 is acceptable when autosaved=0 trims
+  // the trailing byte. cal_status is at offset 42 — see backend handler.
+  if (p.byteLength < 43 || magCal.done) return;
+  const calStatus = p.getUint8(42);
+  magCal.done = true;
+  magCal.pct = -1;
+  if (calStatus === 4) {
+    // MAG_CAL_SUCCESS. Backend emits TWO events (done + reboot hint);
+    // CalibrationPanel only reads the first for completion detection but
+    // we replicate both so the message log looks identical.
+    addEvent({ type: 'event', time: new Date().toLocaleTimeString(),
+               text: t('cal.s.compassDone'), event_type: 'cal_compass' });
+    addEvent({ type: 'event', time: new Date().toLocaleTimeString(),
+               text: t('cal.s.compassReboot'), event_type: 'cal_compass' });
+  } else {
+    addEvent({ type: 'event', time: new Date().toLocaleTimeString(),
+               text: t('cal.s.compassFailed'), event_type: 'cal_compass' });
+  }
+}
+
+export function serialCalCompass(): void {
+  if (!isSerialConnected()) return;
+  _resetMagCal();
+  // MAV_CMD_DO_START_MAG_CAL: p1=mag_mask(0=all), p2-p4=options(0). Matches
+  // backend cmd_cal_compass (send_cmd(link, 42424, p1=0, p2=0, p3=0, p4=0)).
+  serialSendCommandLong(42424, 0, 0, 0, 0, 0, 0, 0);
+}
+
+export function serialCalCompassAccept(): void {
+  if (!isSerialConnected()) return;
+  serialSendCommandLong(42425, 0, 0, 0, 0, 0, 0, 0);
+}
+
+export function serialCalCancel(): void {
+  if (!isSerialConnected()) return;
+  // MAV_CMD_DO_CANCEL_MAG_CAL only cancels MAG cal (per cmd_cal_cancel
+  // comment in backend/commands/_setup.py:62-68 — gyro/level/baro complete
+  // in <1s and have no FC-side cancel). UI state reset stays the same.
+  serialSendCommandLong(42426, 0, 0, 0, 0, 0, 0, 0);
+  _resetMagCal();
+}
+
+export function serialCalGyro(): void {
+  if (!isSerialConnected()) return;
+  // MAV_CMD_PREFLIGHT_CALIBRATION (241), p1=1 = gyro cal.
+  serialSendCommandLong(241, 1, 0, 0, 0, 0, 0, 0);
+}
+
+export function serialCalLevel(): void {
+  if (!isSerialConnected()) return;
+  // MAV_CMD_PREFLIGHT_CALIBRATION (241), p5=4 = level (board-orientation) cal.
+  serialSendCommandLong(241, 0, 0, 0, 0, 4, 0, 0);
+}
+
+export function serialCalBaro(): void {
+  if (!isSerialConnected()) return;
+  // MAV_CMD_PREFLIGHT_CALIBRATION (241), p3=1 = ground pressure cal.
+  serialSendCommandLong(241, 0, 0, 1, 0, 0, 0, 0);
 }
 
 /* ── Log list + download state machines (WebSerial direct mode) ─────────
