@@ -45,7 +45,10 @@ def cmd_cal_baro(link: DroneLink, param, data: dict):
 
 
 def cmd_cal_accel_next(link: DroneLink, param, data: dict):
-    payload = struct.pack('<HB', 1, 0)
+    # ArduPilot's AP_AccelCal advances orientation only when it receives a
+    # COMMAND_ACK whose `command` field equals MAV_CMD_ACCELCAL_VEHICLE_POS
+    # (42429). A generic ACK is ignored — see AccelCal::handle_command_ack.
+    payload = struct.pack('<HB', 42429, 0)
     link.send(bm(77, payload, link.sq, 143))
 
 

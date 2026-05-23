@@ -133,23 +133,28 @@
       const txt = ev.text;
       const orient = detectOrientation(txt);
       const isPlace = /place|放置|请将/i.test(txt);
-      const isDone = /完成|complete|done|success|成功/i.test(txt);
+      const isDone = /完成|complete|done|success|成功|successful/i.test(txt);
+      const isFailed = /failed|失败|FAILED/i.test(txt);
+
       if (orient && isPlace) {
+        // ArduPilot moved to a new orientation — mark prev active done.
         if (active && steps[active] === 'active') steps[active] = 'done';
         steps[orient] = 'active';
         active = orient;
       } else if (orient && isDone) {
         steps[orient] = 'done';
         if (active === orient) active = null;
-      }
-      if (/accel/i.test(txt) && isDone) {
+      } else if (!orient && isDone) {
+        // Generic completion like "Calibration successful" — ArduPilot's
+        // AccelCal emits this once the full 6-orientation sequence is done.
+        // No orientation keyword means it's the final summary, not a per-step.
         for (const id of Object.keys(steps) as AccelStep[]) {
           if (steps[id] !== 'done') steps[id] = 'done';
         }
         active = null;
         complete = true;
       }
-      if (/failed|失败/i.test(txt)) failed = true;
+      if (isFailed) failed = true;
     }
     return { steps, active, complete, failed };
   });

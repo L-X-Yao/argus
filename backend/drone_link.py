@@ -410,14 +410,16 @@ class DroneLink:
             mid = buf[7] | (buf[8] << 8) | (buf[9] << 16)
             crc_extra = _CRC_EXTRA.get(mid)
             if crc_extra is None:
-                # Fail-loud: unknown msg id means we can't verify CRC or trust the
-                # payload offsets. Drop the frame and warn (throttled) so the
-                # missing entry shows up in logs the first time it's seen and
-                # again every 1000 occurrences.
-                n = self._unknown_msg_ids.get(mid, 0) + 1
-                self._unknown_msg_ids[mid] = n
-                if n == 1 or n % 1000 == 0:
-                    logger.warning('Unknown MAVLink msg id %d (count=%d) - dropping frame; add to _CRC_EXTRA', mid, n)
+                # Unknown msg id: drop silently. This covers two cases that
+                # both produce the same outcome here: (a) legitimate ArduPilot
+                # messages we never registered a handler for, and (b) parse
+                # sync errors where 0xFD landed in the middle of a payload and
+                # the trailing bytes happen to look like a frame. We can't tell
+                # them apart at this layer, and either way there's no consumer.
+                # The "handler exists but CRC_EXTRA missing" bug class — which
+                # this used to catch at runtime — is covered statically by
+                # tests/test_contract_handlers_crc.py.
+                self._unknown_msg_ids[mid] = self._unknown_msg_ids.get(mid, 0) + 1
                 return None, 1
             calc_crc = self._mavlink_crc16(crc_data + bytes([crc_extra]))
             if calc_crc != expected_crc:
