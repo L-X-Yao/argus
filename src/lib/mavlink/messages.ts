@@ -135,6 +135,86 @@ export interface AutopilotVersion {
   uid: bigint;
 }
 
+export interface MissionItemReached {
+  seq: number;
+}
+
+export interface MissionRequest {
+  seq: number;
+  missionType: number;
+}
+
+export interface LogEntry {
+  id: number;
+  numLogs: number;
+  lastLogNum: number;
+  timeUtc: number;
+  size: number;
+}
+
+export interface LogData {
+  ofs: number;
+  id: number;
+  count: number;
+  data: Uint8Array;
+}
+
+export interface SerialControl {
+  count: number;
+  data: Uint8Array;
+}
+
+export interface TerrainReport {
+  lat: number;
+  lon: number;
+  terrainHeight: number;
+  currentHeight: number;
+}
+
+export interface BatteryStatus {
+  cells: number[];
+  voltage: number;
+  current: number;
+  remaining: number;
+}
+
+export interface MountStatus {
+  pitch: number;
+  yaw: number;
+}
+
+export interface MagCalProgress {
+  compassId: number;
+  completionPct: number;
+  calStatus: number;
+}
+
+export interface MagCalReport {
+  compassId: number;
+  calStatus: number;
+  autosaved: number;
+}
+
+export interface EkfStatus {
+  velVar: number;
+  posHVar: number;
+  posVVar: number;
+  compassVar: number;
+  terrainVar: number;
+  flags: number;
+}
+
+export interface AdsbVehicle {
+  icao: number;
+  lat: number;
+  lon: number;
+  alt: number;
+  hdg: number;
+  speed: number;
+  vs: number;
+  callsign: string;
+}
+
 /* ── Decoders ── */
 
 export function decodeHeartbeat(p: DataView): Heartbeat {
@@ -305,6 +385,165 @@ export function decodeWind(p: DataView): Wind {
   };
 }
 
+export function decodeMissionItemReached(p: DataView): MissionItemReached {
+  return { seq: p.getUint16(0, true) };
+}
+
+export function decodeMissionRequest(p: DataView): MissionRequest {
+  // 0..1 seq, 2 target_system, 3 target_component, 4 mission_type
+  return { seq: p.getUint16(0, true), missionType: p.getUint8(4) };
+}
+
+export function decodeLogEntry(p: DataView): LogEntry {
+  // LOG_ENTRY (118) wire layout (sorted by size):
+  //   0..3   time_utc (u32)
+  //   4..7   size (u32)
+  //   8..9   id (u16)
+  //   10..11 num_logs (u16)
+  //   12..13 last_log_num (u16)
+  return {
+    timeUtc: p.getUint32(0, true),
+    size: p.getUint32(4, true),
+    id: p.getUint16(8, true),
+    numLogs: p.getUint16(10, true),
+    lastLogNum: p.getUint16(12, true),
+  };
+}
+
+export function decodeLogData(p: DataView): LogData {
+  // LOG_DATA (120): 0..3 ofs(u32), 4..5 id(u16), 6 count(u8), 7..96 data[90]
+  const count = p.getUint8(6);
+  const dataLen = Math.min(count, p.byteLength - 7);
+  return {
+    ofs: p.getUint32(0, true),
+    id: p.getUint16(4, true),
+    count,
+    data: new Uint8Array(p.buffer, p.byteOffset + 7, Math.max(0, dataLen)),
+  };
+}
+
+export function decodeSerialControl(p: DataView): SerialControl {
+  // SERIAL_CONTROL (126): 0..3 baudrate, 4..5 timeout, 6 device, 7 flags,
+  //                       8 count, 9..78 data
+  const count = p.getUint8(8);
+  const dataLen = Math.min(count, p.byteLength - 9);
+  return {
+    count,
+    data: new Uint8Array(p.buffer, p.byteOffset + 9, Math.max(0, dataLen)),
+  };
+}
+
+export function decodeTerrainReport(p: DataView): TerrainReport {
+  // TERRAIN_REPORT (136): 0 lat(i32), 4 lon(i32),
+  //                       8 terrain_height(f), 12 current_height(f),
+  //                       16 spacing(u16), 18 pending(u16), 20 loaded(u16)
+  return {
+    lat: p.getInt32(0, true) / 1e7,
+    lon: p.getInt32(4, true) / 1e7,
+    terrainHeight: p.getFloat32(8, true),
+    currentHeight: p.getFloat32(12, true),
+  };
+}
+
+export function decodeBatteryStatus(p: DataView): BatteryStatus {
+  // BATTERY_STATUS (147) wire layout (sorted by size, partial):
+  //   0..3 current_consumed(i32), 4..7 energy_consumed(i32),
+  //   8..9 temperature(i16),
+  //   10..29 voltages[10] (u16) — cells in mV, 0xFFFF == not present
+  //   30..31 current_battery(i16), 32 id(u8), 33 battery_function(u8),
+  //   34 type(u8), 35 battery_remaining(i8)
+  const cells: number[] = [];
+  for (let i = 0; i < 10; i++) {
+    const v = p.getUint16(10 + i * 2, true);
+    if (v === 0xFFFF) break;
+    cells.push(v / 1000);
+  }
+  return {
+    cells,
+    voltage: cells.reduce((a, b) => a + b, 0),
+    current: p.getInt16(30, true) / 100,
+    remaining: p.getInt8(35),
+  };
+}
+
+export function decodeMountStatus(p: DataView): MountStatus {
+  // MOUNT_STATUS (158): 0..3 pitch_cdeg(i32), 4..7 roll_cdeg(i32),
+  //                     8..11 yaw_cdeg(i32), 12 target_system, 13 target_component
+  return {
+    pitch: p.getInt32(0, true) / 100,
+    yaw: p.getInt32(8, true) / 100,
+  };
+}
+
+export function decodeMagCalProgress(p: DataView): MagCalProgress {
+  // MAG_CAL_PROGRESS (191): 0..11 direction xyz(f),
+  //                         12 compass_id, 13 cal_mask, 14 cal_status,
+  //                         15 attempt, 16 completion_pct, 17..26 mask[10]
+  return {
+    compassId: p.getUint8(12),
+    calStatus: p.getUint8(14),
+    completionPct: p.getUint8(16),
+  };
+}
+
+export function decodeMagCalReport(p: DataView): MagCalReport {
+  // MAG_CAL_REPORT (192) — see backend handle_mag_cal_report for layout.
+  // cal_status at offset 42.
+  return {
+    compassId: p.getUint8(40),
+    calStatus: p.getUint8(42),
+    autosaved: p.getUint8(43),
+  };
+}
+
+export function decodeEkfStatus(p: DataView): EkfStatus {
+  // EKF_STATUS_REPORT (193): 0..3 velocity_var(f), 4..7 pos_horiz_var(f),
+  //                          8..11 pos_vert_var(f), 12..15 compass_var(f),
+  //                          16..19 terrain_alt_var(f), 20..21 flags(u16)
+  return {
+    velVar: p.getFloat32(0, true),
+    posHVar: p.getFloat32(4, true),
+    posVVar: p.getFloat32(8, true),
+    compassVar: p.getFloat32(12, true),
+    terrainVar: p.getFloat32(16, true),
+    flags: p.getUint16(20, true),
+  };
+}
+
+export function decodeAdsbVehicle(p: DataView): AdsbVehicle {
+  // ADSB_VEHICLE (246) wire layout (sorted by size):
+  //   0..3 icao(u32), 4..7 lat(i32), 8..11 lon(i32), 12..15 alt(i32),
+  //   16..17 hdg(u16), 18..19 horizontal_velocity(u16),
+  //   20..21 vertical_velocity(i16), 22..23 flags(u16), 24..25 squawk(u16),
+  //   26 altitude_type, 27..35 callsign[9]
+  const callsignBytes = new Uint8Array(p.buffer, p.byteOffset + 27, Math.min(9, p.byteLength - 27));
+  let end = callsignBytes.indexOf(0);
+  if (end < 0) end = callsignBytes.length;
+  return {
+    icao: p.getUint32(0, true),
+    lat: p.getInt32(4, true) / 1e7,
+    lon: p.getInt32(8, true) / 1e7,
+    alt: p.getInt32(12, true) / 1000,
+    hdg: p.getUint16(16, true) / 100,
+    speed: p.getUint16(18, true) / 100,
+    vs: p.getInt16(20, true) / 100,
+    callsign: new TextDecoder().decode(callsignBytes.slice(0, end)),
+  };
+}
+
+export function decodeAutopilotVersion(p: DataView): AutopilotVersion {
+  // AUTOPILOT_VERSION (148) — partial decode of useful fields.
+  //   0..7 capabilities (u64)
+  //   8..11 uid (u64 low) — we expose flightSwVersion + board_version instead
+  //   16..19 flight_sw_version (u32)
+  //   28..31 board_version (u32)
+  return {
+    flightSwVersion: p.getUint32(16, true),
+    boardVersion: p.getUint32(28, true),
+    uid: p.getBigUint64(8, true),
+  };
+}
+
 /* ── Encoders ── */
 
 export function encodeHeartbeat(sysType: number = 6, autopilot: number = 8): Uint8Array {
@@ -427,6 +666,20 @@ export function dispatchFrame(frame: MavFrame, handlers: Partial<MessageHandlers
     case 241: handlers.onVibration?.(decodeVibration(padPayload(pl, 32)), frame); break;
     case 168: handlers.onWind?.(decodeWind(padPayload(pl, 12)), frame); break;
     case 253: handlers.onStatusText?.(decodeStatusText(padPayload(pl, 51)), frame); break;
+    case 40:  handlers.onMissionRequest?.(decodeMissionRequest(padPayload(pl, 5)), frame); break;
+    case 46:  handlers.onMissionItemReached?.(decodeMissionItemReached(padPayload(pl, 2)), frame); break;
+    case 51:  handlers.onMissionRequest?.(decodeMissionRequest(padPayload(pl, 5)), frame); break;
+    case 118: handlers.onLogEntry?.(decodeLogEntry(padPayload(pl, 14)), frame); break;
+    case 120: handlers.onLogData?.(decodeLogData(padPayload(pl, 97)), frame); break;
+    case 126: handlers.onSerialControl?.(decodeSerialControl(padPayload(pl, 79)), frame); break;
+    case 136: handlers.onTerrainReport?.(decodeTerrainReport(padPayload(pl, 22)), frame); break;
+    case 147: handlers.onBatteryStatus?.(decodeBatteryStatus(padPayload(pl, 36)), frame); break;
+    case 148: handlers.onAutopilotVersion?.(decodeAutopilotVersion(padPayload(pl, 60)), frame); break;
+    case 158: handlers.onMountStatus?.(decodeMountStatus(padPayload(pl, 14)), frame); break;
+    case 191: handlers.onMagCalProgress?.(decodeMagCalProgress(padPayload(pl, 27)), frame); break;
+    case 192: handlers.onMagCalReport?.(decodeMagCalReport(padPayload(pl, 44)), frame); break;
+    case 193: handlers.onEkfStatus?.(decodeEkfStatus(padPayload(pl, 22)), frame); break;
+    case 246: handlers.onAdsbVehicle?.(decodeAdsbVehicle(padPayload(pl, 38)), frame); break;
     default:  handlers.onUnknown?.(frame); break;
   }
 }
@@ -450,5 +703,18 @@ export interface MessageHandlers {
   onVibration: (msg: Vibration, frame: MavFrame) => void;
   onWind: (msg: Wind, frame: MavFrame) => void;
   onStatusText: (msg: StatusText, frame: MavFrame) => void;
+  onMissionRequest: (msg: MissionRequest, frame: MavFrame) => void;
+  onMissionItemReached: (msg: MissionItemReached, frame: MavFrame) => void;
+  onLogEntry: (msg: LogEntry, frame: MavFrame) => void;
+  onLogData: (msg: LogData, frame: MavFrame) => void;
+  onSerialControl: (msg: SerialControl, frame: MavFrame) => void;
+  onTerrainReport: (msg: TerrainReport, frame: MavFrame) => void;
+  onBatteryStatus: (msg: BatteryStatus, frame: MavFrame) => void;
+  onAutopilotVersion: (msg: AutopilotVersion, frame: MavFrame) => void;
+  onMountStatus: (msg: MountStatus, frame: MavFrame) => void;
+  onMagCalProgress: (msg: MagCalProgress, frame: MavFrame) => void;
+  onMagCalReport: (msg: MagCalReport, frame: MavFrame) => void;
+  onEkfStatus: (msg: EkfStatus, frame: MavFrame) => void;
+  onAdsbVehicle: (msg: AdsbVehicle, frame: MavFrame) => void;
   onUnknown: (frame: MavFrame) => void;
 }

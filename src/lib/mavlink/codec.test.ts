@@ -726,3 +726,124 @@ describe('decodeServoOutput regression', () => {
     expect(result.outputs.slice(8, 16)).toEqual([2000, 2001, 2002, 2003, 2004, 2005, 2006, 2007]);
   });
 });
+
+// ---------------------------------------------------------------------------
+// New WebSerial-mode decoders — verify dispatch wires them up correctly.
+// Auditor finding was that the frontend was silently dropping 13 message
+// types (terrain, EKF, battery cells, ADS-B, mag cal progress, log download,
+// mount status, autopilot version, mission progress).
+// ---------------------------------------------------------------------------
+
+describe('new WebSerial decoders', () => {
+  function makePayload(size: number): Uint8Array {
+    return new Uint8Array(size);
+  }
+
+  it('dispatches MISSION_ITEM_REACHED (46)', () => {
+    const buf = makePayload(2);
+    new DataView(buf.buffer).setUint16(0, 7, true);
+    const frame = makeMavFrame(46, buf);
+    let observed: number | undefined;
+    dispatchFrame(frame, { onMissionItemReached: (m) => { observed = m.seq; } });
+    expect(observed).toBe(7);
+  });
+
+  it('dispatches LOG_ENTRY (118)', () => {
+    const buf = makePayload(14);
+    const dv = new DataView(buf.buffer);
+    dv.setUint32(0, 1700000000, true); // time_utc
+    dv.setUint32(4, 102400, true);     // size
+    dv.setUint16(8, 5, true);          // id
+    dv.setUint16(10, 1, true);         // num_logs
+    dv.setUint16(12, 5, true);         // last_log_num
+    const frame = makeMavFrame(118, buf);
+    let entry: { id: number; size: number } | undefined;
+    dispatchFrame(frame, { onLogEntry: (m) => { entry = m; } });
+    expect(entry?.id).toBe(5);
+    expect(entry?.size).toBe(102400);
+  });
+
+  it('dispatches MOUNT_STATUS (158) and scales cdeg to deg', () => {
+    const buf = makePayload(14);
+    const dv = new DataView(buf.buffer);
+    dv.setInt32(0, -4500, true);   // pitch_cdeg
+    dv.setInt32(8, 9000, true);    // yaw_cdeg
+    const frame = makeMavFrame(158, buf);
+    let observed: { pitch: number; yaw: number } | undefined;
+    dispatchFrame(frame, { onMountStatus: (m) => { observed = m; } });
+    expect(observed?.pitch).toBeCloseTo(-45.0, 1);
+    expect(observed?.yaw).toBeCloseTo(90.0, 1);
+  });
+
+  it('dispatches EKF_STATUS_REPORT (193)', () => {
+    const buf = makePayload(22);
+    const dv = new DataView(buf.buffer);
+    dv.setFloat32(0, 0.1, true);
+    dv.setFloat32(4, 0.2, true);
+    dv.setFloat32(8, 0.3, true);
+    dv.setFloat32(12, 0.4, true);
+    dv.setFloat32(16, 0.5, true);
+    dv.setUint16(20, 0x1F, true);
+    const frame = makeMavFrame(193, buf);
+    let observed: { compassVar: number; flags: number } | undefined;
+    dispatchFrame(frame, { onEkfStatus: (m) => { observed = m; } });
+    expect(observed?.compassVar).toBeCloseTo(0.4, 3);
+    expect(observed?.flags).toBe(0x1F);
+  });
+
+  it('dispatches BATTERY_STATUS (147) and stops at 0xFFFF cell sentinel', () => {
+    const buf = makePayload(36);
+    const dv = new DataView(buf.buffer);
+    // 4 real cells at 3700mV then 0xFFFF
+    dv.setUint16(10, 3700, true);
+    dv.setUint16(12, 3700, true);
+    dv.setUint16(14, 3700, true);
+    dv.setUint16(16, 3700, true);
+    dv.setUint16(18, 0xFFFF, true);
+    dv.setInt16(30, 1000, true);
+    dv.setInt8(35, 80);
+    const frame = makeMavFrame(147, buf);
+    let observed: { cells: number[]; remaining: number } | undefined;
+    dispatchFrame(frame, { onBatteryStatus: (m) => { observed = m; } });
+    expect(observed?.cells.length).toBe(4);
+    expect(observed?.cells[0]).toBeCloseTo(3.7, 2);
+    expect(observed?.remaining).toBe(80);
+  });
+
+  it('dispatches MAG_CAL_PROGRESS (191) reading completion_pct at offset 16', () => {
+    const buf = makePayload(27);
+    const dv = new DataView(buf.buffer);
+    dv.setUint8(12, 0);     // compass_id
+    dv.setUint8(14, 3);     // cal_status
+    dv.setUint8(16, 42);    // completion_pct
+    const frame = makeMavFrame(191, buf);
+    let observed: number | undefined;
+    dispatchFrame(frame, { onMagCalProgress: (m) => { observed = m.completionPct; } });
+    expect(observed).toBe(42);
+  });
+
+  it('dispatches MAG_CAL_REPORT (192) reading cal_status at offset 42', () => {
+    const buf = makePayload(44);
+    buf[42] = 4; // SUCCESS
+    const frame = makeMavFrame(192, buf);
+    let observed: number | undefined;
+    dispatchFrame(frame, { onMagCalReport: (m) => { observed = m.calStatus; } });
+    expect(observed).toBe(4);
+  });
+
+  it('dispatches ADSB_VEHICLE (246) decoding callsign', () => {
+    const buf = makePayload(38);
+    const dv = new DataView(buf.buffer);
+    dv.setUint32(0, 0xABCDEF, true);
+    dv.setInt32(4, 340000000, true);   // lat
+    dv.setInt32(8, -1184000000, true); // lon
+    const enc = new TextEncoder().encode('UAL123');
+    buf.set(enc, 27);
+    const frame = makeMavFrame(246, buf);
+    let observed: { icao: number; callsign: string; lat: number } | undefined;
+    dispatchFrame(frame, { onAdsbVehicle: (m) => { observed = m; } });
+    expect(observed?.icao).toBe(0xABCDEF);
+    expect(observed?.callsign).toBe('UAL123');
+    expect(observed?.lat).toBeCloseTo(34.0, 4);
+  });
+});
