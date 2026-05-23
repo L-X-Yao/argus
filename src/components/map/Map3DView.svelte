@@ -1,8 +1,9 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { app } from '../../lib/stores.svelte';
-  import { toGcj } from '../../lib/gcj02';
-  import { t } from '../../lib/i18n.svelte';
+  import { app, addWaypoint, deleteWaypoint, saveWaypoints, addToast } from '../../lib/stores.svelte';
+  import { sendCommand } from '../../lib/ws';
+  import { toGcj, toWgs } from '../../lib/gcj02';
+  import { t, i18nState } from '../../lib/i18n.svelte';
   import { API_BASE } from '../../lib/backend';
   import maplibregl from 'maplibre-gl';
   import 'maplibre-gl/dist/maplibre-gl.css';
@@ -32,6 +33,15 @@
   function toMap(lat: number, lon: number): [number, number] {
     return useGcj ? toGcj(lat, lon) : [lat, lon];
   }
+  function fromMap(mlat: number, mlon: number): [number, number] {
+    return useGcj ? toWgs(mlat, mlon) : [mlat, mlon];
+  }
+
+  // Per-waypoint maplibre Markers — replaces the static GeoJSON circle layer
+  // so each WP is independently draggable. Mirrors WaypointLayer.svelte's 2D
+  // pattern (Leaflet markers + dragend → saveWaypoints).
+  let wpMarkers: maplibregl.Marker[] = [];
+  let wpPopup: maplibregl.Popup | null = null;
 
   function createSvgElement(svgMarkup: string): SVGSVGElement {
     const parser = new DOMParser();
@@ -90,18 +100,13 @@
         type: 'geojson',
         data: { type: 'FeatureCollection', features: [] },
       });
+      // Path line only — the points themselves are rendered as draggable
+      // Markers below so we get native drag-to-edit without a custom layer.
       map!.addLayer({
         id: 'waypoint-line',
         type: 'line',
         source: 'waypoints',
         paint: { 'line-color': '#1565c0', 'line-width': 3, 'line-dasharray': [2, 1] },
-      });
-      map!.addLayer({
-        id: 'waypoint-points',
-        type: 'circle',
-        source: 'waypoints',
-        filter: ['==', '$type', 'Point'],
-        paint: { 'circle-radius': 5, 'circle-color': '#1565c0', 'circle-stroke-width': 2, 'circle-stroke-color': '#fff' },
       });
 
       map!.addSource('trail', {
@@ -115,11 +120,31 @@
         paint: { 'line-color': '#4fc3f7', 'line-width': 2, 'line-opacity': 0.7 },
       });
     });
+
+    // Map click: guided-goto (when armed + guidedMode) or add waypoint.
+    // Mirrors MapView.svelte:118-140 — note the GCJ inverse-transform so
+    // China-tile providers don't store shifted coordinates in app.waypoints.
+    map.on('click', (e) => {
+      const { lat: mlat, lng: mlon } = e.lngLat;
+      const [wlat, wlon] = fromMap(mlat, mlon);
+      if (app.guidedMode && app.drone.connected && app.drone.armed) {
+        sendCommand('guided_goto', undefined, { lat: wlat, lon: wlon, alt: app.defaultAlt });
+        addToast(`${t('map.guided')} → ${wlat.toFixed(5)}, ${wlon.toFixed(5)}`, 'info');
+        return;
+      }
+      addWaypoint({
+        lat: wlat, lon: wlon, alt: app.defaultAlt,
+        drop: false, delay: 0, speed: 0, type: 'wp', loiter_param: 0,
+      });
+    });
   });
 
   onDestroy(() => {
     if (droneMarker) droneMarker.remove();
     if (homeMarker) homeMarker.remove();
+    wpMarkers.forEach((m) => m.remove());
+    wpMarkers = [];
+    if (wpPopup) { wpPopup.remove(); wpPopup = null; }
     if (map) map.remove();
   });
 
@@ -175,30 +200,109 @@
     const src = map.getSource('waypoints') as maplibregl.GeoJSONSource;
     if (!src) return;
 
-    const features: GeoJSON.Feature[] = [];
-
+    // Path line (rebuilt from full waypoint list every time it changes).
     if (wps.length >= 2) {
-      const coords = wps.map(w => {
+      const coords = wps.map((w) => {
         const [lat, lon] = toMap(w.lat, w.lon);
         return [lon, lat] as [number, number];
       });
-      features.push({
+      src.setData({
         type: 'Feature',
         geometry: { type: 'LineString', coordinates: coords },
         properties: {},
       });
+    } else {
+      src.setData({ type: 'FeatureCollection', features: [] });
     }
 
-    for (let i = 0; i < wps.length; i++) {
-      const [lat, lon] = toMap(wps[i].lat, wps[i].lon);
-      features.push({
-        type: 'Feature',
-        geometry: { type: 'Point', coordinates: [lon, lat] },
-        properties: { index: i + 1, alt: wps[i].alt },
+    // Per-waypoint draggable markers. Simpler to dispose + rebuild than to
+    // diff — Argus missions are typically < 50 WPs so the DOM churn is
+    // negligible. Closures capture the current index at marker creation.
+    wpMarkers.forEach((m) => m.remove());
+    wpMarkers = [];
+    if (wpPopup) { wpPopup.remove(); wpPopup = null; }
+
+    wps.forEach((wp, i) => {
+      const [mlat, mlon] = toMap(wp.lat, wp.lon);
+      const isLoiter = wp.type === 'loiter_turns' || wp.type === 'loiter_time';
+      const color = wp.drop ? '#e65100' : isLoiter ? '#7e57c2' : '#1565c0';
+      const el = document.createElement('div');
+      el.style.cssText = `position:relative;width:22px;height:22px;border-radius:50%;background:${color};color:white;text-align:center;line-height:22px;font-size:11px;font-weight:bold;border:2px solid white;box-shadow:0 0 4px rgba(0,0,0,0.6);cursor:pointer`;
+      el.textContent = String(i + 1);
+      if (wp.drop) {
+        const badge = document.createElement('div');
+        badge.style.cssText = 'position:absolute;top:-5px;right:-5px;width:8px;height:8px;border-radius:50%;background:#ff5722;border:1px solid white';
+        el.appendChild(badge);
+      }
+
+      const m = new maplibregl.Marker({ element: el, draggable: true })
+        .setLngLat([mlon, mlat])
+        .addTo(map!);
+
+      m.on('dragend', () => {
+        const ll = m.getLngLat();
+        const [wlat, wlon] = fromMap(ll.lat, ll.lng);
+        // Mutate in-place; the $effect that just rebuilt markers won't re-run
+        // because Svelte 5 tracks .lat/.lon writes on the same array element.
+        app.waypoints[i].lat = wlat;
+        app.waypoints[i].lon = wlon;
+        saveWaypoints();
       });
-    }
 
-    src.setData({ type: 'FeatureCollection', features });
+      el.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        const en = i18nState.locale === 'en';
+        // Build popup DOM piecewise — never innerHTML on values pulled from
+        // app state, even though wp fields here are typed as number/bool.
+        const popupEl = document.createElement('div');
+        popupEl.style.cssText = 'font-size:12px;min-width:160px';
+
+        const title = document.createElement('b');
+        title.textContent = `${en ? 'WP' : '航点'} ${i + 1}`;
+        popupEl.appendChild(title);
+        if (wp.drop) {
+          const dropSpan = document.createElement('span');
+          dropSpan.style.color = '#e65100';
+          dropSpan.textContent = en ? ' · Drop' : ' · 投放';
+          popupEl.appendChild(dropSpan);
+        }
+        popupEl.appendChild(document.createElement('br'));
+
+        const coord = document.createElement('span');
+        coord.style.color = '#888';
+        coord.textContent = `${wp.lat.toFixed(6)}, ${wp.lon.toFixed(6)}`;
+        popupEl.appendChild(coord);
+        popupEl.appendChild(document.createElement('br'));
+
+        const altLabel = document.createTextNode(`${en ? 'Alt' : '高度'}: `);
+        popupEl.appendChild(altLabel);
+        const altVal = document.createElement('b');
+        altVal.textContent = `${wp.alt}m`;
+        popupEl.appendChild(altVal);
+        if (wp.speed) {
+          popupEl.appendChild(document.createTextNode(
+            ` · ${en ? 'Spd' : '速度'}: ${wp.speed}m/s`,
+          ));
+        }
+
+        const btn = document.createElement('button');
+        btn.textContent = en ? 'Delete' : '删除';
+        btn.style.cssText = 'display:block;margin-top:6px;padding:3px 10px;background:#d32f2f;color:white;border:none;border-radius:3px;cursor:pointer;font-size:11px;font-weight:600';
+        btn.addEventListener('click', () => {
+          deleteWaypoint(i);
+          if (wpPopup) { wpPopup.remove(); wpPopup = null; }
+        });
+        popupEl.appendChild(btn);
+
+        if (wpPopup) wpPopup.remove();
+        wpPopup = new maplibregl.Popup({ closeOnClick: true, offset: 14 })
+          .setLngLat([mlon, mlat])
+          .setDOMContent(popupEl)
+          .addTo(map!);
+      });
+
+      wpMarkers.push(m);
+    });
   });
 </script>
 
