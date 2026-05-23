@@ -308,14 +308,32 @@ class Simulator:
         terr = 0.0
         flags = 0x01FF  # attitude + velocity + position all OK
         p = struct.pack('<fffffH', vel, pos_h, pos_v, comp, terr, flags)
-        return bm(74, p, self.sq, 71)
+        # EKF_STATUS_REPORT is msg_id 193, not 74 (VFR_HUD). Previous code
+        # used 74, so the backend's handle_vfr_hud read EKF variances as
+        # airspeed/climb (telemetry overlay garbage) AND handle_ekf_status
+        # at msg_id 193 was never invoked (EKF panel showed no data).
+        return bm(193, p, self.sq, 71)
 
     def msg_wind(self):
         direction = 225.0 + random.uniform(-10, 10)
         speed = 3.5 + random.uniform(-0.5, 0.5)
         speed_z = 0.1 + random.uniform(-0.05, 0.05)
         p = struct.pack('<fff', direction, speed, speed_z)
-        return bm(168, p, self.sq, 231)
+        # WIND (id 168) crc_extra is 1 per MAVLink common.xml. Previous value
+        # 231 was wrong — frames were accepted only because PL-Link framing
+        # doesn't validate the inner MAVLink CRC. On a raw-MAVLink link the
+        # frame would be dropped silently.
+        return bm(168, p, self.sq, 1)
+
+    def msg_vfr_hud(self):
+        gs = math.sqrt(self.vx ** 2 + self.vy ** 2)
+        airspeed = gs + random.uniform(-0.2, 0.2)
+        climb = -self.vz if self.vz else 0.0
+        throttle = max(0, min(100, int(50 + (self.alt / 1.0) if self.armed else 0)))
+        # VFR_HUD wire-sorted layout: airspeed(f), groundspeed(f), alt(f),
+        # climb(f), heading(i16), throttle(u16) = 20 bytes
+        p = struct.pack('<ffffhH', airspeed, gs, self.alt, climb, int(self.yaw) % 360, throttle)
+        return bm(74, p, self.sq, 20)
 
     def msg_terrain_report(self):
         terrain_msl = 400.0 + random.uniform(-2, 2)
@@ -487,7 +505,10 @@ class Simulator:
                     resp.append(self.msg_log_data(log_id, cur, data_bytes))
                     cur += chunk
                 print('  [SIM] 日志数据: id=%d ofs=%d count=%d' % (log_id, ofs, count))
-        elif mid == 126:
+        elif mid == 122:
+            # LOG_REQUEST_END = 122 (per MAVLink common.xml). The backend's
+            # cmd_log_cancel sends 122; using 126 here (SERIAL_CONTROL) meant
+            # the sim never actually saw a cancel.
             self._log_send_active = False
             self._log_send_id = -1
             print('  [SIM] 日志传输取消')

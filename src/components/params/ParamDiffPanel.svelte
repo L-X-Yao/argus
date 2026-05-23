@@ -57,7 +57,9 @@
     status: 'same' | 'diff' | 'fileOnly' | 'currentOnly';
   }
 
-  let currentMap = $derived(() => {
+  // $derived.by builds the Map directly; the previous form wrapped a function,
+  // so callers had to invoke `currentMap()` and the value wasn't memoised.
+  let currentMap = $derived.by(() => {
     const m = new Map<string, number>();
     for (const p of paramState.list) m.set(p.name, p.value);
     return m;
@@ -65,7 +67,7 @@
 
   let allRows = $derived.by((): DiffRow[] => {
     if (!fileParams) return [];
-    const cur = currentMap();
+    const cur = currentMap;
     const rows: DiffRow[] = [];
     const seen = new Set<string>();
 

@@ -106,6 +106,8 @@ export function loadSettings() {
     if (s.voice !== undefined) app.voiceEnabled = s.voice;
     if (s.region) app.mapRegion = s.region;
     if (s.tileSource) app.tileSource = s.tileSource;
+    if (s.mapMode === '2d' || s.mapMode === '3d') app.mapMode = s.mapMode;
+    if (s.unitSystem === 'metric' || s.unitSystem === 'imperial') app.unitSystem = s.unitSystem;
   } catch {}
   try {
     const wps = JSON.parse(localStorage.getItem('argus_waypoints') || '[]');
@@ -124,6 +126,8 @@ export function saveSettings() {
       voice: app.voiceEnabled,
       region: app.mapRegion,
       tileSource: app.tileSource,
+      mapMode: app.mapMode,
+      unitSystem: app.unitSystem,
     }));
   } catch {}
 }

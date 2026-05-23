@@ -1,6 +1,6 @@
 import type { WSMessage } from './types';
 import { app, updateState, addEvent, setWsConnected, addToast, loadDownloadedMission } from './stores.svelte';
-import { handleParamBatch, handleParamsComplete } from './paramStore.svelte';
+import { handleParamBatch, handleParamsComplete, clearParams } from './paramStore.svelte';
 import { setLogList, completeDownload, updateDownloadProgress, appendLogChunk } from './logStore.svelte';
 import { updateInspector, appendConsole } from './inspectorStore.svelte';
 import { saveFlightRecord } from './flightDb';
@@ -59,6 +59,9 @@ export function connectWs(): void {
             case 'disarmed':
               addToast(t('toast.disarmed'), 'success', 4000); break;
             case 'connected':
+              // Drop stale params from a previous vehicle so the new connection
+              // starts with a clean slate.
+              clearParams();
               addToast(msg.text, 'success'); break;
             case 'disconnected': case 'link_lost':
               addToast(t('toast.disconnected'), 'info'); break;
