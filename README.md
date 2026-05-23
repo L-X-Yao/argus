@@ -136,10 +136,10 @@ It generates realistic telemetry: GPS position (Xi'an), attitude, battery drain,
 ## Tests
 
 ```bash
-# Backend unit tests (929 tests)
-python -m pytest tests/test_unit_*.py -v
+# Backend unit tests (1032 tests)
+python -m pytest tests/test_unit_*.py tests/test_contract_*.py -v
 
-# Frontend unit tests (400 tests)
+# Frontend unit tests (419 tests)
 npx vitest run
 
 # Type check (0 errors, 0 warnings)
@@ -158,11 +158,11 @@ npx playwright test
 |---|---|
 | Frontend components | 144 |
 | Frontend lines | 21,000 |
-| Backend modules | 23 |
+| Backend modules | 24 |
 | Backend lines | 3,500 |
-| MAVLink handlers | 27 |
-| Commands | 46 |
-| Tests | 1,329 (929 pytest + 400 vitest) |
+| MAVLink handlers | 31 |
+| Commands | 49 |
+| Tests | 1,451 (1,032 pytest + 419 vitest) |
 | Languages | 10 |
 | Bundle (main) | 207 KB (65 KB gzip) |
 | Bundle (3D map) | 1,028 KB (lazy loaded) |
