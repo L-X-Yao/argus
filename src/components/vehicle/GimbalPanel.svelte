@@ -1,7 +1,30 @@
 <script lang="ts">
   import { app, addToast } from '../../lib/stores.svelte';
   import { sendCommand } from '../../lib/ws';
+  import { isSerialConnected, serialSendCommandLong, serialGimbalPitchYaw } from '../../lib/transport';
   import { t } from '../../lib/i18n.svelte';
+
+  // Route gimbal_angle (MAV_CMD_DO_MOUNT_CONTROL 205, COMMAND_LONG) and the
+  // new gimbal_pitchyaw (MAV_CMD_DO_GIMBAL_MANAGER_PITCHYAW 1000, COMMAND_INT)
+  // through the WebSerial transport when active. camera_* / do_set_roi
+  // remain WS-only — they're not on the WebSerial expansion line yet.
+  function sendGimbalAngle(pitch: number, yaw: number): void {
+    if (isSerialConnected()) {
+      // p1=pitch, p3=yaw, p7=2 (MAV_MOUNT_MODE_MAVLINK_TARGETING) — mirrors
+      // backend cmd_gimbal_angle at backend/commands/_hardware.py:136-141.
+      serialSendCommandLong(205, pitch, 0, yaw, 0, 0, 0, 2);
+    } else {
+      sendCommand('gimbal_angle', undefined, { pitch, yaw });
+    }
+  }
+  function sendGimbalPitchYaw(data: {
+    pitch?: number; yaw?: number;
+    pitch_rate?: number; yaw_rate?: number;
+    flags?: number;
+  }): void {
+    if (isSerialConnected()) serialGimbalPitchYaw(data);
+    else sendCommand('gimbal_pitchyaw', undefined, data);
+  }
   import { X, Aperture, Camera, Video, VideoOff, ZoomIn, Crosshair, RotateCcw } from '@lucide/svelte';
   import Button from '$lib/components/ui/button/button.svelte';
 
@@ -28,10 +51,10 @@
   /* ── Gimbal controls ── */
   function sendAngle() {
     if (rateMode) {
-      sendCommand('gimbal_pitchyaw', undefined, { pitch_rate: pitch, yaw_rate: yaw });
+      sendGimbalPitchYaw({ pitch_rate: pitch, yaw_rate: yaw });
       addToast(`${t('gimbal.rate')}: P=${pitch}°/s Y=${yaw}°/s`, 'info', 2000);
     } else {
-      sendCommand('gimbal_angle', undefined, { pitch, yaw });
+      sendGimbalAngle(pitch, yaw);
       addToast(`${t('gimbal.angle')}: P=${pitch} Y=${yaw}`, 'info', 2000);
     }
   }
@@ -39,24 +62,21 @@
   function centerGimbal() {
     pitch = 0;
     yaw = 0;
-    if (rateMode) {
-      sendCommand('gimbal_pitchyaw', undefined, { pitch_rate: 0, yaw_rate: 0 });
-    } else {
-      sendCommand('gimbal_angle', undefined, { pitch: 0, yaw: 0 });
-    }
+    if (rateMode) sendGimbalPitchYaw({ pitch_rate: 0, yaw_rate: 0 });
+    else sendGimbalAngle(0, 0);
     addToast(t('gimbal.centered'), 'info', 2000);
   }
 
   function retractGimbal() {
     // GIMBAL_MANAGER_FLAGS_RETRACT = 1; AP_Mount.cpp:382 short-circuits to
     // set_mode(MAV_MOUNT_MODE_RETRACT) regardless of pitch/yaw payload.
-    sendCommand('gimbal_pitchyaw', undefined, { flags: 1 });
+    sendGimbalPitchYaw({ flags: 1 });
     addToast(t('gimbal.retract'), 'info', 2000);
   }
 
   function neutralGimbal() {
     // GIMBAL_MANAGER_FLAGS_NEUTRAL = 2; AP_Mount.cpp:387.
-    sendCommand('gimbal_pitchyaw', undefined, { flags: 2 });
+    sendGimbalPitchYaw({ flags: 2 });
     addToast(t('gimbal.neutral'), 'info', 2000);
   }
 

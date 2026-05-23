@@ -93,6 +93,9 @@
   onMount(() => {
     const src = curSource();
     const tileUrl = `${API_BASE}/api/tile/${src.sat}/{z}/{x}/{y}`;
+    // Track the initial tile source so the prevTileSource $effect doesn't
+    // fire a redundant swap on first render. Mirrors MapView.svelte:97.
+    prevTileSource = app.tileSource;
 
     map = new maplibregl.Map({
       container: mapEl,
@@ -306,14 +309,12 @@
   }
 
   function toggleFenceDraw() {
-    if (app.drawingFence) {
-      // Confirm-toggle: leaving draw mode keeps the polygon as-is so user
-      // can hand it to FencePanel for upload (matches 2D behavior).
-      app.drawingFence = false;
-    } else {
-      app.drawingFence = true;
-      app.fencePolygon = [];
-    }
+    // Toggle-only; never wipe the polygon. Mirrors 2D MapView.svelte:376 —
+    // user clicks Fence → enter draw mode, adds vertices, clicks again to
+    // exit and keep the polygon for FencePanel to upload. The explicit
+    // Clear button (rendered only when drawingFence OR polygon non-empty)
+    // is the one path that actually empties fencePolygon.
+    app.drawingFence = !app.drawingFence;
   }
 
   function clearFence() {
@@ -532,6 +533,14 @@
       });
     }
 
+    // Differentiate uploaded vs draft polygons — 2D FenceLayer.svelte:17-30
+    // makes uploaded polygons solid + opaque so operators can see at a
+    // glance whether the local edit has been pushed to the FC.
+    const uploaded = app.fenceUploaded;
+    map.setPaintProperty('fence-fill', 'fill-opacity', uploaded ? 0.18 : 0.1);
+    map.setPaintProperty('fence-line', 'line-width', uploaded ? 2.5 : 2);
+    map.setPaintProperty('fence-line', 'line-dasharray', uploaded ? [1, 0] : [3, 2]);
+
     lonLats.forEach((pt, i) => {
       // First vertex inverted (white-filled) to mark the polygon start,
       // matching 2D FenceLayer.svelte:34.
@@ -541,6 +550,29 @@
         new maplibregl.Marker({ element: el }).setLngLat(pt).addTo(map!),
       );
     });
+  });
+
+  // Tile-source switching: swap the raster source URL when app.tileSource
+  // changes. Mirrors MapView.svelte:applyTileSource — re-creating layers
+  // is the canonical maplibre pattern since setStyle() would nuke the
+  // waypoint/fence/measure overlays we just added. NOTE: existing markers
+  // continue to display at their old GCJ-shifted positions until the next
+  // edit triggers a rebuild — same latent quirk as the 2D path.
+  let prevTileSource = '';
+  $effect(() => {
+    const ts = app.tileSource;
+    if (!map || !map.isStyleLoaded() || ts === prevTileSource) return;
+    prevTileSource = ts;
+    const src = curSource();
+    const url = `${API_BASE}/api/tile/${src.sat}/{z}/{x}/{y}`;
+    if (map.getLayer('raster')) map.removeLayer('raster');
+    if (map.getSource('raster-tiles')) map.removeSource('raster-tiles');
+    map.addSource('raster-tiles', {
+      type: 'raster', tiles: [url], tileSize: 256, maxzoom: 18,
+    });
+    // Insert raster BELOW all overlays so waypoint/fence/measure stay visible.
+    const firstOverlay = map.getLayer('waypoint-line') ? 'waypoint-line' : undefined;
+    map.addLayer({ id: 'raster', type: 'raster', source: 'raster-tiles' }, firstOverlay);
   });
 </script>
 

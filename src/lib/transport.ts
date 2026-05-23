@@ -120,35 +120,35 @@ export async function connectSerial(
         // missing onMissionRequest / onMissionAck. frame.payload is a DataView.
         if (upload?.pending) {
           if (frame.msgId === 40 || frame.msgId === 51) {
-            const seq = frame.payload.byteLength >= 2 ? frame.payload.getUint16(0, true) : 0;
-            _onMissionRequest(seq);
+            const p = _padView(frame.payload, 2);
+            _onMissionRequest(p.getUint16(0, true));
           } else if (frame.msgId === 47) {
             // MISSION_ACK type is at offset 2 (after target_system, target_component).
-            const type = frame.payload.byteLength > 2 ? frame.payload.getUint8(2) : 0;
-            _onMissionAck(type);
+            const p = _padView(frame.payload, 3);
+            _onMissionAck(p.getUint8(2));
           }
         }
         // Mission download state machine listens on MISSION_COUNT (44) and
         // MISSION_ITEM_INT (73). Upload and download are mutually exclusive,
         // so the order of these intercepts doesn't matter.
         if (download.pending) {
-          if (frame.msgId === 44) _onMissionCountDl(frame.payload);
-          else if (frame.msgId === 73) _onMissionItemIntDl(frame.payload);
+          if (frame.msgId === 44) _onMissionCountDl(_padView(frame.payload, 4));
+          else if (frame.msgId === 73) _onMissionItemIntDl(_padView(frame.payload, 37));
         }
         // Log list / download state machines listen on LOG_ENTRY (118) and
         // LOG_DATA (120). Internal intercept first; external dispatch still
         // runs so user handlers see the frames if registered.
         if (logSession.listPending && frame.msgId === 118) {
-          _onLogEntry(frame.payload);
+          _onLogEntry(_padView(frame.payload, 14));
         } else if (logSession.dlPending && frame.msgId === 120) {
-          _onLogData(frame.payload);
+          _onLogData(_padView(frame.payload, 7));
         }
         // Compass cal progress: translate binary MAG_CAL_PROGRESS (191) and
         // MAG_CAL_REPORT (192) into the same locale-aware event-stream
         // entries the backend emits, so the existing CalibrationPanel
         // regex heuristic (compassParsed) keeps working unchanged.
-        if (frame.msgId === 191) _onMagCalProgress(frame.payload);
-        else if (frame.msgId === 192) _onMagCalReport(frame.payload);
+        if (frame.msgId === 191) _onMagCalProgress(_padView(frame.payload, 17));
+        else if (frame.msgId === 192) _onMagCalReport(_padView(frame.payload, 44));
         dispatchFrame(frame, serial.handlers);
       }
     }).catch((e) => { console.error('[Serial] read loop error', e); }).finally(() => {
@@ -198,6 +198,18 @@ function sendSerialFrame(msgId: number, payload: Uint8Array): void {
   if (!serial.conn || !serial.running) return;
   const frame = encodeFrame(msgId, payload, 255, 190, serial.seq++);
   serialWrite(serial.conn, frame).catch((e) => { console.error('[Serial] write error', e); });
+}
+
+// MAVLink 2 zero-trim defense for the in-loop interceptors that read at
+// specific offsets. dispatchFrame() pads via padPayload() before invoking
+// user handlers, but our state-machine intercepts run on the raw payload
+// BEFORE dispatchFrame, so trimmed frames would silently drop without this.
+// Mirrors backend/mavlink_handlers.py:_pad. See protocol_design.md #2.
+function _padView(p: DataView, minBytes: number): DataView {
+  if (p.byteLength >= minBytes) return p;
+  const buf = new Uint8Array(minBytes);
+  buf.set(new Uint8Array(p.buffer, p.byteOffset, p.byteLength));
+  return new DataView(buf.buffer);
 }
 
 function requestStreams(): void {
@@ -261,6 +273,45 @@ export function serialSendCommandLong(
     serial.targetSysId, serial.targetCompId,
     command, 0, p1, p2, p3, p4, p5, p6, p7,
   ));
+}
+
+/**
+ * Gimbal pitch/yaw: wraps the COMMAND_INT (msg 75) path the gimbal manager
+ * handler expects. Mirrors backend cmd_gimbal_pitchyaw at
+ * backend/commands/_hardware.py — same NaN-as-skip semantics for the four
+ * angle/rate params, same flags-as-x bitfield, same instance-as-z (z is the
+ * float slot but the AP handler casts to uint8). See AP_Mount.cpp:363-417.
+ */
+export function serialGimbalPitchYaw(data: {
+  pitch?: number; yaw?: number;
+  pitch_rate?: number; yaw_rate?: number;
+  flags?: number; instance?: number;
+}): void {
+  if (!isSerialConnected()) return;
+  const f = (v: number | undefined): number => (v == null ? NaN : Number(v));
+  const pitch = f(data.pitch);
+  const yaw = f(data.yaw);
+  const pitchRate = f(data.pitch_rate);
+  const yawRate = f(data.yaw_rate);
+  const flags = Number(data.flags ?? 0);
+  const instance = Number(data.instance ?? 0);
+
+  const payload = new Uint8Array(35);
+  const dv = new DataView(payload.buffer);
+  dv.setFloat32(0, pitch, true);
+  dv.setFloat32(4, yaw, true);
+  dv.setFloat32(8, pitchRate, true);
+  dv.setFloat32(12, yawRate, true);
+  dv.setInt32(16, flags | 0, true);     // x: GIMBAL_MANAGER_FLAGS bitfield
+  dv.setInt32(20, 0, true);              // y: unused
+  dv.setFloat32(24, instance, true);     // z: gimbal device id
+  dv.setUint16(28, 1000, true);          // command = MAV_CMD_DO_GIMBAL_MANAGER_PITCHYAW
+  dv.setUint8(30, serial.targetSysId);
+  dv.setUint8(31, serial.targetCompId);
+  dv.setUint8(32, 0);                    // frame (unused for COMMAND_INT)
+  dv.setUint8(33, 0);                    // current
+  dv.setUint8(34, 0);                    // autocontinue
+  sendSerialFrame(75, payload);
 }
 
 /* ── Mission upload state machine (WebSerial direct mode) ───────────────
@@ -336,6 +387,7 @@ export async function serialUploadMission(
 ): Promise<{ ok: boolean; error?: string }> {
   if (!isSerialConnected()) return { ok: false, error: 'Not connected via serial' };
   if (upload?.pending) return { ok: false, error: 'Another upload is in progress' };
+  if (download.pending) return { ok: false, error: 'A mission download is in progress' };
 
   const validation = validateMissionWaypoints(waypoints);
   if (!validation.ok) return validation;
@@ -410,8 +462,8 @@ function _resolveDownload(result: { ok: boolean; error?: string; waypoints?: Way
 }
 
 function _onMissionCountDl(p: DataView): void {
+  // p is pre-padded to ≥4 bytes by the read-loop interceptor.
   if (!download.pending) return;
-  if (p.byteLength < 2) return;
   const count = p.getUint16(0, true);
   download.total = count;
   download.items = new Array(count).fill(null);
@@ -429,8 +481,9 @@ function _onMissionCountDl(p: DataView): void {
 }
 
 function _onMissionItemIntDl(p: DataView): void {
+  // p is pre-padded to ≥37 bytes by the read-loop interceptor (matches
+  // backend handle_mission_item_int's `_pad(p, 37)` at mavlink_handlers.py:406).
   if (!download.pending) return;
-  if (p.byteLength < 37) return;
   // MISSION_ITEM_INT layout (matches decodeMissionItemInt at messages.ts:345
   // and backend handle_mission_item_int at mavlink_handlers.py:402-427).
   const p1 = p.getFloat32(0, true);
@@ -515,7 +568,8 @@ function _resetMagCal(): void {
 }
 
 function _onMagCalProgress(p: DataView): void {
-  if (p.byteLength < 17 || magCal.done) return;
+  // p is pre-padded to ≥17 bytes (matches backend's `_pad(p, 17)`).
+  if (magCal.done) return;
   const pct = p.getUint8(16);
   // Emit only when crossing a new 5% bucket — same filter as backend
   // handle_mag_cal_progress (mavlink_handlers.py:223-226). Prevents 200+
@@ -534,9 +588,9 @@ function _onMagCalProgress(p: DataView): void {
 }
 
 function _onMagCalReport(p: DataView): void {
-  // MAG_CAL_REPORT is 44 bytes; pl=43 is acceptable when autosaved=0 trims
-  // the trailing byte. cal_status is at offset 42 — see backend handler.
-  if (p.byteLength < 43 || magCal.done) return;
+  // p is pre-padded to ≥44 bytes (matches backend's `_pad(p, 44)`).
+  // cal_status is at offset 42 — see backend handler.
+  if (magCal.done) return;
   const calStatus = p.getUint8(42);
   magCal.done = true;
   magCal.pct = -1;
@@ -666,7 +720,7 @@ function _resolveLogList(result: { ok: boolean; error?: string }): void {
 }
 
 function _onLogEntry(p: DataView): void {
-  if (p.byteLength < 14) return;
+  // p is pre-padded to ≥14 bytes by the read-loop interceptor.
   const entry: LogEntryShape = {
     time_utc: p.getUint32(0, true),
     size: p.getUint32(4, true),
@@ -713,7 +767,8 @@ function _finishLogDownload(truncated: boolean): void {
 }
 
 function _onLogData(p: DataView): void {
-  if (p.byteLength < 7) return;
+  // p is pre-padded to ≥7 bytes; the actual data chunk extends beyond and
+  // is clamped to min(count, byteLength-7) below to tolerate trimmed tails.
   const ofs = p.getUint32(0, true);
   const logId = p.getUint16(4, true);
   const count = p.getUint8(6);
