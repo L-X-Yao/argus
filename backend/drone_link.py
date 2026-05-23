@@ -210,6 +210,7 @@ class DroneLink:
             # download would resume in a broken state).
             self.mission._mission_pending = False
             self.mission._fence_pending = False
+            self.mission._rally_pending = False
             self.mission._dl_pending = False
             self.mission._dl_start_time = 0.0
             # Log download in flight: drop the buffer (~100MB possible) and

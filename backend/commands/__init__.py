@@ -37,6 +37,7 @@ from ._helpers import request_streams as request_streams
 from ._helpers import send_fence_item_int as send_fence_item_int
 from ._helpers import send_heartbeat as send_heartbeat
 from ._helpers import send_mission_item_int as send_mission_item_int
+from ._helpers import send_rally_item_int as send_rally_item_int
 from ._mission import (
     cmd_fence_upload,
     cmd_mission_clear,

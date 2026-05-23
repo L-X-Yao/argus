@@ -42,6 +42,20 @@ def send_fence_item_int(link: DroneLink, item: dict) -> None:
     link.send(bm(73, p, link.sq, 38))
 
 
+def send_rally_item_int(link: DroneLink, item: dict) -> None:
+    # MAV_CMD_NAV_RALLY_POINT in mission_type=2. AP_Rally accepts items with
+    # frame=MAV_FRAME_GLOBAL_RELATIVE_ALT (3) so the alt is relative to home.
+    lat7 = int(float(item.get('lat', 0)) * 1e7)
+    lon7 = int(float(item.get('lon', 0)) * 1e7)
+    p = struct.pack('<ffffiifHHBBBBBB',
+                    float(item.get('p1', 0)), float(item.get('p2', 0)), 0.0, 0.0,
+                    lat7, lon7, float(item.get('alt', 0)),
+                    item['seq'], item['cmd'],
+                    link.vehicle.sysid, 1, 3,
+                    0, 1, 2)
+    link.send(bm(73, p, link.sq, 38))
+
+
 def send_mission_item_int(link: DroneLink, wp: dict) -> None:
     frame = 3 if wp['cmd'] in (16, 18, 19, 21, 22, 82) else 2
     lat7 = int(float(wp.get('lat', 0)) * 1e7)

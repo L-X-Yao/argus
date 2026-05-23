@@ -68,6 +68,8 @@ class MissionState:
     _seq_to_wp: dict[int, int] = field(default_factory=dict)
     _fence_items: list[dict] = field(default_factory=list)
     _fence_pending: bool = False
+    _rally_items: list[dict] = field(default_factory=list)
+    _rally_pending: bool = False
     _dl_pending: bool = False
     _dl_total: int = 0
     _dl_items: list = field(default_factory=list)

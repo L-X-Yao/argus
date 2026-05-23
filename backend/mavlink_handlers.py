@@ -447,7 +447,10 @@ def handle_mission_request(p: bytes, pl: int, link: DroneLink) -> None:
     if mission_type == 1 and m._fence_pending:
         if seq < len(m._fence_items):
             cmd_mod.send_fence_item_int(link, m._fence_items[seq])
-    elif m._mission_pending:
+    elif mission_type == 2 and m._rally_pending:
+        if seq < len(m._rally_items):
+            cmd_mod.send_rally_item_int(link, m._rally_items[seq])
+    elif mission_type == 0 and m._mission_pending:
         if seq < len(m._mission_items):
             cmd_mod.send_mission_item_int(link, m._mission_items[seq])
 
@@ -459,13 +462,18 @@ def handle_mission_ack(p: bytes, pl: int, link: DroneLink) -> None:
         return
     p = _pad(p, 4)
     mtype = p[2]
-    mission_type = p[3] if pl >= 4 else 0
+    mission_type = p[3]
     m = link.mission
     if mission_type == 1 and m._fence_pending:
         m._fence_pending = False
         link.add_event((lt('fence_ack_ok', link.locale) if mtype == 0 else lt('fence_ack_fail', link.locale) % mtype),
                        'fence_ack_ok' if mtype == 0 else 'fence_ack_fail')
-    elif m._mission_pending:
+    elif mission_type == 2 and m._rally_pending:
+        m._rally_pending = False
+        # No fence_ack_ok/fail-equivalent for rally; reuse mission text.
+        link.add_event((lt('mission_ack_ok', link.locale) if mtype == 0 else lt('mission_ack_fail', link.locale) % mtype),
+                       'mission_ack_ok' if mtype == 0 else 'mission_ack_fail')
+    elif mission_type == 0 and m._mission_pending:
         m._mission_pending = False
         link.add_event((lt('mission_ack_ok', link.locale) if mtype == 0 else lt('mission_ack_fail', link.locale) % mtype),
                        'mission_ack_ok' if mtype == 0 else 'mission_ack_fail')

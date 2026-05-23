@@ -190,14 +190,24 @@ def _upload_mission(link: DroneLink, waypoints: list, takeoff_alt: float) -> Non
 
 
 def _upload_rally(link: DroneLink, points: list) -> None:
-    count = len(points)
-    link.send(bm(44, struct.pack('<HBB', count, link.vehicle.sysid, 1) + bytes([2]), link.sq, 221))
+    # AP_Mission requires the GCS to follow the proper request/response
+    # handshake: COUNT -> wait for REQUEST -> ITEM -> ... -> ACK. The previous
+    # implementation blasted all items immediately after COUNT, which AP
+    # rejected as MAV_MISSION_INVALID_SEQUENCE. Stash items on the link and
+    # let handle_mission_request stream them out one at a time.
+    items: list[dict] = []
     for i, pt in enumerate(points):
-        lat7 = int(float(pt.get('lat', 0)) * 1e7)
-        lon7 = int(float(pt.get('lon', 0)) * 1e7)
-        alt = float(pt.get('alt', 100))
-        p = struct.pack('<ffffiifHHBBBBBB',
-                        0.0, 0.0, 0.0, 0.0, lat7, lon7, alt,
-                        i, 5100, link.vehicle.sysid, 1, 3, 0, 1, 2)
-        link.send(bm(73, p, link.sq, 38))
+        items.append({
+            'seq': i,
+            'cmd': 5100,             # MAV_CMD_NAV_RALLY_POINT
+            'lat': float(pt.get('lat', 0)),
+            'lon': float(pt.get('lon', 0)),
+            'alt': float(pt.get('alt', 100)),
+            'p1': 0, 'p2': 0,
+        })
+    m = link.mission
+    m._rally_items = items
+    m._rally_pending = True
+    count = len(items)
+    link.send(bm(44, struct.pack('<HBB', count, link.vehicle.sysid, 1) + bytes([2]), link.sq, 221))
     link.add_event(lt('rally_uploaded', link.locale) % count, 'rally_uploaded')
