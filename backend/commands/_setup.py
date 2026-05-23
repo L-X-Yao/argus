@@ -59,6 +59,13 @@ def cmd_cal_accel_next(link: DroneLink, param, data: dict):
 
 
 def cmd_cal_cancel(link: DroneLink, param, data: dict):
+    # MAV_CMD_DO_CANCEL_MAG_CAL (42426) only cancels an in-progress compass
+    # cal. ArduPilot has no MAVLink command to abort an accel calibration —
+    # the FC stays in WAITING_FOR_ORIENTATION until either the next ACK
+    # arrives or the FC reboots (AP_AccelCal::cancel() is internal-only). For
+    # gyro/level/baro the cmd 241 calibration completes within ~1 sec so
+    # cancellation isn't really meaningful. The frontend still resets its UI
+    # state on cancel, which is what the user sees and expects.
     link.add_event(lt('cal_cancel', link.locale), 'cal_cancel')
     send_cmd(link, 42426, p1=0)
 
