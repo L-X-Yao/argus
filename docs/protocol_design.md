@@ -233,36 +233,23 @@ tests fail loud in CI exactly when they should.
 
 ---
 
-## Known-deferred work
+## Current feature & verification status
 
-Listed once so it doesn't have to be re-discovered:
+See **`docs/FEATURE_CHECKLIST.md`** for the canonical per-feature status
+(✅ real-hardware verified / ✅ᵗ test-verified / ⚠️ partial / 🔒 blocked /
+❌ broken or not-implemented). It tracks ~500 numbered features and
+gets updated as the codebase changes. Don't duplicate that table here —
+this document is for **design rationale**, not status.
 
-- **PX4 production support** — the frontend `src/lib/fc/` adapter is
-  scaffolded with mode tables but no production code imports it. Backend
-  doesn't read the HEARTBEAT.autopilot byte. Calibration, mode-set,
-  takeoff, RTL all use ArduPilot-private semantics. Estimated week-scale
-  work to wire end-to-end. Don't promise it's "almost done".
+The orphan / deferred items also live in test allowlists with explanatory
+comments:
+- Frontend → backend command orphans (NTRIP etc.): `tests/test_contract_commands.py::KNOWN_FRONTEND_ORPHANS`
+- Backend dispatch entries with no frontend caller: `tests/test_contract_commands.py::KNOWN_BACKEND_ORPHANS`
+- Locale keys defined but unreferenced: `tests/test_contract_locale.py::KNOWN_ORPHAN_LOCALE_KEYS`
 
-- **`tests/test_integration.py` failures (32)** — all `TimeoutError`. These
-  look like fixture/server-startup infrastructure issues, not code bugs.
-  Not blocking; needs a focused triage pass.
+## Maintenance rule for this document
 
-- **NTRIP feature** — Svelte panel calls `sendCommand('ntrip_start')` /
-  `sendCommand('ntrip_stop')` but neither exists in backend dispatch.
-  Product decision: implement or delete. Listed in
-  `tests/test_contract_commands.py::KNOWN_FRONTEND_ORPHANS`.
-
-- **5 backend dispatch entries with no frontend caller** (`gimbal_rate`,
-  `inject_rtcm`, `param_load`, `rally_upload`, `set_vtype`). Product
-  decision: delete or wire up. Listed in
-  `tests/test_contract_commands.py::KNOWN_BACKEND_ORPHANS`.
-
-- **80 locale keys with no source reference** — staged-but-removed
-  features (Fft, Adsb panels, etc.). Snapshotted in
-  `tests/test_contract_locale.py::KNOWN_ORPHAN_LOCALE_KEYS`.
-
-- **Several Svelte panels** — F-17 (param panels clobber edits during
-  streaming), F-36 (mission upload uses 3-sec hard timer instead of
-  ack-driven state), F-39 (ConnectionForm dual-transport race). All
-  documented in `docs/audits/audit_frontend.md` as needing >10-line
-  refactors.
+When you legitimately remove a load-bearing oddity (i.e., the upstream
+constraint no longer applies), delete its section here **in the same
+commit**. Otherwise this file rots into "looks wrong, here's why we
+*used to* keep it that way" — actively misleading.

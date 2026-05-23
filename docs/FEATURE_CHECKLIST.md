@@ -1,8 +1,10 @@
 # Argus GCS v3.4 — 功能清单与验证状态
 
-> 生成日期: 2026-05-23
-> 飞控: Plkj-Industrial, ArduPilot V4.6.3, 固定翼
-> 测试方式: USB 串口 (/dev/ttyACM0) + Playwright 浏览器自动化 + pytest/vitest
+> **本文档是项目内 feature 验证状态的 single source of truth。** 任何关于"X 功能是否可用 / 是否真机验证过 / 已知问题"的判断都以本文件为准。修了某项功能就同步更新对应行。  
+> 生成日期: 2026-05-23（持续更新）  
+> 飞控: Plkj-Industrial, ArduPilot V4.6.3, 固定翼  
+> 测试方式: USB 串口 (/dev/ttyACM0) + Playwright 浏览器自动化 + pytest/vitest  
+> 相关文档：`docs/protocol_design.md`（don't-refactor 设计理由）/ `docs/audits/`（历史 audit 报告归档）/ `CLAUDE.md`（协议代码纪律）
 
 ## 状态标记说明
 
