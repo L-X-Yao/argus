@@ -172,6 +172,8 @@ def handle_command_ack(p: bytes, pl: int, link: DroneLink) -> None:
     result_text = (_ACK_RESULTS_EN if en else _ACK_RESULTS_ZH).get(result, 'unknown(%d)' % result if en else '未知(%d)' % result)
     if result == 4:
         return
+    if result == 0 and cmd_id in (241, 42424, 42425, 42426):
+        return
     etype = 'cmd_ack_ok' if result == 0 else 'cmd_ack_fail'
     link.add_event(lt('cmd_ack', link.locale) % (cmd_name, result_text), etype)
 
