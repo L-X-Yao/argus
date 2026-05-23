@@ -1,7 +1,7 @@
 import type { WSMessage } from './types';
 import { app, updateState, addEvent, setWsConnected, addToast, loadDownloadedMission } from './stores.svelte';
 import { handleParamBatch, handleParamsComplete } from './paramStore.svelte';
-import { setLogList, completeDownload, updateDownloadProgress } from './logStore.svelte';
+import { setLogList, completeDownload, updateDownloadProgress, appendLogChunk } from './logStore.svelte';
 import { updateInspector, appendConsole } from './inspectorStore.svelte';
 import { saveFlightRecord } from './flightDb';
 import { getWsUrl } from './backend';
@@ -94,6 +94,9 @@ export function connectWs(): void {
           break;
         case 'log_progress':
           updateDownloadProgress(msg.received, msg.total);
+          break;
+        case 'log_chunk':
+          appendLogChunk(msg.id, msg.ofs, msg.data);
           break;
         case 'log_complete':
           completeDownload(msg.id, msg.data, msg.size);

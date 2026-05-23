@@ -94,11 +94,17 @@ def handle_global_position_int(p: bytes, pl: int, link: DroneLink) -> None:
     a.gs = (a.vx ** 2 + a.vy ** 2) ** 0.5
     if pl >= 28:
         a.hdg = struct.unpack_from('<H', p, 26)[0] / 100.0
-    if a.home_lat == 0 and a.home_lon == 0 and abs(a.lat) > 0.001:
+    # Only auto-infer home on first valid fix. We require a non-trivial fix
+    # (>~111 m from null island) to avoid latching the (0,0) startup placeholder
+    # the FC emits before GPS lock. An equator-based real home is fine because
+    # the FC will also emit HOME_POSITION (242) once home is set, which sets
+    # _home_set unconditionally.
+    if not a._home_set and (abs(a.lat) > 0.001 or abs(a.lon) > 0.001):
         a.home_lat = a.lat
         a.home_lon = a.lon
+        a._home_set = True
         link.add_event(lt('home_set', link.locale) % (a.lat, a.lon), 'home_set')
-    if a.home_lat != 0:
+    if a._home_set:
         dlat = (a.lat - a.home_lat) * 111320
         dlon = (a.lon - a.home_lon) * 111320 * math.cos(math.radians(a.lat))
         a.dist_home = (dlat ** 2 + dlon ** 2) ** 0.5
@@ -157,9 +163,12 @@ def handle_home_position(p: bytes, pl: int, link: DroneLink) -> None:
     p = _pad(p, 20)
     hlat = struct.unpack_from('<i', p, 0)[0] / 1e7
     hlon = struct.unpack_from('<i', p, 4)[0] / 1e7
-    if abs(hlat) > 0.001:
-        link.attitude.home_lat = hlat
-        link.attitude.home_lon = hlon
+    # FC only sends HOME_POSITION when home is actually set
+    # (GCS_Common.cpp:3064 `if (!AP::ahrs().home_is_set()) return`),
+    # so trust it even for equator coordinates.
+    link.attitude.home_lat = hlat
+    link.attitude.home_lon = hlon
+    link.attitude._home_set = True
 
 
 def handle_mission_item_reached(p: bytes, pl: int, link: DroneLink) -> None:
@@ -570,6 +579,43 @@ def handle_serial_control(p: bytes, pl: int, link: DroneLink) -> None:
             link._console_buf = link._console_buf[-250:]
 
 
+_LOG_STREAM_CHUNK_SIZE = 65536  # 64KB chunks pushed to the frontend during download
+
+
+def _emit_log_chunks(lg, log_id: int) -> None:
+    """Emit any complete log_stream_chunk messages whose contents are now
+    fully present in lg._log_download_data (between lg._log_emit_ofs and
+    lg._log_download_ofs). Each chunk goes out as a small base64 message
+    rather than buffering the whole log for a single end-of-download blob."""
+    import base64
+    while lg._log_download_ofs - lg._log_emit_ofs >= _LOG_STREAM_CHUNK_SIZE:
+        start = lg._log_emit_ofs
+        endc = start + _LOG_STREAM_CHUNK_SIZE
+        b64 = base64.b64encode(bytes(lg._log_download_data[start:endc])).decode('ascii')
+        lg._log_messages.append({'type': 'log_chunk', 'id': log_id, 'ofs': start, 'data': b64})
+        lg._log_emit_ofs = endc
+
+
+def _finalize_log_download(lg, log_id: int, truncated: bool, link: DroneLink) -> None:
+    """Emit any trailing partial chunk, then a final log_complete message
+    (no data — the frontend has been accumulating chunks). Free the bytearray."""
+    import base64
+    final_size = lg._log_download_ofs
+    if lg._log_emit_ofs < final_size:
+        b64 = base64.b64encode(bytes(lg._log_download_data[lg._log_emit_ofs:final_size])).decode('ascii')
+        lg._log_messages.append({'type': 'log_chunk', 'id': log_id, 'ofs': lg._log_emit_ofs, 'data': b64})
+        lg._log_emit_ofs = final_size
+    lg._log_messages.append({
+        'type': 'log_complete', 'id': log_id, 'size': final_size, 'truncated': truncated,
+    })
+    link.add_event(lt('log_dl_done', link.locale) % (log_id, final_size // 1024), 'log_dl_done')
+    lg._log_download_id = -1
+    lg._log_download_data = bytearray()
+    lg._log_emit_ofs = 0
+    if len(lg._log_messages) > 500:
+        lg._log_messages = lg._log_messages[-200:]
+
+
 def handle_log_data(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 7:
         return
@@ -583,15 +629,7 @@ def handle_log_data(p: bytes, pl: int, link: DroneLink) -> None:
     # requested forever in a tight loop (LOG_REQUEST_DATA never receives data
     # because the source log is gone or unreadable).
     if count == 0:
-        link.add_event(lt('log_dl_done', link.locale) % (log_id, ofs // 1024), 'log_dl_done')
-        lg._log_messages.append({
-            'type': 'log_complete',
-            'id': log_id,
-            'data': '',
-            'size': ofs,
-            'truncated': True,
-        })
-        lg._log_download_id = -1
+        _finalize_log_download(lg, log_id, truncated=True, link=link)
         return
     data = p[7:7 + count]
     end = ofs + count
@@ -601,6 +639,10 @@ def handle_log_data(p: bytes, pl: int, link: DroneLink) -> None:
     # and trigger re-requesting already-received bytes (auditor finding C2).
     lg._log_download_ofs = max(lg._log_download_ofs, end)
     end = lg._log_download_ofs
+    # Stream out fully-received 64KB chunks. Avoids the 5× memory peak that
+    # would happen if we kept the whole log in memory and base64-encoded it
+    # in one shot at the end (auditor finding P1).
+    _emit_log_chunks(lg, log_id)
     if not hasattr(link, '_log_progress_counter'):
         link._log_progress_counter = 0
     link._log_progress_counter += 1
@@ -614,16 +656,7 @@ def handle_log_data(p: bytes, pl: int, link: DroneLink) -> None:
         if len(lg._log_messages) > 500:
             lg._log_messages = lg._log_messages[-200:]
     if end >= lg._log_download_size:
-        import base64
-        b64 = base64.b64encode(bytes(lg._log_download_data)).decode('ascii')
-        lg._log_messages.append({
-            'type': 'log_complete',
-            'id': log_id,
-            'data': b64,
-            'size': lg._log_download_size,
-        })
-        link.add_event(lt('log_dl_done', link.locale) % (log_id, lg._log_download_size // 1024), 'log_dl_done')
-        lg._log_download_id = -1
+        _finalize_log_download(lg, log_id, truncated=False, link=link)
     else:
         from .pllink_proto import bm
         remaining = lg._log_download_size - end

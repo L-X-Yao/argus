@@ -150,11 +150,22 @@ export interface LogProgressMsg {
   total: number;
 }
 
+export interface LogChunkMsg {
+  type: 'log_chunk';
+  id: number;
+  ofs: number;
+  data: string;  // base64-encoded slice of the log
+}
+
 export interface LogCompleteMsg {
   type: 'log_complete';
   id: number;
-  data: string;
   size: number;
+  /** Optional legacy field — the backend used to send the full base64
+   * blob here. Now sent in log_chunk messages; absent on log_complete. */
+  data?: string;
+  /** True if the FC signalled EOF mid-stream (count=0). */
+  truncated?: boolean;
 }
 
 export interface InspectorMsg {
@@ -170,7 +181,7 @@ export interface ConsoleOutputMsg {
 export type WSMessage = DroneState | DroneEvent | ConnectResult
   | ParamBatchMsg | ParamsCompleteMsg
   | MissionDownloadedMsg
-  | LogListMsg | LogProgressMsg | LogCompleteMsg
+  | LogListMsg | LogProgressMsg | LogChunkMsg | LogCompleteMsg
   | InspectorMsg | ConsoleOutputMsg;
 
 export const defaultState: DroneState = {

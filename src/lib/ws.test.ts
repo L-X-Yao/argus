@@ -16,6 +16,7 @@ vi.mock('./logStore.svelte', () => ({
   setLogList: vi.fn(),
   completeDownload: vi.fn(),
   updateDownloadProgress: vi.fn(),
+  appendLogChunk: vi.fn(),
 }));
 vi.mock('./inspectorStore.svelte', () => ({
   updateInspector: vi.fn(),
@@ -169,6 +170,12 @@ describe('message handling', () => {
     await fire({ type: 'log_complete', id: 5, data: 'base64data', size: 1024 });
     const { completeDownload } = await import('./logStore.svelte');
     expect(completeDownload).toHaveBeenCalledWith(5, 'base64data', 1024);
+  });
+
+  it('dispatches log_chunk to appendLogChunk', async () => {
+    await fire({ type: 'log_chunk', id: 5, ofs: 0, data: 'YWJj' });
+    const { appendLogChunk } = await import('./logStore.svelte');
+    expect(appendLogChunk).toHaveBeenCalledWith(5, 0, 'YWJj');
   });
 
   it('dispatches inspector', async () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { logState, setLogList, startDownload, updateDownloadProgress, cancelDownload, completeDownload } from './logStore.svelte';
+import { logState, setLogList, startDownload, updateDownloadProgress, cancelDownload, completeDownload, appendLogChunk } from './logStore.svelte';
 
 describe('logStore', () => {
   it('setLogList replaces list', () => {
@@ -120,5 +120,29 @@ describe('completeDownload', () => {
     startDownload(1, 100);
     completeDownload(1, btoa('x'), 1);
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock-url');
+  });
+
+  it('streaming path: appendLogChunk + completeDownload reassembles', () => {
+    startDownload(99, 6);
+    appendLogChunk(99, 0, btoa('abc'));
+    appendLogChunk(99, 3, btoa('def'));
+    // Streaming completion has no inline data
+    completeDownload(99, undefined, 6);
+    expect(logState.downloading).toBe(false);
+    expect(logState._chunks.length).toBe(0);
+  });
+
+  it('appendLogChunk ignores chunks for other downloads', () => {
+    startDownload(99, 6);
+    appendLogChunk(7, 0, btoa('xxx'));  // wrong id — should be dropped
+    expect(logState._chunks.length).toBe(0);
+  });
+
+  it('cancelDownload clears accumulated chunks', () => {
+    startDownload(99, 100);
+    appendLogChunk(99, 0, btoa('abcd'));
+    expect(logState._chunks.length).toBe(1);
+    cancelDownload();
+    expect(logState._chunks.length).toBe(0);
   });
 });

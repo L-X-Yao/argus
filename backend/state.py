@@ -22,6 +22,11 @@ class AttitudeState:
     hdg: float = 0.0
     home_lat: float = 0.0
     home_lon: float = 0.0
+    # True once home has been set from FC (either inferred from first position
+    # fix or received via HOME_POSITION msg 242). Using a flag rather than
+    # checking home_lat != 0 ensures equator-based homes (lat == 0 within
+    # ~111 m) are not treated as "unset".
+    _home_set: bool = False
     dist_home: float = 0.0
     _prev_pos: tuple | None = None
 
@@ -118,6 +123,11 @@ class LogState:
     _log_download_data: bytearray = field(default_factory=bytearray)
     _log_download_size: int = 0
     _log_download_ofs: int = 0
+    # Offset already streamed to the frontend as log_chunk messages. Lets
+    # handle_log_data emit fresh chunks of CHUNK_SIZE bytes as the bytearray
+    # high-water mark grows, instead of waiting for the whole log and
+    # base64-encoding it in one shot (peak memory ~5× the log size).
+    _log_emit_ofs: int = 0
     _log_messages: list[dict] = field(default_factory=list)
 
 

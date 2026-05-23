@@ -49,6 +49,12 @@ def cmd_mission_upload(link: DroneLink, param, data: dict):
         return {'ok': False, 'error': lt('err_no_wp', link.locale)}
     if len(wps) > 500:
         return {'ok': False, 'error': 'Mission too large (max 500 WP)'}
+    # ArduPlane rejects MAV_CMD_NAV_SPLINE_WAYPOINT with
+    # MAV_MISSION_UNSUPPORTED (AP_Mission.cpp:1153-1158); the partial mission
+    # would be discarded. Reject the whole upload here so the user gets a
+    # clear error rather than a confusing FC ack failure.
+    if link.is_plane() and any(wp.get('type') == 'spline' for wp in wps):
+        return {'ok': False, 'error': 'Spline waypoints are not supported on ArduPlane'}
     for wp in wps:
         try:
             lat, lon = float(wp.get('lat', 0)), float(wp.get('lon', 0))

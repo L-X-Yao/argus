@@ -43,6 +43,11 @@ def cmd_takeoff(link: DroneLink, param, data: dict):
     alt = float(data.get('alt', 30))
     if not 1 <= alt <= 1000:
         return {'ok': False, 'error': 'Takeoff altitude must be 1-1000m'}
+    # QuadPlane.do_user_takeoff (quadplane.cpp:3948) refuses MAV_CMD_NAV_TAKEOFF
+    # unless control_mode == mode_guided. Switch to GUIDED (15) for Plane first;
+    # Copter's takeoff cmd handler doesn't have this strict requirement.
+    if link.is_plane():
+        send_set_mode(link, 15)
     link.add_event(lt('takeoff', link.locale) % alt, 'takeoff')
     send_cmd(link, 22, p7=alt)
 
