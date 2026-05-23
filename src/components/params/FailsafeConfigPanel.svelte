@@ -44,8 +44,13 @@
   let ekfThresh   = $state(0.8);
 
   /* ── Load from params on mount ── */
+  // Audit F-17: a bare $effect over paramsAvailable + getParam re-fired on
+  // every PARAM_VALUE arriving during streaming, clobbering any edit the
+  // operator had already made. Only seed values once on first load.
+  let _loaded = $state(false);
   $effect(() => {
-    if (!paramsAvailable) return;
+    if (!paramsAvailable || _loaded) return;
+    _loaded = true;
     battEnable  = getParam('FS_BATT_ENABLE', 0);
     // Audit F-18: was reading FS_BATT_ENABLE for both — the action selector
     // displayed the same value as the enable toggle. Correct param is
