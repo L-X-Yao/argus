@@ -92,8 +92,9 @@ describe('CRC_EXTRA table', () => {
     expect(CRC_EXTRA[0]).toBe(50);
   });
 
-  it('has entry for COMMAND_LONG (76) = 143', () => {
-    expect(CRC_EXTRA[76]).toBe(143);
+  it('has entry for COMMAND_LONG (76) = 152', () => {
+    // 152 is COMMAND_LONG. 143 is COMMAND_ACK (77).
+    expect(CRC_EXTRA[76]).toBe(152);
   });
 
   it('has entry for STATUSTEXT (253) = 83', () => {
@@ -368,21 +369,28 @@ describe('message decoders', () => {
   });
 
   it('decodeVfrHud reads float and int fields', () => {
+    // VFR_HUD (74) wire layout, MAVLink 2 (sorted by field size, largest first):
+    //   0..3:  airspeed (float)
+    //   4..7:  groundspeed (float)
+    //   8..11: alt (float)
+    //   12..15: climb (float)
+    //   16..17: heading (int16)
+    //   18..19: throttle (uint16)
     const buf = new Uint8Array(20);
     const dv = new DataView(buf.buffer);
-    dv.setFloat32(0, 15.5, true);   // airspeed
-    dv.setFloat32(4, 12.3, true);   // groundspeed
-    dv.setInt16(8, 270, true);      // heading
-    dv.setUint16(10, 45, true);     // throttle
-    dv.setFloat32(12, 100.5, true); // alt
-    dv.setFloat32(16, 2.5, true);   // climb
+    dv.setFloat32(0, 15.5, true);
+    dv.setFloat32(4, 12.3, true);
+    dv.setFloat32(8, 100.5, true);
+    dv.setFloat32(12, 2.5, true);
+    dv.setInt16(16, 270, true);
+    dv.setUint16(18, 45, true);
     const vfr = decodeVfrHud(dv);
     expect(vfr.airspeed).toBeCloseTo(15.5, 1);
     expect(vfr.groundspeed).toBeCloseTo(12.3, 1);
-    expect(vfr.heading).toBe(270);
-    expect(vfr.throttle).toBe(45);
     expect(vfr.alt).toBeCloseTo(100.5, 1);
     expect(vfr.climb).toBeCloseTo(2.5, 1);
+    expect(vfr.heading).toBe(270);
+    expect(vfr.throttle).toBe(45);
   });
 
   it('decodeCommandAck reads command and result', () => {
@@ -409,14 +417,20 @@ describe('message decoders', () => {
   });
 
   it('decodeParamValue reads param ID string and numeric fields', () => {
+    // PARAM_VALUE (22) wire layout, MAVLink 2 (sorted by field size):
+    //   0..3:   param_value (float)
+    //   4..5:   param_count (uint16)
+    //   6..7:   param_index (uint16)
+    //   8..23:  param_id (char[16])
+    //   24:     param_type (uint8)
     const buf = new Uint8Array(25);
     const dv = new DataView(buf.buffer);
-    dv.setFloat32(0, 42.5, true); // paramValue
+    dv.setFloat32(0, 42.5, true);
+    dv.setUint16(4, 1024, true);
+    dv.setUint16(6, 7, true);
     const nameBytes = new TextEncoder().encode('BATT_CAPACITY');
-    buf.set(nameBytes, 4);
-    dv.setUint16(20, 1024, true); // paramCount
-    dv.setUint16(22, 7, true);    // paramIndex
-    dv.setUint8(24, 9);           // paramType (REAL32)
+    buf.set(nameBytes, 8);
+    dv.setUint8(24, 9);
     const pv = decodeParamValue(dv);
     expect(pv.paramId).toBe('BATT_CAPACITY');
     expect(pv.paramValue).toBeCloseTo(42.5, 1);
@@ -464,8 +478,12 @@ describe('message decoders', () => {
   });
 
   it('decodeMissionAck reads type', () => {
-    const buf = new Uint8Array(1);
-    buf[0] = 0; // MAV_MISSION_ACCEPTED
+    // MISSION_ACK (47) — all 1-byte fields, declared order:
+    //   0: target_system, 1: target_component, 2: type
+    const buf = new Uint8Array(3);
+    buf[0] = 1; // target_system
+    buf[1] = 1; // target_component
+    buf[2] = 0; // MAV_MISSION_ACCEPTED
     expect(decodeMissionAck(new DataView(buf.buffer)).type).toBe(0);
   });
 
