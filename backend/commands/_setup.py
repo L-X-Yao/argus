@@ -45,10 +45,16 @@ def cmd_cal_baro(link: DroneLink, param, data: dict):
 
 
 def cmd_cal_accel_next(link: DroneLink, param, data: dict):
-    # ArduPilot's AP_AccelCal advances orientation only when it receives a
-    # COMMAND_ACK whose `command` field equals MAV_CMD_ACCELCAL_VEHICLE_POS
-    # (42429). A generic ACK is ignored — see AccelCal::handle_command_ack.
-    payload = struct.pack('<HB', 42429, 0)
+    # ArduPilot's AP_AccelCal::handle_command_ack (libraries/AP_AccelCal/AP_AccelCal.cpp)
+    # has surprising semantics — the ACK fields are NOT a normal command/result
+    # acknowledgement:
+    #   if (packet.command > 6)                              return;  // not MAV_CMD code!
+    #   if (packet.result != MAV_RESULT_TEMPORARILY_REJECTED) return;  // result MUST be 1
+    #   if (_sysid != src_sysid || _compid != src_compid)    return;  // sender match
+    # QGC sends command=0, result=1. MAVProxy sends command=1..6 (current pose),
+    # result=1. We mirror QGC. sysid/compid match what cmd_cal_accel used to
+    # start the cal (bm() defaults: sysid=255, compid=1).
+    payload = struct.pack('<HB', 0, 1)
     link.send(bm(77, payload, link.sq, 143))
 
 

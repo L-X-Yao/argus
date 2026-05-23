@@ -32,12 +32,15 @@
     keywords: string[];
   }
 
+  // Order matches ArduPilot's actual sequence (AP_AccelCal): level, left,
+  // right, nose-down, nose-up, back. A 3-column grid then lays out row-by-row
+  // in the same order ArduPilot prompts the user.
   const accelOrients: OrientDef[] = [
     { id: 'level',     label: 'cal.orientLevel',    hint: 'cal.hintLevel',    img: `${API_BASE}/images/cal/VehicleDown.png`,       keywords: [] },
-    { id: 'nose_up',   label: 'cal.orientNoseUp',   hint: 'cal.hintNoseUp',   img: `${API_BASE}/images/cal/VehicleTailDown.png`,   keywords: [] },
-    { id: 'nose_down', label: 'cal.orientNoseDown',  hint: 'cal.hintNoseDown',  img: `${API_BASE}/images/cal/VehicleNoseDown.png`,   keywords: [] },
     { id: 'left',      label: 'cal.orientLeft',     hint: 'cal.hintLeft',     img: `${API_BASE}/images/cal/VehicleLeft.png`,       keywords: [] },
     { id: 'right',     label: 'cal.orientRight',    hint: 'cal.hintRight',    img: `${API_BASE}/images/cal/VehicleRight.png`,      keywords: [] },
+    { id: 'nose_down', label: 'cal.orientNoseDown', hint: 'cal.hintNoseDown', img: `${API_BASE}/images/cal/VehicleNoseDown.png`,   keywords: [] },
+    { id: 'nose_up',   label: 'cal.orientNoseUp',   hint: 'cal.hintNoseUp',   img: `${API_BASE}/images/cal/VehicleTailDown.png`,   keywords: [] },
     { id: 'back',      label: 'cal.orientBack',     hint: 'cal.hintBack',     img: `${API_BASE}/images/cal/VehicleUpsideDown.png`, keywords: [] },
   ];
 
