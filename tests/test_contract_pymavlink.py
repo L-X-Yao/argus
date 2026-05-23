@@ -421,12 +421,29 @@ class TestCrcExtraMatchesPymavlink:
     what pymavlink computes from the canonical XML definition. A mismatch
     means our table is wrong and the parser will reject valid frames."""
 
-    def test_all_known_crc_extras(self):
+    def test_backend_crc_extra(self):
         from backend.drone_link import _CRC_EXTRA
-        # pymavlink stores crc_extra in the message class's `crc_extra` attribute
+        self._check_table('backend.drone_link._CRC_EXTRA', _CRC_EXTRA)
+
+    def test_frontend_crc_extra(self):
+        """Parse src/lib/mavlink/crc.ts and verify it against pymavlink. The
+        frontend codec has its own copy of CRC_EXTRA — must stay in sync."""
+        import re
+        from pathlib import Path
+        ts_path = Path(__file__).resolve().parent.parent / 'src' / 'lib' / 'mavlink' / 'crc.ts'
+        src = ts_path.read_text(encoding='utf-8')
+        # match lines like "  76: 152,    // COMMAND_LONG"
+        entries: dict[int, int] = {}
+        for m in re.finditer(r'^\s*(\d+):\s*(\d+)\s*,', src, re.MULTILINE):
+            entries[int(m.group(1))] = int(m.group(2))
+        assert len(entries) >= 30, f'Frontend CRC_EXTRA parser found only {len(entries)} entries'
+        self._check_table('src/lib/mavlink/crc.ts CRC_EXTRA', entries)
+
+    @staticmethod
+    def _check_table(name: str, table: dict[int, int]) -> None:
         mismatches: list[str] = []
         unknown: list[int] = []
-        for mid, our_value in _CRC_EXTRA.items():
+        for mid, our_value in table.items():
             cls = mavlink.mavlink_map.get(mid)
             if cls is None:
                 unknown.append(mid)
@@ -435,8 +452,6 @@ class TestCrcExtraMatchesPymavlink:
                 mismatches.append(
                     f'  msg {mid} ({cls.msgname}): ours={our_value} canonical={cls.crc_extra}'
                 )
-        assert not mismatches, '\nCRC_EXTRA mismatches:\n' + '\n'.join(mismatches)
-        # Unknown ids are informational; only fail if a HUGE number show up
-        # since some ardupilotmega-only ids may be missing from base common.xml
-        # for older pymavlink versions.
-        assert len(unknown) < 5, f'Many msg ids unknown to pymavlink: {unknown}'
+        assert not mismatches, f'\n{name} mismatches:\n' + '\n'.join(mismatches)
+        # Unknown ids are informational; fail only if a huge number show up.
+        assert len(unknown) < 5, f'{name}: many ids unknown to pymavlink: {unknown}'
