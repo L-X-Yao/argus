@@ -61,120 +61,142 @@
 
   let selected = $state<CalType>('compass');
   let calibrating = $state(false);
+  // HH:MM:SS marker set when calibration starts. Empty string = no active run.
+  // Filtering by timestamp (instead of a length cursor) survives backend events-array trim.
+  let calRunStartTime = $state('');
 
-  /* Accel step tracking */
-  let accelSteps = $state<Record<AccelStep, StepStatus>>({
-    level: 'pending', nose_up: 'pending', nose_down: 'pending',
-    left: 'pending', right: 'pending', back: 'pending',
-  });
-  let accelActive = $state<AccelStep | null>(null);
-
-  function resetAccelSteps() {
-    accelSteps = {
-      level: 'pending', nose_up: 'pending', nose_down: 'pending',
-      left: 'pending', right: 'pending', back: 'pending',
-    };
-    accelActive = null;
-  }
-
-  /* Compass rotation tracking (0-100) */
-  let compassProgress = $state(0);
-  let compassMsgCount = $state(0);
-
-  /* ── Event filtering ── */
   const calPattern = /校准|calibrat|cal |gyro|compass|accel|baro|level|place|rotate|orientation|complete|success|完成|成功|失败|failed|progress/i;
 
+  function eventInRun(ev: { time: string; text: string }): boolean {
+    if (!calRunStartTime) return false;
+    if (ev.time < calRunStartTime) return false;
+    if (!calPattern.test(ev.text)) return false;
+    if (/^指令应答:|^Command:/i.test(ev.text)) return false;
+    return true;
+  }
+
+  /* Display: last 20 cal-pattern events for the message log */
   let calEvents = $derived(
     app.events.filter(e => calPattern.test(e.text)).slice(-20)
   );
 
-  /* Track position in source app.events to detect new events */
-  let lastEventTotal = $state(0);
+  /* ── Compass: pure-derived progress/done/failed ── */
+  let compassParsed = $derived.by(() => {
+    let pct = 0, done = false, failed = false;
+    if (selected !== 'compass') return { pct, done, failed };
+    for (const ev of app.events) {
+      if (!eventInRun(ev)) continue;
+      const m = ev.text.match(/(\d+)%/);
+      if (m) {
+        pct = Math.max(pct, parseInt(m[1]));
+      } else if (/complete|完成|calibrated/i.test(ev.text)) {
+        done = true;
+      }
+      if (/failed|失败/i.test(ev.text)) failed = true;
+    }
+    return { pct, done, failed };
+  });
 
-  /* Parse accel/compass progress from events */
+  let compassProgress = $derived(
+    compassParsed.done ? 100 : Math.min(95, compassParsed.pct)
+  );
+
+  /* ── Accel: pure-derived per-orientation status ── */
+  const EMPTY_STEPS: Record<AccelStep, StepStatus> = {
+    level: 'pending', nose_up: 'pending', nose_down: 'pending',
+    left: 'pending', right: 'pending', back: 'pending',
+  };
+
+  let accelParsed = $derived.by(() => {
+    const steps: Record<AccelStep, StepStatus> = { ...EMPTY_STEPS };
+    let active: AccelStep | null = null;
+    let complete = false;
+    let failed = false;
+    if (selected !== 'accel') return { steps, active, complete, failed };
+    for (const ev of app.events) {
+      if (!eventInRun(ev)) continue;
+      const txt = ev.text;
+      const orient = detectOrientation(txt);
+      const isPlace = /place|放置|请将/i.test(txt);
+      const isDone = /完成|complete|done|success|成功/i.test(txt);
+      if (orient && isPlace) {
+        if (active && steps[active] === 'active') steps[active] = 'done';
+        steps[orient] = 'active';
+        active = orient;
+      } else if (orient && isDone) {
+        steps[orient] = 'done';
+        if (active === orient) active = null;
+      }
+      if (/accel/i.test(txt) && isDone) {
+        for (const id of Object.keys(steps) as AccelStep[]) {
+          if (steps[id] !== 'done') steps[id] = 'done';
+        }
+        active = null;
+        complete = true;
+      }
+      if (/failed|失败/i.test(txt)) failed = true;
+    }
+    return { steps, active, complete, failed };
+  });
+
+  let accelSteps = $derived(accelParsed.steps);
+  let accelActive = $derived(accelParsed.active);
+  let accelDoneCount = $derived(
+    accelOrients.filter(o => accelSteps[o.id] === 'done').length
+  );
+
+  /* ── Gyro/level/baro: simple done detector. Skips the "开始" event itself. ── */
+  let simpleCalDone = $derived.by(() => {
+    if (selected === 'compass' || selected === 'accel') return { done: false, failed: false };
+    let done = false, failed = false;
+    for (const ev of app.events) {
+      if (!eventInRun(ev)) continue;
+      if (/开始|start/i.test(ev.text) && !/complete|完成|success|成功|done/i.test(ev.text)) continue;
+      if (/success|成功|complete|done|完成/i.test(ev.text)) done = true;
+      if (/failed|失败/i.test(ev.text)) failed = true;
+    }
+    return { done, failed };
+  });
+
+  /* Side effects: flip calibrating off on completion/failure; auto-accept compass. */
   $effect(() => {
     if (!calibrating) return;
-    const total = app.events.length;
-    if (total <= lastEventTotal) return;
-    const newEvts = app.events.slice(lastEventTotal).filter(e => calPattern.test(e.text));
-    lastEventTotal = total;
-    if (newEvts.length === 0) return;
-
-    for (const ev of newEvts) {
-      if (!calibrating) break;
-      const txt = ev.text;
-      if (/^指令应答:|^Command:/i.test(txt)) continue;
-
-      if (selected === 'accel') {
-        const orient = detectOrientation(txt);
-        const isPlace = /place|放置|请将/i.test(txt);
-        const isDone = /完成|complete|done|success|成功/i.test(txt);
-
-        if (orient && isPlace) {
-          if (accelActive && accelSteps[accelActive] === 'active') {
-            accelSteps[accelActive] = 'done';
-          }
-          accelSteps[orient] = 'active';
-          accelActive = orient;
-        } else if (orient && isDone) {
-          accelSteps[orient] = 'done';
-          if (accelActive === orient) accelActive = null;
-        }
-
-        if (/accel/i.test(txt) && isDone) {
-          for (const o of accelOrients) {
-            if (accelSteps[o.id] !== 'done') accelSteps[o.id] = 'done';
-          }
-          accelActive = null;
-          calibrating = false;
-        }
-      }
-
-      if (selected === 'compass') {
-        const pctMatch = txt.match(/(\d+)%/);
-        if (pctMatch) {
-          compassProgress = Math.min(95, parseInt(pctMatch[1]));
-        } else if (/compass|罗盘|rotate|旋转/i.test(txt)) {
-          compassMsgCount++;
-          compassProgress = Math.min(95, Math.round(compassMsgCount * 3));
-        }
-        if (/complete|完成/i.test(txt) && !pctMatch) {
-          compassProgress = 100;
-          calibrating = false;
-          sendCommand('cal_compass_accept');
-        }
-      }
-
-      if ((selected === 'gyro' || selected === 'level' || selected === 'baro') &&
-          /success|成功|complete|done/i.test(txt)) {
+    if (selected === 'compass') {
+      if (compassParsed.done) {
+        calibrating = false;
+        sendCommand('cal_compass_accept');
+      } else if (compassParsed.failed) {
         calibrating = false;
       }
-      if (/failed|失败/i.test(txt)) {
+    } else if (selected === 'accel') {
+      if (accelParsed.complete || accelParsed.failed) {
         calibrating = false;
       }
+    } else if (simpleCalDone.done || simpleCalDone.failed) {
+      calibrating = false;
     }
   });
+
+  function nowHMS(offsetSec = 1): string {
+    const d = new Date(Date.now() - offsetSec * 1000);
+    return d.toTimeString().slice(0, 8);
+  }
 
   function startCal() {
     const ct = calTypes.find(c => c.id === selected);
     if (!ct) return;
+    // Mark BEFORE sending so the backend's "开始..." event is included in the run.
+    // -1s offset tolerates minor clock skew between frontend and backend.
+    calRunStartTime = nowHMS(1);
     calibrating = true;
-    lastEventTotal = app.events.length;
-    if (selected === 'accel') resetAccelSteps();
-    if (selected === 'compass') { compassProgress = 0; compassMsgCount = 0; }
     sendCommand(ct.cmd);
   }
 
   function cancelCal() {
     sendCommand('cal_cancel');
     calibrating = false;
-    if (selected === 'accel') resetAccelSteps();
-    if (selected === 'compass') { compassProgress = 0; compassMsgCount = 0; }
+    calRunStartTime = '';
   }
-
-  let accelDoneCount = $derived(
-    accelOrients.filter(o => accelSteps[o.id] === 'done').length
-  );
 </script>
 
 <style>
