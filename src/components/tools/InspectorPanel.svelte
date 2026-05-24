@@ -114,11 +114,11 @@
           </thead>
           <tbody>
             {#each sorted as msg (msg.id)}
-              <!-- svelte-ignore a11y_click_events_have_key_events -->
-              <!-- svelte-ignore a11y_no_static_element_interactions -->
               <tr
                 class="border-b border-border/30 hover:bg-muted/50 cursor-pointer transition-colors {expandedId === msg.id ? 'bg-muted/30' : ''}"
+                tabindex="0" role="button"
                 onclick={() => toggleExpand(msg.id)}
+                onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleExpand(msg.id); } }}
               >
                 <td class="py-1 px-1 font-mono text-muted-foreground">{msg.id}</td>
                 <td class="py-1 px-1 font-semibold text-foreground">{msg.name}</td>

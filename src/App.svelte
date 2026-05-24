@@ -357,9 +357,7 @@
           </div>
         {/if}
         <div class="absolute bottom-0 left-0 right-0 z-[1001]" class:max-h-52={flyEventsOpen}>
-          <!-- svelte-ignore a11y_click_events_have_key_events -->
-          <!-- svelte-ignore a11y_no_static_element_interactions -->
-          <div class="backdrop-blur flex items-center justify-center gap-1 py-1 text-[11px] cursor-pointer border-t hover:text-primary transition-colors
+          <button class="w-full backdrop-blur flex items-center justify-center gap-1 py-1 text-[11px] cursor-pointer border-t hover:text-primary transition-colors
             {hasUrgentEvent ? 'bg-destructive/15 border-destructive/40 text-destructive animate-pulse' : 'bg-card/90 border-border text-muted-foreground'}"
                onclick={() => { flyEventsOpen = !flyEventsOpen; if (flyEventsOpen) markEventsSeen(); }}>
             {t('event.title')} ({app.events.length})
@@ -367,7 +365,7 @@
               <span class="px-1.5 py-px rounded-full text-[10px] font-bold {hasUrgentEvent ? 'bg-destructive text-white' : 'bg-primary text-primary-foreground'}">{unseenEvents}</span>
             {/if}
             {#if flyEventsOpen}<ChevronDown size={12} />{:else}<ChevronUp size={12} />{/if}
-          </div>
+          </button>
           {#if flyEventsOpen}
             <EventLog />
           {/if}
@@ -432,11 +430,11 @@
   {/if}
   <LazyPanelHost />
   {#if p.isOpen('shortcuts')}
-    <!-- svelte-ignore a11y_no_static_element_interactions -->
-    <!-- svelte-ignore a11y_click_events_have_key_events -->
     <div class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
-         onclick={() => p.close('shortcuts')}>
-      <div class="bg-card border border-border rounded-xl shadow-2xl p-5 w-[380px]" onclick={(e) => e.stopPropagation()}>
+         role="button" tabindex="-1"
+         onclick={() => p.close('shortcuts')}
+         onkeydown={(e) => { if (e.key === 'Escape') p.close('shortcuts'); }}>
+      <div class="bg-card border border-border rounded-xl shadow-2xl p-5 w-[380px]" role="presentation" onclick={(e) => e.stopPropagation()}>
         <div class="flex items-center justify-between mb-3">
           <h2 class="text-sm font-semibold text-primary uppercase tracking-wider">{t('shortcuts.title')}</h2>
           <Button variant="ghost" size="icon-xs" onclick={() => p.close('shortcuts')}>

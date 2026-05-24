@@ -416,11 +416,9 @@
       </svg>
     </div>
   {/if}
-  <!-- svelte-ignore a11y_click_events_have_key_events -->
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="absolute bottom-1.5 left-2.5 z-[1000] bg-card/85 backdrop-blur text-muted-foreground px-2 py-0.5 rounded text-[11px] font-mono cursor-pointer hover:text-primary transition-colors"
+  <button class="absolute bottom-1.5 left-2.5 z-[1000] bg-card/85 backdrop-blur text-muted-foreground px-2 py-0.5 rounded text-[11px] font-mono cursor-pointer hover:text-primary transition-colors"
        onclick={() => { if (mouseCoord) { navigator.clipboard.writeText(mouseCoord); addToast(t('toast.coordCopied'), 'success', 1500); } }}
-       title={t('tip.copyCoord')}>{mouseCoord || '---'}</div>
+       title={t('tip.copyCoord')}>{mouseCoord || '---'}</button>
   <MapControls />
 
   {#if showHud && app.drone.connected}
