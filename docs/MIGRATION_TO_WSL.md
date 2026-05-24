@@ -55,59 +55,53 @@ source ~/.bashrc
 proxy
 ```
 
-跑 bootstrap 脚本（同步会写到 `scripts/wsl_bootstrap.sh`，但 clone 之前你拿不到，先用下面 inline 版本）：
+**装 git + 装 Claude Code + clone + 启 claude — 4 行就够，其余全自动**：
 
 ```bash
-# 系统包
-sudo apt update && sudo apt install -y \
-  git curl build-essential python3.10 python3.10-venv python3-pip \
-  python3-dev libssl-dev libffi-dev pkg-config \
-  ccache
+# 1. 最少装两个工具
+sudo apt update && sudo apt install -y git curl
+curl -fsSL https://claude.ai/install.sh | bash
+exec bash    # 重载 PATH
 
-# Node 20 LTS（NodeSource 源）
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt install -y nodejs
+# 2. SSH key（如果有就拷过来；没有就用 https clone 也行）
+# 选项 A — 从 VMware 拷私钥过来（推荐，跟 VMware 时期一致）
+#   在 VMware 里: cat ~/.ssh/id_ed25519
+#   在 WSL: mkdir -p ~/.ssh && chmod 700 ~/.ssh
+#           nano ~/.ssh/id_ed25519  # 粘贴
+#           chmod 600 ~/.ssh/id_ed25519
+# 选项 B — 用 HTTPS clone（无 SSH 折腾）—— 后续 push 需要 gh auth login
 
-# 检查
-python3 --version  # → 3.10.x
-node --version     # → v20.x
-npm --version      # → 10.x
+# 3. Clone（SSH 或 HTTPS 二选一）
+git clone git@github.com:L-X-Yao/argus.git ~/argus   # SSH
+# git clone https://github.com/L-X-Yao/argus.git ~/argus   # HTTPS
 
-# SSH key — 从 VMware 拷过来（你手动一次，不让脚本碰）
-# 方法 A: 在 VMware 里 cat ~/.ssh/id_ed25519 → 复制到 WSL ~/.ssh/id_ed25519 → chmod 600
-# 方法 B: 在 WSL 重新 ssh-keygen -t ed25519 -C 1476907630@qq.com 然后把 .pub 加到 github
-mkdir -p ~/.ssh && chmod 700 ~/.ssh
-# (粘贴你的私钥)
-nano ~/.ssh/id_ed25519
-chmod 600 ~/.ssh/id_ed25519
-ssh -T git@github.com  # 应该看到 "Hi L-X-Yao!"
-
-# git 全局配置
-git config --global user.name "L-X-Yao"
-git config --global user.email "1476907630@qq.com"
-
-# Clone 项目
-cd ~
-git clone git@github.com:L-X-Yao/argus.git
+# 4. 启 claude，告诉它"开始迁移"
 cd ~/argus
-
-# Python venv（隔离 argus 依赖，避免污染系统）
-python3 -m venv ~/argus-venv
-source ~/argus-venv/bin/activate
-echo 'source ~/argus-venv/bin/activate' >> ~/.bashrc
-pip install -e ".[dev]"
-
-# 前端
-npm install
-
-# Smoke test — 跑一次完整测试门
-ruff check backend/ scripts/ tests/
-python -m pytest tests/test_unit_*.py tests/test_contract_*.py -q
-npx vitest run
-npx svelte-check --tsconfig ./tsconfig.json
+claude
 ```
 
-全绿之后再处理 ArduPilot SITL（独立 50GB 工程，按需）：
+Claude 一进来读 CLAUDE.md，看到 `.claude-memory-bootstrap/` 存在 + `~/argus-venv/` 不存在 + 在 WSL，会主动问"要跑 `scripts/wsl_first_run.sh` 吗？"。**答 yes**，它就帮你：
+
+| 步骤 | 谁做 | 备注 |
+| - | - | - |
+| apt 装系统包 | 脚本 | 会问一次 sudo 密码 |
+| Node 20 (NodeSource) | 脚本 | |
+| `gh` CLI | 脚本 | SSH 兜底用 |
+| `~/argus-venv` 创建 + 激活进 `.bashrc` | 脚本 | |
+| `pip install -e ".[dev]"` | 脚本 | |
+| `npm install` | 脚本 | |
+| SSH key 检测 + 引导 | 脚本 | 不会自动复制私钥 |
+| 拷 memory 到 `~/.claude/projects/-home-$USER-argus/memory/` | 脚本 | |
+| 跑测试门（ruff + pytest 1040 + vitest 487 + svelte-check） | 脚本 | |
+| 打印下一步（SITL/usbipd 命令） | 脚本 | |
+
+全程 3-5 min（不含 SITL）。
+
+---
+
+## Phase 3 — ArduPilot SITL（可选，按需）
+
+只在 USB 不通需要回退到仿真验证时才装：
 
 ```bash
 cd ~
@@ -128,21 +122,17 @@ ls build/sitl/bin/arducopter  # 验证产物
 
 ---
 
-## Phase 3 — Claude Code memory 迁移
+## Phase 3 — Claude Code memory（脚本已处理）
 
-VMware 里这个会话产出的 memory 在 `/home/plkj/.claude/projects/-home-plkj-samba-filght-argus/memory/`。WSL 里项目路径变了（`-home-<wsl-user>-argus`），memory 不会自动跟过来。
+`scripts/wsl_first_run.sh` 会从 `.claude-memory-bootstrap/` 自动拷 13 个 memory 文件到正确的 `~/.claude/projects/-home-<USER>-argus/memory/`。无需手动操作。
+
+完事后清理 staging 目录（个人偏好不该长期在 repo 里）：
 
 ```bash
-# 在 WSL 内（假设 WSL 用户名 plkj）
-mkdir -p ~/.claude/projects/-home-plkj-argus/memory
-
-# 从 VMware 拷过来 — 任选一种：
-# A. 通过 \\wsl$\Ubuntu UNC 路径在 Windows 里拖（最简单）
-# B. 走 sftp / scp 从 VMware 拉
-# C. 在 VMware 里把 memory 目录 tar 起来放 samba share，再到 WSL 解出来
+git rm -rf .claude-memory-bootstrap/
+git commit -m "chore: remove migration staging"
+git push
 ```
-
-如果嫌麻烦也可以全新开始 — memory 只是辅助，下次会话 Claude 会重新积累。但 `feedback_*` 那几条偏好/纪律值得保留。
 
 ---
 

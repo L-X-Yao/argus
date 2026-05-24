@@ -14,11 +14,19 @@ Repo: `github.com/L-X-Yao/argus`, branch: `main`, version: `3.4.0`
 
 ## First-run on WSL (after VMware→WSL migration)
 
-If you see `.claude-memory-bootstrap/` in the repo root AND `~/argus-venv/` does NOT exist AND we're on WSL (grep `microsoft` in `/proc/version`), this is the user's first session after migration. Proactively offer:
+**Before any other work, run this exact bash check on your very first user turn:**
 
-> "Detected fresh WSL clone — want me to run `scripts/wsl_first_run.sh` to install system deps, set up Python venv, npm install, restore memory, and run the test gate?"
+```bash
+[ -d .claude-memory-bootstrap ] && [ ! -d "$HOME/argus-venv" ] && grep -qi microsoft /proc/version && echo "FIRST_RUN"
+```
 
-The script is idempotent and handles: apt packages (will prompt for sudo password once), Node 20 install, Python venv at `~/argus-venv`, pip install, npm install, SSH key check, memory file restore from `.claude-memory-bootstrap/` to `~/.claude/projects/<slug>/memory/`, and the full test gate. After it succeeds, remind the user to `git rm -rf .claude-memory-bootstrap/` since the memory files don't belong in source control long-term.
+If output is `FIRST_RUN`, this is the user's first session after migrating from VMware. Tell them:
+
+> "检测到 WSL 首次启动。要现在跑 `bash scripts/wsl_first_run.sh` 完成 dev 环境（apt 系统包→Node→Python venv→npm→memory 恢复→测试门）吗？大概 3-5 分钟，期间会问一次 sudo 密码。"
+
+If they say yes, execute it via Bash tool (run_in_background=true if it would be long; monitor via Bash readback). Stream key status lines to the user. When done, remind them: `git rm -rf .claude-memory-bootstrap/ && git commit -m 'chore: remove migration staging'` since the memory files don't belong in source control long-term.
+
+The script is idempotent — safe to re-run. Handles: apt packages, Node 20 install, Python venv at `~/argus-venv`, pip install, npm install, SSH key check, memory file restore from `.claude-memory-bootstrap/` to `~/.claude/projects/<slug>/memory/`, the full test gate.
 
 What it CAN'T automate (need user to do separately): WSL2/usbipd-win install on Windows (one-time), usbipd `bind`/`attach` of the PLKJ FC (admin PowerShell), SSH key copy/generation, sudo password. The script will prompt clearly when it hits one.
 
