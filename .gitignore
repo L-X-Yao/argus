@@ -3,6 +3,7 @@ dist/
 .venv/
 __pycache__/
 *.pyc
+*.egg-info/
 test-results/
 playwright-report/
 .svelte-kit/
