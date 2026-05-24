@@ -813,6 +813,24 @@
 - 个别命令全部在真 AP 上 PASS — 之前只有 mock 测试做断言
 - 仍 hardware-blocked: WebSerial 直连真飞控、5 种校准、firmware 上传 (VMware USB passthrough kernel-unstable)
 
+## 2026-05-24 全面审计 (5-agent parallel)
+
+5 维度并行审计 (后端安全/前端质量/测试覆盖/架构/协议正确性), 报告: `docs/audits/audit_full_2026-05-24.md`
+
+已修复 (commit 712682b):
+- H4: `App.svelte` 加 `<svelte:boundary>` 错误边界，防渲染崩溃白屏
+- M7: `DroneLayer.svelte` ADSB callsign HTML 转义防 XSS
+- M9: `sw.js` 缓存版本 v3.3 → v3.4
+- T1: CI 加入 `test_contract_*.py` (之前被静默跳过)
+- T2: `vite.config.ts` 移除 `onUnhandledErrors:'ignore'`
+- M13: `crc.ts` 补 3 个缺失的 CRC_EXTRA (msg 158/191/192)
+- M3: `auth.py` token 文件原子创建 (os.open O_CREAT 0o600)
+- M4: `_ntrip.py` NTRIP host SSRF 防护 (DNS 解析+内网 IP 拒绝)
+- H3: `app.py` `/api/auth/generate` 限制仅 localhost
+- M6: `app.py` 固件下载流式写入 .tmp (不再 50MB 全量读入内存)
+
+未修复 (documented): H1 WS token query string (浏览器限制), H2 auth status disclosure (前端需要), M1/M2/M5/M10-M14 见审计报告
+
 ## 测试基础设施
 
 | 测试类型 | 数量 | 工具 |
