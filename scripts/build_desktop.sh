@@ -34,41 +34,8 @@ python3 -m PyInstaller \
     --workpath build/pyinstaller \
     --clean \
     --noconfirm \
-    --hidden-import backend \
-    --hidden-import backend.app \
-    --hidden-import backend.drone_link \
-    --hidden-import backend.ws_manager \
-    --hidden-import backend.commands \
-    --hidden-import backend.commands._flight \
-    --hidden-import backend.commands._mission \
-    --hidden-import backend.commands._setup \
-    --hidden-import backend.commands._hardware \
-    --hidden-import backend.commands._helpers \
-    --hidden-import backend.mavlink_handlers \
-    --hidden-import backend.mavlink_dispatch \
-    --hidden-import backend.param_manager \
-    --hidden-import backend.statustext_filter \
-    --hidden-import backend.pllink_proto \
-    --hidden-import backend.server \
-    --hidden-import backend.state \
-    --hidden-import backend.constants \
-    --hidden-import backend.config \
-    --hidden-import backend.connection \
-    --hidden-import backend.log \
-    --hidden-import backend.locale_text \
-    --hidden-import backend.param_meta \
-    --hidden-import backend.video \
-    --hidden-import uvicorn \
-    --hidden-import uvicorn.logging \
-    --hidden-import uvicorn.loops \
-    --hidden-import uvicorn.loops.auto \
-    --hidden-import uvicorn.protocols \
-    --hidden-import uvicorn.protocols.http \
-    --hidden-import uvicorn.protocols.http.auto \
-    --hidden-import uvicorn.protocols.websockets \
-    --hidden-import uvicorn.protocols.websockets.auto \
-    --hidden-import uvicorn.lifespan \
-    --hidden-import uvicorn.lifespan.on \
+    --collect-submodules backend \
+    --collect-submodules uvicorn \
     backend/server.py
 
 echo "Sidecar built: src-tauri/binaries/python-backend-${TARGET_TRIPLE}"

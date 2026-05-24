@@ -21,7 +21,7 @@ SIM_SCRIPT = ROOT_DIR / 'scripts' / 'sim_pllink.py'
 def main():
     parser = argparse.ArgumentParser(description='Argus GCS')
     parser.add_argument('--sim', action='store_true', help='Start simulator on port 5770')
-    parser.add_argument('--host', default='0.0.0.0', help='Bind address (default: 0.0.0.0)')
+    parser.add_argument('--host', default='127.0.0.1', help='Bind address (default: 127.0.0.1; use 0.0.0.0 to expose on LAN)')
     parser.add_argument('--port', type=int, default=8100, help='HTTP port (default: 8100)')
     args = parser.parse_args()
 

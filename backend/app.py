@@ -27,6 +27,7 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 DIST_DIR = ROOT_DIR / 'dist'
 TILE_CACHE = ROOT_DIR / 'tile_cache'
 _TILE_MAX = cfg.TILE_CACHE_MAX
+_TILE_MAX_BYTES = 2 * 1024 * 1024  # 2 MB cap per tile (PNG tiles are ~50-200 KB)
 _tile_count = -1
 
 
@@ -268,10 +269,6 @@ async def api_tile(style: str, z: int, x: int, y: int):
     url = TILE_URLS.get(style, TILE_URLS['6']).format(x=x, y=y, z=z)
     try:
         req = urlreq.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        # Cap tile size at 2MB — a single PNG tile should be ~50-200KB.
-        # Without this a malicious or misbehaving tile server could stream
-        # gigabytes and exhaust disk.
-        _TILE_MAX_BYTES = 2 * 1024 * 1024
         data = await _aio(lambda: urlreq.urlopen(req, timeout=cfg.TILE_DOWNLOAD_TIMEOUT).read(_TILE_MAX_BYTES + 1))
         if len(data) > _TILE_MAX_BYTES:
             return Response(status_code=502, content='Tile too large')
@@ -413,9 +410,11 @@ async def api_tile_bulk_download(request: Request):
                 url = TILE_URLS.get(style, TILE_URLS['6']).format(x=x, y=y, z=z)
                 try:
                     req = urlreq.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-                    data = urlreq.urlopen(req, timeout=5).read()
+                    data = await _aio(lambda: urlreq.urlopen(req, timeout=5).read(_TILE_MAX_BYTES + 1))
+                    if len(data) > _TILE_MAX_BYTES:
+                        continue
                     cache_file.parent.mkdir(parents=True, exist_ok=True)
-                    cache_file.write_bytes(data)
+                    await _aio(cache_file.write_bytes, data)
                     downloaded += 1
                 except (OSError, urllib.error.URLError):
                     pass
@@ -481,6 +480,8 @@ async def api_firmware_upload(file: UploadFile):
     if not file.filename or not file.filename.endswith('.apj'):
         return {'ok': False, 'error': 'Only .apj files accepted'}
     safe_name = Path(file.filename).name
+    if not safe_name[:-4]:  # reject bare '.apj' — pathlib treats it as stem with no suffix
+        return {'ok': False, 'error': 'Only .apj files accepted'}
     FIRMWARE_DIR.mkdir(exist_ok=True)
     dest = FIRMWARE_DIR / safe_name
     # Write via a .tmp sidecar so a mid-upload crash never leaves a half-written

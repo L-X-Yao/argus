@@ -172,6 +172,14 @@ class TestFirmwareUpload:
         assert data['filename'] == 'test.apj'
         assert data['size'] == 100
 
+    def test_dotfile_apj_rejected(self):
+        r = client.post(
+            '/api/firmware/upload',
+            files={'file': ('.apj', b'\x00', 'application/octet-stream')},
+        )
+        data = r.json()
+        assert data['ok'] is False
+
 
 class TestFirmwareDownload:
     def test_missing_url_rejected(self):

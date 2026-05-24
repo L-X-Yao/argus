@@ -104,6 +104,31 @@ class TestConnection:
                 await ws.close()
         asyncio.get_event_loop().run_until_complete(run())
 
+    def test_connect_with_pllink_protocol(self, ws_url, sim_port):
+        """Sim dual-protocol support: explicit pllink framing over TCP must connect."""
+        async def run():
+            ws = await ws_connect(ws_url)
+            try:
+                await ws.send(json.dumps({
+                    'type': 'connect',
+                    'port': f'tcp:localhost:{sim_port}',
+                    'protocol': 'pllink',
+                }))
+                msg = await recv_until(ws, lambda m: m.get('type') == 'connect_result', timeout=10)
+                assert msg['ok'] is True
+                state = await recv_until(
+                    ws,
+                    lambda m: m.get('type') == 'state' and m.get('connected') and m.get('gps_sats', 0) > 0,
+                    timeout=15,
+                )
+                assert state['connected']
+                assert state['gps_sats'] > 0
+            finally:
+                await ws.send(json.dumps({'type': 'disconnect'}))
+                await asyncio.sleep(0.5)
+                await ws.close()
+        asyncio.get_event_loop().run_until_complete(run())
+
 
 class TestTelemetry:
     def test_receives_position(self, ws_url, sim_port):
