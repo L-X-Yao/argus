@@ -8,7 +8,7 @@ Repo: `github.com/L-X-Yao/argus`, branch: `main`, version: `3.4.0`
 - **Frontend**: Svelte 5 (runes) + TypeScript 6 + Vite 8 + Tailwind CSS 4 + Leaflet + MapLibre GL
 - **Backend**: Python 3.10+ + FastAPI + uvicorn + pyserial + websockets
 - **Protocol**: MAVLink v2 (standard + PL-Link wrapper). **ArduPilot is the only production-tested target.** PX4 support is partially scaffolded in `src/lib/fc/` but unwired — see `## PX4 Status` below.
-- **Tests**: pytest (backend + contract, 1040 tests), vitest 4 (frontend, 487 tests), Playwright (E2E, 19 specs). Current verification status per feature: `docs/FEATURE_CHECKLIST.md`. Don't-refactor decisions: `docs/protocol_design.md`.
+- **Tests**: pytest (backend + contract, 1068 tests), vitest 4 (frontend, 487 tests), Playwright (E2E, 20 specs), SITL verification (126/134 items). Current verification status per feature: `docs/FEATURE_CHECKLIST.md`. Don't-refactor decisions: `docs/protocol_design.md`.
 - **Lint**: ruff (Python), svelte-check (TypeScript/Svelte)
 - **CI**: GitHub Actions — lint → test → type-check → build → E2E
 
@@ -47,7 +47,7 @@ npm run dev                    # Or: separate frontend dev server on :5173
 npm run build                  # Production build → dist/
 npx svelte-check               # Type check (must be 0 errors 0 warnings)
 npx vitest run                 # Frontend tests (487)
-python -m pytest tests/test_unit_*.py tests/test_contract_*.py -v  # Backend tests (1040)
+python -m pytest tests/test_unit_*.py tests/test_contract_*.py -v  # Backend tests (1068)
 ruff check backend/ scripts/ tests/       # Python lint
 ```
 
@@ -55,8 +55,11 @@ ruff check backend/ scripts/ tests/       # Python lint
 
 ```
 argus/
-├── backend/                  # Python FastAPI backend (24 modules, 3.5K lines)
-│   ├── app.py                # FastAPI routes + lifespan
+├── backend/                  # Python FastAPI backend (27 modules, 4.8K lines)
+│   ├── app.py                # FastAPI app setup, system/auth/WS routes (211 lines)
+│   ├── tiles.py              # Tile proxy, cache, mbtiles, tile sources (APIRouter)
+│   ├── terrain.py            # SRTM elevation lookup (APIRouter)
+│   ├── firmware.py           # Firmware upload/list/online/download (APIRouter)
 │   ├── drone_link.py         # Drone connection + main loop
 │   ├── state.py              # 9 domain state dataclasses
 │   ├── commands/             # Command dispatch package (50 commands)

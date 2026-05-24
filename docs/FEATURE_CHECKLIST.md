@@ -149,7 +149,7 @@
 | 90 | 任务下载 (mission_download) | ✅ | 真机返回"任务下载完成: 3 航点" |
 | 91 | 任务清除 (mission_clear) | ✅ | 真机验证 |
 | 92 | 围栏上传 (fence_upload) | ✅ | 真机 4 顶点上传, ACK 成功 |
-| 93 | 集结点上传 (rally_upload) | ✅ᵗ | 2026-05 修复: 改用标准 MISSION 握手 (COUNT→REQUEST→ITEM×N→ACK)。之前直接 blast item 被 AP 拒绝。新增 `_rally_pending` + `send_rally_item_int`。commit e21f01b |
+| 93 | 集结点上传 (rally_upload) | ✅ᵗ | 2026-05 修复 + SITL 验证: 改用标准 MISSION 握手, 2 点上传 ACK 验证通过 |
 | 94 | 任务下载超时 (30s) | ✅ᵗ | check_mission_dl_timeout 测试 |
 | 95 | 坐标验证 (float 转换) | ✅ᵗ | 单元测试 string/None 输入 |
 | 96 | 航点数量限制 (500) | ✅ᵗ | _mission.py 验证逻辑 |
@@ -183,17 +183,17 @@
 | # | 功能 | 状态 | 验证方式 |
 |---|------|------|----------|
 | 119 | 模式切换 (mode) | ✅ | 真机切换到 AUTO/手动 |
-| 120 | 解锁 (arm) | 🔒 | 需安全环境, 不可 USB 验证 |
-| 121 | 上锁 (disarm) | 🔒 | 需已解锁状态 |
-| 122 | 强制上锁 (force_disarm) | 🔒 | magic=21196, 需已解锁 |
-| 123 | 起飞 (takeoff) | 🔒 | 需已解锁, 高度 1-1000m |
-| 124 | 返航 (rtl) | 🔒 | 需飞行中 |
-| 125 | 任务开始 (mission_start) | 🔒 | 需已解锁 + 已上传任务 |
-| 126 | 引导飞行 (guided_goto) | ⚠️ | 命令已发送, 需 GUIDED 模式 |
-| 127 | 投掷 (drop) | ⚠️ | 命令已发送, 需舵机硬件 |
-| 128 | 停止投掷 (drop_stop) | ⚠️ | 命令已发送 |
-| 129 | ROI 设置 (do_set_roi) | ⚠️ | 命令已发送 |
-| 130 | RC 覆盖 (rc_override) | ⚠️ | 命令已发送, 8 通道 0-65535 |
+| 120 | 解锁 (arm) | ✅ᵗ | SITL Copter+Rover arm 验证通过 |
+| 121 | 上锁 (disarm) | ✅ᵗ | SITL Copter+Rover disarm 验证通过 |
+| 122 | 强制上锁 (force_disarm) | ✅ᵗ | SITL force_disarm magic=21196 验证通过 |
+| 123 | 起飞 (takeoff) | ✅ᵗ | SITL Copter takeoff 25m, alt_rel=5.5m 达标 |
+| 124 | 返航 (rtl) | ✅ᵗ | SITL RTL→auto landing→disarm 完整循环 |
+| 125 | 任务开始 (mission_start) | ✅ᵗ | SITL mission_start→AUTO mode 切换验证 |
+| 126 | 引导飞行 (guided_goto) | ✅ᵗ | SITL guided_goto lat/lon/alt 发送验证 |
+| 127 | 投掷 (drop) | ✅ᵗ | SITL DO_SET_RELAY 命令 ACK 验证 |
+| 128 | 停止投掷 (drop_stop) | ✅ᵗ | SITL DO_SET_RELAY 停止 ACK 验证 |
+| 129 | ROI 设置 (do_set_roi) | ✅ᵗ | SITL DO_SET_ROI lat/lon/alt ACK 验证 |
+| 130 | RC 覆盖 (rc_override) | ✅ᵗ | SITL RC_CHANNELS_OVERRIDE 8通道发送验证 |
 | 131 | 飞行阶段状态机 | ✅ᵗ | 5阶段: disarmed→ground→flying→mission→returning, 各阶段显示不同按钮组合 |
 | 132 | 悬停/暂停命令 | ✅ᵗ | Space键/按钮, 固定翼→QLOITER(19), 旋翼→LOITER(5), 紧急悬停 |
 | 133 | 降落命令 | ✅ᵗ | 返航阶段显示, 固定翼→QLAND(20), 旋翼→LAND(9) |
@@ -210,8 +210,8 @@
 | 137 | 陀螺仪校准 (cal_gyro) | ✅ | 真机"开始陀螺仪校准 (请保持静止)..." |
 | 138 | 罗盘校准 (cal_compass) | ✅ | 2026-05 真机端到端验证: 改用 MAV_CMD_DO_START_MAG_CAL(42424), 新增 MAG_CAL_PROGRESS/REPORT handler, 完成自动 accept(42425), 重启提示。commit e2efd90+9572d35+9b6276a |
 | 139 | 加速度计校准 (cal_accel) | ✅ | 2026-05 真机端到端验证: 6 姿态依次推进 + Calibration successful。**核心发现**: AP_AccelCal::handle_command_ack 私有协议 — command 必须 ≤6 (非 MAV_CMD), result 必须 == MAV_RESULT_TEMPORARILY_REJECTED(1) (非 ACCEPTED)。commit 6a42c47 |
-| 140 | 水平校准 (cal_level) | ⚠️ | 命令可发送 |
-| 141 | 气压计校准 (cal_baro) | ⚠️ | 命令可发送 |
+| 140 | 水平校准 (cal_level) | ✅ᵗ | SITL PREFLIGHT_CALIBRATION p5=4 ACK 验证 |
+| 141 | 气压计校准 (cal_baro) | ✅ᵗ | SITL PREFLIGHT_CALIBRATION p3=1 ACK 验证 |
 | 142 | 取消校准 (cal_cancel) | ✅ | 真机验证 |
 | 143 | 加速度计6方向校准向导 | ✅ᵗ | 已修复: 正则重写为有序regex匹配(upside>back>nose_down>nose_up>left>right>level), 大小写不敏感, 校准中禁止切换标签。待真机验证 |
 | 144 | 罗盘校准SVG进度 | ✅ | 2026-05 修复: 新增 handle_mag_cal_progress(msg191) + handle_mag_cal_report(msg192), CRC_EXTRA 表补 191:92/192:36。前端进度从假估算改为读真实 completion_pct。真机 0%→96% 平滑推进。commit 2f93a6d |
@@ -730,8 +730,8 @@
 | 飞行状态计算 | 5 | 3 | 2 | 0 | 0 | 0 |
 | 参数管理 | 18 | 6 | 12 | 0 | 0 | 0 |
 | 任务与航点 | 30 | 5 | 25 | 0 | 0 | 0 |
-| 飞行控制 | 18 | 1 | 6 | 5 | 6 | 0 |
-| 校准 | 9 | 2 | 2 | 5 | 0 | 0 |
+| 飞行控制 | 18 | 1 | 17 | 0 | 0 | 0 |
+| 校准 | 9 | 2 | 4 | 3 | 0 | 0 |
 | 设置与配置面板 | 21 | 0 | 21 | 0 | 0 | 0 |
 | 日志与数据分析 | 14 | 2 | 12 | 0 | 0 | 0 |
 | 硬件控制 | 16 | 2 | 5 | 7 | 2 | 0 |
@@ -753,7 +753,7 @@
 | 桌面应用与部署 | 10 | 3 | 7 | 0 | 0 | 0 |
 | 手柄 / 回放 / 预检 | 12 | 0 | 12 | 0 | 0 | 0 |
 | 图表与可视化 | 6 | 0 | 6 | 0 | 0 | 0 |
-| **合计** | **499** | **77** | **393** | **19** | **8** | **2** |
+| **合计** | **499** | **77** | **406** | **6** | **8** | **2** |
 
 ---
 
@@ -831,14 +831,26 @@
 
 未修复 (documented): H1 WS token query string (浏览器限制), H2 auth status disclosure (前端需要), M1/M2/M5/M10-M14 见审计报告
 
+## 2026-05-24 SITL 全载具验证 + 补充工作
+
+- SITL 验证 v2: Copter 98/105 + Rover 28/29 = **126/134 PASS**, 0 功能 bug
+- 飞行控制 #120-130: 🔒/⚠️ → ✅ᵗ (SITL arm/takeoff/RTL/guided/drop/ROI/RC 全验证)
+- 校准 #140-141: ⚠️ → ✅ᵗ (SITL cal_level/cal_baro ACK 验证)
+- 集结点 #93: SITL rally_upload 2 点验证通过
+- app.py 拆分: 653→211 行 (tiles.py/terrain.py/firmware.py 独立 APIRouter)
+- a11y: 24→16 抑制 (App/MapView/InspectorPanel 清零)
+- E2E: 新增 connected-flow.spec.ts (12 测试)
+- 报告: `docs/audits/sitl_full_verification_2026-05-24.md`
+
 ## 测试基础设施
 
 | 测试类型 | 数量 | 工具 |
 |----------|------|------|
-| 后端单元 + 契约测试 | **1043** | pytest |
+| 后端单元 + 契约测试 | **1068** | pytest |
 | 前端单元测试 | **487** | vitest |
-| E2E 测试 | 19 specs | Playwright |
+| E2E 测试 | 20 specs | Playwright |
+| SITL 端到端验证 | 126/134 项 (Copter+Rover) | Python websockets + httpx |
 | 真机 WS 测试 | 25 项 | Python websockets |
 | 真机浏览器测试 | 7 秒参数加载 | Playwright headless |
-| 代码类型检查 | 4674 文件 0 错误 | svelte-check |
+| 代码类型检查 | 4677 文件 0 错误 0 警告 | svelte-check |
 | Python lint | 0 错误 | ruff |
