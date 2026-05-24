@@ -5,9 +5,11 @@ Downloads Python 3.10 embeddable, bundles all dependencies offline,
 produces a zip that runs on any Windows 10/11 x64 with zero install.
 
 Usage:
-    python3 build_package.py
+    python3 build_package.py              # x64 (default)
+    python3 build_package.py --arch arm64 # ARM64 Windows (requires Python 3.11+)
 """
 
+import argparse
 import io
 import os
 import shutil
@@ -21,7 +23,7 @@ SCRIPT_DIR = Path(__file__).resolve().parent.parent
 OUTPUT_DIR = SCRIPT_DIR / 'release'
 
 PY_VER = '3.10.11'
-PY_URL = 'https://www.python.org/ftp/python/{ver}/python-{ver}-embed-amd64.zip'
+PY_BASE_URL = 'https://www.python.org/ftp/python/{ver}/python-{ver}-embed-{arch}.zip'
 
 PIP_DEPS = [
     'fastapi',
@@ -42,8 +44,11 @@ def download(url, desc):
     return data
 
 
-def build():
-    print('=== Argus GCS v3 Package Builder ===\n')
+def build(arch: str = 'amd64'):
+    pip_platform = f'win_{arch}'
+    py_url = PY_BASE_URL.format(ver=PY_VER, arch=arch)
+
+    print(f'=== Argus GCS v3 Package Builder (arch={arch}) ===\n')
 
     build_dir = SCRIPT_DIR / '_build'
     if build_dir.exists():
@@ -65,12 +70,12 @@ def build():
 
     # ── 2. Download Python embeddable ──
     print('[2/5] Python embeddable')
-    cache = SCRIPT_DIR / ('python-%s-embed.zip' % PY_VER)
+    cache = SCRIPT_DIR / (f'python-{PY_VER}-embed-{arch}.zip')
     if cache.exists():
         print('  Using cached %s' % cache.name)
         py_data = cache.read_bytes()
     else:
-        py_data = download(PY_URL.format(ver=PY_VER), 'Python %s' % PY_VER)
+        py_data = download(py_url, f'Python {PY_VER} ({arch})')
         cache.write_bytes(py_data)
 
     py_dir = build_dir / 'python'
@@ -94,7 +99,7 @@ def build():
         print('  %s' % dep)
         subprocess.run([
             sys.executable, '-m', 'pip', 'download',
-            '--only-binary=:all:', '--platform=win_amd64',
+            '--only-binary=:all:', f'--platform={pip_platform}',
             '--python-version=%s' % PY_VER.rsplit('.', 1)[0],
             '-d', str(wheels_dir),
             dep,
@@ -155,7 +160,7 @@ def build():
     # ── 5. Package ──
     print('[5/5] Creating zip')
     OUTPUT_DIR.mkdir(exist_ok=True)
-    zip_name = OUTPUT_DIR / 'PLLink_GCS_v3.0.zip'
+    zip_name = OUTPUT_DIR / f'PLLink_GCS_v3.0_{arch}.zip'
     if zip_name.exists():
         zip_name.unlink()
 
@@ -175,4 +180,11 @@ def build():
 
 
 if __name__ == '__main__':
-    build()
+    ap = argparse.ArgumentParser(description='Build Argus GCS Windows package')
+    ap.add_argument(
+        '--arch', choices=['amd64', 'arm64'], default='amd64',
+        help='Target architecture (default: amd64). '
+             'arm64 Windows embeddable Python requires PY_VER >= 3.11.',
+    )
+    args = ap.parse_args()
+    build(arch=args.arch)

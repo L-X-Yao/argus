@@ -767,9 +767,9 @@
 | 4 | ~~VFR_HUD 数据后端不解析~~ | ✅ | 已修复: 新增 handle_vfr_hud, state 增加 airspeed/throttle/climb |
 | 5 | ~~云台遥测无接收 handler~~ | ✅ | 已修复: 新增 handle_mount_status (msg 158) |
 | 6 | ~~高级命令后端未实现上传~~ | ✅ | 已修复: _upload_mission() 处理 5 种 cmd_* 字段 |
-| 7 | PX4 支持基本未实现 | ❌ | 前端 `src/lib/fc/` PX4 adapter scaffolded 但无 production import; 后端不读 HEARTBEAT.autopilot byte。详见 `CLAUDE.md ## PX4 Status` |
+| 7 | PX4 支持基本未实现 | ❌ | 前端 `src/lib/fc/` PX4 adapter scaffolded 但无 production import; 后端 Phase P commit 已读取 HEARTBEAT.autopilot byte 并推送 `drone.autopilot`，但无任何分支行为。详见 `CLAUDE.md ## PX4 Status` |
 | 8 | ~~gimbal_rate 命令无法工作~~ | ✅ᵗ | 已修复 (#184): 新增 `cmd_gimbal_pitchyaw` 走 MAV_CMD_DO_GIMBAL_MANAGER_PITCHYAW(1000) via COMMAND_INT, 5 个 pymavlink 字节级契约测试通过; 前端 GimbalPanel 加 Rate 模式 + Retract/Neutral 按钮 |
-| 9 | tests/test_integration.py 32 个失败 | ⚠️ | 2026-05 audit 分类: A=真 bug已修, B=sim协议bug已修, C=过期测试已修, D=预xfail。剩余看 docs/audits/audit_remaining.md |
+| 9 | ~~tests/test_integration.py 32 个失败~~ | ✅ | 2026-05-24 全部修复: A=真 bug已修, B=sim协议bug已修, C=过期测试已修, D=xfail装饰器已移除; 新增 test_connect_with_pllink_protocol。53/53 通过。|
 | 10 | ~~MAVLink 2 zero-trim 不容忍~~ | ✅ | 2026-05 修复: 所有 handler 新增 `_pad()` helper, 容忍 trailing-zero trimmed payload (FC 发的 trailing-zero 字段不再读到 0)。commit 102a05e |
 | 11 | ~~observer 客户端可发危险指令~~ | ✅ | 2026-05 修复: ws_manager.command 分支检查 pilot 角色, 否则拒绝 |
 | 12 | ~~firmware download 路径穿越 + SSRF~~ | ✅ | 2026-05 修复: Path.relative_to + DNS 解析后检查私有 IP |
@@ -792,6 +792,20 @@
   - locale key 完整性
 - CLAUDE.md 新增 `## Protocol Code Discipline` 规则: FC 协议代码必须引上游源码 file:line
 
+## 2026-05-24 audit_remaining 跟进修复
+
+- 修复 L2: `scripts/build_package.py` PIP_DEPS 补 `python-multipart`
+- 修复 L4: `run.py` `--host` 默认改为 `127.0.0.1`
+- 修复 L5: `backend/app.py` 固件上传拒绝裸 `.apj` 点文件 + 新增测试
+- 修复 M4: `scripts/build_desktop.sh` 替换19条 `--hidden-import` 为 `--collect-submodules`
+- 修复 M7: `backend/app.py` tile_bulk_download 全异步 + 每块大小限制
+- 修复 M8: `backend/app.py` mbtiles 穿越防护改用 `Path.relative_to`
+- 修复 M9: `backend/app.py` 固件上传流式写入 + `.tmp` 原子重命名
+- 修复 Gap A/B: `tests/test_unit_handlers.py` 补 count=0 和乱序块两个单元测试
+- 修复 Gap C: `tests/test_integration.py` 补 `test_connect_with_pllink_protocol`
+- 移除 xfail 装饰器 (`test_compass_calibration` 已稳定通过)
+- 集成测试: 52/52 → 53/53 全部通过; 后端单元测试: 1043 条
+
 ## 2026-05-24 真 SITL 端到端验证
 
 - `docs/audits/sitl_validation_2026-05-24.md` — 在真 ArduCopter SITL v4.6.3 上跑通 7 条关键路径:
@@ -803,7 +817,7 @@
 
 | 测试类型 | 数量 | 工具 |
 |----------|------|------|
-| 后端单元 + 契约测试 | **1040** | pytest |
+| 后端单元 + 契约测试 | **1043** | pytest |
 | 前端单元测试 | **487** | vitest |
 | E2E 测试 | 19 specs | Playwright |
 | 真机 WS 测试 | 25 项 | Python websockets |

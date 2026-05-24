@@ -4,13 +4,13 @@ Scope: scripts/sim_pllink.py, scripts/build_package.py, scripts/build_desktop.sh
 run.py, tests/test_integration.py, backend/app.py routes not previously
 audited, plus a test-coverage gap survey.
 
-Result summary
-- 4 critical findings (3 fixed in place, 1 documented)
-- 9 medium findings (6 fixed, 3 documented)
-- 8 low / info findings (2 fixed, 6 documented)
-- Integration test pass rate moved from **20/52 → 51/52** (1 xpassed). The
-  only "failure" remaining is `xpassed` on a test marked xfail.
-- Unit + contract tests: **1024 / 1024 passing**.
+Result summary (original 2026-05-23; updated 2026-05-24)
+- 6 critical findings: **all fixed** (C1–C6)
+- 9 medium findings: **all fixed** (M4/M7/M9 fixed 2026-05-24; M8 fixed shortly after audit)
+- Low/info: L2/L4/L5 fixed 2026-05-24; L1/L3 remain documented; L6/L7 info/by-design, no action needed
+- Gap A/B/C: **all fixed** (unit tests added 2026-05-24)
+- Integration tests: 20/52 → 52/52 (xfail removed 2026-05-24) + `test_connect_with_pllink_protocol` = **53 defined**
+- Unit + contract tests: **1043 / 1043 passing**
 
 ----------------------------------------------------------------------
 ## 1. scripts/sim_pllink.py — Simulator deviations from real ArduPilot
@@ -129,24 +129,25 @@ hardware. All five are now fixed.
   it would silently produce a broken zip for the wrong arch. Add an
   `--arch` argparse arg if you need ARM64 support.
 
-### L2 [LOW — documented] PIP_DEPS missing `python-multipart`
+### L2 [LOW — FIXED 2026-05-24] PIP_DEPS missing `python-multipart`
 - `pyproject.toml` declares `python-multipart>=0.0.9` (needed for FastAPI
   UploadFile). The packager's PIP_DEPS list omits it, so `/api/firmware/upload`
   will return 500 ("Form data requires python-multipart") on the packaged build.
-- Recommend: add `'python-multipart'` to `PIP_DEPS`.
+- Fix: added `'python-multipart'` to `PIP_DEPS` in `scripts/build_package.py`.
 
 ----------------------------------------------------------------------
 ## 3. scripts/build_desktop.sh — Tauri desktop build
 
-### M4 [MEDIUM — documented] PyInstaller --hidden-import doesn't include backend.commands._*
-- The script lists `--hidden-import backend.commands` but the subpackage
+### M4 [MEDIUM — FIXED 2026-05-24] PyInstaller --hidden-import doesn't include backend.commands._*
+- The script listed `--hidden-import backend.commands` but the subpackage
   contains `_flight.py`, `_mission.py`, `_setup.py`, `_hardware.py`,
-  `_helpers.py`. PyInstaller will not automatically pick those up because
+  `_helpers.py`. PyInstaller would not automatically pick those up because
   they're imported dynamically via `commands/__init__.py`.
 - Risk: built executable may run until the first non-helper command is
   invoked, then fail with ModuleNotFoundError.
-- Recommend: replace the per-module `--hidden-import` list with
+- Fix: replaced the 19 individual `--hidden-import` lines with
   `--collect-submodules backend` and `--collect-submodules uvicorn`.
+- File: `scripts/build_desktop.sh`.
 
 ### L3 [LOW — documented] No verification of TARGET_TRIPLE against tauri.conf.json
 - The script names the binary `python-backend-${TARGET_TRIPLE}`. If
@@ -172,11 +173,13 @@ hardware. All five are now fixed.
 - Fix: `wait(timeout=5)` then fall back to `kill()`.
 - File: `run.py:93-102`.
 
-### L4 [LOW — documented] `--host` defaults to `0.0.0.0`
+### L4 [LOW — FIXED 2026-05-24] `--host` defaults to `0.0.0.0`
 - Exposes the backend on all interfaces by default. Auth middleware
   mitigates this if a token is configured, but unset-token mode allows any
-  device on the LAN to drive the vehicle. Consider defaulting to `127.0.0.1`
-  and requiring `--host 0.0.0.0` to opt into network exposure.
+  device on the LAN to drive the vehicle.
+- Fix: changed default to `127.0.0.1`; added help text explaining
+  `--host 0.0.0.0` to opt into network exposure.
+- File: `run.py` (argparse default + help string).
 
 ----------------------------------------------------------------------
 ## 5. tests/test_integration.py — Failing-test categorization
@@ -214,9 +217,11 @@ Originally 32+ failures. After fixes: **51/52 passing, 1 xpassed**.
    data` but tile_sources is `{source_id: {region: 'china'|'global'}}`.
    Rewrote to check the set of `region` values across entries.
 
-### Category D: Pre-existing xfail
-- One xpassed test (one test marked `xfail` actually passed; the test
-  decorator is now stale but it's not a regression).
+### Category D: Pre-existing xfail (FIXED 2026-05-24)
+- `test_compass_calibration` was marked `xfail` (sim timing flakiness) but
+  had been passing consistently since the C2 sim fix. Decorator removed;
+  test now counts as a normal pass.
+- File: `tests/test_integration.py`.
 
 ----------------------------------------------------------------------
 ## 6. backend/app.py routes — security & error-handling
@@ -224,39 +229,45 @@ Originally 32+ failures. After fixes: **51/52 passing, 1 xpassed**.
 (Routes already audited elsewhere: tile/SRTM/firmware download/upload —
 generally well-guarded with SSRF, size caps, path-traversal defense.)
 
-### M7 [MEDIUM — documented] /api/tile_bulk_download blocks the event loop
-- `urlreq.urlopen(req, timeout=5).read()` is called synchronously from an
+### M7 [MEDIUM — FIXED 2026-05-24] /api/tile_bulk_download blocks the event loop
+- `urlreq.urlopen(req, timeout=5).read()` was called synchronously from an
   `async` handler. With 5000 tiles at 5s timeout each = up to 7+ hours of
-  blocked event loop. The handler returns after `total > 5000`, but a
-  single slow tile server can still freeze the entire backend for
-  `min(5000, tile_count) * timeout` seconds.
-- Also missing per-tile size cap (single-tile endpoint already has one).
-- Recommend: wrap each `urlopen` in `_aio(...)`, and apply the
-  `_TILE_MAX_BYTES = 2 * 1024 * 1024` cap from the single-tile endpoint.
+  blocked event loop. Also missing per-tile size cap.
+- Fix: wrapped each `urlopen(...).read()` call with `_aio(lambda: ...)`;
+  promoted `_TILE_MAX_BYTES = 2 * 1024 * 1024` to module level (shared with
+  single-tile endpoint); added per-tile size check; wrapped `write_bytes`
+  with `_aio`.
+- File: `backend/app.py` (module-level constant + api_tile_bulk_download).
 
-### M8 [MEDIUM — documented] /api/mbtiles/{name}/{z}/{x}/{y} traversal guard via `str.startswith` has a subtle hole
+### M8 [MEDIUM — FIXED] /api/mbtiles/{name}/{z}/{x}/{y} traversal guard via `str.startswith` has a subtle hole
 - `str(path).startswith(str(MBTILES_DIR.resolve()))` returns True for paths
   inside `/mbtiles` AND for paths inside `/mbtiles2/...` or `/mbtilesx/...`.
 - A sibling directory whose name happens to start with the same prefix is
   not prevented. (In practice the file then has to also `.endswith('.mbtiles')`
   and exist — so the practical impact is low — but it's a latent footgun.)
-- Recommend: `path.relative_to(MBTILES_DIR.resolve())` with try/except
-  ValueError, the same pattern used in `/api/firmware/download`.
+- Fix: switched to `path.relative_to(MBTILES_DIR.resolve())` with
+  try/except ValueError, the same pattern used in `/api/firmware/download`.
+- File: `backend/app.py` (api_mbtiles_tile).
 
-### M9 [MEDIUM — documented] /api/firmware/upload buffers entire file in memory
+### M9 [MEDIUM — FIXED 2026-05-24] /api/firmware/upload buffers entire file in memory
 - Reads 1MB at a time into a `list[bytes]`, then `b''.join()` doubles peak
   memory. For a 50MB cap that's 100MB transient. On embedded/low-memory
   hosts this can OOM the process.
-- Recommend: open the dest file once with `'wb'`, write each chunk
-  directly, `os.remove()` on size-cap violation. Bonus: atomic write via
-  rename from a `.tmp` filename so a crash mid-upload doesn't leave a
-  half-written firmware in `FIRMWARE_DIR`.
+- Fix: replaced list accumulation with streaming write to a `.apj.tmp`
+  sidecar file; on success atomically renames to final path; on
+  size-cap violation unlinks the partial `.tmp`. Peak memory: one 1MB
+  chunk at a time regardless of firmware size.
+- File: `backend/app.py` (api_firmware_upload).
 
-### L5 [LOW — documented] /api/firmware/upload accepts files named just `.apj`
+### L5 [LOW — FIXED 2026-05-24] /api/firmware/upload accepts files named just `.apj`
 - `Path('.apj').name == '.apj'`, which passes both `endswith('.apj')` and
   `if not file.filename` (since `.apj` is truthy). The resulting filename
   is a hidden dotfile in FIRMWARE_DIR. No security impact (still confined),
   but worth rejecting since it's never a legitimate name.
+- Fix: added `if not safe_name[:-4]:` check — strips the 4-char `.apj`
+  suffix; empty result means it's a bare dotfile. Covered by new test
+  `TestFirmwareUpload::test_dotfile_apj_rejected`.
+- File: `backend/app.py` (api_firmware_upload), `tests/test_unit_app_routes.py`.
 
 ### L6 [LOW — info] /api/version subprocess git invocation
 - `git rev-parse --short HEAD` is shelled out. `cwd=ROOT_DIR` (constant),
@@ -271,39 +282,31 @@ generally well-guarded with SSRF, size caps, path-traversal defense.)
 ----------------------------------------------------------------------
 ## 7. Test coverage gaps
 
-### Gap A [documented] handle_log_data count=0 path
+### Gap A [FIXED 2026-05-24] handle_log_data count=0 path
 - `count == 0` triggers `_finalize_log_download(truncated=True)`. Code
   path exists (mavlink_handlers.py:631-633) but no unit test covers it.
-- Recommend adding to `tests/test_unit_handlers.py::TestLogData`:
-  ```python
-  def test_count_zero_finalizes_as_truncated(self):
-      link = make_link()
-      link.log_dl._log_download_id = 5
-      link.log_dl._log_download_size = 100
-      link.log_dl._log_download_data = bytearray(100)
-      link.send = lambda f: None
-      p = struct.pack('<IHB', 0, 5, 0) + bytes(90)
-      handle_log_data(p, len(p), link)
-      msgs = link.log_dl._log_messages
-      assert any(m['type'] == 'log_complete' and m['truncated'] for m in msgs)
-  ```
+- Fix: added `test_count_zero_finalizes_as_truncated` to
+  `tests/test_unit_handlers.py::TestLogData`.
 
-### Gap B [documented] handle_log_data out-of-order chunks
+### Gap B [FIXED 2026-05-24] handle_log_data out-of-order chunks
 - `max(lg._log_download_ofs, end)` prevents rewinding (added by previous
-  audit), but no test covers it. Recommend a test that sends two chunks
-  out of order (ofs=10 first, then ofs=0) and verifies the data is
-  written to both positions and `_log_download_ofs` stays at the
-  higher value.
+  audit), but no test covers it.
+- Fix: added `test_out_of_order_chunk_ofs_stays_at_max` to
+  `tests/test_unit_handlers.py::TestLogData`. Sends two chunks out of
+  order (ofs=10 first, then ofs=0), verifies both positions written and
+  `_log_download_ofs` stays at the higher value.
 
-### Gap C [documented] WSManager dual-protocol sim coverage
+### Gap C [FIXED 2026-05-24] WSManager dual-protocol sim coverage
 - The sim now speaks both PL-Link and raw MAVLink. There's no
   integration test that explicitly forces `protocol='pllink'` on a TCP
   connection — every test uses default `auto` (which falls back to
-  standard). Worth adding one explicit PL-Link test to make sure the
-  fallback path stays exercised.
+  standard).
+- Fix: added `TestConnection::test_connect_with_pllink_protocol` to
+  `tests/test_integration.py`. Connects with `protocol='pllink'`, waits
+  for `connect_result.ok == True` and first `gps_sats > 0` state push.
 
 ----------------------------------------------------------------------
-## Files modified in this audit
+## Files modified in original audit (2026-05-23)
 - scripts/sim_pllink.py — 6 fixes (C1, C3, C4, C5, M1, M2) + dual-protocol
 - scripts/build_package.py — 2 fixes (C6, M3)
 - run.py — 2 fixes (M5, M6)
@@ -311,7 +314,16 @@ generally well-guarded with SSRF, size caps, path-traversal defense.)
 - src/components/planning/SchedulerPanel.svelte — confirm guard (Category A)
 - src/lib/locales/{zh,en}.ts — new `sched.confirmRun` key
 
-## Files NOT modified (documented findings only)
-- scripts/build_desktop.sh — M4 (PyInstaller hidden-imports), L3
-- backend/app.py — M7, M8, M9, L5 documented for follow-up
-- tests/test_unit_handlers.py — Gap A, Gap B unit-test suggestions
+## Files modified in follow-up (2026-05-24)
+- backend/app.py — M7 (tile_bulk async), M8 (mbtiles relative_to), M9 (streaming upload), L5 (dotfile reject)
+- scripts/build_desktop.sh — M4 (--collect-submodules)
+- scripts/build_package.py — L2 (python-multipart)
+- run.py — L4 (host default 127.0.0.1)
+- tests/test_unit_handlers.py — Gap A + Gap B (2 new tests)
+- tests/test_unit_app_routes.py — L5 (test_dotfile_apj_rejected), test_valid_apj_accepted refactor
+- tests/test_integration.py — Gap C (test_connect_with_pllink_protocol), Category D (xfail removed)
+
+## Remaining open findings
+- L1 (build_package.py --arch for ARM64 Windows) — documented only
+- L3 (build_desktop.sh TARGET_TRIPLE verification) — documented only
+- L6, L7 — info/by-design, no action needed
