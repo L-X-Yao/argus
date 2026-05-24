@@ -49,6 +49,42 @@ simulator (A.9).
 4. **SITL accumulates CLOSE-WAIT TCP connections** when probes connect/disconnect rapidly. Hit 5 stale half-closed sockets and a fresh client got no telemetry. Production usage holds a single long-lived connection so this never bites users, but it's a footgun when running automated tests.
 5. **`autopilot=0` in initial state** propagates to first WS push (before first heartbeat). After ~1s the field flips to 3 via delta. UI consumers reading the initial frame may see GENERIC briefly — not a bug, but worth noting.
 
+## Update — 2026-05-24 afternoon: real FC validated via WSL2 + usbipd
+
+The VMware passthrough blocker (head of this document) has been resolved by
+migrating the dev environment to WSL2 + `usbipd-win`. The PLKJ FC at
+`/dev/ttyACM0` now survives `DroneLink.connect()` + heartbeats +
+`request_streams()` — the same code path that previously deadlocked the VM
+kernel.
+
+| # | Scope | Result |
+| - | - | - |
+| A.0 (real FC, not SITL) | `DroneLink.connect('/dev/ttyACM0', 115200, 'auto')` + 3s + `get_state()` | **PASS** — 240 frames in 3s, `autopilot=3` (MAV_AUTOPILOT_ARDUPILOTMEGA — note: the bare-pyserial probes earlier in this doc saw `autopilot=1` MAV_AUTOPILOT_RESERVED; the FC may have been re-flashed or runs different identity bytes when the full negotiation completes), mode `手动`, clean disconnect, exit 0 |
+
+### Unblocked
+
+The "What's blocked" table above is now superseded for everything except
+NTRIP (which still wants a real GPS receiver, not a USB issue):
+
+- **A.1 — WebSerial direct connect on real FC**: ready to test. Open
+  `http://localhost:8100` in Windows Chrome with FC attached and click the
+  USB button.
+- **A.2 — Real-sensor calibration**: ready to test (compass / gyro / level /
+  baro / accel). This is the highest-value item — it exercises the
+  AP_AccelCal ACK-abuse protocol and AP-private mag cal binary messages on
+  real hardware for the first time.
+- **Firmware upload**: technically unblocked, but the bricking risk is
+  unchanged. Only attempt with PLKJ's own firmware build, never with a
+  generic ArduPilot APJ.
+
+### Migration provenance
+
+- `docs/MIGRATION_TO_WSL.md` — full Phase 1–6 runbook
+- `scripts/wsl_first_run.sh` — idempotent WSL bootstrap
+- PLKJ FC BUSID on this host: `2-1` (re-check with `usbipd list` if it moves
+  after replug). Attach each session with `usbipd attach --wsl --busid=2-1`
+  from Windows admin PowerShell.
+
 ## How to reproduce
 
 ```bash
