@@ -483,16 +483,30 @@ async def api_firmware_upload(file: UploadFile):
     safe_name = Path(file.filename).name
     FIRMWARE_DIR.mkdir(exist_ok=True)
     dest = FIRMWARE_DIR / safe_name
-    chunks: list[bytes] = []
+    # Write via a .tmp sidecar so a mid-upload crash never leaves a half-written
+    # firmware file in FIRMWARE_DIR. Chunks are written directly to disk as they
+    # arrive — peak memory stays at one 1 MB chunk rather than the full file size
+    # (M9: the old list[bytes] + b''.join pattern doubled peak to ~100 MB for a
+    # 50 MB file).
+    tmp = dest.with_suffix('.apj.tmp')
     total = 0
-    while chunk := await file.read(1024 * 1024):
-        total += len(chunk)
-        if total > cfg.FIRMWARE_MAX_SIZE:
-            return {'ok': False, 'error': f'File too large (max {cfg.FIRMWARE_MAX_SIZE // 1024 // 1024} MB)'}
-        chunks.append(chunk)
-    data = b''.join(chunks)
-    dest.write_bytes(data)
-    return {'ok': True, 'filename': safe_name, 'size': len(data)}
+    too_large = False
+    try:
+        with tmp.open('wb') as fh:
+            while chunk := await file.read(1024 * 1024):
+                total += len(chunk)
+                if total > cfg.FIRMWARE_MAX_SIZE:
+                    too_large = True
+                    break
+                fh.write(chunk)
+    except Exception:
+        tmp.unlink(missing_ok=True)
+        raise
+    if too_large:
+        tmp.unlink(missing_ok=True)
+        return {'ok': False, 'error': f'File too large (max {cfg.FIRMWARE_MAX_SIZE // 1024 // 1024} MB)'}
+    tmp.rename(dest)
+    return {'ok': True, 'filename': safe_name, 'size': total}
 
 
 @app.get('/api/firmware/list')

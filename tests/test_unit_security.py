@@ -1,6 +1,5 @@
 """Security regression tests — adversarial inputs on API endpoints and commands."""
 import socket
-from pathlib import Path
 from unittest.mock import patch
 
 from backend.commands import execute
@@ -211,12 +210,14 @@ class TestMbtilesPathTraversal:
 
 
 class TestFirmwareUploadSanitization:
-    def test_traversal_filename_sanitized(self):
-        from fastapi.testclient import TestClient
+    def test_traversal_filename_sanitized(self, tmp_path):
+        from fastapi.testclient import TestClient  # noqa: PLC0415
 
-        from backend.app import app
+        import backend.app as app_mod
+        from backend.app import app  # noqa: PLC0415
+
         client = TestClient(app)
-        with patch.object(Path, 'write_bytes'):
+        with patch.object(app_mod, 'FIRMWARE_DIR', tmp_path):
             r = client.post(
                 '/api/firmware/upload',
                 files={'file': ('../../exploit.apj', b'\x00' * 10, 'application/octet-stream')},

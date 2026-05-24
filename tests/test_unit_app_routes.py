@@ -160,9 +160,9 @@ class TestFirmwareUpload:
         data = r.json()
         assert data.get('ok') is False or 'error' in data or r.status_code >= 400
 
-    def test_valid_apj_accepted(self):
-        from pathlib import Path as P
-        with patch.object(P, 'write_bytes'):
+    def test_valid_apj_accepted(self, tmp_path):
+        import backend.app as app_mod
+        with patch.object(app_mod, 'FIRMWARE_DIR', tmp_path):
             r = client.post(
                 '/api/firmware/upload',
                 files={'file': ('test.apj', b'\x00' * 100, 'application/octet-stream')},
