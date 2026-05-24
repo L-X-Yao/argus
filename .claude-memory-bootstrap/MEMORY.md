@@ -1,0 +1,12 @@
+- [No Co-Author trailer](feedback_no_coauthor.md) — never add Co-Authored-By to commits
+- [Auto-commit](feedback_auto_commit.md) — commit autonomously when work is done, don't ask
+- [Auto-push](feedback_auto_push.md) — push to origin after every commit, same agency as auto-commit
+- [Test real data flow](feedback_test_boundaries.md) — test with actual caller types (string/float/None), not just config values
+- [Argus is GCS not FC](feedback_argus_is_gcs.md) — don't overdramatize safety risk or propose heavy processes
+- [Fail-loud first](feedback_fail_loud_first.md) — runtime log+drop for unknown msg IDs before reaching for test infra
+- [Shorten feedback loop](feedback_shorten_feedback_loop.md) — bottleneck is code→hardware→observe latency, not test count
+- [Mention pymavlink](feedback_mention_pymavlink.md) — address standard library before proposing custom codegen
+- [Protocol discipline](feedback_protocol_discipline.md) — FC-coupled code must cite ArduPilot/PX4 source file:line in a comment
+- [Rerun after interrupt](feedback_rerun_after_interrupt.md) — after a manual interrupt, re-run the full test gate before committing
+- [Audit state May 2026](project_audit_state_may2026.md) — what the 2026-05-23 multi-agent audit found, fixed, and deferred. Reports at docs/audits/
+- [VMware USB unstable](project_vmware_usb_unstable.md) — PLKJ FC reads OK on /dev/ttyACM0 but DroneLink writes deadlock the VM. Use SITL for validation, not real FC

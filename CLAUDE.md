@@ -12,6 +12,18 @@ Repo: `github.com/L-X-Yao/argus`, branch: `main`, version: `3.4.0`
 - **Lint**: ruff (Python), svelte-check (TypeScript/Svelte)
 - **CI**: GitHub Actions — lint → test → type-check → build → E2E
 
+## First-run on WSL (after VMware→WSL migration)
+
+If you see `.claude-memory-bootstrap/` in the repo root AND `~/argus-venv/` does NOT exist AND we're on WSL (grep `microsoft` in `/proc/version`), this is the user's first session after migration. Proactively offer:
+
+> "Detected fresh WSL clone — want me to run `scripts/wsl_first_run.sh` to install system deps, set up Python venv, npm install, restore memory, and run the test gate?"
+
+The script is idempotent and handles: apt packages (will prompt for sudo password once), Node 20 install, Python venv at `~/argus-venv`, pip install, npm install, SSH key check, memory file restore from `.claude-memory-bootstrap/` to `~/.claude/projects/<slug>/memory/`, and the full test gate. After it succeeds, remind the user to `git rm -rf .claude-memory-bootstrap/` since the memory files don't belong in source control long-term.
+
+What it CAN'T automate (need user to do separately): WSL2/usbipd-win install on Windows (one-time), usbipd `bind`/`attach` of the PLKJ FC (admin PowerShell), SSH key copy/generation, sudo password. The script will prompt clearly when it hits one.
+
+Full context at `docs/MIGRATION_TO_WSL.md`.
+
 ## Quick Start
 
 ```bash
