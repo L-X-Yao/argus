@@ -11,7 +11,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from .auth import auth_middleware, auth_required, generate_token, verify_token, verify_ws_token
-from .config import ROOT_DIR, aio, cfg
+from .config import ROOT_DIR, VERSION, aio, cfg
 from .drone_link import DroneLink
 from .firmware import router as firmware_router
 from .param_meta import get_metadata
@@ -34,7 +34,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title='Argus GCS API',
     description='Universal Web Ground Control Station — REST API for MAVLink vehicle control',
-    version='3.4.0',
+    version=VERSION,
     lifespan=lifespan,
 )
 
@@ -100,7 +100,7 @@ async def api_version():
     except (OSError, subprocess.SubprocessError):
         pass
     return {
-        'version': '3.4.0',
+        'version': VERSION,
         'git': git_hash,
         'protocols': ['standard', 'pllink'],
         'vehicles': ['copter', 'plane', 'rover', 'sub'],

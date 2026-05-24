@@ -1,7 +1,7 @@
 # Argus GCS v3.4 — 功能清单与验证状态
 
-> **本文档是项目内 feature 验证状态的 single source of truth。** 任何关于"X 功能是否可用 / 是否真机验证过 / 已知问题"的判断都以本文件为准。修了某项功能就同步更新对应行。  
-> 生成日期: 2026-05-23（持续更新）  
+> **本文档记录 v3.4 功能验证状态快照。** 499 项功能的逐条维护成本已超过参考价值，自 2026-05-24 起冻结逐行更新。后续功能变更在 git commit message 和 CHANGELOG 中追踪，不再同步到本文件的每一行。已知问题和 SITL 验证结果仍在底部更新。  
+> 快照日期: 2026-05-24（冻结）  
 > 飞控: Plkj-Industrial, ArduPilot V4.6.3, 固定翼  
 > 测试方式: USB 串口 (/dev/ttyACM0) + Playwright 浏览器自动化 + pytest/vitest  
 > 相关文档：`docs/protocol_design.md`（don't-refactor 设计理由）/ `docs/audits/`（历史 audit 报告归档）/ `CLAUDE.md`（协议代码纪律）
