@@ -289,6 +289,42 @@ class TestFirmwareOnline:
         assert len(data['versions']) == 10
 
 
+class TestSecurityHeaders:
+    def test_nosniff(self):
+        r = client.get('/health')
+        assert r.headers.get('X-Content-Type-Options') == 'nosniff'
+
+    def test_frame_deny(self):
+        r = client.get('/health')
+        assert r.headers.get('X-Frame-Options') == 'DENY'
+
+    def test_referrer_policy(self):
+        r = client.get('/health')
+        assert r.headers.get('Referrer-Policy') == 'strict-origin-when-cross-origin'
+
+    def test_headers_on_api_route(self):
+        r = client.get('/api/version')
+        assert r.headers.get('X-Content-Type-Options') == 'nosniff'
+        assert r.headers.get('X-Frame-Options') == 'DENY'
+
+
+class TestWebSocketGuards:
+    def test_bad_origin_rejected_4003(self):
+        from starlette.websockets import WebSocketDisconnect
+        with pytest.raises(WebSocketDisconnect) as exc, \
+             client.websocket_connect('/ws', headers={'origin': 'https://evil.com'}):
+            pass
+        assert exc.value.code == 4003
+
+    def test_allowed_origin_accepted(self):
+        with client.websocket_connect('/ws', headers={'origin': 'http://localhost:5173'}) as ws:
+            ws.send_json({'type': 'disconnect'})
+
+    def test_no_origin_accepted(self):
+        with client.websocket_connect('/ws') as ws:
+            ws.send_json({'type': 'disconnect'})
+
+
 class TestParamMeta:
     def test_param_meta_returns(self):
         r = client.get('/api/param_meta')
