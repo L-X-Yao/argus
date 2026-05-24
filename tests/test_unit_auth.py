@@ -69,6 +69,7 @@ class TestTokenGeneration:
         generate_token()
         assert TOKEN_FILE.exists()
 
+    @pytest.mark.skipif(sys.platform == 'win32', reason='POSIX file mode not applicable on Windows (uses ACLs instead)')
     def test_token_file_has_correct_permissions(self):
         generate_token()
         mode = TOKEN_FILE.stat().st_mode & 0o777

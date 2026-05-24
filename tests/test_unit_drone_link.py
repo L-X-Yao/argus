@@ -1,7 +1,6 @@
 """Tests for DroneLink state machine, heartbeat timeout, reconnect logic."""
 from __future__ import annotations
 
-import os
 import struct
 import sys
 import threading
@@ -9,9 +8,23 @@ import time
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+import backend.drone_link as _dl_module
 from backend.config import cfg
 from backend.drone_link import _CRC_EXTRA, _MSG_NAMES, DroneLink
+
+
+@pytest.fixture(autouse=True)
+def _isolate_log_dir(tmp_path, monkeypatch):
+    # Repoint drone_link.__file__ so _start_log's Path(__file__).parent.parent/'logs' lands in tmp_path — second-resolution argus_*.csv names collide across same-second tests, which on Windows cascades file-lock failures.
+    fake_backend = tmp_path / 'backend'
+    fake_backend.mkdir()
+    fake_drone_link = fake_backend / 'drone_link.py'
+    fake_drone_link.touch()
+    monkeypatch.setattr(_dl_module, '__file__', str(fake_drone_link))
+    yield tmp_path
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -373,12 +386,12 @@ class TestDroneLinkDisconnect:
     def test_disconnect_stops_log(self):
         link = DroneLink()
         link._start_log()
-        assert link._logfile is not None
-        path = link._logfile.name
-        link.disconnect()
-        assert link._logfile is None
-        if os.path.exists(path):
-            os.unlink(path)
+        try:
+            assert link._logfile is not None
+            link.disconnect()
+            assert link._logfile is None
+        finally:
+            link._stop_log()
 
 
 # ---------------------------------------------------------------------------
@@ -614,11 +627,10 @@ class TestDroneLinkGetState:
         link = DroneLink()
         assert link.get_state()['log_active'] is False
         link._start_log()
-        assert link.get_state()['log_active'] is True
-        path = link._logfile.name
-        link._stop_log()
-        if os.path.exists(path):
-            os.unlink(path)
+        try:
+            assert link.get_state()['log_active'] is True
+        finally:
+            link._stop_log()
 
 
 # ---------------------------------------------------------------------------
@@ -660,12 +672,11 @@ class TestDroneLinkLog:
     def test_start_stop_log(self):
         link = DroneLink()
         link._start_log()
-        assert link._logfile is not None
-        path = link._logfile.name
-        link._stop_log()
+        try:
+            assert link._logfile is not None
+        finally:
+            link._stop_log()
         assert link._logfile is None
-        if os.path.exists(path):
-            os.unlink(path)
 
     def test_get_log_path_none(self):
         link = DroneLink()
@@ -674,73 +685,72 @@ class TestDroneLinkLog:
     def test_get_log_path_returns_path(self):
         link = DroneLink()
         link._start_log()
-        path = link.get_log_path()
-        assert path is not None
-        assert 'argus_' in path
-        assert path.endswith('.csv')
-        link._stop_log()
-        if os.path.exists(path):
-            os.unlink(path)
+        try:
+            path = link.get_log_path()
+            assert path is not None
+            assert 'argus_' in path
+            assert path.endswith('.csv')
+        finally:
+            link._stop_log()
 
     def test_log_file_has_csv_header(self):
         link = DroneLink()
         link._start_log()
-        path = link._logfile.name
-        link._logfile.flush()
-        with open(path) as f:
-            header = f.readline()
-        assert header.startswith('time,roll,pitch,yaw,lat,lon')
-        link._stop_log()
-        if os.path.exists(path):
-            os.unlink(path)
+        try:
+            path = link._logfile.name
+            link._logfile.flush()
+            with open(path, encoding='utf-8') as f:
+                header = f.readline()
+            assert header.startswith('time,roll,pitch,yaw,lat,lon')
+        finally:
+            link._stop_log()
 
     def test_start_log_adds_event(self):
         link = DroneLink()
         link._start_log()
-        path = link._logfile.name
-        log_events = [e for e in link.events if e['event_type'] == 'log_file']
-        assert len(log_events) >= 1
-        link._stop_log()
-        if os.path.exists(path):
-            os.unlink(path)
+        try:
+            log_events = [e for e in link.events if e['event_type'] == 'log_file']
+            assert len(log_events) >= 1
+        finally:
+            link._stop_log()
 
     def test_write_log_line_respects_interval(self):
         """_write_log_line does nothing if called too soon after last write."""
         link = DroneLink()
         link._start_log()
-        path = link._logfile.name
-        link.start_time = time.time()
-        link._last_log_time = time.time()  # set to now
-        link._write_log_line()
-        link._logfile.flush()
-        with open(path) as f:
-            lines = f.readlines()
-        # Only the header line, no data line
-        assert len(lines) == 1
-        link._stop_log()
-        if os.path.exists(path):
-            os.unlink(path)
+        try:
+            path = link._logfile.name
+            link.start_time = time.time()
+            link._last_log_time = time.time()  # set to now
+            link._write_log_line()
+            link._logfile.flush()
+            with open(path, encoding='utf-8') as f:
+                lines = f.readlines()
+            # Only the header line, no data line
+            assert len(lines) == 1
+        finally:
+            link._stop_log()
 
     def test_write_log_line_writes_data(self):
         """_write_log_line writes data when interval elapsed."""
         link = DroneLink()
         link._start_log()
-        path = link._logfile.name
-        link.start_time = time.time() - 10.0
-        link._last_log_time = 0.0  # force write
-        link.attitude.roll = 5.0
-        link.battery.voltage = 12.6
-        link._write_log_line()
-        link._logfile.flush()
-        with open(path) as f:
-            lines = f.readlines()
-        assert len(lines) == 2  # header + 1 data line
-        data_line = lines[1]
-        assert '5.00' in data_line
-        assert '12.60' in data_line
-        link._stop_log()
-        if os.path.exists(path):
-            os.unlink(path)
+        try:
+            path = link._logfile.name
+            link.start_time = time.time() - 10.0
+            link._last_log_time = 0.0  # force write
+            link.attitude.roll = 5.0
+            link.battery.voltage = 12.6
+            link._write_log_line()
+            link._logfile.flush()
+            with open(path, encoding='utf-8') as f:
+                lines = f.readlines()
+            assert len(lines) == 2  # header + 1 data line
+            data_line = lines[1]
+            assert '5.00' in data_line
+            assert '12.60' in data_line
+        finally:
+            link._stop_log()
 
     def test_write_log_line_no_logfile(self):
         """_write_log_line is a no-op when no log file is open."""
@@ -755,11 +765,11 @@ class TestDroneLinkLog:
     def test_log_created_in_logs_dir(self):
         link = DroneLink()
         link._start_log()
-        path = link._logfile.name
-        assert '/logs/' in path or '\\logs\\' in path
-        link._stop_log()
-        if os.path.exists(path):
-            os.unlink(path)
+        try:
+            path = link._logfile.name
+            assert '/logs/' in path or '\\logs\\' in path
+        finally:
+            link._stop_log()
 
 
 # ---------------------------------------------------------------------------
