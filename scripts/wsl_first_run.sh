@@ -41,7 +41,7 @@ log "Phase 1: 系统包 (需要 sudo)"
 NEED_INSTALL=()
 command -v python3 >/dev/null || NEED_INSTALL+=("python3")
 command -v pip3 >/dev/null || NEED_INSTALL+=("python3-pip")
-[[ -d /usr/lib/python3*/venv ]] || NEED_INSTALL+=("python3-venv")
+python3 -c "import venv" 2>/dev/null || NEED_INSTALL+=("python3-venv")
 command -v curl >/dev/null || NEED_INSTALL+=("curl")
 command -v git >/dev/null || NEED_INSTALL+=("git")
 command -v cc >/dev/null || NEED_INSTALL+=("build-essential")
