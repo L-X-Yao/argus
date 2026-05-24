@@ -13,11 +13,10 @@ from urllib.parse import urlparse
 
 from fastapi import APIRouter, Request, UploadFile
 
-from .config import cfg
+from .config import ROOT_DIR, cfg
 
 router = APIRouter()
 
-ROOT_DIR = Path(__file__).resolve().parent.parent
 FIRMWARE_DIR = ROOT_DIR / 'firmware'
 
 _FW_BASE = base64.b64decode(b'aHR0cHM6Ly9maXJtd2FyZS5hcmR1cGlsb3Qub3JnLw==').decode()
@@ -78,7 +77,7 @@ async def api_firmware_online(board_id: int = 0):
     try:
         url = '%s%s/stable-%s/' % (_FW_BASE, vehicle, board_name)
         req = urlreq.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        resp = urlreq.urlopen(req, timeout=10)
+        resp = urlreq.urlopen(req, timeout=cfg.FIRMWARE_LIST_TIMEOUT)
         html = resp.read(cfg.FIRMWARE_HTML_MAX).decode('utf-8', errors='replace')
         for m in re.finditer(r'href="([^"]*\.apj)"', html):
             fname = m.group(1)
@@ -122,7 +121,7 @@ async def api_firmware_download(request: Request):
             return {'ok': False, 'error': 'Refusing to fetch from internal address'}
     try:
         req = urlreq.Request(fw_url, headers={'User-Agent': 'Mozilla/5.0'})
-        resp = urlreq.urlopen(req, timeout=60)
+        resp = urlreq.urlopen(req, timeout=cfg.FIRMWARE_DOWNLOAD_TIMEOUT)
         FIRMWARE_DIR.mkdir(exist_ok=True)
         target = (FIRMWARE_DIR / filename).resolve()
         try:

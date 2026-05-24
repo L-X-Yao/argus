@@ -1,27 +1,18 @@
 """SRTM terrain elevation lookup."""
 from __future__ import annotations
 
-import asyncio
 import math
 import struct
 import urllib.error
 import urllib.request as urlreq
-from functools import partial
-from pathlib import Path
 
 from fastapi import APIRouter, Request
 
-from .config import cfg
+from .config import ROOT_DIR, aio, cfg
 
 router = APIRouter()
 
-ROOT_DIR = Path(__file__).resolve().parent.parent
 SRTM_CACHE = ROOT_DIR / 'srtm_cache'
-
-
-async def _aio(fn, *args):
-    loop = asyncio.get_event_loop()
-    return await loop.run_in_executor(None, partial(fn, *args) if args else fn)
 
 
 @router.get('/api/terrain/elevation', tags=['Map'])
@@ -57,20 +48,20 @@ async def _get_srtm_elevation(lat: float, lon: float) -> float:
     cache_file = SRTM_CACHE / fname
     if not cache_file.exists():
         SRTM_CACHE.mkdir(parents=True, exist_ok=True)
-        srtm_count = await _aio(lambda: sum(1 for _ in SRTM_CACHE.glob('*.hgt')) if SRTM_CACHE.exists() else 0)
+        srtm_count = await aio(lambda: sum(1 for _ in SRTM_CACHE.glob('*.hgt')) if SRTM_CACHE.exists() else 0)
         if srtm_count >= cfg.SRTM_CACHE_MAX:
             return 0
         url = 'https://elevation-tiles-prod.s3.amazonaws.com/skadi/%s%02d/%s' % (ns, abs(ilat), fname)
         try:
             req = urlreq.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-            data = await _aio(lambda: urlreq.urlopen(req, timeout=10).read(30 * 1024 * 1024))
-            if len(data) >= 30 * 1024 * 1024:
+            data = await aio(lambda: urlreq.urlopen(req, timeout=cfg.SRTM_DOWNLOAD_TIMEOUT).read(cfg.SRTM_FILE_MAX))
+            if len(data) >= cfg.SRTM_FILE_MAX:
                 return 0
-            await _aio(cache_file.write_bytes, data)
+            await aio(cache_file.write_bytes, data)
         except (OSError, urllib.error.URLError):
             return 0
     try:
-        data = await _aio(cache_file.read_bytes)
+        data = await aio(cache_file.read_bytes)
         samples = 1201
         if len(data) == 2884802:
             samples = 1201

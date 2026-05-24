@@ -1,7 +1,18 @@
 """Centralized configuration — all tunable constants in one place."""
 from __future__ import annotations
 
+import asyncio
 import os
+from functools import partial
+from pathlib import Path
+
+ROOT_DIR = Path(__file__).resolve().parent.parent
+
+
+async def aio(fn, *args):
+    """Run a blocking function in the default executor."""
+    loop = asyncio.get_event_loop()
+    return await loop.run_in_executor(None, partial(fn, *args) if args else fn)
 
 
 def _env(key: str, default, cast=None):
@@ -50,9 +61,17 @@ class Config:
     # Tile cache
     TILE_CACHE_MAX: int = 50000
     TILE_DOWNLOAD_TIMEOUT: float = 10.0
+
+    # SRTM terrain
     SRTM_CACHE_MAX: int = 500
+    SRTM_DOWNLOAD_TIMEOUT: float = 10.0
+    SRTM_FILE_MAX: int = 30 * 1024 * 1024  # 30 MB
+
+    # Firmware
     FIRMWARE_MAX_SIZE: int = 50 * 1024 * 1024  # 50 MB
     FIRMWARE_HTML_MAX: int = 1024 * 1024  # 1 MB
+    FIRMWARE_LIST_TIMEOUT: float = 10.0
+    FIRMWARE_DOWNLOAD_TIMEOUT: float = 60.0
 
     # Param metadata
     PARAM_CACHE_TTL: int = 86400 * 7

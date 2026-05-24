@@ -1,33 +1,25 @@
 """Tile proxy, cache, MBTiles, and tile source registry."""
 from __future__ import annotations
 
-import asyncio
 import shutil
 import sqlite3
 import urllib.error
 import urllib.request as urlreq
-from functools import partial
 from pathlib import Path
 
 from fastapi import APIRouter, Request
 from fastapi.responses import Response
 
-from .config import cfg
+from .config import ROOT_DIR, aio, cfg
 
 router = APIRouter()
 
-ROOT_DIR = Path(__file__).resolve().parent.parent
 TILE_CACHE = ROOT_DIR / 'tile_cache'
 MBTILES_DIR = ROOT_DIR / 'mbtiles'
 
 _TILE_MAX = cfg.TILE_CACHE_MAX
 _TILE_MAX_BYTES = 2 * 1024 * 1024
 _tile_count = -1
-
-
-async def _aio(fn, *args):
-    loop = asyncio.get_event_loop()
-    return await loop.run_in_executor(None, partial(fn, *args) if args else fn)
 
 
 TILE_URLS = {
@@ -105,20 +97,20 @@ async def api_tile(style: str, z: int, x: int, y: int):
     cache_dir = TILE_CACHE / style / str(z) / str(x)
     cache_file = cache_dir / ('%d.png' % y)
     if cache_file.exists():
-        data = await _aio(cache_file.read_bytes)
+        data = await aio(cache_file.read_bytes)
         return Response(content=data, media_type='image/png',
                         headers={'Cache-Control': 'public, max-age=604800'})
     url = TILE_URLS.get(style, TILE_URLS['6']).format(x=x, y=y, z=z)
     try:
         req = urlreq.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-        data = await _aio(lambda: urlreq.urlopen(req, timeout=cfg.TILE_DOWNLOAD_TIMEOUT).read(_TILE_MAX_BYTES + 1))
+        data = await aio(lambda: urlreq.urlopen(req, timeout=cfg.TILE_DOWNLOAD_TIMEOUT).read(_TILE_MAX_BYTES + 1))
         if len(data) > _TILE_MAX_BYTES:
             return Response(status_code=502, content='Tile too large')
         if _tile_count < 0:
-            _tile_count = await _aio(lambda: sum(1 for _ in TILE_CACHE.rglob('*.png')) if TILE_CACHE.exists() else 0)
+            _tile_count = await aio(lambda: sum(1 for _ in TILE_CACHE.rglob('*.png')) if TILE_CACHE.exists() else 0)
         if _tile_count < _TILE_MAX:
             cache_dir.mkdir(parents=True, exist_ok=True)
-            await _aio(cache_file.write_bytes, data)
+            await aio(cache_file.write_bytes, data)
             _tile_count += 1
         return Response(content=data, media_type='image/png',
                         headers={'Cache-Control': 'public, max-age=604800'})
@@ -139,7 +131,7 @@ async def api_tile_cache():
                 count += 1
         return total, count
 
-    total, count = await _aio(_count_cache)
+    total, count = await aio(_count_cache)
     return {'size': total, 'count': count}
 
 
@@ -175,11 +167,11 @@ async def api_tile_bulk_download(request: Request):
                 url = TILE_URLS.get(style, TILE_URLS['6']).format(x=x, y=y, z=z)
                 try:
                     req = urlreq.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-                    data = await _aio(lambda: urlreq.urlopen(req, timeout=5).read(_TILE_MAX_BYTES + 1))
+                    data = await aio(lambda: urlreq.urlopen(req, timeout=cfg.TILE_DOWNLOAD_TIMEOUT).read(_TILE_MAX_BYTES + 1))
                     if len(data) > _TILE_MAX_BYTES:
                         continue
                     cache_file.parent.mkdir(parents=True, exist_ok=True)
-                    await _aio(cache_file.write_bytes, data)
+                    await aio(cache_file.write_bytes, data)
                     downloaded += 1
                 except (OSError, urllib.error.URLError):
                     pass

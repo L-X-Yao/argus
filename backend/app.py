@@ -1,12 +1,9 @@
 from __future__ import annotations
 
-import asyncio
 import glob
 import os
 import sys
 from contextlib import asynccontextmanager
-from functools import partial
-from pathlib import Path
 
 from fastapi import FastAPI, Request, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
@@ -14,7 +11,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from .auth import auth_middleware, auth_required, generate_token, verify_token, verify_ws_token
-from .config import cfg
+from .config import ROOT_DIR, aio, cfg
 from .drone_link import DroneLink
 from .firmware import router as firmware_router
 from .param_meta import get_metadata
@@ -23,13 +20,7 @@ from .tiles import router as tiles_router
 from .video import router as video_router
 from .ws_manager import WSManager
 
-ROOT_DIR = Path(__file__).resolve().parent.parent
 DIST_DIR = ROOT_DIR / 'dist'
-
-
-async def _aio(fn, *args):
-    loop = asyncio.get_event_loop()
-    return await loop.run_in_executor(None, partial(fn, *args) if args else fn)
 
 
 @asynccontextmanager
@@ -173,7 +164,7 @@ async def api_ports():
             pass
         return {'ports': ports or ['COM3']}
     else:
-        found = await _aio(lambda: sorted(glob.glob('/dev/ttyUSB*') + glob.glob('/dev/ttyACM*')))
+        found = await aio(lambda: sorted(glob.glob('/dev/ttyUSB*') + glob.glob('/dev/ttyACM*')))
         return {'ports': found or ['/dev/ttyUSB0']}
 
 
