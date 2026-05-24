@@ -704,6 +704,34 @@ class TestLogData:
         assert link.log_dl._log_download_id == -1
         assert any(m['type'] == 'log_complete' for m in link.log_dl._log_messages)
 
+    def test_count_zero_finalizes_as_truncated(self):
+        link = make_link()
+        link.log_dl._log_download_id = 5
+        link.log_dl._log_download_size = 100
+        link.log_dl._log_download_data = bytearray(100)
+        link.send = lambda f: None
+        p = struct.pack('<IHB', 0, 5, 0) + bytes(90)
+        handle_log_data(p, len(p), link)
+        msgs = link.log_dl._log_messages
+        assert any(m['type'] == 'log_complete' and m['truncated'] for m in msgs)
+
+    def test_out_of_order_chunk_ofs_stays_at_max(self):
+        link = make_link()
+        link.log_dl._log_download_id = 7
+        link.log_dl._log_download_size = 30
+        link.log_dl._log_download_data = bytearray(30)
+        link.send = lambda frame: None
+        # chunk at ofs=10 arrives first
+        p1 = struct.pack('<IHB', 10, 7, 10) + bytes(range(10))
+        handle_log_data(p1, len(p1), link)
+        assert link.log_dl._log_download_ofs == 20
+        # late chunk at ofs=0 must not rewind progress
+        p2 = struct.pack('<IHB', 0, 7, 10) + bytes(range(10))
+        handle_log_data(p2, len(p2), link)
+        assert link.log_dl._log_download_ofs == 20
+        assert link.log_dl._log_download_data[10:20] == bytes(range(10))
+        assert link.log_dl._log_download_data[0:10] == bytes(range(10))
+
 
 # ── Mission Item Int ─────────────────────────────────────────────────────────
 

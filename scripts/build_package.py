@@ -29,6 +29,7 @@ PIP_DEPS = [
     'pyserial',
     'httpx',
     'websockets',
+    'python-multipart',
 ]
 
 

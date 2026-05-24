@@ -875,7 +875,6 @@ class TestCalibration:
                 await ws.close()
         asyncio.get_event_loop().run_until_complete(run())
 
-    @pytest.mark.xfail(reason='compass cal depends on sim timing, flaky under load')
     def test_compass_calibration(self, ws_url, sim_port):
         async def run():
             await asyncio.sleep(1)
