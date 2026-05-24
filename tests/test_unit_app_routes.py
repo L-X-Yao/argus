@@ -243,6 +243,52 @@ class TestVideo:
         assert 'error' in data
 
 
+class TestFirmwareOnline:
+    def test_unknown_board_id(self):
+        r = client.get('/api/firmware/online?board_id=999')
+        data = r.json()
+        assert 'error' in data
+        assert data['versions'] == []
+
+    def test_default_board_id_zero(self):
+        r = client.get('/api/firmware/online')
+        data = r.json()
+        assert data['versions'] == []
+        assert 'error' in data
+
+    def test_valid_board_parses_html(self):
+        html = (
+            '<html><body>'
+            '<a href="firmware-v4.6.3.apj">firmware-v4.6.3.apj</a>'
+            '<a href="firmware-v4.5.7.apj">firmware-v4.5.7.apj</a>'
+            '<a href="README.md">README.md</a>'
+            '</body></html>'
+        )
+        mock_resp = type('R', (), {'read': lambda self, n: html.encode()})()
+        with patch('backend.app.urlreq.urlopen', return_value=mock_resp):
+            r = client.get('/api/firmware/online?board_id=56')
+        data = r.json()
+        assert len(data['versions']) == 2
+        assert data['versions'][0]['version'] == '4.6.3'
+        assert data['versions'][1]['version'] == '4.5.7'
+        assert data['versions'][0]['url'].endswith('firmware-v4.6.3.apj')
+
+    def test_network_error_returns_empty(self):
+        with patch('backend.app.urlreq.urlopen', side_effect=OSError('timeout')):
+            r = client.get('/api/firmware/online?board_id=56')
+        data = r.json()
+        assert data['versions'] == []
+
+    def test_max_10_versions(self):
+        links = ''.join(f'<a href="fw-v1.0.{i}.apj">fw</a>' for i in range(20))
+        html = f'<html>{links}</html>'
+        mock_resp = type('R', (), {'read': lambda self, n: html.encode()})()
+        with patch('backend.app.urlreq.urlopen', return_value=mock_resp):
+            r = client.get('/api/firmware/online?board_id=56')
+        data = r.json()
+        assert len(data['versions']) == 10
+
+
 class TestParamMeta:
     def test_param_meta_returns(self):
         r = client.get('/api/param_meta')

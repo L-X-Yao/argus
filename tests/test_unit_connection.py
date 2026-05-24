@@ -62,3 +62,93 @@ class TestTcpWrapper:
         wrapper = TcpWrapper(mock_sock)
         wrapper.close()
         mock_sock.close.assert_called_once()
+
+    def test_read_os_error_returns_empty(self):
+        mock_sock = MagicMock()
+        mock_sock.recv.side_effect = OSError('connection reset')
+        wrapper = TcpWrapper(mock_sock)
+        assert wrapper.read(1024) == b''
+
+
+class TestUdpWrapper:
+    def _make_wrapper(self):
+        mock_sock = MagicMock()
+        with patch('backend.connection.socket.socket', return_value=mock_sock):
+            wrapper = UdpWrapper(14550)
+        return wrapper, mock_sock
+
+    def test_read_sets_remote_on_first_packet(self):
+        wrapper, mock_sock = self._make_wrapper()
+        mock_sock.recvfrom.return_value = (b'\xfd\x09', ('192.168.1.10', 5760))
+        data = wrapper.read(1024)
+        assert data == b'\xfd\x09'
+        assert wrapper._remote == ('192.168.1.10', 5760)
+
+    def test_read_same_peer_updates_last_seen(self):
+        wrapper, mock_sock = self._make_wrapper()
+        wrapper._remote = ('192.168.1.10', 5760)
+        wrapper._remote_last_seen = 100.0
+        mock_sock.recvfrom.return_value = (b'\xfd', ('192.168.1.10', 5760))
+        with patch('time.monotonic', return_value=200.0):
+            data = wrapper.read(1024)
+        assert data == b'\xfd'
+        assert wrapper._remote_last_seen == 200.0
+
+    def test_read_different_peer_while_active_drops(self):
+        wrapper, mock_sock = self._make_wrapper()
+        wrapper._remote = ('192.168.1.10', 5760)
+        wrapper._remote_last_seen = 100.0
+        mock_sock.recvfrom.return_value = (b'\xfd', ('10.0.0.1', 9999))
+        with patch('time.monotonic', return_value=105.0):
+            data = wrapper.read(1024)
+        assert data == b''
+        assert wrapper._remote == ('192.168.1.10', 5760)
+
+    def test_read_different_peer_after_guard_timeout_accepts(self):
+        wrapper, mock_sock = self._make_wrapper()
+        wrapper._remote = ('192.168.1.10', 5760)
+        wrapper._remote_last_seen = 100.0
+        mock_sock.recvfrom.return_value = (b'\xfd\x01', ('10.0.0.2', 8888))
+        with patch('time.monotonic', return_value=200.0):
+            data = wrapper.read(1024)
+        assert data == b'\xfd\x01'
+        assert wrapper._remote == ('10.0.0.2', 8888)
+
+    def test_write_sends_to_remote(self):
+        wrapper, mock_sock = self._make_wrapper()
+        wrapper._remote = ('192.168.1.10', 5760)
+        wrapper.write(b'\x01\x02\x03')
+        mock_sock.sendto.assert_called_once_with(b'\x01\x02\x03', ('192.168.1.10', 5760))
+
+    def test_write_no_remote_does_nothing(self):
+        wrapper, mock_sock = self._make_wrapper()
+        assert wrapper._remote is None
+        wrapper.write(b'\x01\x02')
+        mock_sock.sendto.assert_not_called()
+
+    def test_write_os_error_swallowed(self):
+        wrapper, mock_sock = self._make_wrapper()
+        wrapper._remote = ('192.168.1.10', 5760)
+        mock_sock.sendto.side_effect = OSError('network unreachable')
+        wrapper.write(b'\x01')
+
+    def test_read_timeout_returns_empty(self):
+        wrapper, mock_sock = self._make_wrapper()
+        mock_sock.recvfrom.side_effect = TimeoutError
+        assert wrapper.read(1024) == b''
+
+    def test_read_os_error_returns_empty(self):
+        wrapper, mock_sock = self._make_wrapper()
+        mock_sock.recvfrom.side_effect = OSError('closed')
+        assert wrapper.read(1024) == b''
+
+    def test_close(self):
+        wrapper, mock_sock = self._make_wrapper()
+        wrapper.close()
+        mock_sock.close.assert_called_once()
+
+    def test_bind_called_on_init(self):
+        mock_sock = MagicMock()
+        with patch('backend.connection.socket.socket', return_value=mock_sock):
+            UdpWrapper(14550, '0.0.0.0')
+        mock_sock.bind.assert_called_once_with(('0.0.0.0', 14550))

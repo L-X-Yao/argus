@@ -894,6 +894,39 @@ class TestPushLoop:
         )
 
     @pytest.mark.asyncio
+    async def test_mixed_param_batch_and_individual(self):
+        """When param_value and non-param_value messages arrive in same cycle,
+        param_values are batched while others are sent individually."""
+        link = DroneLink()
+        mgr = WSManager(link)
+        ws = make_ws()
+        call_count = 0
+
+        async def fake_sleep(_interval):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                link.param_mgr._messages.append(
+                    {'type': 'param_value', 'name': 'RC1_MAX', 'value': 2000})
+                link.param_mgr._messages.append(
+                    {'type': 'param_progress', 'pct': 75})
+                link.param_mgr._messages.append(
+                    {'type': 'param_value', 'name': 'RC1_MIN', 'value': 1000})
+            if call_count >= 2:
+                raise WebSocketDisconnect()
+
+        with patch('backend.ws_manager.asyncio.sleep', side_effect=fake_sleep):
+            await mgr._push_loop(ws)
+
+        all_msgs = [json.loads(c[0][0]) for c in ws.send_text.call_args_list]
+        batch_msgs = [m for m in all_msgs if m.get('type') == 'param_batch']
+        progress_msgs = [m for m in all_msgs if m.get('type') == 'param_progress']
+        assert len(batch_msgs) == 1
+        assert len(batch_msgs[0]['params']) == 2
+        assert len(progress_msgs) == 1
+        assert progress_msgs[0]['pct'] == 75
+
+    @pytest.mark.asyncio
     async def test_10th_push_is_full_state(self):
         """Every 10th push sends full state (push_count % 10 == 1)."""
         link = DroneLink()
