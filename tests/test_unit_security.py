@@ -213,11 +213,11 @@ class TestFirmwareUploadSanitization:
     def test_traversal_filename_sanitized(self, tmp_path):
         from fastapi.testclient import TestClient  # noqa: PLC0415
 
-        import backend.app as app_mod
+        import backend.firmware as fw_mod
         from backend.app import app  # noqa: PLC0415
 
         client = TestClient(app)
-        with patch.object(app_mod, 'FIRMWARE_DIR', tmp_path):
+        with patch.object(fw_mod, 'FIRMWARE_DIR', tmp_path):
             r = client.post(
                 '/api/firmware/upload',
                 files={'file': ('../../exploit.apj', b'\x00' * 10, 'application/octet-stream')},

@@ -111,7 +111,7 @@ class TestTileProxy:
         assert b'unknown tile style' in r.content
 
     def test_valid_style_no_network(self):
-        with patch('backend.app.urlreq.urlopen', side_effect=OSError('no network')):
+        with patch('backend.tiles.urlreq.urlopen', side_effect=OSError('no network')):
             r = client.get('/api/tile/osm/1/0/0')
         assert r.status_code in (200, 404)
 
@@ -161,8 +161,8 @@ class TestFirmwareUpload:
         assert data.get('ok') is False or 'error' in data or r.status_code >= 400
 
     def test_valid_apj_accepted(self, tmp_path):
-        import backend.app as app_mod
-        with patch.object(app_mod, 'FIRMWARE_DIR', tmp_path):
+        import backend.firmware as fw_mod
+        with patch.object(fw_mod, 'FIRMWARE_DIR', tmp_path):
             r = client.post(
                 '/api/firmware/upload',
                 files={'file': ('test.apj', b'\x00' * 100, 'application/octet-stream')},
@@ -265,7 +265,7 @@ class TestFirmwareOnline:
             '</body></html>'
         )
         mock_resp = type('R', (), {'read': lambda self, n: html.encode()})()
-        with patch('backend.app.urlreq.urlopen', return_value=mock_resp):
+        with patch('backend.firmware.urlreq.urlopen', return_value=mock_resp):
             r = client.get('/api/firmware/online?board_id=56')
         data = r.json()
         assert len(data['versions']) == 2
@@ -274,7 +274,7 @@ class TestFirmwareOnline:
         assert data['versions'][0]['url'].endswith('firmware-v4.6.3.apj')
 
     def test_network_error_returns_empty(self):
-        with patch('backend.app.urlreq.urlopen', side_effect=OSError('timeout')):
+        with patch('backend.firmware.urlreq.urlopen', side_effect=OSError('timeout')):
             r = client.get('/api/firmware/online?board_id=56')
         data = r.json()
         assert data['versions'] == []
@@ -283,7 +283,7 @@ class TestFirmwareOnline:
         links = ''.join(f'<a href="fw-v1.0.{i}.apj">fw</a>' for i in range(20))
         html = f'<html>{links}</html>'
         mock_resp = type('R', (), {'read': lambda self, n: html.encode()})()
-        with patch('backend.app.urlreq.urlopen', return_value=mock_resp):
+        with patch('backend.firmware.urlreq.urlopen', return_value=mock_resp):
             r = client.get('/api/firmware/online?board_id=56')
         data = r.json()
         assert len(data['versions']) == 10

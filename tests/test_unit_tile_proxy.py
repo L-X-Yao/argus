@@ -9,8 +9,9 @@ import pytest
 from fastapi.testclient import TestClient
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from backend.app import TILE_SOURCES, TILE_URLS, app
+from backend.app import app
 from backend.drone_link import DroneLink
+from backend.tiles import TILE_SOURCES, TILE_URLS
 from backend.ws_manager import WSManager
 
 client = TestClient(app, raise_server_exceptions=False)
@@ -30,7 +31,7 @@ def tile_cache_dir(tmp_path):
     """Provide a temporary tile cache directory and patch TILE_CACHE."""
     cache = tmp_path / 'tile_cache'
     cache.mkdir()
-    with patch('backend.app.TILE_CACHE', cache):
+    with patch('backend.tiles.TILE_CACHE', cache):
         yield cache
 
 
@@ -39,7 +40,7 @@ def mbtiles_dir(tmp_path):
     """Provide a temporary mbtiles directory and patch MBTILES_DIR."""
     mb = tmp_path / 'mbtiles'
     mb.mkdir()
-    with patch('backend.app.MBTILES_DIR', mb):
+    with patch('backend.tiles.MBTILES_DIR', mb):
         yield mb
 
 
@@ -203,7 +204,7 @@ class TestTileCache:
         """First request for a tile should try to fetch from network."""
         fake_tile = b'\x89PNG\r\n\x1a\n' + b'\x42' * 50
 
-        with patch('backend.app.urlreq.urlopen') as mock_urlopen:
+        with patch('backend.tiles.urlreq.urlopen') as mock_urlopen:
             mock_response = MagicMock()
             mock_response.read.return_value = fake_tile
             mock_urlopen.return_value = mock_response
@@ -217,7 +218,7 @@ class TestTileCache:
         """Second request for same tile should come from cache, not network."""
         fake_tile = b'\x89PNG\r\n\x1a\n' + b'\x42' * 50
 
-        with patch('backend.app.urlreq.urlopen') as mock_urlopen:
+        with patch('backend.tiles.urlreq.urlopen') as mock_urlopen:
             mock_response = MagicMock()
             mock_response.read.return_value = fake_tile
             mock_urlopen.return_value = mock_response
@@ -236,7 +237,7 @@ class TestTileCache:
 
     def test_network_failure_returns_404(self, tile_cache_dir):
         """If network fetch fails and no cache, return 404."""
-        with patch('backend.app.urlreq.urlopen') as mock_urlopen:
+        with patch('backend.tiles.urlreq.urlopen') as mock_urlopen:
             mock_urlopen.side_effect = OSError('network error')
 
             r = client.get('/api/tile/osm/5/10/15')
@@ -367,7 +368,7 @@ class TestTileBulkDownload:
     def test_bulk_download_zoom_clamped(self, tile_cache_dir):
         """Zoom levels are clamped to 0-18."""
         fake_tile = b'\x89PNG' + b'\x00' * 10
-        with patch('backend.app.urlreq.urlopen') as mock_urlopen:
+        with patch('backend.tiles.urlreq.urlopen') as mock_urlopen:
             mock_response = MagicMock()
             mock_response.read.return_value = fake_tile
             mock_urlopen.return_value = mock_response
@@ -385,7 +386,7 @@ class TestTileBulkDownload:
     def test_bulk_download_respects_5000_limit(self, tile_cache_dir):
         """Bulk download truncates at 5000 tiles."""
         fake_tile = b'\x89PNG' + b'\x00' * 10
-        with patch('backend.app.urlreq.urlopen') as mock_urlopen:
+        with patch('backend.tiles.urlreq.urlopen') as mock_urlopen:
             mock_response = MagicMock()
             mock_response.read.return_value = fake_tile
             mock_urlopen.return_value = mock_response
@@ -416,7 +417,7 @@ class TestTileBulkDownload:
         lat_max = math.degrees(math.atan(math.sinh(math.pi * (1 - 2 * 420 / n))))
         lat_min = math.degrees(math.atan(math.sinh(math.pi * (1 - 2 * (420 + 1) / n))))
 
-        with patch('backend.app.urlreq.urlopen') as mock_urlopen:
+        with patch('backend.tiles.urlreq.urlopen') as mock_urlopen:
             mock_response = MagicMock()
             mock_response.read.return_value = b'\x89PNG' + b'\x00' * 10
             mock_urlopen.return_value = mock_response
