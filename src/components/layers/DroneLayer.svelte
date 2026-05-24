@@ -7,6 +7,10 @@
   type CoordFn = (lat: number, lon: number) => [number, number];
   let { map, follow, trail, coord }: { map: L.Map; follow: boolean; trail: [number, number][]; coord: CoordFn } = $props();
 
+  function escHtml(s: string): string {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
   let droneMarker: L.Marker | null = null;
   let homeMarker: L.Marker | null = null;
   let trailLine: L.Polyline | null = null;
@@ -148,11 +152,11 @@
         const icon = L.divIcon({
           className: '',
           html: `<div style="transform:rotate(${a.hdg}deg)"><svg viewBox="-10 -10 20 20" width="20" height="20"><polygon points="0,-8 -5,6 0,3 5,6" fill="#ffc107" stroke="#333" stroke-width="0.5"/></svg></div>
-            <div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-size:8px;color:#ffc107;font-weight:bold;white-space:nowrap">${a.callsign || a.icao.toString(16)}</div>`,
+            <div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-size:8px;color:#ffc107;font-weight:bold;white-space:nowrap">${a.callsign ? escHtml(a.callsign) : a.icao.toString(16)}</div>`,
           iconSize: [20, 20], iconAnchor: [10, 10],
         });
         const m = L.marker([glat, glon], { icon, zIndexOffset: 600 }).addTo(map);
-        m.bindTooltip(`${a.callsign || 'ADSB'} | ${a.alt.toFixed(0)}m | ${a.speed.toFixed(0)}m/s`, { permanent: false });
+        m.bindTooltip(`${a.callsign ? escHtml(a.callsign) : 'ADSB'} | ${a.alt.toFixed(0)}m | ${a.speed.toFixed(0)}m/s`, { permanent: false });
         adsbMarkers.set(a.icao, m);
       }
     }

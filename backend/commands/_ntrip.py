@@ -13,6 +13,7 @@ in _hardware.py for the same wire format used by the manual paste path.
 from __future__ import annotations
 
 import base64
+import ipaddress
 import socket
 import struct
 import threading
@@ -183,6 +184,18 @@ def cmd_ntrip_start(link: DroneLink, param, data: dict):
     password = str(data.get('password', ''))[:128]
     if any(c in username + password for c in ('\r', '\n')):
         return {'ok': False, 'error': 'NTRIP credentials contain invalid chars'}
+
+    try:
+        addrs = socket.getaddrinfo(host, port)
+    except socket.gaierror:
+        return {'ok': False, 'error': 'Cannot resolve NTRIP host'}
+    for _fam, *_rest, sockaddr in addrs:
+        try:
+            ip = ipaddress.ip_address(sockaddr[0])
+        except ValueError:
+            continue
+        if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast:
+            return {'ok': False, 'error': 'NTRIP host resolves to private/internal address'}
 
     with link._state_lock:
         existing = link.ntrip_thread

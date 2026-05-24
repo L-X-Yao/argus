@@ -77,9 +77,12 @@ export const CRC_EXTRA: Record<number, number> = {
   136: 1,    // TERRAIN_REPORT
   147: 154,  // BATTERY_STATUS
   148: 178,  // AUTOPILOT_VERSION
+  158: 134,  // MOUNT_STATUS
   163: 127,  // AHRS
   168: 1,    // WIND
   178: 47,   // AHRS2
+  191: 92,   // MAG_CAL_PROGRESS
+  192: 36,   // MAG_CAL_REPORT
   233: 35,   // GPS_INPUT
   241: 90,   // VIBRATION
   242: 104,  // HOME_POSITION

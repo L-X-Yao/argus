@@ -9,7 +9,6 @@ export default defineConfig({
   },
   test: {
     include: ['src/**/*.test.ts'],
-    onUnhandledErrors: 'ignore',
   },
   build: {
     chunkSizeWarningLimit: 300,

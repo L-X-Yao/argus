@@ -196,8 +196,11 @@ async def api_auth_status():
 
 
 @app.post('/api/auth/generate', tags=['Auth'])
-async def api_auth_generate():
+async def api_auth_generate(request: Request):
     """Generate a new auth token (only works if no token exists yet)."""
+    client = request.client
+    if not client or client.host not in ('127.0.0.1', '::1'):
+        return JSONResponse(status_code=403, content={'error': 'token generation only allowed from localhost'})
     if auth_required():
         return JSONResponse(status_code=403, content={'error': 'token already exists'})
     token = generate_token()
@@ -597,22 +600,33 @@ async def api_firmware_download(request: Request):
     try:
         req = urlreq.Request(fw_url, headers={'User-Agent': 'Mozilla/5.0'})
         resp = urlreq.urlopen(req, timeout=60)
-        data = resp.read(cfg.FIRMWARE_MAX_SIZE + 1)
-        if len(data) > cfg.FIRMWARE_MAX_SIZE:
-            return {'ok': False, 'error': 'File too large (max %d MB)' % (cfg.FIRMWARE_MAX_SIZE // 1024 // 1024)}
         FIRMWARE_DIR.mkdir(exist_ok=True)
-        # Final defense-in-depth: assert the resolved path stays inside
-        # FIRMWARE_DIR. relative_to() raises ValueError if not.
         target = (FIRMWARE_DIR / filename).resolve()
         try:
             target.relative_to(FIRMWARE_DIR.resolve())
         except ValueError:
             return {'ok': False, 'error': 'Invalid filename'}
-        target.write_bytes(data)
-        return {'ok': True, 'filename': filename, 'size': len(data)}
+        tmp = target.with_suffix('.tmp')
+        total = 0
+        try:
+            with open(tmp, 'wb') as f:
+                while True:
+                    chunk = resp.read(65536)
+                    if not chunk:
+                        break
+                    total += len(chunk)
+                    if total > cfg.FIRMWARE_MAX_SIZE:
+                        raise ValueError('too large')
+                    f.write(chunk)
+            tmp.rename(target)
+        except ValueError:
+            tmp.unlink(missing_ok=True)
+            return {'ok': False, 'error': 'File too large (max %d MB)' % (cfg.FIRMWARE_MAX_SIZE // 1024 // 1024)}
+        except Exception:
+            tmp.unlink(missing_ok=True)
+            raise
+        return {'ok': True, 'filename': filename, 'size': total}
     except (OSError, urllib.error.URLError) as e:
-        # Don't leak server paths / internal URLError reasons to the client.
-        # Log the detail server-side for the operator.
         import logging
         logging.getLogger('gcs').warning('firmware download failed: %s', e)
         return {'ok': False, 'error': 'Download failed (check server logs)'}

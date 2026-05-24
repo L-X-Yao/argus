@@ -300,6 +300,17 @@
     {/if}
   </nav>
 
+  <svelte:boundary onerror={(e) => console.error('View render error:', e)}>
+    {#snippet failed(error, reset)}
+      <div class="flex-1 flex items-center justify-center bg-background">
+        <div class="text-center p-6">
+          <p class="text-destructive font-bold text-sm">Render Error</p>
+          <p class="text-xs text-muted-foreground mt-1 max-w-xs break-all">{error instanceof Error ? error.message : String(error)}</p>
+          <button class="mt-3 px-3 py-1.5 bg-primary text-primary-foreground text-xs rounded-md" onclick={reset}>Retry</button>
+        </div>
+      </div>
+    {/snippet}
+
   {#if view === 'fly'}
     <div id="main-content" class="flex-1 flex overflow-hidden">
       {#if app.drone.connected && controlsOpen}
@@ -402,6 +413,7 @@
   {#if !app.drone.connected && view === 'fly' && ReplayMod}
     <ReplayMod onposition={(lat: number, lon: number, yaw: number) => app.replayPos = { lat, lon, yaw }} />
   {/if}
+  </svelte:boundary>
 
   <ToastContainer />
   {#if app.summaryShown && app.drone.flight_summary && FlightSummaryMod}
