@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // Mock dependencies before importing module
 vi.mock('./ws', () => ({ sendCommand: vi.fn() }));
@@ -7,6 +7,8 @@ vi.mock('./stores.svelte', () => ({
 }));
 
 import { gamepad, loadGamepadMap, saveGamepadMap, startGamepad, stopGamepad } from './gamepad.svelte';
+import { sendCommand } from './ws';
+import { app } from './stores.svelte';
 
 function makeStorage(): Storage {
   const store = new Map<string, string>();
@@ -146,5 +148,260 @@ describe('startGamepad / stopGamepad', () => {
     expect(gamepad.connected).toBe(false);
     expect(window.removeEventListener).toHaveBeenCalledWith('gamepadconnected', expect.any(Function));
     expect(window.removeEventListener).toHaveBeenCalledWith('gamepaddisconnected', expect.any(Function));
+  });
+});
+
+describe('onConnect / onDisconnect handlers', () => {
+  it('onConnect sets connected state and name', () => {
+    startGamepad();
+    const addEventCalls = (window.addEventListener as ReturnType<typeof vi.fn>).mock.calls;
+    const connectHandler = addEventCalls.find((c: unknown[]) => c[0] === 'gamepadconnected')![1] as (e: GamepadEvent) => void;
+    connectHandler({ gamepad: { index: 0, id: 'Xbox Wireless Controller (Long Name Truncated Here)' } } as unknown as GamepadEvent);
+
+    expect(gamepad.connected).toBe(true);
+    expect(gamepad.name.length).toBeLessThanOrEqual(40);
+    expect(gamepad.name).toBe('Xbox Wireless Controller (Long Name Trun');
+  });
+
+  it('onDisconnect resets all gamepad state', () => {
+    startGamepad();
+    const addEventCalls = (window.addEventListener as ReturnType<typeof vi.fn>).mock.calls;
+    const connectHandler = addEventCalls.find((c: unknown[]) => c[0] === 'gamepadconnected')![1] as (e: GamepadEvent) => void;
+    const disconnectHandler = addEventCalls.find((c: unknown[]) => c[0] === 'gamepaddisconnected')![1] as () => void;
+
+    // Connect first
+    connectHandler({ gamepad: { index: 0, id: 'Test Controller' } } as unknown as GamepadEvent);
+    expect(gamepad.connected).toBe(true);
+
+    // Then disconnect
+    disconnectHandler();
+    expect(gamepad.connected).toBe(false);
+    expect(gamepad.name).toBe('');
+    expect(gamepad.axes).toEqual([0, 0, 0, 0]);
+  });
+});
+
+describe('poll() gamepad reading and RC override', () => {
+  let pollFn: () => void;
+
+  beforeEach(() => {
+    (sendCommand as ReturnType<typeof vi.fn>).mockClear();
+    // Capture the poll callback passed to requestAnimationFrame
+    vi.stubGlobal('requestAnimationFrame', vi.fn((cb: () => void) => {
+      pollFn = cb;
+      return 1;
+    }));
+    vi.stubGlobal('performance', { now: vi.fn(() => 1000) });
+  });
+
+  afterEach(() => {
+    stopGamepad();
+  });
+
+  it('reads axes from gamepad and updates state', () => {
+    const mockGamepad = {
+      index: 0,
+      axes: [0.5, -0.3, 0.8, -0.9],
+      buttons: [{ pressed: true }, { pressed: false }],
+    };
+    vi.stubGlobal('navigator', { getGamepads: vi.fn(() => [mockGamepad]) });
+
+    gamepad.enabled = true;
+    gamepad.connected = true;
+
+    // Simulate poll being called (need to set gpIndex via onConnect)
+    // Start gamepad and invoke the connect handler
+    startGamepad();
+    const addEventCalls = (window.addEventListener as ReturnType<typeof vi.fn>).mock.calls;
+    const connectHandler = addEventCalls.find((c: unknown[]) => c[0] === 'gamepadconnected')![1] as (e: GamepadEvent) => void;
+    connectHandler({ gamepad: { index: 0, id: 'Test Controller' } } as unknown as GamepadEvent);
+
+    // Now call poll via requestAnimationFrame callback
+    expect(pollFn).toBeDefined();
+    pollFn();
+
+    // Axes should be updated (with deadzone applied)
+    expect(gamepad.axes[0]).toBeGreaterThan(0);
+    expect(gamepad.axes[1]).toBeLessThan(0);
+    expect(gamepad.buttons).toEqual([true, false]);
+  });
+
+  it('does not send rc_override when drone is not connected', () => {
+    const mockGamepad = {
+      index: 0,
+      axes: [0.5, -0.3, 0.8, -0.9],
+      buttons: [],
+    };
+    vi.stubGlobal('navigator', { getGamepads: vi.fn(() => [mockGamepad]) });
+    vi.stubGlobal('performance', { now: vi.fn(() => 6000) }); // past rate limit
+
+    (app as any).drone.connected = false;
+    (app as any).drone.armed = false;
+
+    startGamepad();
+    const addEventCalls = (window.addEventListener as ReturnType<typeof vi.fn>).mock.calls;
+    const connectHandler = addEventCalls.find((c: unknown[]) => c[0] === 'gamepadconnected')![1] as (e: GamepadEvent) => void;
+    connectHandler({ gamepad: { index: 0, id: 'Test Controller' } } as unknown as GamepadEvent);
+
+    pollFn();
+    expect((sendCommand as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
+  });
+
+  it('does not send rc_override when drone is not armed', () => {
+    const mockGamepad = {
+      index: 0,
+      axes: [0.5, -0.3, 0.8, -0.9],
+      buttons: [],
+    };
+    vi.stubGlobal('navigator', { getGamepads: vi.fn(() => [mockGamepad]) });
+    vi.stubGlobal('performance', { now: vi.fn(() => 10000) });
+
+    (app as any).drone.connected = true;
+    (app as any).drone.armed = false;
+
+    startGamepad();
+    const addEventCalls = (window.addEventListener as ReturnType<typeof vi.fn>).mock.calls;
+    const connectHandler = addEventCalls.find((c: unknown[]) => c[0] === 'gamepadconnected')![1] as (e: GamepadEvent) => void;
+    connectHandler({ gamepad: { index: 0, id: 'Test Controller' } } as unknown as GamepadEvent);
+
+    pollFn();
+    expect((sendCommand as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
+  });
+
+  it('sends rc_override when drone is connected and armed', () => {
+    const mockGamepad = {
+      index: 0,
+      axes: [0.5, -0.3, 0.8, -0.9],
+      buttons: [],
+    };
+    vi.stubGlobal('navigator', { getGamepads: vi.fn(() => [mockGamepad]) });
+    vi.stubGlobal('performance', { now: vi.fn(() => 20000) }); // well past any prior lastSend
+
+    (app as any).drone.connected = true;
+    (app as any).drone.armed = true;
+
+    startGamepad();
+    const addEventCalls = (window.addEventListener as ReturnType<typeof vi.fn>).mock.calls;
+    const connectHandler = addEventCalls.find((c: unknown[]) => c[0] === 'gamepadconnected')![1] as (e: GamepadEvent) => void;
+    connectHandler({ gamepad: { index: 0, id: 'Test Controller' } } as unknown as GamepadEvent);
+
+    pollFn();
+    expect((sendCommand as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith('rc_override', undefined, {
+      channels: expect.any(Array),
+    });
+    const channels = (sendCommand as ReturnType<typeof vi.fn>).mock.calls[0][2].channels;
+    expect(channels).toHaveLength(8);
+    // Last 4 channels should be 0 (unused)
+    expect(channels[4]).toBe(0);
+    expect(channels[5]).toBe(0);
+    expect(channels[6]).toBe(0);
+    expect(channels[7]).toBe(0);
+  });
+
+  it('applies channel inversion correctly', () => {
+    const mockGamepad = {
+      index: 0,
+      axes: [1.0, 1.0, 1.0, 1.0], // all axes at max
+      buttons: [],
+    };
+    vi.stubGlobal('navigator', { getGamepads: vi.fn(() => [mockGamepad]) });
+    vi.stubGlobal('performance', { now: vi.fn(() => 30000) });
+
+    (app as any).drone.connected = true;
+    (app as any).drone.armed = true;
+
+    // Default: invertRoll=false, invertPitch=true, invertThrottle=true, invertYaw=false
+    // roll axis=0, pitch axis=1, yaw axis=2, throttle axis=3
+    startGamepad();
+    const addEventCalls = (window.addEventListener as ReturnType<typeof vi.fn>).mock.calls;
+    const connectHandler = addEventCalls.find((c: unknown[]) => c[0] === 'gamepadconnected')![1] as (e: GamepadEvent) => void;
+    connectHandler({ gamepad: { index: 0, id: 'Test Controller' } } as unknown as GamepadEvent);
+
+    pollFn();
+    const channels = (sendCommand as ReturnType<typeof vi.fn>).mock.calls[0][2].channels;
+    // roll (axis 0, not inverted): 1500 + 500 = 2000
+    expect(channels[0]).toBe(2000);
+    // pitch (axis 1, inverted): 1500 + (-500) = 1000
+    expect(channels[1]).toBe(1000);
+    // throttle (axis 3, inverted): 1500 + (-500) = 1000
+    expect(channels[2]).toBe(1000);
+    // yaw (axis 2, not inverted): 1500 + 500 = 2000
+    expect(channels[3]).toBe(2000);
+  });
+
+  it('rate-limits RC override to 50ms intervals', () => {
+    const mockGamepad = {
+      index: 0,
+      axes: [0.5, 0.5, 0.5, 0.5],
+      buttons: [],
+    };
+    vi.stubGlobal('navigator', { getGamepads: vi.fn(() => [mockGamepad]) });
+
+    (app as any).drone.connected = true;
+    (app as any).drone.armed = true;
+
+    let currentTime = 40000;
+    vi.stubGlobal('performance', { now: vi.fn(() => currentTime) });
+
+    startGamepad();
+    const addEventCalls = (window.addEventListener as ReturnType<typeof vi.fn>).mock.calls;
+    const connectHandler = addEventCalls.find((c: unknown[]) => c[0] === 'gamepadconnected')![1] as (e: GamepadEvent) => void;
+    connectHandler({ gamepad: { index: 0, id: 'Test Controller' } } as unknown as GamepadEvent);
+
+    // First poll sends
+    pollFn();
+    expect((sendCommand as ReturnType<typeof vi.fn>)).toHaveBeenCalledTimes(1);
+
+    // Second poll 20ms later does NOT send (under 50ms threshold)
+    currentTime = 40020;
+    pollFn();
+    expect((sendCommand as ReturnType<typeof vi.fn>)).toHaveBeenCalledTimes(1);
+
+    // Third poll 60ms after first DOES send
+    currentTime = 40060;
+    pollFn();
+    expect((sendCommand as ReturnType<typeof vi.fn>)).toHaveBeenCalledTimes(2);
+  });
+
+  it('does nothing when gamepad index is invalid', () => {
+    vi.stubGlobal('navigator', { getGamepads: vi.fn(() => [null]) });
+    vi.stubGlobal('performance', { now: vi.fn(() => 50000) });
+
+    (app as any).drone.connected = true;
+    (app as any).drone.armed = true;
+
+    startGamepad();
+    // Don't fire onConnect, so gpIndex remains -1
+    pollFn();
+    expect((sendCommand as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
+    // Axes should stay at default
+    expect(gamepad.axes).toEqual([0, 0, 0, 0]);
+  });
+
+  it('applies deadzone correctly', () => {
+    // Values below deadzone (0.08) should become 0
+    const mockGamepad = {
+      index: 0,
+      axes: [0.05, -0.05, 0.0, 0.5],
+      buttons: [],
+    };
+    vi.stubGlobal('navigator', { getGamepads: vi.fn(() => [mockGamepad]) });
+    vi.stubGlobal('performance', { now: vi.fn(() => 60000) });
+
+    (app as any).drone.connected = true;
+    (app as any).drone.armed = true;
+
+    startGamepad();
+    const addEventCalls = (window.addEventListener as ReturnType<typeof vi.fn>).mock.calls;
+    const connectHandler = addEventCalls.find((c: unknown[]) => c[0] === 'gamepadconnected')![1] as (e: GamepadEvent) => void;
+    connectHandler({ gamepad: { index: 0, id: 'Test Controller' } } as unknown as GamepadEvent);
+
+    pollFn();
+    // Axes below deadzone should be 0
+    expect(gamepad.axes[0]).toBe(0);
+    expect(gamepad.axes[1]).toBe(0);
+    expect(gamepad.axes[2]).toBe(0);
+    // Axis 3 (0.5) is above deadzone
+    expect(gamepad.axes[3]).toBeGreaterThan(0);
   });
 });

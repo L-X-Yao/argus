@@ -1,5 +1,5 @@
-import { describe, it, expect } from 'vitest';
-import { parseQgcWaypoints, parseQgcPlan, exportKml, segDist, totalDist, pointInPoly } from './missionIO';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { parseQgcWaypoints, parseQgcPlan, exportKml, parseKmlCoords, segDist, totalDist, pointInPoly } from './missionIO';
 
 describe('parseQgcWaypoints', () => {
   it('parses valid waypoints', () => {
@@ -50,6 +50,98 @@ describe('exportKml', () => {
     expect(kml).toContain('<?xml');
     expect(kml).toContain('108.94,34.25,50');
     expect(kml).toContain('108.95,34.26,60');
+  });
+});
+
+describe('parseKmlCoords', () => {
+  beforeEach(() => {
+    // Mock DOMParser for node environment
+    const mockDOMParser = class {
+      parseFromString(text: string, _type: string) {
+        // Minimal XML parser for test KML docs
+        const coordsMatches = [...text.matchAll(/<coordinates>([\s\S]*?)<\/coordinates>/g)];
+        const elements: { textContent: string }[] = coordsMatches.map(m => ({
+          textContent: m[1],
+        }));
+        return {
+          getElementsByTagName: (tag: string) => {
+            if (tag === 'coordinates') return elements;
+            return [];
+          },
+        };
+      }
+    };
+    vi.stubGlobal('DOMParser', mockDOMParser);
+  });
+
+  it('parses KML with valid coordinates', () => {
+    const kml = `<?xml version="1.0"?>
+<kml xmlns="http://www.opengis.net/kml/2.2"><Document>
+<Placemark><LineString><coordinates>108.942,34.258,50
+108.943,34.259,60</coordinates></LineString></Placemark>
+</Document></kml>`;
+    const wps = parseKmlCoords(kml, 30);
+    expect(wps).toHaveLength(2);
+    expect(wps[0].lat).toBeCloseTo(34.258);
+    expect(wps[0].lon).toBeCloseTo(108.942);
+    expect(wps[0].alt).toBe(50);
+    expect(wps[1].alt).toBe(60);
+    expect(wps[0].type).toBe('wp');
+  });
+
+  it('uses defaultAlt when altitude is missing', () => {
+    const kml = `<kml><Document><Placemark><LineString>
+<coordinates>108.942,34.258</coordinates>
+</LineString></Placemark></Document></kml>`;
+    const wps = parseKmlCoords(kml, 75);
+    expect(wps).toHaveLength(1);
+    expect(wps[0].alt).toBe(75);
+  });
+
+  it('skips coordinates near zero lat/lon', () => {
+    const kml = `<kml><Document><Placemark><LineString>
+<coordinates>0.0001,0.0001,50
+108.943,34.259,60</coordinates>
+</LineString></Placemark></Document></kml>`;
+    const wps = parseKmlCoords(kml, 30);
+    expect(wps).toHaveLength(1);
+    expect(wps[0].lat).toBeCloseTo(34.259);
+  });
+
+  it('removes duplicate closing point in closed polygon', () => {
+    const kml = `<kml><Document><Placemark><LineString>
+<coordinates>108.942,34.258,50
+108.943,34.259,50
+108.944,34.260,50
+108.942,34.258,50</coordinates>
+</LineString></Placemark></Document></kml>`;
+    const wps = parseKmlCoords(kml, 30);
+    expect(wps).toHaveLength(3); // last point removed (duplicate of first)
+  });
+
+  it('returns empty for KML with no coordinates element', () => {
+    const kml = `<kml><Document><Placemark><name>Test</name></Placemark></Document></kml>`;
+    const wps = parseKmlCoords(kml, 30);
+    expect(wps).toHaveLength(0);
+  });
+
+  it('handles multiple coordinate elements', () => {
+    const kml = `<kml><Document>
+<Placemark><LineString><coordinates>108.942,34.258,50</coordinates></LineString></Placemark>
+<Placemark><LineString><coordinates>108.943,34.259,60</coordinates></LineString></Placemark>
+</Document></kml>`;
+    const wps = parseKmlCoords(kml, 30);
+    expect(wps).toHaveLength(2);
+  });
+
+  it('skips entries with fewer than 2 comma-separated values', () => {
+    const kml = `<kml><Document><Placemark><LineString>
+<coordinates>108.942
+108.943,34.259,60</coordinates>
+</LineString></Placemark></Document></kml>`;
+    const wps = parseKmlCoords(kml, 30);
+    expect(wps).toHaveLength(1);
+    expect(wps[0].lon).toBeCloseTo(108.943);
   });
 });
 
