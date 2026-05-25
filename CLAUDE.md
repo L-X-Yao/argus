@@ -8,7 +8,7 @@ Repo: `github.com/L-X-Yao/argus`, branch: `main`, version: `3.4.0`
 - **Frontend**: Svelte 5 (runes) + TypeScript 6 + Vite 8 + Tailwind CSS 4 + Leaflet + MapLibre GL
 - **Backend**: Python 3.10+ + FastAPI + uvicorn + pyserial + websockets
 - **Protocol**: MAVLink v2 (standard + PL-Link wrapper). **ArduPilot is the only production-tested target.** PX4 support is partially scaffolded in `src/lib/fc/` but unwired — see `## PX4 Status` below.
-- **Tests**: pytest (backend + contract, 1068 tests), vitest 4 (frontend, 487 tests), Playwright (E2E, 20 specs), SITL verification (126/134 items). Current verification status per feature: `docs/FEATURE_CHECKLIST.md`. Don't-refactor decisions: `docs/protocol_design.md`.
+- **Tests**: pytest (backend + contract, 1116 tests), vitest 4 (frontend, 487 tests), Playwright (E2E, 19 specs), SITL verification (126/134 items). Current verification status per feature: `docs/FEATURE_CHECKLIST.md`. Don't-refactor decisions: `docs/protocol_design.md`.
 - **Lint**: ruff (Python), svelte-check (TypeScript/Svelte)
 - **CI**: GitHub Actions — lint → test → type-check → build → E2E
 
