@@ -6,7 +6,8 @@ export type PanelId =
   | 'advCmd' | 'overlapCalc' | 'corridor' | 'poi' | 'annotation'
   | 'remote' | 'role' | 'airspace' | 'offlineMap' | 'mission3d'
   | 'gimbal' | 'dashboard' | 'aiPlanner' | 'script' | 'ortho'
-  | 'aiAnnotation' | 'scheduler' | 'posSource' | 'ntrip' | 'fleet';
+  | 'aiAnnotation' | 'scheduler' | 'posSource' | 'ntrip' | 'fleet'
+  | 'terrainProfile';
 
 class PanelRegistry {
   _open = $state(new Set<PanelId>());
@@ -75,4 +76,5 @@ export const PANEL_LOADERS: Record<PanelId, () => Promise<{ default: unknown }>>
   posSource:     () => import('../components/setup/PositionSourcePanel.svelte'),
   ntrip:         () => import('../components/setup/NtripPanel.svelte'),
   fleet:         () => import('../components/vehicle/FleetDashboard.svelte'),
+  terrainProfile: () => import('../components/mission/TerrainProfilePanel.svelte'),
 };

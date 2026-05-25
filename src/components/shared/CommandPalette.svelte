@@ -165,6 +165,8 @@
         handler: () => openPanel('offlineMap'), available: true },
       { id: 'tool-mission3d', label: '3D Preview', category: t('ctrl.mission'), icon: Search,
         handler: () => openPanel('mission3d'), available: true },
+      { id: 'tool-terrainProfile', label: t('terrain.profileTitle'), category: t('ctrl.mission'), icon: Search,
+        handler: () => openPanel('terrainProfile'), available: true },
 
       { id: 'set-theme', label: t('settings.darkTheme'), category: t('settings.title'), shortcut: 'L', icon: app.darkTheme ? Sun : Moon,
         handler: () => { app.darkTheme = !app.darkTheme; saveSettings(); }, available: true },

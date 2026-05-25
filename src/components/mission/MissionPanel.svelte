@@ -8,6 +8,7 @@
   import { isSerialConnected, serialUploadMission } from '../../lib/transport';
   import { parseQgcWaypoints, parseQgcPlan, exportKml as buildKml, parseKmlCoords, segDist, totalDist as calcTotalDist, pointInPoly } from '../../lib/missionIO';
   import { saveMission as dbSave, listMissions, loadMission as dbLoad, deleteMission as dbDelete, type MissionRecord } from '../../lib/missionDb';
+  import { panels } from '../../lib/panels.svelte';
   import { saveFence, saveRally } from '../../lib/stores.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
   import { BookOpen, Trash2 } from '@lucide/svelte';
@@ -575,6 +576,7 @@
     <Button variant="outline" size="xs" onclick={applyAltAll}>{t('cat.all')}</Button>
     <Button variant="outline" size="xs" onclick={validateMission}>{t('wp.validate')}</Button>
     <Button variant="outline" size="xs" onclick={applyTerrainFollow} disabled={terrainLoading || app.waypoints.length < 1}>{terrainLoading ? t('terrain.loading') : t('terrain.follow')}</Button>
+    <Button variant="outline" size="xs" onclick={() => panels.open('terrainProfile')} disabled={app.waypoints.length < 2}>{t('terrain.profile')}</Button>
     <Button size="xs" class="bg-orange-700 hover:bg-orange-800 text-white font-bold" onclick={uploadMission} disabled={uploading}>{uploading ? t('toast.uploading') : t('wp.upload')}</Button>
   </div>
   <div class="flex gap-1 mt-1.5 items-center flex-wrap">

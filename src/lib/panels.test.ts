@@ -69,6 +69,7 @@ describe('PANEL_LOADERS', () => {
       'remote', 'role', 'airspace', 'offlineMap', 'mission3d',
       'gimbal', 'dashboard', 'aiPlanner', 'script', 'ortho',
       'aiAnnotation', 'scheduler', 'posSource', 'ntrip', 'fleet',
+      'terrainProfile',
     ];
     for (const id of ids) {
       expect(PANEL_LOADERS[id]).toBeDefined();
@@ -83,7 +84,7 @@ describe('PANEL_LOADERS', () => {
   });
 
   it('has exactly 42 panel loaders', () => {
-    expect(Object.keys(PANEL_LOADERS).length).toBe(42);
+    expect(Object.keys(PANEL_LOADERS).length).toBe(43);
   });
 
   it('shortcuts loader resolves immediately', async () => {
