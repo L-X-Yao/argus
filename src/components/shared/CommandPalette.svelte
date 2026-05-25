@@ -6,7 +6,7 @@
     serialCalCompass, serialCalGyro, serialCalLevel, serialCalAccel,
   } from '../../lib/transport';
   import { t, i18nState, setLocale } from '../../lib/i18n.svelte';
-  import { isPlane, saveSettings, showSlide } from '../../lib/stores.svelte';
+  import { isPlane, saveSettings, showSlide, showConfirm } from '../../lib/stores.svelte';
   import { paramState } from '../../lib/paramStore.svelte';
   import type { Component } from 'svelte';
   import {
@@ -88,7 +88,7 @@
           }
         }, available: connected },
       { id: 'mission-clear', label: t('ctrl.clearMission'), category: t('ctrl.mission'), icon: Trash2,
-        handler: () => isSerialConnected() ? serialClearMission() : sendCommand('mission_clear'),
+        handler: () => showConfirm(t('ctrl.clearMission') + '?', true).then(ok => ok && (isSerialConnected() ? serialClearMission() : sendCommand('mission_clear'))),
         available: connected },
 
       { id: 'param-read', label: t('param.readAll'), category: t('param.title'), icon: Download,
