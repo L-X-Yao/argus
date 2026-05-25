@@ -33,16 +33,25 @@ jobs:
         run: ruff check backend/ scripts/ tests/
 
       - name: Python tests with coverage
-        run: python -m pytest tests/test_unit_*.py -v --cov=backend --cov-report=term-missing
+        run: python -m pytest tests/test_unit_*.py tests/test_contract_*.py -v --cov=backend --cov-report=term-missing --cov-fail-under=60
 
       - name: TypeScript check
         run: npx svelte-check --tsconfig ./tsconfig.json
 
       - name: Frontend tests with coverage
-        run: npx vitest run --coverage
+        run: npx vitest run --coverage --coverage.thresholds.lines=50
 
       - name: Build
         run: npm run build
+
+      - name: Check bundle size
+        run: |
+          TOTAL=$(du -sb dist/assets/ | cut -f1)
+          echo "Bundle size: $(( TOTAL / 1024 )) KB"
+          if [ "$TOTAL" -gt 2621440 ]; then
+            echo "ERROR: Bundle exceeds 2.5MB limit ($TOTAL bytes)"
+            exit 1
+          fi
 
       - name: Security audit
         run: npm audit --audit-level=critical
@@ -76,8 +85,21 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
-      - name: Run E2E smoke tests
-        run: npx playwright test --config=tests/playwright.config.ts --project=chromium tests/e2e/smoke.spec.ts tests/e2e/navigation.spec.ts
+      - name: Run E2E tests (no-backend specs)
+        run: >-
+          npx playwright test --config=tests/playwright.config.ts --project=chromium
+          tests/e2e/smoke.spec.ts
+          tests/e2e/navigation.spec.ts
+          tests/e2e/accessibility.spec.ts
+          tests/e2e/command-palette.spec.ts
+          tests/e2e/error-boundary.spec.ts
+          tests/e2e/keyboard.spec.ts
+          tests/e2e/map.spec.ts
+          tests/e2e/mission.spec.ts
+          tests/e2e/mobile.spec.ts
+          tests/e2e/pwa.spec.ts
+          tests/e2e/settings.spec.ts
+          tests/e2e/resilience.spec.ts
         env:
           ARGUS_NO_BROWSER: '1'
 
