@@ -15,12 +15,18 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks(id: string) {
+          if (id.includes('node_modules/svelte/')) {
+            return 'vendor-svelte';
+          }
           if (id.includes('node_modules/clsx') || id.includes('node_modules/tailwind-merge') ||
               id.includes('node_modules/bits-ui') || id.includes('node_modules/@lucide/svelte')) {
             return 'vendor-ui';
           }
           if (id.includes('node_modules/maplibre-gl')) {
             return 'vendor-maplibre';
+          }
+          if (id.includes('src/lib/mavlink/')) {
+            return 'mavlink';
           }
           const toolPaths = ['dflog', 'survey', 'gcj02', 'flightDb', 'plugins', 'units', 'branding'];
           if (toolPaths.some(p => id.includes(`src/lib/${p}`))) {
