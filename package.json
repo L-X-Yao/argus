@@ -22,6 +22,7 @@
     "@types/leaflet": "^1.9.21",
     "@types/node": "^25.9.1",
     "@vitest/coverage-v8": "^4.1.7",
+    "fake-indexeddb": "^6.2.5",
     "svelte": "^5.0.0",
     "svelte-check": "^4.0.0",
     "tailwind-variants": "^3.2.2",

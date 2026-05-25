@@ -7,9 +7,15 @@
   import { sendCommand } from '../../lib/ws';
   import { isSerialConnected, serialUploadMission } from '../../lib/transport';
   import { parseQgcWaypoints, parseQgcPlan, exportKml as buildKml, parseKmlCoords, segDist, totalDist as calcTotalDist, pointInPoly } from '../../lib/missionIO';
+  import { saveMission as dbSave, listMissions, loadMission as dbLoad, deleteMission as dbDelete, type MissionRecord } from '../../lib/missionDb';
+  import { saveFence, saveRally } from '../../lib/stores.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
+  import { BookOpen, Trash2 } from '@lucide/svelte';
 
   let showCircleGen = $state(false);
+  let showLibrary = $state(false);
+  let libraryList: MissionRecord[] = $state([]);
+  let libName = $state('');
   let circleRadius = $state(50);
   let circleCount = $state(12);
 
@@ -171,6 +177,46 @@
       reader.readAsText(file);
     };
     input.click();
+  }
+
+  async function toggleLibrary() {
+    showLibrary = !showLibrary;
+    if (showLibrary) libraryList = await listMissions();
+  }
+
+  async function saveToLibrary() {
+    if (!libName.trim()) return;
+    await dbSave(libName.trim(), {
+      waypoints: app.waypoints,
+      fence: app.fencePolygon,
+      rally: app.rallyPoints,
+      defaultAlt: app.defaultAlt,
+    });
+    addToast(t('wp.savedOk'), 'success');
+    libName = '';
+    libraryList = await listMissions();
+  }
+
+  async function loadFromLibrary(id: string) {
+    const m = await dbLoad(id);
+    if (!m) return;
+    pushUndo();
+    app.waypoints = m.waypoints;
+    if (m.fence.length > 0) app.fencePolygon = m.fence;
+    if (m.rally.length > 0) app.rallyPoints = m.rally;
+    app.defaultAlt = m.defaultAlt;
+    saveWaypoints();
+    saveFence();
+    saveRally();
+    saveSettings();
+    addToast(t('wp.loaded'), 'success');
+    fitAfterLoad();
+  }
+
+  async function deleteFromLibrary(id: string) {
+    await dbDelete(id);
+    addToast(t('wp.deleted'), 'info');
+    libraryList = await listMissions();
   }
 
   function handleQgcWaypoints(text: string) {
@@ -534,6 +580,7 @@
   <div class="flex gap-1 mt-1.5 items-center flex-wrap">
     <Button variant="secondary" size="xs" onclick={saveMission}>{t('wp.save')}</Button>
     <Button variant="secondary" size="xs" onclick={loadMission}>{t('wp.load')}</Button>
+    <Button variant="secondary" size="xs" class="gap-1" onclick={toggleLibrary}><BookOpen size={12} />{t('wp.library')}</Button>
     <Button variant="secondary" size="xs" onclick={exportKml}>{t('wp.export')}</Button>
     <Button variant="secondary" size="xs" onclick={importKml}>{t('wp.import')}</Button>
     <Button variant="secondary" size="xs" onclick={reverseRoute}>{t('wp.reverse')}</Button>
@@ -551,6 +598,34 @@
       <input id="cc" type="number" bind:value={circleCount} min="4" max="72" step="1"
              class="w-12 h-6 px-1 bg-input border border-border rounded text-xs text-foreground" />
       <Button size="xs" onclick={genCircle}>Gen</Button>
+    </div>
+  {/if}
+  {#if showLibrary}
+    <div class="mt-2 p-2 bg-muted rounded-lg space-y-2">
+      <div class="flex gap-1 items-center">
+        <input bind:value={libName} placeholder={t('wp.missionName')}
+               class="flex-1 h-7 px-2 bg-input border border-border rounded text-xs text-foreground"
+               onkeydown={(e) => { if (e.key === 'Enter') saveToLibrary(); }} />
+        <Button size="xs" onclick={saveToLibrary} disabled={!libName.trim()}>{t('wp.saveToLib')}</Button>
+      </div>
+      {#if libraryList.length === 0}
+        <p class="text-[11px] text-muted-foreground text-center py-2">{t('wp.noSaved')}</p>
+      {:else}
+        <div class="max-h-40 overflow-auto space-y-1">
+          {#each libraryList as m}
+            <div class="flex items-center gap-1 px-2 py-1 bg-card rounded border border-border hover:border-primary/50 transition-colors">
+              <button class="flex-1 text-left text-xs truncate cursor-pointer" onclick={() => loadFromLibrary(m.id)}>
+                <span class="font-medium text-foreground">{m.name}</span>
+                <span class="text-muted-foreground ml-1">({m.waypoints.length} WP)</span>
+              </button>
+              <span class="text-[10px] text-muted-foreground shrink-0">{new Date(m.createdAt).toLocaleDateString()}</span>
+              <button class="shrink-0 text-muted-foreground hover:text-destructive cursor-pointer p-0.5" onclick={() => deleteFromLibrary(m.id)}>
+                <Trash2 size={12} />
+              </button>
+            </div>
+          {/each}
+        </div>
+      {/if}
     </div>
   {/if}
 </div>

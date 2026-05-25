@@ -129,6 +129,14 @@ export function loadSettings() {
     const wps = JSON.parse(localStorage.getItem('argus_waypoints') || '[]');
     if (Array.isArray(wps) && wps.length > 0) app.waypoints = wps;
   } catch {}
+  try {
+    const fence = JSON.parse(localStorage.getItem('argus_fence') || '[]');
+    if (Array.isArray(fence) && fence.length > 0) app.fencePolygon = fence;
+  } catch {}
+  try {
+    const rally = JSON.parse(localStorage.getItem('argus_rally') || '[]');
+    if (Array.isArray(rally) && rally.length > 0) app.rallyPoints = rally;
+  } catch {}
 }
 
 export function saveSettings() {
@@ -151,6 +159,18 @@ export function saveSettings() {
 export function saveWaypoints() {
   try {
     localStorage.setItem('argus_waypoints', JSON.stringify(app.waypoints));
+  } catch {}
+}
+
+export function saveFence() {
+  try {
+    localStorage.setItem('argus_fence', JSON.stringify(app.fencePolygon));
+  } catch {}
+}
+
+export function saveRally() {
+  try {
+    localStorage.setItem('argus_rally', JSON.stringify(app.rallyPoints));
   } catch {}
 }
 
