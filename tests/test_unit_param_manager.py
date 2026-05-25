@@ -3,6 +3,7 @@ import json
 import struct
 import sys
 import tempfile
+import time
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -169,6 +170,154 @@ class TestLoadFromFile:
         mgr = ParamManager(link)
         changed = mgr.load_from_file('/nonexistent/path.json')
         assert changed == []
+
+
+class TestHandleParamValueEdgeCases:
+    def test_zero_length_payload_ignored(self):
+        """Line 71: pl < 1 early return."""
+        link = _make_link()
+        mgr = ParamManager(link)
+        mgr.handle_param_value(b'', 0)
+        assert len(mgr.params) == 0
+        assert mgr.received_count == 0
+
+    def test_empty_name_payload_rejected(self):
+        """All-zero payload produces empty name and must be discarded."""
+        link = _make_link()
+        mgr = ParamManager(link)
+        payload = b'\x00' * 25
+        mgr.handle_param_value(payload, 25)
+        assert '' not in mgr.params
+        assert mgr.received_count == 0
+
+    def test_index_0xFFFF_not_added_to_received_indices(self):
+        """AP replies with index=0xFFFF for PARAM_REQUEST_READ by name."""
+        link = _make_link()
+        mgr = ParamManager(link)
+        p = _param_payload('THR_MAX', 80.0, 0xFFFF, 10)
+        mgr.handle_param_value(p, len(p))
+        assert 'THR_MAX' in mgr.params
+        assert mgr.received_count == 1
+        assert 0xFFFF not in mgr._received_indices
+
+
+class TestSetParamValidation:
+    def test_nan_rejected(self):
+        """Lines 125-126: NaN value rejected."""
+        link = _make_link()
+        mgr = ParamManager(link)
+        mgr.set_param('THR_MAX', float('nan'))
+        link.send.assert_not_called()
+        link.add_event.assert_called_once()
+        assert 'NaN' in link.add_event.call_args[0][0]
+
+    def test_positive_inf_rejected(self):
+        """Lines 125-126: +Inf value rejected."""
+        link = _make_link()
+        mgr = ParamManager(link)
+        mgr.set_param('THR_MAX', float('inf'))
+        link.send.assert_not_called()
+        link.add_event.assert_called_once()
+
+    def test_negative_inf_rejected(self):
+        """Lines 125-126: -Inf value rejected."""
+        link = _make_link()
+        mgr = ParamManager(link)
+        mgr.set_param('THR_MAX', float('-inf'))
+        link.send.assert_not_called()
+
+
+class TestCheckTimeout:
+    def test_not_fetching_is_noop(self):
+        """Line 168: early return when not fetching."""
+        link = _make_link()
+        mgr = ParamManager(link)
+        mgr.fetching = False
+        mgr.check_timeout()
+        link.send.assert_not_called()
+
+    def test_gap_fill_requests_missing_indices(self):
+        """Lines 169-186: after gap delay, missing indices are re-requested."""
+        link = _make_link()
+        mgr = ParamManager(link)
+        mgr.fetching = True
+        mgr.total_count = 5
+        mgr._received_indices = {0, 1, 3, 4}  # index 2 missing
+        # Set last_value_time far enough in the past to trigger gap fill
+        mgr._last_value_time = time.time() - 10.0
+        mgr._fetch_start = time.time()
+
+        mgr.check_timeout()
+
+        # _request_one sends via link.send
+        link.send.assert_called_once()
+        assert mgr._gap_fill_attempts[2] == 1
+
+    def test_gap_fill_respects_max_retries(self):
+        """Lines 182-183: index with >= max_retries is skipped."""
+        link = _make_link()
+        mgr = ParamManager(link)
+        mgr.fetching = True
+        mgr.total_count = 3
+        mgr._received_indices = {0, 2}  # index 1 missing
+        mgr._last_value_time = time.time() - 10.0
+        mgr._fetch_start = time.time()
+        mgr._gap_fill_attempts = {1: 3}  # already at max
+
+        mgr.check_timeout()
+
+        link.send.assert_not_called()
+
+    def test_gap_fill_throttled_to_10(self):
+        """Line 180: only up to 10 missing indices per cycle."""
+        link = _make_link()
+        mgr = ParamManager(link)
+        mgr.fetching = True
+        mgr.total_count = 20
+        mgr._received_indices = set()  # all 20 missing
+        mgr._last_value_time = time.time() - 10.0
+        mgr._fetch_start = time.time()
+
+        mgr.check_timeout()
+
+        assert link.send.call_count == 10
+
+    def test_timeout_stops_fetching(self):
+        """Lines 188-192: after PARAM_FETCH_TIMEOUT, fetching stops."""
+        link = _make_link()
+        mgr = ParamManager(link)
+        mgr.fetching = True
+        mgr.total_count = 10
+        mgr._received_indices = {0, 1, 2}  # 7 missing
+        # Set fetch_start far in the past
+        mgr._fetch_start = time.time() - 120.0
+        mgr._last_value_time = time.time()
+
+        mgr.check_timeout()
+
+        assert mgr.fetching is False
+        link.add_event.assert_called_once()
+        # Check timeout message was appended
+        timeout_msgs = [m for m in mgr._messages if m.get('type') == 'param_timeout']
+        assert len(timeout_msgs) == 1
+        assert timeout_msgs[0]['missing'] == 7
+
+    def test_gap_fill_then_timeout(self):
+        """Both gap fill and timeout fire when both conditions met."""
+        link = _make_link()
+        mgr = ParamManager(link)
+        mgr.fetching = True
+        mgr.total_count = 3
+        mgr._received_indices = {0}  # indices 1, 2 missing
+        mgr._fetch_start = time.time() - 120.0
+        mgr._last_value_time = time.time() - 10.0
+
+        mgr.check_timeout()
+
+        # Gap fill sent requests for missing indices
+        assert link.send.call_count == 2
+        # Then timeout fired
+        assert mgr.fetching is False
 
 
 class TestGetStatus:

@@ -367,6 +367,23 @@ def handle_mount_status(p: bytes, pl: int, link: DroneLink) -> None:
     d.gimbal_yaw = yaw_cdeg / 100.0
 
 
+# ArduPilot: libraries/AP_Mount/AP_Mount.cpp — GCS_MAVLink::send_gimbal_device_attitude_status
+def handle_gimbal_device_attitude_status(p: bytes, pl: int, link: DroneLink) -> None:
+    if pl < 20:
+        return
+    p = _pad(p, 36)
+    # Wire layout (MAVLink 2, sorted by size): time_boot_ms (u32, 0..3),
+    # q[4] (float×4, 4..19), angular_velocity_{x,y,z} (float, 20..31),
+    # failure_flags (u32, 32..35), flags (u16, 36..37).
+    w, x, y, z = struct.unpack_from('<4f', p, 4)
+    sinp = 2.0 * (w * y - z * x)
+    pitch = math.copysign(math.pi / 2, sinp) if abs(sinp) >= 1.0 else math.asin(sinp)
+    yaw = math.atan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z))
+    d = link.diagnostic
+    d.gimbal_pitch = math.degrees(pitch)
+    d.gimbal_yaw = math.degrees(yaw)
+
+
 # ArduPilot: libraries/AP_Terrain/TerrainGCS.cpp:229 — AP_Terrain::send_terrain_report
 def handle_terrain_report(p: bytes, pl: int, link: DroneLink) -> None:
     # TERRAIN_REPORT (136) wire layout (MAVLink 2, sorted by size):
@@ -721,6 +738,7 @@ def init_handlers() -> None:
     mavlink_dispatch.register(74, handle_vfr_hud)
     mavlink_dispatch.register(193, handle_ekf_status)
     mavlink_dispatch.register(158, handle_mount_status)
+    mavlink_dispatch.register(285, handle_gimbal_device_attitude_status)
     mavlink_dispatch.register(136, handle_terrain_report)
     mavlink_dispatch.register(168, handle_wind)
     mavlink_dispatch.register(22, handle_param_value)

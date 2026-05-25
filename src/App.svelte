@@ -17,6 +17,7 @@
   import { showConfirm, showSlide, undo } from './lib/stores.svelte';
   import { migrateLocalStorage } from './lib/migrate';
   import { panels } from './lib/panels.svelte';
+  import { apiUrl } from './lib/backend';
   import { ChevronUp, ChevronDown, CornerDownLeft, Pause, HardDrive, Wrench, Video, SlidersHorizontal, PanelLeftClose, Plane, MapPinned, Activity, Settings2, X as XIcon, Globe } from '@lucide/svelte';
   import type { Component } from 'svelte';
   import Button from '$lib/components/ui/button/button.svelte';
@@ -56,6 +57,8 @@
   let FlightSummaryMod: DynComp | null = $state(null);
   let PreflightMod: DynComp | null = $state(null);
   let ReplayMod: DynComp | null = $state(null);
+  let LoginMod: DynComp | null = $state(null);
+  let authGate = $state(false);
 
   $effect(() => {
     if (app.mapMode === '3d' && !Map3DViewModule) {
@@ -117,11 +120,29 @@
     }
   });
 
+  async function checkAuth() {
+    try {
+      const res = await fetch(apiUrl('/api/auth/status'));
+      const data = await res.json();
+      if (data.auth_required && !localStorage.getItem('argus_auth_token')) {
+        authGate = true;
+        import('./components/shared/LoginDialog.svelte').then(m => LoginMod = m.default);
+        return;
+      }
+    } catch { /* backend down — proceed without auth gate */ }
+    connectWs();
+  }
+
+  function onAuthSuccess() {
+    authGate = false;
+    connectWs();
+  }
+
   onMount(() => {
     migrateLocalStorage();
     loadLocale();
     loadSettings();
-    connectWs();
+    checkAuth();
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   });
@@ -429,6 +450,9 @@
     />
   {/if}
   <LazyPanelHost />
+  {#if authGate && LoginMod}
+    <LoginMod onlogin={onAuthSuccess} />
+  {/if}
   {#if p.isOpen('shortcuts')}
     <div class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
          role="button" tabindex="-1"

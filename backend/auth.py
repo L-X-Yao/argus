@@ -65,7 +65,7 @@ async def auth_middleware(request: Request, call_next):
     if path in ('/health', '/', '/index.html', '/sw.js', '/manifest.json') or \
        path.startswith('/assets') or path.startswith('/lib') or path.startswith('/images'):
         return await call_next(request)
-    if path == '/api/auth/login':
+    if path in ('/api/auth/login', '/api/auth/status'):
         return await call_next(request)
     token = request.headers.get('Authorization', '').replace('Bearer ', '')
     if not verify_token(token):
