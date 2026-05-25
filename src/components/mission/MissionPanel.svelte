@@ -545,6 +545,10 @@
         <input type="number" class="w-9 bg-input text-success border border-border px-0.5 rounded text-[11px] text-right"
                value={wp.speed || ''} placeholder="—"
                onchange={(e) => setSpeed(i, (e.target as HTMLInputElement).value)} title={t('tip.spdMs')} />
+        {#if app.drone.armed}
+          <button class="bg-transparent border-none text-warning cursor-pointer text-[9px] px-0.5 font-bold hover:text-foreground"
+                  onclick={() => sendCommand('mission_set_current', undefined, { wp_index: i })} title={t('wp.goto')}>&raquo;</button>
+        {/if}
         <button class="bg-transparent border-none text-muted-foreground cursor-pointer text-xs px-px" onclick={() => moveWp(i, -1)}>&uarr;</button>
         <button class="bg-transparent border-none text-muted-foreground cursor-pointer text-xs px-px" onclick={() => moveWp(i, 1)}>&darr;</button>
         <button class="bg-transparent border-none text-destructive cursor-pointer text-base px-0.5 leading-none" onclick={() => deleteWaypoint(i)}>&times;</button>

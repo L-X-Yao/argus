@@ -615,6 +615,7 @@ const messages: Record<string, string> = {
   'wp.tooHigh': 'WP {n} 고도 이상 ({h}m)',
   'wp.outFence': 'WP {n}이 펜스 밖에 있음',
   'wp.noHome': '홈 위치 없음 — 귀환 거리를 추정할 수 없습니다',
+  'wp.goto': 'Jump to this waypoint',
   'rally.title': '랠리 포인트',
   'rally.add': '랠리 추가',
   'rally.upload': '랠리 업로드',

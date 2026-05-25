@@ -615,6 +615,7 @@ const messages: Record<string, string> = {
   'wp.tooHigh': 'النقطة {n} شذوذ في الارتفاع ({h}m)',
   'wp.outFence': 'النقطة {n} خارج السياج',
   'wp.noHome': 'لا يوجد موقع قاعدة — لا يمكن تقدير مسافة العودة',
+  'wp.goto': 'Jump to this waypoint',
   'rally.title': 'نقاط التجمع',
   'rally.add': 'إضافة نقطة',
   'rally.upload': 'رفع نقاط التجمع',

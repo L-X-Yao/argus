@@ -37,6 +37,22 @@ def cmd_mission_start(link: DroneLink, param, data: dict):
         _mission_timer.start()
 
 
+def cmd_mission_set_current(link: DroneLink, param, data: dict):
+    # MISSION_SET_CURRENT (msg 41, CRC_EXTRA 28): jump to waypoint seq during flight.
+    # ArduPilot: GCS_MAVLINK::handle_mission_set_current (GCS_Common.cpp)
+    # Frontend sends wp_index (0-based waypoint position). We resolve to
+    # the actual MAVLink seq via _seq_to_wp reverse lookup, falling back to
+    # index+2 (home=0, takeoff=1, first nav=2) when no upload mapping exists.
+    wp_index = int(data.get('wp_index', param if param is not None else 0))
+    seq = wp_index + 2
+    for s, idx in link.mission._seq_to_wp.items():
+        if idx == wp_index:
+            seq = s
+            break
+    link.send(bm(41, struct.pack('<HBB', seq, link.vehicle.sysid, 1), link.sq, 28))
+    link.add_event(lt('mission_set_current', link.locale) % seq, 'mission_set_current')
+
+
 def cmd_mission_clear(link: DroneLink, param, data: dict):
     link.send(bm(45, bytes([link.vehicle.sysid, 1, 0]), link.sq, 232))
     link.add_event(lt('mission_clear', link.locale), 'mission_clear')

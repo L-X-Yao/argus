@@ -615,6 +615,7 @@ const messages: Record<string, string> = {
   'wp.tooHigh': 'WP {n} Höhenanomalie ({h}m)',
   'wp.outFence': 'WP {n} außerhalb des Zauns',
   'wp.noHome': 'Keine Homeposition — Rückkehrstrecke kann nicht geschätzt werden',
+  'wp.goto': 'Jump to this waypoint',
   'rally.title': 'Sammelpunkte',
   'rally.add': 'Sammelpunkt hinzufügen',
   'rally.upload': 'Sammelpunkte hochladen',

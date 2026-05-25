@@ -32,6 +32,7 @@ _T = {
     'drop_off':        ('投放停止: 继电器 ON',      'Drop stop: relay ON'),
     'mission_start':   ('任务开始',                 'Mission start'),
     'mission_clear':   ('任务已清除',               'Mission cleared'),
+    'mission_set_current': ('跳转到航点 #%d',          'Jump to WP #%d'),
     'mission_upload':  ('任务: %d 航点, %d 投放, 高度 %.0fm', 'Mission: %d WP, %d drops, alt %.0fm'),
     'fence_upload':    ('围栏: %d 顶点上传中',      'Fence: uploading %d vertices'),
     'vtype_set':       ('机型: %s',                 'Vehicle: %s'),

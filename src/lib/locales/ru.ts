@@ -615,6 +615,7 @@ const messages: Record<string, string> = {
   'wp.tooHigh': 'ТЧ {n} аномалия высоты ({h}m)',
   'wp.outFence': 'ТЧ {n} вне забора',
   'wp.noHome': 'Нет домашней позиции — невозможно рассчитать дистанцию возврата',
+  'wp.goto': 'Jump to this waypoint',
   'rally.title': 'Точки сбора',
   'rally.add': 'Добавить точку',
   'rally.upload': 'Загрузить точки',

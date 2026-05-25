@@ -632,6 +632,7 @@ const messages: Record<string, string> = {
   'wp.tooHigh': '航点 {n} 高度异常 ({h}m)',
   'wp.outFence': '航点 {n} 在围栏外',
   'wp.noHome': '无起飞点，无法估算返航距离',
+  'wp.goto': '跳转到此航点',
   'rally.title': '备降点',
   'rally.add': '添加备降点',
   'rally.upload': '上传备降点',
