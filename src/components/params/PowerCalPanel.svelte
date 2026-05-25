@@ -112,11 +112,11 @@
         </div>
 
         <!-- Measured voltage input + auto calc -->
-        <!-- svelte-ignore a11y_label_has_associated_control -->
         <div class="space-y-2">
           <div class="flex items-center gap-2">
-            <label class="text-[11px] text-muted-foreground w-24 shrink-0">{t('power.measured')}</label>
+            <label for="power-measured-volt" class="text-[11px] text-muted-foreground w-24 shrink-0">{t('power.measured')}</label>
             <input
+              id="power-measured-volt"
               type="number"
               step="0.01"
               min="0"
@@ -155,10 +155,10 @@
         </div>
 
         <!-- Manual input -->
-        <!-- svelte-ignore a11y_label_has_associated_control -->
         <div class="flex items-center gap-2">
-          <label class="text-[11px] text-muted-foreground w-24 shrink-0">{t('power.ampPerVolt')}</label>
+          <label for="power-amp-pervlt" class="text-[11px] text-muted-foreground w-24 shrink-0">{t('power.ampPerVolt')}</label>
           <input
+            id="power-amp-pervlt"
             type="number"
             step="0.1"
             min="0"

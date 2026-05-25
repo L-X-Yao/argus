@@ -127,11 +127,10 @@
       {#if wps.length < 2}
         <div class="text-center py-16 text-muted-foreground text-sm">{t('wp.clickToAdd')}</div>
       {:else}
-        <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-        <div class="border border-border rounded-lg overflow-hidden cursor-grab" role="application"
-             onmousedown={onMouseDown} onmousemove={onMouseMove} onmouseup={onMouseUp}
-             onmouseleave={onMouseUp} onwheel={onWheel}>
-          <canvas bind:this={canvasEl} height="400" class="w-full"></canvas>
+        <div class="border border-border rounded-lg overflow-hidden">
+          <canvas bind:this={canvasEl} height="400" class="w-full cursor-grab"
+                  onmousedown={onMouseDown} onmousemove={onMouseMove} onmouseup={onMouseUp}
+                  onmouseleave={onMouseUp} onwheel={onWheel}></canvas>
         </div>
         <div class="flex items-center gap-3 mt-2 text-[10px] text-muted-foreground px-2">
           <span>Drag: rotate · Scroll: zoom</span>

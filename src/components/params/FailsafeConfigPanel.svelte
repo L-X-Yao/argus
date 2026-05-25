@@ -158,19 +158,17 @@
               <Battery size={14} class="text-red-500" />
               <span class="text-xs font-semibold text-foreground uppercase tracking-wider">{t('failsafe.battery')}</span>
             </div>
-            <!-- svelte-ignore a11y_click_events_have_key_events -->
-            <!-- svelte-ignore a11y_no_static_element_interactions -->
-            <label class="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" class="sr-only peer" checked={battEnable > 0}
-                     onchange={() => { battEnable = battEnable > 0 ? 0 : 1; }} />
-              <div class="w-9 h-5 bg-muted-foreground/30 peer-checked:bg-red-500 rounded-full
+            <button type="button" role="switch" aria-checked={battEnable > 0}
+                    class="relative inline-flex items-center cursor-pointer"
+                    onclick={() => { battEnable = battEnable > 0 ? 0 : 1; }}>
+              <div class="w-9 h-5 rounded-full transition-colors
                           after:content-[''] after:absolute after:top-[2px] after:left-[2px]
                           after:bg-white after:rounded-full after:h-4 after:w-4
-                          after:transition-all peer-checked:after:translate-x-full transition-colors"></div>
+                          after:transition-all {battEnable > 0 ? 'bg-red-500 after:translate-x-full' : 'bg-muted-foreground/30'}"></div>
               <span class="ml-2 text-[11px] text-muted-foreground">
                 {battEnable > 0 ? t('failsafe.enable') : t('failsafe.disable')}
               </span>
-            </label>
+            </button>
           </div>
           <div class="px-4 py-3 space-y-2.5">
             <div class="flex justify-between items-center">
@@ -220,19 +218,17 @@
               <Radio size={14} class="text-orange-500" />
               <span class="text-xs font-semibold text-foreground uppercase tracking-wider">{t('failsafe.rcLoss')}</span>
             </div>
-            <!-- svelte-ignore a11y_click_events_have_key_events -->
-            <!-- svelte-ignore a11y_no_static_element_interactions -->
-            <label class="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" class="sr-only peer" checked={rcEnable > 0}
-                     onchange={() => { rcEnable = rcEnable > 0 ? 0 : 1; }} />
-              <div class="w-9 h-5 bg-muted-foreground/30 peer-checked:bg-orange-500 rounded-full
+            <button type="button" role="switch" aria-checked={rcEnable > 0}
+                    class="relative inline-flex items-center cursor-pointer"
+                    onclick={() => { rcEnable = rcEnable > 0 ? 0 : 1; }}>
+              <div class="w-9 h-5 rounded-full transition-colors
                           after:content-[''] after:absolute after:top-[2px] after:left-[2px]
                           after:bg-white after:rounded-full after:h-4 after:w-4
-                          after:transition-all peer-checked:after:translate-x-full transition-colors"></div>
+                          after:transition-all {rcEnable > 0 ? 'bg-orange-500 after:translate-x-full' : 'bg-muted-foreground/30'}"></div>
               <span class="ml-2 text-[11px] text-muted-foreground">
                 {rcEnable > 0 ? t('failsafe.enable') : t('failsafe.disable')}
               </span>
-            </label>
+            </button>
           </div>
           <div class="px-4 py-3 space-y-2.5">
             <div class="flex justify-between items-center">
@@ -272,19 +268,17 @@
               <Wifi size={14} class="text-yellow-500" />
               <span class="text-xs font-semibold text-foreground uppercase tracking-wider">{t('failsafe.gcsLoss')}</span>
             </div>
-            <!-- svelte-ignore a11y_click_events_have_key_events -->
-            <!-- svelte-ignore a11y_no_static_element_interactions -->
-            <label class="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" class="sr-only peer" checked={gcsEnable > 0}
-                     onchange={() => { gcsEnable = gcsEnable > 0 ? 0 : 1; }} />
-              <div class="w-9 h-5 bg-muted-foreground/30 peer-checked:bg-yellow-500 rounded-full
+            <button type="button" role="switch" aria-checked={gcsEnable > 0}
+                    class="relative inline-flex items-center cursor-pointer"
+                    onclick={() => { gcsEnable = gcsEnable > 0 ? 0 : 1; }}>
+              <div class="w-9 h-5 rounded-full transition-colors
                           after:content-[''] after:absolute after:top-[2px] after:left-[2px]
                           after:bg-white after:rounded-full after:h-4 after:w-4
-                          after:transition-all peer-checked:after:translate-x-full transition-colors"></div>
+                          after:transition-all {gcsEnable > 0 ? 'bg-yellow-500 after:translate-x-full' : 'bg-muted-foreground/30'}"></div>
               <span class="ml-2 text-[11px] text-muted-foreground">
                 {gcsEnable > 0 ? t('failsafe.enable') : t('failsafe.disable')}
               </span>
-            </label>
+            </button>
           </div>
           <div class="px-4 py-3 space-y-2.5">
             <div class="flex justify-between items-center">
@@ -314,19 +308,17 @@
               <Navigation size={14} class="text-blue-500" />
               <span class="text-xs font-semibold text-foreground uppercase tracking-wider">{t('failsafe.ekf')}</span>
             </div>
-            <!-- svelte-ignore a11y_click_events_have_key_events -->
-            <!-- svelte-ignore a11y_no_static_element_interactions -->
-            <label class="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" class="sr-only peer" checked={ekfAction > 0}
-                     onchange={() => { ekfAction = ekfAction > 0 ? 0 : 1; }} />
-              <div class="w-9 h-5 bg-muted-foreground/30 peer-checked:bg-blue-500 rounded-full
+            <button type="button" role="switch" aria-checked={ekfAction > 0}
+                    class="relative inline-flex items-center cursor-pointer"
+                    onclick={() => { ekfAction = ekfAction > 0 ? 0 : 1; }}>
+              <div class="w-9 h-5 rounded-full transition-colors
                           after:content-[''] after:absolute after:top-[2px] after:left-[2px]
                           after:bg-white after:rounded-full after:h-4 after:w-4
-                          after:transition-all peer-checked:after:translate-x-full transition-colors"></div>
+                          after:transition-all {ekfAction > 0 ? 'bg-blue-500 after:translate-x-full' : 'bg-muted-foreground/30'}"></div>
               <span class="ml-2 text-[11px] text-muted-foreground">
                 {ekfAction > 0 ? t('failsafe.enable') : t('failsafe.disable')}
               </span>
-            </label>
+            </button>
           </div>
           <div class="px-4 py-3 space-y-2.5">
             <div class="flex justify-between items-center">

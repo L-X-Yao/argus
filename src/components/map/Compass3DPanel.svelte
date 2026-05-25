@@ -101,10 +101,9 @@
     </div>
     <div class="px-5 py-3">
       <p class="text-xs text-muted-foreground mb-3">{t('compass3d.hint')}</p>
-      <!-- svelte-ignore a11y_no_noninteractive_element_interactions -->
-      <div class="border border-border rounded-lg overflow-hidden cursor-grab" role="application"
-           onmousedown={onMouseDown} onmousemove={onMouseMove} onmouseup={onMouseUp} onmouseleave={onMouseUp}>
-        <canvas bind:this={canvasEl} height="300" class="w-full"></canvas>
+      <div class="border border-border rounded-lg overflow-hidden">
+        <canvas bind:this={canvasEl} height="300" class="w-full cursor-grab"
+                onmousedown={onMouseDown} onmousemove={onMouseMove} onmouseup={onMouseUp} onmouseleave={onMouseUp}></canvas>
       </div>
       <div class="flex gap-2 mt-3">
         <Button variant="default" size="sm" onclick={startCal} disabled={!app.drone.connected}>{t('cal.start')}</Button>

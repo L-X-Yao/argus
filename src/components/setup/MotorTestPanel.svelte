@@ -164,20 +164,19 @@
       {/if}
 
       <!-- Controls row -->
-      <!-- svelte-ignore a11y_label_has_associated_control -->
       <div class="space-y-3 mb-4">
         <!-- Throttle slider -->
         <div class="flex items-center gap-3">
-          <label class="text-[11px] font-medium text-foreground w-16 shrink-0">{t('motor.throttle')}</label>
-          <input type="range" min="0" max="100" step="1" bind:value={throttle}
+          <label for="motor-throttle" class="text-[11px] font-medium text-foreground w-16 shrink-0">{t('motor.throttle')}</label>
+          <input id="motor-throttle" type="range" min="0" max="100" step="1" bind:value={throttle}
                  class="flex-1 h-1.5 accent-primary" />
           <span class="text-xs font-mono text-muted-foreground w-10 text-right">{throttle}%</span>
         </div>
 
         <!-- Duration slider -->
         <div class="flex items-center gap-3">
-          <label class="text-[11px] font-medium text-foreground w-16 shrink-0">{t('motor.duration')}</label>
-          <input type="range" min="0.5" max="5" step="0.5" bind:value={duration}
+          <label for="motor-duration" class="text-[11px] font-medium text-foreground w-16 shrink-0">{t('motor.duration')}</label>
+          <input id="motor-duration" type="range" min="0.5" max="5" step="0.5" bind:value={duration}
                  class="flex-1 h-1.5 accent-primary" />
           <span class="text-xs font-mono text-muted-foreground w-10 text-right">{duration}s</span>
         </div>

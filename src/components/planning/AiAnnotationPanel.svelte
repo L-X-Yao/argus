@@ -229,7 +229,6 @@
 
       <!-- Canvas -->
       {#if imageLoaded}
-        <!-- svelte-ignore a11y_no_static_element_interactions -->
         <div class="border border-border rounded-lg overflow-hidden bg-black/20">
           <canvas
             bind:this={canvasEl}
