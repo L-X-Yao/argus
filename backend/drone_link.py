@@ -262,12 +262,13 @@ class DroneLink:
             self.ntrip_stop.set()
         if self._thread:
             self._thread.join(timeout=3)
-        try:
-            if self._ser:
-                self._ser.close()
-        except OSError:
-            pass
-        self._ser = None
+        with self._lock:
+            try:
+                if self._ser:
+                    self._ser.close()
+            except OSError:
+                pass
+            self._ser = None
         self._reset_session_state()
         self._stop_log()
         self.add_event(lt('disconnected', self.locale), 'disconnected')
@@ -276,12 +277,13 @@ class DroneLink:
         self._running = False
         if self._thread:
             self._thread.join(timeout=3)
-        try:
-            if self._ser:
-                self._ser.close()
-        except OSError:
-            pass
-        self._ser = None
+        with self._lock:
+            try:
+                if self._ser:
+                    self._ser.close()
+            except OSError:
+                pass
+            self._ser = None
         with self._state_lock:
             self.connected = False
             self._buf = b''
@@ -406,17 +408,19 @@ class DroneLink:
         self.add_event(lt('log_file', self.locale) % logname, 'log_file')
 
     def _stop_log(self) -> None:
-        try:
-            if self._logfile:
-                self._logfile.close()
-        except OSError:
-            pass
-        self._logfile = None
+        with self._state_lock:
+            try:
+                if self._logfile:
+                    self._logfile.close()
+            except OSError:
+                pass
+            self._logfile = None
 
     def get_log_path(self) -> str | None:
-        if self._logfile:
-            self._logfile.flush()
-            return self._logfile.name
+        with self._state_lock:
+            if self._logfile:
+                self._logfile.flush()
+                return self._logfile.name
         return None
 
     def _write_log_line(self) -> None:
@@ -546,11 +550,12 @@ class DroneLink:
                 self._reset_session_state()
                 if self._reconnect_enabled and self._last_port:
                     self.add_event(lt('reconnecting', self.locale), 'reconnecting')
-                    try:
-                        if self._ser:
-                            self._ser.close()
-                    except OSError:
-                        pass
+                    with self._lock:
+                        try:
+                            if self._ser:
+                                self._ser.close()
+                        except OSError:
+                            pass
                     self._buf = b''
                     self._protocol = 'auto'
                     try:
@@ -570,7 +575,11 @@ class DroneLink:
                         time.sleep(delay)
                     continue
             try:
-                data = self._ser.read(1024)
+                ser = self._ser
+                if ser is None:
+                    time.sleep(0.1)
+                    continue
+                data = ser.read(1024)
                 if data:
                     self._buf += data
                     if len(self._buf) > 65536:

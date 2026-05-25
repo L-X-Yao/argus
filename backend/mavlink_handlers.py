@@ -27,6 +27,7 @@ def _pad(p: bytes, n: int) -> bytes:
     return p if len(p) >= n else p + b'\x00' * (n - len(p))
 
 
+# ArduPilot: libraries/GCS_MAVLink/GCS_Common.cpp:3166 — GCS_MAVLINK::send_heartbeat
 def handle_heartbeat(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 1:
         return
@@ -76,6 +77,7 @@ def handle_heartbeat(p: bytes, pl: int, link: DroneLink) -> None:
         link.add_event(lt('connected', link.locale) % v.sysid, 'connected')
 
 
+# ArduPilot: libraries/GCS_MAVLink/GCS_Common.cpp:6082 — GCS_MAVLINK::send_attitude
 def handle_attitude(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 1:
         return
@@ -88,6 +90,7 @@ def handle_attitude(p: bytes, pl: int, link: DroneLink) -> None:
         a.yaw += 360
 
 
+# ArduPilot: libraries/GCS_MAVLink/GCS_Common.cpp:6138 — GCS_MAVLINK::send_global_position_int
 def handle_global_position_int(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 1:
         return
@@ -133,6 +136,7 @@ def handle_global_position_int(p: bytes, pl: int, link: DroneLink) -> None:
         a._prev_pos = (a.lat, a.lon)
 
 
+# ArduPilot: libraries/GCS_MAVLink/GCS_Common.cpp:6005 — GCS_MAVLINK::send_sys_status
 def handle_sys_status(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 1:
         return
@@ -154,6 +158,7 @@ def handle_sys_status(p: bytes, pl: int, link: DroneLink) -> None:
                 bat.bat_time_remaining = int(bat.remaining / (dr / dt))
 
 
+# ArduPilot: libraries/AP_GPS/AP_GPS.cpp:1375 — AP_GPS::send_mavlink_gps_raw
 def handle_gps_raw_int(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 1:
         return
@@ -162,6 +167,7 @@ def handle_gps_raw_int(p: bytes, pl: int, link: DroneLink) -> None:
     link.gps.gps_sats = p[29]
 
 
+# ArduPilot: libraries/GCS_MAVLink/GCS_Common.cpp:716 — GCS_MAVLINK::send_mission_current
 def handle_mission_current(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 1:
         return
@@ -183,6 +189,7 @@ def handle_home_position(p: bytes, pl: int, link: DroneLink) -> None:
     link.attitude._home_set = True
 
 
+# ArduPilot: libraries/GCS_MAVLink/GCS_Common.cpp:5956 — try_send_message(MSG_MISSION_ITEM_REACHED)
 def handle_mission_item_reached(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 1:
         return
@@ -204,6 +211,7 @@ _CMD_NAMES_EN = {
 _ACK_RESULTS_ZH = {0: '成功', 1: '暂时拒绝', 2: '拒绝', 3: '不支持', 4: '进行中', 5: '已取消'}
 _ACK_RESULTS_EN = {0: 'success', 1: 'temporarily rejected', 2: 'denied', 3: 'unsupported', 4: 'in progress', 5: 'cancelled'}
 
+# ArduPilot: libraries/GCS_MAVLink/GCS_Common.cpp:1446 — GCS_MAVLINK_InProgress::send_ack
 def handle_command_ack(p: bytes, pl: int, link: DroneLink) -> None:
     # Min check 2: command at 0-1. result (offset 2) reads 0 (ACCEPTED) when
     # the byte was trimmed.
@@ -224,6 +232,7 @@ def handle_command_ack(p: bytes, pl: int, link: DroneLink) -> None:
     link.add_event(lt('cmd_ack', link.locale) % (cmd_name, result_text), etype)
 
 
+# ArduPilot: libraries/AP_Compass/AP_Compass_Calibration.cpp:270 — Compass::send_mag_cal_progress
 def handle_mag_cal_progress(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 1:
         return
@@ -238,6 +247,7 @@ def handle_mag_cal_progress(p: bytes, pl: int, link: DroneLink) -> None:
             link.add_event(lt('mag_cal_pct', link.locale) % pct, 'cal_compass')
 
 
+# ArduPilot: libraries/AP_Compass/AP_Compass_Calibration.cpp:309 — Compass::send_mag_cal_report
 def handle_mag_cal_report(p: bytes, pl: int, link: DroneLink) -> None:
     # cal_status at offset 42. autosaved (43) and the orientation extension
     # fields commonly trim down to pl=43 when autosaved=0.
@@ -256,6 +266,7 @@ def handle_mag_cal_report(p: bytes, pl: int, link: DroneLink) -> None:
         link.add_event(lt('mag_cal_fail', link.locale), 'cal_compass')
 
 
+# ArduPilot: libraries/GCS_MAVLink/GCS_Common.cpp:2684 — GCS_MAVLINK::service_statustext
 def handle_statustext(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 2:
         return
@@ -276,6 +287,7 @@ def handle_statustext(p: bytes, pl: int, link: DroneLink) -> None:
     link.add_event(('%s: %s' % ('FC' if link.locale == 'en' else '飞控', text)), 'statustext')
 
 
+# ArduPilot: libraries/GCS_MAVLink/GCS_Common.cpp:3394 — GCS_MAVLINK::send_servo_output_raw
 def handle_servo_output(p: bytes, pl: int, link: DroneLink) -> None:
     # Min check 6 (servo1 last byte). Trim could drop port (offset 20) and the
     # extension servo9-16 if those values are all zero.
@@ -290,6 +302,7 @@ def handle_servo_output(p: bytes, pl: int, link: DroneLink) -> None:
         rc.servo_out += [0] * 8
 
 
+# ArduPilot: libraries/GCS_MAVLink/GCS_Common.cpp:2168 — GCS_MAVLINK::send_rc_channels
 def handle_rc_channels(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 6:
         return
@@ -298,6 +311,7 @@ def handle_rc_channels(p: bytes, pl: int, link: DroneLink) -> None:
     link.rc_servo.rc_rssi = p[41]
 
 
+# ArduPilot: libraries/GCS_MAVLink/GCS_Common.cpp:3073 — GCS_MAVLINK::send_vibration
 def handle_vibration(p: bytes, pl: int, link: DroneLink) -> None:
     # Min check 12: vibration_x first useful field. Trim can drop trailing
     # clipping counters when they're zero.
@@ -313,6 +327,7 @@ def handle_vibration(p: bytes, pl: int, link: DroneLink) -> None:
     d.vibe_clip2 = struct.unpack_from('<I', p, 28)[0]
 
 
+# ArduPilot: libraries/GCS_MAVLink/GCS_Common.cpp:3492 — GCS_MAVLINK::send_vfr_hud
 def handle_vfr_hud(p: bytes, pl: int, link: DroneLink) -> None:
     # Min check 4 (airspeed): MAVLink 2 zero-trim can shrink this from the
     # nominal 20 bytes down to as little as 4 when throttle/heading/climb are
@@ -327,6 +342,7 @@ def handle_vfr_hud(p: bytes, pl: int, link: DroneLink) -> None:
     a.climb = climb
 
 
+# ArduPilot: libraries/AP_NavEKF3/AP_NavEKF3_Outputs.cpp:348 — NavEKF3_core::send_status_report
 def handle_ekf_status(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 1:
         return
@@ -351,6 +367,7 @@ def handle_mount_status(p: bytes, pl: int, link: DroneLink) -> None:
     d.gimbal_yaw = yaw_cdeg / 100.0
 
 
+# ArduPilot: libraries/AP_Terrain/TerrainGCS.cpp:229 — AP_Terrain::send_terrain_report
 def handle_terrain_report(p: bytes, pl: int, link: DroneLink) -> None:
     # TERRAIN_REPORT (136) wire layout (MAVLink 2, sorted by size):
     #   lat (i32, 0..3), lon (i32, 4..7), terrain_height (float, 8..11),
@@ -364,6 +381,7 @@ def handle_terrain_report(p: bytes, pl: int, link: DroneLink) -> None:
     link.diagnostic.terrain_alt = struct.unpack_from('<f', p, 8)[0]
 
 
+# ArduPilot: libraries/AP_WindVane/AP_WindVane.cpp:427 — AP_WindVane::send_wind
 def handle_wind(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 1:
         return
@@ -373,10 +391,12 @@ def handle_wind(p: bytes, pl: int, link: DroneLink) -> None:
     link.diagnostic.wind_speed = speed
 
 
+# ArduPilot: libraries/GCS_MAVLink/GCS_Param.cpp:332 — GCS_MAVLINK::send_parameter_value
 def handle_param_value(p: bytes, pl: int, link: DroneLink) -> None:
     link.param_mgr.handle_param_value(p, pl)
 
 
+# ArduPilot: libraries/GCS_MAVLink/GCS_Common.cpp:2980 — GCS_MAVLINK::send_autopilot_version
 def handle_autopilot_version(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 1:
         return
@@ -395,6 +415,7 @@ def handle_autopilot_version(p: bytes, pl: int, link: DroneLink) -> None:
     link.add_event(lt('fw_info', link.locale) % (v.fw_version, v.fw_git), 'fw_info')
 
 
+# ArduPilot: libraries/GCS_MAVLink/MissionItemProtocol.cpp:135 — handle_mission_request_list
 def handle_mission_count(p: bytes, pl: int, link: DroneLink) -> None:
     m = link.mission
     if pl < 1 or not m._dl_pending:
@@ -482,6 +503,7 @@ def _request_dl_item(link: DroneLink, seq: int) -> None:
     link.send(bm(51, struct.pack('<HBBB', seq, link.vehicle.sysid, 1, 0), link.sq, 196))
 
 
+# ArduPilot: libraries/GCS_MAVLink/MissionItemProtocol.cpp:357 — MissionItemProtocol::queued_request_send
 def handle_mission_request(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 1:
         return
@@ -504,6 +526,7 @@ def handle_mission_request(p: bytes, pl: int, link: DroneLink) -> None:
             m._mission_ul_start_time = time.time()
 
 
+# ArduPilot: libraries/GCS_MAVLink/MissionItemProtocol.cpp:341 — MissionItemProtocol::send_mission_ack
 def handle_mission_ack(p: bytes, pl: int, link: DroneLink) -> None:
     # Min check 1: target_system. type (offset 2) reads 0=ACCEPTED from
     # zero-padded buffer if trimmed.
@@ -531,6 +554,7 @@ def handle_mission_ack(p: bytes, pl: int, link: DroneLink) -> None:
                        'mission_ack_ok' if mtype == 0 else 'mission_ack_fail')
 
 
+# ArduPilot: libraries/AP_Logger/AP_Logger_MAVLinkLogTransfer.cpp:259 — AP_Logger::handle_log_send_listing
 def handle_log_entry(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 1:
         return
@@ -543,6 +567,7 @@ def handle_log_entry(p: bytes, pl: int, link: DroneLink) -> None:
         link.add_event(lt('log_list_n', link.locale) % len(lg._log_list), 'log_list_n')
 
 
+# ArduPilot: libraries/GCS_MAVLink/GCS_Common.cpp:304 — GCS_MAVLINK::send_battery_status
 def handle_battery_status(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 10:
         return
@@ -556,6 +581,7 @@ def handle_battery_status(p: bytes, pl: int, link: DroneLink) -> None:
     link.battery.battery_cells = cells
 
 
+# ArduPilot: libraries/AP_ADSB/AP_ADSB.cpp:620 — AP_ADSB::send_adsb_vehicle
 def handle_adsb_vehicle(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 1:
         return
@@ -579,6 +605,7 @@ def handle_adsb_vehicle(p: bytes, pl: int, link: DroneLink) -> None:
         del tr._adsb_vehicles[oldest]
 
 
+# ArduPilot: libraries/GCS_MAVLink/GCS_serial_control.cpp:192 — GCS_MAVLINK::handle_serial_control
 def handle_serial_control(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 9:
         return
@@ -628,6 +655,7 @@ def _finalize_log_download(lg, log_id: int, truncated: bool, link: DroneLink) ->
         lg._log_messages = lg._log_messages[-200:]
 
 
+# ArduPilot: libraries/AP_Logger/AP_Logger_MAVLinkLogTransfer.cpp:296 — AP_Logger::handle_log_send_data
 def handle_log_data(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 7:
         return

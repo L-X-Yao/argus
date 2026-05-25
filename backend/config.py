@@ -99,3 +99,10 @@ class Config:
 
 
 cfg = Config()
+
+if not 1 <= cfg.PORT <= 65535:
+    import logging
+    logging.getLogger('gcs').warning(
+        'ARGUS_PORT=%d out of range 1-65535; using default 8100', cfg.PORT,
+    )
+    cfg.PORT = 8100
