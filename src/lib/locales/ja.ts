@@ -938,6 +938,23 @@ const messages: Record<string, string> = {
   'posSource.constPos': '固定位置モード',
   'posSource.uninit': '未初期化',
   'error.loadFailed': 'コンポーネント読込失敗',
+  'wp.library': 'Library',
+  'wp.saveToLib': 'Save to Library',
+  'wp.missionName': 'Mission name',
+  'wp.noSaved': 'No saved missions',
+  'wp.savedOk': 'Mission saved',
+  'wp.loaded': 'Mission loaded',
+  'wp.deleted': 'Deleted',
+  'param.compare': 'Compare',
+  'param.clearCompare': 'Clear Compare',
+  'param.compareLoaded': 'Loaded {n} params, {d} differences',
+  'param.refValue': 'Value from reference file',
+  'auth.title': 'Authentication',
+  'auth.tokenLabel': 'Access Token',
+  'auth.tokenPlaceholder': 'Enter access token',
+  'auth.login': 'Login',
+  'auth.error': 'Invalid token',
+  'auth.connFailed': 'Cannot connect to server',
 };
 
 

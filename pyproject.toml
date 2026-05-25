@@ -23,6 +23,11 @@ dev = [
 [tool.setuptools.packages.find]
 include = ["backend*"]
 
+[tool.coverage.run]
+omit = [
+    "backend/server.py",
+]
+
 [tool.ruff]
 target-version = "py310"
 line-length = 120

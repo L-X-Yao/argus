@@ -938,6 +938,23 @@ const messages: Record<string, string> = {
   'posSource.constPos': 'Mode Pos Constante',
   'posSource.uninit': 'Non initialisé',
   'error.loadFailed': 'Échec du chargement du composant',
+  'wp.library': 'Library',
+  'wp.saveToLib': 'Save to Library',
+  'wp.missionName': 'Mission name',
+  'wp.noSaved': 'No saved missions',
+  'wp.savedOk': 'Mission saved',
+  'wp.loaded': 'Mission loaded',
+  'wp.deleted': 'Deleted',
+  'param.compare': 'Compare',
+  'param.clearCompare': 'Clear Compare',
+  'param.compareLoaded': 'Loaded {n} params, {d} differences',
+  'param.refValue': 'Value from reference file',
+  'auth.title': 'Authentication',
+  'auth.tokenLabel': 'Access Token',
+  'auth.tokenPlaceholder': 'Enter access token',
+  'auth.login': 'Login',
+  'auth.error': 'Invalid token',
+  'auth.connFailed': 'Cannot connect to server',
 };
 
 

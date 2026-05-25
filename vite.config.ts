@@ -9,6 +9,9 @@ export default defineConfig({
   },
   test: {
     include: ['src/**/*.test.ts'],
+    coverage: {
+      exclude: ['src/lib/fc/px4.ts'],
+    },
   },
   build: {
     chunkSizeWarningLimit: 300,
