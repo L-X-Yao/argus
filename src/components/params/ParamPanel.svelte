@@ -7,7 +7,7 @@
   import type { Param } from '../../lib/types';
   import Button from '$lib/components/ui/button/button.svelte';
   import Badge from '$lib/components/ui/badge/badge.svelte';
-  import { Battery, ShieldAlert, Sliders, Navigation, Radio, ToggleLeft, Cpu, FileText, List } from '@lucide/svelte';
+  import { Battery, ShieldAlert, Sliders, Navigation, Radio, ToggleLeft, Cpu, FileText, List, GitCompareArrows } from '@lucide/svelte';
   import type { Component } from 'svelte';
 
   interface ParamMeta {
@@ -120,6 +120,8 @@
   let modified = $state<Set<string>>(new Set());
   let expandedParam = $state<string | null>(null);
   let viewMode = $state<'flat' | 'tree'>('flat');
+  let compareMap = $state<Map<string, number>>(new Map());
+  let compareActive = $derived(compareMap.size > 0);
 
   function hasDefaultDiff(name: string, value: number): boolean {
     const m = getMeta()[name];
@@ -257,6 +259,63 @@
     addToast(`${name} = ${newVal}`, 'info', 2000);
   }
 
+  function exportCsv() {
+    if (!paramState.list.length) return;
+    const header = 'Name,Value,Default,Units,Range,Description';
+    const rows = paramState.list.map(p => {
+      const m = getMeta()[p.name] || {};
+      const def = m.default !== undefined ? String(m.default) : '';
+      const units = (m.units || '').replace(/,/g, ';');
+      const range = m.range ? `${m.range[0]}~${m.range[1]}` : '';
+      const desc = (m.human || m.desc || '').replace(/,/g, ';').replace(/\n/g, ' ');
+      return `${p.name},${fmtValue(p.value)},${def},${units},${range},"${desc}"`;
+    });
+    const csv = [header, ...rows].join('\n');
+    const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'params_' + new Date().toISOString().slice(0, 10) + '.csv';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    addToast(t('param.exported').replace('{n}', String(paramState.list.length)), 'success');
+  }
+
+  function compareWithFile() {
+    const input = document.createElement('input');
+    input.type = 'file'; input.accept = '.param,.txt,.csv';
+    input.onchange = (e: Event) => {
+      const file = (e.target as HTMLInputElement).files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (ev: ProgressEvent<FileReader>) => {
+        const text = ev.target!.result as string;
+        const map = new Map<string, number>();
+        for (const line of text.split('\n')) {
+          const trimmed = line.trim();
+          if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith('Name,')) continue;
+          const parts = trimmed.split(/[\t,\s]+/);
+          if (parts.length < 2) continue;
+          const val = parseFloat(parts[1]);
+          if (!isNaN(val)) map.set(parts[0], val);
+        }
+        compareMap = map;
+        const diffCount = paramState.list.filter(p => {
+          const ref = map.get(p.name);
+          return ref !== undefined && Math.abs(ref - p.value) > 1e-6;
+        }).length;
+        addToast(t('param.compareLoaded').replace('{n}', String(map.size)).replace('{d}', String(diffCount)), 'success');
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  }
+
+  function clearCompare() { compareMap = new Map(); }
+
+  function getCompareValue(name: string): number | undefined {
+    return compareMap.get(name);
+  }
+
   function importParams() {
     const input = document.createElement('input');
     input.type = 'file'; input.accept = '.param,.txt';
@@ -330,6 +389,14 @@
                     onclick={() => { sendCommand('param_set', undefined, { name: p.name, value: getMeta()[p.name]!.default! }); modified.add(p.name); modified = new Set(modified); }}
                     title={t('tip.resetDefault').replace('{v}', String(getMeta()[p.name]!.default))}>↩</button>
           {/if}
+          {#if compareActive}
+            {@const ref = getCompareValue(p.name)}
+            {#if ref !== undefined && Math.abs(ref - p.value) > 1e-6}
+              <span class="text-[10px] text-destructive font-mono" title={t('param.refValue')}>ref:{fmtValue(ref)}</span>
+            {:else if ref !== undefined}
+              <span class="text-[10px] text-green-500 font-mono">=</span>
+            {/if}
+          {/if}
           {#if rangeStr}<span class="text-[10px] text-muted-foreground/50 ml-auto whitespace-nowrap">[{rangeStr}]</span>{/if}
         </div>
       {/if}
@@ -390,10 +457,14 @@
       {#if paramState.list.length > 0}
         <Button variant="secondary" size="sm" onclick={saveParams}>{t('param.writeFlash')}</Button>
         <Button variant="outline" size="sm" onclick={exportParams}>{t('param.export')}</Button>
+        <Button variant="outline" size="sm" onclick={exportCsv}>CSV</Button>
         {#if metaLoaded && modifiedCount > 0}
           <Button variant="outline" size="sm" onclick={exportDiff}>Diff</Button>
         {/if}
         <Button variant="outline" size="sm" onclick={importParams}>{t('param.import')}</Button>
+        <Button variant={compareActive ? 'default' : 'outline'} size="sm" class="gap-1" onclick={compareActive ? clearCompare : compareWithFile}>
+          <GitCompareArrows size={13} />{compareActive ? t('param.clearCompare') : t('param.compare')}
+        </Button>
         <Badge variant="outline" class="text-[10px] font-mono">{paramState.list.length} {t('param.params')}</Badge>
       {/if}
     </div>
