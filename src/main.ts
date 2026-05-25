@@ -2,6 +2,34 @@ import './app.css';
 import App from './App.svelte';
 import { mount } from 'svelte';
 
+const ERROR_LOG_KEY = 'argus_error_log';
+const ERROR_LOG_MAX = 50;
+
+function logError(source: string, message: string) {
+  try {
+    const log: { t: string; s: string; m: string }[] = JSON.parse(localStorage.getItem(ERROR_LOG_KEY) || '[]');
+    log.push({ t: new Date().toISOString(), s: source, m: message.slice(0, 500) });
+    if (log.length > ERROR_LOG_MAX) log.splice(0, log.length - ERROR_LOG_MAX);
+    localStorage.setItem(ERROR_LOG_KEY, JSON.stringify(log));
+  } catch {}
+}
+
+window.addEventListener('error', (e) => {
+  logError('error', `${e.message} at ${e.filename}:${e.lineno}`);
+});
+
+window.addEventListener('unhandledrejection', (e) => {
+  logError('promise', String(e.reason));
+});
+
+export function getErrorLog(): { t: string; s: string; m: string }[] {
+  try { return JSON.parse(localStorage.getItem(ERROR_LOG_KEY) || '[]'); } catch { return []; }
+}
+
+export function clearErrorLog(): void {
+  localStorage.removeItem(ERROR_LOG_KEY);
+}
+
 const app = mount(App, { target: document.getElementById('app')! });
 
 export default app;

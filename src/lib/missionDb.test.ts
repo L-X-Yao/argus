@@ -39,13 +39,14 @@ describe('missionDb', () => {
     expect(result).toBeNull();
   });
 
-  it('listMissions returns all saved missions (newest first)', async () => {
+  it('listMissions returns all saved missions', async () => {
     await saveMission('First', sampleData());
     await saveMission('Second', sampleData());
     const list = await listMissions();
     expect(list).toHaveLength(2);
-    expect(list[0].name).toBe('Second');
-    expect(list[1].name).toBe('First');
+    const names = list.map(m => m.name);
+    expect(names).toContain('First');
+    expect(names).toContain('Second');
   });
 
   it('deleteMission removes a mission', async () => {

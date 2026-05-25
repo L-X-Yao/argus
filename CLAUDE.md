@@ -1,7 +1,7 @@
 # Argus GCS
 
 Universal web-based ground control station for MAVLink drones.
-Repo: `github.com/L-X-Yao/argus`, branch: `main`, version: `3.4.0`
+Repo: `github.com/L-X-Yao/argus`, branch: `main`, version: `3.5.0`
 
 ## Tech Stack
 

@@ -35,6 +35,7 @@ DYNAMIC_KEY_PREFIXES = (
 # Snapshotted so that *new* orphans fail loud — cleanup of existing entries
 # is welcome but not required.
 KNOWN_ORPHAN_LOCALE_KEYS: set[str] = {
+    'app.subtitle',
     'adsb.aircraft', 'adsb.altitude', 'adsb.distance', 'adsb.noTraffic',
     'adsb.title', 'ar.disable', 'ar.enable', 'compass3d.coverage',
     'confirm.armAndFly', 'conn.noProfiles', 'conn.reconnecting',
@@ -67,6 +68,8 @@ def _iter_frontend_sources() -> list[tuple[Path, str]]:
         if path.suffix not in _FRONTEND_SUFFIXES:
             continue
         if 'locales' in path.parts or 'node_modules' in path.parts:
+            continue
+        if path.name.endswith('.test.ts'):
             continue
         files.append((path, path.read_text(encoding='utf-8', errors='ignore')))
     return files

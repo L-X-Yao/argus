@@ -53,7 +53,7 @@ describe('plugins', () => {
   describe('createPluginAPI()', () => {
     it('returns an object with version and all methods', () => {
       const api = createPluginAPI();
-      expect(api.version).toBe('3.4.0');
+      expect(api.version).toBe('3.5.0');
       expect(typeof api.getDroneState).toBe('function');
       expect(typeof api.getWaypoints).toBe('function');
       expect(typeof api.sendCommand).toBe('function');

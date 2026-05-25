@@ -1,0 +1,20 @@
+#!/bin/bash
+# Pre-commit gate: lint + type-check + fast tests.
+# Install: git config core.hooksPath .githooks
+set -e
+
+echo "[pre-commit] ruff..."
+ruff check backend/ scripts/ tests/ --quiet
+
+echo "[pre-commit] svelte-check..."
+npx svelte-check --tsconfig ./tsconfig.json 2>&1 | tail -1 | grep -q '0 ERRORS' || {
+  echo "svelte-check failed"; exit 1;
+}
+
+echo "[pre-commit] vitest..."
+npx vitest run --bail 1 --reporter=dot 2>&1 | tail -1
+
+echo "[pre-commit] pytest..."
+python -m pytest tests/test_unit_*.py tests/test_contract_*.py -q --tb=line -x 2>&1 | tail -1
+
+echo "[pre-commit] OK"

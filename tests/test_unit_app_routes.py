@@ -39,7 +39,7 @@ class TestHealthAndSystem:
         r = client.get('/api/version')
         assert r.status_code == 200
         data = r.json()
-        assert data['version'] == '3.4.0'
+        assert data['version'] == '3.5.0'
         assert 'protocols' in data
         assert 'pllink' in data['protocols']
         assert 'vehicles' in data

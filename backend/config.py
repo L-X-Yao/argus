@@ -7,7 +7,7 @@ from functools import partial
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
-VERSION = '3.4.0'
+VERSION = '3.5.0'
 
 
 async def aio(fn, *args):

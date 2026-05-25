@@ -33,13 +33,13 @@ jobs:
         run: ruff check backend/ scripts/ tests/
 
       - name: Python tests with coverage
-        run: python -m pytest tests/test_unit_*.py tests/test_contract_*.py -v --cov=backend --cov-report=term-missing --cov-fail-under=60
+        run: python -m pytest tests/test_unit_*.py tests/test_contract_*.py -v --cov=backend --cov-report=term-missing --cov-fail-under=95
 
       - name: TypeScript check
         run: npx svelte-check --tsconfig ./tsconfig.json
 
       - name: Frontend tests with coverage
-        run: npx vitest run --coverage --coverage.thresholds.lines=50
+        run: npx vitest run --coverage --coverage.thresholds.lines=85
 
       - name: Build
         run: npm run build
