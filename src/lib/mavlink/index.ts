@@ -12,6 +12,7 @@ export {
   encodeMissionCount,
   encodeMissionItemInt,
   encodeMissionClearAll,
+  encodeMissionSetCurrent,
   encodeMissionRequestList,
   encodeMissionRequestInt,
   encodeMissionAck,

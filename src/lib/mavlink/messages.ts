@@ -726,6 +726,22 @@ export function encodeCommandAck(command: number, result: number): Uint8Array {
 }
 
 /**
+ * MISSION_SET_CURRENT (msg 41, 4-byte payload). Tells the FC to jump to a
+ * specific waypoint seq during AUTO flight.
+ * ArduPilot: GCS_MAVLINK::handle_mission_set_current (GCS_Common.cpp)
+ */
+export function encodeMissionSetCurrent(
+  targetSys: number, targetComp: number, seq: number,
+): Uint8Array {
+  const buf = new Uint8Array(4);
+  const dv = new DataView(buf.buffer);
+  dv.setUint16(0, seq, true);
+  dv.setUint8(2, targetSys);
+  dv.setUint8(3, targetComp);
+  return buf;
+}
+
+/**
  * MISSION_REQUEST_LIST (msg 43, 3-byte payload). Asks the FC to start a
  * mission download — it responds with MISSION_COUNT (44).
  */

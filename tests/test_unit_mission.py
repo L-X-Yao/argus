@@ -6,6 +6,7 @@ from unittest.mock import MagicMock, patch
 from backend.commands._mission import (
     _upload_mission,
     check_mission_dl_timeout,
+    cmd_mission_set_current,
     cmd_mission_start,
     cmd_mission_upload,
 )
@@ -300,3 +301,56 @@ class TestUploadMissionWaypointTypes:
         assert 181 in cmds
         # seq_to_wp should map the nav waypoint seq to wp index 0
         assert 0 in link.mission._seq_to_wp.values()
+
+
+# ---------------------------------------------------------------------------
+# cmd_mission_set_current — jump to waypoint during flight (msg 41)
+# ---------------------------------------------------------------------------
+class TestMissionSetCurrent:
+    def test_sends_msg_41_with_correct_seq(self):
+        """Sends MISSION_SET_CURRENT (msg 41) with wp_index resolved to seq."""
+        link = make_link()
+        # Simulate a prior upload that mapped seq 5 -> wp_index 2
+        link.mission._seq_to_wp = {2: 0, 3: 1, 5: 2}
+        cmd_mission_set_current(link, None, {'wp_index': 2})
+
+        # Should have sent a frame with msg 41
+        assert link._ser.write.called
+        frame = link._ser.write.call_args[0][0]
+        assert frame[7] == 41  # msg ID at offset 7 in MAVLink v2 frame
+        # seq should be 5 (from _seq_to_wp reverse lookup)
+        import struct
+        payload_start = 10  # MAVLink v2: 10 bytes header
+        seq = struct.unpack_from('<H', frame, payload_start)[0]
+        assert seq == 5
+
+    def test_fallback_seq_when_no_mapping(self):
+        """Falls back to wp_index + 2 when _seq_to_wp has no match."""
+        link = make_link()
+        link.mission._seq_to_wp = {}
+        cmd_mission_set_current(link, None, {'wp_index': 3})
+
+        frame = link._ser.write.call_args[0][0]
+        import struct
+        payload_start = 10
+        seq = struct.unpack_from('<H', frame, payload_start)[0]
+        assert seq == 5  # 3 + 2
+
+    def test_event_logged(self):
+        """An event is added for the jump command."""
+        link = make_link()
+        link.mission._seq_to_wp = {4: 1}
+        cmd_mission_set_current(link, None, {'wp_index': 1})
+        assert any(e.get('event_type') == 'mission_set_current' for e in link.events)
+
+    def test_param_fallback(self):
+        """When wp_index is not in data, falls back to param argument."""
+        link = make_link()
+        link.mission._seq_to_wp = {}
+        cmd_mission_set_current(link, 7, {})
+
+        frame = link._ser.write.call_args[0][0]
+        import struct
+        payload_start = 10
+        seq = struct.unpack_from('<H', frame, payload_start)[0]
+        assert seq == 9  # 7 + 2

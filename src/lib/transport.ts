@@ -19,6 +19,7 @@ import {
   encodeMissionCount,
   encodeMissionItemInt,
   encodeMissionClearAll,
+  encodeMissionSetCurrent,
   encodeMissionRequestList,
   encodeMissionRequestInt,
   encodeMissionAck,
@@ -439,6 +440,13 @@ export function serialClearMission(): void {
   if (!isSerialConnected()) return;
   sendSerialFrame(45, encodeMissionClearAll(
     serial.targetSysId, serial.targetCompId, 0,
+  ));
+}
+
+export function serialMissionSetCurrent(seq: number): void {
+  if (!isSerialConnected()) return;
+  sendSerialFrame(41, encodeMissionSetCurrent(
+    serial.targetSysId, serial.targetCompId, seq,
   ));
 }
 
