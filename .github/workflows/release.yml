@@ -71,41 +71,13 @@ jobs:
         run: python scripts/build_package.py --arch amd64
 
       - name: Generate release notes
-        id: notes
         run: |
           PREV_TAG=$(git tag --sort=-v:refname | sed -n '2p')
-          if [ -z "$PREV_TAG" ]; then
-            RANGE="HEAD"
+          if [ -n "$PREV_TAG" ]; then
+            bash scripts/changelog.sh "$PREV_TAG" > RELEASE_NOTES.md
           else
-            RANGE="${PREV_TAG}..HEAD"
+            bash scripts/changelog.sh > RELEASE_NOTES.md
           fi
-
-          {
-            echo "## Changes"
-            echo ""
-
-            FEATS=$(git log "$RANGE" --pretty=format:"%s" | grep -E "^feat:" | sed 's/^feat: /- /' || true)
-            if [ -n "$FEATS" ]; then
-              echo "### New Features"
-              echo "$FEATS"
-              echo ""
-            fi
-
-            FIXES=$(git log "$RANGE" --pretty=format:"%s" | grep -E "^fix:" | sed 's/^fix: /- /' || true)
-            if [ -n "$FIXES" ]; then
-              echo "### Bug Fixes"
-              echo "$FIXES"
-              echo ""
-            fi
-
-            OTHER=$(git log "$RANGE" --pretty=format:"%s" | grep -vE "^(feat|fix|release|Merge):" | sed 's/^/- /' || true)
-            if [ -n "$OTHER" ]; then
-              echo "### Other"
-              echo "$OTHER"
-              echo ""
-            fi
-          } > RELEASE_NOTES.md
-
           cat RELEASE_NOTES.md
 
       - name: Create GitHub Release
