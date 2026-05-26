@@ -5,7 +5,7 @@ requires-python = ">=3.10"
 dependencies = [
     "fastapi>=0.115.0,<1.0",
     "uvicorn[standard]>=0.34.0,<1.0",
-    "websockets>=14.0,<17.0",
+    "websockets>=16.0,<17.0",
     "python-multipart>=0.0.9",
     "pyserial>=3.5",
 ]
