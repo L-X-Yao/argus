@@ -50,7 +50,7 @@ def get_metadata(vehicle: str) -> dict:
             json.dump(data, f, ensure_ascii=False)
         _cache[vehicle] = data
         return data
-    except (OSError, json.JSONDecodeError, ValueError):
+    except (OSError, json.JSONDecodeError, ValueError, ET.ParseError):
         if cache_path.exists():
             with open(cache_path, encoding='utf-8') as f:
                 data = json.load(f)

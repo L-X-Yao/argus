@@ -92,7 +92,9 @@
     if (viewMode !== 'tree') return [];
     const groups = new Map<string, typeof filtered>();
     for (const p of filtered) {
-      const prefix = p.name.split('_').slice(0, p.name.startsWith('BRD') || p.name.startsWith('LOG') || p.name.startsWith('GPS') ? 1 : Math.min(2, p.name.split('_').length - 1)).join('_');
+      const first = p.name.split('_')[0];
+      const use1 = /^(BRD|LOG|GPS|BATT|INS|ATC|COMPASS|WPNAV|FENCE|RALLY|SERVO\d*)$/.test(first);
+      const prefix = p.name.split('_').slice(0, use1 ? 1 : Math.min(2, p.name.split('_').length - 1)).join('_');
       const key = prefix || 'OTHER';
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key)!.push(p);
@@ -101,7 +103,7 @@
   });
 
   const CAT_DEFS: { key: string; i18nKey: string; icon: Component; match: (n: string) => boolean }[] = [
-    { key: 'battery', i18nKey: 'cat.battery', icon: Battery, match: n => n.startsWith('BATT') || n === 'FS_BATT_ENABLE' || n === 'FS_BATT_MAH' || n === 'FS_BATT_VOLTAGE' },
+    { key: 'battery', i18nKey: 'cat.battery', icon: Battery, match: n => n.startsWith('BATT') },
     { key: 'failsafe', i18nKey: 'cat.failsafe', icon: ShieldAlert, match: n => n.startsWith('FS_') },
     { key: 'pid', i18nKey: 'cat.pid', icon: Sliders, match: n => n.startsWith('ATC_RAT_') || n.startsWith('ATC_ANG_') },
     { key: 'nav', i18nKey: 'cat.nav', icon: Navigation, match: n => n.startsWith('WPNAV') || n.startsWith('RTL') || n.startsWith('LOIT') },
@@ -267,7 +269,7 @@
       const def = m.default !== undefined ? String(m.default) : '';
       const units = (m.units || '').replace(/,/g, ';');
       const range = m.range ? `${m.range[0]}~${m.range[1]}` : '';
-      const desc = (m.human || m.desc || '').replace(/,/g, ';').replace(/\n/g, ' ');
+      const desc = (m.human || m.desc || '').replace(/"/g, '""').replace(/\n/g, ' ');
       return `${p.name},${p.value},${def},${units},${range},"${desc}"`;
     });
     const csv = [header, ...rows].join('\n');
