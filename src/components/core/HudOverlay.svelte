@@ -64,7 +64,7 @@
   }
 </script>
 
-<svg class="pfd" viewBox="0 0 300 195" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Primary flight display">
+<svg class="pfd" viewBox="0 0 300 195" xmlns="http://www.w3.org/2000/svg" role="img" aria-label={t('ui.pfd')}>
   <defs>
     <clipPath id="pc"><circle cx={CX} cy={CY} r={AHI_R} /></clipPath>
     <clipPath id="sc"><rect x="2" y={TT} width="50" height={TB - TT} /></clipPath>

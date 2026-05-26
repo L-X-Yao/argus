@@ -1024,6 +1024,22 @@ const messages: Record<string, string> = {
   'motor.fr': 'أمام يمين (2)',
   'motor.bl': 'خلف يسار (3)',
   'motor.br': 'خلف يمين (4)',
+  'ui.skipToContent': 'انتقل إلى المحتوى',
+  'ui.map2d': 'خريطة ثنائية الأبعاد',
+  'ui.globe3d': 'كرة أرضية ثلاثية الأبعاد',
+  'ui.rtspVideo': 'فيديو RTSP',
+  'ui.renderError': 'خطأ في العرض',
+  'ui.retry': 'إعادة المحاولة',
+  'ui.sendCommand': 'إرسال الأمر',
+  'ui.pfd': 'شاشة الطيران الرئيسية',
+  'ui.eventLog': 'سجل الأحداث',
+  'ui.widgetPicker': 'تبديل اختيار الأدوات',
+  'ui.video': 'فيديو',
+  'ui.videoControls': 'تحكم الفيديو',
+  'ui.skipBack': 'رجوع',
+  'ui.skipForward': 'تقدم',
+  'ui.linkQuality': 'جودة الاتصال {rate} هرتز',
+  'ui.battery': 'البطارية {v}ف {pct}%',
 };
 
 

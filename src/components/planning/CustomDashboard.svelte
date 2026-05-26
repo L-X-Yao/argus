@@ -168,10 +168,10 @@
         <h3 class="text-base font-bold text-primary">{t('dashboard.title')}</h3>
       </div>
       <div class="flex items-center gap-1">
-        <Button variant="ghost" size="icon-xs" onclick={() => showPicker = !showPicker} aria-label="Toggle widget picker">
+        <Button variant="ghost" size="icon-xs" onclick={() => showPicker = !showPicker} aria-label={t('ui.widgetPicker')}>
           <Settings2 size={16} />
         </Button>
-        <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label="Close"><X size={16} /></Button>
+        <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label={t('error.close')}><X size={16} /></Button>
       </div>
     </div>
 

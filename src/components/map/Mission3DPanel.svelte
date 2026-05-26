@@ -121,7 +121,7 @@
         <h3 class="text-base font-bold text-primary">{t('panel.mission3d')}</h3>
         <span class="text-xs text-muted-foreground">{wps.length} WP</span>
       </div>
-      <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label="Close"><X size={16} /></Button>
+      <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label={t('error.close')}><X size={16} /></Button>
     </div>
     <div class="px-2 py-2">
       {#if wps.length < 2}

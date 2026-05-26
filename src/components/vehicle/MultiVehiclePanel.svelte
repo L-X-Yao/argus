@@ -44,7 +44,7 @@
           {app.drone.vehicles.length}
         </Badge>
       </div>
-      <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label="Close"><X size={16} /></Button>
+      <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label={t('error.close')}><X size={16} /></Button>
     </div>
 
     <div class="flex-1 min-h-0 overflow-y-auto p-4 space-y-3">

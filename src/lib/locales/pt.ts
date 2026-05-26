@@ -1024,6 +1024,22 @@ const messages: Record<string, string> = {
   'motor.fr': 'DD (2)',
   'motor.bl': 'TE (3)',
   'motor.br': 'TD (4)',
+  'ui.skipToContent': 'Ir para o conteúdo',
+  'ui.map2d': 'Mapa 2D',
+  'ui.globe3d': 'Globo 3D',
+  'ui.rtspVideo': 'Vídeo RTSP',
+  'ui.renderError': 'Erro de renderização',
+  'ui.retry': 'Tentar novamente',
+  'ui.sendCommand': 'Enviar comando',
+  'ui.pfd': 'Display de voo principal',
+  'ui.eventLog': 'Registro de eventos',
+  'ui.widgetPicker': 'Alternar seletor',
+  'ui.video': 'Vídeo',
+  'ui.videoControls': 'Controles de vídeo',
+  'ui.skipBack': 'Voltar',
+  'ui.skipForward': 'Avançar',
+  'ui.linkQuality': 'Qualidade do link {rate} Hz',
+  'ui.battery': 'Bateria {v}V {pct}%',
 };
 
 

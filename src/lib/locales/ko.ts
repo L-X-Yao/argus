@@ -1024,6 +1024,22 @@ const messages: Record<string, string> = {
   'motor.fr': '우전 (2)',
   'motor.bl': '좌후 (3)',
   'motor.br': '우후 (4)',
+  'ui.skipToContent': '콘텐츠로 건너뛰기',
+  'ui.map2d': '2D 지도',
+  'ui.globe3d': '3D 지구본',
+  'ui.rtspVideo': 'RTSP 영상',
+  'ui.renderError': '렌더링 오류',
+  'ui.retry': '재시도',
+  'ui.sendCommand': '명령 전송',
+  'ui.pfd': '주비행계기',
+  'ui.eventLog': '이벤트 로그',
+  'ui.widgetPicker': '위젯 선택',
+  'ui.video': '영상',
+  'ui.videoControls': '영상 컨트롤',
+  'ui.skipBack': '뒤로',
+  'ui.skipForward': '앞으로',
+  'ui.linkQuality': '링크 품질 {rate} Hz',
+  'ui.battery': '배터리 {v}V {pct}%',
 };
 
 

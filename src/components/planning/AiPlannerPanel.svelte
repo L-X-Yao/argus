@@ -138,7 +138,7 @@
         <Sparkles size={16} class="text-purple-400" />
         <h3 class="text-base font-bold text-purple-400">{t('panel.aiPlanner')}</h3>
       </div>
-      <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label="Close"><X size={16} /></Button>
+      <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label={t('error.close')}><X size={16} /></Button>
     </div>
 
     <div class="flex-1 overflow-y-auto px-5 py-3 space-y-3">

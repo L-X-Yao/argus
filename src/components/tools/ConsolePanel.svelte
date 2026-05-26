@@ -84,7 +84,7 @@
         <Button variant="ghost" size="icon-xs" onclick={clearConsole} title={t('inspector.clear')} aria-label={t('inspector.clear')}>
           <Trash2 size={14} />
         </Button>
-        <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label="Close">
+        <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label={t('error.close')}>
           <X size={16} />
         </Button>
       </div>
@@ -118,7 +118,7 @@
           placeholder={t('console.placeholder')}
           class="flex-1 bg-transparent border-none outline-none text-emerald-300 font-mono text-xs placeholder:text-emerald-800 caret-emerald-400"
         />
-        <Button variant="ghost" size="icon-xs" onclick={submit} aria-label="Send command">
+        <Button variant="ghost" size="icon-xs" onclick={submit} aria-label={t('ui.sendCommand')}>
           <Send size={14} class="text-emerald-500" />
         </Button>
       </div>

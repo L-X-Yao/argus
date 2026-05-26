@@ -166,12 +166,12 @@
   class="absolute z-[1003] flex flex-col bg-card/95 backdrop-blur border border-border
          rounded-xl shadow-2xl overflow-hidden select-none"
   style="right: {posX}px; top: {posY}px; width: {sizeMap[size].w}px;"
-  role="region" aria-label="Video"
+  role="region" aria-label={t('ui.video')}
 >
   <!-- Title bar (draggable) -->
   <div
     class="flex items-center justify-between px-3 py-1.5 border-b border-border cursor-move bg-muted/50"
-    role="toolbar" aria-label="Video controls" tabindex="0"
+    role="toolbar" aria-label={t('ui.videoControls')} tabindex="0"
     onmousedown={onDragStart}
   >
     <span class="text-xs font-semibold text-foreground tracking-wide">{t('video.title')}</span>

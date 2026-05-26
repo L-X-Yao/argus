@@ -261,7 +261,7 @@
     <!-- Header -->
     <div class="flex items-center justify-between px-4 py-3 border-b border-border">
       <h2 class="text-sm font-semibold text-primary uppercase tracking-wider">{t('cal.title')}</h2>
-      <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label="Close"><X size={16} /></Button>
+      <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label={t('error.close')}><X size={16} /></Button>
     </div>
 
     <div class="flex-1 min-h-0 overflow-y-auto p-4">

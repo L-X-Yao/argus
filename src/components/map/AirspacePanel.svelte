@@ -130,7 +130,7 @@
           {t('airspace.enabled')}
           <Switch size="sm" checked={enabled} onCheckedChange={toggleEnabled} />
         </label>
-        <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label="Close"><X size={16} /></Button>
+        <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label={t('error.close')}><X size={16} /></Button>
       </div>
     </div>
 

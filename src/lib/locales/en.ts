@@ -1024,6 +1024,22 @@ const messages: Record<string, string> = {
   'motor.fr': 'FR (2)',
   'motor.bl': 'BL (3)',
   'motor.br': 'BR (4)',
+  'ui.skipToContent': 'Skip to content',
+  'ui.map2d': '2D Map',
+  'ui.globe3d': '3D Globe',
+  'ui.rtspVideo': 'RTSP Video',
+  'ui.renderError': 'Render Error',
+  'ui.retry': 'Retry',
+  'ui.sendCommand': 'Send command',
+  'ui.pfd': 'Primary flight display',
+  'ui.eventLog': 'Event log',
+  'ui.widgetPicker': 'Toggle widget picker',
+  'ui.video': 'Video',
+  'ui.videoControls': 'Video controls',
+  'ui.skipBack': 'Skip back',
+  'ui.skipForward': 'Skip forward',
+  'ui.linkQuality': 'Link quality {rate} Hz',
+  'ui.battery': 'Battery {v}V {pct}%',
 };
 
 

@@ -22,7 +22,7 @@
   <div class="bg-card border border-border rounded-2xl overflow-hidden min-w-[380px] max-h-[80vh] shadow-2xl flex flex-col" role="presentation" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
     <div class="bg-gradient-to-r from-primary/20 to-primary/5 px-5 py-3 flex items-center justify-between shrink-0">
       <h3 class="text-base font-bold text-primary">{t('settings.title')}</h3>
-      <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label="Close"><X size={16} /></Button>
+      <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label={t('error.close')}><X size={16} /></Button>
     </div>
 
     <div class="overflow-y-auto px-5 py-3 space-y-4">

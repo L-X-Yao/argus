@@ -84,7 +84,7 @@
         <MapPin size={16} class="text-primary" />
         <h3 class="text-base font-bold text-primary">{t('annotation.title')}</h3>
       </div>
-      <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label="Close"><X size={16} /></Button>
+      <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label={t('error.close')}><X size={16} /></Button>
     </div>
 
     <div class="overflow-y-auto px-5 py-3 space-y-3">

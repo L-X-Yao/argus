@@ -100,7 +100,7 @@ log("Alt: " + drone.alt_rel + "m");
           <Play size={13} class="mr-1" />{running ? t('panel.script.running') : t('panel.script.run')}
         </Button>
         <Button variant="outline" size="sm" onclick={saveScript}><Save size={13} class="mr-1" />Save</Button>
-        <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label="Close"><X size={16} /></Button>
+        <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label={t('error.close')}><X size={16} /></Button>
       </div>
     </div>
     <div class="flex flex-1 min-h-0">

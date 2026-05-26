@@ -254,7 +254,7 @@
 </script>
 
 <a href="#main-content" class="sr-only focus:not-sr-only focus:absolute focus:z-[99999] focus:bg-primary focus:text-primary-foreground focus:p-2 focus:rounded-md focus:top-2 focus:left-2">
-  Skip to content
+  {t('ui.skipToContent')}
 </a>
 <div class="flex flex-col h-screen overflow-hidden" role="application">
   <StatusBar {toggleTheme} onSettings={() => app.showSettings = !app.showSettings} />
@@ -305,11 +305,11 @@
         {#if view === 'fly'}
           <Button variant={app.mapMode === '3d' ? 'default' : 'secondary'} size="sm" class="gap-1"
                   onclick={() => app.mapMode = app.mapMode === '3d' ? '2d' : '3d'}
-                  title={app.mapMode === '3d' ? '2D Map' : '3D Globe'}>
+                  title={app.mapMode === '3d' ? t('ui.map2d') : t('ui.globe3d')}>
             <Globe size={13} />{app.mapMode === '3d' ? '3D' : '2D'}
           </Button>
           <Button variant={p.isOpen('video') ? 'default' : 'secondary'} size="sm" class="gap-1"
-                  onclick={() => p.toggle('video')} title="RTSP Video">
+                  onclick={() => p.toggle('video')} title={t('ui.rtspVideo')}>
             <Video size={13} />{t('nav.video')}
           </Button>
           <Button variant={controlsOpen ? 'default' : 'secondary'} size="sm" class="gap-1"
@@ -325,9 +325,9 @@
     {#snippet failed(error, reset)}
       <div class="flex-1 flex items-center justify-center bg-background">
         <div class="text-center p-6">
-          <p class="text-destructive font-bold text-sm">Render Error</p>
+          <p class="text-destructive font-bold text-sm">{t('ui.renderError')}</p>
           <p class="text-xs text-muted-foreground mt-1 max-w-xs break-all">{error instanceof Error ? error.message : String(error)}</p>
-          <button class="mt-3 px-3 py-1.5 bg-primary text-primary-foreground text-xs rounded-md" onclick={reset}>Retry</button>
+          <button class="mt-3 px-3 py-1.5 bg-primary text-primary-foreground text-xs rounded-md" onclick={reset}>{t('ui.retry')}</button>
         </div>
       </div>
     {/snippet}

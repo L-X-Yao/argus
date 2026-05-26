@@ -1024,6 +1024,22 @@ const messages: Record<string, string> = {
   'motor.fr': 'ПП (2)',
   'motor.bl': 'ЛЗ (3)',
   'motor.br': 'ПЗ (4)',
+  'ui.skipToContent': 'Перейти к содержимому',
+  'ui.map2d': '2D-карта',
+  'ui.globe3d': '3D-глобус',
+  'ui.rtspVideo': 'RTSP-видео',
+  'ui.renderError': 'Ошибка отрисовки',
+  'ui.retry': 'Повторить',
+  'ui.sendCommand': 'Отправить команду',
+  'ui.pfd': 'Основной пилотажный дисплей',
+  'ui.eventLog': 'Журнал событий',
+  'ui.widgetPicker': 'Переключить виджеты',
+  'ui.video': 'Видео',
+  'ui.videoControls': 'Управление видео',
+  'ui.skipBack': 'Назад',
+  'ui.skipForward': 'Вперёд',
+  'ui.linkQuality': 'Качество связи {rate} Гц',
+  'ui.battery': 'Батарея {v}В {pct}%',
 };
 
 

@@ -288,7 +288,7 @@
         <Mountain size={18} class="text-amber-500" />
         <h3 class="text-base font-bold text-primary">{t('terrain.profileTitle')}</h3>
       </div>
-      <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label="Close"><X size={16} /></Button>
+      <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label={t('error.close')}><X size={16} /></Button>
     </div>
 
     {#if wps.length < 2}

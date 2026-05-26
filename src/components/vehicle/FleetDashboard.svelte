@@ -30,7 +30,7 @@
         <h2 class="text-sm font-semibold text-primary uppercase tracking-wider">{t('fleet.title')}</h2>
         <span class="text-[10px] text-muted-foreground">({vehicles.length + 1} {t('fleet.online')})</span>
       </div>
-      <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label="Close"><X size={16} /></Button>
+      <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label={t('error.close')}><X size={16} /></Button>
     </div>
 
     <div class="flex-1 overflow-y-auto p-4 space-y-2">

@@ -287,7 +287,7 @@
       </div>
       <div class="flex items-center gap-2">
         <Button variant="default" size="sm" onclick={openFile}>{t('logview.open')}</Button>
-        <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label="Close"><X size={16} /></Button>
+        <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label={t('error.close')}><X size={16} /></Button>
       </div>
     </div>
 

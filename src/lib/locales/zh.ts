@@ -1024,6 +1024,22 @@ const messages: Record<string, string> = {
   'motor.fr': '右前 (2)',
   'motor.bl': '左后 (3)',
   'motor.br': '右后 (4)',
+  'ui.skipToContent': '跳转到内容',
+  'ui.map2d': '2D 地图',
+  'ui.globe3d': '3D 地球',
+  'ui.rtspVideo': 'RTSP 视频',
+  'ui.renderError': '渲染错误',
+  'ui.retry': '重试',
+  'ui.sendCommand': '发送命令',
+  'ui.pfd': '主飞行显示',
+  'ui.eventLog': '事件日志',
+  'ui.widgetPicker': '切换小部件选择器',
+  'ui.video': '视频',
+  'ui.videoControls': '视频控制',
+  'ui.skipBack': '后退',
+  'ui.skipForward': '前进',
+  'ui.linkQuality': '链路质量 {rate} Hz',
+  'ui.battery': '电池 {v}V {pct}%',
 };
 
 

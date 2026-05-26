@@ -387,7 +387,7 @@
         {#if log}
           <Button variant="outline" size="sm" onclick={exportCsv}><Download size={13} class="mr-1" />{t('logview.export')}</Button>
         {/if}
-        <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label="Close"><X size={16} /></Button>
+        <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label={t('error.close')}><X size={16} /></Button>
       </div>
     </div>
 

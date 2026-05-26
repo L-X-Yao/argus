@@ -44,7 +44,7 @@
         <h3 class="text-base font-bold text-primary">{t('summary.title')}</h3>
         <p class="text-[11px] text-muted-foreground mt-0.5">{t('summary.subtitle')}</p>
       </div>
-      <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label="Close"><X size={16} /></Button>
+      <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label={t('error.close')}><X size={16} /></Button>
     </div>
     <div class="px-5 py-3 grid grid-cols-2 gap-3">
       <div class="flex items-center gap-2.5 py-1.5">

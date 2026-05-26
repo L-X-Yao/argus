@@ -49,7 +49,7 @@
   <div class="bg-card border border-border rounded-2xl overflow-hidden w-[420px] shadow-2xl" role="presentation" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
     <div class="bg-gradient-to-r from-warning/20 to-warning/5 px-5 py-3 flex items-center justify-between">
       <h3 class="text-base font-bold text-warning">{t('esccal.title')}</h3>
-      <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label="Close"><X size={16} /></Button>
+      <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label={t('error.close')}><X size={16} /></Button>
     </div>
 
     <div class="px-5 py-4 space-y-4">

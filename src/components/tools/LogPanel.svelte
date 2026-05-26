@@ -65,7 +65,7 @@
                 disabled={logState.downloading}>
           {t('log.fetchList')}
         </Button>
-        <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label="Close"><X size={16} /></Button>
+        <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label={t('error.close')}><X size={16} /></Button>
       </div>
     </div>
 

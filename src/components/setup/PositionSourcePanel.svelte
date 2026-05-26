@@ -126,7 +126,7 @@
         <Locate size={16} class="text-primary" />
         <h2 class="text-sm font-semibold text-primary uppercase tracking-wider">{t('posSource.title')}</h2>
       </div>
-      <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label="Close"><X size={16} /></Button>
+      <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label={t('error.close')}><X size={16} /></Button>
     </div>
 
     <div class="flex-1 min-h-0 overflow-y-auto p-4 space-y-3">

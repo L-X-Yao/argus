@@ -1024,6 +1024,22 @@ const messages: Record<string, string> = {
   'motor.fr': 'VR (2)',
   'motor.bl': 'HL (3)',
   'motor.br': 'HR (4)',
+  'ui.skipToContent': 'Zum Inhalt springen',
+  'ui.map2d': '2D-Karte',
+  'ui.globe3d': '3D-Globus',
+  'ui.rtspVideo': 'RTSP-Video',
+  'ui.renderError': 'Darstellungsfehler',
+  'ui.retry': 'Erneut versuchen',
+  'ui.sendCommand': 'Befehl senden',
+  'ui.pfd': 'Primäre Fluganzeige',
+  'ui.eventLog': 'Ereignisprotokoll',
+  'ui.widgetPicker': 'Widget-Auswahl umschalten',
+  'ui.video': 'Video',
+  'ui.videoControls': 'Video-Steuerung',
+  'ui.skipBack': 'Zurück',
+  'ui.skipForward': 'Vor',
+  'ui.linkQuality': 'Verbindungsqualität {rate} Hz',
+  'ui.battery': 'Batterie {v}V {pct}%',
 };
 
 

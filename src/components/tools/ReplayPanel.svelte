@@ -169,13 +169,13 @@
       <button class="text-destructive leading-none bg-transparent border-none cursor-pointer px-0.5" onclick={close}><X size={14} /></button>
     </div>
     <div class="flex items-center gap-2">
-      <Button variant="ghost" size="icon-xs" class="shrink-0" onclick={() => { cursor = Math.max(0, cursor - 10); emitPosition(); }} aria-label="Skip back">
+      <Button variant="ghost" size="icon-xs" class="shrink-0" onclick={() => { cursor = Math.max(0, cursor - 10); emitPosition(); }} aria-label={t('ui.skipBack')}>
         <SkipBack size={12} />
       </Button>
-      <Button variant="default" size="icon-sm" class="rounded-full shrink-0" onclick={togglePlay} aria-label={playing ? 'Pause' : 'Play'}>
+      <Button variant="default" size="icon-sm" class="rounded-full shrink-0" onclick={togglePlay} aria-label={playing ? t('ctrl.pauseMission') : t('panel.script.run')}>
         {#if playing}<Pause size={14} />{:else}<Play size={14} />{/if}
       </Button>
-      <Button variant="ghost" size="icon-xs" class="shrink-0" onclick={() => { cursor = Math.min(rows.length - 1, cursor + 10); emitPosition(); }} aria-label="Skip forward">
+      <Button variant="ghost" size="icon-xs" class="shrink-0" onclick={() => { cursor = Math.min(rows.length - 1, cursor + 10); emitPosition(); }} aria-label={t('ui.skipForward')}>
         <SkipForward size={12} />
       </Button>
       <input type="range" class="flex-1 h-1 accent-primary" min="0" max={rows.length - 1} value={cursor} oninput={seek} />

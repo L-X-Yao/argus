@@ -108,7 +108,7 @@
         <Badge variant="destructive" class="text-[10px] font-bold animate-pulse">{t('status.armed')}</Badge>
       {/if}
 
-      <span class="flex items-center gap-0.5" title="Link {app.drone.link_age >= 0 ? app.drone.link_age.toFixed(1) + 's' : '---'} · {msgRate} Hz" aria-label="Link quality {msgRate} Hz">
+      <span class="flex items-center gap-0.5" title="Link {app.drone.link_age >= 0 ? app.drone.link_age.toFixed(1) + 's' : '---'} · {msgRate} Hz" aria-label={t('ui.linkQuality').replace('{rate}', String(msgRate))}>
         <svg width="16" height="12" viewBox="0 0 16 12" class="shrink-0">
           <rect x="0" y="9" width="3" height="3" rx="0.5" fill={linkBars >= 1 ? barColor : '#555'} />
           <rect x="4.5" y="6" width="3" height="6" rx="0.5" fill={linkBars >= 2 ? barColor : '#555'} />
@@ -143,7 +143,7 @@
         {ekfLabel}
       </Badge>
 
-      <span class="{battColor} font-bold tabular-nums flex items-center gap-1" title="{app.drone.voltage.toFixed(2)}V | {app.drone.current.toFixed(1)}A" aria-label="Battery {app.drone.voltage.toFixed(1)}V {app.drone.remaining >= 0 ? app.drone.remaining + '%' : ''}">
+      <span class="{battColor} font-bold tabular-nums flex items-center gap-1" title="{app.drone.voltage.toFixed(2)}V | {app.drone.current.toFixed(1)}A" aria-label={t('ui.battery').replace('{v}', app.drone.voltage.toFixed(1)).replace('{pct}', app.drone.remaining >= 0 ? String(app.drone.remaining) : '--')}>
         <svg width="22" height="12" viewBox="0 0 22 12" class="shrink-0">
           <rect x="0.5" y="0.5" width="18" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1"/>
           <rect x="19" y="3" width="2.5" height="6" rx="1" fill="currentColor" opacity="0.5"/>
