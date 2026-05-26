@@ -8,7 +8,7 @@ Repo: `github.com/L-X-Yao/argus`, branch: `main`, version: `3.5.0`
 - **Frontend**: Svelte 5 (runes) + TypeScript 6 + Vite 8 + Tailwind CSS 4 + Leaflet + MapLibre GL
 - **Backend**: Python 3.10+ + FastAPI + uvicorn + pyserial + websockets
 - **Protocol**: MAVLink v2 (standard + PL-Link wrapper). **ArduPilot is the only production-tested target.** PX4 support is partially scaffolded in `src/lib/fc/` but unwired — see `## PX4 Status` below.
-- **Tests**: pytest (backend + contract, 1252 tests), vitest 4 (frontend, 487 tests), Playwright (E2E, 19 specs), SITL verification (126/134 items). Current verification status per feature: `docs/FEATURE_CHECKLIST.md`. Don't-refactor decisions: `docs/protocol_design.md`.
+- **Tests**: pytest (backend + contract, 1265 tests), vitest 4 (frontend, 593 tests), Playwright (E2E, 19 specs), SITL verification (126/134 items). Current verification status per feature: `docs/FEATURE_CHECKLIST.md`. Don't-refactor decisions: `docs/protocol_design.md`.
 - **Lint**: ruff (Python), svelte-check (TypeScript/Svelte)
 - **CI**: GitHub Actions — lint → test → type-check → build → E2E
 
@@ -46,8 +46,8 @@ npm run dev                    # Or: separate frontend dev server on :5173
 ```bash
 npm run build                  # Production build → dist/
 npx svelte-check               # Type check (must be 0 errors 0 warnings)
-npx vitest run                 # Frontend tests (487)
-python -m pytest tests/test_unit_*.py tests/test_contract_*.py -v  # Backend tests (1068)
+npx vitest run                 # Frontend tests (593)
+python -m pytest tests/test_unit_*.py tests/test_contract_*.py -v  # Backend tests (1265)
 ruff check backend/ scripts/ tests/       # Python lint
 ```
 
@@ -55,14 +55,14 @@ ruff check backend/ scripts/ tests/       # Python lint
 
 ```
 argus/
-├── backend/                  # Python FastAPI backend (27 modules, 4.8K lines)
+├── backend/                  # Python FastAPI backend (29 modules, 4.9K lines)
 │   ├── app.py                # FastAPI app setup, system/auth/WS routes (211 lines)
 │   ├── tiles.py              # Tile proxy, cache, mbtiles, tile sources (APIRouter)
 │   ├── terrain.py            # SRTM elevation lookup (APIRouter)
 │   ├── firmware.py           # Firmware upload/list/online/download (APIRouter)
 │   ├── drone_link.py         # Drone connection + main loop
 │   ├── state.py              # 9 domain state dataclasses
-│   ├── commands/             # Command dispatch package (50 commands)
+│   ├── commands/             # Command dispatch package (51 commands)
 │   │   ├── __init__.py       # execute() dispatcher + dispatch table
 │   │   ├── _flight.py        # arm, disarm, rtl, mode, takeoff, drop
 │   │   ├── _mission.py       # mission upload/download/clear, fence, rally
@@ -70,10 +70,10 @@ argus/
 │   │   ├── _hardware.py      # vehicle, system, RC, motor, gimbal, camera
 │   │   └── _helpers.py       # MAVLink wire helpers (send_cmd, heartbeat, etc.)
 │   ├── ws_manager.py         # WebSocket client manager (delta push)
-│   ├── mavlink_handlers.py   # 31 MAVLink message handlers
+│   ├── mavlink_handlers.py   # 32 MAVLink message handlers
 │   ├── pllink_proto.py       # PL-Link protocol codec
 │   └── ...                   # config, auth, video, param_manager, connection, etc.
-├── src/                      # Svelte 5 frontend (144 components, 21K lines)
+├── src/                      # Svelte 5 frontend (78 components + 159 libs, 22K lines)
 │   ├── components/           # UI components (12 subdirectories)
 │   │   ├── core/             # MapView, StatusBar, ConnectionForm, ControlPanel, EventLog
 │   │   ├── telemetry/        # RcPanel, ServoPanel, VibrationPanel, EkfPanel
@@ -87,7 +87,7 @@ argus/
 │   │   ├── shared/           # CommandPalette, ConfirmDialog, SettingsPanel (dialogs only)
 │   │   └── layers/           # DroneLayer, WaypointLayer (map overlays)
 │   ├── lib/                  # Shared libraries
-│   │   ├── panels.svelte.ts  # Panel registry (42 panels, lazy-loaded via LazyPanelHost)
+│   │   ├── panels.svelte.ts  # Panel registry (43 panels, lazy-loaded via LazyPanelHost)
 │   │   ├── stores.svelte.ts  # App state (Svelte 5 runes)
 │   │   ├── ws.ts             # WebSocket client (typed protocol)
 │   │   ├── locales/          # i18n translation files (10 languages)
