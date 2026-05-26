@@ -9,12 +9,12 @@ incoming HEARTBEAT.custom_mode value. Missing entries fall back to "MODE%d".
 # Copter — ArduCopter/mode.h `enum class Number`
 COPTER_MODES = {
     0: '自稳', 1: '特技', 2: '定高', 3: '自动', 4: '引导',
-    5: '悬停', 6: '返航', 7: '绕圈', 8: '定点旧', 9: '降落',
-    11: '漂移', 13: '运动', 14: '甩飞', 15: '随我',
-    16: '定点', 17: '刹停', 18: '空速校准', 19: '避障',
-    20: '引导无导航', 21: '智能返航', 22: '飞越',
-    23: '跟随', 24: '起飞', 25: '自动返航', 26: '翻转',
-    27: '手动油门定高', 28: '蛇形',
+    5: '悬停', 6: '返航', 7: '绕圈', 9: '降落',
+    11: '漂移', 13: '运动', 14: '翻转', 15: '自动调参',
+    16: '定点', 17: '刹停', 18: '抛飞', 19: '避障',
+    20: '引导无导航', 21: '智能返航', 22: '光流定点',
+    23: '跟随', 24: '蛇形', 25: '系统辨识', 26: '自旋下降',
+    27: '自动返航', 28: '翻龟',
 }
 PLANE_MODES = {
     0: '手动', 1: '绕圈', 2: '自稳', 3: '训练', 4: '特技',
@@ -22,7 +22,7 @@ PLANE_MODES = {
     10: '自动', 11: '返航', 12: '盘旋', 13: '起飞', 14: '空速校准',
     15: '引导', 16: '初始化',
     17: '旋翼自稳', 18: '旋翼悬停', 19: '旋翼定点', 20: '旋翼降落', 21: '旋翼返航',
-    22: '旋翼自调', 23: '旋翼特技', 24: '热气流', 25: '盘旋至定点',
+    22: '旋翼自调', 23: '旋翼特技', 24: '热气流', 25: '盘旋至定点', 26: '自动着陆',
 }
 ROVER_MODES = {
     0: '手动', 1: '特技', 3: '转向', 4: '固定', 5: '悬停',
@@ -46,11 +46,11 @@ FIX_NAMES = {0: '无定位', 1: '无定位', 2: '2D', 3: '3D', 4: '差分', 5: '
 
 COPTER_MODES_EN = {
     0: 'Stabilize', 1: 'Acro', 2: 'Alt Hold', 3: 'Auto', 4: 'Guided',
-    5: 'Loiter', 6: 'RTL', 7: 'Circle', 8: 'PosHold', 9: 'Land',
+    5: 'Loiter', 6: 'RTL', 7: 'Circle', 9: 'Land',
     11: 'Drift', 13: 'Sport', 14: 'Flip', 15: 'AutoTune',
-    16: 'PosHoldOld', 17: 'Brake', 18: 'Throw', 19: 'AvoidADSB',
+    16: 'PosHold', 17: 'Brake', 18: 'Throw', 19: 'AvoidADSB',
     20: 'GuidedNoGPS', 21: 'Smart RTL', 22: 'FlowHold',
-    23: 'Follow', 24: 'ZigZag', 25: 'SystemID', 26: 'Heli_Autorotate',
+    23: 'Follow', 24: 'ZigZag', 25: 'SystemID', 26: 'Autorotate',
     27: 'Auto RTL', 28: 'Turtle',
 }
 PLANE_MODES_EN = {
@@ -59,7 +59,7 @@ PLANE_MODES_EN = {
     10: 'Auto', 11: 'RTL', 12: 'Loiter', 13: 'Takeoff', 14: 'AvoidADSB',
     15: 'Guided', 16: 'Initialising',
     17: 'Q-Stabilize', 18: 'Q-Hover', 19: 'Q-Loiter', 20: 'Q-Land', 21: 'Q-RTL',
-    22: 'QAutoTune', 23: 'QAcro', 24: 'Thermal', 25: 'Loiter2Q',
+    22: 'QAutoTune', 23: 'QAcro', 24: 'Thermal', 25: 'Loiter2QLand', 26: 'Autoland',
 }
 ROVER_MODES_EN = {
     0: 'Manual', 1: 'Acro', 3: 'Steering', 4: 'Hold', 5: 'Loiter',

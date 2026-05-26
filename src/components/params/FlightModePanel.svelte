@@ -10,19 +10,24 @@
 
   /* ── Mode maps ── */
 
+  // ArduCopter/mode.h — Mode::Number enum (May 2026 master)
   const COPTER_MODES: Record<number, string> = {
-    0: 'Stabilize', 2: 'AltHold', 3: 'Auto', 4: 'Guided', 5: 'Loiter',
-    6: 'RTL', 7: 'Circle', 9: 'Land', 11: 'Drift', 13: 'Sport',
-    15: 'AutoTune', 16: 'PosHold', 17: 'Brake', 18: 'Throw',
-    19: 'Avoid', 20: 'Guided_NoGPS', 21: 'SmartRTL', 22: 'FlowHold',
+    0: 'Stabilize', 1: 'Acro', 2: 'AltHold', 3: 'Auto', 4: 'Guided',
+    5: 'Loiter', 6: 'RTL', 7: 'Circle', 9: 'Land', 11: 'Drift',
+    13: 'Sport', 14: 'Flip', 15: 'AutoTune', 16: 'PosHold', 17: 'Brake',
+    18: 'Throw', 19: 'AvoidADSB', 20: 'Guided_NoGPS', 21: 'SmartRTL',
+    22: 'FlowHold', 23: 'Follow', 24: 'ZigZag', 25: 'SystemID',
+    26: 'Autorotate', 27: 'Auto RTL', 28: 'Turtle',
   };
 
+  // ArduPlane/mode.h — Mode::Number enum (May 2026 master)
   const PLANE_MODES: Record<number, string> = {
     0: 'Manual', 1: 'Circle', 2: 'Stabilize', 3: 'Training', 4: 'Acro',
-    5: 'FlyByWire_A', 6: 'FlyByWire_B', 7: 'Cruise', 8: 'AutoTune',
-    10: 'Auto', 11: 'RTL', 12: 'Loiter', 14: 'Avoid', 15: 'Guided',
-    17: 'QStabilize', 18: 'QHover', 19: 'QLoiter', 20: 'QLand',
-    21: 'QRTL', 22: 'QAutotune', 25: 'QAcro',
+    5: 'FBW-A', 6: 'FBW-B', 7: 'Cruise', 8: 'AutoTune',
+    10: 'Auto', 11: 'RTL', 12: 'Loiter', 13: 'Takeoff', 14: 'AvoidADSB',
+    15: 'Guided', 17: 'QStabilize', 18: 'QHover', 19: 'QLoiter',
+    20: 'QLand', 21: 'QRTL', 22: 'QAutoTune', 23: 'QAcro', 24: 'Thermal',
+    25: 'Loiter2QLand',
   };
 
   const PWM_RANGES = [
