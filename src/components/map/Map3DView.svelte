@@ -826,7 +826,7 @@
       <Grid3x3 size={13} />{t('map.survey')}
     </button>
     {#if app.fencePolygon.length > 0 || app.surveyPolygon.length > 0 || measuring}
-      <button class="map-btn" onclick={() => { clearMeasure(); clearFence(); }} title="Clear">
+      <button class="map-btn" onclick={() => { clearMeasure(); clearFence(); }} title={t('label.clear')}>
         <XIcon size={13} />
       </button>
     {/if}

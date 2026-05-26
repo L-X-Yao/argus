@@ -498,7 +498,7 @@
       <button class="text-[11px] px-2 py-0.5 rounded border transition-all cursor-pointer
         {viewMode === 'tree' ? 'bg-primary/20 text-primary border-primary/50' : 'text-muted-foreground border-border hover:text-foreground'}"
               onclick={() => viewMode = viewMode === 'flat' ? 'tree' : 'flat'}
-              title={viewMode === 'flat' ? 'Tree view' : 'Flat view'}>
+              title={viewMode === 'flat' ? t('label.treeView') : t('label.flatView')}>
         {viewMode === 'flat' ? '🌲' : '☰'}
       </button>
       {#if metaLoaded && modifiedCount > 0}

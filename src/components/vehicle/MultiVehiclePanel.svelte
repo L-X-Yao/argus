@@ -57,7 +57,7 @@
         </div>
         <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-xs">
           <div class="flex justify-between">
-            <span class="text-muted-foreground">SysID</span>
+            <span class="text-muted-foreground">{t('label.sysid')}</span>
             <span class="font-mono font-medium text-foreground">{activeSysid}</span>
           </div>
           <div class="flex justify-between">
@@ -67,19 +67,19 @@
           <div class="flex justify-between">
             <span class="text-muted-foreground">{t('status.armed')}</span>
             <span class="font-medium {app.drone.armed ? 'text-destructive' : 'text-muted-foreground'}">
-              {app.drone.armed ? 'Armed' : 'Disarmed'}
+              {app.drone.armed ? t('label.armed') : t('label.disarmed')}
             </span>
           </div>
           <div class="flex justify-between">
-            <span class="text-muted-foreground">Alt</span>
+            <span class="text-muted-foreground">{t('label.alt')}</span>
             <span class="font-mono font-medium text-foreground">{app.drone.alt_rel.toFixed(1)} m</span>
           </div>
           <div class="flex justify-between">
-            <span class="text-muted-foreground">Lat</span>
+            <span class="text-muted-foreground">{t('label.lat')}</span>
             <span class="font-mono text-[11px] text-foreground">{app.drone.lat.toFixed(6)}</span>
           </div>
           <div class="flex justify-between">
-            <span class="text-muted-foreground">Lon</span>
+            <span class="text-muted-foreground">{t('label.lon')}</span>
             <span class="font-mono text-[11px] text-foreground">{app.drone.lon.toFixed(6)}</span>
           </div>
         </div>
@@ -99,11 +99,11 @@
               <div class="flex items-center justify-between mb-2">
                 <div class="flex items-center gap-2">
                   <Plane size={14} class="text-muted-foreground" />
-                  <span class="text-xs font-semibold text-foreground">SysID {v.sysid}</span>
+                  <span class="text-xs font-semibold text-foreground">{t('label.sysid')} {v.sysid}</span>
                   {#if v.armed}
-                    <Badge variant="destructive" class="text-[10px]">Armed</Badge>
+                    <Badge variant="destructive" class="text-[10px]">{t('label.armed')}</Badge>
                   {:else}
-                    <Badge variant="outline" class="text-[10px]">Disarmed</Badge>
+                    <Badge variant="outline" class="text-[10px]">{t('label.disarmed')}</Badge>
                   {/if}
                 </div>
                 <Button variant="outline" size="xs" onclick={() => switchTo(v.sysid)}>
@@ -112,11 +112,11 @@
               </div>
               <div class="grid grid-cols-3 gap-x-3 gap-y-1 text-[11px]">
                 <div class="flex justify-between">
-                  <span class="text-muted-foreground">Alt</span>
+                  <span class="text-muted-foreground">{t('label.alt')}</span>
                   <span class="font-mono text-foreground">{v.alt.toFixed(1)} m</span>
                 </div>
                 <div class="flex justify-between">
-                  <span class="text-muted-foreground">Hdg</span>
+                  <span class="text-muted-foreground">{t('label.hdg')}</span>
                   <span class="font-mono text-foreground">{fmtHdg(v.hdg)}</span>
                 </div>
                 <div class="flex justify-between">

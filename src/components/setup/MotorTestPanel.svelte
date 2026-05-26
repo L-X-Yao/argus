@@ -65,10 +65,10 @@
 
   /* Quad X motor position labels */
   const quadLabels: Record<number, string> = {
-    0: 'FL (1)',
-    1: 'FR (2)',
-    2: 'BL (3)',
-    3: 'BR (4)',
+    0: t('motor.fl'),
+    1: t('motor.fr'),
+    2: t('motor.bl'),
+    3: t('motor.br'),
   };
 
   // Stop motors and clear intervals if the panel unmounts mid-spin so the
@@ -152,7 +152,7 @@
       <!-- Copter motor layout hint (Quad X) -->
       {#if isCopter}
         <div class="mb-4 p-2.5 rounded-lg bg-muted/50 border border-border/50">
-          <p class="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">Quad X</p>
+          <p class="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">{t('label.quadX')}</p>
           <div class="grid grid-cols-2 gap-1 max-w-[160px] mx-auto">
             {#each [0, 1, 2, 3] as m}
               <div class="text-center text-[10px] font-mono text-muted-foreground py-0.5 rounded bg-muted/40">

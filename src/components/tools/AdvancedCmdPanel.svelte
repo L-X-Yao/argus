@@ -161,11 +161,11 @@
               <button
                 class="px-3 py-1 text-xs rounded-md transition-all
                   {yawDir === 'cw' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-muted'}"
-                onclick={() => yawDir = 'cw'}>CW</button>
+                onclick={() => yawDir = 'cw'}>{t('label.cw')}</button>
               <button
                 class="px-3 py-1 text-xs rounded-md transition-all
                   {yawDir === 'ccw' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-muted'}"
-                onclick={() => yawDir = 'ccw'}>CCW</button>
+                onclick={() => yawDir = 'ccw'}>{t('label.ccw')}</button>
             </div>
           </div>
 
@@ -175,11 +175,11 @@
             <button
               class="px-3 py-1.5 text-xs font-semibold rounded-md transition-all
                 {vtolMode === 'hover' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-muted'}"
-              onclick={() => vtolMode = 'hover'}>Hover</button>
+              onclick={() => vtolMode = 'hover'}>{t('label.hover')}</button>
             <button
               class="px-3 py-1.5 text-xs font-semibold rounded-md transition-all
                 {vtolMode === 'plane' ? 'bg-primary text-primary-foreground' : 'bg-secondary text-secondary-foreground hover:bg-muted'}"
-              onclick={() => vtolMode = 'plane'}>Plane</button>
+              onclick={() => vtolMode = 'plane'}>{t('label.plane')}</button>
           </div>
         {/if}
       </div>

@@ -212,7 +212,7 @@
                   <span class="text-[10px] text-muted-foreground ml-1 font-mono">{prof.port}</span>
                 </button>
                 <button class="px-1.5 opacity-0 group-hover:opacity-60 hover:!opacity-100 text-destructive transition-opacity"
-                        onmousedown={() => deleteProfile(prof.name)} title="Delete">×</button>
+                        onmousedown={() => deleteProfile(prof.name)} title={t('label.delete')}>×</button>
               </div>
             {/each}
             <div class="border-t border-border/50"></div>

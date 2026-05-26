@@ -79,25 +79,25 @@
     <div class="px-5 py-4 space-y-3">
       {#if cacheInfo}
         <div class="flex justify-between text-xs text-muted-foreground p-2 bg-muted rounded-lg">
-          <span>Cache: {cacheInfo.count} tiles</span>
+          <span>{t('label.cache')}: {cacheInfo.count} tiles</span>
           <span>{fmtSize(cacheInfo.size)}</span>
         </div>
       {/if}
       <div class="grid grid-cols-2 gap-2 text-xs">
         <div>
-          <span class="text-muted-foreground">Lat Min</span>
+          <span class="text-muted-foreground">{t('label.latMin')}</span>
           <input type="number" step="0.01" bind:value={latMin} class="w-full h-7 px-2 bg-input border border-border rounded text-xs font-mono" />
         </div>
         <div>
-          <span class="text-muted-foreground">Lat Max</span>
+          <span class="text-muted-foreground">{t('label.latMax')}</span>
           <input type="number" step="0.01" bind:value={latMax} class="w-full h-7 px-2 bg-input border border-border rounded text-xs font-mono" />
         </div>
         <div>
-          <span class="text-muted-foreground">Lon Min</span>
+          <span class="text-muted-foreground">{t('label.lonMin')}</span>
           <input type="number" step="0.01" bind:value={lonMin} class="w-full h-7 px-2 bg-input border border-border rounded text-xs font-mono" />
         </div>
         <div>
-          <span class="text-muted-foreground">Lon Max</span>
+          <span class="text-muted-foreground">{t('label.lonMax')}</span>
           <input type="number" step="0.01" bind:value={lonMax} class="w-full h-7 px-2 bg-input border border-border rounded text-xs font-mono" />
         </div>
       </div>
@@ -107,8 +107,8 @@
         <span>—</span>
         <input type="number" min="1" max="18" bind:value={zMax} class="w-12 h-7 px-1 bg-input border border-border rounded text-xs text-center" />
         <select bind:value={style} class="h-7 px-1 bg-input border border-border rounded text-xs">
-          <option value="6">Satellite</option>
-          <option value="7">Vector</option>
+          <option value="6">{t('label.satellite')}</option>
+          <option value="7">{t('label.vector')}</option>
           <option value="osm">OSM</option>
         </select>
       </div>

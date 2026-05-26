@@ -133,7 +133,7 @@
                   onmouseleave={onMouseUp} onwheel={onWheel}></canvas>
         </div>
         <div class="flex items-center gap-3 mt-2 text-[10px] text-muted-foreground px-2">
-          <span>Drag: rotate · Scroll: zoom</span>
+          <span>{t('panel.mission3d.hint')}</span>
           <span>Zoom: {zoom.toFixed(1)}x</span>
         </div>
       {/if}

@@ -125,12 +125,12 @@
         <div class="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('ortho.nwCorner')}</div>
         <div class="grid grid-cols-2 gap-2">
           <div class="flex items-center gap-1">
-            <label for="nw-lat" class="text-[11px] text-muted-foreground w-8 shrink-0">Lat</label>
+            <label for="nw-lat" class="text-[11px] text-muted-foreground w-8 shrink-0">{t('label.lat')}</label>
             <input id="nw-lat" type="number" step="0.000001" bind:value={nwLat}
                    class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50" />
           </div>
           <div class="flex items-center gap-1">
-            <label for="nw-lon" class="text-[11px] text-muted-foreground w-8 shrink-0">Lon</label>
+            <label for="nw-lon" class="text-[11px] text-muted-foreground w-8 shrink-0">{t('label.lon')}</label>
             <input id="nw-lon" type="number" step="0.000001" bind:value={nwLon}
                    class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50" />
           </div>
@@ -139,12 +139,12 @@
         <div class="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('ortho.seCorner')}</div>
         <div class="grid grid-cols-2 gap-2">
           <div class="flex items-center gap-1">
-            <label for="se-lat" class="text-[11px] text-muted-foreground w-8 shrink-0">Lat</label>
+            <label for="se-lat" class="text-[11px] text-muted-foreground w-8 shrink-0">{t('label.lat')}</label>
             <input id="se-lat" type="number" step="0.000001" bind:value={seLat}
                    class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50" />
           </div>
           <div class="flex items-center gap-1">
-            <label for="se-lon" class="text-[11px] text-muted-foreground w-8 shrink-0">Lon</label>
+            <label for="se-lon" class="text-[11px] text-muted-foreground w-8 shrink-0">{t('label.lon')}</label>
             <input id="se-lon" type="number" step="0.000001" bind:value={seLon}
                    class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50" />
           </div>
@@ -175,10 +175,10 @@
               <Image size={14} class="text-primary shrink-0" />
               <div class="flex-1 min-w-0">
                 <div class="text-[11px] font-mono text-foreground truncate">
-                  NW: {ov.nwLat.toFixed(4)}, {ov.nwLon.toFixed(4)}
+                  {t('label.nw')}: {ov.nwLat.toFixed(4)}, {ov.nwLon.toFixed(4)}
                 </div>
                 <div class="text-[11px] font-mono text-muted-foreground truncate">
-                  SE: {ov.seLat.toFixed(4)}, {ov.seLon.toFixed(4)} | {Math.round(ov.opacity * 100)}%
+                  {t('label.se')}: {ov.seLat.toFixed(4)}, {ov.seLon.toFixed(4)} | {Math.round(ov.opacity * 100)}%
                 </div>
               </div>
               <button class="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-destructive hover:bg-destructive/10 rounded"

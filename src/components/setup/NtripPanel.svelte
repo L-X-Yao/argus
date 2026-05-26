@@ -38,11 +38,11 @@
   });
 
   function rtkStatusLabel(): string {
-    if (rtkFixType >= 6) return 'RTK Fixed';
-    if (rtkFixType >= 5) return 'RTK Float';
-    if (rtkFixType >= 4) return 'DGPS';
-    if (rtkFixType >= 3) return '3D Fix';
-    return 'No Fix';
+    if (rtkFixType >= 6) return t('rtk.fixed');
+    if (rtkFixType >= 5) return t('rtk.float');
+    if (rtkFixType >= 4) return t('rtk.dgps');
+    if (rtkFixType >= 3) return t('rtk.3d');
+    return t('rtk.none');
   }
 
   function rtkStatusColor(): string {
@@ -106,12 +106,12 @@
       <!-- Connection form -->
       <div class="space-y-2">
         <div class="flex gap-2">
-          <input bind:value={host} placeholder="NTRIP Host" onchange={saveConfig}
+          <input bind:value={host} placeholder={t('ntrip.host')} onchange={saveConfig}
                  class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground" />
-          <input bind:value={port} type="number" placeholder="Port" onchange={saveConfig}
+          <input bind:value={port} type="number" placeholder={t('ntrip.port')} onchange={saveConfig}
                  class="w-16 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground text-right" />
         </div>
-        <input bind:value={mountpoint} placeholder="Mountpoint" onchange={saveConfig}
+        <input bind:value={mountpoint} placeholder={t('ntrip.mount')} onchange={saveConfig}
                class="w-full h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground" />
         <div class="flex gap-2">
           <input bind:value={username} placeholder={t('ntrip.username')} onchange={saveConfig}

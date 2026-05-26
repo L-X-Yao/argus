@@ -199,8 +199,8 @@
     {/if}
 
     <Button variant="ghost" size="icon-xs" onclick={() => { app.audioMuted = !app.audioMuted; saveSettings(); }}
-            class={app.audioMuted ? 'opacity-40' : ''} title={app.audioMuted ? 'Unmute' : 'Mute'}
-            aria-label={app.audioMuted ? 'Unmute' : 'Mute'}>
+            class={app.audioMuted ? 'opacity-40' : ''} title={app.audioMuted ? t('label.unmute') : t('label.mute')}
+            aria-label={app.audioMuted ? t('label.unmute') : t('label.mute')}>
       {#if app.audioMuted}<VolumeOff size={14} />{:else}<Volume2 size={14} />{/if}
     </Button>
     <Button variant="ghost" size="icon-xs" onclick={toggleTheme} title={t('tip.theme')} aria-label={t('tip.theme')}>

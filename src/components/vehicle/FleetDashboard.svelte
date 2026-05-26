@@ -56,7 +56,7 @@
             <div class="font-mono">{app.drone.gs.toFixed(1)}m/s</div>
           </div>
           <div>
-            <div class="text-muted-foreground/60">Mode</div>
+            <div class="text-muted-foreground/60">{t('label.mode')}</div>
             <div class="font-mono">{app.drone.mode}</div>
           </div>
         </div>
@@ -78,16 +78,16 @@
           </div>
           <div class="grid grid-cols-3 gap-2 mt-1.5 text-[10px]">
             <div>
-              <div class="text-muted-foreground/60">Alt</div>
+              <div class="text-muted-foreground/60">{t('label.alt')}</div>
               <div class="font-mono">{v.alt.toFixed(1)}m</div>
             </div>
             <div>
-              <div class="text-muted-foreground/60">Hdg</div>
+              <div class="text-muted-foreground/60">{t('label.hdg')}</div>
               <div class="font-mono">{v.hdg.toFixed(0)}</div>
             </div>
             <div>
-              <div class="text-muted-foreground/60">Armed</div>
-              <div class="font-mono {v.armed ? 'text-destructive' : ''}">{v.armed ? 'YES' : 'NO'}</div>
+              <div class="text-muted-foreground/60">{t('label.armed')}</div>
+              <div class="font-mono {v.armed ? 'text-destructive' : ''}">{v.armed ? t('label.yes') : t('label.no')}</div>
             </div>
           </div>
         </div>

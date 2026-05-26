@@ -245,7 +245,7 @@
         </div>
 
         <!-- Search -->
-        <input type="text" placeholder="Search..." bind:value={search}
+        <input type="text" placeholder={t('label.search')} bind:value={search}
                class="h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring/50" />
 
         <!-- Table header -->
