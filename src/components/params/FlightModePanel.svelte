@@ -53,7 +53,8 @@
   // Audit F-17: load once, don't clobber operator edits mid-stream.
   let _loaded = $state(false);
   $effect(() => {
-    if (!paramsAvailable || _loaded) return;
+    if (!paramsAvailable) { _loaded = false; return; }
+    if (_loaded) return;
     _loaded = true;
     slot1 = getParam('FLTMODE1', 0);
     slot2 = getParam('FLTMODE2', 0);

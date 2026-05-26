@@ -150,7 +150,7 @@ async def websocket_endpoint(ws: WebSocket):
 
 @app.get('/api/param_meta')
 async def api_param_meta(vehicle: str = 'copter'):
-    return get_metadata(vehicle)
+    return await aio(get_metadata, vehicle)
 
 
 @app.get('/api/ports')

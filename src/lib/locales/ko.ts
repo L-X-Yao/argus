@@ -527,7 +527,6 @@ const messages: Record<string, string> = {
   'failsafe.actionRtl': '귀환 (RTL)',
   'failsafe.actionLand': '즉시 착륙',
   'failsafe.actionSmartRtl': '스마트 RTL',
-  'failsafe.actionContinue': '미션 계속',
   'failsafe.actionNone': '동작 없음',
   'failsafe.threshold': '임계값',
   'failsafe.voltage': '최소 전압 (V)',

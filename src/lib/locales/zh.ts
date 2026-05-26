@@ -550,7 +550,6 @@ const messages: Record<string, string> = {
   'failsafe.actionRtl': '返航 (RTL)',
   'failsafe.actionLand': '立即着陆',
   'failsafe.actionSmartRtl': '智能返航',
-  'failsafe.actionContinue': '继续任务',
   'failsafe.actionNone': '无动作',
   'failsafe.threshold': '触发阈值',
   'failsafe.voltage': '最低电压 (V)',

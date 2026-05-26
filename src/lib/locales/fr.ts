@@ -527,7 +527,6 @@ const messages: Record<string, string> = {
   'failsafe.actionRtl': 'Retour (RTL)',
   'failsafe.actionLand': 'Atterrir maintenant',
   'failsafe.actionSmartRtl': 'Retour intelligent',
-  'failsafe.actionContinue': 'Continuer la mission',
   'failsafe.actionNone': 'Aucune action',
   'failsafe.threshold': 'Seuil',
   'failsafe.voltage': 'Tension min (V)',
