@@ -29,10 +29,17 @@ fi
 # Bump version across all files
 bash scripts/bump_version.sh "$NEW_VER"
 
-# Commit + tag
-git add backend/config.py pyproject.toml package.json public/sw.js \
-       src-tauri/Cargo.toml src-tauri/tauri.conf.json
-git commit -m "release: v$NEW_VER"
+# Commit version bump if files changed, otherwise tag current commit
+if [ -n "$(git status --porcelain)" ]; then
+    git add backend/config.py pyproject.toml package.json public/sw.js \
+           src-tauri/Cargo.toml src-tauri/tauri.conf.json
+    git commit -m "release: v$NEW_VER"
+fi
+
+if git rev-parse "v$NEW_VER" >/dev/null 2>&1; then
+    echo "ERROR: tag v$NEW_VER already exists"
+    exit 1
+fi
 git tag -a "v$NEW_VER" -m "Release v$NEW_VER"
 
 # Push commit + tag
