@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onDestroy, untrack } from 'svelte';
   import { app, saveWaypoints } from '../../lib/stores.svelte';
-  import { i18nState } from '../../lib/i18n.svelte';
+  import { t } from '../../lib/i18n.svelte';
 
 
   type CoordFn = (lat: number, lon: number) => [number, number];
@@ -42,7 +42,7 @@
       const color = wp.drop ? '#e65100' : isLoiter ? '#7e57c2' : '#1565c0';
       const border = isLoiter ? 'border:2px dashed rgba(255,255,255,0.8)' : 'border:2px solid white';
       const badge = wp.drop ? '<div style="position:absolute;top:-5px;right:-5px;width:8px;height:8px;border-radius:50%;background:#ff5722;border:1px solid white"></div>' : '';
-      const sub = isLoiter ? `<div style="position:absolute;bottom:-10px;left:50%;transform:translateX(-50%);font-size:8px;color:${color};white-space:nowrap;font-weight:600">${wp.type === 'loiter_turns' ? wp.loiter_param + '圈' : wp.loiter_param + 's'}</div>` : wp.delay ? `<div style="position:absolute;bottom:-10px;left:50%;transform:translateX(-50%);font-size:8px;color:#888;white-space:nowrap">+${wp.delay}s</div>` : '';
+      const sub = isLoiter ? `<div style="position:absolute;bottom:-10px;left:50%;transform:translateX(-50%);font-size:8px;color:${color};white-space:nowrap;font-weight:600">${wp.type === 'loiter_turns' ? t('label.turns').replace('{n}', String(wp.loiter_param)) : wp.loiter_param + 's'}</div>` : wp.delay ? `<div style="position:absolute;bottom:-10px;left:50%;transform:translateX(-50%);font-size:8px;color:#888;white-space:nowrap">+${wp.delay}s</div>` : '';
       const icon = L.divIcon({
         className: '',
         html: `<div style="position:relative;width:22px;height:22px;border-radius:50%;background:${color};color:white;text-align:center;line-height:22px;font-size:11px;font-weight:bold;${border};box-shadow:0 0 4px rgba(0,0,0,0.5)">${i + 1}${badge}${sub}</div>`,
@@ -63,16 +63,14 @@
           const prev = app.waypoints[i - 1];
           const dlat2 = (wp.lat - prev.lat) * 111320, dlon2 = (wp.lon - prev.lon) * 111320 * Math.cos(wp.lat * Math.PI / 180);
           const seg = Math.sqrt(dlat2 * dlat2 + dlon2 * dlon2);
-          const en = i18nState.locale === 'en';
           const segFmt = seg < 1000 ? seg.toFixed(0) + 'm' : (seg/1000).toFixed(1) + 'km';
-          segInfo = `<br>${en ? 'Seg' : '距上一点'}: <b>${segFmt}</b>`;
+          segInfo = `<br>${t('label.seg')}: <b>${segFmt}</b>`;
         }
-        const en = i18nState.locale === 'en';
         const content = `<div style="font-size:12px;min-width:140px">
-          <b>${en ? 'WP' : '航点'} ${i + 1}</b> ${wp.drop ? `<span style="color:#e65100">${en ? 'Drop' : '投放'}</span>` : ''}<br>
+          <b>${t('label.wp')} ${i + 1}</b> ${wp.drop ? `<span style="color:#e65100">${t('label.drop')}</span>` : ''}<br>
           <span style="color:#888">${wp.lat.toFixed(6)}, ${wp.lon.toFixed(6)}</span><br>
-          ${en ? 'Alt' : '高度'}: <b>${wp.alt}m</b>${wp.speed ? ` · ${en ? 'Spd' : '速度'}: ${wp.speed}m/s` : ''}
-          ${wp.delay ? `<br>${en ? 'Delay' : '延迟'}: ${wp.delay}s` : ''}${segInfo}
+          ${t('label.alt')}: <b>${wp.alt}m</b>${wp.speed ? ` · ${t('label.spd')}: ${wp.speed}m/s` : ''}
+          ${wp.delay ? `<br>${t('label.delay')}: ${wp.delay}s` : ''}${segInfo}
         </div>`;
         if (wpPopup) map.closePopup(wpPopup);
         wpPopup = L.popup({ closeButton: true, className: 'wp-popup' })

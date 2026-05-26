@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import { app } from '../../lib/stores.svelte';
-  import { i18nState } from '../../lib/i18n.svelte';
+  import { t } from '../../lib/i18n.svelte';
 
 
   type CoordFn = (lat: number, lon: number) => [number, number];
@@ -36,13 +36,12 @@
       droneMarker.on('click', () => {
         const d = app.drone;
         const coordStr = `${d.lat.toFixed(6)}, ${d.lon.toFixed(6)}`;
-        const en = i18nState.locale === 'en';
         const content = `<div style="font-size:12px;min-width:160px">
-          <b>${d.mode}</b> ${d.armed ? `<span style="color:#f44336">${en ? 'ARMED' : '已解锁'}</span>` : (en ? 'Disarmed' : '已锁定')}<br>
+          <b>${d.mode}</b> ${d.armed ? `<span style="color:#f44336">${t('label.armed')}</span>` : t('label.disarmed')}<br>
           <span style="color:#888;cursor:pointer;text-decoration:underline dotted" onclick="navigator.clipboard.writeText('${coordStr}')">${coordStr}</span><br>
-          ${en ? 'Alt' : '高度'}: <b>${d.alt_rel.toFixed(1)}m</b> (${en ? 'MSL' : '海拔'} ${d.alt_msl.toFixed(0)}m)<br>
-          ${en ? 'Spd' : '速度'}: <b>${d.gs.toFixed(1)} m/s</b> ${en ? 'Hdg' : '航向'} ${d.hdg.toFixed(0)}°<br>
-          ${en ? 'Home' : '距起飞点'}: <b>${d.dist_home.toFixed(0)}m</b>
+          ${t('label.alt')}: <b>${d.alt_rel.toFixed(1)}m</b> (${t('label.msl')} ${d.alt_msl.toFixed(0)}m)<br>
+          ${t('label.spd')}: <b>${d.gs.toFixed(1)} m/s</b> ${t('label.hdg')} ${d.hdg.toFixed(0)}°<br>
+          ${t('label.home')}: <b>${d.dist_home.toFixed(0)}m</b>
         </div>`;
         L.popup({ closeButton: true }).setLatLng([glat, glon]).setContent(content).openOn(map);
       });

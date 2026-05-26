@@ -3,7 +3,7 @@
   import { app, addWaypoint, deleteWaypoint, saveWaypoints, addToast, showConfirm } from '../../lib/stores.svelte';
   import { sendCommand } from '../../lib/ws';
   import { toGcj, toWgs } from '../../lib/gcj02';
-  import { t, i18nState } from '../../lib/i18n.svelte';
+  import { t } from '../../lib/i18n.svelte';
   import { API_BASE } from '../../lib/backend';
   import { Ruler, Square, ShieldAlert, Grid3x3, X as XIcon } from '@lucide/svelte';
   import { segDist } from '../../lib/missionIO';
@@ -521,19 +521,18 @@
 
       el.addEventListener('click', (ev) => {
         ev.stopPropagation();
-        const en = i18nState.locale === 'en';
         // Build popup DOM piecewise — never innerHTML on values pulled from
         // app state, even though wp fields here are typed as number/bool.
         const popupEl = document.createElement('div');
         popupEl.style.cssText = 'font-size:12px;min-width:160px';
 
         const title = document.createElement('b');
-        title.textContent = `${en ? 'WP' : '航点'} ${i + 1}`;
+        title.textContent = `${t('label.wp')} ${i + 1}`;
         popupEl.appendChild(title);
         if (wp.drop) {
           const dropSpan = document.createElement('span');
           dropSpan.style.color = '#e65100';
-          dropSpan.textContent = en ? ' · Drop' : ' · 投放';
+          dropSpan.textContent = ` · ${t('label.drop')}`;
           popupEl.appendChild(dropSpan);
         }
         popupEl.appendChild(document.createElement('br'));
@@ -544,19 +543,19 @@
         popupEl.appendChild(coord);
         popupEl.appendChild(document.createElement('br'));
 
-        const altLabel = document.createTextNode(`${en ? 'Alt' : '高度'}: `);
+        const altLabel = document.createTextNode(`${t('label.alt')}: `);
         popupEl.appendChild(altLabel);
         const altVal = document.createElement('b');
         altVal.textContent = `${wp.alt}m`;
         popupEl.appendChild(altVal);
         if (wp.speed) {
           popupEl.appendChild(document.createTextNode(
-            ` · ${en ? 'Spd' : '速度'}: ${wp.speed}m/s`,
+            ` · ${t('label.spd')}: ${wp.speed}m/s`,
           ));
         }
 
         const btn = document.createElement('button');
-        btn.textContent = en ? 'Delete' : '删除';
+        btn.textContent = t('label.delete');
         btn.style.cssText = 'display:block;margin-top:6px;padding:3px 10px;background:#d32f2f;color:white;border:none;border-radius:3px;cursor:pointer;font-size:11px;font-weight:600';
         btn.addEventListener('click', () => {
           deleteWaypoint(i);

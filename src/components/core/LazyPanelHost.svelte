@@ -1,5 +1,6 @@
 <script lang="ts">
   import { panels, PANEL_LOADERS } from '../../lib/panels.svelte';
+  import { t } from '../../lib/i18n.svelte';
 
   let loaded: Record<string, any> = $state({});
   let errors: Record<string, string> = $state({});
@@ -38,9 +39,9 @@
       <p class="text-xs mt-1 opacity-75">{errors[id]}</p>
       <div class="flex gap-2 mt-2">
         {#if (retryCounts[id] || 0) < 3}
-          <button class="text-xs underline hover:text-white" onclick={() => retry(id)}>Retry ({3 - (retryCounts[id] || 0)} left)</button>
+          <button class="text-xs underline hover:text-white" onclick={() => retry(id)}>{t('error.retry').replace('{n}', String(3 - (retryCounts[id] || 0)))}</button>
         {/if}
-        <button class="text-xs underline hover:text-white" onclick={() => panels.close(id)}>Close</button>
+        <button class="text-xs underline hover:text-white" onclick={() => panels.close(id)}>{t('error.close')}</button>
       </div>
     </div>
   {/if}

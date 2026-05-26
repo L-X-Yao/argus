@@ -65,10 +65,12 @@ export function tp(key: string, count: number): string {
 
 export function fmtDate(date: Date | string): string {
   const d = typeof date === 'string' ? new Date(date) : date;
-  if (i18nState.locale === 'zh') {
-    return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
-  }
-  return d.toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  const localeMap: Record<string, string> = {
+    zh: 'zh-CN', en: 'en-US', ja: 'ja-JP', ko: 'ko-KR',
+    de: 'de-DE', fr: 'fr-FR', es: 'es-ES', pt: 'pt-BR',
+    ru: 'ru-RU', ar: 'ar-SA',
+  };
+  return d.toLocaleDateString(localeMap[i18nState.locale] || 'en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 }
 
 export function fmtTime(seconds: number): string {

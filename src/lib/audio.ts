@@ -1,6 +1,5 @@
 import { app } from './stores.svelte';
-import { i18nState } from './i18n.svelte';
-import { t } from './i18n.svelte';
+import { t, i18nState } from './i18n.svelte';
 
 let audioCtx: AudioContext | null = null;
 
@@ -50,26 +49,23 @@ let ascentIdx = 0;
 
 const RTL_MODES = ['返航', '旋翼返航', '智能返航', '降落', '旋翼降落', 'RTL', 'Q-RTL', 'Smart RTL', 'Land', 'Q-Land', 'Return'];
 
-function s(zh: string, en: string): string {
-  return i18nState.locale === 'en' ? en : zh;
-}
 const DESCENT_THRESHOLDS = [50, 40, 30, 20, 10, 8, 6, 4, 2];
 const ASCENT_THRESHOLDS = [10, 20, 30, 50, 100];
 
 export function checkAlerts(connected: boolean, armed: boolean, remaining: number, linkAge: number) {
   if (armed && !prevArmed) {
     beep(880, 200, 2);
-    speak(s('已解锁', 'Armed'));
+    speak(t('audio.armed'));
   }
   if (!armed && prevArmed) {
     beep(440, 300, 1);
-    speak(s('已锁定', 'Disarmed'));
+    speak(t('audio.disarmed'));
   }
   prevArmed = armed;
 
   if (!connected && prevConnected) {
     beep(200, 1000, 3, 200);
-    speak(s('飞控连接已断开', 'Vehicle connection lost'));
+    speak(t('audio.linkLost'));
   }
   prevConnected = connected;
 
@@ -83,15 +79,15 @@ export function checkAlerts(connected: boolean, armed: boolean, remaining: numbe
   if (remaining >= 0) {
     if (remaining <= 10 && batWarnLevel < 3 && armed) {
       beep(200, 800, 5, 100);
-      speak(s('电量严重不足，请立即返航', 'Critical battery, return now'));
+      speak(t('audio.batCritical'));
       batWarnLevel = 3;
     } else if (remaining <= 20 && batWarnLevel < 2) {
       beep(300, 500, 3, 200);
-      speak(s('低电量警告', 'Low battery warning'));
+      speak(t('audio.batLow'));
       batWarnLevel = 2;
     } else if (remaining <= 30 && batWarnLevel < 1 && armed) {
       beep(400, 400, 2, 200);
-      speak(s('电量百分之三十，注意返航', 'Battery thirty percent, plan return'));
+      speak(t('audio.batWarn'));
       batWarnLevel = 1;
     }
   }
@@ -100,7 +96,7 @@ export function checkAlerts(connected: boolean, armed: boolean, remaining: numbe
   if (connected && linkAge > 3 && Date.now() - linkLostBeepT > 5000) {
     beep(200, 800, 1);
     linkLostBeepT = Date.now();
-    if (!linkLostSpoken) { speak(s('链路延迟过高', 'High link latency')); linkLostSpoken = true; }
+    if (!linkLostSpoken) { speak(t('audio.linkDelay')); linkLostSpoken = true; }
   }
   if (connected && linkAge >= 0 && linkAge < 2) linkLostSpoken = false;
 
