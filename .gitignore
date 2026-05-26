@@ -29,6 +29,8 @@ coverage/
 .env
 .env.*
 !.env.example
+release/
+RELEASE_NOTES.md
 .DS_Store
 Thumbs.db
 *.swp
