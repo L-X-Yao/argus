@@ -1018,7 +1018,7 @@ const messages: Record<string, string> = {
   'rtk.fixed': 'RTK ثابت',
   'rtk.float': 'RTK عائم',
   'rtk.dgps': 'DGPS',
-  'rtk.3d': 'تحديد ثلاثي الأبعاد',
+  'rtk.fix3d': 'تحديد ثلاثي الأبعاد',
   'rtk.none': 'بدون تحديد',
   'ntrip.host': 'مضيف NTRIP',
   'ntrip.port': 'المنفذ',

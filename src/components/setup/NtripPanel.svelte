@@ -41,7 +41,7 @@
     if (rtkFixType >= 6) return t('rtk.fixed');
     if (rtkFixType >= 5) return t('rtk.float');
     if (rtkFixType >= 4) return t('rtk.dgps');
-    if (rtkFixType >= 3) return t('rtk.3d');
+    if (rtkFixType >= 3) return t('rtk.fix3d');
     return t('rtk.none');
   }
 

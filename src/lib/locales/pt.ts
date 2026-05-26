@@ -1018,7 +1018,7 @@ const messages: Record<string, string> = {
   'rtk.fixed': 'RTK Fixo',
   'rtk.float': 'RTK Flutuante',
   'rtk.dgps': 'DGPS',
-  'rtk.3d': 'Fix 3D',
+  'rtk.fix3d': 'Fix 3D',
   'rtk.none': 'Sem fix',
   'ntrip.host': 'Host NTRIP',
   'ntrip.port': 'Porta',
