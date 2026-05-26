@@ -166,7 +166,7 @@ describe('i18n completeness', () => {
       'PID', 'GPS', 'EKF', 'AHRS', 'MSL', 'WP', 'SITL', 'TCP', 'UDP', 'USB',
       'CSV', 'JSON', 'KML', 'GPX', 'WebSerial', 'Quad X', 'FOV', 'Hz',
       'VTOL', 'FPV', 'GCS', 'IMU', 'RC', 'BEC', 'ESC', 'RSSI', 'SNR',
-      'Bootloader', 'FFT', 'Tauri', 'ArduPilot', 'PX4', 'SRTM',
+      'Bootloader', 'FFT', 'Tauri', 'ArduPilot', 'PX4', 'SRTM', 'Bitmask',
     ]);
     const nonEnLocales = localeFiles.filter(f => f !== BASE_LOCALE && f !== 'en.ts');
 

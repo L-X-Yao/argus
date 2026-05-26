@@ -1,7 +1,7 @@
 <script lang="ts">
   import { addToast } from '../../lib/stores.svelte';
   import { sendCommand } from '../../lib/ws';
-  import { paramState } from '../../lib/paramStore.svelte';
+  import { paramState, getParam } from '../../lib/paramStore.svelte';
   import { t } from '../../lib/i18n.svelte';
   import { X, ShieldAlert, Battery, Radio, Wifi, Navigation } from '@lucide/svelte';
   import Button from '$lib/components/ui/button/button.svelte';
@@ -9,11 +9,6 @@
   let { onclose }: { onclose: () => void } = $props();
 
   /* ── Helpers ── */
-
-  function getParam(name: string, fallback: number): number {
-    const p = paramState.list.find(p => p.name === name);
-    return p !== undefined ? p.value : fallback;
-  }
 
   function saveParams(pairs: [string, number][]) {
     for (const [name, value] of pairs) {
@@ -94,6 +89,7 @@
   const ekfActions: [number, string][] = [
     [0, 'failsafe.actionNone'],
     [1, 'failsafe.actionLand'],
+    // ArduPilot FS_EKF_ACTION value 2 = AltHold mode
     [2, 'failsafe.actionAltHold'],
   ];
 
@@ -203,7 +199,7 @@
             </div>
             <div class="flex justify-end pt-1">
               <Button variant="default" size="sm" class="h-7 text-xs px-4" onclick={saveBattery}>
-                {t('fence.save') ?? 'Save'}
+                {t('failsafe.save')}
               </Button>
             </div>
           </div>
@@ -253,7 +249,7 @@
             </div>
             <div class="flex justify-end pt-1">
               <Button variant="default" size="sm" class="h-7 text-xs px-4" onclick={saveRc}>
-                {t('fence.save') ?? 'Save'}
+                {t('failsafe.save')}
               </Button>
             </div>
           </div>
@@ -293,7 +289,7 @@
             </div>
             <div class="flex justify-end pt-1">
               <Button variant="default" size="sm" class="h-7 text-xs px-4" onclick={saveGcs}>
-                {t('fence.save') ?? 'Save'}
+                {t('failsafe.save')}
               </Button>
             </div>
           </div>
@@ -342,7 +338,7 @@
             </div>
             <div class="flex justify-end pt-1">
               <Button variant="default" size="sm" class="h-7 text-xs px-4" onclick={saveEkf}>
-                {t('fence.save') ?? 'Save'}
+                {t('failsafe.save')}
               </Button>
             </div>
           </div>

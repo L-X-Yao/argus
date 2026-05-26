@@ -122,7 +122,7 @@ class ParamManager:
         # caller side so the UI sees an immediate error rather than the
         # parameter "appearing to set" then unchanged on the next read.
         if math.isnan(value) or math.isinf(value):
-            self._link.add_event('Param: rejected NaN/Inf for %s' % name, 'param_set_fail')
+            self._link.add_event(lt('param_nan', self._link.locale) % name, 'param_set_fail')
             return
         param = self.params.get(name)
         ptype = param['type'] if param else 9
@@ -151,7 +151,7 @@ class ParamManager:
             with open(path, encoding='utf-8') as f:
                 data = json.load(f)
         except (json.JSONDecodeError, OSError) as e:
-            self._link.add_event('Param load error: %s' % e, 'param_load_err')
+            self._link.add_event(lt('param_load_err', self._link.locale) % e, 'param_load_err')
             return []
         changed = []
         for name, value in data.items():

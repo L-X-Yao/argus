@@ -80,7 +80,7 @@ const messages: Record<string, string> = {
   'param.title': 'Parámetros',
   'param.readAll': 'Leer todo',
   'param.reading': 'Leyendo',
-  'param.writeFlash': 'Escribir a Flash',
+  'param.saveBackup': 'Guardar respaldo',
   'param.export': 'Exportar',
   'param.import': 'Importar',
   'param.connectHint': 'Conecte al vehículo y haga clic en "Leer todo"',
@@ -1040,6 +1040,18 @@ const messages: Record<string, string> = {
   'ui.skipForward': 'Avanzar',
   'ui.linkQuality': 'Calidad de enlace {rate} Hz',
   'ui.battery': 'Batería {v}V {pct}%',
+  'meta.group': 'Grupo',
+  'meta.units': 'Unidades',
+  'meta.range': 'Rango',
+  'meta.step': 'Paso',
+  'meta.default': 'Predeterminado',
+  'meta.bitmask': 'Bitmask',
+  'failsafe.actionAltHold': 'Mantener alt.',
+  'failsafe.save': 'Guardar',
+  'power.write': 'Escribir',
+  'pid.responseCurve': 'Curva de respuesta',
+  'pid.actual': 'Real',
+  'pid.target': 'Objetivo',
 };
 
 

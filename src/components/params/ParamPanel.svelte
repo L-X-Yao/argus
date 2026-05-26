@@ -407,11 +407,11 @@
           <p class="text-muted-foreground leading-relaxed">{getMeta()[p.name]!.desc}</p>
         {/if}
         <div class="flex flex-wrap gap-x-4 gap-y-1 text-[10px]">
-          {#if getMeta()[p.name]?.group}<span class="text-muted-foreground/60">Group: <span class="text-foreground">{getMeta()[p.name]!.group}</span></span>{/if}
-          {#if units}<span class="text-muted-foreground/60">Units: <span class="text-foreground">{units}</span></span>{/if}
-          {#if rangeStr}<span class="text-muted-foreground/60">Range: <span class="text-foreground">{rangeStr}</span></span>{/if}
-          {#if getMeta()[p.name]?.step}<span class="text-muted-foreground/60">Step: <span class="text-foreground">{getMeta()[p.name]!.step}</span></span>{/if}
-          {#if getMeta()[p.name]?.default !== undefined}<span class="text-muted-foreground/60">Default: <span class="text-foreground">{getMeta()[p.name]!.default}</span></span>{/if}
+          {#if getMeta()[p.name]?.group}<span class="text-muted-foreground/60">{t('meta.group')}: <span class="text-foreground">{getMeta()[p.name]!.group}</span></span>{/if}
+          {#if units}<span class="text-muted-foreground/60">{t('meta.units')}: <span class="text-foreground">{units}</span></span>{/if}
+          {#if rangeStr}<span class="text-muted-foreground/60">{t('meta.range')}: <span class="text-foreground">{rangeStr}</span></span>{/if}
+          {#if getMeta()[p.name]?.step}<span class="text-muted-foreground/60">{t('meta.step')}: <span class="text-foreground">{getMeta()[p.name]!.step}</span></span>{/if}
+          {#if getMeta()[p.name]?.default !== undefined}<span class="text-muted-foreground/60">{t('meta.default')}: <span class="text-foreground">{getMeta()[p.name]!.default}</span></span>{/if}
         </div>
         {#if getMeta()[p.name]?.values}
           <div class="flex flex-wrap gap-1">
@@ -425,7 +425,7 @@
         {/if}
         {#if bmEntries.length > 0}
           <div class="space-y-0.5">
-            <span class="text-[10px] text-muted-foreground/60 font-semibold">Bitmask:</span>
+            <span class="text-[10px] text-muted-foreground/60 font-semibold">{t('meta.bitmask')}:</span>
             <div class="flex flex-wrap gap-1">
               {#each bmEntries as bm}
                 <button class="px-1.5 py-0.5 rounded text-[10px] border cursor-pointer transition-colors
@@ -455,7 +455,7 @@
         {paramState.fetching ? `${t('param.reading')} ${progress}%` : t('param.readAll')}
       </Button>
       {#if paramState.list.length > 0}
-        <Button variant="secondary" size="sm" onclick={saveParams}>{t('param.writeFlash')}</Button>
+        <Button variant="secondary" size="sm" onclick={saveParams}>{t('param.saveBackup')}</Button>
         <Button variant="outline" size="sm" onclick={exportParams}>{t('param.export')}</Button>
         <Button variant="outline" size="sm" onclick={exportCsv}>CSV</Button>
         {#if metaLoaded && modifiedCount > 0}

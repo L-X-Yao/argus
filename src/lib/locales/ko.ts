@@ -80,7 +80,7 @@ const messages: Record<string, string> = {
   'param.title': '매개변수',
   'param.readAll': '전체 읽기',
   'param.reading': '읽는 중',
-  'param.writeFlash': '플래시에 쓰기',
+  'param.saveBackup': '백업 저장',
   'param.export': '내보내기',
   'param.import': '가져오기',
   'param.connectHint': '기체에 연결 후 "전체 읽기"를 클릭',
@@ -1040,6 +1040,18 @@ const messages: Record<string, string> = {
   'ui.skipForward': '앞으로',
   'ui.linkQuality': '링크 품질 {rate} Hz',
   'ui.battery': '배터리 {v}V {pct}%',
+  'meta.group': '그룹',
+  'meta.units': '단위',
+  'meta.range': '범위',
+  'meta.step': '단계',
+  'meta.default': '기본값',
+  'meta.bitmask': 'Bitmask',
+  'failsafe.actionAltHold': '고도 유지',
+  'failsafe.save': '저장',
+  'power.write': '쓰기',
+  'pid.responseCurve': '응답 곡선',
+  'pid.actual': '실측값',
+  'pid.target': '목표값',
 };
 
 

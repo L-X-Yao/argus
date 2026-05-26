@@ -2,18 +2,13 @@
   import { app, addToast } from '../../lib/stores.svelte';
   import { sendCommand } from '../../lib/ws';
   import { t } from '../../lib/i18n.svelte';
-  import { paramState } from '../../lib/paramStore.svelte';
+  import { paramState, getParam } from '../../lib/paramStore.svelte';
   import { X, Sliders } from '@lucide/svelte';
   import Button from '$lib/components/ui/button/button.svelte';
 
   let { onclose }: { onclose: () => void } = $props();
 
   /* ── Helpers ── */
-
-  function getParam(name: string, fallback: number): number {
-    const p = paramState.list.find(p => p.name === name);
-    return p !== undefined ? p.value : fallback;
-  }
 
   let paramsAvailable = $derived(paramState.list.length > 0);
 
@@ -142,9 +137,9 @@
     ctx.setLineDash([]);
     ctx.fillStyle = '#4fc3f7';
     ctx.font = '9px monospace';
-    ctx.fillText('Actual', 4, 12);
+    ctx.fillText(t('pid.actual'), 4, 12);
     ctx.fillStyle = '#555';
-    ctx.fillText('Target', 4, 24);
+    ctx.fillText(t('pid.target'), 4, 24);
     ctx.fillStyle = '#666';
     ctx.fillText(`${vals[vals.length - 1]?.toFixed(1)}°`, w - 40, 12);
   });
@@ -241,7 +236,7 @@
         <div class="mt-4">
           <button class="text-[10px] text-muted-foreground hover:text-primary transition-colors cursor-pointer border-none bg-transparent"
                   onclick={() => { showResponse = !showResponse; responseHistory = []; }}>
-            {showResponse ? '▼' : '▶'} Response Curve
+            {showResponse ? '▼' : '▶'} {t('pid.responseCurve')}
           </button>
           {#if showResponse}
             <div class="mt-2 border border-border rounded-lg overflow-hidden">

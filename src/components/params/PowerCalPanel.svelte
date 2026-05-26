@@ -1,18 +1,12 @@
 <script lang="ts">
   import { app, addToast } from '../../lib/stores.svelte';
   import { sendCommand } from '../../lib/ws';
-  import { paramState } from '../../lib/paramStore.svelte';
+  import { getParam } from '../../lib/paramStore.svelte';
   import { t } from '../../lib/i18n.svelte';
   import { X, Battery, Zap } from '@lucide/svelte';
   import Button from '$lib/components/ui/button/button.svelte';
 
   let { onclose }: { onclose: () => void } = $props();
-
-  /* ── Helpers ── */
-  function getParam(name: string, fallback: number): number {
-    const p = paramState.list.find(p => p.name === name);
-    return p ? p.value : fallback;
-  }
 
   function writeParam(name: string, value: number) {
     sendCommand('param_set', undefined, { name, value });
@@ -136,7 +130,7 @@
               <span class="text-xs font-mono font-bold text-green-400">{calculatedMult.toFixed(4)}</span>
             </div>
             <Button variant="default" size="xs" class="w-full" onclick={writeVoltMult}>
-              {t('power.voltMult')} &rarr; Write
+              {t('power.voltMult')} &rarr; {t('power.write')}
             </Button>
           {/if}
         </div>
@@ -168,7 +162,7 @@
           />
           <Button variant="secondary" size="xs" onclick={writeAmpPerVlt}
                   disabled={!manualAmpPerVlt}>
-            Write
+            {t('power.write')}
           </Button>
         </div>
       </div>
@@ -198,7 +192,7 @@
           </select>
           <Button variant="secondary" size="xs" onclick={writeCells}
                   disabled={selectedCells < 1}>
-            Write
+            {t('power.write')}
           </Button>
         </div>
       </div>

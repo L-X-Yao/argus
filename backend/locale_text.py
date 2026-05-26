@@ -85,6 +85,8 @@ _T = {
     'err_no_video_url':('未提供视频地址',           'No video URL provided'),
     'err_no_ffmpeg':   ('服务器未安装 ffmpeg',      'ffmpeg not installed on server'),
     'param_timeout':   ('参数读取超时',             'Parameter fetch timeout'),
+    'param_load_err':  ('参数加载失败: %s',         'Param load error: %s'),
+    'param_nan':       ('参数: 拒绝 NaN/Inf (%s)',  'Param: rejected NaN/Inf for %s'),
     'mission_dl_timeout': ('任务下载超时',          'Mission download timeout'),
     'ntrip_connected':   ('NTRIP 已连接: %s',         'NTRIP connected: %s'),
     'ntrip_disconnected':('NTRIP 已断开',              'NTRIP disconnected'),

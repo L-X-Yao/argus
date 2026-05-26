@@ -49,6 +49,11 @@ export function updateSingleParam(name: string, value: number) {
   }
 }
 
+export function getParam(name: string, fallback: number): number {
+  const idx = nameIndex.get(name);
+  return idx !== undefined ? paramState.list[idx].value : fallback;
+}
+
 export function clearParams() {
   paramState.list = [];
   paramState.total = 0;

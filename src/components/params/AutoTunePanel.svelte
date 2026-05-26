@@ -1,7 +1,7 @@
 <script lang="ts">
   import { app, addToast, isPlane } from '../../lib/stores.svelte';
   import { sendCommand } from '../../lib/ws';
-  import { paramState } from '../../lib/paramStore.svelte';
+  import { paramState, getParam } from '../../lib/paramStore.svelte';
   import { t } from '../../lib/i18n.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
   import { X, Zap, AlertTriangle } from '@lucide/svelte';
@@ -34,12 +34,9 @@
   }
 
   function stop() {
+    // Plane: 19=QLoiter, Copter: 5=Loiter — safe hover modes to exit AutoTune
     sendCommand('mode', isPlane() ? 19 : 5);
     addToast(t('autotune.stop'), 'info');
-  }
-
-  function getParam(name: string, def: number): number {
-    return paramState.list.find(p => p.name === name)?.value ?? def;
   }
 
   let currentAxes = $derived(getParam('AUTOTUNE_AXES', 0));

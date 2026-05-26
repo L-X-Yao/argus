@@ -80,7 +80,7 @@ const messages: Record<string, string> = {
   'param.title': 'المعلمات',
   'param.readAll': 'قراءة الكل',
   'param.reading': 'جاري القراءة',
-  'param.writeFlash': 'كتابة إلى Flash',
+  'param.saveBackup': 'حفظ نسخة احتياطية',
   'param.export': 'تصدير',
   'param.import': 'استيراد',
   'param.connectHint': 'اتصل بالمركبة ثم انقر "قراءة الكل"',
@@ -1040,6 +1040,18 @@ const messages: Record<string, string> = {
   'ui.skipForward': 'تقدم',
   'ui.linkQuality': 'جودة الاتصال {rate} هرتز',
   'ui.battery': 'البطارية {v}ف {pct}%',
+  'meta.group': 'المجموعة',
+  'meta.units': 'الوحدة',
+  'meta.range': 'النطاق',
+  'meta.step': 'الخطوة',
+  'meta.default': 'الافتراضي',
+  'meta.bitmask': 'Bitmask',
+  'failsafe.actionAltHold': 'تثبيت الارتفاع',
+  'failsafe.save': 'حفظ',
+  'power.write': 'كتابة',
+  'pid.responseCurve': 'منحنى الاستجابة',
+  'pid.actual': 'فعلي',
+  'pid.target': 'مستهدف',
 };
 
 

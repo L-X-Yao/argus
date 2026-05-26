@@ -80,7 +80,7 @@ const messages: Record<string, string> = {
   'param.title': 'Параметры',
   'param.readAll': 'Читать всё',
   'param.reading': 'Чтение',
-  'param.writeFlash': 'Записать во Flash',
+  'param.saveBackup': 'Сохранить копию',
   'param.export': 'Экспорт',
   'param.import': 'Импорт',
   'param.connectHint': 'Подключитесь к аппарату и нажмите «Читать всё»',
@@ -1040,6 +1040,18 @@ const messages: Record<string, string> = {
   'ui.skipForward': 'Вперёд',
   'ui.linkQuality': 'Качество связи {rate} Гц',
   'ui.battery': 'Батарея {v}В {pct}%',
+  'meta.group': 'Группа',
+  'meta.units': 'Единицы',
+  'meta.range': 'Диапазон',
+  'meta.step': 'Шаг',
+  'meta.default': 'По умолчанию',
+  'meta.bitmask': 'Битовая маска',
+  'failsafe.actionAltHold': 'Удержание высоты',
+  'failsafe.save': 'Сохранить',
+  'power.write': 'Записать',
+  'pid.responseCurve': 'Кривая отклика',
+  'pid.actual': 'Факт',
+  'pid.target': 'Цель',
 };
 
 

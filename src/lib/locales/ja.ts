@@ -80,7 +80,7 @@ const messages: Record<string, string> = {
   'param.title': 'パラメータ',
   'param.readAll': '全読込',
   'param.reading': '読込中',
-  'param.writeFlash': 'フラッシュに書込',
+  'param.saveBackup': 'バックアップ保存',
   'param.export': 'エクスポート',
   'param.import': 'インポート',
   'param.connectHint': '機体に接続して「全読込」をクリック',
@@ -1040,6 +1040,18 @@ const messages: Record<string, string> = {
   'ui.skipForward': '進む',
   'ui.linkQuality': 'リンク品質 {rate} Hz',
   'ui.battery': 'バッテリー {v}V {pct}%',
+  'meta.group': 'グループ',
+  'meta.units': '単位',
+  'meta.range': '範囲',
+  'meta.step': 'ステップ',
+  'meta.default': 'デフォルト',
+  'meta.bitmask': 'ビットマスク',
+  'failsafe.actionAltHold': '高度保持',
+  'failsafe.save': '保存',
+  'power.write': '書込',
+  'pid.responseCurve': '応答曲線',
+  'pid.actual': '実測値',
+  'pid.target': '目標値',
 };
 
 

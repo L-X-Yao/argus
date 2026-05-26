@@ -1,7 +1,7 @@
 <script lang="ts">
   import { app, addToast, isPlane } from '../../lib/stores.svelte';
   import { sendCommand } from '../../lib/ws';
-  import { paramState } from '../../lib/paramStore.svelte';
+  import { paramState, getParam } from '../../lib/paramStore.svelte';
   import { t } from '../../lib/i18n.svelte';
   import { X, Plane } from '@lucide/svelte';
   import Button from '$lib/components/ui/button/button.svelte';
@@ -36,11 +36,6 @@
   let modeEntries = $derived(
     Object.entries(modes).map(([k, v]) => [Number(k), v] as [number, string]).sort((a, b) => a[0] - b[0])
   );
-
-  function getParam(name: string, fallback: number): number {
-    const p = paramState.list.find(p => p.name === name);
-    return p !== undefined ? p.value : fallback;
-  }
 
   let paramsAvailable = $derived(paramState.list.length > 0);
 
