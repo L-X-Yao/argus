@@ -60,7 +60,7 @@
       id: 'gpsfix', labelKey: 'dashboard.gpsFix', unit: '',
       getValue: () => {
         const f = app.drone.gps_fix_raw ?? 0;
-        return f >= 3 ? '3D Fix' : f >= 2 ? '2D' : 'No Fix';
+        return f >= 3 ? t('rtk.fix3d') : f >= 2 ? '2D' : t('rtk.none');
       },
       getStatus: () => (app.drone.gps_fix_raw ?? 0) >= 3 ? 'good' : (app.drone.gps_fix_raw ?? 0) >= 2 ? 'warn' : 'bad',
     },
