@@ -54,8 +54,16 @@ if [ "$OLD_CACHE" != "$NEW_CACHE" ]; then
     echo "  sw.js cache: v$OLD_CACHE → v$NEW_CACHE"
 fi
 
+# 5. src-tauri/Cargo.toml
+sed -i "s/^version = \"$OLD_VER\"/version = \"$NEW_VER\"/" src-tauri/Cargo.toml
+
+# 6. src-tauri/tauri.conf.json
+sed -i "s/\"version\": \"$OLD_VER\"/\"version\": \"$NEW_VER\"/" src-tauri/tauri.conf.json
+
 echo "Done. Files updated:"
 echo "  backend/config.py"
 echo "  pyproject.toml"
 echo "  package.json"
-grep -n "$NEW_VER" backend/config.py pyproject.toml package.json | sed 's/^/  /'
+echo "  src-tauri/Cargo.toml"
+echo "  src-tauri/tauri.conf.json"
+grep -n "$NEW_VER" backend/config.py pyproject.toml package.json src-tauri/Cargo.toml | sed 's/^/  /'

@@ -12,6 +12,7 @@ Usage:
 import argparse
 import io
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -21,6 +22,8 @@ from pathlib import Path
 
 SCRIPT_DIR = Path(__file__).resolve().parent.parent
 OUTPUT_DIR = SCRIPT_DIR / 'release'
+
+_VERSION = re.search(r"VERSION = '([^']+)'", (SCRIPT_DIR / 'backend' / 'config.py').read_text()).group(1)
 
 PY_VER = '3.10.11'
 PY_BASE_URL = 'https://www.python.org/ftp/python/{ver}/python-{ver}-embed-{arch}.zip'
@@ -160,7 +163,7 @@ def build(arch: str = 'amd64'):
     # ── 5. Package ──
     print('[5/5] Creating zip')
     OUTPUT_DIR.mkdir(exist_ok=True)
-    zip_name = OUTPUT_DIR / f'PLLink_GCS_v3.0_{arch}.zip'
+    zip_name = OUTPUT_DIR / f'Argus_GCS_v{_VERSION}_{arch}.zip'
     if zip_name.exists():
         zip_name.unlink()
 
@@ -168,7 +171,7 @@ def build(arch: str = 'amd64'):
         for root, _dirs, files in os.walk(build_dir):
             for f in files:
                 filepath = Path(root) / f
-                arcname = 'PLLink_GCS_v3/' + str(filepath.relative_to(build_dir))
+                arcname = f'Argus_GCS_v{_VERSION}/' + str(filepath.relative_to(build_dir))
                 zf.write(filepath, arcname)
 
     shutil.rmtree(build_dir)
