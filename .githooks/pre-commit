@@ -4,6 +4,14 @@
 # Install: git config core.hooksPath .githooks
 set -e
 
+echo "[pre-commit] sensitive-word check..."
+_W1="pl""kj"; _W2="peng""likeji"
+if git diff --cached --name-only | xargs grep -qri "$_W1\|$_W2" -- 2>/dev/null; then
+  echo "ERROR: proprietary reference found in staged files"
+  git diff --cached --name-only | xargs grep -rni "$_W1\|$_W2" -- 2>/dev/null
+  exit 1
+fi
+
 echo "[pre-commit] ruff..."
 ruff check backend/ scripts/ tests/ --quiet
 

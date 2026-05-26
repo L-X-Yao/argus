@@ -159,4 +159,102 @@ describe('i18n completeness', () => {
       `Keys not matching dot-notation: ${invalidKeys.join(', ')}`
     ).toEqual([]);
   });
+
+  describe('no untranslated placeholders in non-English locales', () => {
+    const TECHNICAL_TERMS = new Set([
+      'Argus', 'MAVLink', 'PL-Link', 'NTRIP', 'RTSP', 'RTK', 'DGPS', 'PWM',
+      'PID', 'GPS', 'EKF', 'AHRS', 'MSL', 'WP', 'SITL', 'TCP', 'UDP', 'USB',
+      'CSV', 'JSON', 'KML', 'GPX', 'WebSerial', 'Quad X', 'FOV', 'Hz',
+      'VTOL', 'FPV', 'GCS', 'IMU', 'RC', 'BEC', 'ESC', 'RSSI', 'SNR',
+      'Bootloader', 'FFT', 'Tauri', 'ArduPilot', 'PX4', 'SRTM',
+    ]);
+    const nonEnLocales = localeFiles.filter(f => f !== BASE_LOCALE && f !== 'en.ts');
+
+    for (const file of nonEnLocales) {
+      it(`${file} should not have values identical to en.ts (except technical terms)`, () => {
+        const messages = allLocales[file];
+        const enMessages = allLocales['en.ts'];
+        const untranslated: string[] = [];
+
+        for (const [key, enVal] of Object.entries(enMessages)) {
+          if (!(key in messages)) continue;
+          const localeVal = messages[key];
+          if (localeVal !== enVal) continue;
+          if (enVal.length <= 3) continue;
+          if (/^\d/.test(enVal) || /^[A-Z0-9 ._\-/°%{}]+$/.test(enVal)) continue;
+          if (TECHNICAL_TERMS.has(enVal.trim())) continue;
+          if (/\{[^}]+\}/.test(enVal) && enVal.replace(/\{[^}]+\}/g, '').trim().length <= 3) continue;
+          untranslated.push(`${key}: "${enVal}"`);
+        }
+
+        expect(
+          untranslated.length,
+          `${file} has ${untranslated.length} untranslated keys (identical to en.ts):\n${untranslated.slice(0, 10).join('\n')}${untranslated.length > 10 ? '\n...' : ''}`
+        ).toBe(0);
+      });
+    }
+  });
+
+  describe('no hardcoded strings in Svelte components', () => {
+    const componentsDir = resolve(__dir, '..', 'components');
+    const appFile = resolve(__dir, '..', 'App.svelte');
+
+    function findSvelteFiles(dir: string): string[] {
+      const files: string[] = [];
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const full = resolve(dir, entry.name);
+        if (entry.isDirectory()) files.push(...findSvelteFiles(full));
+        else if (entry.name.endsWith('.svelte')) files.push(full);
+      }
+      return files;
+    }
+
+    it('no hardcoded aria-label attributes in .svelte files', () => {
+      const svelteFiles = [...findSvelteFiles(componentsDir), appFile];
+      const violations: string[] = [];
+      for (const f of svelteFiles) {
+        const src = readFileSync(f, 'utf-8');
+        const lines = src.split('\n');
+        for (let i = 0; i < lines.length; i++) {
+          if (/aria-label="[A-Za-z]/.test(lines[i]) && !lines[i].includes('{t(')) {
+            const rel = f.split('/src/')[1] || f;
+            violations.push(`${rel}:${i + 1}: ${lines[i].trim().slice(0, 80)}`);
+          }
+        }
+      }
+      expect(violations, `Hardcoded aria-label found:\n${violations.join('\n')}`).toEqual([]);
+    });
+
+    it('no hardcoded placeholder attributes in .svelte files', () => {
+      const svelteFiles = [...findSvelteFiles(componentsDir), appFile];
+      const violations: string[] = [];
+      for (const f of svelteFiles) {
+        const src = readFileSync(f, 'utf-8');
+        const lines = src.split('\n');
+        for (let i = 0; i < lines.length; i++) {
+          if (/placeholder="[A-Za-z]/.test(lines[i]) && !lines[i].includes('{t(')) {
+            const rel = f.split('/src/')[1] || f;
+            violations.push(`${rel}:${i + 1}: ${lines[i].trim().slice(0, 80)}`);
+          }
+        }
+      }
+      expect(violations, `Hardcoded placeholder found:\n${violations.join('\n')}`).toEqual([]);
+    });
+
+    it('no hardcoded title attributes in .svelte files', () => {
+      const svelteFiles = [...findSvelteFiles(componentsDir), appFile];
+      const violations: string[] = [];
+      for (const f of svelteFiles) {
+        const src = readFileSync(f, 'utf-8');
+        const lines = src.split('\n');
+        for (let i = 0; i < lines.length; i++) {
+          if (/\btitle="[A-Z]/.test(lines[i]) && !lines[i].includes('{t(')) {
+            const rel = f.split('/src/')[1] || f;
+            violations.push(`${rel}:${i + 1}: ${lines[i].trim().slice(0, 80)}`);
+          }
+        }
+      }
+      expect(violations, `Hardcoded title found:\n${violations.join('\n')}`).toEqual([]);
+    });
+  });
 });
