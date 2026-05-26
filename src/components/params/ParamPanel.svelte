@@ -215,7 +215,8 @@
     else if (e.key === 'Escape') cancelEdit();
   }
 
-  function fmtValue(v: number): string {
+  function fmtValue(v: number, ptype?: number): string {
+    if (ptype !== undefined && ptype !== 9) return String(Math.round(v));
     if (Number.isInteger(v) || Math.abs(v) >= 100) return v.toFixed(0);
     if (Math.abs(v) >= 1) return v.toFixed(2);
     return v.toFixed(4);
@@ -383,7 +384,7 @@
       {:else}
         <div class="flex-1 flex items-center gap-1.5 min-w-0">
                     <div role="presentation" class="font-mono cursor-pointer px-1.5 py-0.5 rounded hover:bg-input transition-colors text-right min-w-[60px] {hasDefaultDiff(p.name, p.value) ? 'text-warning' : ''}"
-               onclick={() => startEdit(p)}>{fmtValue(p.value)}</div>
+               onclick={() => startEdit(p)}>{fmtValue(p.value, p.type)}</div>
           {#if units}<span class="text-[10px] text-muted-foreground">{units}</span>{/if}
           {#if valLabel}<span class="text-[10px] text-primary/70 truncate">{valLabel}</span>{/if}
           {#if hasDefaultDiff(p.name, p.value)}

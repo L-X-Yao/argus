@@ -140,11 +140,18 @@ class ParamManager:
             save_dir = Path(__file__).resolve().parent.parent / 'params'
             save_dir.mkdir(exist_ok=True)
             path = str(save_dir / ('params_%s.json' % time.strftime('%Y%m%d_%H%M%S')))
+            self._prune_backups(save_dir)
         data = {name: p['value'] for name, p in sorted(self.params.items())}
         with open(path, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=2)
         self._link.add_event(lt('param_saved', self._link.locale) % (len(data), Path(path).name), 'param_saved')
         return path
+
+    @staticmethod
+    def _prune_backups(save_dir: Path, keep: int = 20) -> None:
+        files = sorted(save_dir.glob('params_*.json'), key=lambda f: f.stat().st_mtime)
+        for old in files[:-keep] if len(files) > keep else []:
+            old.unlink(missing_ok=True)
 
     def load_from_file(self, path: str) -> list[str]:
         try:
