@@ -602,6 +602,7 @@ const messages: Record<string, string> = {
   'pid.rateP': 'Rate P',
   'pid.rateI': 'Rate I',
   'pid.rateD': 'Rate D',
+  'pid.rateFF': 'Rate FF',
   'pid.save': '写入飞控',
   'pid.saved': 'PID 参数已写入',
   'pid.reset': '恢复默认',

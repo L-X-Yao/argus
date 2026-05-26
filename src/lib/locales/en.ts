@@ -602,6 +602,7 @@ const messages: Record<string, string> = {
   'pid.rateP': 'Rate P',
   'pid.rateI': 'Rate I',
   'pid.rateD': 'Rate D',
+  'pid.rateFF': 'Rate FF',
   'pid.save': 'Write to FC',
   'pid.saved': 'PID parameters saved',
   'pid.reset': 'Reset Defaults',

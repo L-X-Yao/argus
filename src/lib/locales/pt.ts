@@ -1051,6 +1051,7 @@ const messages: Record<string, string> = {
   'pid.responseCurve': 'Curva de resposta',
   'pid.actual': 'Real',
   'pid.target': 'Alvo',
+  'pid.rateFF': 'Taxa FF',
 };
 
 

@@ -36,10 +36,12 @@
     step: number;
   }
 
+  // AC_AttitudeControl rate PID terms — P/I/D/FF per axis
   const pidSliders: PidSliderDef[] = [
-    { suffix: '_P', labelKey: 'pid.rateP', min: 0, max: 0.5,  step: 0.001 },
-    { suffix: '_I', labelKey: 'pid.rateI', min: 0, max: 0.5,  step: 0.001 },
-    { suffix: '_D', labelKey: 'pid.rateD', min: 0, max: 0.05, step: 0.0001 },
+    { suffix: '_P',  labelKey: 'pid.rateP',  min: 0, max: 0.5,  step: 0.001 },
+    { suffix: '_I',  labelKey: 'pid.rateI',  min: 0, max: 0.5,  step: 0.001 },
+    { suffix: '_D',  labelKey: 'pid.rateD',  min: 0, max: 0.05, step: 0.0001 },
+    { suffix: '_FF', labelKey: 'pid.rateFF', min: 0, max: 0.5,  step: 0.001 },
   ];
 
   /* ── State ── */

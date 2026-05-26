@@ -1051,6 +1051,7 @@ const messages: Record<string, string> = {
   'pid.responseCurve': '응답 곡선',
   'pid.actual': '실측값',
   'pid.target': '목표값',
+  'pid.rateFF': '레이트 FF',
 };
 
 

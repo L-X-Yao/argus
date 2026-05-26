@@ -1051,6 +1051,7 @@ const messages: Record<string, string> = {
   'pid.responseCurve': 'منحنى الاستجابة',
   'pid.actual': 'فعلي',
   'pid.target': 'مستهدف',
+  'pid.rateFF': 'معدل FF',
 };
 
 
