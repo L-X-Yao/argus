@@ -42,11 +42,8 @@ export function handleParamsComplete() {
   paramState.list = sorted;
 }
 
-export function updateSingleParam(name: string, value: number) {
-  const idx = nameIndex.get(name);
-  if (idx !== undefined) {
-    paramState.list[idx] = { ...paramState.list[idx], value };
-  }
+export function handleParamTimeout() {
+  paramState.fetching = false;
 }
 
 export function getParam(name: string, fallback: number): number {

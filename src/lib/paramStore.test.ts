@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { paramState, handleParamBatch, handleParamsComplete, updateSingleParam, clearParams } from './paramStore.svelte';
+import { paramState, handleParamBatch, handleParamsComplete, handleParamTimeout, getParam, clearParams } from './paramStore.svelte';
 
 beforeEach(() => {
   clearParams();
@@ -42,16 +42,33 @@ describe('handleParamsComplete', () => {
   });
 });
 
-describe('updateSingleParam', () => {
-  it('updates value by name', () => {
-    handleParamBatch([{ name: 'TEST', value: 100, ptype: 9, index: 0, total: 1, received: 1 }]);
-    updateSingleParam('TEST', 200);
-    expect(paramState.list[0].value).toBe(200);
+describe('handleParamTimeout', () => {
+  it('sets fetching false on timeout', () => {
+    handleParamBatch([{ name: 'A', value: 0, ptype: 9, index: 0, total: 10, received: 1 }]);
+    expect(paramState.fetching).toBe(true);
+    handleParamTimeout();
+    expect(paramState.fetching).toBe(false);
+  });
+});
+
+describe('getParam', () => {
+  it('returns value by name via O(1) lookup', () => {
+    handleParamBatch([{ name: 'TEST', value: 42, ptype: 9, index: 0, total: 1, received: 1 }]);
+    expect(getParam('TEST', 0)).toBe(42);
   });
 
-  it('ignores unknown param', () => {
-    updateSingleParam('NONEXISTENT', 999);
-    expect(paramState.list.length).toBe(0);
+  it('returns fallback for unknown param', () => {
+    expect(getParam('NONEXISTENT', -1)).toBe(-1);
+  });
+
+  it('works after sort', () => {
+    handleParamBatch([
+      { name: 'Z_PARAM', value: 10, ptype: 9, index: 0, total: 2, received: 1 },
+      { name: 'A_PARAM', value: 20, ptype: 9, index: 1, total: 2, received: 2 },
+    ]);
+    handleParamsComplete();
+    expect(getParam('A_PARAM', 0)).toBe(20);
+    expect(getParam('Z_PARAM', 0)).toBe(10);
   });
 });
 
@@ -95,20 +112,5 @@ describe('handleParamBatch edge cases', () => {
     expect(paramState.list.length).toBe(3);
     expect(paramState.received).toBe(3);
     expect(paramState.fetching).toBe(false);
-  });
-});
-
-describe('handleParamsComplete edge cases', () => {
-  it('rebuilds nameIndex after sort so updateSingleParam still works', () => {
-    handleParamBatch([
-      { name: 'Z_PARAM', value: 10, ptype: 9, index: 0, total: 2, received: 1 },
-      { name: 'A_PARAM', value: 20, ptype: 9, index: 1, total: 2, received: 2 },
-    ]);
-    handleParamsComplete();
-    // After sort, A_PARAM is at index 0, Z_PARAM at index 1
-    updateSingleParam('Z_PARAM', 99);
-    expect(paramState.list[1].value).toBe(99);
-    updateSingleParam('A_PARAM', 88);
-    expect(paramState.list[0].value).toBe(88);
   });
 });

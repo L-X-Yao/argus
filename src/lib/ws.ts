@@ -1,6 +1,6 @@
 import type { WSMessage } from './types';
 import { app, updateState, addEvent, setWsConnected, addToast, loadDownloadedMission } from './stores.svelte';
-import { handleParamBatch, handleParamsComplete, clearParams } from './paramStore.svelte';
+import { handleParamBatch, handleParamsComplete, handleParamTimeout, clearParams } from './paramStore.svelte';
 import { setLogList, completeDownload, updateDownloadProgress, appendLogChunk } from './logStore.svelte';
 import { updateInspector, appendConsole } from './inspectorStore.svelte';
 import { saveFlightRecord } from './flightDb';
@@ -86,6 +86,9 @@ export function connectWs(): void {
           break;
         case 'params_complete':
           handleParamsComplete();
+          break;
+        case 'param_timeout':
+          handleParamTimeout();
           break;
         case 'mission_downloaded':
           loadDownloadedMission(msg.waypoints);

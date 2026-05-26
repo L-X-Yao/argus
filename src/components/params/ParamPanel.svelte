@@ -189,7 +189,7 @@
 
   $effect(() => { filtered; visibleStart = 0; });
 
-  function startEdit(p: Param) { editName = p.name; editValue = fmtValue(p.value); }
+  function startEdit(p: Param) { editName = p.name; editValue = String(p.value); }
   function cancelEdit() { editName = null; }
 
   function submitEdit() {
@@ -224,7 +224,7 @@
 
   function exportParams() {
     if (!paramState.list.length) return;
-    const lines = paramState.list.map(p => `${p.name}\t${fmtValue(p.value)}`).join('\n');
+    const lines = paramState.list.map(p => `${p.name}\t${p.value}`).join('\n');
     const blob = new Blob([lines], { type: 'text/plain' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -240,7 +240,7 @@
     if (!diffs.length) { addToast(t('param.noChange'), 'info'); return; }
     const lines = diffs.map(p => {
       const def = getMeta()[p.name]?.default;
-      return `${p.name}\t${fmtValue(p.value)}\t# default=${def !== undefined ? def : '?'}`;
+      return `${p.name}\t${p.value}\t# default=${def !== undefined ? def : '?'}`;
     }).join('\n');
     const blob = new Blob([`# ${diffs.length} parameters differ from defaults\n${lines}\n`], { type: 'text/plain' });
     const a = document.createElement('a');
@@ -268,7 +268,7 @@
       const units = (m.units || '').replace(/,/g, ';');
       const range = m.range ? `${m.range[0]}~${m.range[1]}` : '';
       const desc = (m.human || m.desc || '').replace(/,/g, ';').replace(/\n/g, ' ');
-      return `${p.name},${fmtValue(p.value)},${def},${units},${range},"${desc}"`;
+      return `${p.name},${p.value},${def},${units},${range},"${desc}"`;
     });
     const csv = [header, ...rows].join('\n');
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });

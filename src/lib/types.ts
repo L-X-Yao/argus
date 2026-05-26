@@ -144,6 +144,11 @@ export interface ParamsCompleteMsg {
   count: number;
 }
 
+export interface ParamTimeoutMsg {
+  type: 'param_timeout';
+  missing: number;
+}
+
 export interface MissionDownloadedMsg {
   type: 'mission_downloaded';
   waypoints: Waypoint[];
@@ -189,7 +194,7 @@ export interface ConsoleOutputMsg {
 }
 
 export type WSMessage = DroneState | DroneEvent | ConnectResult
-  | ParamBatchMsg | ParamsCompleteMsg
+  | ParamBatchMsg | ParamsCompleteMsg | ParamTimeoutMsg
   | MissionDownloadedMsg
   | LogListMsg | LogProgressMsg | LogChunkMsg | LogCompleteMsg
   | InspectorMsg | ConsoleOutputMsg;
