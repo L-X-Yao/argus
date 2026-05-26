@@ -184,7 +184,7 @@
     const d = app.drone;
     if (d.connected) {
       const parts = [d.mode];
-      if (d.armed) parts.push('已解锁');
+      if (d.armed) parts.push(t('label.armed'));
       parts.push(`${d.voltage.toFixed(1)}V`);
       if (d.gps_fix) parts.push(d.gps_fix);
       let warn = '';

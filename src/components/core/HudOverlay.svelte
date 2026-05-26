@@ -50,11 +50,17 @@
     return (Math.atan2(dlon, dlat) * 180 / Math.PI + 360) % 360;
   });
 
-  const CARD_ZH = ['北', '东北', '东', '东南', '南', '西南', '西', '西北'];
+  const CARD: Record<string, string[]> = {
+    zh: ['北', '东北', '东', '东南', '南', '西南', '西', '西北'],
+    ja: ['北', '北東', '東', '南東', '南', '南西', '西', '北西'],
+    ko: ['북', '북동', '동', '남동', '남', '남서', '서', '북서'],
+    ru: ['С', 'СВ', 'В', 'ЮВ', 'Ю', 'ЮЗ', 'З', 'СЗ'],
+    ar: ['ش', 'شق', 'ق', 'جق', 'ج', 'جغ', 'غ', 'شغ'],
+  };
   const CARD_EN = ['N', 'NE', 'E', 'SE', 'S', 'SW', 'W', 'NW'];
   function cardinal(h: number): string {
     const idx = Math.round(h / 45) % 8;
-    return (i18nState.locale === 'en' ? CARD_EN : CARD_ZH)[idx];
+    return (CARD[i18nState.locale] || CARD_EN)[idx];
   }
 </script>
 

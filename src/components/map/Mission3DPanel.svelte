@@ -118,7 +118,7 @@
     <div class="bg-gradient-to-r from-primary/20 to-primary/5 px-5 py-3 flex items-center justify-between">
       <div class="flex items-center gap-2">
         <Box size={16} class="text-primary" />
-        <h3 class="text-base font-bold text-primary">3D Preview</h3>
+        <h3 class="text-base font-bold text-primary">{t('panel.mission3d')}</h3>
         <span class="text-xs text-muted-foreground">{wps.length} WP</span>
       </div>
       <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label="Close"><X size={16} /></Button>

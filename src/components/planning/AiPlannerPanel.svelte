@@ -1,5 +1,6 @@
 <script lang="ts">
   import { app, pushUndo, saveWaypoints, addToast } from '../../lib/stores.svelte';
+  import { t } from '../../lib/i18n.svelte';
   import type { Waypoint } from '../../lib/types';
   import Button from '$lib/components/ui/button/button.svelte';
   import { X, Sparkles, Send, Loader2 } from '@lucide/svelte';
@@ -135,14 +136,14 @@
     <div class="bg-gradient-to-r from-purple-500/20 to-primary/5 px-5 py-3 flex items-center justify-between shrink-0">
       <div class="flex items-center gap-2">
         <Sparkles size={16} class="text-purple-400" />
-        <h3 class="text-base font-bold text-purple-400">AI Mission Planner</h3>
+        <h3 class="text-base font-bold text-purple-400">{t('panel.aiPlanner')}</h3>
       </div>
       <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label="Close"><X size={16} /></Button>
     </div>
 
     <div class="flex-1 overflow-y-auto px-5 py-3 space-y-3">
       {#if history.length === 0}
-        <p class="text-xs text-muted-foreground mb-2">Describe a mission in natural language:</p>
+        <p class="text-xs text-muted-foreground mb-2">{t('panel.aiPlanner.desc')}</p>
         <div class="space-y-1.5">
           {#each EXAMPLES as ex}
             <button class="block w-full text-left px-3 py-2 text-xs text-muted-foreground bg-muted/50 rounded-lg hover:bg-muted transition-colors cursor-pointer border-none"
@@ -166,7 +167,7 @@
     </div>
 
     <div class="px-5 py-3 border-t border-border flex gap-2">
-      <input bind:value={prompt} placeholder="Describe your mission..."
+      <input bind:value={prompt} placeholder={t('panel.aiPlanner.placeholder')}
              class="flex-1 h-8 px-3 text-xs bg-input border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/50"
              onkeydown={(e) => { if (e.key === 'Enter') send(); }} />
       <Button variant="default" size="sm" onclick={send} disabled={loading}>

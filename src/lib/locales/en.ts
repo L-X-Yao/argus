@@ -977,6 +977,13 @@ const messages: Record<string, string> = {
   'audio.batLow': 'Low battery warning',
   'audio.batWarn': 'Battery thirty percent, plan return',
   'audio.linkDelay': 'High link latency',
+  'panel.aiPlanner': 'AI Mission Planner',
+  'panel.aiPlanner.desc': 'Describe a mission in natural language:',
+  'panel.aiPlanner.placeholder': 'Describe your mission...',
+  'panel.script': 'Script Engine',
+  'panel.script.run': 'Run',
+  'panel.script.running': 'Running...',
+  'panel.mission3d': '3D Preview',
 };
 
 

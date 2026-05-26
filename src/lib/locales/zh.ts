@@ -977,6 +977,13 @@ const messages: Record<string, string> = {
   'audio.batLow': '低电量警告',
   'audio.batWarn': '电量百分之三十，注意返航',
   'audio.linkDelay': '链路延迟过高',
+  'panel.aiPlanner': 'AI 任务规划',
+  'panel.aiPlanner.desc': '用自然语言描述任务：',
+  'panel.aiPlanner.placeholder': '描述你的任务...',
+  'panel.script': '脚本引擎',
+  'panel.script.run': '运行',
+  'panel.script.running': '运行中...',
+  'panel.mission3d': '3D 预览',
 };
 
 

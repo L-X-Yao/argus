@@ -29,7 +29,12 @@ export function speak(text: string) {
   if (!app.voiceEnabled || !('speechSynthesis' in window)) return;
   if (speechSynthesis.pending) speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
-  u.lang = i18nState.locale === 'en' ? 'en-US' : 'zh-CN';
+  const langMap: Record<string, string> = {
+    zh: 'zh-CN', en: 'en-US', ja: 'ja-JP', ko: 'ko-KR',
+    de: 'de-DE', fr: 'fr-FR', es: 'es-ES', pt: 'pt-BR',
+    ru: 'ru-RU', ar: 'ar-SA',
+  };
+  u.lang = langMap[i18nState.locale] || 'en-US';
   u.rate = 1.2;
   u.volume = 0.8;
   speechSynthesis.speak(u);

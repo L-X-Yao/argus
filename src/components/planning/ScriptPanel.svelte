@@ -1,5 +1,6 @@
 <script lang="ts">
   import { app, addToast } from '../../lib/stores.svelte';
+  import { t } from '../../lib/i18n.svelte';
   import { sendCommand } from '../../lib/ws';
   import Button from '$lib/components/ui/button/button.svelte';
   import { X, Play, Trash2, Save, FileText } from '@lucide/svelte';
@@ -92,11 +93,11 @@ log("Alt: " + drone.alt_rel + "m");
     <div class="bg-gradient-to-r from-green-500/20 to-primary/5 px-5 py-3 flex items-center justify-between shrink-0">
       <div class="flex items-center gap-2">
         <FileText size={16} class="text-green-400" />
-        <h3 class="text-base font-bold text-green-400">Script Engine</h3>
+        <h3 class="text-base font-bold text-green-400">{t('panel.script')}</h3>
       </div>
       <div class="flex items-center gap-2">
         <Button variant="default" size="sm" onclick={runScript} disabled={running}>
-          <Play size={13} class="mr-1" />{running ? 'Running...' : 'Run'}
+          <Play size={13} class="mr-1" />{running ? t('panel.script.running') : t('panel.script.run')}
         </Button>
         <Button variant="outline" size="sm" onclick={saveScript}><Save size={13} class="mr-1" />Save</Button>
         <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label="Close"><X size={16} /></Button>
