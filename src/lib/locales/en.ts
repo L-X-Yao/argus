@@ -117,6 +117,8 @@ const messages: Record<string, string> = {
   'preflight.ready': 'Ready',
   'preflight.notReady': 'Not Ready',
   'preflight.allPass': 'All critical checks passed — ready to fly',
+  'theme.dark': 'Dark',
+  'theme.light': 'Light',
   'settings.title': 'Settings',
   'settings.flightParams': 'Flight Parameters',
   'settings.safety': 'Safety',

@@ -1056,6 +1056,8 @@ const messages: Record<string, string> = {
   'poi.dronePos': 'موقع الطائرة',
   'wp.gen': 'إنشاء',
   'conn.serialLost': 'اتصال السلسلة مفقود',
+  'theme.dark': 'داكن',
+  'theme.light': 'فاتح',
 };
 
 export default messages;

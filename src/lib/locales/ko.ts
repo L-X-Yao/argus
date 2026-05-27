@@ -1056,6 +1056,8 @@ const messages: Record<string, string> = {
   'poi.dronePos': '드론 위치',
   'wp.gen': '생성',
   'conn.serialLost': '시리얼 연결 끊김',
+  'theme.dark': '다크',
+  'theme.light': '라이트',
 };
 
 export default messages;

@@ -172,7 +172,7 @@
                 saveSettings();
               }}
             >
-              {#if app.darkTheme}<Moon size={13} />Dark{:else}<Sun size={13} />Light{/if}
+              {#if app.darkTheme}<Moon size={13} />{t('theme.dark')}{:else}<Sun size={13} />{t('theme.light')}{/if}
             </Button>
           </div>
           <div class="flex justify-between items-center py-2 border-b border-border/50">

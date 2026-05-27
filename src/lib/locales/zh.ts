@@ -117,6 +117,8 @@ const messages: Record<string, string> = {
   'preflight.ready': '就绪',
   'preflight.notReady': '未就绪',
   'preflight.allPass': '所有关键项通过 — 可以飞行',
+  'theme.dark': '深色',
+  'theme.light': '浅色',
   'settings.title': '设置',
   'settings.flightParams': '飞行参数',
   'settings.safety': '安全',

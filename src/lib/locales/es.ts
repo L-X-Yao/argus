@@ -1060,6 +1060,8 @@ const messages: Record<string, string> = {
   'poi.dronePos': 'Posición del dron',
   'wp.gen': 'Generar',
   'conn.serialLost': 'Conexión serial perdida',
+  'theme.dark': 'Oscuro',
+  'theme.light': 'Claro',
 };
 
 export default messages;
