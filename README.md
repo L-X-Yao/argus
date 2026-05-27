@@ -45,7 +45,7 @@ Argus fills the gap: **open-source + web-native + protocol-agnostic + white-labe
 | **Fleet** | Multi-vehicle dashboard with live telemetry per vehicle |
 | **Video** | RTSP proxy, AR waypoint overlay, screenshot capture |
 | **HUD** | PFD (attitude/speed/altitude/compass/wind), real-time charts, EKF status |
-| **Audio** | Bilingual voice callouts (mode, battery, altitude, waypoints) |
+| **Audio** | Localized voice callouts (mode, battery, altitude, waypoints) in all 10 languages |
 | **i18n** | 10 languages (zh, en, ja, ko, de, fr, es, pt, ru, ar) + RTL |
 | **Offline** | PWA with service worker, mbtiles support, tile caching (5000-entry LRU) |
 | **Desktop** | Tauri v2 packaging (Windows MSI/NSIS installer) |
