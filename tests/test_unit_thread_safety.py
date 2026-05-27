@@ -76,6 +76,7 @@ class TestThreadSafety:
             "gps_fix_raw",
             "gps_sats",
             "wp",
+            "wp_idx",
             "vtype",
             "vtype_raw",
             "autopilot",

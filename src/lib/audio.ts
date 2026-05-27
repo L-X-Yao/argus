@@ -53,7 +53,7 @@ let linkLostBeepT = 0;
 let linkLostSpoken = false;
 let prevMode = '';
 let batWarnLevel = 0;
-let prevWp = 0;
+let prevWp = -1;
 let altPrev = 0;
 let altInit = false;
 let descentNext = Infinity;
@@ -129,11 +129,11 @@ export function checkAlerts(connected: boolean, armed: boolean, remaining: numbe
 
   checkAltCallouts(app.drone.alt_rel, armed);
 
-  const wp = app.drone.wp;
-  if (wp > prevWp && prevWp >= 1 && armed) {
-    speak(t('audio.waypoint').replace('{n}', String(prevWp - 1)));
+  const wpIdx = app.drone.wp_idx;
+  if (wpIdx > prevWp && prevWp >= 0 && armed) {
+    speak(t('audio.waypoint').replace('{n}', String(prevWp + 1)));
   }
-  prevWp = armed ? wp : 0;
+  prevWp = armed ? wpIdx : -1;
 }
 
 function checkAltCallouts(alt: number, armed: boolean) {

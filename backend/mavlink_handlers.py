@@ -520,6 +520,7 @@ def handle_mission_item_int(p: bytes, pl: int, link: DroneLink) -> None:
             "autocontinue": autocontinue,
         }
     if seq + 1 < m._dl_total:
+        m._dl_start_time = time.time()
         _request_dl_item(link, seq + 1)
     else:
         m._dl_pending = False

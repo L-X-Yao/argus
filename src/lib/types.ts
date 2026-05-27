@@ -27,6 +27,7 @@ export interface DroneState {
   gps_fix_raw: number;
   gps_sats: number;
   wp: number;
+  wp_idx: number;
   vtype: string;
   vtype_raw: number;
   // MAV_AUTOPILOT enum byte from HEARTBEAT — 3 = ArduPilot, 12 = PX4,
@@ -270,6 +271,7 @@ export const defaultState: DroneState = {
   gps_fix_raw: 0,
   gps_sats: 0,
   wp: 0,
+  wp_idx: 0,
   vtype: '',
   vtype_raw: 0,
   autopilot: 0,

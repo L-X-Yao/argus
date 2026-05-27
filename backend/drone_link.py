@@ -413,6 +413,18 @@ class DroneLink:
         with self._state_lock:
             return self._build_state()
 
+    def _wp_idx(self) -> int:
+        m = self.mission
+        seq = m.wp_seq
+        mapping = m._seq_to_wp
+        if not mapping:
+            return max(0, seq - 2)
+        best_seq = -1
+        for s in mapping:
+            if s <= seq and s > best_seq:
+                best_seq = s
+        return mapping[best_seq] if best_seq >= 0 else max(0, seq - 2)
+
     def _build_state(self) -> dict:
         md, btns, vn = self._get_vehicle_info()
         a, v, bat, g = self.attitude, self.vehicle, self.battery, self.gps
@@ -446,6 +458,7 @@ class DroneLink:
             "gps_fix_raw": g.gps_fix,
             "gps_sats": g.gps_sats,
             "wp": m.wp_seq,
+            "wp_idx": self._wp_idx(),
             "vtype": vn,
             "vtype_raw": v.vtype_raw,
             "autopilot": v.autopilot,

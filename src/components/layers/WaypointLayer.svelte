@@ -19,10 +19,9 @@
       map.removeLayer(activeWpMarker);
       activeWpMarker = null;
     }
-    const seq = app.drone.wp;
-    if (seq >= 2 && app.waypoints.length > 0) {
-      const wpIdx = seq - 2;
-      if (wpIdx >= 0 && wpIdx < app.waypoints.length) {
+    const wpIdx = app.drone.wp_idx;
+    if (wpIdx >= 0 && app.waypoints.length > 0) {
+      if (wpIdx < app.waypoints.length) {
         const wp = app.waypoints[wpIdx];
         const [glat, glon] = coord(wp.lat, wp.lon);
         activeWpMarker = L.circleMarker([glat, glon], {

@@ -50,7 +50,7 @@ def cmd_mission_set_current(link: DroneLink, param, data: dict):
             seq = s
             break
     link.send(bm(41, struct.pack("<HBB", seq, link.vehicle.sysid, 1), link.sq, 28))
-    link.add_event(lt("mission_set_current", link.locale) % seq, "mission_set_current")
+    link.add_event(lt("mission_set_current", link.locale) % (wp_index + 1), "mission_set_current")
 
 
 def cmd_mission_clear(link: DroneLink, param, data: dict):

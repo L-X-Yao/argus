@@ -7,7 +7,7 @@
   let isAutoMode = $derived(isPlane() ? d.mode_id === 10 : d.mode_id === 3);
 
   let wpCount = $derived(app.waypoints.length);
-  let currentWpIdx = $derived(Math.max(0, d.wp - 2));
+  let currentWpIdx = $derived(d.wp_idx);
   let progress = $derived(wpCount > 0 ? Math.min(100, (currentWpIdx / wpCount) * 100) : 0);
 
   let remainingDist = $derived.by(() => {
@@ -47,7 +47,7 @@
     class="absolute top-2 left-1/2 -translate-x-1/2 z-[1001] w-80 bg-card/90 backdrop-blur border border-border rounded-xl px-4 py-2 shadow-lg"
   >
     <div class="flex justify-between text-xs text-muted-foreground mb-1">
-      <span>{t('ctrl.mission')} #{d.wp}</span>
+      <span>{t('ctrl.mission')} #{d.wp_idx + 1}</span>
       <span>{currentWpIdx}/{wpCount} WP</span>
     </div>
     <div class="relative h-2 bg-muted rounded-full overflow-visible">

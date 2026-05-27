@@ -602,15 +602,15 @@
   <div class="flex items-center gap-2 mb-2">
     <h2 class="text-sm font-semibold text-primary uppercase tracking-wider">{t('wp.title')}</h2>
     <span class="text-xs text-muted-foreground">({app.waypoints.length})</span>
-    {#if app.drone.connected && app.drone.wp > 0}
-      <span class="text-[11px] text-warning ml-auto">WP #{app.drone.wp}</span>
+    {#if app.drone.connected && app.drone.wp_idx >= 0 && app.drone.wp > 0}
+      <span class="text-[11px] text-warning ml-auto">WP #{app.drone.wp_idx + 1}</span>
     {/if}
   </div>
   <div class="flex-1 overflow-y-auto max-h-72 rounded-lg border border-border/50">
     {#each app.waypoints as wp, i}
       <div
         class="flex items-center gap-1 px-1 py-1 border-b border-border/30 text-xs hover:bg-muted/50 transition-colors
-        {app.drone.wp === i + 2 ? 'bg-warning/10 border-l-2 border-l-warning pl-0.5' : ''}"
+        {app.drone.wp_idx === i ? 'bg-warning/10 border-l-2 border-l-warning pl-0.5' : ''}"
       >
         <button
           class="w-5 text-center text-primary font-bold text-[11px] hover:underline cursor-pointer bg-transparent border-none p-0"

@@ -28,8 +28,12 @@
     const halfWidth = width / 2;
     const numLines = Math.max(1, Math.floor(width / spacing) + 1);
     const offsets: number[] = [];
-    for (let i = 0; i < numLines; i++) {
-      offsets.push(-halfWidth + i * (width / (numLines - 1 || 1)));
+    if (numLines === 1) {
+      offsets.push(0);
+    } else {
+      for (let i = 0; i < numLines; i++) {
+        offsets.push(-halfWidth + i * (width / (numLines - 1)));
+      }
     }
 
     const allLines: { lat: number; lon: number }[][] = [];
