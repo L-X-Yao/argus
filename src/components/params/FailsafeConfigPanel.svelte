@@ -72,29 +72,37 @@
 
   /* ── Action option maps ── */
   // AP_BattMonitor_Params.cpp: BATT_FS_LOW_ACT values for Copter:
-  // 0=Warn only, 1=Land, 2=RTL, 3=SmartRTL or RTL, 4=SmartRTL or Land
+  // 0=Warn only, 1=Land, 2=RTL, 3=SmartRTL or RTL, 4=SmartRTL or Land, 5=Terminate
   const battActions: [number, string][] = [
     [0, 'failsafe.actionNone'],
     [1, 'failsafe.actionLand'],
     [2, 'failsafe.actionRtl'],
     [3, 'failsafe.actionSmartRtl'],
+    [4, 'failsafe.actionSmartRtlLand'],
+    [5, 'failsafe.actionTerminate'],
   ];
 
   // ArduCopter/Parameters.cpp: FS_THR_ENABLE values:
-  // 0=Disabled, 1=Always RTL, 3=Always Land, 4=SmartRTL or RTL
+  // 0=Disabled, 1=Always RTL, 2=Continue Mission in Auto, 3=Always Land,
+  // 4=SmartRTL or RTL, 5=SmartRTL or Land
   const rcActions: [number, string][] = [
     [0, 'failsafe.actionNone'],
     [1, 'failsafe.actionRtl'],
+    [2, 'failsafe.actionContinue'],
     [3, 'failsafe.actionLand'],
     [4, 'failsafe.actionSmartRtl'],
+    [5, 'failsafe.actionSmartRtlLand'],
   ];
 
   // ArduCopter/Parameters.cpp: FS_GCS_ENABLE values:
-  // 0=Disabled, 1=RTL, 3=SmartRTL or RTL, 5=Land
+  // 0=Disabled, 1=Always RTL, 2=Continue Mission in Auto,
+  // 3=SmartRTL or RTL, 4=SmartRTL or Land, 5=Always Land
   const gcsActions: [number, string][] = [
     [0, 'failsafe.actionNone'],
     [1, 'failsafe.actionRtl'],
+    [2, 'failsafe.actionContinue'],
     [3, 'failsafe.actionSmartRtl'],
+    [4, 'failsafe.actionSmartRtlLand'],
     [5, 'failsafe.actionLand'],
   ];
 
