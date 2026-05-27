@@ -4,12 +4,7 @@
   import {
     isSerialConnected,
     serialDownloadMission,
-    serialClearMission,
-    serialCalCompass,
-    serialCalGyro,
-    serialCalLevel,
-    serialCalAccel,
-    flightCmd,
+    dispatch,
   } from '../../lib/transport';
   import { t, i18nState, setLocale } from '../../lib/i18n.svelte';
   import { isPlane, saveSettings, showSlide, showConfirm } from '../../lib/stores.svelte';
@@ -124,7 +119,7 @@
         category: t('cmd.catFlight'),
         shortcut: 'A',
         icon: Zap,
-        handler: () => showSlide(t('slide.arm'), 'orange', () => flightCmd('arm')),
+        handler: () => showSlide(t('slide.arm'), 'orange', () => dispatch('arm')),
         available: connected && !d.armed,
       },
       {
@@ -133,7 +128,7 @@
         category: t('cmd.catFlight'),
         shortcut: 'D',
         icon: Zap,
-        handler: () => flightCmd('disarm'),
+        handler: () => dispatch('disarm'),
         available: connected && d.armed,
       },
       {
@@ -141,7 +136,7 @@
         label: t('ctrl.forceDisarm'),
         category: t('cmd.catFlight'),
         icon: ShieldAlert,
-        handler: () => showSlide(t('slide.forceDisarm'), 'red', () => flightCmd('force_disarm')),
+        handler: () => showSlide(t('slide.forceDisarm'), 'red', () => dispatch('force_disarm')),
         available: connected && d.armed,
       },
       {
@@ -151,7 +146,7 @@
         icon: Play,
         handler: () =>
           showSlide(`${t('slide.takeoff')} ${app.defaultAlt}m`, 'teal', () =>
-            flightCmd('takeoff', undefined, { alt: app.defaultAlt }),
+            dispatch('takeoff', undefined, { alt: app.defaultAlt }),
           ),
         available: connected && d.armed,
       },
@@ -161,7 +156,7 @@
         category: t('cmd.catFlight'),
         shortcut: 'R',
         icon: CornerDownLeft,
-        handler: () => showSlide(t('slide.rtl'), 'red', () => flightCmd('rtl')),
+        handler: () => showSlide(t('slide.rtl'), 'red', () => dispatch('rtl')),
         available: connected,
       },
       {
@@ -170,7 +165,7 @@
         category: t('cmd.catFlight'),
         shortcut: 'Space',
         icon: Pause,
-        handler: () => flightCmd('mode', isPlane() ? 19 : 5),
+        handler: () => dispatch('mode', isPlane() ? 19 : 5),
         available: connected,
       },
       {
@@ -178,7 +173,7 @@
         label: t('ctrl.startMission'),
         category: t('cmd.catFlight'),
         icon: Play,
-        handler: () => showSlide(t('slide.mission'), 'blue', () => flightCmd('mission_start')),
+        handler: () => showSlide(t('slide.mission'), 'blue', () => dispatch('mission_start')),
         available: connected,
       },
       {
@@ -186,7 +181,7 @@
         label: t('ctrl.land'),
         category: t('cmd.catFlight'),
         icon: Download,
-        handler: () => flightCmd('mode', isPlane() ? 20 : 9),
+        handler: () => dispatch('mode', isPlane() ? 20 : 9),
         available: connected && d.armed,
       },
 
@@ -226,7 +221,7 @@
         icon: Trash2,
         handler: () =>
           showConfirm(t('ctrl.clearMission') + '?', true).then(
-            (ok) => ok && (isSerialConnected() ? serialClearMission() : sendCommand('mission_clear')),
+            (ok) => ok && (dispatch('mission_clear')),
           ),
         available: connected,
       },
@@ -238,7 +233,7 @@
         icon: Download,
         handler: () => {
           onnavigate('params');
-          flightCmd('param_request_all');
+          dispatch('param_request_all');
         },
         available: connected,
       },
@@ -258,7 +253,7 @@
         icon: Compass,
         handler: () => {
           openPanel('calibration');
-          isSerialConnected() ? serialCalCompass() : sendCommand('cal_compass');
+          dispatch('cal_compass');
         },
         available: connected,
       },
@@ -269,7 +264,7 @@
         icon: Gauge,
         handler: () => {
           openPanel('calibration');
-          isSerialConnected() ? serialCalAccel() : sendCommand('cal_accel');
+          dispatch('cal_accel');
         },
         available: connected,
       },
@@ -280,7 +275,7 @@
         icon: RotateCcw,
         handler: () => {
           openPanel('calibration');
-          isSerialConnected() ? serialCalGyro() : sendCommand('cal_gyro');
+          dispatch('cal_gyro');
         },
         available: connected,
       },
@@ -291,7 +286,7 @@
         icon: Navigation,
         handler: () => {
           openPanel('calibration');
-          isSerialConnected() ? serialCalLevel() : sendCommand('cal_level');
+          dispatch('cal_level');
         },
         available: connected,
       },
@@ -621,7 +616,7 @@
         label: t('fw.rebootNormal'),
         category: t('cmd.catConn'),
         icon: RotateCcw,
-        handler: () => flightCmd('reboot'),
+        handler: () => dispatch('reboot'),
         available: connected,
       },
     ];
@@ -633,7 +628,7 @@
           label: modeName,
           category: t('ctrl.mode'),
           icon: Plane,
-          handler: () => flightCmd('mode', modeId),
+          handler: () => dispatch('mode', modeId),
           available: true,
         });
       }

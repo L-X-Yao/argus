@@ -1,6 +1,6 @@
 <script lang="ts">
   import { app, addToast, isPlane } from '../../lib/stores.svelte';
-  import { flightCmd } from '../../lib/transport';
+  import { dispatch } from '../../lib/transport';
   import { paramState, getParam } from '../../lib/paramStore.svelte';
   import { t } from '../../lib/i18n.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
@@ -27,15 +27,15 @@
 
   function start() {
     if (axes !== 0) {
-      flightCmd('param_set', undefined, { name: 'AUTOTUNE_AXES', value: axes });
+      dispatch('param_set', undefined, { name: 'AUTOTUNE_AXES', value: axes });
     }
-    flightCmd('mode', isPlane() ? AUTOTUNE_MODE_PLANE : AUTOTUNE_MODE_COPTER);
+    dispatch('mode', isPlane() ? AUTOTUNE_MODE_PLANE : AUTOTUNE_MODE_COPTER);
     addToast(t('autotune.start'), 'info');
   }
 
   function stop() {
     // Plane: 19=QLoiter, Copter: 5=Loiter — safe hover modes to exit AutoTune
-    flightCmd('mode', isPlane() ? 19 : 5);
+    dispatch('mode', isPlane() ? 19 : 5);
     addToast(t('autotune.stop'), 'info');
   }
 

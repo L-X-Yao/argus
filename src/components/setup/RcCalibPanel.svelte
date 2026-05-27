@@ -1,7 +1,7 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import { app, addToast } from '../../lib/stores.svelte';
-  import { flightCmd } from '../../lib/transport';
+  import { dispatch } from '../../lib/transport';
   import { t } from '../../lib/i18n.svelte';
   import { X, Radio, ChevronRight } from '@lucide/svelte';
   import Button from '$lib/components/ui/button/button.svelte';
@@ -80,10 +80,10 @@
     for (let i = 0; i < CH_COUNT; i++) {
       const ch = i + 1;
       const rev = reversed[i];
-      flightCmd('param_set', undefined, { name: `RC${ch}_MIN`, value: rev ? maxValues[i] : minValues[i] });
-      flightCmd('param_set', undefined, { name: `RC${ch}_MAX`, value: rev ? minValues[i] : maxValues[i] });
-      flightCmd('param_set', undefined, { name: `RC${ch}_TRIM`, value: trimValues[i] });
-      flightCmd('param_set', undefined, { name: `RC${ch}_REVERSED`, value: rev ? 1 : 0 });
+      dispatch('param_set', undefined, { name: `RC${ch}_MIN`, value: rev ? maxValues[i] : minValues[i] });
+      dispatch('param_set', undefined, { name: `RC${ch}_MAX`, value: rev ? minValues[i] : maxValues[i] });
+      dispatch('param_set', undefined, { name: `RC${ch}_TRIM`, value: trimValues[i] });
+      dispatch('param_set', undefined, { name: `RC${ch}_REVERSED`, value: rev ? 1 : 0 });
     }
     writing = false;
     const revCount = reversed.filter((r) => r).length;

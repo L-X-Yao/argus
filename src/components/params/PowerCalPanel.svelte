@@ -1,6 +1,6 @@
 <script lang="ts">
   import { app, addToast } from '../../lib/stores.svelte';
-  import { flightCmd } from '../../lib/transport';
+  import { dispatch } from '../../lib/transport';
   import { getParam } from '../../lib/paramStore.svelte';
   import { t } from '../../lib/i18n.svelte';
   import { X, Battery, Zap } from '@lucide/svelte';
@@ -9,7 +9,7 @@
   let { onclose }: { onclose: () => void } = $props();
 
   function writeParam(name: string, value: number) {
-    flightCmd('param_set', undefined, { name, value });
+    dispatch('param_set', undefined, { name, value });
     addToast(t('power.saved'), 'success');
   }
 

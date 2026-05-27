@@ -1,7 +1,7 @@
 <script lang="ts">
   import { untrack } from 'svelte';
   import { app } from '../../lib/stores.svelte';
-  import { sendCommand } from '../../lib/ws';
+  import { dispatch } from '../../lib/transport';
   import { isSerialConnected, serialCalCompass } from '../../lib/transport';
   import { t } from '../../lib/i18n.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
@@ -95,7 +95,7 @@
 
   function startCal() {
     if (isSerialConnected()) serialCalCompass();
-    else sendCommand('cal_compass');
+    else dispatch('cal_compass');
   }
   function clearSamples() {
     samples = [];

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { app, addToast } from '../../lib/stores.svelte';
-  import { sendCommand } from '../../lib/ws';
+  import { dispatch } from '../../lib/transport';
   import { t } from '../../lib/i18n.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
   import { X, AlertTriangle, ChevronRight } from '@lucide/svelte';
@@ -13,7 +13,7 @@
   function safeClose() {
     if (step > 0 && step < 5) {
       const channels = Array(8).fill(0);
-      sendCommand('rc_override', undefined, { channels });
+      dispatch('rc_override', undefined, { channels });
     }
     step = 0;
     _onclose();
@@ -22,19 +22,19 @@
 
   function setMax() {
     const channels = Array(8).fill(2000);
-    sendCommand('rc_override', undefined, { channels });
+    dispatch('rc_override', undefined, { channels });
     step = 2;
   }
 
   function setMin() {
     const channels = Array(8).fill(1000);
-    sendCommand('rc_override', undefined, { channels });
+    dispatch('rc_override', undefined, { channels });
     step = 4;
   }
 
   function release() {
     const channels = Array(8).fill(0);
-    sendCommand('rc_override', undefined, { channels });
+    dispatch('rc_override', undefined, { channels });
     addToast(t('esccal.title') + ' OK', 'success');
     step = 5;
   }
@@ -125,7 +125,7 @@
             onclick={() => {
               step = 0;
               const ch = Array(8).fill(0);
-              sendCommand('rc_override', undefined, { channels: ch });
+              dispatch('rc_override', undefined, { channels: ch });
             }}
           >
             {t('rccal.reset')}

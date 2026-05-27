@@ -1,59 +1,8 @@
 <script lang="ts">
   import { app } from '../../lib/stores.svelte';
-  import { sendCommand } from '../../lib/ws';
-  import {
-    isSerialConnected,
-    serialCalCompass,
-    serialCalCompassAccept,
-    serialCalCancel,
-    serialCalGyro,
-    serialCalLevel,
-    serialCalBaro,
-    serialCalAccel,
-    serialCalAccelNext,
-  } from '../../lib/transport';
+  import { dispatch } from '../../lib/transport';
   import { API_BASE } from '../../lib/backend';
   import { t } from '../../lib/i18n.svelte';
-
-  // Branch dispatch between WS backend and direct WebSerial. Both paths
-  // produce identical wire bytes — the WebSerial impls mirror backend
-  // commands in backend/commands/_setup.py. accel_next in particular uses
-  // the AP_AccelCal ACK reinterpretation cited in protocol_design.md #1.
-  function dispatchCal(cmd: string): void {
-    if (!isSerialConnected()) {
-      sendCommand(cmd);
-      return;
-    }
-    switch (cmd) {
-      case 'cal_compass':
-        serialCalCompass();
-        return;
-      case 'cal_compass_accept':
-        serialCalCompassAccept();
-        return;
-      case 'cal_cancel':
-        serialCalCancel();
-        return;
-      case 'cal_gyro':
-        serialCalGyro();
-        return;
-      case 'cal_level':
-        serialCalLevel();
-        return;
-      case 'cal_baro':
-        serialCalBaro();
-        return;
-      case 'cal_accel':
-        serialCalAccel();
-        return;
-      case 'cal_accel_next':
-        serialCalAccelNext();
-        return;
-      default:
-        sendCommand(cmd);
-        return;
-    }
-  }
   import Button from '$lib/components/ui/button/button.svelte';
   import Badge from '$lib/components/ui/badge/badge.svelte';
   import { X, Compass, Move3d, RotateCw, AlignHorizontalSpaceAround, Thermometer, ChevronRight } from '@lucide/svelte';
@@ -261,7 +210,7 @@
     if (selected === 'compass') {
       if (compassParsed.done) {
         calibrating = false;
-        dispatchCal('cal_compass_accept');
+        dispatch('cal_compass_accept');
       } else if (compassParsed.failed) {
         calibrating = false;
       }
@@ -286,11 +235,11 @@
     // offset — that would let events from a just-cancelled prior cal leak in.
     calRunStartTime = nowHMS();
     calibrating = true;
-    dispatchCal(ct.cmd);
+    dispatch(ct.cmd);
   }
 
   function cancelCal() {
-    dispatchCal('cal_cancel');
+    dispatch('cal_cancel');
     calibrating = false;
     calRunStartTime = '';
   }
@@ -405,7 +354,7 @@
                 class="p-2.5 rounded-lg bg-primary/10 border border-primary/20 mb-3 flex items-center justify-between gap-2"
               >
                 <p class="text-xs text-primary font-medium">{t(ao.hint)}，{t('cal.holdStill')}</p>
-                <Button variant="default" size="sm" class="shrink-0" onclick={() => dispatchCal('cal_accel_next')}>
+                <Button variant="default" size="sm" class="shrink-0" onclick={() => dispatch('cal_accel_next')}>
                   <ChevronRight size={14} class="mr-1" />{t('cal.accelNext')}
                 </Button>
               </div>

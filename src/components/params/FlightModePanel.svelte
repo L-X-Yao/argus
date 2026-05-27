@@ -1,6 +1,6 @@
 <script lang="ts">
   import { app, addToast, isPlane } from '../../lib/stores.svelte';
-  import { flightCmd } from '../../lib/transport';
+  import { dispatch } from '../../lib/transport';
   import { paramState, getParam } from '../../lib/paramStore.svelte';
   import { t } from '../../lib/i18n.svelte';
   import { X, Plane } from '@lucide/svelte';
@@ -97,7 +97,7 @@
       ['FLTMODE4', slot4], ['FLTMODE5', slot5], ['FLTMODE6', slot6],
     ];
     for (const [name, value] of pairs) {
-      flightCmd('param_set', undefined, { name, value });
+      dispatch('param_set', undefined, { name, value });
     }
     addToast(t('fltmode.saved'), 'success');
   }

@@ -1,4 +1,4 @@
-import { sendCommand } from './ws';
+import { dispatch } from './transport';
 import { app } from './stores.svelte';
 
 export interface ChannelMap {
@@ -117,7 +117,7 @@ function poll() {
   const thr = 1500 + Math.round(axes[m.throttle] * (m.invertThrottle ? -500 : 500));
   const yaw = 1500 + Math.round(axes[m.yaw] * (m.invertYaw ? -500 : 500));
 
-  sendCommand('rc_override', undefined, {
+  dispatch('rc_override', undefined, {
     channels: [roll, pitch, thr, yaw, 0, 0, 0, 0],
   });
 }

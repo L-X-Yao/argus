@@ -1,18 +1,18 @@
 <script lang="ts">
   import { app, showSlide, isPlane } from '../../lib/stores.svelte';
-  import { flightCmd } from '../../lib/transport';
+  import { dispatch } from '../../lib/transport';
   import { t } from '../../lib/i18n.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
   import Badge from '$lib/components/ui/badge/badge.svelte';
 
   function rtl() {
-    showSlide(t('slide.rtl'), 'red', () => flightCmd('rtl'));
+    showSlide(t('slide.rtl'), 'red', () => dispatch('rtl'));
   }
   function pause() {
-    flightCmd('mode', isPlane() ? 19 : 5);
+    dispatch('mode', isPlane() ? 19 : 5);
   }
   function forceDisarm() {
-    showSlide(t('slide.forceDisarm'), 'red', () => flightCmd('force_disarm'));
+    showSlide(t('slide.forceDisarm'), 'red', () => dispatch('force_disarm'));
   }
 
   function fmtTime(s: number): string {
@@ -42,10 +42,10 @@
         <Button
           size="xs"
           class="bg-orange-700 hover:bg-orange-800 text-white"
-          onclick={() => showSlide(t('slide.arm'), 'orange', () => flightCmd('arm'))}>{t('ctrl.arm')}</Button
+          onclick={() => showSlide(t('slide.arm'), 'orange', () => dispatch('arm'))}>{t('ctrl.arm')}</Button
         >
       {:else}
-        <Button size="xs" class="bg-green-700 hover:bg-green-800 text-white" onclick={() => flightCmd('disarm')}
+        <Button size="xs" class="bg-green-700 hover:bg-green-800 text-white" onclick={() => dispatch('disarm')}
           >{t('ctrl.disarm')}</Button
         >
       {/if}
@@ -58,7 +58,7 @@
         <Button
           variant={app.drone.mode_id === id ? 'default' : 'outline'}
           size="xs"
-          onclick={() => flightCmd('mode', id)}>{name}</Button
+          onclick={() => dispatch('mode', id)}>{name}</Button
         >
       {/each}
     </div>

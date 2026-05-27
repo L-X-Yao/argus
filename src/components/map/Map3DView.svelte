@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import { app, addWaypoint, deleteWaypoint, saveWaypoints, addToast, showConfirm } from '../../lib/stores.svelte';
-  import { flightCmd } from '../../lib/transport';
+  import { dispatch } from '../../lib/transport';
   import { toGcj, toWgs } from '../../lib/gcj02';
   import { t } from '../../lib/i18n.svelte';
   import { API_BASE } from '../../lib/backend';
@@ -282,7 +282,7 @@
         return;
       }
       if (app.guidedMode && app.drone.connected && app.drone.armed) {
-        flightCmd('guided_goto', undefined, { lat: wlat, lon: wlon, alt: app.defaultAlt });
+        dispatch('guided_goto', undefined, { lat: wlat, lon: wlon, alt: app.defaultAlt });
         addToast(`${t('map.guided')} → ${wlat.toFixed(5)}, ${wlon.toFixed(5)}`, 'info');
         return;
       }
@@ -307,7 +307,7 @@
       const msg = `${t('confirm.guidedGoto')}\n${wlat.toFixed(5)}, ${wlon.toFixed(5)}\n${t('ctrl.altitude')}: ${app.defaultAlt}m`;
       showConfirm(msg).then((ok) => {
         if (!ok) return;
-        flightCmd('guided_goto', undefined, { lat: wlat, lon: wlon, alt: app.defaultAlt });
+        dispatch('guided_goto', undefined, { lat: wlat, lon: wlon, alt: app.defaultAlt });
         addToast(`${t('map.guided')} → ${wlat.toFixed(5)}, ${wlon.toFixed(5)}`, 'info');
       });
     });

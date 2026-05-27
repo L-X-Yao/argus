@@ -1,6 +1,6 @@
 <script lang="ts">
   import { app, addToast } from '../../lib/stores.svelte';
-  import { flightCmd } from '../../lib/transport';
+  import { dispatch } from '../../lib/transport';
   import { t } from '../../lib/i18n.svelte';
   import { paramState, getParam } from '../../lib/paramStore.svelte';
   import { X, Sliders } from '@lucide/svelte';
@@ -73,7 +73,7 @@
 
   function onSliderChange(paramName: string, newVal: number) {
     values[paramName] = newVal;
-    flightCmd('param_set', undefined, { name: paramName, value: newVal });
+    dispatch('param_set', undefined, { name: paramName, value: newVal });
   }
 
   /* ── Input field change handler (typed value) ── */
@@ -150,7 +150,7 @@
   /* ── Save to flash ── */
 
   function saveToFlash() {
-    flightCmd('param_save');
+    dispatch('param_save');
     addToast(t('pid.saved'), 'success');
   }
 </script>

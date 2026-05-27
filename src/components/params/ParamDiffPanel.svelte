@@ -1,6 +1,6 @@
 <script lang="ts">
   import { addToast } from '../../lib/stores.svelte';
-  import { flightCmd } from '../../lib/transport';
+  import { dispatch } from '../../lib/transport';
   import { paramState } from '../../lib/paramStore.svelte';
   import { t } from '../../lib/i18n.svelte';
   import { X, Upload, ArrowRight, Check } from '@lucide/svelte';
@@ -130,7 +130,7 @@
   }
 
   function applyOne(name: string, value: number) {
-    flightCmd('param_set', undefined, { name, value });
+    dispatch('param_set', undefined, { name, value });
     applied.add(name);
     applied = new Set(applied);
     addToast(`${name} = ${value}`, 'info', 2000);
@@ -140,7 +140,7 @@
     let count = 0;
     for (const row of allRows) {
       if (row.status === 'diff' && row.file !== undefined && !applied.has(row.name)) {
-        flightCmd('param_set', undefined, { name: row.name, value: row.file });
+        dispatch('param_set', undefined, { name: row.name, value: row.file });
         applied.add(row.name);
         count++;
       }

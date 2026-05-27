@@ -1,6 +1,6 @@
 <script lang="ts">
   import { app, addToast } from '../../lib/stores.svelte';
-  import { flightCmd } from '../../lib/transport';
+  import { dispatch } from '../../lib/transport';
   import { t } from '../../lib/i18n.svelte';
   import { paramState } from '../../lib/paramStore.svelte';
   import { X } from '@lucide/svelte';
@@ -80,9 +80,9 @@
   /* ── Write to FC ── */
 
   function writeFrame() {
-    flightCmd('param_set', undefined, { name: 'FRAME_CLASS', value: selectedClass });
+    dispatch('param_set', undefined, { name: 'FRAME_CLASS', value: selectedClass });
     if (showTypeGrid) {
-      flightCmd('param_set', undefined, { name: 'FRAME_TYPE', value: selectedType });
+      dispatch('param_set', undefined, { name: 'FRAME_TYPE', value: selectedType });
     }
     addToast(t('frame.saved'), 'success');
   }

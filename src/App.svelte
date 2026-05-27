@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount } from 'svelte';
   import { connectWs, sendCommand } from './lib/ws';
-  import { flightCmd } from './lib/transport';
+  import { dispatch } from './lib/transport';
   import { app, loadSettings, saveSettings, isPlane, addToast } from './lib/stores.svelte';
   import { checkAlerts, beep, speak } from './lib/audio';
   import { t, loadLocale, i18nState } from './lib/i18n.svelte';
@@ -254,12 +254,12 @@
     const k = e.key.toLowerCase();
     if (k === ' ') {
       e.preventDefault();
-      flightCmd('mode', isPlane() ? 19 : 5);
+      dispatch('mode', isPlane() ? 19 : 5);
     } else if (k === 'r') {
-      showConfirm(t('slide.rtl') + '?', true).then((ok) => ok && flightCmd('rtl'));
+      showConfirm(t('slide.rtl') + '?', true).then((ok) => ok && dispatch('rtl'));
     } else if (k === 'a') {
-      showConfirm(t('slide.arm') + '?', true).then((ok) => ok && flightCmd('arm'));
-    } else if (k === 'd') flightCmd('disarm');
+      showConfirm(t('slide.arm') + '?', true).then((ok) => ok && dispatch('arm'));
+    } else if (k === 'd') dispatch('disarm');
     else if (k === 'l') {
       app.darkTheme = !app.darkTheme;
       saveSettings();
@@ -287,7 +287,7 @@
     } else if (k >= '1' && k <= '9') {
       const btns = app.drone.mode_btns;
       const idx = parseInt(k) - 1;
-      if (idx < btns.length) flightCmd('mode', btns[idx][0]);
+      if (idx < btns.length) dispatch('mode', btns[idx][0]);
     }
   }
 
@@ -363,7 +363,7 @@
         <Button
           size="sm"
           class="bg-red-600 hover:bg-red-700 text-white font-bold gap-1"
-          onclick={() => showSlide(t('slide.rtl'), 'red', () => flightCmd('rtl'))}
+          onclick={() => showSlide(t('slide.rtl'), 'red', () => dispatch('rtl'))}
           title="{t('ctrl.rtl')} (R)"
         >
           <CornerDownLeft size={13} />{t('nav.rtl')}
@@ -371,7 +371,7 @@
         <Button
           size="sm"
           class="bg-amber-600 hover:bg-amber-700 text-white font-bold gap-1"
-          onclick={() => flightCmd('mode', isPlane() ? 19 : 5)}
+          onclick={() => dispatch('mode', isPlane() ? 19 : 5)}
           title="{t('ctrl.pause')} (Space)"
         >
           <Pause size={13} />{t('nav.pause')}

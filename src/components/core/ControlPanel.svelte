@@ -12,8 +12,7 @@
   import {
     isSerialConnected,
     serialDownloadMission,
-    serialClearMission,
-    flightCmd,
+    dispatch,
   } from '../../lib/transport';
   import { t } from '../../lib/i18n.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
@@ -75,36 +74,36 @@
   );
 
   function arm() {
-    showSlide(t('slide.arm'), 'orange', () => flightCmd('arm'));
+    showSlide(t('slide.arm'), 'orange', () => dispatch('arm'));
   }
   function disarm() {
-    flightCmd('disarm');
+    dispatch('disarm');
   }
   function rtl() {
-    showSlide(t('slide.rtl'), 'red', () => flightCmd('rtl'));
+    showSlide(t('slide.rtl'), 'red', () => dispatch('rtl'));
   }
   function forceDisarm() {
-    showSlide(t('slide.forceDisarm'), 'red', () => flightCmd('force_disarm'));
+    showSlide(t('slide.forceDisarm'), 'red', () => dispatch('force_disarm'));
   }
   function pauseMode() {
-    flightCmd('mode', isPlane() ? 19 : 5);
+    dispatch('mode', isPlane() ? 19 : 5);
   }
   function takeoff() {
     showSlide(`${t('slide.takeoff')} ${app.defaultAlt}m`, 'teal', () =>
-      flightCmd('takeoff', undefined, { alt: app.defaultAlt }),
+      dispatch('takeoff', undefined, { alt: app.defaultAlt }),
     );
   }
   function startMission() {
-    showSlide(t('slide.mission'), 'blue', () => flightCmd('mission_start'));
+    showSlide(t('slide.mission'), 'blue', () => dispatch('mission_start'));
   }
   async function drop() {
-    if (await showConfirm(t('ctrl.drop') + '?', true)) flightCmd('drop');
+    if (await showConfirm(t('ctrl.drop') + '?', true)) dispatch('drop');
   }
   function adjustAlt(delta: number) {
     const d = app.drone;
     if (!d.connected || !d.armed || d.lat === 0) return;
     const newAlt = Math.max(5, Math.round(d.alt_rel + delta));
-    flightCmd('guided_goto', undefined, { lat: d.lat, lon: d.lon, alt: newAlt });
+    dispatch('guided_goto', undefined, { lat: d.lat, lon: d.lon, alt: newAlt });
     addToast(`${t('ctrl.altitude')} → ${newAlt}m`, 'info', 2000);
   }
 </script>
@@ -127,7 +126,7 @@
           variant={app.drone.mode_id === id ? 'default' : 'secondary'}
           size="sm"
           class="w-full justify-start"
-          onclick={() => flightCmd('mode', id)}>{name}</Button
+          onclick={() => dispatch('mode', id)}>{name}</Button
         >
       {/each}
     </div>
@@ -157,7 +156,7 @@
       class="w-full"
       onclick={async () => {
         if (await showConfirm(t('ctrl.clearMission') + '?'))
-          isSerialConnected() ? serialClearMission() : sendCommand('mission_clear');
+          dispatch('mission_clear');
       }}>{t('ctrl.clearMission')}</Button
     >
   {:else if phase === 'ground'}
@@ -197,7 +196,7 @@
           variant={app.drone.mode_id === id ? 'default' : 'secondary'}
           size="sm"
           class="w-full justify-start"
-          onclick={() => flightCmd('mode', id)}>{name}</Button
+          onclick={() => dispatch('mode', id)}>{name}</Button
         >
       {/each}
     </div>
@@ -225,7 +224,7 @@
       <Button size="sm" class="flex-1 bg-orange-700 hover:bg-orange-800 text-white font-bold" onclick={drop}>
         <Package size={12} />{t('ctrl.drop')}
       </Button>
-      <Button size="sm" variant="secondary" class="flex-1" onclick={() => flightCmd('drop_stop')}
+      <Button size="sm" variant="secondary" class="flex-1" onclick={() => dispatch('drop_stop')}
         >{t('ctrl.dropStop')}</Button
       >
     </div>
@@ -236,7 +235,7 @@
           variant={app.drone.mode_id === id ? 'default' : 'secondary'}
           size="sm"
           class="w-full justify-start"
-          onclick={() => flightCmd('mode', id)}>{name}</Button
+          onclick={() => dispatch('mode', id)}>{name}</Button
         >
       {/each}
     </div>
@@ -255,7 +254,7 @@
       <Button size="sm" class="flex-1 bg-orange-700 hover:bg-orange-800 text-white font-bold" onclick={drop}
         >{t('ctrl.drop')}</Button
       >
-      <Button size="sm" variant="secondary" class="flex-1" onclick={() => flightCmd('drop_stop')}
+      <Button size="sm" variant="secondary" class="flex-1" onclick={() => dispatch('drop_stop')}
         >{t('ctrl.dropStop')}</Button
       >
     </div>
@@ -266,7 +265,7 @@
           variant={app.drone.mode_id === id ? 'default' : 'secondary'}
           size="sm"
           class="w-full justify-start"
-          onclick={() => flightCmd('mode', id)}>{name}</Button
+          onclick={() => dispatch('mode', id)}>{name}</Button
         >
       {/each}
     </div>
@@ -280,7 +279,7 @@
     <Button
       size="sm"
       class="w-full bg-teal-700 hover:bg-teal-800 text-white gap-1.5"
-      onclick={() => flightCmd('mode', isPlane() ? 20 : 9)}
+      onclick={() => dispatch('mode', isPlane() ? 20 : 9)}
     >
       <ArrowDown size={14} />{t('ctrl.land')}
     </Button>

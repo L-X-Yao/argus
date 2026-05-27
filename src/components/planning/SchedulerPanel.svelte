@@ -1,6 +1,6 @@
 <script lang="ts">
   import { addToast, showConfirm } from '../../lib/stores.svelte';
-  import { sendCommand } from '../../lib/ws';
+  import { dispatch } from '../../lib/transport';
   import { t } from '../../lib/i18n.svelte';
   import { X, Clock, Calendar, Play, Trash2 } from '@lucide/svelte';
   import Button from '$lib/components/ui/button/button.svelte';
@@ -109,7 +109,7 @@
     if (!ok) return;
     sched.status = 'active';
     persist();
-    sendCommand('mission_start');
+    dispatch('mission_start');
     addToast(t('sched.started'), 'success');
   }
 

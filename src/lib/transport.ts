@@ -272,39 +272,78 @@ export function serialSendCommandLong(command: number, p1 = 0, p2 = 0, p3 = 0, p
 }
 
 /**
- * Unified flight command dispatcher — routes through WebSerial when
- * USB-connected, otherwise falls back to the WebSocket backend.
- * Import this instead of calling sendCommand() for flight-critical ops.
+ * Serial command dispatch table. Each entry maps a command name to a
+ * function that sends it via WebSerial MAVLink. Commands not in this
+ * table fall through to the WebSocket backend. Adding a new serial-
+ * capable command = one line here, no switch/case to maintain.
  */
-export function flightCmd(name: string, param?: number, data?: Record<string, unknown>): void {
-  if (isSerialConnected()) {
-    switch (name) {
-      case 'arm': serialSendArm(); return;
-      case 'disarm': serialSendDisarm(); return;
-      case 'force_disarm': serialSendCommandLong(400, 0, 21196); return;
-      case 'mode': serialSendMode(param!); return;
-      case 'rtl': serialSendMode(_isPlane() ? 11 : 6); return;
-      case 'takeoff': serialSendCommandLong(22, 0, 0, 0, 0, 0, 0, (data?.alt as number) ?? 30); return;
-      case 'mission_start': serialSendMode(_isPlane() ? 10 : 3); return;
-      case 'drop': serialSendCommandLong(181, 0, 0); return;
-      case 'drop_stop': serialSendCommandLong(181, 0, 1); return;
-      case 'guided_goto':
-        serialSendCommandLong(192, 0, 0, 0, 0,
-          (data?.lat as number) ?? 0, (data?.lon as number) ?? 0, (data?.alt as number) ?? 30);
-        return;
-      case 'param_set':
-        serialSendParamSet(data?.name as string, data?.value as number);
-        return;
-      case 'param_request_all': serialSendParamRequestAll(); return;
-      // MAV_CMD_PREFLIGHT_STORAGE p1=1 = save params to flash
-      case 'param_save': serialSendCommandLong(245, 1); return;
-      // MAV_CMD_PREFLIGHT_REBOOT_SHUTDOWN p1=1 = reboot autopilot
-      case 'reboot': serialSendCommandLong(246, 1); return;
-      case 'reboot_bootloader': serialSendCommandLong(246, 3); return;
+type CmdHandler = (param?: number, data?: Record<string, unknown>) => void;
+const _serialDispatch: Record<string, CmdHandler> = {
+  arm: () => serialSendArm(),
+  disarm: () => serialSendDisarm(),
+  force_disarm: () => serialSendCommandLong(400, 0, 21196),
+  mode: (p) => serialSendMode(p!),
+  rtl: () => serialSendMode(_isPlane() ? 11 : 6),
+  takeoff: (_, d) => serialSendCommandLong(22, 0, 0, 0, 0, 0, 0, (d?.alt as number) ?? 30),
+  mission_start: () => serialSendMode(_isPlane() ? 10 : 3),
+  mission_clear: () => serialClearMission(),
+  mission_set_current: (_, d) => serialMissionSetCurrent((d?.wp_index as number) ?? 0),
+  drop: () => serialSendCommandLong(181, 0, 0),
+  drop_stop: () => serialSendCommandLong(181, 0, 1),
+  guided_goto: (_, d) => serialSendCommandLong(192, 0, 0, 0, 0,
+    (d?.lat as number) ?? 0, (d?.lon as number) ?? 0, (d?.alt as number) ?? 30),
+  do_set_roi: (_, d) => serialSendCommandLong(197, 0, 0, 0, 0,
+    (d?.lat as number) ?? 0, (d?.lon as number) ?? 0, (d?.alt as number) ?? 0),
+  param_set: (_, d) => serialSendParamSet(d?.name as string, d?.value as number),
+  param_request_all: () => serialSendParamRequestAll(),
+  param_save: () => serialSendCommandLong(245, 1),
+  reboot: () => serialSendCommandLong(246, 1),
+  reboot_bootloader: () => serialSendCommandLong(246, 3),
+  rc_override: (_, d) => {
+    const ch = d?.channels as number[];
+    if (ch) {
+      const payload = new Uint8Array(18);
+      const dv = new DataView(payload.buffer);
+      for (let i = 0; i < 8; i++) dv.setUint16(i * 2, ch[i] ?? 0, true);
+      dv.setUint8(16, serial.targetSysId);
+      dv.setUint8(17, serial.targetCompId);
+      sendSerialFrame(70, payload);
     }
+  },
+  cal_compass: () => serialCalCompass(),
+  cal_compass_accept: () => serialCalCompassAccept(),
+  cal_cancel: () => serialCalCancel(),
+  cal_gyro: () => serialCalGyro(),
+  cal_level: () => serialCalLevel(),
+  cal_baro: () => serialCalBaro(),
+  cal_accel: () => serialCalAccel(),
+  cal_accel_next: () => serialCalAccelNext(),
+  log_cancel: () => serialLogCancel(),
+  gimbal_pitchyaw: (_, d) => serialGimbalPitchYaw(d as Parameters<typeof serialGimbalPitchYaw>[0]),
+  gimbal_angle: (_, d) => serialSendCommandLong(205,
+    (d?.pitch as number) ?? 0, 0, (d?.yaw as number) ?? 0, 0, 0, 0, 2),
+  camera_trigger: () => serialSendCommandLong(203),
+  camera_video_start: () => serialSendCommandLong(2500),
+  camera_video_stop: () => serialSendCommandLong(2501),
+  camera_zoom: (_, d) => serialSendCommandLong(531, 1, (d?.zoom as number) ?? 0),
+};
+
+/**
+ * Unified command dispatcher. Routes through WebSerial when USB-
+ * connected and the command has a serial handler; otherwise falls
+ * back to the WebSocket backend. Use this everywhere instead of
+ * sendCommand() — new serial commands only need a table entry above.
+ */
+export function dispatch(name: string, param?: number, data?: Record<string, unknown>): void {
+  if (isSerialConnected()) {
+    const handler = _serialDispatch[name];
+    if (handler) { handler(param, data); return; }
   }
   import('./ws').then((ws) => ws.sendCommand(name, param, data));
 }
+
+/** @deprecated Use dispatch() instead */
+export const flightCmd = dispatch;
 
 /**
  * Gimbal pitch/yaw: wraps the COMMAND_INT (msg 75) path the gimbal manager

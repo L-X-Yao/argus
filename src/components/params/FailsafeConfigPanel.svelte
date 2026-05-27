@@ -1,6 +1,6 @@
 <script lang="ts">
   import { addToast } from '../../lib/stores.svelte';
-  import { flightCmd } from '../../lib/transport';
+  import { dispatch } from '../../lib/transport';
   import { paramState, getParam } from '../../lib/paramStore.svelte';
   import { t } from '../../lib/i18n.svelte';
   import { X, ShieldAlert, Battery, Radio, Wifi, Navigation } from '@lucide/svelte';
@@ -12,7 +12,7 @@
 
   function saveParams(pairs: [string, number][]) {
     for (const [name, value] of pairs) {
-      flightCmd('param_set', undefined, { name, value });
+      dispatch('param_set', undefined, { name, value });
     }
     addToast(t('failsafe.saved').replace('{n}', String(pairs.length)), 'success');
   }

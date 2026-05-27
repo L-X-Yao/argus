@@ -17,7 +17,7 @@
   function fitAfterLoad() {
     requestAnimationFrame(() => app.fitRouteFlag++);
   }
-  import { sendCommand } from '../../lib/ws';
+  import { dispatch } from '../../lib/transport';
   import { isSerialConnected, serialUploadMission } from '../../lib/transport';
   import {
     parseQgcWaypoints,
@@ -190,7 +190,7 @@
       });
       return;
     }
-    sendCommand('mission_upload', undefined, {
+    dispatch('mission_upload', undefined, {
       waypoints: app.waypoints,
       takeoff_alt: app.defaultAlt,
     });
@@ -669,7 +669,7 @@
         {#if app.drone.armed}
           <button
             class="bg-transparent border-none text-warning cursor-pointer text-[9px] px-0.5 font-bold hover:text-foreground"
-            onclick={() => sendCommand('mission_set_current', undefined, { wp_index: i })}
+            onclick={() => dispatch('mission_set_current', undefined, { wp_index: i })}
             title={t('wp.goto')}>&raquo;</button
           >
         {/if}

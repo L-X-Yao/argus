@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 // Mock dependencies before importing module
-vi.mock('./ws', () => ({ sendCommand: vi.fn() }));
+vi.mock('./transport', () => ({ dispatch: vi.fn() }));
 vi.mock('./stores.svelte', () => ({
   app: { drone: { connected: false, armed: false } },
 }));
 
 import { gamepad, loadGamepadMap, saveGamepadMap, startGamepad, stopGamepad } from './gamepad.svelte';
-import { sendCommand } from './ws';
+import { dispatch } from './transport';
 import { app } from './stores.svelte';
 
 function makeStorage(): Storage {
@@ -221,7 +221,7 @@ describe('poll() gamepad reading and RC override', () => {
   let pollFn: () => void;
 
   beforeEach(() => {
-    (sendCommand as ReturnType<typeof vi.fn>).mockClear();
+    (dispatch as ReturnType<typeof vi.fn>).mockClear();
     // Capture the poll callback passed to requestAnimationFrame
     vi.stubGlobal(
       'requestAnimationFrame',
@@ -287,7 +287,7 @@ describe('poll() gamepad reading and RC override', () => {
     connectHandler({ gamepad: { index: 0, id: 'Test Controller' } } as unknown as GamepadEvent);
 
     pollFn();
-    expect(sendCommand as ReturnType<typeof vi.fn>).not.toHaveBeenCalled();
+    expect(dispatch as ReturnType<typeof vi.fn>).not.toHaveBeenCalled();
   });
 
   it('does not send rc_override when drone is not armed', () => {
@@ -310,7 +310,7 @@ describe('poll() gamepad reading and RC override', () => {
     connectHandler({ gamepad: { index: 0, id: 'Test Controller' } } as unknown as GamepadEvent);
 
     pollFn();
-    expect(sendCommand as ReturnType<typeof vi.fn>).not.toHaveBeenCalled();
+    expect(dispatch as ReturnType<typeof vi.fn>).not.toHaveBeenCalled();
   });
 
   it('sends rc_override when drone is connected and armed', () => {
@@ -333,10 +333,10 @@ describe('poll() gamepad reading and RC override', () => {
     connectHandler({ gamepad: { index: 0, id: 'Test Controller' } } as unknown as GamepadEvent);
 
     pollFn();
-    expect(sendCommand as ReturnType<typeof vi.fn>).toHaveBeenCalledWith('rc_override', undefined, {
+    expect(dispatch as ReturnType<typeof vi.fn>).toHaveBeenCalledWith('rc_override', undefined, {
       channels: expect.any(Array),
     });
-    const channels = (sendCommand as ReturnType<typeof vi.fn>).mock.calls[0][2].channels;
+    const channels = (dispatch as ReturnType<typeof vi.fn>).mock.calls[0][2].channels;
     expect(channels).toHaveLength(8);
     // Last 4 channels should be 0 (unused)
     expect(channels[4]).toBe(0);
@@ -367,7 +367,7 @@ describe('poll() gamepad reading and RC override', () => {
     connectHandler({ gamepad: { index: 0, id: 'Test Controller' } } as unknown as GamepadEvent);
 
     pollFn();
-    const channels = (sendCommand as ReturnType<typeof vi.fn>).mock.calls[0][2].channels;
+    const channels = (dispatch as ReturnType<typeof vi.fn>).mock.calls[0][2].channels;
     // roll (axis 0, not inverted): 1500 + 500 = 2000
     expect(channels[0]).toBe(2000);
     // pitch (axis 1, inverted): 1500 + (-500) = 1000
@@ -401,17 +401,17 @@ describe('poll() gamepad reading and RC override', () => {
 
     // First poll sends
     pollFn();
-    expect(sendCommand as ReturnType<typeof vi.fn>).toHaveBeenCalledTimes(1);
+    expect(dispatch as ReturnType<typeof vi.fn>).toHaveBeenCalledTimes(1);
 
     // Second poll 20ms later does NOT send (under 50ms threshold)
     currentTime = 40020;
     pollFn();
-    expect(sendCommand as ReturnType<typeof vi.fn>).toHaveBeenCalledTimes(1);
+    expect(dispatch as ReturnType<typeof vi.fn>).toHaveBeenCalledTimes(1);
 
     // Third poll 60ms after first DOES send
     currentTime = 40060;
     pollFn();
-    expect(sendCommand as ReturnType<typeof vi.fn>).toHaveBeenCalledTimes(2);
+    expect(dispatch as ReturnType<typeof vi.fn>).toHaveBeenCalledTimes(2);
   });
 
   it('does nothing when gamepad index is invalid', () => {
@@ -424,7 +424,7 @@ describe('poll() gamepad reading and RC override', () => {
     startGamepad();
     // Don't fire onConnect, so gpIndex remains -1
     pollFn();
-    expect(sendCommand as ReturnType<typeof vi.fn>).not.toHaveBeenCalled();
+    expect(dispatch as ReturnType<typeof vi.fn>).not.toHaveBeenCalled();
     // Axes should stay at default
     expect(gamepad.axes).toEqual([0, 0, 0, 0]);
   });

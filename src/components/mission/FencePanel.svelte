@@ -1,6 +1,6 @@
 <script lang="ts">
   import { app, addToast } from '../../lib/stores.svelte';
-  import { sendCommand } from '../../lib/ws';
+  import { dispatch } from '../../lib/transport';
   import { isSerialConnected, serialUploadFence } from '../../lib/transport';
   import { t } from '../../lib/i18n.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
@@ -103,7 +103,7 @@
       });
       return;
     }
-    sendCommand('fence_upload', undefined, { polygon: app.fencePolygon });
+    dispatch('fence_upload', undefined, { polygon: app.fencePolygon });
   }
 
   function exportKml() {

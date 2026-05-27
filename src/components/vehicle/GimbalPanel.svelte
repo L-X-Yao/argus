@@ -1,6 +1,6 @@
 <script lang="ts">
   import { app, addToast } from '../../lib/stores.svelte';
-  import { sendCommand } from '../../lib/ws';
+  import { dispatch } from '../../lib/transport';
   import { isSerialConnected, serialSendCommandLong, serialGimbalPitchYaw } from '../../lib/transport';
   import { t } from '../../lib/i18n.svelte';
 
@@ -14,7 +14,7 @@
       // backend cmd_gimbal_angle at backend/commands/_hardware.py:136-141.
       serialSendCommandLong(205, pitch, 0, yaw, 0, 0, 0, 2);
     } else {
-      sendCommand('gimbal_angle', undefined, { pitch, yaw });
+      dispatch('gimbal_angle', undefined, { pitch, yaw });
     }
   }
   function sendGimbalPitchYaw(data: {
@@ -25,7 +25,7 @@
     flags?: number;
   }): void {
     if (isSerialConnected()) serialGimbalPitchYaw(data);
-    else sendCommand('gimbal_pitchyaw', undefined, data);
+    else dispatch('gimbal_pitchyaw', undefined, data);
   }
   import { X, Aperture, Camera, Video, VideoOff, ZoomIn, Crosshair, RotateCcw } from '@lucide/svelte';
   import Button from '$lib/components/ui/button/button.svelte';
@@ -84,24 +84,24 @@
 
   /* ── Camera controls ── */
   function takePhoto() {
-    sendCommand('camera_trigger');
+    dispatch('camera_trigger');
     addToast(t('camera.photoTaken'), 'success', 2000);
   }
 
   function toggleVideo() {
     if (recording) {
-      sendCommand('camera_video_stop');
+      dispatch('camera_video_stop');
       recording = false;
       addToast(t('camera.videoStopped'), 'info', 2000);
     } else {
-      sendCommand('camera_video_start');
+      dispatch('camera_video_start');
       recording = true;
       addToast(t('camera.videoStarted'), 'success', 2000);
     }
   }
 
   function setZoom() {
-    sendCommand('camera_zoom', undefined, { zoom: zoomLevel });
+    dispatch('camera_zoom', undefined, { zoom: zoomLevel });
     addToast(`${t('camera.zoom')}: ${zoomLevel}x`, 'info', 2000);
   }
 
@@ -111,12 +111,12 @@
       addToast(t('gimbal.roiHint'), 'warn');
       return;
     }
-    sendCommand('do_set_roi', undefined, { lat: roiLat, lon: roiLon, alt: roiAlt });
+    dispatch('do_set_roi', undefined, { lat: roiLat, lon: roiLon, alt: roiAlt });
     addToast(`${t('gimbal.roiSet')}: ${roiLat.toFixed(6)}, ${roiLon.toFixed(6)}`, 'success');
   }
 
   function clearRoi() {
-    sendCommand('do_set_roi', undefined, { lat: 0, lon: 0, alt: 0 });
+    dispatch('do_set_roi', undefined, { lat: 0, lon: 0, alt: 0 });
     addToast(t('gimbal.roiCleared'), 'info');
   }
 

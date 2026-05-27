@@ -1,6 +1,6 @@
 <script lang="ts">
   import { app, addToast } from '../../lib/stores.svelte';
-  import { sendCommand } from '../../lib/ws';
+  import { dispatch } from '../../lib/transport';
   import { t } from '../../lib/i18n.svelte';
   import { X, Crosshair } from '@lucide/svelte';
   import Button from '$lib/components/ui/button/button.svelte';
@@ -25,7 +25,7 @@
     roiAlt = alt;
     roiSet = true;
     // DO_SET_ROI not yet implemented in backend — store locally and notify user
-    sendCommand('do_set_roi', undefined, { lat, lon, alt });
+    dispatch('do_set_roi', undefined, { lat, lon, alt });
     addToast(t('poi.set') + `: ${lat.toFixed(6)}, ${lon.toFixed(6)}, ${alt}m`, 'success');
   }
 
