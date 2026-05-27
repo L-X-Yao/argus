@@ -1058,6 +1058,10 @@ const messages: Record<string, string> = {
   'conn.serialLost': '시리얼 연결 끊김',
   'theme.dark': '다크',
   'theme.light': '라이트',
+  'overlap.trigger': '촬영 간격',
+  'overlap.footprint': '촬영 범위',
+  'overlap.coverage': '커버리지',
+  'overlap.apply': '측량에 적용',
 };
 
 export default messages;

@@ -1058,6 +1058,10 @@ const messages: Record<string, string> = {
   'conn.serialLost': 'اتصال السلسلة مفقود',
   'theme.dark': 'داكن',
   'theme.light': 'فاتح',
+  'overlap.trigger': 'مسافة التصوير',
+  'overlap.footprint': 'بصمة الصورة',
+  'overlap.coverage': 'التغطية',
+  'overlap.apply': 'تطبيق على المسح',
 };
 
 export default messages;

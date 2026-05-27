@@ -5,19 +5,18 @@
   import Button from '$lib/components/ui/button/button.svelte';
 
   let angle = $state(0);
-  let spacing = $state(20);
   let overshoot = $state(10);
 
   let polyPts = $derived(app.surveyPolygon);
   let area = $derived(polygonArea(polyPts));
   let previewCount = $derived.by(() => {
     if (polyPts.length < 3) return 0;
-    return generateSurveyGrid(polyPts, { angle, spacing, alt: app.defaultAlt, overshoot }).length;
+    return generateSurveyGrid(polyPts, { angle, spacing: app.surveySpacing, alt: app.defaultAlt, overshoot }).length;
   });
 
   function generate() {
     if (polyPts.length < 3) return;
-    const wps = generateSurveyGrid(polyPts, { angle, spacing, alt: app.defaultAlt, overshoot });
+    const wps = generateSurveyGrid(polyPts, { angle, spacing: app.surveySpacing, alt: app.defaultAlt, overshoot });
     if (wps.length === 0) {
       addToast(t('survey.genFail'), 'warn');
       return;
@@ -84,7 +83,7 @@
           min="5"
           max="200"
           step="5"
-          bind:value={spacing}
+          bind:value={app.surveySpacing}
           class="w-16 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground"
         />
         <span class="text-xs text-muted-foreground">m</span>

@@ -1062,6 +1062,10 @@ const messages: Record<string, string> = {
   'conn.serialLost': 'Conexión serial perdida',
   'theme.dark': 'Oscuro',
   'theme.light': 'Claro',
+  'overlap.trigger': 'Dist. disparo',
+  'overlap.footprint': 'Huella de imagen',
+  'overlap.coverage': 'Cobertura',
+  'overlap.apply': 'Aplicar al levantamiento',
 };
 
 export default messages;

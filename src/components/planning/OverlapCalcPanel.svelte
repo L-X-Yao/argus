@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { addToast } from '../../lib/stores.svelte';
+  import { app, addToast } from '../../lib/stores.svelte';
   import { t } from '../../lib/i18n.svelte';
   import { X, Camera } from '@lucide/svelte';
   import Button from '$lib/components/ui/button/button.svelte';
@@ -61,6 +61,7 @@
 
   function applyToSurvey() {
     if (!hasResult) return;
+    app.surveySpacing = Math.round(lineSpacing);
     addToast(
       t('overlap.result')
         .replace('{s}', lineSpacing.toFixed(1))
@@ -231,14 +232,14 @@
               <div class="text-[10px] text-muted-foreground">m</div>
             </div>
             <div>
-              <div class="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">Trigger</div>
+              <div class="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">{t('overlap.trigger')}</div>
               <div class="text-sm font-bold text-primary">{triggerDist.toFixed(1)}</div>
               <div class="text-[10px] text-muted-foreground">m</div>
             </div>
           </div>
           <div class="mt-2 pt-2 border-t border-primary/20 grid grid-cols-2 gap-2 text-[11px] text-muted-foreground">
-            <span>Footprint: {footprintW.toFixed(1)} x {footprintH.toFixed(1)} m</span>
-            <span class="text-right">Coverage: {((footprintW * footprintH) / 10000).toFixed(2)} ha</span>
+            <span>{t('overlap.footprint')}: {footprintW.toFixed(1)} x {footprintH.toFixed(1)} m</span>
+            <span class="text-right">{t('overlap.coverage')}: {((footprintW * footprintH) / 10000).toFixed(2)} ha</span>
           </div>
         </div>
       {:else}
@@ -249,7 +250,7 @@
 
       <!-- Apply button -->
       <Button variant="default" class="w-full" onclick={applyToSurvey} disabled={!hasResult}>
-        {t('overlap.spacing')}
+        {t('overlap.apply')}
       </Button>
     </div>
   </div>

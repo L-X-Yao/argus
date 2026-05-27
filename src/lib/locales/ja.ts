@@ -1059,6 +1059,10 @@ const messages: Record<string, string> = {
   'conn.serialLost': 'シリアル接続が切断されました',
   'theme.dark': 'ダーク',
   'theme.light': 'ライト',
+  'overlap.trigger': '撮影間隔',
+  'overlap.footprint': 'フットプリント',
+  'overlap.coverage': 'カバレッジ',
+  'overlap.apply': '測量に適用',
 };
 
 export default messages;

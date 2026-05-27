@@ -27,6 +27,7 @@ class AppState {
   focusWp: number = $state(-1);
   fitRouteFlag: number = $state(0);
   replayPos: { lat: number; lon: number; yaw: number } | null = $state(null);
+  surveySpacing: number = $state(20);
   surveyPolygon: { lat: number; lon: number }[] = $state([]);
   drawingPolygon: boolean = $state(false);
   showSurvey: boolean = $state(false);

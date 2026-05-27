@@ -1063,6 +1063,10 @@ const messages: Record<string, string> = {
   'conn.serialLost': 'Serielle Verbindung verloren',
   'theme.dark': 'Dunkel',
   'theme.light': 'Hell',
+  'overlap.trigger': 'Auslöseabstand',
+  'overlap.footprint': 'Bildabdeckung',
+  'overlap.coverage': 'Flächenabdeckung',
+  'overlap.apply': 'Auf Vermessung anwenden',
 };
 
 export default messages;
