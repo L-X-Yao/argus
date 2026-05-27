@@ -557,7 +557,7 @@ export function encodeHeartbeat(sysType: number = 6, autopilot: number = 8): Uin
   dv.setUint8(4, sysType); // MAV_TYPE_GCS = 6
   dv.setUint8(5, autopilot); // MAV_AUTOPILOT_INVALID = 8
   dv.setUint8(6, 0); // base_mode
-  dv.setUint8(7, 0); // system_status
+  dv.setUint8(7, 4); // system_status = MAV_STATE_ACTIVE (matches backend send_heartbeat)
   dv.setUint8(8, 3); // mavlink_version
   return buf;
 }
