@@ -58,19 +58,29 @@ export async function getElevationProfile(points: { lat: number; lon: number }[]
  * Adjust waypoint altitudes so that every point maintains a constant AGL
  * clearance over the terrain.
  *
- * For each waypoint the ground elevation is queried, then the waypoint
- * altitude is set to  groundElevation + targetAGL  (MSL).
+ * Mission items use frame=3 (GLOBAL_RELATIVE_ALT) so the FC interprets alt
+ * as meters above home. SRTM returns MSL, so we subtract the home ground
+ * elevation: alt = (groundMSL - homeMSL) + targetAGL.
  *
+ * @param homeLatLon  Home position for MSL-to-relative conversion. If null,
+ *                    the first waypoint's ground elevation is used as reference.
  * @returns A new array (original waypoints are not mutated).
  */
 export async function adjustWaypointsForTerrain(
   waypoints: { lat: number; lon: number; alt: number }[],
   targetAGL: number,
+  homeLatLon?: { lat: number; lon: number } | null,
 ): Promise<{ lat: number; lon: number; alt: number }[]> {
   const elevations = await getElevationProfile(waypoints);
+  let homeElev: number;
+  if (homeLatLon && (homeLatLon.lat !== 0 || homeLatLon.lon !== 0)) {
+    homeElev = await getElevation(homeLatLon.lat, homeLatLon.lon);
+  } else {
+    homeElev = elevations[0];
+  }
   return waypoints.map((wp, i) => ({
     ...wp,
-    alt: Math.round(elevations[i] + targetAGL),
+    alt: Math.round(elevations[i] - homeElev + targetAGL),
   }));
 }
 

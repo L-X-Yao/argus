@@ -199,7 +199,7 @@
       ctx.fill();
 
       ctx.fillStyle = '#aaa';
-      ctx.fillText(`WP${i}`, x + 6, y - 6);
+      ctx.fillText(`WP${i + 1}`, x + 6, y - 6);
       ctx.fillText(`${alts[i].toFixed(0)}m`, x + 6, y + 12);
 
       if (tElevs && tPts.length > 0) {

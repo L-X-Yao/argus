@@ -226,7 +226,7 @@ describe('adjustWaypointsForTerrain', () => {
     vi.stubGlobal('window', { location: { protocol: 'http:', host: 'localhost' } });
   });
 
-  it('adjusts waypoint altitudes to terrain + targetAGL', async () => {
+  it('adjusts waypoint altitudes relative to home elevation', async () => {
     const mockResponse = {
       ok: true,
       json: () => Promise.resolve({ elevations: [100, 150, 200] }),
@@ -240,10 +240,11 @@ describe('adjustWaypointsForTerrain', () => {
     ];
     const result = await adjustWaypointsForTerrain(wps, 30);
 
-    // Each alt should be elevation + targetAGL, rounded
-    expect(result[0].alt).toBe(130); // 100 + 30
-    expect(result[1].alt).toBe(180); // 150 + 30
-    expect(result[2].alt).toBe(230); // 200 + 30
+    // No homeLatLon → uses elevations[0]=100 as home reference.
+    // alt = (groundElev - homeElev) + targetAGL (frame=3 relative to home)
+    expect(result[0].alt).toBe(30); // (100-100) + 30
+    expect(result[1].alt).toBe(80); // (150-100) + 30
+    expect(result[2].alt).toBe(130); // (200-100) + 30
   });
 
   it('does not mutate original waypoints', async () => {
@@ -257,7 +258,7 @@ describe('adjustWaypointsForTerrain', () => {
     const result = await adjustWaypointsForTerrain(wps, 50);
 
     expect(wps[0].alt).toBe(10); // Original unchanged
-    expect(result[0].alt).toBe(550); // 500 + 50
+    expect(result[0].alt).toBe(50); // (500-500) + 50 = 50 (home = first WP ground)
   });
 
   it('preserves lat/lon in returned waypoints', async () => {
@@ -272,7 +273,7 @@ describe('adjustWaypointsForTerrain', () => {
 
     expect(result[0].lat).toBe(92.1234);
     expect(result[0].lon).toBe(52.5678);
-    expect(result[0].alt).toBe(270); // 250 + 20
+    expect(result[0].alt).toBe(20); // (250-250) + 20 (single WP, home = itself)
   });
 
   it('rounds altitude to nearest integer', async () => {
@@ -285,8 +286,32 @@ describe('adjustWaypointsForTerrain', () => {
     const wps = [{ lat: 93.0001, lon: 53.0001, alt: 0 }];
     const result = await adjustWaypointsForTerrain(wps, 10.3);
 
-    // 123.7 + 10.3 = 134.0 → Math.round = 134
-    expect(result[0].alt).toBe(134);
+    // (123.7-123.7) + 10.3 = 10.3 → Math.round = 10
+    expect(result[0].alt).toBe(10);
+  });
+
+  it('uses explicit home position for MSL-to-relative conversion', async () => {
+    let callCount = 0;
+    (globalThis.fetch as ReturnType<typeof vi.fn>).mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        // First call: batch profile for waypoints
+        return Promise.resolve({ ok: true, json: () => Promise.resolve({ elevations: [200, 300] }) });
+      }
+      // Second call: home elevation query
+      return Promise.resolve({ ok: true, json: () => Promise.resolve({ elevations: [50] }) });
+    });
+
+    const wps = [
+      { lat: 94.0001, lon: 54.0001, alt: 0 },
+      { lat: 94.0002, lon: 54.0002, alt: 0 },
+    ];
+    const home = { lat: 94.001, lon: 54.001 };
+    const result = await adjustWaypointsForTerrain(wps, 30, home);
+
+    // homeElev=50 (from separate query). alt = (groundElev - 50) + 30
+    expect(result[0].alt).toBe(180); // (200-50) + 30
+    expect(result[1].alt).toBe(280); // (300-50) + 30
   });
 
   it('handles empty waypoints array', async () => {

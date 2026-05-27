@@ -64,11 +64,16 @@
       reader.onload = (ev: ProgressEvent<FileReader>) => {
         try {
           const pts = JSON.parse(ev.target!.result as string);
-          if (Array.isArray(pts) && pts.length >= 3) {
-            app.fencePolygon = pts;
-            app.fenceUploaded = false;
-            addToast(t('fence.loaded').replace('{n}', String(pts.length)), 'success');
+          if (!Array.isArray(pts) || pts.length < 3) throw new Error('min 3');
+          for (const p of pts) {
+            const lat = Number(p?.lat),
+              lon = Number(p?.lon);
+            if (!Number.isFinite(lat) || !Number.isFinite(lon)) throw new Error('bad coord');
+            if (lat < -90 || lat > 90 || lon < -180 || lon > 180) throw new Error('bad coord');
           }
+          app.fencePolygon = pts;
+          app.fenceUploaded = false;
+          addToast(t('fence.loaded').replace('{n}', String(pts.length)), 'success');
         } catch {
           addToast(t('fence.loadFail'), 'error');
         }

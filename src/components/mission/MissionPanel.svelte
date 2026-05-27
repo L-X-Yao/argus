@@ -56,7 +56,11 @@
     if (!app.waypoints.length) return;
     terrainLoading = true;
     try {
-      const adjusted = await adjustWaypointsForTerrain(app.waypoints, app.defaultAlt);
+      const home =
+        app.drone.home_lat !== 0 || app.drone.home_lon !== 0
+          ? { lat: app.drone.home_lat, lon: app.drone.home_lon }
+          : null;
+      const adjusted = await adjustWaypointsForTerrain(app.waypoints, app.defaultAlt, home);
       pushUndo();
       for (let i = 0; i < app.waypoints.length; i++) {
         app.waypoints[i].alt = adjusted[i].alt;
