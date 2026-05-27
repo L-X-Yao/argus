@@ -164,24 +164,24 @@ def cmd_ntrip_start(link: DroneLink, param, data: dict):
     """
     host = str(data.get("host", "")).strip()
     if not host or len(host) > 255:
-        return {"ok": False, "error": "NTRIP host required (1-255 chars)"}
+        return {"ok": False, "error": lt("err_ntrip_host", link.locale)}
     try:
         port = int(data.get("port", 2101))
     except (TypeError, ValueError):
-        return {"ok": False, "error": "NTRIP port must be int"}
+        return {"ok": False, "error": lt("err_ntrip_port_type", link.locale)}
     if not 1 <= port <= 65535:
-        return {"ok": False, "error": "NTRIP port out of range (1-65535)"}
+        return {"ok": False, "error": lt("err_ntrip_port_range", link.locale)}
     mountpoint = str(data.get("mountpoint", "")).strip()
     if not mountpoint or len(mountpoint) > 100:
-        return {"ok": False, "error": "NTRIP mountpoint required (1-100 chars)"}
+        return {"ok": False, "error": lt("err_ntrip_mount", link.locale)}
     # Reject CR/LF in any field that goes into the HTTP request — prevents
     # request smuggling via crafted user/pass/mountpoint.
     if any(c in mountpoint for c in ("\r", "\n")):
-        return {"ok": False, "error": "NTRIP mountpoint contains invalid chars"}
+        return {"ok": False, "error": lt("err_ntrip_mount_chars", link.locale)}
     username = str(data.get("username", ""))[:128]
     password = str(data.get("password", ""))[:128]
     if any(c in username + password for c in ("\r", "\n")):
-        return {"ok": False, "error": "NTRIP credentials contain invalid chars"}
+        return {"ok": False, "error": lt("err_ntrip_cred_chars", link.locale)}
 
     try:
         addrs = socket.getaddrinfo(host, port)
@@ -193,12 +193,12 @@ def cmd_ntrip_start(link: DroneLink, param, data: dict):
         except ValueError:
             continue
         if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast:
-            return {"ok": False, "error": "NTRIP host resolves to private/internal address"}
+            return {"ok": False, "error": lt("err_ntrip_private", link.locale)}
 
     with link._state_lock:
         existing = link.ntrip_thread
     if existing is not None and existing.is_alive():
-        return {"ok": False, "error": "NTRIP already running"}
+        return {"ok": False, "error": lt("err_ntrip_running", link.locale)}
 
     stop_event = threading.Event()
     thread = threading.Thread(

@@ -117,10 +117,10 @@ def cmd_motor_test(link: DroneLink, param, data: dict):
     # as invalid. Convert here.
     motor = int(data.get("motor", 0))
     if not 0 <= motor <= 7:
-        return {"ok": False, "error": "Motor index must be 0-7"}
+        return {"ok": False, "error": lt("err_motor_index", link.locale)}
     throttle = float(data.get("throttle", 5))
     if not 0 <= throttle <= 100:
-        return {"ok": False, "error": "Throttle must be 0-100%"}
+        return {"ok": False, "error": lt("err_throttle_range", link.locale)}
     duration = float(data.get("duration", 2))
     if not 0 < duration <= 30:
         return {"ok": False, "error": lt("err_motor_duration", link.locale)}
@@ -212,7 +212,7 @@ def cmd_camera_video_stop(link: DroneLink, param, data: dict):
 def cmd_camera_zoom(link: DroneLink, param, data: dict):
     zoom_val = float(data.get("zoom", 1))
     if not 0.1 <= zoom_val <= 100:
-        return {"ok": False, "error": "Zoom must be 0.1-100"}
+        return {"ok": False, "error": lt("err_zoom_range", link.locale)}
     send_cmd(link, 531, p1=1, p2=zoom_val)
 
 

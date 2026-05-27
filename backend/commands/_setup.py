@@ -103,9 +103,9 @@ def cmd_param_load(link: DroneLink, param, data: dict):
     try:
         p.relative_to(params_dir)
     except ValueError:
-        return {"ok": False, "error": "Path must be within params directory"}
+        return {"ok": False, "error": "Path must be within params directory"}  # i18n-exempt
     if p.suffix != ".json":
-        return {"ok": False, "error": "Only .json parameter files allowed"}
+        return {"ok": False, "error": "Only .json parameter files allowed"}  # i18n-exempt
     # load_from_file iterates with `time.sleep(PARAM_LOAD_SPACING)` between
     # sends to avoid overrunning the FC's param queue. For a 1000-param file
     # that's ~20s of blocking — and commands.execute() is called from inside

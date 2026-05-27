@@ -45,76 +45,23 @@ class TestThreadSafety:
         assert errors == [], f"Errors during concurrent access: {errors}"
 
     def test_get_state_keys_stable(self):
+        """_build_state() keys must match the DroneState interface in types.ts.
+
+        Instead of a hardcoded set (which drifts every time a field is added),
+        we derive the expected keys from the same TypeScript source that the
+        frontend uses. This is the same parse logic as
+        test_contract_ws_protocol._frontend_state_fields — duplicated here to
+        keep this file self-contained and avoid circular import.
+        """
+        from tests.test_contract_ws_protocol import _frontend_state_fields
+
         link = DroneLink()
         state = link.get_state()
-        expected = {
-            "type",
-            "connected",
-            "frames",
-            "mode",
-            "mode_id",
-            "armed",
-            "roll",
-            "pitch",
-            "yaw",
-            "lat",
-            "lon",
-            "alt_rel",
-            "alt_msl",
-            "gs",
-            "airspeed",
-            "throttle",
-            "climb",
-            "vz",
-            "hdg",
-            "dist_home",
-            "flight_time",
-            "voltage",
-            "current",
-            "remaining",
-            "gps_fix",
-            "gps_fix_raw",
-            "gps_sats",
-            "wp",
-            "wp_idx",
-            "vtype",
-            "vtype_raw",
-            "autopilot",
-            "mode_btns",
-            "link_age",
-            "bat_time",
-            "home_lat",
-            "home_lon",
-            "parse_errors",
-            "flight_summary",
-            "log_active",
-            "fw_version",
-            "fw_git",
-            "board_id",
-            "rc",
-            "rc_rssi",
-            "vibe",
-            "vibe_clip",
-            "servo",
-            "ekf_vel",
-            "ekf_pos_h",
-            "ekf_pos_v",
-            "ekf_compass",
-            "ekf_flags",
-            "wind_dir",
-            "wind_speed",
-            "terrain_alt",
-            "gimbal_pitch",
-            "gimbal_yaw",
-            "vehicles",
-            "prearm",
-            "adsb",
-            "cells",
-            "param_count",
-            "param_total",
-            "param_fetching",
-        }
-        assert state.keys() == expected
+        expected = _frontend_state_fields()
+        assert state.keys() == expected, (
+            f"\nBackend-only: {state.keys() - expected}"
+            f"\nFrontend-only: {expected - state.keys()}"
+        )
 
 
 class TestBufferCap:

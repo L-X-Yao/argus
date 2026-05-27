@@ -21,15 +21,38 @@ PRIMARY = "zh.ts"
 FALLBACK = "en.ts"
 SECONDARY = ["ar.ts", "de.ts", "es.ts", "fr.ts", "ja.ts", "ko.ts", "pt.ts", "ru.ts"]
 
-KEY_RE = re.compile(r"""['"]([a-zA-Z][a-zA-Z0-9._]*)['"]\s*:\s*['"](.*)['"],?\s*$""")
+# Match key on the same line as value: 'key': 'value',
+_SINGLE_LINE_RE = re.compile(r"""['"]([a-zA-Z][a-zA-Z0-9._]*)['"]\s*:\s*['"](.*)['"],?\s*$""")
+# Match key on its own line (value continues on next line): 'key':
+_KEY_ONLY_RE = re.compile(r"""['"]([a-zA-Z][a-zA-Z0-9._]*)['"]\s*:\s*$""")
 
 
 def parse_keys(path: Path) -> dict[str, str]:
     out: dict[str, str] = {}
-    for line in path.read_text(encoding="utf-8").splitlines():
-        m = KEY_RE.search(line)
+    lines = path.read_text(encoding="utf-8").splitlines()
+    i = 0
+    while i < len(lines):
+        line = lines[i]
+        m = _SINGLE_LINE_RE.search(line)
         if m:
             out[m.group(1)] = m.group(2)
+            i += 1
+            continue
+        m = _KEY_ONLY_RE.search(line)
+        if m:
+            key = m.group(1)
+            # Value is on the next line(s) — grab it
+            if i + 1 < len(lines):
+                val_line = lines[i + 1].strip().rstrip(",")
+                # Strip surrounding quotes
+                if (val_line.startswith("'") and val_line.endswith("'")) or (
+                    val_line.startswith('"') and val_line.endswith('"')
+                ):
+                    val_line = val_line[1:-1]
+                out[key] = val_line
+                i += 2
+                continue
+        i += 1
     return out
 
 
@@ -41,13 +64,12 @@ def sync_file(path: Path, ref_keys: list[str], fallback: dict[str, str], write: 
     if not missing and not orphans:
         return 0
 
-    if missing:
+    if missing and write:
         src = path.read_text(encoding="utf-8")
         insert_before = "};"
         new_lines = "\n".join(f"  '{k}': '{fallback[k]}'," for k in missing)
         src = src.replace(insert_before, new_lines + "\n" + insert_before, 1)
-        if write:
-            path.write_text(src, encoding="utf-8")
+        path.write_text(src, encoding="utf-8")
 
     changes = len(missing) + len(orphans)
     tag = "WRITE" if write else "DRY-RUN"

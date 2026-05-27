@@ -12,6 +12,16 @@ if git diff --cached --name-only | xargs grep -qri "$_W1\|$_W2" -- 2>/dev/null; 
   exit 1
 fi
 
+echo "[pre-commit] i18n error-string check..."
+# WS command handlers must use lt() for error messages, not hardcoded English.
+# Security-boundary errors in firmware.py/video.py are exempt (HTTP API, no locale).
+_BAD=$(git diff --cached --name-only -- 'backend/commands/*.py' | xargs grep -n '"error":\s*"[A-Z]' 2>/dev/null | grep -v 'lt(' | grep -v '# i18n-exempt' || true)
+if [ -n "$_BAD" ]; then
+  echo "ERROR: hardcoded English error strings in command handlers (use lt()):"
+  echo "$_BAD"
+  exit 1
+fi
+
 echo "[pre-commit] ruff..."
 ruff check backend/ scripts/ tests/ --quiet
 

@@ -104,6 +104,17 @@ _T = {
     "err_unknown_board": ("未知主板 ID", "Unknown board_id"),
     "err_invalid_params": ("无效参数", "Invalid params"),
     "err_invalid_filename": ("无效文件名", "Invalid filename"),
+    "err_motor_index": ("电机编号须为 0-7", "Motor index must be 0-7"),
+    "err_throttle_range": ("油门须为 0-100%%", "Throttle must be 0-100%%"),
+    "err_zoom_range": ("缩放须为 0.1-100", "Zoom must be 0.1-100"),
+    "err_ntrip_host": ("NTRIP 主机名无效 (1-255 字符)", "NTRIP host required (1-255 chars)"),
+    "err_ntrip_port_type": ("NTRIP 端口须为整数", "NTRIP port must be int"),
+    "err_ntrip_port_range": ("NTRIP 端口超限 (1-65535)", "NTRIP port out of range (1-65535)"),
+    "err_ntrip_mount": ("NTRIP 挂载点无效 (1-100 字符)", "NTRIP mountpoint required (1-100 chars)"),
+    "err_ntrip_mount_chars": ("NTRIP 挂载点含非法字符", "NTRIP mountpoint contains invalid chars"),
+    "err_ntrip_cred_chars": ("NTRIP 凭据含非法字符", "NTRIP credentials contain invalid chars"),
+    "err_ntrip_private": ("NTRIP 主机解析到内网地址", "NTRIP host resolves to private/internal address"),
+    "err_ntrip_running": ("NTRIP 已在运行", "NTRIP already running"),
 }
 
 

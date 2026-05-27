@@ -511,3 +511,43 @@ describe('disconnect cleanup', () => {
     expect(res.error).toMatch(/lost|disconnect/i);
   });
 });
+
+describe('download rejects during upload', () => {
+  it('serialDownloadMission rejects when an upload is in progress', async () => {
+    const wps = [{ lat: 30, lon: 120, alt: 50, drop: false, delay: 0, speed: 0, type: 'wp' as const, loiter_param: 0 }];
+    void serialUploadMission(wps, 30);
+    const result = await serialDownloadMission();
+    expect(result.ok).toBe(false);
+    expect(result.error).toMatch(/upload/i);
+  });
+});
+
+describe('upload out-of-range seq handling', () => {
+  it('rejects when FC requests seq beyond item count', async () => {
+    const wps = [{ lat: 30, lon: 120, alt: 50, drop: false, delay: 0, speed: 0, type: 'wp' as const, loiter_param: 0 }];
+    const promise = serialUploadMission(wps, 30);
+    // Built mission for 1 WP = 4 items (HOME, TAKEOFF, WP, RTL). Request seq=99.
+    inject(fcFrame(51, encodeMissionRequestInt(1, 1, 99)));
+    const res = await promise;
+    expect(res.ok).toBe(false);
+    expect(res.error).toMatch(/out-of-range/i);
+  });
+});
+
+describe('download with multi-item mission', () => {
+  it('downloads 3 items and collapses HOME+WP+RTL to single waypoint', async () => {
+    const promise = serialDownloadMission();
+    // FC → MISSION_COUNT = 3
+    inject(fcFrame(44, encodeMissionCount(1, 1, 3)));
+    // FC → 3 MISSION_ITEM_INT
+    inject(fcFrame(73, mkMissionItemInt(0, 16, 0, 0, 0))); // HOME
+    inject(fcFrame(73, mkMissionItemInt(1, 16, 34.258, 108.942, 50))); // WP (seq>0 cmd=16)
+    inject(fcFrame(73, mkMissionItemInt(2, 20, 0, 0, 0))); // RTL
+    const res = await promise;
+    expect(res.ok).toBe(true);
+    expect(res.waypoints).toHaveLength(1);
+    expect(res.waypoints![0].lat).toBeCloseTo(34.258, 4);
+    // GCS should have sent MISSION_ACK (msg 47)
+    expect(countWrites(47)).toBe(1);
+  });
+});
