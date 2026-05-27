@@ -11,7 +11,8 @@ describe('gcj02', () => {
   });
 
   it('roundtrips toGcj -> toWgs with sub-meter accuracy', () => {
-    const lat = 34.2583, lon = 108.9425;
+    const lat = 34.2583,
+      lon = 108.9425;
     const [g0, g1] = toGcj(lat, lon);
     const [w0, w1] = toWgs(g0, g1);
     expect(Math.abs(w0 - lat)).toBeLessThan(2e-5);

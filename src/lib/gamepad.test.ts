@@ -14,10 +14,16 @@ function makeStorage(): Storage {
   const store = new Map<string, string>();
   return {
     getItem: (k: string) => store.get(k) ?? null,
-    setItem: (k: string, v: string) => { store.set(k, v); },
-    removeItem: (k: string) => { store.delete(k); },
+    setItem: (k: string, v: string) => {
+      store.set(k, v);
+    },
+    removeItem: (k: string) => {
+      store.delete(k);
+    },
     clear: () => store.clear(),
-    get length() { return store.size; },
+    get length() {
+      return store.size;
+    },
     key: (i: number) => [...store.keys()][i] ?? null,
   };
 }
@@ -39,8 +45,14 @@ beforeEach(() => {
   gamepad.enabled = false;
   gamepad.deadzone = 0.08;
   gamepad.channelMap = {
-    roll: 0, pitch: 1, throttle: 3, yaw: 2,
-    invertRoll: false, invertPitch: true, invertThrottle: true, invertYaw: false,
+    roll: 0,
+    pitch: 1,
+    throttle: 3,
+    yaw: 2,
+    invertRoll: false,
+    invertPitch: true,
+    invertThrottle: true,
+    invertYaw: false,
   };
 });
 
@@ -67,8 +79,14 @@ describe('gamepad default state', () => {
 describe('loadGamepadMap', () => {
   it('loads saved channel map from localStorage', () => {
     const custom = {
-      roll: 1, pitch: 0, throttle: 2, yaw: 3,
-      invertRoll: true, invertPitch: false, invertThrottle: false, invertYaw: true,
+      roll: 1,
+      pitch: 0,
+      throttle: 2,
+      yaw: 3,
+      invertRoll: true,
+      invertPitch: false,
+      invertThrottle: false,
+      invertYaw: true,
     };
     localStorage.setItem('argus_gamepad_map', JSON.stringify(custom));
     loadGamepadMap();
@@ -117,14 +135,26 @@ describe('saveGamepadMap', () => {
 
   it('roundtrips through save and load', () => {
     gamepad.channelMap = {
-      roll: 3, pitch: 2, throttle: 1, yaw: 0,
-      invertRoll: true, invertPitch: false, invertThrottle: false, invertYaw: true,
+      roll: 3,
+      pitch: 2,
+      throttle: 1,
+      yaw: 0,
+      invertRoll: true,
+      invertPitch: false,
+      invertThrottle: false,
+      invertYaw: true,
     };
     saveGamepadMap();
     // Reset to defaults
     gamepad.channelMap = {
-      roll: 0, pitch: 1, throttle: 3, yaw: 2,
-      invertRoll: false, invertPitch: true, invertThrottle: true, invertYaw: false,
+      roll: 0,
+      pitch: 1,
+      throttle: 3,
+      yaw: 2,
+      invertRoll: false,
+      invertPitch: true,
+      invertThrottle: true,
+      invertYaw: false,
     };
     loadGamepadMap();
     expect(gamepad.channelMap.roll).toBe(3);
@@ -155,8 +185,12 @@ describe('onConnect / onDisconnect handlers', () => {
   it('onConnect sets connected state and name', () => {
     startGamepad();
     const addEventCalls = (window.addEventListener as ReturnType<typeof vi.fn>).mock.calls;
-    const connectHandler = addEventCalls.find((c: unknown[]) => c[0] === 'gamepadconnected')![1] as (e: GamepadEvent) => void;
-    connectHandler({ gamepad: { index: 0, id: 'Xbox Wireless Controller (Long Name Truncated Here)' } } as unknown as GamepadEvent);
+    const connectHandler = addEventCalls.find((c: unknown[]) => c[0] === 'gamepadconnected')![1] as (
+      e: GamepadEvent,
+    ) => void;
+    connectHandler({
+      gamepad: { index: 0, id: 'Xbox Wireless Controller (Long Name Truncated Here)' },
+    } as unknown as GamepadEvent);
 
     expect(gamepad.connected).toBe(true);
     expect(gamepad.name.length).toBeLessThanOrEqual(40);
@@ -166,7 +200,9 @@ describe('onConnect / onDisconnect handlers', () => {
   it('onDisconnect resets all gamepad state', () => {
     startGamepad();
     const addEventCalls = (window.addEventListener as ReturnType<typeof vi.fn>).mock.calls;
-    const connectHandler = addEventCalls.find((c: unknown[]) => c[0] === 'gamepadconnected')![1] as (e: GamepadEvent) => void;
+    const connectHandler = addEventCalls.find((c: unknown[]) => c[0] === 'gamepadconnected')![1] as (
+      e: GamepadEvent,
+    ) => void;
     const disconnectHandler = addEventCalls.find((c: unknown[]) => c[0] === 'gamepaddisconnected')![1] as () => void;
 
     // Connect first
@@ -187,10 +223,13 @@ describe('poll() gamepad reading and RC override', () => {
   beforeEach(() => {
     (sendCommand as ReturnType<typeof vi.fn>).mockClear();
     // Capture the poll callback passed to requestAnimationFrame
-    vi.stubGlobal('requestAnimationFrame', vi.fn((cb: () => void) => {
-      pollFn = cb;
-      return 1;
-    }));
+    vi.stubGlobal(
+      'requestAnimationFrame',
+      vi.fn((cb: () => void) => {
+        pollFn = cb;
+        return 1;
+      }),
+    );
     vi.stubGlobal('performance', { now: vi.fn(() => 1000) });
   });
 
@@ -213,7 +252,9 @@ describe('poll() gamepad reading and RC override', () => {
     // Start gamepad and invoke the connect handler
     startGamepad();
     const addEventCalls = (window.addEventListener as ReturnType<typeof vi.fn>).mock.calls;
-    const connectHandler = addEventCalls.find((c: unknown[]) => c[0] === 'gamepadconnected')![1] as (e: GamepadEvent) => void;
+    const connectHandler = addEventCalls.find((c: unknown[]) => c[0] === 'gamepadconnected')![1] as (
+      e: GamepadEvent,
+    ) => void;
     connectHandler({ gamepad: { index: 0, id: 'Test Controller' } } as unknown as GamepadEvent);
 
     // Now call poll via requestAnimationFrame callback
@@ -240,11 +281,13 @@ describe('poll() gamepad reading and RC override', () => {
 
     startGamepad();
     const addEventCalls = (window.addEventListener as ReturnType<typeof vi.fn>).mock.calls;
-    const connectHandler = addEventCalls.find((c: unknown[]) => c[0] === 'gamepadconnected')![1] as (e: GamepadEvent) => void;
+    const connectHandler = addEventCalls.find((c: unknown[]) => c[0] === 'gamepadconnected')![1] as (
+      e: GamepadEvent,
+    ) => void;
     connectHandler({ gamepad: { index: 0, id: 'Test Controller' } } as unknown as GamepadEvent);
 
     pollFn();
-    expect((sendCommand as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
+    expect(sendCommand as ReturnType<typeof vi.fn>).not.toHaveBeenCalled();
   });
 
   it('does not send rc_override when drone is not armed', () => {
@@ -261,11 +304,13 @@ describe('poll() gamepad reading and RC override', () => {
 
     startGamepad();
     const addEventCalls = (window.addEventListener as ReturnType<typeof vi.fn>).mock.calls;
-    const connectHandler = addEventCalls.find((c: unknown[]) => c[0] === 'gamepadconnected')![1] as (e: GamepadEvent) => void;
+    const connectHandler = addEventCalls.find((c: unknown[]) => c[0] === 'gamepadconnected')![1] as (
+      e: GamepadEvent,
+    ) => void;
     connectHandler({ gamepad: { index: 0, id: 'Test Controller' } } as unknown as GamepadEvent);
 
     pollFn();
-    expect((sendCommand as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
+    expect(sendCommand as ReturnType<typeof vi.fn>).not.toHaveBeenCalled();
   });
 
   it('sends rc_override when drone is connected and armed', () => {
@@ -282,11 +327,13 @@ describe('poll() gamepad reading and RC override', () => {
 
     startGamepad();
     const addEventCalls = (window.addEventListener as ReturnType<typeof vi.fn>).mock.calls;
-    const connectHandler = addEventCalls.find((c: unknown[]) => c[0] === 'gamepadconnected')![1] as (e: GamepadEvent) => void;
+    const connectHandler = addEventCalls.find((c: unknown[]) => c[0] === 'gamepadconnected')![1] as (
+      e: GamepadEvent,
+    ) => void;
     connectHandler({ gamepad: { index: 0, id: 'Test Controller' } } as unknown as GamepadEvent);
 
     pollFn();
-    expect((sendCommand as ReturnType<typeof vi.fn>)).toHaveBeenCalledWith('rc_override', undefined, {
+    expect(sendCommand as ReturnType<typeof vi.fn>).toHaveBeenCalledWith('rc_override', undefined, {
       channels: expect.any(Array),
     });
     const channels = (sendCommand as ReturnType<typeof vi.fn>).mock.calls[0][2].channels;
@@ -314,7 +361,9 @@ describe('poll() gamepad reading and RC override', () => {
     // roll axis=0, pitch axis=1, yaw axis=2, throttle axis=3
     startGamepad();
     const addEventCalls = (window.addEventListener as ReturnType<typeof vi.fn>).mock.calls;
-    const connectHandler = addEventCalls.find((c: unknown[]) => c[0] === 'gamepadconnected')![1] as (e: GamepadEvent) => void;
+    const connectHandler = addEventCalls.find((c: unknown[]) => c[0] === 'gamepadconnected')![1] as (
+      e: GamepadEvent,
+    ) => void;
     connectHandler({ gamepad: { index: 0, id: 'Test Controller' } } as unknown as GamepadEvent);
 
     pollFn();
@@ -345,22 +394,24 @@ describe('poll() gamepad reading and RC override', () => {
 
     startGamepad();
     const addEventCalls = (window.addEventListener as ReturnType<typeof vi.fn>).mock.calls;
-    const connectHandler = addEventCalls.find((c: unknown[]) => c[0] === 'gamepadconnected')![1] as (e: GamepadEvent) => void;
+    const connectHandler = addEventCalls.find((c: unknown[]) => c[0] === 'gamepadconnected')![1] as (
+      e: GamepadEvent,
+    ) => void;
     connectHandler({ gamepad: { index: 0, id: 'Test Controller' } } as unknown as GamepadEvent);
 
     // First poll sends
     pollFn();
-    expect((sendCommand as ReturnType<typeof vi.fn>)).toHaveBeenCalledTimes(1);
+    expect(sendCommand as ReturnType<typeof vi.fn>).toHaveBeenCalledTimes(1);
 
     // Second poll 20ms later does NOT send (under 50ms threshold)
     currentTime = 40020;
     pollFn();
-    expect((sendCommand as ReturnType<typeof vi.fn>)).toHaveBeenCalledTimes(1);
+    expect(sendCommand as ReturnType<typeof vi.fn>).toHaveBeenCalledTimes(1);
 
     // Third poll 60ms after first DOES send
     currentTime = 40060;
     pollFn();
-    expect((sendCommand as ReturnType<typeof vi.fn>)).toHaveBeenCalledTimes(2);
+    expect(sendCommand as ReturnType<typeof vi.fn>).toHaveBeenCalledTimes(2);
   });
 
   it('does nothing when gamepad index is invalid', () => {
@@ -373,7 +424,7 @@ describe('poll() gamepad reading and RC override', () => {
     startGamepad();
     // Don't fire onConnect, so gpIndex remains -1
     pollFn();
-    expect((sendCommand as ReturnType<typeof vi.fn>)).not.toHaveBeenCalled();
+    expect(sendCommand as ReturnType<typeof vi.fn>).not.toHaveBeenCalled();
     // Axes should stay at default
     expect(gamepad.axes).toEqual([0, 0, 0, 0]);
   });
@@ -393,7 +444,9 @@ describe('poll() gamepad reading and RC override', () => {
 
     startGamepad();
     const addEventCalls = (window.addEventListener as ReturnType<typeof vi.fn>).mock.calls;
-    const connectHandler = addEventCalls.find((c: unknown[]) => c[0] === 'gamepadconnected')![1] as (e: GamepadEvent) => void;
+    const connectHandler = addEventCalls.find((c: unknown[]) => c[0] === 'gamepadconnected')![1] as (
+      e: GamepadEvent,
+    ) => void;
     connectHandler({ gamepad: { index: 0, id: 'Test Controller' } } as unknown as GamepadEvent);
 
     pollFn();

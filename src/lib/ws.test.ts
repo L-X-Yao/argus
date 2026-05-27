@@ -55,7 +55,10 @@ beforeEach(() => {
     close: vi.fn(),
     readyState: 1,
   };
-  vi.stubGlobal('WebSocket', vi.fn(() => mockWs));
+  vi.stubGlobal(
+    'WebSocket',
+    vi.fn(() => mockWs),
+  );
   vi.clearAllMocks();
 });
 
@@ -80,7 +83,9 @@ async function freshConnect() {
     static CLOSED = 3;
     static CONNECTING = 0;
     static CLOSING = 2;
-    constructor() { return mockWs as unknown as WsMock; }
+    constructor() {
+      return mockWs as unknown as WsMock;
+    }
   }
   vi.stubGlobal('WebSocket', WsMock);
   const mod = await import('./ws');
@@ -221,9 +226,7 @@ describe('helper functions', () => {
     const mod = await freshConnect();
     mockWs.onopen?.(new Event('open'));
     mod.sendConnect('udp:14550', 57600, 'standard');
-    expect(mockWs.send).toHaveBeenCalledWith(
-      expect.stringContaining('"type":"connect"')
-    );
+    expect(mockWs.send).toHaveBeenCalledWith(expect.stringContaining('"type":"connect"'));
   });
 
   it('sendDisconnect sends disconnect message', async () => {

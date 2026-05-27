@@ -13,9 +13,18 @@
   import FenceLayer from '../layers/FenceLayer.svelte';
   import SurveyLayer from '../layers/SurveyLayer.svelte';
   import ReplayLayer from '../layers/ReplayLayer.svelte';
-  import { Layers, Ruler, Navigation, Grid3x3, ShieldAlert, Download, Crosshair, Home, Maximize2 } from '@lucide/svelte';
+  import {
+    Layers,
+    Ruler,
+    Navigation,
+    Grid3x3,
+    ShieldAlert,
+    Download,
+    Crosshair,
+    Home,
+    Maximize2,
+  } from '@lucide/svelte';
   import { t } from '../../lib/i18n.svelte';
-
 
   let { showHud = true }: { showHud?: boolean } = $props();
 
@@ -38,24 +47,60 @@
   let measurePolygon: L.Polygon | null = null;
 
   interface TileSourceDef {
-    name: string; sat: string; vec: string; label: string | null;
-    gcj02: boolean; region: string;
+    name: string;
+    sat: string;
+    vec: string;
+    label: string | null;
+    gcj02: boolean;
+    region: string;
   }
 
   const SOURCES: Record<string, TileSourceDef> = {
-    amap:          { name: 'Amap',             sat: '6',            vec: '7',             label: '8',         gcj02: true,  region: 'china' },
-    google_sat:    { name: 'Google Satellite',  sat: 'google_sat',   vec: 'google_street', label: null,        gcj02: false, region: 'global' },
-    google_hybrid: { name: 'Google Hybrid',     sat: 'google_hybrid',vec: 'google_street', label: null,        gcj02: false, region: 'global' },
-    osm:           { name: 'OpenStreetMap',     sat: 'osm_sat',      vec: 'osm',           label: null,        gcj02: false, region: 'global' },
-    carto_dark:    { name: 'CartoDB Dark',      sat: 'carto_dark',   vec: 'carto_dark',    label: null,        gcj02: false, region: 'global' },
-    carto_light:   { name: 'CartoDB Light',     sat: 'carto_light',  vec: 'carto_light',   label: null,        gcj02: false, region: 'global' },
-    esri:          { name: 'Esri Topo',         sat: 'osm_sat',      vec: 'esri_topo',     label: null,        gcj02: false, region: 'global' },
-    tianditu:      { name: 'Tianditu',          sat: 'tdt_sat',      vec: 'tdt_vec',       label: 'tdt_label', gcj02: false, region: 'china' },
+    amap: { name: 'Amap', sat: '6', vec: '7', label: '8', gcj02: true, region: 'china' },
+    google_sat: {
+      name: 'Google Satellite',
+      sat: 'google_sat',
+      vec: 'google_street',
+      label: null,
+      gcj02: false,
+      region: 'global',
+    },
+    google_hybrid: {
+      name: 'Google Hybrid',
+      sat: 'google_hybrid',
+      vec: 'google_street',
+      label: null,
+      gcj02: false,
+      region: 'global',
+    },
+    osm: { name: 'OpenStreetMap', sat: 'osm_sat', vec: 'osm', label: null, gcj02: false, region: 'global' },
+    carto_dark: {
+      name: 'CartoDB Dark',
+      sat: 'carto_dark',
+      vec: 'carto_dark',
+      label: null,
+      gcj02: false,
+      region: 'global',
+    },
+    carto_light: {
+      name: 'CartoDB Light',
+      sat: 'carto_light',
+      vec: 'carto_light',
+      label: null,
+      gcj02: false,
+      region: 'global',
+    },
+    esri: { name: 'Esri Topo', sat: 'osm_sat', vec: 'esri_topo', label: null, gcj02: false, region: 'global' },
+    tianditu: { name: 'Tianditu', sat: 'tdt_sat', vec: 'tdt_vec', label: 'tdt_label', gcj02: false, region: 'china' },
   };
 
-  function tileUrl(style: string): string { return `${API_BASE}/api/tile/${style}/{z}/{x}/{y}`; }
+  function tileUrl(style: string): string {
+    return `${API_BASE}/api/tile/${style}/{z}/{x}/{y}`;
+  }
 
-  function curSource(): TileSourceDef { return SOURCES[app.tileSource] || SOURCES['amap']; }
+  function curSource(): TileSourceDef {
+    return SOURCES[app.tileSource] || SOURCES['amap'];
+  }
 
   let useGcj = $derived(curSource().gcj02);
 
@@ -107,17 +152,25 @@
       mouseCoord = `${wlat.toFixed(6)}, ${wlon.toFixed(6)}`;
     });
     window.addEventListener('keydown', onKeyDown);
-    const invalidateTimer = setTimeout(() => { if (map) map.invalidateSize(); }, 100);
+    const invalidateTimer = setTimeout(() => {
+      if (map) map.invalidateSize();
+    }, 100);
     return () => {
       clearTimeout(invalidateTimer);
       window.removeEventListener('keydown', onKeyDown);
-      if (map) { map.remove(); map = null; }
+      if (map) {
+        map.remove();
+        map = null;
+      }
     };
   });
 
   function onMapClick(e: L.LeafletMouseEvent) {
     const ll = e.latlng;
-    if (measuring) { addMeasurePoint(ll); return; }
+    if (measuring) {
+      addMeasurePoint(ll);
+      return;
+    }
     if (app.drawingPolygon) {
       const [wlat, wlon] = fromMap(ll.lat, ll.lng);
       app.surveyPolygon = [...app.surveyPolygon, { lat: wlat, lon: wlon }];
@@ -136,7 +189,16 @@
       return;
     }
     const [wlat, wlon] = fromMap(ll.lat, ll.lng);
-    addWaypoint({ lat: wlat, lon: wlon, alt: app.defaultAlt, drop: false, delay: 0, speed: 0, type: 'wp', loiter_param: 0 });
+    addWaypoint({
+      lat: wlat,
+      lon: wlon,
+      alt: app.defaultAlt,
+      drop: false,
+      delay: 0,
+      speed: 0,
+      type: 'wp',
+      loiter_param: 0,
+    });
   }
 
   function onRightClick(e: L.LeafletMouseEvent) {
@@ -144,7 +206,9 @@
     if (!app.drone.connected || !app.drone.armed) return;
     const ll = e.latlng;
     const [wlat, wlon] = fromMap(ll.lat, ll.lng);
-    showConfirm(`${t('confirm.guidedGoto')}\n${wlat.toFixed(5)}, ${wlon.toFixed(5)}\n${t('ctrl.altitude')}: ${app.defaultAlt}m`).then(ok => {
+    showConfirm(
+      `${t('confirm.guidedGoto')}\n${wlat.toFixed(5)}, ${wlon.toFixed(5)}\n${t('ctrl.altitude')}: ${app.defaultAlt}m`,
+    ).then((ok) => {
       if (ok) {
         sendCommand('guided_goto', undefined, { lat: wlat, lon: wlon, alt: app.defaultAlt });
         guidedTarget = { lat: wlat, lon: wlon, alt: app.defaultAlt };
@@ -156,9 +220,18 @@
   function onKeyDown(e: KeyboardEvent) {
     if (e.key === 'Escape') {
       if (measuring) clearMeasure();
-      if (app.guidedMode) { app.guidedMode = false; guidedTarget = null; }
-      if (app.drawingPolygon) { app.drawingPolygon = false; app.surveyPolygon = []; }
-      if (app.drawingFence) { app.drawingFence = false; app.fencePolygon = []; }
+      if (app.guidedMode) {
+        app.guidedMode = false;
+        guidedTarget = null;
+      }
+      if (app.drawingPolygon) {
+        app.drawingPolygon = false;
+        app.surveyPolygon = [];
+      }
+      if (app.drawingFence) {
+        app.drawingFence = false;
+        app.fencePolygon = [];
+      }
       map?.closePopup();
     }
     if (e.key === 'g' && (e.target as HTMLElement).tagName !== 'INPUT') {
@@ -172,11 +245,12 @@
     const R = 6371000;
     for (let i = 0; i < pts.length; i++) {
       const j = (i + 1) % pts.length;
-      const lat1 = pts[i].lat * Math.PI / 180, lat2 = pts[j].lat * Math.PI / 180;
-      const dlon = (pts[j].lng - pts[i].lng) * Math.PI / 180;
+      const lat1 = (pts[i].lat * Math.PI) / 180,
+        lat2 = (pts[j].lat * Math.PI) / 180;
+      const dlon = ((pts[j].lng - pts[i].lng) * Math.PI) / 180;
       area += dlon * (2 + Math.sin(lat1) + Math.sin(lat2));
     }
-    return Math.abs(area * R * R / 2);
+    return Math.abs((area * R * R) / 2);
   }
 
   function fmtArea(m2: number): string {
@@ -186,7 +260,12 @@
   }
 
   function addMeasurePoint(ll: L.LatLng) {
-    const cm = L.circleMarker([ll.lat, ll.lng], { radius: 4, color: '#ff5252', fillColor: '#ff5252', fillOpacity: 1 }).addTo(map!);
+    const cm = L.circleMarker([ll.lat, ll.lng], {
+      radius: 4,
+      color: '#ff5252',
+      fillColor: '#ff5252',
+      fillOpacity: 1,
+    }).addTo(map!);
     measurePts.push({ marker: cm, ll });
     const pts = measurePts.map((p) => [p.ll.lat, p.ll.lng] as [number, number]);
 
@@ -194,7 +273,13 @@
       if (measurePolygon) map!.removeLayer(measurePolygon);
       if (measureLabel) map!.removeLayer(measureLabel);
       if (pts.length >= 3) {
-        measurePolygon = L.polygon(pts, { color: '#ff5252', weight: 2, dashArray: '4,4', fillColor: '#ff5252', fillOpacity: 0.1 }).addTo(map!);
+        measurePolygon = L.polygon(pts, {
+          color: '#ff5252',
+          weight: 2,
+          dashArray: '4,4',
+          fillColor: '#ff5252',
+          fillOpacity: 0.1,
+        }).addTo(map!);
         const area = calcPolygonArea(measurePts.map((p) => p.ll));
         const center = measurePolygon.getBounds().getCenter();
         measureLabel = L.marker(center, {
@@ -232,13 +317,25 @@
     measuring = false;
     measurePts.forEach((p) => map!.removeLayer(p.marker));
     measurePts = [];
-    if (measureLine) { map!.removeLayer(measureLine); measureLine = null; }
-    if (measureLabel) { map!.removeLayer(measureLabel); measureLabel = null; }
-    if (measurePolygon) { map!.removeLayer(measurePolygon); measurePolygon = null; }
+    if (measureLine) {
+      map!.removeLayer(measureLine);
+      measureLine = null;
+    }
+    if (measureLabel) {
+      map!.removeLayer(measureLabel);
+      measureLabel = null;
+    }
+    if (measurePolygon) {
+      map!.removeLayer(measurePolygon);
+      measurePolygon = null;
+    }
   }
 
   function toggleMeasure(mode: 'distance' | 'area') {
-    if (measuring && measureMode === mode) { clearMeasure(); return; }
+    if (measuring && measureMode === mode) {
+      clearMeasure();
+      return;
+    }
     clearMeasure();
     measureMode = mode;
     measuring = true;
@@ -248,7 +345,8 @@
 
   function importKmlOverlay() {
     const input = document.createElement('input');
-    input.type = 'file'; input.accept = '.kml,.kmz';
+    input.type = 'file';
+    input.accept = '.kml,.kmz';
     input.onchange = (e: Event) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
@@ -263,16 +361,20 @@
             const coordsEl = pm.getElementsByTagName('coordinates');
             if (coordsEl.length === 0) continue;
             const pts: [number, number][] = [];
-            coordsEl[0].textContent!.trim().split(/\s+/).forEach((c: string) => {
-              const p = c.split(',');
-              if (p.length >= 2) {
-                const lon = parseFloat(p[0]), lat = parseFloat(p[1]);
-                if (Math.abs(lat) > 0.001) {
-                  const [mlat, mlon] = toMap(lat, lon);
-                  pts.push([mlat, mlon]);
+            coordsEl[0]
+              .textContent!.trim()
+              .split(/\s+/)
+              .forEach((c: string) => {
+                const p = c.split(',');
+                if (p.length >= 2) {
+                  const lon = parseFloat(p[0]),
+                    lat = parseFloat(p[1]);
+                  if (Math.abs(lat) > 0.001) {
+                    const [mlat, mlon] = toMap(lat, lon);
+                    pts.push([mlat, mlon]);
+                  }
                 }
-              }
-            });
+              });
             if (pts.length < 2) continue;
             const isPolygon = pm.getElementsByTagName('Polygon').length > 0;
             const layer = isPolygon
@@ -284,7 +386,9 @@
             count++;
           }
           addToast(t('kml.loaded').replace('{n}', String(count)), 'success');
-        } catch { addToast(t('kml.loadFail'), 'error'); }
+        } catch {
+          addToast(t('kml.loadFail'), 'error');
+        }
       };
       reader.readAsText(file);
     };
@@ -292,7 +396,7 @@
   }
 
   function clearKmlOverlay() {
-    kmlLayers.forEach(l => map!.removeLayer(l));
+    kmlLayers.forEach((l) => map!.removeLayer(l));
     kmlLayers = [];
   }
 
@@ -310,7 +414,7 @@
   }
 
   function fitRoute() {
-    const pts = app.waypoints.map(w => toMap(w.lat, w.lon));
+    const pts = app.waypoints.map((w) => toMap(w.lat, w.lon));
     if (pts.length) map!.fitBounds(L.latLngBounds(pts), { padding: [40, 40] });
   }
 
@@ -320,10 +424,12 @@
 
   function exportTrack() {
     if (!droneTrail.length) return;
-    const coords = droneTrail.map(([glat, glon]) => {
-      const [wlat, wlon] = fromMap(glat, glon);
-      return `${wlon},${wlat},0`;
-    }).join('\n');
+    const coords = droneTrail
+      .map(([glat, glon]) => {
+        const [wlat, wlon] = fromMap(glat, glon);
+        return `${wlon},${wlat},0`;
+      })
+      .join('\n');
     const kml = `<?xml version="1.0" encoding="UTF-8"?>
 <kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>Flight Track</name>
 <Style id="track"><LineStyle><color>ff4fc3f7</color><width>2</width></LineStyle></Style>
@@ -355,25 +461,41 @@
     <button class="map-btn" onclick={toggleMapType} title={isSat ? t('map.street') : t('map.satellite')}>
       <Layers size={13} />{isSat ? t('map.satellite') : t('map.street')}
     </button>
-    <button class="map-btn {measuring && measureMode === 'distance' ? '!text-destructive !border-destructive' : ''}"
-            onclick={() => toggleMeasure('distance')} title={t('map.measure')}>
+    <button
+      class="map-btn {measuring && measureMode === 'distance' ? '!text-destructive !border-destructive' : ''}"
+      onclick={() => toggleMeasure('distance')}
+      title={t('map.measure')}
+    >
       <Ruler size={13} />{measuring && measureMode === 'distance' ? t('map.cancel') : t('map.measure')}
     </button>
-    <button class="map-btn {measuring && measureMode === 'area' ? '!text-destructive !border-destructive' : ''}"
-            onclick={() => toggleMeasure('area')} title={t('map.area')}>
+    <button
+      class="map-btn {measuring && measureMode === 'area' ? '!text-destructive !border-destructive' : ''}"
+      onclick={() => toggleMeasure('area')}
+      title={t('map.area')}
+    >
       □ {measuring && measureMode === 'area' ? t('map.cancel') : t('map.area')}
     </button>
     {#if app.drone.connected && app.drone.armed}
-      <button class="map-btn {app.guidedMode ? '!text-warning !border-warning' : ''}" onclick={() => app.guidedMode = !app.guidedMode} title={t('map.guided')}>
+      <button
+        class="map-btn {app.guidedMode ? '!text-warning !border-warning' : ''}"
+        onclick={() => (app.guidedMode = !app.guidedMode)}
+        title={t('map.guided')}
+      >
         <Navigation size={13} />{app.guidedMode ? t('map.guidedActive') : t('map.guided')}
       </button>
     {/if}
-    <button class="map-btn {app.showSurvey || app.drawingPolygon ? '!text-purple-400 !border-purple-400' : ''}"
-            onclick={() => app.showSurvey = !app.showSurvey} title={t('map.survey')}>
+    <button
+      class="map-btn {app.showSurvey || app.drawingPolygon ? '!text-purple-400 !border-purple-400' : ''}"
+      onclick={() => (app.showSurvey = !app.showSurvey)}
+      title={t('map.survey')}
+    >
       <Grid3x3 size={13} />{t('map.survey')}
     </button>
-    <button class="map-btn {app.showFence || app.drawingFence ? '!text-destructive !border-destructive' : ''}"
-            onclick={() => app.showFence = !app.showFence} title={t('map.fence')}>
+    <button
+      class="map-btn {app.showFence || app.drawingFence ? '!text-destructive !border-destructive' : ''}"
+      onclick={() => (app.showFence = !app.showFence)}
+      title={t('map.fence')}
+    >
       <ShieldAlert size={13} />{t('map.fence')}
     </button>
     {#if droneTrail.length > 10}
@@ -391,7 +513,11 @@
     {/if}
   </div>
   <div class="absolute top-2.5 right-2.5 z-[1000] flex gap-1">
-    <button class="map-btn {follow ? '!text-destructive !border-destructive' : ''}" onclick={() => follow = !follow} title={follow ? t('map.free') : t('map.follow')}>
+    <button
+      class="map-btn {follow ? '!text-destructive !border-destructive' : ''}"
+      onclick={() => (follow = !follow)}
+      title={follow ? t('map.free') : t('map.follow')}
+    >
       <Crosshair size={13} />{follow ? t('map.follow') : t('map.free')}
     </button>
     <button class="map-btn" onclick={centerHome} title={t('map.home')}>
@@ -405,7 +531,9 @@
     <div class="absolute top-12 right-3 z-[1000]" title="{t('telem.hdg')} {app.drone.hdg.toFixed(0)}°">
       <svg width="42" height="42" viewBox="0 0 42 42" class="drop-shadow-lg">
         <circle cx="21" cy="21" r="19" fill="rgba(0,0,0,0.65)" stroke="rgba(255,255,255,0.15)" stroke-width="0.5" />
-        <text x="21" y="10" text-anchor="middle" fill="#f44336" font-size="9" font-weight="bold" font-family="monospace">N</text>
+        <text x="21" y="10" text-anchor="middle" fill="#f44336" font-size="9" font-weight="bold" font-family="monospace"
+          >N</text
+        >
         <text x="21" y="37" text-anchor="middle" fill="#666" font-size="7" font-family="monospace">S</text>
         <text x="5" y="24" text-anchor="middle" fill="#666" font-size="7" font-family="monospace">W</text>
         <text x="37" y="24" text-anchor="middle" fill="#666" font-size="7" font-family="monospace">E</text>
@@ -416,9 +544,16 @@
       </svg>
     </div>
   {/if}
-  <button class="absolute bottom-1.5 left-2.5 z-[1000] bg-card/85 backdrop-blur text-muted-foreground px-2 py-0.5 rounded text-[11px] font-mono cursor-pointer hover:text-primary transition-colors"
-       onclick={() => { if (mouseCoord) { navigator.clipboard.writeText(mouseCoord); addToast(t('toast.coordCopied'), 'success', 1500); } }}
-       title={t('tip.copyCoord')}>{mouseCoord || '---'}</button>
+  <button
+    class="absolute bottom-1.5 left-2.5 z-[1000] bg-card/85 backdrop-blur text-muted-foreground px-2 py-0.5 rounded text-[11px] font-mono cursor-pointer hover:text-primary transition-colors"
+    onclick={() => {
+      if (mouseCoord) {
+        navigator.clipboard.writeText(mouseCoord);
+        addToast(t('toast.coordCopied'), 'success', 1500);
+      }
+    }}
+    title={t('tip.copyCoord')}>{mouseCoord || '---'}</button
+  >
   <MapControls />
 
   {#if showHud && app.drone.connected}
@@ -427,13 +562,55 @@
 </div>
 
 <style>
-  .map-btn { display:inline-flex; align-items:center; gap:3px; padding:4px 10px; background:hsl(var(--card) / 0.92); border:1px solid hsl(var(--border)); border-radius:6px; cursor:pointer; font-size:12px; font-weight:600; color:hsl(var(--muted-foreground)); backdrop-filter:blur(4px); transition:all 0.15s; }
-  .map-btn:hover { color:hsl(var(--primary)); border-color:hsl(var(--primary)); }
-  :global(.drone-icon) { transition: transform 200ms linear !important; background: none !important; border: none !important; }
-  :global(.drone-arrow) { transition: transform 150ms ease-out; }
-  :global(.dark .leaflet-tile-pane) { filter: brightness(0.75) contrast(1.1) saturate(0.85); }
-  :global(.dark .leaflet-control-zoom a) { background: hsl(var(--card)); color: hsl(var(--foreground)); border-color: hsl(var(--border)); }
-  :global(.guided-pulse) { animation: guidedPulse 1.5s ease-in-out infinite; }
-  @keyframes guidedPulse { 0%,100% { opacity: 0.6; } 50% { opacity: 1; } }
-  .compass-needle { transition: transform 200ms ease-out; transform-origin: 21px 21px; }
+  .map-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 4px 10px;
+    background: hsl(var(--card) / 0.92);
+    border: 1px solid hsl(var(--border));
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    color: hsl(var(--muted-foreground));
+    backdrop-filter: blur(4px);
+    transition: all 0.15s;
+  }
+  .map-btn:hover {
+    color: hsl(var(--primary));
+    border-color: hsl(var(--primary));
+  }
+  :global(.drone-icon) {
+    transition: transform 200ms linear !important;
+    background: none !important;
+    border: none !important;
+  }
+  :global(.drone-arrow) {
+    transition: transform 150ms ease-out;
+  }
+  :global(.dark .leaflet-tile-pane) {
+    filter: brightness(0.75) contrast(1.1) saturate(0.85);
+  }
+  :global(.dark .leaflet-control-zoom a) {
+    background: hsl(var(--card));
+    color: hsl(var(--foreground));
+    border-color: hsl(var(--border));
+  }
+  :global(.guided-pulse) {
+    animation: guidedPulse 1.5s ease-in-out infinite;
+  }
+  @keyframes guidedPulse {
+    0%,
+    100% {
+      opacity: 0.6;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+  .compass-needle {
+    transition: transform 200ms ease-out;
+    transform-origin: 21px 21px;
+  }
 </style>

@@ -1,4 +1,5 @@
 """SRTM terrain elevation lookup."""
+
 from __future__ import annotations
 
 import math
@@ -12,19 +13,19 @@ from .config import ROOT_DIR, aio, cfg
 
 router = APIRouter()
 
-SRTM_CACHE = ROOT_DIR / 'srtm_cache'
+SRTM_CACHE = ROOT_DIR / "srtm_cache"
 
 
-@router.get('/api/terrain/elevation', tags=['Map'])
+@router.get("/api/terrain/elevation", tags=["Map"])
 async def api_terrain_elevation(request: Request):
     """Get ground elevation for a list of lat/lon points using SRTM data."""
     params = request.query_params
-    points_str = params.get('points', '')
+    points_str = params.get("points", "")
     if not points_str:
-        return {'elevations': []}
+        return {"elevations": []}
     points = []
-    for p in points_str.split(';'):
-        parts = p.split(',')
+    for p in points_str.split(";"):
+        parts = p.split(",")
         if len(parts) >= 2:
             try:
                 lat, lon = float(parts[0]), float(parts[1])
@@ -36,24 +37,24 @@ async def api_terrain_elevation(request: Request):
     for lat, lon in points:
         elev = await _get_srtm_elevation(lat, lon)
         elevations.append(elev)
-    return {'elevations': elevations}
+    return {"elevations": elevations}
 
 
 async def _get_srtm_elevation(lat: float, lon: float) -> float:
     ilat = int(math.floor(lat))
     ilon = int(math.floor(lon))
-    ns = 'N' if ilat >= 0 else 'S'
-    ew = 'E' if ilon >= 0 else 'W'
-    fname = '%s%02d%s%03d.hgt' % (ns, abs(ilat), ew, abs(ilon))
+    ns = "N" if ilat >= 0 else "S"
+    ew = "E" if ilon >= 0 else "W"
+    fname = "%s%02d%s%03d.hgt" % (ns, abs(ilat), ew, abs(ilon))
     cache_file = SRTM_CACHE / fname
     if not cache_file.exists():
         SRTM_CACHE.mkdir(parents=True, exist_ok=True)
-        srtm_count = await aio(lambda: sum(1 for _ in SRTM_CACHE.glob('*.hgt')) if SRTM_CACHE.exists() else 0)
+        srtm_count = await aio(lambda: sum(1 for _ in SRTM_CACHE.glob("*.hgt")) if SRTM_CACHE.exists() else 0)
         if srtm_count >= cfg.SRTM_CACHE_MAX:
             return 0
-        url = 'https://elevation-tiles-prod.s3.amazonaws.com/skadi/%s%02d/%s' % (ns, abs(ilat), fname)
+        url = "https://elevation-tiles-prod.s3.amazonaws.com/skadi/%s%02d/%s" % (ns, abs(ilat), fname)
         try:
-            req = urlreq.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+            req = urlreq.Request(url, headers={"User-Agent": "Mozilla/5.0"})
             data = await aio(lambda: urlreq.urlopen(req, timeout=cfg.SRTM_DOWNLOAD_TIMEOUT).read(cfg.SRTM_FILE_MAX))
             if len(data) >= cfg.SRTM_FILE_MAX:
                 return 0
@@ -76,7 +77,7 @@ async def _get_srtm_elevation(lat: float, lon: float) -> float:
         idx = (row * samples + col) * 2
         if idx + 2 > len(data):
             return 0
-        elev = struct.unpack('>h', data[idx:idx + 2])[0]
+        elev = struct.unpack(">h", data[idx : idx + 2])[0]
         if elev == -32768:
             return 0
         return float(elev)

@@ -1,4 +1,5 @@
 """Centralized configuration — all tunable constants in one place."""
+
 from __future__ import annotations
 
 import asyncio
@@ -8,7 +9,7 @@ from functools import partial
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
-VERSION = re.search(r'^version = "([^"]+)"', (ROOT_DIR / 'pyproject.toml').read_text(), re.MULTILINE).group(1)
+VERSION = re.search(r'^version = "([^"]+)"', (ROOT_DIR / "pyproject.toml").read_text(), re.MULTILINE).group(1)
 
 
 async def aio(fn, *args):
@@ -30,15 +31,19 @@ def _env(key: str, default, cast=None):
         # traceback. Fall back to the default and log a warning so the
         # process still starts.
         import logging
-        logging.getLogger('gcs').warning(
-            'Invalid value for %s=%r; falling back to default %r', key, val, default,
+
+        logging.getLogger("gcs").warning(
+            "Invalid value for %s=%r; falling back to default %r",
+            key,
+            val,
+            default,
         )
         return default
 
 
 class Config:
-    HOST: str = _env('ARGUS_HOST', '127.0.0.1')
-    PORT: int = _env('ARGUS_PORT', 8100)
+    HOST: str = _env("ARGUS_HOST", "127.0.0.1")
+    PORT: int = _env("ARGUS_PORT", 8100)
 
     # Connection
     TCP_CONNECT_TIMEOUT: float = 5.0
@@ -95,7 +100,7 @@ class Config:
 
     # Validation
     VALID_BAUD_RATES: tuple = (9600, 19200, 38400, 57600, 115200, 230400, 460800, 921600)
-    VALID_PROTOCOLS: tuple = ('auto', 'standard', 'pllink')
+    VALID_PROTOCOLS: tuple = ("auto", "standard", "pllink")
     VIDEO_URL_MAX_LEN: int = 2048
 
 
@@ -103,7 +108,9 @@ cfg = Config()
 
 if not 1 <= cfg.PORT <= 65535:
     import logging
-    logging.getLogger('gcs').warning(
-        'ARGUS_PORT=%d out of range 1-65535; using default 8100', cfg.PORT,
+
+    logging.getLogger("gcs").warning(
+        "ARGUS_PORT=%d out of range 1-65535; using default 8100",
+        cfg.PORT,
     )
     cfg.PORT = 8100

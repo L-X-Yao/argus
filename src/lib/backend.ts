@@ -11,13 +11,10 @@
  */
 
 /** True when running inside a Tauri webview. */
-export const isTauri: boolean =
-  '__TAURI_INTERNALS__' in window;
+export const isTauri: boolean = '__TAURI_INTERNALS__' in window;
 
 /** Base URL for HTTP API calls (no trailing slash). */
-export const API_BASE: string = isTauri
-  ? 'http://127.0.0.1:8100'
-  : '';
+export const API_BASE: string = isTauri ? 'http://127.0.0.1:8100' : '';
 
 /** WebSocket URL for the drone link. */
 export function getWsUrl(): string {

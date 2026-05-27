@@ -9,13 +9,15 @@
   $effect(() => {
     for (const id of panels._open) {
       if (!loaded[id] && !errors[id] && PANEL_LOADERS[id]) {
-        PANEL_LOADERS[id]().then(mod => {
-          if (mod.default) {
-            loaded = { ...loaded, [id]: mod.default };
-          }
-        }).catch(err => {
-          errors = { ...errors, [id]: String(err?.message || 'Load failed') };
-        });
+        PANEL_LOADERS[id]()
+          .then((mod) => {
+            if (mod.default) {
+              loaded = { ...loaded, [id]: mod.default };
+            }
+          })
+          .catch((err) => {
+            errors = { ...errors, [id]: String(err?.message || 'Load failed') };
+          });
       }
     }
   });
@@ -39,7 +41,9 @@
       <p class="text-xs mt-1 opacity-75">{errors[id]}</p>
       <div class="flex gap-2 mt-2">
         {#if (retryCounts[id] || 0) < 3}
-          <button class="text-xs underline hover:text-white" onclick={() => retry(id)}>{t('error.retry').replace('{n}', String(3 - (retryCounts[id] || 0)))}</button>
+          <button class="text-xs underline hover:text-white" onclick={() => retry(id)}
+            >{t('error.retry').replace('{n}', String(3 - (retryCounts[id] || 0)))}</button
+          >
         {/if}
         <button class="text-xs underline hover:text-white" onclick={() => panels.close(id)}>{t('error.close')}</button>
       </div>

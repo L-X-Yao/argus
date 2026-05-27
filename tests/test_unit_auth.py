@@ -3,6 +3,7 @@
 Tests token generation, validation, middleware behavior, file I/O,
 auth-disable mode, and concurrent access patterns.
 """
+
 import os
 import sys
 import threading
@@ -24,7 +25,7 @@ from backend.ws_manager import WSManager
 def _reset_auth_state():
     """Reset auth module state before and after each test."""
     auth_module._token = None
-    old_env = os.environ.pop('GCS_AUTH_TOKEN', None)
+    old_env = os.environ.pop("GCS_AUTH_TOKEN", None)
     existed = TOKEN_FILE.exists()
     if existed:
         backup = TOKEN_FILE.read_text()
@@ -36,15 +37,15 @@ def _reset_auth_state():
     if existed:
         TOKEN_FILE.write_text(backup)
     if old_env is not None:
-        os.environ['GCS_AUTH_TOKEN'] = old_env
+        os.environ["GCS_AUTH_TOKEN"] = old_env
     else:
-        os.environ.pop('GCS_AUTH_TOKEN', None)
+        os.environ.pop("GCS_AUTH_TOKEN", None)
 
 
 @pytest.fixture
 def client():
     """FastAPI TestClient with app state initialized."""
-    if not hasattr(app.state, 'link'):
+    if not hasattr(app.state, "link"):
         app.state.link = DroneLink()
         app.state.ws_mgr = WSManager(app.state.link)
     return TestClient(app, raise_server_exceptions=False)
@@ -54,7 +55,7 @@ class TestTokenGeneration:
     def test_token_is_32_hex_chars(self):
         token = generate_token()
         assert len(token) == 32
-        assert all(c in '0123456789abcdef' for c in token)
+        assert all(c in "0123456789abcdef" for c in token)
 
     def test_token_is_different_each_time(self):
         t1 = generate_token()
@@ -69,11 +70,11 @@ class TestTokenGeneration:
         generate_token()
         assert TOKEN_FILE.exists()
 
-    @pytest.mark.skipif(sys.platform == 'win32', reason='POSIX file mode not applicable on Windows (uses ACLs instead)')
+    @pytest.mark.skipif(sys.platform == "win32", reason="POSIX file mode not applicable on Windows (uses ACLs instead)")
     def test_token_file_has_correct_permissions(self):
         generate_token()
         mode = TOKEN_FILE.stat().st_mode & 0o777
-        assert mode == 0o600, f'Expected 0600, got {oct(mode)}'
+        assert mode == 0o600, f"Expected 0600, got {oct(mode)}"
 
 
 class TestTokenValidation:
@@ -83,11 +84,11 @@ class TestTokenValidation:
 
     def test_wrong_token_fails(self):
         generate_token()
-        assert verify_token('aaaabbbbccccddddeeeeffffgggghhhh') is False
+        assert verify_token("aaaabbbbccccddddeeeeffffgggghhhh") is False
 
     def test_empty_string_fails_when_auth_active(self):
         generate_token()
-        assert verify_token('') is False
+        assert verify_token("") is False
 
     def test_partial_token_fails(self):
         token = generate_token()
@@ -101,9 +102,9 @@ class TestTokenValidation:
 
     def test_env_token_validation(self):
         """GCS_AUTH_TOKEN environment variable is accepted."""
-        os.environ['GCS_AUTH_TOKEN'] = 'env_secret_token_12345678'
-        assert verify_token('env_secret_token_12345678') is True
-        assert verify_token('wrong_value') is False
+        os.environ["GCS_AUTH_TOKEN"] = "env_secret_token_12345678"
+        assert verify_token("env_secret_token_12345678") is True
+        assert verify_token("wrong_value") is False
 
 
 class TestAuthDisableMode:
@@ -111,49 +112,49 @@ class TestAuthDisableMode:
         assert auth_required() is False
 
     def test_no_token_allows_any_value(self):
-        assert verify_token('anything_at_all') is True
+        assert verify_token("anything_at_all") is True
 
     def test_no_token_allows_empty_string(self):
-        assert verify_token('') is True
+        assert verify_token("") is True
 
 
 class TestProtectedEndpoints:
     def test_unauthenticated_request_rejected(self, client):
         """Protected endpoint rejects requests without valid token."""
         generate_token()
-        r = client.get('/api/session')
+        r = client.get("/api/session")
         assert r.status_code == 401
         data = r.json()
-        assert data['error'] == 'unauthorized'
+        assert data["error"] == "unauthorized"
 
     def test_authenticated_request_passes(self, client):
         """Protected endpoint accepts requests with valid token."""
         token = generate_token()
-        r = client.get('/api/session', headers={'Authorization': f'Bearer {token}'})
+        r = client.get("/api/session", headers={"Authorization": f"Bearer {token}"})
         assert r.status_code == 200
 
     def test_query_param_token_rejected_for_http(self, client):
         """Token in query params is not accepted for HTTP — must use Authorization header."""
         token = generate_token()
-        r = client.get(f'/api/session?token={token}')
+        r = client.get(f"/api/session?token={token}")
         assert r.status_code == 401
 
     def test_health_endpoint_bypasses_auth(self, client):
         """Health endpoint is always accessible regardless of auth."""
         generate_token()
-        r = client.get('/health')
+        r = client.get("/health")
         assert r.status_code == 200
 
     def test_login_endpoint_bypasses_auth(self, client):
         """Login endpoint is accessible without token."""
         token = generate_token()
-        r = client.post('/api/auth/login', json={'token': token})
+        r = client.post("/api/auth/login", json={"token": token})
         assert r.status_code == 200
-        assert r.json()['ok'] is True
+        assert r.json()["ok"] is True
 
     def test_login_with_bad_token_returns_401(self, client):
         generate_token()
-        r = client.post('/api/auth/login', json={'token': 'totally_wrong'})
+        r = client.post("/api/auth/login", json={"token": "totally_wrong"})
         assert r.status_code == 401
 
 
@@ -178,7 +179,7 @@ class TestConcurrentAuth:
         for t in threads:
             t.join()
 
-        assert len(errors) == 0, f'Got errors: {errors}'
+        assert len(errors) == 0, f"Got errors: {errors}"
         assert all(r is True for r in results)
 
     def test_concurrent_verify_wrong_token(self):
@@ -190,7 +191,7 @@ class TestConcurrentAuth:
         def worker():
             try:
                 for _ in range(50):
-                    r = verify_token('wrong_token_value_here!!')
+                    r = verify_token("wrong_token_value_here!!")
                     results.append(r)
             except Exception as e:
                 errors.append(e)

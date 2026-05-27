@@ -10,9 +10,7 @@
   /* ── Active vehicle (own sysid = 1 by convention) ── */
   let activeSysid = $state(1);
 
-  let otherVehicles = $derived(
-    app.drone.vehicles.filter(v => v.sysid !== activeSysid)
-  );
+  let otherVehicles = $derived(app.drone.vehicles.filter((v) => v.sysid !== activeSysid));
 
   /* ── Mode name helper ── */
   function modeName(id: number | undefined): string {
@@ -31,10 +29,19 @@
   }
 </script>
 
-<div role="dialog" aria-modal="true" tabindex="-1" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
-     onclick={(e) => { if (e.target === e.currentTarget) onclose(); }} onkeydown={(e) => { if (e.key === "Escape") onclose(); }}>
+<div
+  role="dialog"
+  aria-modal="true"
+  tabindex="-1"
+  class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+  onclick={(e) => {
+    if (e.target === e.currentTarget) onclose();
+  }}
+  onkeydown={(e) => {
+    if (e.key === 'Escape') onclose();
+  }}
+>
   <div class="bg-card border border-border rounded-xl shadow-2xl w-[500px] max-h-[85vh] flex flex-col overflow-hidden">
-
     <!-- Header -->
     <div class="flex items-center justify-between px-4 py-3 border-b border-border">
       <div class="flex items-center gap-2">
@@ -48,7 +55,6 @@
     </div>
 
     <div class="flex-1 min-h-0 overflow-y-auto p-4 space-y-3">
-
       <!-- Active vehicle info -->
       <div class="p-3 rounded-lg bg-primary/10 border border-primary/30 space-y-2">
         <div class="flex items-center gap-2">
@@ -133,7 +139,6 @@
           <p class="text-xs text-muted-foreground">{t('multi.noVehicles')}</p>
         </div>
       {/if}
-
     </div>
   </div>
 </div>

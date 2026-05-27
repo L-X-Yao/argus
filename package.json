@@ -22,7 +22,9 @@
     "test": "vitest run",
     "test:e2e": "playwright test --config=tests/playwright.config.ts",
     "lint:py": "ruff check backend/ scripts/ tests/",
-    "lint:ts": "svelte-check --tsconfig ./tsconfig.json"
+    "lint:ts": "svelte-check --tsconfig ./tsconfig.json",
+    "format": "prettier --write 'src/**/*.{ts,svelte}' && ruff format backend/ scripts/ tests/",
+    "format:check": "prettier --check 'src/**/*.{ts,svelte}' && ruff format --check backend/ scripts/ tests/"
   },
   "devDependencies": {
     "@internationalized/date": "^3.12.1",
@@ -34,6 +36,8 @@
     "@types/node": "^25.9.1",
     "@vitest/coverage-v8": "^4.1.7",
     "fake-indexeddb": "^6.2.5",
+    "prettier": "^3.8.3",
+    "prettier-plugin-svelte": "^4.0.1",
     "svelte": "^5.0.0",
     "svelte-check": "^4.0.0",
     "tailwind-variants": "^3.2.2",

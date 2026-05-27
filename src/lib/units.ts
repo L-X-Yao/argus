@@ -4,10 +4,14 @@ let _system: UnitSystem = 'metric';
 
 export function setUnitSystem(s: UnitSystem) {
   _system = s;
-  try { localStorage.setItem('argus_units', s); } catch {}
+  try {
+    localStorage.setItem('argus_units', s);
+  } catch {}
 }
 
-export function getUnitSystem(): UnitSystem { return _system; }
+export function getUnitSystem(): UnitSystem {
+  return _system;
+}
 
 export function loadUnitSystem() {
   try {
@@ -16,10 +20,18 @@ export function loadUnitSystem() {
   } catch {}
 }
 
-export function altUnit(): string { return _system === 'imperial' ? 'ft' : 'm'; }
-export function speedUnit(): string { return _system === 'imperial' ? 'mph' : 'm/s'; }
-export function distUnit(): string { return _system === 'imperial' ? 'mi' : 'km'; }
-export function vsUnit(): string { return _system === 'imperial' ? 'ft/min' : 'm/s'; }
+export function altUnit(): string {
+  return _system === 'imperial' ? 'ft' : 'm';
+}
+export function speedUnit(): string {
+  return _system === 'imperial' ? 'mph' : 'm/s';
+}
+export function distUnit(): string {
+  return _system === 'imperial' ? 'mi' : 'km';
+}
+export function vsUnit(): string {
+  return _system === 'imperial' ? 'ft/min' : 'm/s';
+}
 
 export function fmtAlt(m: number): string {
   if (_system === 'imperial') return (m * 3.28084).toFixed(0);

@@ -167,7 +167,7 @@
   }
 
   function deleteAnnotation(id: number) {
-    const idx = annotations.findIndex(a => a.id === id);
+    const idx = annotations.findIndex((a) => a.id === id);
     if (idx >= 0) {
       annotations.splice(idx, 1);
       persist();
@@ -182,7 +182,7 @@
     }
     const data = {
       filename: imgFileName,
-      annotations: annotations.map(a => ({
+      annotations: annotations.map((a) => ({
         type: a.type,
         severity: a.severity,
         bbox: a.bbox,
@@ -204,10 +204,19 @@
   }
 </script>
 
-<div role="dialog" aria-modal="true" tabindex="-1" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
-     onclick={(e) => { if (e.target === e.currentTarget) onclose(); }} onkeydown={(e) => { if (e.key === "Escape") onclose(); }}>
+<div
+  role="dialog"
+  aria-modal="true"
+  tabindex="-1"
+  class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+  onclick={(e) => {
+    if (e.target === e.currentTarget) onclose();
+  }}
+  onkeydown={(e) => {
+    if (e.key === 'Escape') onclose();
+  }}
+>
   <div class="bg-card border border-border rounded-xl shadow-2xl w-[600px] max-h-[90vh] flex flex-col overflow-hidden">
-
     <!-- Header -->
     <div class="flex items-center justify-between px-4 py-3 border-b border-border">
       <div class="flex items-center gap-2">
@@ -218,10 +227,11 @@
     </div>
 
     <div class="flex-1 min-h-0 overflow-y-auto p-4 space-y-3">
-
       <!-- Load image button -->
-      <label class="flex items-center justify-center gap-2 w-full px-3 py-2 rounded-lg border border-dashed border-border
-                     bg-muted/20 hover:bg-muted/40 cursor-pointer transition-colors text-xs text-muted-foreground">
+      <label
+        class="flex items-center justify-center gap-2 w-full px-3 py-2 rounded-lg border border-dashed border-border
+                     bg-muted/20 hover:bg-muted/40 cursor-pointer transition-colors text-xs text-muted-foreground"
+      >
         <Square size={14} />
         {imgFileName || t('aiAnnot.loadImage')}
         <input type="file" accept=".jpg,.jpeg,.png" class="hidden" onchange={handleLoadImage} />
@@ -245,8 +255,11 @@
       <div class="grid grid-cols-3 gap-2">
         <div class="flex flex-col gap-1">
           <label for="ann-type" class="text-[11px] text-muted-foreground">{t('aiAnnot.type')}</label>
-          <select id="ann-type" bind:value={editType}
-                  class="h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50">
+          <select
+            id="ann-type"
+            bind:value={editType}
+            class="h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50"
+          >
             <option value="crack">{t('aiAnnot.crack')}</option>
             <option value="corrosion">{t('aiAnnot.corrosion')}</option>
             <option value="damage">{t('aiAnnot.damage')}</option>
@@ -255,8 +268,11 @@
         </div>
         <div class="flex flex-col gap-1">
           <label for="ann-sev" class="text-[11px] text-muted-foreground">{t('aiAnnot.severity')}</label>
-          <select id="ann-sev" bind:value={editSeverity}
-                  class="h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50">
+          <select
+            id="ann-sev"
+            bind:value={editSeverity}
+            class="h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50"
+          >
             <option value="low">{t('aiAnnot.low')}</option>
             <option value="medium">{t('aiAnnot.medium')}</option>
             <option value="high">{t('aiAnnot.high')}</option>
@@ -264,8 +280,13 @@
         </div>
         <div class="flex flex-col gap-1">
           <label for="ann-notes" class="text-[11px] text-muted-foreground">{t('aiAnnot.notes')}</label>
-          <input id="ann-notes" type="text" bind:value={editNotes} placeholder="..."
-                 class="h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50" />
+          <input
+            id="ann-notes"
+            type="text"
+            bind:value={editNotes}
+            placeholder="..."
+            class="h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50"
+          />
         </div>
       </div>
 
@@ -287,19 +308,24 @@
           </div>
           {#each annotations as ann (ann.id)}
             <div class="flex items-center gap-2 bg-muted/20 rounded-lg p-2 group">
-              <div class="w-3 h-3 rounded-full shrink-0"
-                   style="background:{SEVERITY_BORDER[ann.severity] || '#eab308'}"></div>
+              <div
+                class="w-3 h-3 rounded-full shrink-0"
+                style="background:{SEVERITY_BORDER[ann.severity] || '#eab308'}"
+              ></div>
               <div class="flex-1 min-w-0">
                 <div class="text-xs font-medium text-foreground">
                   {t(`aiAnnot.${ann.type}`)} <span class="text-muted-foreground">({t(`aiAnnot.${ann.severity}`)})</span>
                 </div>
                 <div class="text-[10px] font-mono text-muted-foreground">
-                  {ann.bbox.x},{ann.bbox.y} {ann.bbox.w}x{ann.bbox.h}
+                  {ann.bbox.x},{ann.bbox.y}
+                  {ann.bbox.w}x{ann.bbox.h}
                   {#if ann.notes}&middot; {ann.notes}{/if}
                 </div>
               </div>
-              <button class="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-destructive hover:bg-destructive/10 rounded"
-                      onclick={() => deleteAnnotation(ann.id)}>
+              <button
+                class="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-destructive hover:bg-destructive/10 rounded"
+                onclick={() => deleteAnnotation(ann.id)}
+              >
                 <X size={13} />
               </button>
             </div>
@@ -315,7 +341,6 @@
           </p>
         </div>
       {/if}
-
     </div>
   </div>
 </div>

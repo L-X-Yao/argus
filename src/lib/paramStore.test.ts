@@ -1,5 +1,12 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { paramState, handleParamBatch, handleParamsComplete, handleParamTimeout, getParam, clearParams } from './paramStore.svelte';
+import {
+  paramState,
+  handleParamBatch,
+  handleParamsComplete,
+  handleParamTimeout,
+  getParam,
+  clearParams,
+} from './paramStore.svelte';
 
 beforeEach(() => {
   clearParams();
@@ -91,10 +98,7 @@ describe('clearParams', () => {
 });
 
 describe('param edit round-trip precision', () => {
-  const cases = [
-    0, 1, -1, 0.001, 0.123456, 99.9999, 100, 100.5,
-    3.4028235e+38, -3.4028235e+38, 1e-7, 16777216, 16777217,
-  ];
+  const cases = [0, 1, -1, 0.001, 0.123456, 99.9999, 100, 100.5, 3.4028235e38, -3.4028235e38, 1e-7, 16777216, 16777217];
 
   for (const v of cases) {
     it(`String(${v}) → parseFloat preserves value`, () => {

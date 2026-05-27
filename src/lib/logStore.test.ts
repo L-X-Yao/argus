@@ -1,5 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { logState, setLogList, startDownload, updateDownloadProgress, cancelDownload, completeDownload, appendLogChunk } from './logStore.svelte';
+import {
+  logState,
+  setLogList,
+  startDownload,
+  updateDownloadProgress,
+  cancelDownload,
+  completeDownload,
+  appendLogChunk,
+} from './logStore.svelte';
 
 describe('logStore', () => {
   it('setLogList replaces list', () => {
@@ -86,9 +94,15 @@ describe('completeDownload', () => {
       createObjectURL: vi.fn(() => 'blob:mock-url'),
       revokeObjectURL: vi.fn(),
     });
-    vi.stubGlobal('Blob', class MockBlob {
-      constructor(public parts: any[], public options: any) {}
-    });
+    vi.stubGlobal(
+      'Blob',
+      class MockBlob {
+        constructor(
+          public parts: any[],
+          public options: any,
+        ) {}
+      },
+    );
     vi.stubGlobal('document', {
       createElement: vi.fn(() => ({
         href: '',
@@ -134,7 +148,7 @@ describe('completeDownload', () => {
 
   it('appendLogChunk ignores chunks for other downloads', () => {
     startDownload(99, 6);
-    appendLogChunk(7, 0, btoa('xxx'));  // wrong id — should be dropped
+    appendLogChunk(7, 0, btoa('xxx')); // wrong id — should be dropped
     expect(logState._chunks.length).toBe(0);
   });
 

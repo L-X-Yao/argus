@@ -1054,5 +1054,4 @@ const messages: Record<string, string> = {
   'ui.battery': '电池 {v}V {pct}%',
 };
 
-
 export default messages;

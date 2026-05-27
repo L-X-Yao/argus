@@ -108,9 +108,9 @@ export interface MissionItemInt {
   param2: number;
   param3: number;
   param4: number;
-  x: number;  // lat * 1e7
-  y: number;  // lon * 1e7
-  z: number;  // alt
+  x: number; // lat * 1e7
+  y: number; // lon * 1e7
+  z: number; // alt
 }
 
 export interface HomePosition {
@@ -120,8 +120,12 @@ export interface HomePosition {
 }
 
 export interface Vibration {
-  x: number; y: number; z: number;
-  clip0: number; clip1: number; clip2: number;
+  x: number;
+  y: number;
+  z: number;
+  clip0: number;
+  clip1: number;
+  clip2: number;
 }
 
 export interface Wind {
@@ -248,9 +252,9 @@ export function decodeGpsRawInt(p: DataView): GpsRawInt {
 
 export function decodeAttitude(p: DataView): Attitude {
   return {
-    roll: p.getFloat32(4, true) * 180 / Math.PI,
-    pitch: p.getFloat32(8, true) * 180 / Math.PI,
-    yaw: p.getFloat32(12, true) * 180 / Math.PI,
+    roll: (p.getFloat32(4, true) * 180) / Math.PI,
+    pitch: (p.getFloat32(8, true) * 180) / Math.PI,
+    yaw: (p.getFloat32(12, true) * 180) / Math.PI,
   };
 }
 
@@ -280,7 +284,7 @@ export function decodeVfrHud(p: DataView): VfrHud {
 
 export function decodeRcChannels(p: DataView): RcChannels {
   const channels: number[] = [];
-  for (let i = 0; i < 18 && (4 + i * 2 + 1) < p.byteLength; i++) {
+  for (let i = 0; i < 18 && 4 + i * 2 + 1 < p.byteLength; i++) {
     channels.push(p.getUint16(4 + i * 2, true));
   }
   const chancount = p.byteLength > 40 ? p.getUint8(40) : 0;
@@ -293,10 +297,10 @@ export function decodeServoOutput(p: DataView): ServoOutput {
   //   extensions: servo9..16 raw(u16, 21..36).
   // servo9-16 sit AFTER the port byte, not contiguous with servo1-8.
   const outputs: number[] = [];
-  for (let i = 0; i < 8 && (4 + i * 2 + 1) < p.byteLength; i++) {
+  for (let i = 0; i < 8 && 4 + i * 2 + 1 < p.byteLength; i++) {
     outputs.push(p.getUint16(4 + i * 2, true));
   }
-  for (let i = 0; i < 8 && (21 + i * 2 + 1) < p.byteLength; i++) {
+  for (let i = 0; i < 8 && 21 + i * 2 + 1 < p.byteLength; i++) {
     outputs.push(p.getUint16(21 + i * 2, true));
   }
   while (outputs.length < 16) outputs.push(0);
@@ -455,7 +459,7 @@ export function decodeBatteryStatus(p: DataView): BatteryStatus {
   const cells: number[] = [];
   for (let i = 0; i < 10; i++) {
     const v = p.getUint16(10 + i * 2, true);
-    if (v === 0xFFFF) break;
+    if (v === 0xffff) break;
     cells.push(v / 1000);
   }
   return {
@@ -549,20 +553,27 @@ export function decodeAutopilotVersion(p: DataView): AutopilotVersion {
 export function encodeHeartbeat(sysType: number = 6, autopilot: number = 8): Uint8Array {
   const buf = new Uint8Array(9);
   const dv = new DataView(buf.buffer);
-  dv.setUint32(0, 0, true);    // custom_mode
-  dv.setUint8(4, sysType);     // MAV_TYPE_GCS = 6
-  dv.setUint8(5, autopilot);   // MAV_AUTOPILOT_INVALID = 8
-  dv.setUint8(6, 0);           // base_mode
-  dv.setUint8(7, 0);           // system_status
-  dv.setUint8(8, 3);           // mavlink_version
+  dv.setUint32(0, 0, true); // custom_mode
+  dv.setUint8(4, sysType); // MAV_TYPE_GCS = 6
+  dv.setUint8(5, autopilot); // MAV_AUTOPILOT_INVALID = 8
+  dv.setUint8(6, 0); // base_mode
+  dv.setUint8(7, 0); // system_status
+  dv.setUint8(8, 3); // mavlink_version
   return buf;
 }
 
 export function encodeCommandLong(
-  targetSys: number, targetComp: number,
-  command: number, confirmation: number,
-  p1: number, p2: number, p3: number, p4: number,
-  p5: number, p6: number, p7: number,
+  targetSys: number,
+  targetComp: number,
+  command: number,
+  confirmation: number,
+  p1: number,
+  p2: number,
+  p3: number,
+  p4: number,
+  p5: number,
+  p6: number,
+  p7: number,
 ): Uint8Array {
   const buf = new Uint8Array(33);
   const dv = new DataView(buf.buffer);
@@ -597,8 +608,11 @@ export function encodeParamRequestList(targetSys: number, targetComp: number): U
 }
 
 export function encodeParamSet(
-  targetSys: number, targetComp: number,
-  paramId: string, value: number, paramType: number,
+  targetSys: number,
+  targetComp: number,
+  paramId: string,
+  value: number,
+  paramType: number,
 ): Uint8Array {
   const buf = new Uint8Array(23);
   const dv = new DataView(buf.buffer);
@@ -613,8 +627,11 @@ export function encodeParamSet(
 }
 
 export function encodeRequestDataStream(
-  targetSys: number, targetComp: number,
-  streamId: number, rate: number, startStop: number,
+  targetSys: number,
+  targetComp: number,
+  streamId: number,
+  rate: number,
+  startStop: number,
 ): Uint8Array {
   const buf = new Uint8Array(6);
   const dv = new DataView(buf.buffer);
@@ -634,7 +651,10 @@ export function encodeRequestDataStream(
  * missionType: 0 = MAV_MISSION_TYPE_MISSION, 1 = FENCE, 2 = RALLY.
  */
 export function encodeMissionCount(
-  targetSys: number, targetComp: number, count: number, missionType: number = 0,
+  targetSys: number,
+  targetComp: number,
+  count: number,
+  missionType: number = 0,
 ): Uint8Array {
   const buf = new Uint8Array(4);
   const dv = new DataView(buf.buffer);
@@ -663,11 +683,21 @@ export function encodeMissionCount(
  * current: 1 only on seq 0 (the home item), 0 otherwise.
  */
 export function encodeMissionItemInt(
-  targetSys: number, targetComp: number,
-  seq: number, command: number, frame: number,
-  current: number, autocontinue: number, missionType: number,
-  p1: number, p2: number, p3: number, p4: number,
-  x: number, y: number, z: number,
+  targetSys: number,
+  targetComp: number,
+  seq: number,
+  command: number,
+  frame: number,
+  current: number,
+  autocontinue: number,
+  missionType: number,
+  p1: number,
+  p2: number,
+  p3: number,
+  p4: number,
+  x: number,
+  y: number,
+  z: number,
 ): Uint8Array {
   const buf = new Uint8Array(38);
   const dv = new DataView(buf.buffer);
@@ -694,9 +724,7 @@ export function encodeMissionItemInt(
  * for the given mission type before starting a fresh upload (or just to
  * abandon an in-progress one).
  */
-export function encodeMissionClearAll(
-  targetSys: number, targetComp: number, missionType: number = 0,
-): Uint8Array {
+export function encodeMissionClearAll(targetSys: number, targetComp: number, missionType: number = 0): Uint8Array {
   if (missionType !== 0) {
     return new Uint8Array([targetSys, targetComp, missionType]);
   }
@@ -730,9 +758,7 @@ export function encodeCommandAck(command: number, result: number): Uint8Array {
  * specific waypoint seq during AUTO flight.
  * ArduPilot: GCS_MAVLINK::handle_mission_set_current (GCS_Common.cpp)
  */
-export function encodeMissionSetCurrent(
-  targetSys: number, targetComp: number, seq: number,
-): Uint8Array {
+export function encodeMissionSetCurrent(targetSys: number, targetComp: number, seq: number): Uint8Array {
   const buf = new Uint8Array(4);
   const dv = new DataView(buf.buffer);
   dv.setUint16(0, seq, true);
@@ -745,9 +771,7 @@ export function encodeMissionSetCurrent(
  * MISSION_REQUEST_LIST (msg 43, 3-byte payload). Asks the FC to start a
  * mission download — it responds with MISSION_COUNT (44).
  */
-export function encodeMissionRequestList(
-  targetSys: number, targetComp: number, missionType: number = 0,
-): Uint8Array {
+export function encodeMissionRequestList(targetSys: number, targetComp: number, missionType: number = 0): Uint8Array {
   if (missionType !== 0) {
     return new Uint8Array([targetSys, targetComp, missionType]);
   }
@@ -760,7 +784,10 @@ export function encodeMissionRequestList(
  * backend/mavlink_handlers.py:468 → <HBBB>.
  */
 export function encodeMissionRequestInt(
-  targetSys: number, targetComp: number, seq: number, missionType: number = 0,
+  targetSys: number,
+  targetComp: number,
+  seq: number,
+  missionType: number = 0,
 ): Uint8Array {
   const buf = new Uint8Array(5);
   const dv = new DataView(buf.buffer);
@@ -777,8 +804,10 @@ export function encodeMissionRequestInt(
  * backend's send at handle_mission_item_int line 465 — <BBB>.
  */
 export function encodeMissionAck(
-  targetSys: number, targetComp: number,
-  type: number = 0, missionType: number = 0,
+  targetSys: number,
+  targetComp: number,
+  type: number = 0,
+  missionType: number = 0,
 ): Uint8Array {
   if (missionType !== 0) {
     return new Uint8Array([targetSys, targetComp, type, missionType]);
@@ -793,7 +822,10 @@ export function encodeMissionAck(
  * end=0xFFFF to request the full inventory.
  */
 export function encodeLogRequestList(
-  targetSys: number, targetComp: number, start: number = 0, end: number = 0xFFFF,
+  targetSys: number,
+  targetComp: number,
+  start: number = 0,
+  end: number = 0xffff,
 ): Uint8Array {
   const buf = new Uint8Array(6);
   const dv = new DataView(buf.buffer);
@@ -812,8 +844,11 @@ export function encodeLogRequestList(
  * backend/commands/_setup.py:cmd_log_download).
  */
 export function encodeLogRequestData(
-  targetSys: number, targetComp: number,
-  id: number, ofs: number, count: number,
+  targetSys: number,
+  targetComp: number,
+  id: number,
+  ofs: number,
+  count: number,
 ): Uint8Array {
   const buf = new Uint8Array(12);
   const dv = new DataView(buf.buffer);
@@ -855,39 +890,105 @@ function padPayload(p: DataView, minBytes: number): DataView {
 export function dispatchFrame(frame: MavFrame, handlers: Partial<MessageHandlers>): void {
   const pl = frame.payload;
   switch (frame.msgId) {
-    case 0:   handlers.onHeartbeat?.(decodeHeartbeat(padPayload(pl, 9)), frame); break;
-    case 1:   handlers.onSysStatus?.(decodeSysStatus(padPayload(pl, 31)), frame); break;
-    case 24:  handlers.onGpsRawInt?.(decodeGpsRawInt(padPayload(pl, 30)), frame); break;
-    case 30:  handlers.onAttitude?.(decodeAttitude(padPayload(pl, 28)), frame); break;
-    case 33:  handlers.onGlobalPositionInt?.(decodeGlobalPositionInt(padPayload(pl, 28)), frame); break;
-    case 65:  handlers.onRcChannels?.(decodeRcChannels(padPayload(pl, 42)), frame); break;
-    case 36:  handlers.onServoOutput?.(decodeServoOutput(padPayload(pl, 37)), frame); break;
-    case 74:  handlers.onVfrHud?.(decodeVfrHud(padPayload(pl, 20)), frame); break;
-    case 22:  handlers.onParamValue?.(decodeParamValue(padPayload(pl, 25)), frame); break;
-    case 77:  handlers.onCommandAck?.(decodeCommandAck(padPayload(pl, 10)), frame); break;
-    case 42:  handlers.onMissionCurrent?.(decodeMissionCurrent(padPayload(pl, 2)), frame); break;
-    case 47:  handlers.onMissionAck?.(decodeMissionAck(padPayload(pl, 4)), frame); break;
-    case 44:  handlers.onMissionCount?.(decodeMissionCount(padPayload(pl, 4)), frame); break;
-    case 73:  handlers.onMissionItemInt?.(decodeMissionItemInt(padPayload(pl, 38)), frame); break;
-    case 242: handlers.onHomePosition?.(decodeHomePosition(padPayload(pl, 60)), frame); break;
-    case 241: handlers.onVibration?.(decodeVibration(padPayload(pl, 32)), frame); break;
-    case 168: handlers.onWind?.(decodeWind(padPayload(pl, 12)), frame); break;
-    case 253: handlers.onStatusText?.(decodeStatusText(padPayload(pl, 51)), frame); break;
-    case 40:  handlers.onMissionRequest?.(decodeMissionRequest(padPayload(pl, 5)), frame); break;
-    case 46:  handlers.onMissionItemReached?.(decodeMissionItemReached(padPayload(pl, 2)), frame); break;
-    case 51:  handlers.onMissionRequest?.(decodeMissionRequest(padPayload(pl, 5)), frame); break;
-    case 118: handlers.onLogEntry?.(decodeLogEntry(padPayload(pl, 14)), frame); break;
-    case 120: handlers.onLogData?.(decodeLogData(padPayload(pl, 97)), frame); break;
-    case 126: handlers.onSerialControl?.(decodeSerialControl(padPayload(pl, 79)), frame); break;
-    case 136: handlers.onTerrainReport?.(decodeTerrainReport(padPayload(pl, 22)), frame); break;
-    case 147: handlers.onBatteryStatus?.(decodeBatteryStatus(padPayload(pl, 36)), frame); break;
-    case 148: handlers.onAutopilotVersion?.(decodeAutopilotVersion(padPayload(pl, 60)), frame); break;
-    case 158: handlers.onMountStatus?.(decodeMountStatus(padPayload(pl, 14)), frame); break;
-    case 191: handlers.onMagCalProgress?.(decodeMagCalProgress(padPayload(pl, 27)), frame); break;
-    case 192: handlers.onMagCalReport?.(decodeMagCalReport(padPayload(pl, 44)), frame); break;
-    case 193: handlers.onEkfStatus?.(decodeEkfStatus(padPayload(pl, 22)), frame); break;
-    case 246: handlers.onAdsbVehicle?.(decodeAdsbVehicle(padPayload(pl, 38)), frame); break;
-    default:  handlers.onUnknown?.(frame); break;
+    case 0:
+      handlers.onHeartbeat?.(decodeHeartbeat(padPayload(pl, 9)), frame);
+      break;
+    case 1:
+      handlers.onSysStatus?.(decodeSysStatus(padPayload(pl, 31)), frame);
+      break;
+    case 24:
+      handlers.onGpsRawInt?.(decodeGpsRawInt(padPayload(pl, 30)), frame);
+      break;
+    case 30:
+      handlers.onAttitude?.(decodeAttitude(padPayload(pl, 28)), frame);
+      break;
+    case 33:
+      handlers.onGlobalPositionInt?.(decodeGlobalPositionInt(padPayload(pl, 28)), frame);
+      break;
+    case 65:
+      handlers.onRcChannels?.(decodeRcChannels(padPayload(pl, 42)), frame);
+      break;
+    case 36:
+      handlers.onServoOutput?.(decodeServoOutput(padPayload(pl, 37)), frame);
+      break;
+    case 74:
+      handlers.onVfrHud?.(decodeVfrHud(padPayload(pl, 20)), frame);
+      break;
+    case 22:
+      handlers.onParamValue?.(decodeParamValue(padPayload(pl, 25)), frame);
+      break;
+    case 77:
+      handlers.onCommandAck?.(decodeCommandAck(padPayload(pl, 10)), frame);
+      break;
+    case 42:
+      handlers.onMissionCurrent?.(decodeMissionCurrent(padPayload(pl, 2)), frame);
+      break;
+    case 47:
+      handlers.onMissionAck?.(decodeMissionAck(padPayload(pl, 4)), frame);
+      break;
+    case 44:
+      handlers.onMissionCount?.(decodeMissionCount(padPayload(pl, 4)), frame);
+      break;
+    case 73:
+      handlers.onMissionItemInt?.(decodeMissionItemInt(padPayload(pl, 38)), frame);
+      break;
+    case 242:
+      handlers.onHomePosition?.(decodeHomePosition(padPayload(pl, 60)), frame);
+      break;
+    case 241:
+      handlers.onVibration?.(decodeVibration(padPayload(pl, 32)), frame);
+      break;
+    case 168:
+      handlers.onWind?.(decodeWind(padPayload(pl, 12)), frame);
+      break;
+    case 253:
+      handlers.onStatusText?.(decodeStatusText(padPayload(pl, 51)), frame);
+      break;
+    case 40:
+      handlers.onMissionRequest?.(decodeMissionRequest(padPayload(pl, 5)), frame);
+      break;
+    case 46:
+      handlers.onMissionItemReached?.(decodeMissionItemReached(padPayload(pl, 2)), frame);
+      break;
+    case 51:
+      handlers.onMissionRequest?.(decodeMissionRequest(padPayload(pl, 5)), frame);
+      break;
+    case 118:
+      handlers.onLogEntry?.(decodeLogEntry(padPayload(pl, 14)), frame);
+      break;
+    case 120:
+      handlers.onLogData?.(decodeLogData(padPayload(pl, 97)), frame);
+      break;
+    case 126:
+      handlers.onSerialControl?.(decodeSerialControl(padPayload(pl, 79)), frame);
+      break;
+    case 136:
+      handlers.onTerrainReport?.(decodeTerrainReport(padPayload(pl, 22)), frame);
+      break;
+    case 147:
+      handlers.onBatteryStatus?.(decodeBatteryStatus(padPayload(pl, 36)), frame);
+      break;
+    case 148:
+      handlers.onAutopilotVersion?.(decodeAutopilotVersion(padPayload(pl, 60)), frame);
+      break;
+    case 158:
+      handlers.onMountStatus?.(decodeMountStatus(padPayload(pl, 14)), frame);
+      break;
+    case 191:
+      handlers.onMagCalProgress?.(decodeMagCalProgress(padPayload(pl, 27)), frame);
+      break;
+    case 192:
+      handlers.onMagCalReport?.(decodeMagCalReport(padPayload(pl, 44)), frame);
+      break;
+    case 193:
+      handlers.onEkfStatus?.(decodeEkfStatus(padPayload(pl, 22)), frame);
+      break;
+    case 246:
+      handlers.onAdsbVehicle?.(decodeAdsbVehicle(padPayload(pl, 38)), frame);
+      break;
+    default:
+      handlers.onUnknown?.(frame);
+      break;
   }
 }
 

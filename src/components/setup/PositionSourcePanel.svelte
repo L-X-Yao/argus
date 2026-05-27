@@ -7,15 +7,15 @@
   let { onclose }: { onclose: () => void } = $props();
 
   /* ── EKF flag bit masks ── */
-  const BIT_ATTITUDE       = 0x001;  // bit 0
-  const BIT_VEL_HORIZ      = 0x002;  // bit 1
-  const BIT_VEL_VERT       = 0x004;  // bit 2
-  const BIT_POS_HORIZ_REL  = 0x008;  // bit 3
-  const BIT_POS_HORIZ_ABS  = 0x010;  // bit 4
-  const BIT_POS_VERT_ABS   = 0x020;  // bit 5
-  const BIT_POS_VERT_AGL   = 0x040;  // bit 6
-  const BIT_CONST_POS      = 0x080;  // bit 7
-  const BIT_UNINITIALIZED  = 0x400;  // bit 10
+  const BIT_ATTITUDE = 0x001; // bit 0
+  const BIT_VEL_HORIZ = 0x002; // bit 1
+  const BIT_VEL_VERT = 0x004; // bit 2
+  const BIT_POS_HORIZ_REL = 0x008; // bit 3
+  const BIT_POS_HORIZ_ABS = 0x010; // bit 4
+  const BIT_POS_VERT_ABS = 0x020; // bit 5
+  const BIT_POS_VERT_AGL = 0x040; // bit 6
+  const BIT_CONST_POS = 0x080; // bit 7
+  const BIT_UNINITIALIZED = 0x400; // bit 10
 
   const d = app.drone;
 
@@ -99,7 +99,12 @@
   let sources: Source[] = $derived([
     { icon: Navigation, name: 'GPS', status: gpsStatus, detail: gpsDetail },
     { icon: Locate, name: 'EKF', status: ekfStatus, detail: `flags: 0x${ekfFlags.toString(16).padStart(3, '0')}` },
-    { icon: Locate, name: t('posSource.optFlow'), status: optFlowStatus, detail: t(`posSource.optFlow.${optFlowStatus}`) },
+    {
+      icon: Locate,
+      name: t('posSource.optFlow'),
+      status: optFlowStatus,
+      detail: t(`posSource.optFlow.${optFlowStatus}`),
+    },
     { icon: Locate, name: t('posSource.compass'), status: compassStatus, detail: compassDetail },
   ]);
 
@@ -116,10 +121,19 @@
   }
 </script>
 
-<div role="dialog" aria-modal="true" tabindex="-1" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
-     onclick={(e) => { if (e.target === e.currentTarget) onclose(); }} onkeydown={(e) => { if (e.key === "Escape") onclose(); }}>
+<div
+  role="dialog"
+  aria-modal="true"
+  tabindex="-1"
+  class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+  onclick={(e) => {
+    if (e.target === e.currentTarget) onclose();
+  }}
+  onkeydown={(e) => {
+    if (e.key === 'Escape') onclose();
+  }}
+>
   <div class="bg-card border border-border rounded-xl shadow-2xl w-[400px] max-h-[85vh] flex flex-col overflow-hidden">
-
     <!-- Header -->
     <div class="flex items-center justify-between px-4 py-3 border-b border-border">
       <div class="flex items-center gap-2">
@@ -130,9 +144,14 @@
     </div>
 
     <div class="flex-1 min-h-0 overflow-y-auto p-4 space-y-3">
-
       <!-- Overall confidence -->
-      <div class="p-3 rounded-lg border {confidence === 'good' ? 'bg-green-500/5 border-green-500/30' : confidence === 'warn' ? 'bg-yellow-500/5 border-yellow-500/30' : 'bg-red-500/5 border-red-500/30'}">
+      <div
+        class="p-3 rounded-lg border {confidence === 'good'
+          ? 'bg-green-500/5 border-green-500/30'
+          : confidence === 'warn'
+            ? 'bg-yellow-500/5 border-yellow-500/30'
+            : 'bg-red-500/5 border-red-500/30'}"
+      >
         <div class="flex items-center gap-2">
           <div class="w-2.5 h-2.5 rounded-full {statusColorClass(confidence)}"></div>
           <span class="text-xs font-semibold {statusTextClass(confidence)}">
@@ -161,19 +180,26 @@
 
       <!-- EKF flags decoded -->
       <div class="space-y-1">
-        <div class="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('posSource.ekfFlags')}</div>
+        <div class="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          {t('posSource.ekfFlags')}
+        </div>
         <div class="grid grid-cols-2 gap-1">
           {#each decodedFlags as flag}
             <div class="flex items-center gap-1.5 text-[11px]">
-              <div class="w-2 h-2 rounded-full {flag.active ? (flag.warn ? 'bg-yellow-500' : 'bg-green-500') : 'bg-muted-foreground/30'}"></div>
-              <span class="{flag.active ? (flag.warn ? 'text-yellow-400' : 'text-foreground') : 'text-muted-foreground'}">
+              <div
+                class="w-2 h-2 rounded-full {flag.active
+                  ? flag.warn
+                    ? 'bg-yellow-500'
+                    : 'bg-green-500'
+                  : 'bg-muted-foreground/30'}"
+              ></div>
+              <span class={flag.active ? (flag.warn ? 'text-yellow-400' : 'text-foreground') : 'text-muted-foreground'}>
                 {flag.label}
               </span>
             </div>
           {/each}
         </div>
       </div>
-
     </div>
   </div>
 </div>

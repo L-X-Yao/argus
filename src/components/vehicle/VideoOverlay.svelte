@@ -13,15 +13,19 @@
   let arGimbalPitch = $state(0);
 
   let videoUrl = $state('');
-  onMount(() => { try { videoUrl = localStorage.getItem('argus_video_url') || ''; } catch {} });
+  onMount(() => {
+    try {
+      videoUrl = localStorage.getItem('argus_video_url') || '';
+    } catch {}
+  });
   let streaming = $state(false);
   let size = $state<'sm' | 'md' | 'lg'>('md');
   let error = $state('');
 
   // --- dragging ---
   let dragging = $state(false);
-  let posX = $state(16);  // offset from right
-  let posY = $state(8);   // offset from top
+  let posX = $state(16); // offset from right
+  let posY = $state(8); // offset from top
   let dragStartX = 0;
   let dragStartY = 0;
   let origX = 0;
@@ -33,9 +37,7 @@
     lg: { w: 640, h: 480, labelKey: 'video.sizeLarge' },
   } as const;
 
-  let imgSrc = $derived(
-    streaming ? apiUrl(`/api/video?url=${encodeURIComponent(videoUrl)}`) : ''
-  );
+  let imgSrc = $derived(streaming ? apiUrl(`/api/video?url=${encodeURIComponent(videoUrl)}`) : '');
 
   function startStream() {
     if (!videoUrl.trim()) {
@@ -44,7 +46,9 @@
     }
     error = '';
     streaming = true;
-    try { localStorage.setItem('argus_video_url', videoUrl); } catch {}
+    try {
+      localStorage.setItem('argus_video_url', videoUrl);
+    } catch {}
   }
 
   async function stopStream() {
@@ -109,17 +113,17 @@
     const wps = app.waypoints;
     if (!d.connected || d.lat === 0 || wps.length === 0) return;
     const ctx = arCanvas.getContext('2d')!;
-    const w = arCanvas.width = sizeMap[size].w;
-    const h = arCanvas.height = sizeMap[size].h;
+    const w = (arCanvas.width = sizeMap[size].w);
+    const h = (arCanvas.height = sizeMap[size].h);
     ctx.clearRect(0, 0, w, h);
-    const hfov = arFov * Math.PI / 180;
+    const hfov = (arFov * Math.PI) / 180;
     const vfov = hfov * (h / w);
-    const yawRad = d.yaw * Math.PI / 180;
+    const yawRad = (d.yaw * Math.PI) / 180;
     const gimbalP = d.gimbal_pitch ?? arGimbalPitch;
-    const pitchRad = (d.pitch + gimbalP) * Math.PI / 180;
+    const pitchRad = ((d.pitch + gimbalP) * Math.PI) / 180;
     for (let i = 0; i < wps.length; i++) {
       const dlat = (wps[i].lat - d.lat) * 111320;
-      const dlon = (wps[i].lon - d.lon) * 111320 * Math.cos(d.lat * Math.PI / 180);
+      const dlon = (wps[i].lon - d.lon) * 111320 * Math.cos((d.lat * Math.PI) / 180);
       const dist = Math.sqrt(dlat * dlat + dlon * dlon);
       if (dist < 1 || dist > 5000) continue;
       const bearing = Math.atan2(dlon, dlat);
@@ -135,8 +139,10 @@
       ctx.strokeStyle = '#4fc3f7';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.moveTo(sx - 8, sy); ctx.lineTo(sx + 8, sy);
-      ctx.moveTo(sx, sy - 8); ctx.lineTo(sx, sy + 8);
+      ctx.moveTo(sx - 8, sy);
+      ctx.lineTo(sx + 8, sy);
+      ctx.moveTo(sx, sy - 8);
+      ctx.lineTo(sx, sy + 8);
       ctx.stroke();
       ctx.fillStyle = '#4fc3f7';
       ctx.font = 'bold 10px monospace';
@@ -145,7 +151,7 @@
     }
     if (d.home_lat !== 0) {
       const dlat = (d.home_lat - d.lat) * 111320;
-      const dlon = (d.home_lon - d.lon) * 111320 * Math.cos(d.lat * Math.PI / 180);
+      const dlon = (d.home_lon - d.lon) * 111320 * Math.cos((d.lat * Math.PI) / 180);
       const dist = Math.sqrt(dlat * dlat + dlon * dlon);
       const bearing = Math.atan2(dlon, dlat);
       let relBearing = bearing - yawRad;
@@ -154,7 +160,9 @@
       if (Math.abs(relBearing) <= hfov / 2) {
         const sx = w / 2 + (relBearing / (hfov / 2)) * (w / 2);
         ctx.fillStyle = '#f44336';
-        ctx.beginPath(); ctx.arc(sx, h - 20, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.beginPath();
+        ctx.arc(sx, h - 20, 5, 0, Math.PI * 2);
+        ctx.fill();
         ctx.font = 'bold 9px monospace';
         ctx.fillText(`H ${dist.toFixed(0)}m`, sx + 8, h - 16);
       }
@@ -166,39 +174,38 @@
   class="absolute z-[1003] flex flex-col bg-card/95 backdrop-blur border border-border
          rounded-xl shadow-2xl overflow-hidden select-none"
   style="right: {posX}px; top: {posY}px; width: {sizeMap[size].w}px;"
-  role="region" aria-label={t('ui.video')}
+  role="region"
+  aria-label={t('ui.video')}
 >
   <!-- Title bar (draggable) -->
   <div
     class="flex items-center justify-between px-3 py-1.5 border-b border-border cursor-move bg-muted/50"
-    role="toolbar" aria-label={t('ui.videoControls')} tabindex="0"
+    role="toolbar"
+    aria-label={t('ui.videoControls')}
+    tabindex="0"
     onmousedown={onDragStart}
   >
     <span class="text-xs font-semibold text-foreground tracking-wide">{t('video.title')}</span>
     <div class="flex items-center gap-1">
-      {#each (['sm', 'md', 'lg'] as const) as s}
+      {#each ['sm', 'md', 'lg'] as const as s}
         <button
           class="px-1.5 py-0.5 rounded text-[10px] font-semibold transition-all
             {size === s
-              ? 'bg-primary text-primary-foreground'
-              : 'text-muted-foreground hover:text-foreground hover:bg-muted'}"
-          onclick={() => size = s}
+            ? 'bg-primary text-primary-foreground'
+            : 'text-muted-foreground hover:text-foreground hover:bg-muted'}"
+          onclick={() => (size = s)}
         >
           {t(sizeMap[s].labelKey)}
         </button>
       {/each}
-      <button class="ml-1 text-muted-foreground hover:text-foreground leading-none px-0.5"
-              onclick={handleClose}>
+      <button class="ml-1 text-muted-foreground hover:text-foreground leading-none px-0.5" onclick={handleClose}>
         <X size={14} />
       </button>
     </div>
   </div>
 
   <!-- Video display -->
-  <div
-    class="relative bg-black flex items-center justify-center overflow-hidden"
-    style="height: {sizeMap[size].h}px;"
-  >
+  <div class="relative bg-black flex items-center justify-center overflow-hidden" style="height: {sizeMap[size].h}px;">
     {#if streaming && imgSrc}
       <img
         bind:this={videoImg}
@@ -206,7 +213,10 @@
         alt={t('video.alt')}
         class="w-full h-full object-contain"
         crossorigin="anonymous"
-        onerror={() => { error = t('video.loadFail'); streaming = false; }}
+        onerror={() => {
+          error = t('video.loadFail');
+          streaming = false;
+        }}
       />
       {#if arEnabled}
         <canvas bind:this={arCanvas} class="absolute inset-0 w-full h-full pointer-events-none"></canvas>
@@ -228,14 +238,35 @@
       placeholder={t('video.placeholder')}
       bind:value={videoUrl}
       disabled={streaming}
-      onkeydown={(e) => { if (e.key === 'Enter') startStream(); }}
+      onkeydown={(e) => {
+        if (e.key === 'Enter') startStream();
+      }}
     />
     {#if streaming}
-      <Button variant="ghost" size="icon-xs" onclick={takeScreenshot} title={t('tip.screenshot')} aria-label={t('tip.screenshot')}><Camera size={14} /></Button>
-      <Button variant={arEnabled ? 'default' : 'ghost'} size="icon-xs" onclick={() => arEnabled = !arEnabled} title={t('ar.overlay')} aria-label={t('ar.overlay')}><Crosshair size={14} /></Button>
+      <Button
+        variant="ghost"
+        size="icon-xs"
+        onclick={takeScreenshot}
+        title={t('tip.screenshot')}
+        aria-label={t('tip.screenshot')}><Camera size={14} /></Button
+      >
+      <Button
+        variant={arEnabled ? 'default' : 'ghost'}
+        size="icon-xs"
+        onclick={() => (arEnabled = !arEnabled)}
+        title={t('ar.overlay')}
+        aria-label={t('ar.overlay')}><Crosshair size={14} /></Button
+      >
       {#if arEnabled}
-        <input type="number" bind:value={arFov} min="30" max="120" step="5" title={t('label.fov')}
-               class="w-10 h-5 px-1 text-[9px] text-center bg-input border border-border rounded font-mono" />
+        <input
+          type="number"
+          bind:value={arFov}
+          min="30"
+          max="120"
+          step="5"
+          title={t('label.fov')}
+          class="w-10 h-5 px-1 text-[9px] text-center bg-input border border-border rounded font-mono"
+        />
       {/if}
       <Button variant="destructive" size="sm" onclick={stopStream}>{t('video.disconnect')}</Button>
     {:else}

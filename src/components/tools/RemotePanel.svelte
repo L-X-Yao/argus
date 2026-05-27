@@ -43,17 +43,31 @@
   /* ── Copy URL helper ── */
   let copied = $state(false);
   function copyUrl() {
-    navigator.clipboard.writeText(window.location.href).then(() => {
-      copied = true;
-      setTimeout(() => { copied = false; }, 2000);
-    }).catch(() => {});
+    navigator.clipboard
+      .writeText(window.location.href)
+      .then(() => {
+        copied = true;
+        setTimeout(() => {
+          copied = false;
+        }, 2000);
+      })
+      .catch(() => {});
   }
 </script>
 
-<div role="dialog" aria-modal="true" tabindex="-1" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
-     onclick={(e) => { if (e.target === e.currentTarget) onclose(); }} onkeydown={(e) => { if (e.key === "Escape") onclose(); }}>
+<div
+  role="dialog"
+  aria-modal="true"
+  tabindex="-1"
+  class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+  onclick={(e) => {
+    if (e.target === e.currentTarget) onclose();
+  }}
+  onkeydown={(e) => {
+    if (e.key === 'Escape') onclose();
+  }}
+>
   <div class="bg-card border border-border rounded-xl shadow-2xl w-[420px] max-h-[85vh] flex flex-col overflow-hidden">
-
     <!-- Header -->
     <div class="flex items-center justify-between px-4 py-3 border-b border-border">
       <div class="flex items-center gap-2">
@@ -64,7 +78,6 @@
     </div>
 
     <div class="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
-
       <!-- Status section -->
       <div class="space-y-2">
         <span class="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('remote.status')}</span>
@@ -98,7 +111,13 @@
           <!-- Latency -->
           <div class="flex items-center justify-between text-xs">
             <span class="text-muted-foreground">{t('remote.latency')}</span>
-            <span class="font-mono font-medium {latencyMs >= 0 && latencyMs < 200 ? 'text-green-500' : latencyMs >= 200 && latencyMs < 500 ? 'text-yellow-500' : 'text-muted-foreground'}">
+            <span
+              class="font-mono font-medium {latencyMs >= 0 && latencyMs < 200
+                ? 'text-green-500'
+                : latencyMs >= 200 && latencyMs < 500
+                  ? 'text-yellow-500'
+                  : 'text-muted-foreground'}"
+            >
               {latencyMs >= 0 ? `${latencyMs} ms` : '---'}
             </span>
           </div>
@@ -110,12 +129,12 @@
         <span class="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Share</span>
 
         <div class="p-3 rounded-lg bg-muted/30 border border-border space-y-3">
-          <p class="text-xs text-muted-foreground">
-            Share this URL with team members to observe the flight session.
-          </p>
+          <p class="text-xs text-muted-foreground">Share this URL with team members to observe the flight session.</p>
 
           <div class="flex items-center gap-2">
-            <div class="flex-1 bg-background border border-border rounded px-2 py-1.5 text-xs font-mono text-foreground truncate">
+            <div
+              class="flex-1 bg-background border border-border rounded px-2 py-1.5 text-xs font-mono text-foreground truncate"
+            >
               {window.location.href}
             </div>
             <Button variant="outline" size="xs" onclick={copyUrl}>
@@ -131,7 +150,6 @@
           {t('remote.hint')}
         </p>
       </div>
-
     </div>
   </div>
 </div>

@@ -94,7 +94,7 @@
   }
 
   function deleteSchedule(id: number) {
-    const idx = schedules.findIndex(s => s.id === id);
+    const idx = schedules.findIndex((s) => s.id === id);
     if (idx >= 0) {
       schedules.splice(idx, 1);
       persist();
@@ -115,26 +115,42 @@
 
   function fmtFreq(s: Schedule): string {
     switch (s.frequency) {
-      case 'once': return t('sched.once');
-      case 'daily': return t('sched.daily');
-      case 'weekly': return t('sched.weekly');
-      case 'custom': return `${s.customHours}h`;
+      case 'once':
+        return t('sched.once');
+      case 'daily':
+        return t('sched.daily');
+      case 'weekly':
+        return t('sched.weekly');
+      case 'custom':
+        return `${s.customHours}h`;
     }
   }
 
   function statusColor(s: ScheduleStatus): string {
     switch (s) {
-      case 'active': return 'text-green-400';
-      case 'completed': return 'text-muted-foreground';
-      default: return 'text-yellow-400';
+      case 'active':
+        return 'text-green-400';
+      case 'completed':
+        return 'text-muted-foreground';
+      default:
+        return 'text-yellow-400';
     }
   }
 </script>
 
-<div role="dialog" aria-modal="true" tabindex="-1" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
-     onclick={(e) => { if (e.target === e.currentTarget) onclose(); }} onkeydown={(e) => { if (e.key === "Escape") onclose(); }}>
+<div
+  role="dialog"
+  aria-modal="true"
+  tabindex="-1"
+  class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+  onclick={(e) => {
+    if (e.target === e.currentTarget) onclose();
+  }}
+  onkeydown={(e) => {
+    if (e.key === 'Escape') onclose();
+  }}
+>
   <div class="bg-card border border-border rounded-xl shadow-2xl w-[500px] max-h-[85vh] flex flex-col overflow-hidden">
-
     <!-- Header -->
     <div class="flex items-center justify-between px-4 py-3 border-b border-border">
       <div class="flex items-center gap-2">
@@ -145,10 +161,9 @@
     </div>
 
     <div class="flex-1 min-h-0 overflow-y-auto p-4 space-y-3">
-
       <!-- New schedule toggle -->
       {#if !showForm}
-        <Button variant="outline" class="w-full" onclick={() => showForm = true}>
+        <Button variant="outline" class="w-full" onclick={() => (showForm = true)}>
           + {t('sched.new')}
         </Button>
       {:else}
@@ -156,15 +171,23 @@
           <!-- Name -->
           <div class="flex items-center gap-2">
             <label for="sched-name" class="text-xs text-muted-foreground w-16 shrink-0">{t('sched.name')}</label>
-            <input id="sched-name" type="text" bind:value={formName} placeholder="..."
-                   class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50" />
+            <input
+              id="sched-name"
+              type="text"
+              bind:value={formName}
+              placeholder="..."
+              class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50"
+            />
           </div>
 
           <!-- Mission -->
           <div class="flex items-center gap-2">
             <label for="sched-mission" class="text-xs text-muted-foreground w-16 shrink-0">{t('sched.mission')}</label>
-            <select id="sched-mission" bind:value={formMission}
-                    class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50">
+            <select
+              id="sched-mission"
+              bind:value={formMission}
+              class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50"
+            >
               {#each savedMissions as m}
                 <option value={m}>{m === 'current' ? t('sched.currentWp') : m}</option>
               {/each}
@@ -174,8 +197,11 @@
           <!-- Frequency -->
           <div class="flex items-center gap-2">
             <label for="sched-freq" class="text-xs text-muted-foreground w-16 shrink-0">{t('sched.frequency')}</label>
-            <select id="sched-freq" bind:value={formFrequency}
-                    class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50">
+            <select
+              id="sched-freq"
+              bind:value={formFrequency}
+              class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50"
+            >
               <option value="once">{t('sched.once')}</option>
               <option value="daily">{t('sched.daily')}</option>
               <option value="weekly">{t('sched.weekly')}</option>
@@ -186,8 +212,14 @@
           {#if formFrequency === 'custom'}
             <div class="flex items-center gap-2">
               <label for="sched-hours" class="text-xs text-muted-foreground w-16 shrink-0">{t('sched.interval')}</label>
-              <input id="sched-hours" type="number" min="1" max="720" bind:value={formCustomHours}
-                     class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50" />
+              <input
+                id="sched-hours"
+                type="number"
+                min="1"
+                max="720"
+                bind:value={formCustomHours}
+                class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50"
+              />
               <span class="text-xs text-muted-foreground">h</span>
             </div>
           {/if}
@@ -195,15 +227,23 @@
           <!-- Start time -->
           <div class="flex items-center gap-2">
             <label for="sched-time" class="text-xs text-muted-foreground w-16 shrink-0">{t('sched.startTime')}</label>
-            <input id="sched-time" type="datetime-local" bind:value={formStartTime}
-                   class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50" />
+            <input
+              id="sched-time"
+              type="datetime-local"
+              bind:value={formStartTime}
+              class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50"
+            />
           </div>
 
           <!-- Auto-arm -->
           <div class="flex items-center gap-2">
             <label for="sched-arm" class="text-xs text-muted-foreground w-16 shrink-0">{t('sched.autoArm')}</label>
-            <input id="sched-arm" type="checkbox" bind:checked={formAutoArm}
-                   class="w-4 h-4 rounded border-border text-primary focus:ring-primary" />
+            <input
+              id="sched-arm"
+              type="checkbox"
+              bind:checked={formAutoArm}
+              class="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+            />
           </div>
 
           <!-- Form actions -->
@@ -211,7 +251,7 @@
             <Button variant="default" size="sm" class="flex-1" onclick={addSchedule}>
               {t('sched.create')}
             </Button>
-            <Button variant="ghost" size="sm" onclick={() => showForm = false}>
+            <Button variant="ghost" size="sm" onclick={() => (showForm = false)}>
               {t('map.cancel')}
             </Button>
           </div>
@@ -239,11 +279,17 @@
                 </div>
               </div>
               <div class="flex items-center gap-1 shrink-0">
-                <button class="p-1 text-primary hover:bg-primary/10 rounded" onclick={() => runNow(sched)} title={t('sched.runNow')}>
+                <button
+                  class="p-1 text-primary hover:bg-primary/10 rounded"
+                  onclick={() => runNow(sched)}
+                  title={t('sched.runNow')}
+                >
                   <Play size={13} />
                 </button>
-                <button class="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-destructive hover:bg-destructive/10 rounded"
-                        onclick={() => deleteSchedule(sched.id)}>
+                <button
+                  class="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-destructive hover:bg-destructive/10 rounded"
+                  onclick={() => deleteSchedule(sched.id)}
+                >
                   <Trash2 size={13} />
                 </button>
               </div>
@@ -262,7 +308,6 @@
           {t('sched.hint')}
         </p>
       </div>
-
     </div>
   </div>
 </div>

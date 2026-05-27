@@ -31,15 +31,18 @@
   $effect(() => {
     if (!canvasEl || samples.length < 2) return;
     const ctx = canvasEl.getContext('2d')!;
-    const w = canvasEl.width = canvasEl.parentElement!.clientWidth;
+    const w = (canvasEl.width = canvasEl.parentElement!.clientWidth);
     const h = canvasEl.height;
     ctx.clearRect(0, 0, w, h);
     ctx.fillStyle = '#0d1117';
     ctx.fillRect(0, 0, w, h);
-    const cx = w / 2, cy = h / 2;
+    const cx = w / 2,
+      cy = h / 2;
     const scale = Math.min(w, h) / 3;
-    const cosX = Math.cos(rotX), sinX = Math.sin(rotX);
-    const cosY = Math.cos(rotY), sinY = Math.sin(rotY);
+    const cosX = Math.cos(rotX),
+      sinX = Math.sin(rotX);
+    const cosY = Math.cos(rotY),
+      sinY = Math.sin(rotY);
 
     function project(x: number, y: number, z: number): [number, number] {
       const y1 = y * cosX - z * sinX;
@@ -56,13 +59,15 @@
         pts.push(project(Math.cos(a) * Math.cos(b), Math.sin(a) * Math.cos(b), Math.sin(b)));
       }
       ctx.beginPath();
-      pts.forEach(([px, py], i) => i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py));
+      pts.forEach(([px, py], i) => (i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py)));
       ctx.stroke();
     }
 
-    const maxVal = Math.max(...samples.map(s => Math.max(Math.abs(s.x), Math.abs(s.y), Math.abs(s.z))), 1);
+    const maxVal = Math.max(...samples.map((s) => Math.max(Math.abs(s.x), Math.abs(s.y), Math.abs(s.z))), 1);
     for (const s of samples) {
-      const nx = s.x / maxVal, ny = s.y / maxVal, nz = s.z / maxVal;
+      const nx = s.x / maxVal,
+        ny = s.y / maxVal,
+        nz = s.z / maxVal;
       const [px, py] = project(nx, ny, nz);
       const dist = Math.sqrt(nx * nx + ny * ny + nz * nz);
       ctx.fillStyle = dist > 0.7 ? '#4fc3f7' : '#ff9800';
@@ -74,24 +79,45 @@
     ctx.fillText(`${t('compass3d.samples')}: ${samples.length}`, 8, 14);
   });
 
-  function onMouseDown(e: MouseEvent) { dragging = true; lastMouse = { x: e.clientX, y: e.clientY }; }
+  function onMouseDown(e: MouseEvent) {
+    dragging = true;
+    lastMouse = { x: e.clientX, y: e.clientY };
+  }
   function onMouseMove(e: MouseEvent) {
     if (!dragging) return;
     rotY += (e.clientX - lastMouse.x) * 0.01;
     rotX += (e.clientY - lastMouse.y) * 0.01;
     lastMouse = { x: e.clientX, y: e.clientY };
   }
-  function onMouseUp() { dragging = false; }
+  function onMouseUp() {
+    dragging = false;
+  }
 
   function startCal() {
     if (isSerialConnected()) serialCalCompass();
     else sendCommand('cal_compass');
   }
-  function clearSamples() { samples = []; }
+  function clearSamples() {
+    samples = [];
+  }
 </script>
 
-<div role="dialog" aria-modal="true" tabindex="-1" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center" onclick={onclose} onkeydown={(e) => { if (e.key === "Escape") onclose(); }}>
-  <div class="bg-card border border-border rounded-2xl overflow-hidden w-[500px] shadow-2xl" role="presentation" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
+<div
+  role="dialog"
+  aria-modal="true"
+  tabindex="-1"
+  class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center"
+  onclick={onclose}
+  onkeydown={(e) => {
+    if (e.key === 'Escape') onclose();
+  }}
+>
+  <div
+    class="bg-card border border-border rounded-2xl overflow-hidden w-[500px] shadow-2xl"
+    role="presentation"
+    onclick={(e) => e.stopPropagation()}
+    onkeydown={(e) => e.stopPropagation()}
+  >
     <div class="bg-gradient-to-r from-primary/20 to-primary/5 px-5 py-3 flex items-center justify-between">
       <div class="flex items-center gap-2">
         <Compass size={16} class="text-primary" />
@@ -102,8 +128,15 @@
     <div class="px-5 py-3">
       <p class="text-xs text-muted-foreground mb-3">{t('compass3d.hint')}</p>
       <div class="border border-border rounded-lg overflow-hidden">
-        <canvas bind:this={canvasEl} height="300" class="w-full cursor-grab"
-                onmousedown={onMouseDown} onmousemove={onMouseMove} onmouseup={onMouseUp} onmouseleave={onMouseUp}></canvas>
+        <canvas
+          bind:this={canvasEl}
+          height="300"
+          class="w-full cursor-grab"
+          onmousedown={onMouseDown}
+          onmousemove={onMouseMove}
+          onmouseup={onMouseUp}
+          onmouseleave={onMouseUp}
+        ></canvas>
       </div>
       <div class="flex gap-2 mt-3">
         <Button variant="default" size="sm" onclick={startCal} disabled={!app.drone.connected}>{t('cal.start')}</Button>

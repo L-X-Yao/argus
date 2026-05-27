@@ -76,20 +76,19 @@
   onDestroy(stopAll);
 </script>
 
-<style>
-  @keyframes motor-pulse {
-    0%, 100% { box-shadow: 0 0 0 0 hsl(211 100% 50% / 0.4); }
-    50% { box-shadow: 0 0 12px 4px hsl(211 100% 50% / 0.25); }
-  }
-  .motor-active {
-    animation: motor-pulse 0.8s ease-in-out infinite;
-  }
-</style>
-
-<div role="dialog" aria-modal="true" tabindex="-1" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
-     onclick={(e) => { if (e.target === e.currentTarget) onclose(); }} onkeydown={(e) => { if (e.key === "Escape") onclose(); }}>
+<div
+  role="dialog"
+  aria-modal="true"
+  tabindex="-1"
+  class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+  onclick={(e) => {
+    if (e.target === e.currentTarget) onclose();
+  }}
+  onkeydown={(e) => {
+    if (e.key === 'Escape') onclose();
+  }}
+>
   <div class="bg-card border border-border rounded-xl shadow-2xl w-[560px] max-h-[85vh] flex flex-col overflow-hidden">
-
     <!-- Header -->
     <div class="flex items-center justify-between px-4 py-3 border-b border-border">
       <h2 class="text-sm font-semibold text-primary uppercase tracking-wider">{t('motor.title')}</h2>
@@ -97,7 +96,6 @@
     </div>
 
     <div class="flex-1 min-h-0 overflow-y-auto p-4">
-
       <!-- Warning banner -->
       <div class="flex items-center gap-2 p-3 mb-3 rounded-lg bg-destructive/10 border border-destructive/30">
         <AlertTriangle size={18} class="text-destructive shrink-0" />
@@ -111,16 +109,20 @@
       <div class="grid grid-cols-4 gap-2 mb-4">
         {#each Array(MOTOR_COUNT) as _, i}
           {@const active = isSpinning(i)}
-          <div class="flex flex-col items-center gap-1.5 p-2 rounded-lg border transition-all
-            {active ? 'border-primary/60 bg-primary/5' : 'border-border/50 bg-muted/20'}">
-
+          <div
+            class="flex flex-col items-center gap-1.5 p-2 rounded-lg border transition-all
+            {active ? 'border-primary/60 bg-primary/5' : 'border-border/50 bg-muted/20'}"
+          >
             <!-- Spinning indicator circle -->
             <div class="relative w-8 h-8 flex items-center justify-center">
-              <div class="w-8 h-8 rounded-full border-2 transition-all
-                {active ? 'border-primary bg-primary/20 motor-active' : 'border-muted-foreground/30 bg-muted/30'}">
-              </div>
-              <span class="absolute text-[10px] font-bold
-                {active ? 'text-primary' : 'text-muted-foreground'}">
+              <div
+                class="w-8 h-8 rounded-full border-2 transition-all
+                {active ? 'border-primary bg-primary/20 motor-active' : 'border-muted-foreground/30 bg-muted/30'}"
+              ></div>
+              <span
+                class="absolute text-[10px] font-bold
+                {active ? 'text-primary' : 'text-muted-foreground'}"
+              >
                 {i + 1}
               </span>
             </div>
@@ -152,7 +154,9 @@
       <!-- Copter motor layout hint (Quad X) -->
       {#if isCopter}
         <div class="mb-4 p-2.5 rounded-lg bg-muted/50 border border-border/50">
-          <p class="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">{t('label.quadX')}</p>
+          <p class="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
+            {t('label.quadX')}
+          </p>
           <div class="grid grid-cols-2 gap-1 max-w-[160px] mx-auto">
             {#each [0, 1, 2, 3] as m}
               <div class="text-center text-[10px] font-mono text-muted-foreground py-0.5 rounded bg-muted/40">
@@ -167,25 +171,41 @@
       <div class="space-y-3 mb-4">
         <!-- Throttle slider -->
         <div class="flex items-center gap-3">
-          <label for="motor-throttle" class="text-[11px] font-medium text-foreground w-16 shrink-0">{t('motor.throttle')}</label>
-          <input id="motor-throttle" type="range" min="0" max="100" step="1" bind:value={throttle}
-                 class="flex-1 h-1.5 accent-primary" />
+          <label for="motor-throttle" class="text-[11px] font-medium text-foreground w-16 shrink-0"
+            >{t('motor.throttle')}</label
+          >
+          <input
+            id="motor-throttle"
+            type="range"
+            min="0"
+            max="100"
+            step="1"
+            bind:value={throttle}
+            class="flex-1 h-1.5 accent-primary"
+          />
           <span class="text-xs font-mono text-muted-foreground w-10 text-right">{throttle}%</span>
         </div>
 
         <!-- Duration slider -->
         <div class="flex items-center gap-3">
-          <label for="motor-duration" class="text-[11px] font-medium text-foreground w-16 shrink-0">{t('motor.duration')}</label>
-          <input id="motor-duration" type="range" min="0.5" max="5" step="0.5" bind:value={duration}
-                 class="flex-1 h-1.5 accent-primary" />
+          <label for="motor-duration" class="text-[11px] font-medium text-foreground w-16 shrink-0"
+            >{t('motor.duration')}</label
+          >
+          <input
+            id="motor-duration"
+            type="range"
+            min="0.5"
+            max="5"
+            step="0.5"
+            bind:value={duration}
+            class="flex-1 h-1.5 accent-primary"
+          />
           <span class="text-xs font-mono text-muted-foreground w-10 text-right">{duration}s</span>
         </div>
       </div>
 
       <!-- Stop All button -->
-      <Button variant="destructive" class="w-full"
-              onclick={stopAll}
-              disabled={!connected}>
+      <Button variant="destructive" class="w-full" onclick={stopAll} disabled={!connected}>
         <Square size={14} />
         {t('motor.stop')}
       </Button>
@@ -196,3 +216,18 @@
     </div>
   </div>
 </div>
+
+<style>
+  @keyframes motor-pulse {
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 hsl(211 100% 50% / 0.4);
+    }
+    50% {
+      box-shadow: 0 0 12px 4px hsl(211 100% 50% / 0.25);
+    }
+  }
+  .motor-active {
+    animation: motor-pulse 0.8s ease-in-out infinite;
+  }
+</style>

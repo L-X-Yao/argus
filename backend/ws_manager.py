@@ -13,11 +13,11 @@ from .locale_text import lt
 
 logger = logging.getLogger(__name__)
 
-_VALID_LOCALES = frozenset(('zh', 'en', 'ja', 'ko', 'de', 'fr', 'es', 'pt', 'ru', 'ar'))
+_VALID_LOCALES = frozenset(("zh", "en", "ja", "ko", "de", "fr", "es", "pt", "ru", "ar"))
 
 
 def validate_port(port) -> bool:
-    return isinstance(port, str) and len(port) <= 200 and '\x00' not in port
+    return isinstance(port, str) and len(port) <= 200 and "\x00" not in port
 
 
 def sanitize_baud(baud) -> int:
@@ -29,7 +29,7 @@ def sanitize_baud(baud) -> int:
 
 
 def sanitize_protocol(protocol) -> str:
-    return protocol if protocol in cfg.VALID_PROTOCOLS else 'auto'
+    return protocol if protocol in cfg.VALID_PROTOCOLS else "auto"
 
 
 class WSManager:
@@ -90,57 +90,79 @@ class WSManager:
                     msg = json.loads(raw)
                 except json.JSONDecodeError:
                     continue
-                msg_type = msg.get('type', '')
-                if msg_type == 'connect':
-                    port = msg.get('port', 'tcp:localhost:5770')
-                    baud = msg.get('baud', cfg.SERIAL_BAUD)
-                    protocol = msg.get('protocol', 'auto')
+                msg_type = msg.get("type", "")
+                if msg_type == "connect":
+                    port = msg.get("port", "tcp:localhost:5770")
+                    baud = msg.get("baud", cfg.SERIAL_BAUD)
+                    protocol = msg.get("protocol", "auto")
                     if not validate_port(port):
-                        await ws.send_text(json.dumps({
-                            'type': 'connect_result', 'ok': False, 'error': 'Invalid port',
-                        }))
+                        await ws.send_text(
+                            json.dumps(
+                                {
+                                    "type": "connect_result",
+                                    "ok": False,
+                                    "error": "Invalid port",
+                                }
+                            )
+                        )
                         continue
                     baud = sanitize_baud(baud)
                     protocol = sanitize_protocol(protocol)
                     ok = self.link.connect(port, baud, protocol=protocol)
-                    await ws.send_text(json.dumps({
-                        'type': 'connect_result', 'ok': ok,
-                        'error': '' if ok else lt('err_connect', self.link.locale),
-                    }))
-                elif msg_type == 'disconnect':
+                    await ws.send_text(
+                        json.dumps(
+                            {
+                                "type": "connect_result",
+                                "ok": ok,
+                                "error": "" if ok else lt("err_connect", self.link.locale),
+                            }
+                        )
+                    )
+                elif msg_type == "disconnect":
                     self.link.disconnect()
-                    await ws.send_text(json.dumps({
-                        'type': 'connect_result', 'ok': True, 'error': '',
-                    }))
-                elif msg_type == 'set_locale':
-                    locale = msg.get('locale', 'zh')
+                    await ws.send_text(
+                        json.dumps(
+                            {
+                                "type": "connect_result",
+                                "ok": True,
+                                "error": "",
+                            }
+                        )
+                    )
+                elif msg_type == "set_locale":
+                    locale = msg.get("locale", "zh")
                     if locale in _VALID_LOCALES:
                         self.link.locale = locale
-                elif msg_type == 'set_role':
-                    role = msg.get('role', 'observer')
+                elif msg_type == "set_role":
+                    role = msg.get("role", "observer")
                     self._roles[id(ws)] = role
-                    if role == 'pilot':
+                    if role == "pilot":
                         self._pilot_ws = ws
-                    await self.broadcast({'type': 'role_update', 'clients': self.client_count,
-                                          'pilot_connected': self._pilot_ws in self._clients})
-                elif msg_type == 'request_handoff':
+                    await self.broadcast(
+                        {
+                            "type": "role_update",
+                            "clients": self.client_count,
+                            "pilot_connected": self._pilot_ws in self._clients,
+                        }
+                    )
+                elif msg_type == "request_handoff":
                     if self._pilot_ws and self._pilot_ws != ws and self._pilot_ws in self._clients:
-                        await self._pilot_ws.send_text(json.dumps({'type': 'handoff_request', 'from': id(ws)}))
+                        await self._pilot_ws.send_text(json.dumps({"type": "handoff_request", "from": id(ws)}))
                     else:
                         self._pilot_ws = ws
-                        self._roles[id(ws)] = 'pilot'
-                        await ws.send_text(json.dumps({'type': 'handoff_granted'}))
-                elif msg_type == 'handoff_accept':
-                    target_id = msg.get('target')
+                        self._roles[id(ws)] = "pilot"
+                        await ws.send_text(json.dumps({"type": "handoff_granted"}))
+                elif msg_type == "handoff_accept":
+                    target_id = msg.get("target")
                     for client in self._clients:
                         if id(client) == target_id:
                             self._pilot_ws = client
-                            self._roles[id(client)] = 'pilot'
-                            self._roles[id(ws)] = 'observer'
-                            await client.send_text(json.dumps({'type': 'handoff_granted'}))
-                            await ws.send_text(json.dumps({'type': 'handoff_released'}))
+                            self._roles[id(client)] = "pilot"
+                            self._roles[id(ws)] = "observer"
+                            await client.send_text(json.dumps({"type": "handoff_granted"}))
+                            await ws.send_text(json.dumps({"type": "handoff_released"}))
                             break
-                elif msg_type == 'command':
+                elif msg_type == "command":
                     # Observer clients must not be able to control the
                     # vehicle. Auditor finding: previously every connected
                     # client could call commands.execute() — meaning a
@@ -149,25 +171,27 @@ class WSManager:
                     # below covers the single-client case where no role has
                     # been set yet).
                     role = self._roles.get(id(ws))
-                    is_implicit_pilot = (
-                        self._pilot_ws is None and role is None and
-                        self.client_count == 1
-                    )
-                    if role != 'pilot' and not is_implicit_pilot:
-                        await ws.send_text(json.dumps({
-                            'type': 'cmd_result', 'ok': False,
-                            'error': lt('err_observer_no_cmd', self.link.locale),
-                        }))
+                    is_implicit_pilot = self._pilot_ws is None and role is None and self.client_count == 1
+                    if role != "pilot" and not is_implicit_pilot:
+                        await ws.send_text(
+                            json.dumps(
+                                {
+                                    "type": "cmd_result",
+                                    "ok": False,
+                                    "error": lt("err_observer_no_cmd", self.link.locale),
+                                }
+                            )
+                        )
                         continue
-                    cmd = msg.get('cmd', '')
-                    param = msg.get('param')
+                    cmd = msg.get("cmd", "")
+                    param = msg.get("param")
                     result = commands.execute(cmd, param, self.link, data=msg)
                     if result:
-                        await ws.send_text(json.dumps({'type': 'cmd_result', **result}))
+                        await ws.send_text(json.dumps({"type": "cmd_result", **result}))
         except WebSocketDisconnect:
             pass
         except (ConnectionError, RuntimeError):
-            logger.warning('receive_loop error', exc_info=True)
+            logger.warning("receive_loop error", exc_info=True)
 
     async def _push_loop(self, ws: WebSocket) -> None:
         # Use the monotonic emitted-count as our cursor for events. The array
@@ -188,8 +212,8 @@ class WSManager:
                     delta = state
                 else:
                     delta = {k: v for k, v in state.items() if last_sent.get(k) != v}
-                    delta['type'] = 'state'
-                    delta['connected'] = state['connected']
+                    delta["type"] = "state"
+                    delta["connected"] = state["connected"]
                 if delta:
                     await ws.send_text(json.dumps(delta))
                     last_sent.update(state)
@@ -204,13 +228,17 @@ class WSManager:
                 # seq, we accept the loss (the trimmed events are gone).
                 if events_total > event_seq_cursor:
                     for ev in events:
-                        if ev.get('seq', 0) > event_seq_cursor:
-                            await ws.send_text(json.dumps({
-                                'type': 'event',
-                                'time': ev['time'],
-                                'text': ev['text'],
-                                'event_type': ev.get('event_type', ''),
-                            }))
+                        if ev.get("seq", 0) > event_seq_cursor:
+                            await ws.send_text(
+                                json.dumps(
+                                    {
+                                        "type": "event",
+                                        "time": ev["time"],
+                                        "text": ev["text"],
+                                        "event_type": ev.get("event_type", ""),
+                                    }
+                                )
+                            )
                     event_seq_cursor = events_total
                 if dl_cursor > len(dlmsg):
                     dl_cursor = 0
@@ -228,33 +256,47 @@ class WSManager:
                     param_cursor = 0
                 if len(pmsg) > param_cursor:
                     batch = pmsg[param_cursor:]
-                    pvals = [m for m in batch if m['type'] == 'param_value']
-                    others = [m for m in batch if m['type'] != 'param_value']
+                    pvals = [m for m in batch if m["type"] == "param_value"]
+                    others = [m for m in batch if m["type"] != "param_value"]
                     if pvals:
-                        await ws.send_text(json.dumps({
-                            'type': 'param_batch', 'params': pvals,
-                        }))
+                        await ws.send_text(
+                            json.dumps(
+                                {
+                                    "type": "param_batch",
+                                    "params": pvals,
+                                }
+                            )
+                        )
                     for msg in others:
                         await ws.send_text(json.dumps(msg))
                     param_cursor = len(pmsg)
                 if self.link.inspector_enabled:
-                    await ws.send_text(json.dumps({
-                        'type': 'inspector',
-                        'messages': self.link.get_inspector_data(),
-                    }))
+                    await ws.send_text(
+                        json.dumps(
+                            {
+                                "type": "inspector",
+                                "messages": self.link.get_inspector_data(),
+                            }
+                        )
+                    )
                 with self.link._state_lock:
                     if self.link._console_buf:
-                        text = ''.join(self.link._console_buf)
+                        text = "".join(self.link._console_buf)
                         self.link._console_buf.clear()
                     else:
-                        text = ''
+                        text = ""
                 if text:
-                    await ws.send_text(json.dumps({
-                        'type': 'console_output', 'text': text,
-                    }))
+                    await ws.send_text(
+                        json.dumps(
+                            {
+                                "type": "console_output",
+                                "text": text,
+                            }
+                        )
+                    )
                 interval = cfg.WS_PUSH_INTERVAL_CONNECTED if self.link.connected else cfg.WS_PUSH_INTERVAL_IDLE
                 await asyncio.sleep(interval)
         except WebSocketDisconnect:
             pass
         except (ConnectionError, RuntimeError):
-            logger.warning('push_loop error', exc_info=True)
+            logger.warning("push_loop error", exc_info=True)

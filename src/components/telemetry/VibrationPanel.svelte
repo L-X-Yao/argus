@@ -13,7 +13,9 @@
     if (!app.drone.connected) return;
     const [vx, vy, vz] = app.drone.vibe;
     untrack(() => {
-      xData.push(vx); yData.push(vy); zData.push(vz);
+      xData.push(vx);
+      yData.push(vy);
+      zData.push(vz);
       if (xData.length > MAX) xData.shift();
       if (yData.length > MAX) yData.shift();
       if (zData.length > MAX) zData.shift();
@@ -26,7 +28,7 @@
   function draw() {
     if (!canvas) return;
     const ctx = canvas.getContext('2d')!;
-    const w = canvas.width = canvas.parentElement!.clientWidth;
+    const w = (canvas.width = canvas.parentElement!.clientWidth);
     const h = canvas.height;
     ctx.clearRect(0, 0, w, h);
 
@@ -39,12 +41,17 @@
     const ty = (1 - thresh / mx) * (h - 8) + 4;
     ctx.fillRect(0, 0, w, ty);
 
-    ctx.strokeStyle = '#333'; ctx.lineWidth = 0.5;
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 0.5;
     ctx.setLineDash([3, 3]);
-    ctx.beginPath(); ctx.moveTo(0, ty); ctx.lineTo(w, ty); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(0, ty);
+    ctx.lineTo(w, ty);
+    ctx.stroke();
     ctx.setLineDash([]);
 
-    ctx.fillStyle = '#666'; ctx.font = '9px monospace';
+    ctx.fillStyle = '#666';
+    ctx.font = '9px monospace';
     ctx.fillText(mx.toFixed(0), 2, 10);
     ctx.fillText('30', w - 18, ty - 2);
     ctx.fillText('0', 2, h - 2);
@@ -54,11 +61,14 @@
     for (let d = 0; d < 3; d++) {
       const data = datasets[d];
       if (data.length < 2) continue;
-      ctx.strokeStyle = colors[d]; ctx.lineWidth = 1.5; ctx.beginPath();
+      ctx.strokeStyle = colors[d];
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
       for (let i = 0; i < data.length; i++) {
-        const x = i / (data.length - 1) * w;
+        const x = (i / (data.length - 1)) * w;
         const y = (1 - data[i] / mx) * (h - 8) + 4;
-        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
       }
       ctx.stroke();
     }
@@ -92,7 +102,9 @@
         {vibeLevel(Math.max(...d.vibe))}
       </Badge>
       {#if d.vibe_clip[0] + d.vibe_clip[1] + d.vibe_clip[2] > 0}
-        <span class="text-destructive text-[10px]">{t('vibe.clip')} {d.vibe_clip[0]}/{d.vibe_clip[1]}/{d.vibe_clip[2]}</span>
+        <span class="text-destructive text-[10px]"
+          >{t('vibe.clip')} {d.vibe_clip[0]}/{d.vibe_clip[1]}/{d.vibe_clip[2]}</span
+        >
       {/if}
     </div>
     <div class="w-full">

@@ -34,8 +34,11 @@ export function loadBranding() {
       _brand = { ...DEFAULT_BRAND, ...cfg };
     }
   } catch {}
-  if (_brand.primaryColor && _brand.primaryColor.length < 100
-      && !/expression|url\s*\(|javascript:|[;{}]/i.test(_brand.primaryColor)) {
+  if (
+    _brand.primaryColor &&
+    _brand.primaryColor.length < 100 &&
+    !/expression|url\s*\(|javascript:|[;{}]/i.test(_brand.primaryColor)
+  ) {
     document.documentElement.style.setProperty('--brand-primary', _brand.primaryColor);
   }
 }

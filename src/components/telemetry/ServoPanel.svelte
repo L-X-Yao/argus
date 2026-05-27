@@ -23,7 +23,10 @@
           <div class="flex items-center gap-1.5 text-[11px]">
             <span class="w-5 text-right text-muted-foreground text-[10px] shrink-0">S{i + 1}</span>
             <div class="flex-1 h-2.5 bg-muted rounded-full overflow-hidden">
-              <div class="h-full rounded-full transition-all duration-150 {barColor(val, app.drone.armed)}" style="width:{barWidth(val)}%"></div>
+              <div
+                class="h-full rounded-full transition-all duration-150 {barColor(val, app.drone.armed)}"
+                style="width:{barWidth(val)}%"
+              ></div>
             </div>
             <span class="w-8 text-right font-mono text-muted-foreground text-[10px] shrink-0">{val}</span>
           </div>

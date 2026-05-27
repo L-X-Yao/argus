@@ -61,9 +61,27 @@ export interface DroneState {
   param_count: number;
   param_total: number;
   param_fetching: boolean;
-  vehicles: { sysid: number; lat: number; lon: number; alt: number; hdg: number; armed?: boolean; mode?: number; vtype?: number }[];
+  vehicles: {
+    sysid: number;
+    lat: number;
+    lon: number;
+    alt: number;
+    hdg: number;
+    armed?: boolean;
+    mode?: number;
+    vtype?: number;
+  }[];
   prearm: string[];
-  adsb: { icao: number; lat: number; lon: number; alt: number; hdg: number; speed: number; vs: number; callsign: string }[];
+  adsb: {
+    icao: number;
+    lat: number;
+    lon: number;
+    alt: number;
+    hdg: number;
+    speed: number;
+    vs: number;
+    callsign: string;
+  }[];
   cells: number[];
   gimbal_pitch: number;
   gimbal_yaw: number;
@@ -136,7 +154,15 @@ export interface Param {
 
 export interface ParamBatchMsg {
   type: 'param_batch';
-  params: { type: string; name: string; value: number; ptype: number; index: number; total: number; received: number }[];
+  params: {
+    type: string;
+    name: string;
+    value: number;
+    ptype: number;
+    index: number;
+    total: number;
+    received: number;
+  }[];
 }
 
 export interface ParamsCompleteMsg {
@@ -169,7 +195,7 @@ export interface LogChunkMsg {
   type: 'log_chunk';
   id: number;
   ofs: number;
-  data: string;  // base64-encoded slice of the log
+  data: string; // base64-encoded slice of the log
 }
 
 export interface LogCompleteMsg {
@@ -185,7 +211,14 @@ export interface LogCompleteMsg {
 
 export interface InspectorMsg {
   type: 'inspector';
-  messages: { id: number; name: string; hz: number; count: number; size: number; last_fields: Record<string, unknown> }[];
+  messages: {
+    id: number;
+    name: string;
+    hz: number;
+    count: number;
+    size: number;
+    last_fields: Record<string, unknown>;
+  }[];
 }
 
 export interface ConsoleOutputMsg {
@@ -193,30 +226,80 @@ export interface ConsoleOutputMsg {
   text: string;
 }
 
-export type WSMessage = DroneState | DroneEvent | ConnectResult
-  | ParamBatchMsg | ParamsCompleteMsg | ParamTimeoutMsg
+export type WSMessage =
+  | DroneState
+  | DroneEvent
+  | ConnectResult
+  | ParamBatchMsg
+  | ParamsCompleteMsg
+  | ParamTimeoutMsg
   | MissionDownloadedMsg
-  | LogListMsg | LogProgressMsg | LogChunkMsg | LogCompleteMsg
-  | InspectorMsg | ConsoleOutputMsg;
+  | LogListMsg
+  | LogProgressMsg
+  | LogChunkMsg
+  | LogCompleteMsg
+  | InspectorMsg
+  | ConsoleOutputMsg;
 
 export const defaultState: DroneState = {
   type: 'state',
-  connected: false, frames: 0,
-  mode: '---', mode_id: 0, armed: false,
-  roll: 0, pitch: 0, yaw: 0,
-  lat: 0, lon: 0, alt_rel: 0, alt_msl: 0,
-  gs: 0, airspeed: 0, throttle: 0, climb: 0, vz: 0, hdg: 0, dist_home: 0, flight_time: 0,
-  voltage: 0, current: 0, remaining: -1,
-  gps_fix: '---', gps_fix_raw: 0, gps_sats: 0, wp: 0,
-  vtype: '', vtype_raw: 0, autopilot: 0, mode_btns: [],
-  link_age: -1, bat_time: -1,
-  home_lat: 0, home_lon: 0, parse_errors: 0,
-  flight_summary: null, log_active: false,
-  fw_version: '', fw_git: '', board_id: 0,
-  rc: [], rc_rssi: 0, vibe: [0, 0, 0], vibe_clip: [0, 0, 0], servo: [],
-  ekf_vel: 0, ekf_pos_h: 0, ekf_pos_v: 0, ekf_compass: 0, ekf_flags: 0,
-  wind_dir: 0, wind_speed: 0, terrain_alt: -1,
-  param_count: 0, param_total: -1, param_fetching: false,
+  connected: false,
+  frames: 0,
+  mode: '---',
+  mode_id: 0,
+  armed: false,
+  roll: 0,
+  pitch: 0,
+  yaw: 0,
+  lat: 0,
+  lon: 0,
+  alt_rel: 0,
+  alt_msl: 0,
+  gs: 0,
+  airspeed: 0,
+  throttle: 0,
+  climb: 0,
+  vz: 0,
+  hdg: 0,
+  dist_home: 0,
+  flight_time: 0,
+  voltage: 0,
+  current: 0,
+  remaining: -1,
+  gps_fix: '---',
+  gps_fix_raw: 0,
+  gps_sats: 0,
+  wp: 0,
+  vtype: '',
+  vtype_raw: 0,
+  autopilot: 0,
+  mode_btns: [],
+  link_age: -1,
+  bat_time: -1,
+  home_lat: 0,
+  home_lon: 0,
+  parse_errors: 0,
+  flight_summary: null,
+  log_active: false,
+  fw_version: '',
+  fw_git: '',
+  board_id: 0,
+  rc: [],
+  rc_rssi: 0,
+  vibe: [0, 0, 0],
+  vibe_clip: [0, 0, 0],
+  servo: [],
+  ekf_vel: 0,
+  ekf_pos_h: 0,
+  ekf_pos_v: 0,
+  ekf_compass: 0,
+  ekf_flags: 0,
+  wind_dir: 0,
+  wind_speed: 0,
+  terrain_alt: -1,
+  param_count: 0,
+  param_total: -1,
+  param_fetching: false,
   vehicles: [],
   prearm: [],
   adsb: [],

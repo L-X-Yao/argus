@@ -17,8 +17,25 @@ function buildBinaryLog(
   fmtBody[0] = msgType;
   // length = 3 header bytes + sum of field sizes
   const FMT_SIZES: Record<string, number> = {
-    b: 1, B: 1, h: 2, H: 2, i: 4, I: 4, f: 4, d: 8,
-    n: 4, N: 16, Z: 64, c: 2, C: 2, e: 4, E: 4, L: 4, M: 1, q: 8, Q: 8,
+    b: 1,
+    B: 1,
+    h: 2,
+    H: 2,
+    i: 4,
+    I: 4,
+    f: 4,
+    d: 8,
+    n: 4,
+    N: 16,
+    Z: 64,
+    c: 2,
+    C: 2,
+    e: 4,
+    E: 4,
+    L: 4,
+    M: 1,
+    q: 8,
+    Q: 8,
   };
   const bodyLen = format.split('').reduce((s, c) => s + (FMT_SIZES[c] || 1), 0);
   fmtBody[1] = 3 + bodyLen;
@@ -63,7 +80,7 @@ function timeFloatRow(timeUS: number, val: number): ArrayBuffer {
   const buf = new ArrayBuffer(12);
   const dv = new DataView(buf);
   // Q: lo 4 bytes, hi 4 bytes (little endian)
-  dv.setUint32(0, timeUS & 0xFFFFFFFF, true);
+  dv.setUint32(0, timeUS & 0xffffffff, true);
   dv.setUint32(4, Math.floor(timeUS / 0x100000000), true);
   dv.setFloat32(8, val, true);
   return buf;
@@ -182,7 +199,7 @@ describe('parseDFLog — field types', () => {
 
   it('reads lat/lon (L) — value / 1e7', () => {
     const row = new ArrayBuffer(4);
-    new DataView(row).setInt32(0, 399042000, true);  // 39.9042 * 1e7
+    new DataView(row).setInt32(0, 399042000, true); // 39.9042 * 1e7
     const log = parseDFLog(buildBinaryLog(10, 'T', 'L', ['V'], [row]));
     expect(log.messages[0].fields['V']).toBeCloseTo(39.9042, 3);
   });
@@ -198,11 +215,7 @@ describe('parseDFLog — field types', () => {
 /* ── getTimeSeries ── */
 describe('getTimeSeries', () => {
   function makeSampleLog(): DFLog {
-    const rows = [
-      timeFloatRow(1_000_000, 10.0),
-      timeFloatRow(2_000_000, 20.0),
-      timeFloatRow(3_000_000, 30.0),
-    ];
+    const rows = [timeFloatRow(1_000_000, 10.0), timeFloatRow(2_000_000, 20.0), timeFloatRow(3_000_000, 30.0)];
     return parseDFLog(buildBinaryLog(10, 'SENS', 'Qf', ['TimeUS', 'Val'], rows));
   }
 
@@ -254,7 +267,7 @@ describe('computeFFT', () => {
     const N = 256;
     const fs = 400;
     const f0 = 50;
-    const signal = Array.from({ length: N }, (_, i) => Math.sin(2 * Math.PI * f0 * i / fs));
+    const signal = Array.from({ length: N }, (_, i) => Math.sin((2 * Math.PI * f0 * i) / fs));
     const { freq, mag } = computeFFT(signal, fs);
 
     expect(freq.length).toBeGreaterThan(0);
@@ -263,7 +276,7 @@ describe('computeFFT', () => {
     // A sine wave should produce a clear peak well above noise floor
     expect(peakMag).toBeGreaterThan(0.3);
     // Most bins should be much weaker than the peak
-    const weakBins = mag.filter(m => m < peakMag * 0.1);
+    const weakBins = mag.filter((m) => m < peakMag * 0.1);
     expect(weakBins.length).toBeGreaterThan(mag.length * 0.8);
   });
 

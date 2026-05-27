@@ -21,8 +21,18 @@
   }
 </script>
 
-<div role="dialog" aria-modal="true" tabindex="-1" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
-     onclick={(e) => { if (e.target === e.currentTarget) onclose(); }} onkeydown={(e) => { if (e.key === "Escape") onclose(); }}>
+<div
+  role="dialog"
+  aria-modal="true"
+  tabindex="-1"
+  class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+  onclick={(e) => {
+    if (e.target === e.currentTarget) onclose();
+  }}
+  onkeydown={(e) => {
+    if (e.key === 'Escape') onclose();
+  }}
+>
   <div class="bg-card border border-border rounded-xl shadow-2xl w-[500px] max-h-[80vh] flex flex-col overflow-hidden">
     <div class="flex items-center justify-between px-4 py-3 border-b border-border">
       <div class="flex items-center gap-2">
@@ -71,8 +81,7 @@
             <span class="text-xs text-muted-foreground">
               {v.lat.toFixed(5)}, {v.lon.toFixed(5)}
             </span>
-            <Button variant="outline" size="xs" class="ml-auto text-[10px]"
-                    onclick={() => switchVehicle(v.sysid)}>
+            <Button variant="outline" size="xs" class="ml-auto text-[10px]" onclick={() => switchVehicle(v.sysid)}>
               {t('fleet.switch')}
             </Button>
           </div>
@@ -87,7 +96,9 @@
             </div>
             <div>
               <div class="text-muted-foreground/60">{t('label.armed')}</div>
-              <div class="font-mono {v.armed ? 'text-destructive' : ''}">{v.armed ? t('label.yes') : t('label.no')}</div>
+              <div class="font-mono {v.armed ? 'text-destructive' : ''}">
+                {v.armed ? t('label.yes') : t('label.no')}
+              </div>
             </div>
           </div>
         </div>

@@ -55,14 +55,23 @@
   let { onclose }: { onclose: () => void } = $props();
 </script>
 
-<div role="dialog" aria-modal="true" tabindex="-1" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
-     onclick={(e) => { if (e.target === e.currentTarget) onclose(); }} onkeydown={(e) => { if (e.key === "Escape") onclose(); }}>
+<div
+  role="dialog"
+  aria-modal="true"
+  tabindex="-1"
+  class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+  onclick={(e) => {
+    if (e.target === e.currentTarget) onclose();
+  }}
+  onkeydown={(e) => {
+    if (e.key === 'Escape') onclose();
+  }}
+>
   <div class="bg-card border border-border rounded-xl shadow-2xl w-[520px] max-h-[80vh] flex flex-col overflow-hidden">
     <div class="flex items-center justify-between px-4 py-3 border-b border-border">
       <h2 class="text-sm font-semibold text-primary uppercase tracking-wider">{t('log.title')}</h2>
       <div class="flex items-center gap-2">
-        <Button variant="default" size="sm" onclick={requestList}
-                disabled={logState.downloading}>
+        <Button variant="default" size="sm" onclick={requestList} disabled={logState.downloading}>
           {t('log.fetchList')}
         </Button>
         <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label={t('error.close')}><X size={16} /></Button>
@@ -74,34 +83,46 @@
         <div class="mb-3 p-3 bg-muted/50 rounded-lg">
           <div class="flex items-center justify-between mb-2">
             <span class="text-xs text-foreground">
-              {t('log.downloading')} {logState.progress > 0 ? logState.progress + '%' : ''}{logState.downloadSpeed ? ' | ' + logState.downloadSpeed : ''}
+              {t('log.downloading')}
+              {logState.progress > 0 ? logState.progress + '%' : ''}{logState.downloadSpeed
+                ? ' | ' + logState.downloadSpeed
+                : ''}
             </span>
             <Button variant="destructive" size="xs" onclick={cancel}>{t('log.cancel')}</Button>
           </div>
           <div class="h-1.5 bg-muted rounded-full overflow-hidden">
-            <div class="h-full bg-primary rounded-full transition-all duration-300"
-                 style="width:{logState.progress > 0 ? logState.progress : 5}%"></div>
+            <div
+              class="h-full bg-primary rounded-full transition-all duration-300"
+              style="width:{logState.progress > 0 ? logState.progress : 5}%"
+            ></div>
           </div>
         </div>
       {/if}
 
       {#if logState.list.length > 0}
         <div class="rounded-lg border border-border overflow-hidden">
-          <div class="grid grid-cols-[60px_1fr_100px_80px] gap-2 px-3 py-2 bg-muted/50 text-[11px] text-muted-foreground font-semibold uppercase">
+          <div
+            class="grid grid-cols-[60px_1fr_100px_80px] gap-2 px-3 py-2 bg-muted/50 text-[11px] text-muted-foreground font-semibold uppercase"
+          >
             <span>{t('log.number')}</span>
             <span>{t('log.date')}</span>
             <span class="text-right">{t('log.size')}</span>
             <span class="text-center">{t('log.action')}</span>
           </div>
           {#each logState.list as log (log.id)}
-            <div class="grid grid-cols-[60px_1fr_100px_80px] gap-2 px-3 py-1.5 items-center text-xs border-t border-border/50 hover:bg-muted/30 transition-colors">
+            <div
+              class="grid grid-cols-[60px_1fr_100px_80px] gap-2 px-3 py-1.5 items-center text-xs border-t border-border/50 hover:bg-muted/30 transition-colors"
+            >
               <span class="font-mono font-bold">#{log.id}</span>
               <span class="text-muted-foreground font-mono">{fmtDate(log.time_utc)}</span>
               <span class="text-right font-mono">{fmtSize(log.size)}</span>
               <div class="text-center">
-                <Button variant="outline" size="xs"
-                        disabled={logState.downloading}
-                        onclick={() => downloadLog(log.id, log.size)}>
+                <Button
+                  variant="outline"
+                  size="xs"
+                  disabled={logState.downloading}
+                  onclick={() => downloadLog(log.id, log.size)}
+                >
                   {t('log.download')}
                 </Button>
               </div>

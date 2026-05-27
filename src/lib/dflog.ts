@@ -24,19 +24,33 @@ const HEAD2 = 0x95;
 
 function readField(dv: DataView, offset: number, fmt: string): [number | string, number] {
   switch (fmt) {
-    case 'b': return [dv.getInt8(offset), 1];
-    case 'B': case 'M': return [dv.getUint8(offset), 1];
-    case 'h': return [dv.getInt16(offset, true), 2];
-    case 'H': return [dv.getUint16(offset, true), 2];
-    case 'i': return [dv.getInt32(offset, true), 4];
-    case 'I': return [dv.getUint32(offset, true), 4];
-    case 'f': return [dv.getFloat32(offset, true), 4];
-    case 'd': return [dv.getFloat64(offset, true), 8];
-    case 'c': return [dv.getInt16(offset, true) / 100, 2];
-    case 'C': return [dv.getUint16(offset, true) / 100, 2];
-    case 'e': return [dv.getInt32(offset, true) / 100, 4];
-    case 'E': return [dv.getUint32(offset, true) / 100, 4];
-    case 'L': return [dv.getInt32(offset, true) / 1e7, 4];
+    case 'b':
+      return [dv.getInt8(offset), 1];
+    case 'B':
+    case 'M':
+      return [dv.getUint8(offset), 1];
+    case 'h':
+      return [dv.getInt16(offset, true), 2];
+    case 'H':
+      return [dv.getUint16(offset, true), 2];
+    case 'i':
+      return [dv.getInt32(offset, true), 4];
+    case 'I':
+      return [dv.getUint32(offset, true), 4];
+    case 'f':
+      return [dv.getFloat32(offset, true), 4];
+    case 'd':
+      return [dv.getFloat64(offset, true), 8];
+    case 'c':
+      return [dv.getInt16(offset, true) / 100, 2];
+    case 'C':
+      return [dv.getUint16(offset, true) / 100, 2];
+    case 'e':
+      return [dv.getInt32(offset, true) / 100, 4];
+    case 'E':
+      return [dv.getUint32(offset, true) / 100, 4];
+    case 'L':
+      return [dv.getInt32(offset, true) / 1e7, 4];
     case 'n': {
       const bytes = new Uint8Array(dv.buffer, dv.byteOffset + offset, 4);
       return [String.fromCharCode(...bytes).replace(/\0/g, ''), 4];
@@ -59,7 +73,8 @@ function readField(dv: DataView, offset: number, fmt: string): [number | string,
       const hi = dv.getUint32(offset + 4, true);
       return [hi * 0x100000000 + lo, 8];
     }
-    default: return [0, 1];
+    default:
+      return [0, 1];
   }
 }
 
@@ -90,7 +105,7 @@ export function parseDFLog(buffer: ArrayBuffer): DFLog {
       const format = String.fromCharCode(...fmtBytes).replace(/\0/g, '');
       const colBytes = data.slice(pos + 22, pos + 86);
       const colStr = String.fromCharCode(...colBytes).replace(/\0/g, '');
-      const columns = colStr.split(',').filter(c => c);
+      const columns = colStr.split(',').filter((c) => c);
       formats.set(type, { type, length, name, format, columns });
       formatsByName.set(name, { type, length, name, format, columns });
       pos += 86;
@@ -122,10 +137,8 @@ export function parseDFLog(buffer: ArrayBuffer): DFLog {
     pos += msgLen;
   }
 
-  const types = [...new Set(messages.map(m => m.type))].sort();
-  const duration = messages.length > 0
-    ? messages[messages.length - 1].timestamp - messages[0].timestamp
-    : 0;
+  const types = [...new Set(messages.map((m) => m.type))].sort();
+  const duration = messages.length > 0 ? messages[messages.length - 1].timestamp - messages[0].timestamp : 0;
 
   return { messages, formats: formatsByName, types, duration };
 }
@@ -155,14 +168,16 @@ export function computeFFT(values: number[], sampleRate: number): { freq: number
 
   for (let s = 1; s <= Math.log2(N); s++) {
     const m = 1 << s;
-    const wm_re = Math.cos(-2 * Math.PI / m);
-    const wm_im = Math.sin(-2 * Math.PI / m);
+    const wm_re = Math.cos((-2 * Math.PI) / m);
+    const wm_im = Math.sin((-2 * Math.PI) / m);
     for (let k = 0; k < N; k += m) {
-      let w_re = 1, w_im = 0;
+      let w_re = 1,
+        w_im = 0;
       for (let j = 0; j < m / 2; j++) {
         const t_re = w_re * re[k + j + m / 2] - w_im * im[k + j + m / 2];
         const t_im = w_re * im[k + j + m / 2] + w_im * re[k + j + m / 2];
-        const u_re = re[k + j], u_im = im[k + j];
+        const u_re = re[k + j],
+          u_im = im[k + j];
         re[k + j] = u_re + t_re;
         im[k + j] = u_im + t_im;
         re[k + j + m / 2] = u_re - t_re;
@@ -178,7 +193,7 @@ export function computeFFT(values: number[], sampleRate: number): { freq: number
   const mag: number[] = [];
   const halfN = N / 2;
   for (let i = 1; i < halfN; i++) {
-    freq.push(i * sampleRate / N);
+    freq.push((i * sampleRate) / N);
     mag.push(Math.sqrt(re[i] * re[i] + im[i] * im[i]) / halfN);
   }
   return { freq, mag };

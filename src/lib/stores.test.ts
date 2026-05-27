@@ -1,11 +1,25 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
-  app, updateState, isPlane, setWsConnected,
-  addEvent, clearEvents, addWaypoint, deleteWaypoint,
-  clearWaypoints, undo, generateCircle,
-  addToast, dismissToast,
-  showConfirm, resolveConfirm, confirmState,
-  showSlide, completeSlide, cancelSlide, slideState,
+  app,
+  updateState,
+  isPlane,
+  setWsConnected,
+  addEvent,
+  clearEvents,
+  addWaypoint,
+  deleteWaypoint,
+  clearWaypoints,
+  undo,
+  generateCircle,
+  addToast,
+  dismissToast,
+  showConfirm,
+  resolveConfirm,
+  confirmState,
+  showSlide,
+  completeSlide,
+  cancelSlide,
+  slideState,
   loadDownloadedMission,
 } from './stores.svelte';
 
@@ -13,10 +27,16 @@ function makeStorage(): Storage {
   const store = new Map<string, string>();
   return {
     getItem: (k: string) => store.get(k) ?? null,
-    setItem: (k: string, v: string) => { store.set(k, v); },
-    removeItem: (k: string) => { store.delete(k); },
+    setItem: (k: string, v: string) => {
+      store.set(k, v);
+    },
+    removeItem: (k: string) => {
+      store.delete(k);
+    },
     clear: () => store.clear(),
-    get length() { return store.size; },
+    get length() {
+      return store.size;
+    },
     key: (i: number) => [...store.keys()][i] ?? null,
   };
 }
@@ -265,7 +285,9 @@ describe('loadDownloadedMission', () => {
   });
 
   it('creates undo point', () => {
-    loadDownloadedMission([{ lat: 30, lon: 120, alt: 50, drop: false, delay: 0, speed: 0, type: 'wp', loiter_param: 0 }]);
+    loadDownloadedMission([
+      { lat: 30, lon: 120, alt: 50, drop: false, delay: 0, speed: 0, type: 'wp', loiter_param: 0 },
+    ]);
     expect(app.undoStack.length).toBeGreaterThan(0);
   });
 });

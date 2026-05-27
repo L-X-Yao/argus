@@ -1,5 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { parseQgcWaypoints, parseQgcPlan, exportKml, parseKmlCoords, segDist, totalDist, pointInPoly } from './missionIO';
+import {
+  parseQgcWaypoints,
+  parseQgcPlan,
+  exportKml,
+  parseKmlCoords,
+  segDist,
+  totalDist,
+  pointInPoly,
+} from './missionIO';
 
 describe('parseQgcWaypoints', () => {
   it('parses valid waypoints', () => {
@@ -30,8 +38,8 @@ describe('parseQgcPlan', () => {
           { command: 22, params: [0, 0, 0, 0, 0, 0, 30] },
           { command: 16, params: [0, 0, 0, 0, 34.26, 108.94, 50] },
           { command: 82, params: [0, 0, 0, 0, 34.27, 108.95, 60] },
-        ]
-      }
+        ],
+      },
     };
     const wps = parseQgcPlan(JSON.stringify(plan));
     expect(wps).toHaveLength(2);
@@ -60,7 +68,7 @@ describe('parseKmlCoords', () => {
       parseFromString(text: string, _type: string) {
         // Minimal XML parser for test KML docs
         const coordsMatches = [...text.matchAll(/<coordinates>([\s\S]*?)<\/coordinates>/g)];
-        const elements: { textContent: string }[] = coordsMatches.map(m => ({
+        const elements: { textContent: string }[] = coordsMatches.map((m) => ({
           textContent: m[1],
         }));
         return {
@@ -179,8 +187,10 @@ describe('totalDist', () => {
 
 describe('pointInPoly', () => {
   const square = [
-    { lat: 0, lon: 0 }, { lat: 0, lon: 10 },
-    { lat: 10, lon: 10 }, { lat: 10, lon: 0 },
+    { lat: 0, lon: 0 },
+    { lat: 0, lon: 10 },
+    { lat: 10, lon: 10 },
+    { lat: 10, lon: 0 },
   ];
 
   it('returns true for point inside', () => {

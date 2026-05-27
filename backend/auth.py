@@ -1,4 +1,5 @@
 """Simple token-based authentication for remote operation mode."""
+
 from __future__ import annotations
 
 import hashlib
@@ -9,7 +10,7 @@ from pathlib import Path
 from fastapi import Request, WebSocket
 from fastapi.responses import JSONResponse
 
-TOKEN_FILE = Path(__file__).resolve().parent.parent / '.gcs_token'
+TOKEN_FILE = Path(__file__).resolve().parent.parent / ".gcs_token"
 _token: str | None = None
 
 
@@ -20,7 +21,7 @@ def _load_token() -> str | None:
     if TOKEN_FILE.exists():
         _token = TOKEN_FILE.read_text().strip()
         return _token
-    env_token = os.environ.get('GCS_AUTH_TOKEN')
+    env_token = os.environ.get("GCS_AUTH_TOKEN")
     if env_token:
         _token = env_token
         return _token
@@ -62,19 +63,23 @@ async def auth_middleware(request: Request, call_next):
     # `/sw.js` and `/manifest.json` MUST be reachable without an Authorization
     # header — browsers don't send auth on service-worker installs or manifest
     # fetches, and a 401 here breaks PWA install/refresh entirely.
-    if path in ('/health', '/', '/index.html', '/sw.js', '/manifest.json') or \
-       path.startswith('/assets') or path.startswith('/lib') or path.startswith('/images'):
+    if (
+        path in ("/health", "/", "/index.html", "/sw.js", "/manifest.json")
+        or path.startswith("/assets")
+        or path.startswith("/lib")
+        or path.startswith("/images")
+    ):
         return await call_next(request)
-    if path in ('/api/auth/login', '/api/auth/status'):
+    if path in ("/api/auth/login", "/api/auth/status"):
         return await call_next(request)
-    token = request.headers.get('Authorization', '').replace('Bearer ', '')
+    token = request.headers.get("Authorization", "").replace("Bearer ", "")
     if not verify_token(token):
-        return JSONResponse(status_code=401, content={'error': 'unauthorized'})
+        return JSONResponse(status_code=401, content={"error": "unauthorized"})
     return await call_next(request)
 
 
 def verify_ws_token(ws: WebSocket) -> bool:
     if not auth_required():
         return True
-    token = ws.query_params.get('token', '')
+    token = ws.query_params.get("token", "")
     return verify_token(token)

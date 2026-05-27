@@ -141,18 +141,21 @@ export function loadSettings() {
 
 export function saveSettings() {
   try {
-    localStorage.setItem('argus_settings', JSON.stringify({
-      alt: app.defaultAlt,
-      speed: app.defaultSpeed,
-      radius: app.geoRadius,
-      dark: app.darkTheme,
-      muted: app.audioMuted,
-      voice: app.voiceEnabled,
-      region: app.mapRegion,
-      tileSource: app.tileSource,
-      mapMode: app.mapMode,
-      unitSystem: app.unitSystem,
-    }));
+    localStorage.setItem(
+      'argus_settings',
+      JSON.stringify({
+        alt: app.defaultAlt,
+        speed: app.defaultSpeed,
+        radius: app.geoRadius,
+        dark: app.darkTheme,
+        muted: app.audioMuted,
+        voice: app.voiceEnabled,
+        region: app.mapRegion,
+        tileSource: app.tileSource,
+        mapMode: app.mapMode,
+        unitSystem: app.unitSystem,
+      }),
+    );
   } catch {}
 }
 
@@ -179,9 +182,18 @@ export function generateCircle(centerLat: number, centerLon: number, radius: num
   const pts: Waypoint[] = [];
   for (let i = 0; i < count; i++) {
     const angle = (i / count) * 2 * Math.PI;
-    const dlat = radius * Math.cos(angle) / 111320;
-    const dlon = radius * Math.sin(angle) / (111320 * Math.cos(centerLat * Math.PI / 180));
-    pts.push({ lat: centerLat + dlat, lon: centerLon + dlon, alt, drop: false, delay: 0, speed: 0, type: 'wp' as const, loiter_param: 0 });
+    const dlat = (radius * Math.cos(angle)) / 111320;
+    const dlon = (radius * Math.sin(angle)) / (111320 * Math.cos((centerLat * Math.PI) / 180));
+    pts.push({
+      lat: centerLat + dlat,
+      lon: centerLon + dlon,
+      alt,
+      drop: false,
+      delay: 0,
+      speed: 0,
+      type: 'wp' as const,
+      loiter_param: 0,
+    });
   }
   app.waypoints = [...app.waypoints, ...pts];
   saveWaypoints();
@@ -189,10 +201,15 @@ export function generateCircle(centerLat: number, centerLon: number, radius: num
 
 export function loadDownloadedMission(wps: Waypoint[]) {
   pushUndo();
-  app.waypoints = wps.map(w => ({
-    lat: w.lat, lon: w.lon, alt: w.alt,
-    drop: w.drop || false, delay: w.delay || 0, speed: w.speed || 0,
-    type: w.type || 'wp', loiter_param: w.loiter_param || 0,
+  app.waypoints = wps.map((w) => ({
+    lat: w.lat,
+    lon: w.lon,
+    alt: w.alt,
+    drop: w.drop || false,
+    delay: w.delay || 0,
+    speed: w.speed || 0,
+    type: w.type || 'wp',
+    loiter_param: w.loiter_param || 0,
   }));
   saveWaypoints();
   requestAnimationFrame(() => app.fitRouteFlag++);
@@ -209,7 +226,7 @@ export const confirmState = new ConfirmState();
 
 export function showConfirm(message: string, danger = false): Promise<boolean> {
   cancelSlide();
-  return new Promise(resolve => {
+  return new Promise((resolve) => {
     confirmState.message = message;
     confirmState.danger = danger;
     confirmState.visible = true;
@@ -254,29 +271,35 @@ export function resolveConfirm(result: boolean) {
 let _toastId = 0;
 let _toastTimers = new Map<number, ReturnType<typeof setTimeout>>();
 export function addToast(text: string, level: 'info' | 'warn' | 'error' | 'success' = 'info', duration = 4000) {
-  const existing = app.toasts.find(t => t.text === text && t.level === level);
+  const existing = app.toasts.find((t) => t.text === text && t.level === level);
   if (existing) {
     existing.count++;
     const prev = _toastTimers.get(existing.id);
     if (prev) clearTimeout(prev);
-    _toastTimers.set(existing.id, setTimeout(() => {
-      const idx = app.toasts.findIndex(t => t.id === existing.id);
-      if (idx >= 0) app.toasts.splice(idx, 1);
-      _toastTimers.delete(existing.id);
-    }, duration));
+    _toastTimers.set(
+      existing.id,
+      setTimeout(() => {
+        const idx = app.toasts.findIndex((t) => t.id === existing.id);
+        if (idx >= 0) app.toasts.splice(idx, 1);
+        _toastTimers.delete(existing.id);
+      }, duration),
+    );
     return;
   }
   const id = ++_toastId;
   app.toasts.push({ id, text, level, count: 1 });
   if (app.toasts.length > 5) app.toasts.shift();
-  _toastTimers.set(id, setTimeout(() => {
-    const idx = app.toasts.findIndex(t => t.id === id);
-    if (idx >= 0) app.toasts.splice(idx, 1);
-    _toastTimers.delete(id);
-  }, duration));
+  _toastTimers.set(
+    id,
+    setTimeout(() => {
+      const idx = app.toasts.findIndex((t) => t.id === id);
+      if (idx >= 0) app.toasts.splice(idx, 1);
+      _toastTimers.delete(id);
+    }, duration),
+  );
 }
 
 export function dismissToast(id: number) {
-  const idx = app.toasts.findIndex(t => t.id === id);
+  const idx = app.toasts.findIndex((t) => t.id === id);
   if (idx >= 0) app.toasts.splice(idx, 1);
 }

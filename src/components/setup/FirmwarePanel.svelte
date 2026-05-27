@@ -9,13 +9,21 @@
   let files: { name: string; size: number }[] = $state([]);
   let uploading = $state(false);
 
-  interface FwVersion { version: string; date: string; url: string; size: number }
+  interface FwVersion {
+    version: string;
+    date: string;
+    url: string;
+    size: number;
+  }
   let onlineVersions: FwVersion[] = $state([]);
   let loadingOnline = $state(false);
   let showOnline = $state(false);
 
   async function fetchOnlineVersions() {
-    if (onlineVersions.length > 0) { showOnline = !showOnline; return; }
+    if (onlineVersions.length > 0) {
+      showOnline = !showOnline;
+      return;
+    }
     loadingOnline = true;
     showOnline = true;
     try {
@@ -98,7 +106,9 @@
     }
   }
 
-  $effect(() => { if (app.drone.connected) loadList(); });
+  $effect(() => {
+    if (app.drone.connected) loadList();
+  });
 </script>
 
 <div class="space-y-2">
@@ -111,17 +121,26 @@
     <Button variant="outline" size="sm" class="gap-1 h-7 text-xs flex-1" onclick={uploadFile} disabled={uploading}>
       <Upload size={13} />{t('fw.upload')}
     </Button>
-    <Button variant="outline" size="sm" class="gap-1 h-7 text-xs" onclick={fetchOnlineVersions}
-            disabled={loadingOnline}>
+    <Button
+      variant="outline"
+      size="sm"
+      class="gap-1 h-7 text-xs"
+      onclick={fetchOnlineVersions}
+      disabled={loadingOnline}
+    >
       <HardDriveDownload size={13} />{loadingOnline ? '...' : t('fw.browse')}
     </Button>
   </div>
 
   {#if showOnline && onlineVersions.length > 0}
     <div class="space-y-1 max-h-32 overflow-y-auto border border-border rounded-lg p-1.5">
-      <div class="text-[10px] text-muted-foreground/60 font-semibold">{t('fw.available')} ({onlineVersions.length})</div>
+      <div class="text-[10px] text-muted-foreground/60 font-semibold">
+        {t('fw.available')} ({onlineVersions.length})
+      </div>
       {#each onlineVersions as fw}
-        <div class="flex justify-between items-center text-xs text-muted-foreground px-1 py-0.5 hover:bg-muted/50 rounded">
+        <div
+          class="flex justify-between items-center text-xs text-muted-foreground px-1 py-0.5 hover:bg-muted/50 rounded"
+        >
           <div class="flex-1 min-w-0">
             <span class="font-mono text-foreground">{fw.version}</span>
             <span class="text-[10px] ml-1">{fw.date}</span>
@@ -150,12 +169,22 @@
   {/if}
 
   <div class="flex gap-2 pt-1">
-    <Button variant="destructive" size="sm" class="gap-1 h-7 text-xs flex-1"
-            onclick={rebootBootloader} disabled={!app.drone.connected}>
+    <Button
+      variant="destructive"
+      size="sm"
+      class="gap-1 h-7 text-xs flex-1"
+      onclick={rebootBootloader}
+      disabled={!app.drone.connected}
+    >
       <RotateCw size={13} />{t('fw.reboot')}
     </Button>
-    <Button variant="outline" size="sm" class="gap-1 h-7 text-xs"
-            onclick={rebootNormal} disabled={!app.drone.connected}>
+    <Button
+      variant="outline"
+      size="sm"
+      class="gap-1 h-7 text-xs"
+      onclick={rebootNormal}
+      disabled={!app.drone.connected}
+    >
       <RotateCw size={13} />{t('fw.rebootNormal')}
     </Button>
   </div>

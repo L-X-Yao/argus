@@ -1054,5 +1054,4 @@ const messages: Record<string, string> = {
   'pid.rateFF': 'معدل FF',
 };
 
-
 export default messages;

@@ -1,13 +1,40 @@
 <script lang="ts">
-  import { app, pushUndo, undo, deleteWaypoint, clearWaypoints, saveSettings, saveWaypoints, generateCircle, addToast, showConfirm } from '../../lib/stores.svelte';
+  import {
+    app,
+    pushUndo,
+    undo,
+    deleteWaypoint,
+    clearWaypoints,
+    saveSettings,
+    saveWaypoints,
+    generateCircle,
+    addToast,
+    showConfirm,
+  } from '../../lib/stores.svelte';
   import { t } from '../../lib/i18n.svelte';
   import { getElevationProfile, adjustWaypointsForTerrain, interpolateRoute } from '../../lib/terrain';
 
-  function fitAfterLoad() { requestAnimationFrame(() => app.fitRouteFlag++); }
+  function fitAfterLoad() {
+    requestAnimationFrame(() => app.fitRouteFlag++);
+  }
   import { sendCommand } from '../../lib/ws';
   import { isSerialConnected, serialUploadMission } from '../../lib/transport';
-  import { parseQgcWaypoints, parseQgcPlan, exportKml as buildKml, parseKmlCoords, segDist, totalDist as calcTotalDist, pointInPoly } from '../../lib/missionIO';
-  import { saveMission as dbSave, listMissions, loadMission as dbLoad, deleteMission as dbDelete, type MissionRecord } from '../../lib/missionDb';
+  import {
+    parseQgcWaypoints,
+    parseQgcPlan,
+    exportKml as buildKml,
+    parseKmlCoords,
+    segDist,
+    totalDist as calcTotalDist,
+    pointInPoly,
+  } from '../../lib/missionIO';
+  import {
+    saveMission as dbSave,
+    listMissions,
+    loadMission as dbLoad,
+    deleteMission as dbDelete,
+    type MissionRecord,
+  } from '../../lib/missionDb';
   import { panels } from '../../lib/panels.svelte';
   import { saveFence, saveRally } from '../../lib/stores.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
@@ -35,7 +62,10 @@
         app.waypoints[i].alt = adjusted[i].alt;
       }
       saveWaypoints();
-      addToast(t('terrain.adjusted').replace('{n}', String(app.waypoints.length)).replace('{alt}', String(app.defaultAlt)), 'success');
+      addToast(
+        t('terrain.adjusted').replace('{n}', String(app.waypoints.length)).replace('{alt}', String(app.defaultAlt)),
+        'success',
+      );
     } catch {
       addToast(t('terrain.noData'), 'error');
     } finally {
@@ -44,19 +74,31 @@
   }
 
   function genCircle() {
-    const center = app.drone.lat !== 0
-      ? { lat: app.drone.lat, lon: app.drone.lon }
-      : app.waypoints.length > 0
-        ? { lat: app.waypoints[app.waypoints.length - 1].lat, lon: app.waypoints[app.waypoints.length - 1].lon }
-        : { lat: 34.258, lon: 108.942 };
+    const center =
+      app.drone.lat !== 0
+        ? { lat: app.drone.lat, lon: app.drone.lon }
+        : app.waypoints.length > 0
+          ? { lat: app.waypoints[app.waypoints.length - 1].lat, lon: app.waypoints[app.waypoints.length - 1].lon }
+          : { lat: 34.258, lon: 108.942 };
     generateCircle(center.lat, center.lon, circleRadius, circleCount, app.defaultAlt);
     showCircleGen = false;
     fitAfterLoad();
   }
 
-  function toggleDrop(i: number) { pushUndo(); app.waypoints[i].drop = !app.waypoints[i].drop; saveWaypoints(); }
-  function setAlt(i: number, v: string) { app.waypoints[i].alt = parseFloat(v) || 30; saveWaypoints(); saveSettings(); }
-  function setSpeed(i: number, v: string) { app.waypoints[i].speed = parseFloat(v) || 0; saveWaypoints(); }
+  function toggleDrop(i: number) {
+    pushUndo();
+    app.waypoints[i].drop = !app.waypoints[i].drop;
+    saveWaypoints();
+  }
+  function setAlt(i: number, v: string) {
+    app.waypoints[i].alt = parseFloat(v) || 30;
+    saveWaypoints();
+    saveSettings();
+  }
+  function setSpeed(i: number, v: string) {
+    app.waypoints[i].speed = parseFloat(v) || 0;
+    saveWaypoints();
+  }
   function cycleType(i: number) {
     pushUndo();
     const types: ('wp' | 'loiter_turns' | 'loiter_time' | 'spline')[] = ['wp', 'spline', 'loiter_turns', 'loiter_time'];
@@ -78,8 +120,15 @@
     if (t === 'spline') return '#00897b';
     return '#1565c0';
   }
-  function applyAltAll() { pushUndo(); app.waypoints.forEach(w => w.alt = app.defaultAlt); }
-  function reverseRoute() { if (!app.waypoints.length) return; pushUndo(); app.waypoints.reverse(); }
+  function applyAltAll() {
+    pushUndo();
+    app.waypoints.forEach((w) => (w.alt = app.defaultAlt));
+  }
+  function reverseRoute() {
+    if (!app.waypoints.length) return;
+    pushUndo();
+    app.waypoints.reverse();
+  }
   function moveWp(i: number, dir: number) {
     const j = i + dir;
     if (j < 0 || j >= app.waypoints.length) return;
@@ -105,7 +154,10 @@
       if (ev.seq !== undefined && ev.seq <= _uploadEventSeq) break;
       if (ev.event_type === 'mission_ack_ok' || ev.event_type === 'mission_ack_fail') {
         uploading = false;
-        if (uploadTimer) { clearTimeout(uploadTimer); uploadTimer = null; }
+        if (uploadTimer) {
+          clearTimeout(uploadTimer);
+          uploadTimer = null;
+        }
         return;
       }
     }
@@ -113,16 +165,17 @@
 
   function uploadMission() {
     if (!app.waypoints.length || uploading) return;
-    _uploadEventSeq = app.events.length > 0
-      ? (app.events[app.events.length - 1].seq ?? 0)
-      : 0;
+    _uploadEventSeq = app.events.length > 0 ? (app.events[app.events.length - 1].seq ?? 0) : 0;
     uploading = true;
     addToast(t('toast.uploading'), 'info', 3000);
     // WebSerial direct mode runs its own state machine in transport.ts and
     // resolves a promise; the WS path goes through the backend which emits
     // mission_ack_ok / mission_ack_fail events that the $effect above watches.
     if (isSerialConnected()) {
-      if (uploadTimer) { clearTimeout(uploadTimer); uploadTimer = null; }
+      if (uploadTimer) {
+        clearTimeout(uploadTimer);
+        uploadTimer = null;
+      }
       serialUploadMission(app.waypoints, app.defaultAlt).then((res) => {
         uploading = false;
         if (res.ok) {
@@ -138,7 +191,10 @@
       takeoff_alt: app.defaultAlt,
     });
     if (uploadTimer) clearTimeout(uploadTimer);
-    uploadTimer = setTimeout(() => { uploading = false; uploadTimer = null; }, 8000);
+    uploadTimer = setTimeout(() => {
+      uploading = false;
+      uploadTimer = null;
+    }, 8000);
   }
 
   function saveMission() {
@@ -153,7 +209,8 @@
 
   function loadMission() {
     const input = document.createElement('input');
-    input.type = 'file'; input.accept = '.json,.waypoints,.plan';
+    input.type = 'file';
+    input.accept = '.json,.waypoints,.plan';
     input.onchange = (e: Event) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
@@ -173,7 +230,9 @@
             if (d.alt) app.defaultAlt = d.alt;
           }
           fitAfterLoad();
-        } catch (err) { addToast(t('toast.loadFail'), 'error'); }
+        } catch (err) {
+          addToast(t('toast.loadFail'), 'error');
+        }
       };
       reader.readAsText(file);
     };
@@ -243,7 +302,8 @@
 
   function importKml() {
     const input = document.createElement('input');
-    input.type = 'file'; input.accept = '.kml';
+    input.type = 'file';
+    input.accept = '.kml';
     input.onchange = (e: Event) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
@@ -255,7 +315,9 @@
           pushUndo();
           app.waypoints = wps;
           fitAfterLoad();
-        } catch (err: unknown) { addToast('KML: ' + (err instanceof Error ? err.message : String(err)), 'error'); }
+        } catch (err: unknown) {
+          addToast('KML: ' + (err instanceof Error ? err.message : String(err)), 'error');
+        }
       };
       reader.readAsText(file);
     };
@@ -266,9 +328,9 @@
     return calcTotalDist(app.waypoints);
   }
 
-  let dropCount = $derived(app.waypoints.filter(w => w.drop).length);
-  let altMin = $derived(app.waypoints.length > 0 ? Math.min(...app.waypoints.map(w => w.alt)) : 0);
-  let altMax = $derived(app.waypoints.length > 0 ? Math.max(...app.waypoints.map(w => w.alt)) : 0);
+  let dropCount = $derived(app.waypoints.filter((w) => w.drop).length);
+  let altMin = $derived(app.waypoints.length > 0 ? Math.min(...app.waypoints.map((w) => w.alt)) : 0);
+  let altMax = $derived(app.waypoints.length > 0 ? Math.max(...app.waypoints.map((w) => w.alt)) : 0);
 
   function estimateTime(): string {
     if (app.waypoints.length < 2) return '--';
@@ -282,7 +344,8 @@
       if (app.waypoints[i].type === 'loiter_turns') totalSec += (app.waypoints[i].loiter_param || 0) * 20;
       totalSec += app.waypoints[i].delay || 0;
     }
-    const m = Math.floor(totalSec / 60), s = Math.round(totalSec % 60);
+    const m = Math.floor(totalSec / 60),
+      s = Math.round(totalSec % 60);
     return `${m}:${s.toString().padStart(2, '0')}`;
   }
 
@@ -292,17 +355,27 @@
     return d < 1000 ? d.toFixed(0) + 'm' : (d / 1000).toFixed(1) + 'km';
   }
 
-
   function validateMission() {
     const issues: string[] = [];
     const wps = app.waypoints;
     if (wps.length < 1) return;
     for (let i = 1; i < wps.length; i++) {
       const d = segDist(wps[i - 1], wps[i]);
-      if (d > 5000) issues.push(t('wp.tooFar').replace('{a}', String(i)).replace('{b}', String(i + 1)).replace('{d}', d > 1000 ? (d / 1000).toFixed(1) + 'km' : d.toFixed(0) + 'm'));
+      if (d > 5000)
+        issues.push(
+          t('wp.tooFar')
+            .replace('{a}', String(i))
+            .replace('{b}', String(i + 1))
+            .replace('{d}', d > 1000 ? (d / 1000).toFixed(1) + 'km' : d.toFixed(0) + 'm'),
+        );
     }
     for (let i = 0; i < wps.length; i++) {
-      if (wps[i].alt < 2 || wps[i].alt > 500) issues.push(t('wp.tooHigh').replace('{n}', String(i + 1)).replace('{h}', String(wps[i].alt)));
+      if (wps[i].alt < 2 || wps[i].alt > 500)
+        issues.push(
+          t('wp.tooHigh')
+            .replace('{n}', String(i + 1))
+            .replace('{h}', String(wps[i].alt)),
+        );
     }
     if (app.fencePolygon.length >= 3) {
       for (let i = 0; i < wps.length; i++) {
@@ -322,36 +395,42 @@
     }
   }
 
-
   let profileCanvas: HTMLCanvasElement = $state(null!);
 
   // Fetch terrain data whenever waypoints change (async, non-blocking)
   $effect(() => {
-    if (app.waypoints.length < 2) { terrainElevations = null; terrainPoints = []; return; }
-    const wps = app.waypoints.map(w => ({ lat: w.lat, lon: w.lon }));
-    const pts = interpolateRoute(wps, 50);
-    // Capture a snapshot to detect staleness after await
-    const snapshot = JSON.stringify(wps.map(w => `${w.lat.toFixed(5)},${w.lon.toFixed(5)}`));
-    terrainLoading = true;
-    getElevationProfile(pts).then(elevs => {
-      // Only apply if waypoints haven't changed since we started
-      const current = app.waypoints.map(w => `${w.lat.toFixed(5)},${w.lon.toFixed(5)}`);
-      if (JSON.stringify(current) !== snapshot) return;
-      terrainPoints = pts;
-      terrainElevations = elevs;
-    }).catch(() => {
+    if (app.waypoints.length < 2) {
       terrainElevations = null;
       terrainPoints = [];
-    }).finally(() => {
-      terrainLoading = false;
-    });
+      return;
+    }
+    const wps = app.waypoints.map((w) => ({ lat: w.lat, lon: w.lon }));
+    const pts = interpolateRoute(wps, 50);
+    // Capture a snapshot to detect staleness after await
+    const snapshot = JSON.stringify(wps.map((w) => `${w.lat.toFixed(5)},${w.lon.toFixed(5)}`));
+    terrainLoading = true;
+    getElevationProfile(pts)
+      .then((elevs) => {
+        // Only apply if waypoints haven't changed since we started
+        const current = app.waypoints.map((w) => `${w.lat.toFixed(5)},${w.lon.toFixed(5)}`);
+        if (JSON.stringify(current) !== snapshot) return;
+        terrainPoints = pts;
+        terrainElevations = elevs;
+      })
+      .catch(() => {
+        terrainElevations = null;
+        terrainPoints = [];
+      })
+      .finally(() => {
+        terrainLoading = false;
+      });
   });
 
   $effect(() => {
     if (!profileCanvas || app.waypoints.length < 2) return;
     const wps = app.waypoints;
     const ctx = profileCanvas.getContext('2d')!;
-    const w = profileCanvas.width = profileCanvas.parentElement!.clientWidth;
+    const w = (profileCanvas.width = profileCanvas.parentElement!.clientWidth);
     const h = profileCanvas.height;
     ctx.clearRect(0, 0, w, h);
 
@@ -360,10 +439,11 @@
       dists.push(dists[i - 1] + segDist(wps[i - 1], wps[i]));
     }
     const totalD = dists[dists.length - 1] || 1;
-    const alts = wps.map(wp => wp.alt);
+    const alts = wps.map((wp) => wp.alt);
 
     // Compute altitude range — include terrain elevations if available
-    let mn = Math.min(...alts), mx = Math.max(...alts);
+    let mn = Math.min(...alts),
+      mx = Math.max(...alts);
     const tElevs = terrainElevations;
     if (tElevs && tElevs.length > 0) {
       const tMin = Math.min(...tElevs);
@@ -371,9 +451,13 @@
       mn = Math.min(mn, tMin);
       mx = Math.max(mx, tMax);
     }
-    if (mx === mn) { mx += 5; mn = Math.max(0, mn - 5); }
+    if (mx === mn) {
+      mx += 5;
+      mn = Math.max(0, mn - 5);
+    }
     const pad = (mx - mn) * 0.15;
-    mn -= pad; mx += pad;
+    mn -= pad;
+    mx += pad;
 
     const toY = (alt: number) => (1 - (alt - mn) / (mx - mn)) * (h - 16) + 8;
 
@@ -407,7 +491,8 @@
       for (let i = 0; i < wps.length; i++) {
         const x = (dists[i] / totalD) * w;
         const y = toY(alts[i]);
-        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
       }
       // Trace the terrain line backward
       for (let i = tPts.length - 1; i >= 0; i--) {
@@ -425,7 +510,8 @@
       for (let i = 0; i < tPts.length; i++) {
         const x = (tDists[i] / tTotalD) * w;
         const y = toY(tElevs[i]);
-        if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+        if (i === 0) ctx.moveTo(x, y);
+        else ctx.lineTo(x, y);
       }
       ctx.stroke();
 
@@ -469,7 +555,8 @@
     for (let i = 0; i < wps.length; i++) {
       const x = (dists[i] / totalD) * w;
       const y = toY(alts[i]);
-      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
     }
     ctx.stroke();
 
@@ -488,7 +575,7 @@
       }
       // Ground clearance label at each waypoint when terrain is available
       if (tElevs && tElevs.length > 0 && terrainPoints.length > 0) {
-        const tIdx = terrainPoints.findIndex(p => p.wpIndex === i);
+        const tIdx = terrainPoints.findIndex((p) => p.wpIndex === i);
         if (tIdx >= 0) {
           const groundElev = tElevs[tIdx];
           const clearance = alts[i] - groundElev;
@@ -517,41 +604,83 @@
   </div>
   <div class="flex-1 overflow-y-auto max-h-72 rounded-lg border border-border/50">
     {#each app.waypoints as wp, i}
-      <div class="flex items-center gap-1 px-1 py-1 border-b border-border/30 text-xs hover:bg-muted/50 transition-colors
-        {app.drone.wp === i + 2 ? 'bg-warning/10 border-l-2 border-l-warning pl-0.5' : ''}">
-        <button class="w-5 text-center text-primary font-bold text-[11px] hover:underline cursor-pointer bg-transparent border-none p-0"
-                onclick={() => app.focusWp = i} title={t('tip.focusWp')}>{i + 1}</button>
-        <button class="px-1 py-px rounded text-[9px] font-bold border-none text-white cursor-pointer whitespace-nowrap"
-                style="background:{typeColor(wp.type || 'wp')}" onclick={() => cycleType(i)}
-                title={t('tip.cycleType')}>
+      <div
+        class="flex items-center gap-1 px-1 py-1 border-b border-border/30 text-xs hover:bg-muted/50 transition-colors
+        {app.drone.wp === i + 2 ? 'bg-warning/10 border-l-2 border-l-warning pl-0.5' : ''}"
+      >
+        <button
+          class="w-5 text-center text-primary font-bold text-[11px] hover:underline cursor-pointer bg-transparent border-none p-0"
+          onclick={() => (app.focusWp = i)}
+          title={t('tip.focusWp')}>{i + 1}</button
+        >
+        <button
+          class="px-1 py-px rounded text-[9px] font-bold border-none text-white cursor-pointer whitespace-nowrap"
+          style="background:{typeColor(wp.type || 'wp')}"
+          onclick={() => cycleType(i)}
+          title={t('tip.cycleType')}
+        >
           {typeLabel(wp.type || 'wp')}
         </button>
-        <button class="w-4.5 h-4.5 rounded border shrink-0 text-[10px] font-bold p-0 leading-[18px] text-center cursor-pointer
-          {wp.drop ? 'bg-orange-700 text-white border-orange-700' : 'bg-transparent text-muted-foreground border-border'}"
-                onclick={() => toggleDrop(i)} title={t('tip.dropToggle')}>
+        <button
+          class="w-4.5 h-4.5 rounded border shrink-0 text-[10px] font-bold p-0 leading-[18px] text-center cursor-pointer
+          {wp.drop
+            ? 'bg-orange-700 text-white border-orange-700'
+            : 'bg-transparent text-muted-foreground border-border'}"
+          onclick={() => toggleDrop(i)}
+          title={t('tip.dropToggle')}
+        >
           {wp.drop ? 'D' : '·'}
         </button>
-        {#if (wp.type === 'loiter_turns' || wp.type === 'loiter_time')}
-          <input type="number" class="w-7 bg-input text-purple-400 border border-border px-0.5 rounded text-[10px] text-right"
-                 value={wp.loiter_param}
-                 onchange={(e) => { app.waypoints[i].loiter_param = parseFloat((e.target as HTMLInputElement).value) || 0; saveWaypoints(); }}
-                 title={wp.type === 'loiter_turns' ? t('tip.turns') : t('tip.seconds')} />
+        {#if wp.type === 'loiter_turns' || wp.type === 'loiter_time'}
+          <input
+            type="number"
+            class="w-7 bg-input text-purple-400 border border-border px-0.5 rounded text-[10px] text-right"
+            value={wp.loiter_param}
+            onchange={(e) => {
+              app.waypoints[i].loiter_param = parseFloat((e.target as HTMLInputElement).value) || 0;
+              saveWaypoints();
+            }}
+            title={wp.type === 'loiter_turns' ? t('tip.turns') : t('tip.seconds')}
+          />
         {/if}
-        <span class="flex-1 text-muted-foreground text-[10px] overflow-hidden whitespace-nowrap">{wp.lat.toFixed(5)},{wp.lon.toFixed(5)}
+        <span class="flex-1 text-muted-foreground text-[10px] overflow-hidden whitespace-nowrap"
+          >{wp.lat.toFixed(5)},{wp.lon.toFixed(5)}
           {#if i > 0}<span class="text-muted-foreground/60 text-[9px] ml-0.5">{fmtSegDist(i)}</span>{/if}
         </span>
-        <input type="number" class="w-9 bg-input text-foreground border border-border px-0.5 rounded text-[11px] text-right"
-               value={wp.alt} onchange={(e) => setAlt(i, (e.target as HTMLInputElement).value)} title={t('tip.altM')} />
-        <input type="number" class="w-9 bg-input text-success border border-border px-0.5 rounded text-[11px] text-right"
-               value={wp.speed || ''} placeholder="—"
-               onchange={(e) => setSpeed(i, (e.target as HTMLInputElement).value)} title={t('tip.spdMs')} />
+        <input
+          type="number"
+          class="w-9 bg-input text-foreground border border-border px-0.5 rounded text-[11px] text-right"
+          value={wp.alt}
+          onchange={(e) => setAlt(i, (e.target as HTMLInputElement).value)}
+          title={t('tip.altM')}
+        />
+        <input
+          type="number"
+          class="w-9 bg-input text-success border border-border px-0.5 rounded text-[11px] text-right"
+          value={wp.speed || ''}
+          placeholder="—"
+          onchange={(e) => setSpeed(i, (e.target as HTMLInputElement).value)}
+          title={t('tip.spdMs')}
+        />
         {#if app.drone.armed}
-          <button class="bg-transparent border-none text-warning cursor-pointer text-[9px] px-0.5 font-bold hover:text-foreground"
-                  onclick={() => sendCommand('mission_set_current', undefined, { wp_index: i })} title={t('wp.goto')}>&raquo;</button>
+          <button
+            class="bg-transparent border-none text-warning cursor-pointer text-[9px] px-0.5 font-bold hover:text-foreground"
+            onclick={() => sendCommand('mission_set_current', undefined, { wp_index: i })}
+            title={t('wp.goto')}>&raquo;</button
+          >
         {/if}
-        <button class="bg-transparent border-none text-muted-foreground cursor-pointer text-xs px-px" onclick={() => moveWp(i, -1)}>&uarr;</button>
-        <button class="bg-transparent border-none text-muted-foreground cursor-pointer text-xs px-px" onclick={() => moveWp(i, 1)}>&darr;</button>
-        <button class="bg-transparent border-none text-destructive cursor-pointer text-base px-0.5 leading-none" onclick={() => deleteWaypoint(i)}>&times;</button>
+        <button
+          class="bg-transparent border-none text-muted-foreground cursor-pointer text-xs px-px"
+          onclick={() => moveWp(i, -1)}>&uarr;</button
+        >
+        <button
+          class="bg-transparent border-none text-muted-foreground cursor-pointer text-xs px-px"
+          onclick={() => moveWp(i, 1)}>&darr;</button
+        >
+        <button
+          class="bg-transparent border-none text-destructive cursor-pointer text-base px-0.5 leading-none"
+          onclick={() => deleteWaypoint(i)}>&times;</button
+        >
       </div>
     {:else}
       <div class="text-muted-foreground text-xs py-4 text-center">{t('wp.clickToAdd')}</div>
@@ -559,59 +688,125 @@
   </div>
   {#if app.waypoints.length > 0}
     <div class="text-xs text-warning mt-1.5 leading-relaxed">
-      {t('telem.dist')} {totalDist()} · ETA {estimateTime()} · WP {app.waypoints.length}
+      {t('telem.dist')}
+      {totalDist()} · ETA {estimateTime()} · WP {app.waypoints.length}
       {#if dropCount > 0}· {t('ctrl.drop')} {dropCount}{/if}
-      · {t('telem.alt')} {altMin}-{altMax}m
+      · {t('telem.alt')}
+      {altMin}-{altMax}m
     </div>
   {/if}
   {#if app.waypoints.length >= 2}
-    <div class="mt-1.5"><canvas bind:this={profileCanvas} height="50" class="w-full bg-background rounded-lg"></canvas></div>
+    <div class="mt-1.5">
+      <canvas bind:this={profileCanvas} height="50" class="w-full bg-background rounded-lg"></canvas>
+    </div>
   {/if}
   <div class="flex gap-1 mt-1.5 items-center flex-wrap">
     <label for="def-alt" class="text-[11px] text-muted-foreground">{t('ctrl.altitude')}:</label>
-    <input id="def-alt" type="number" bind:value={app.defaultAlt} min="5" max="200" step="5" onchange={saveSettings}
-           class="w-12 h-6 px-1 bg-input border border-border rounded text-xs text-foreground" />
+    <input
+      id="def-alt"
+      type="number"
+      bind:value={app.defaultAlt}
+      min="5"
+      max="200"
+      step="5"
+      onchange={saveSettings}
+      class="w-12 h-6 px-1 bg-input border border-border rounded text-xs text-foreground"
+    />
     <span class="text-[11px] text-muted-foreground">m</span>
     {#each [10, 30, 50, 100] as a}
-      <button class="px-1.5 py-px text-[10px] rounded border cursor-pointer transition-colors
-        {app.defaultAlt === a ? 'text-primary border-primary bg-primary/10' : 'text-muted-foreground border-border hover:text-foreground'}"
-              onclick={() => { app.defaultAlt = a; saveSettings(); }}>{a}</button>
+      <button
+        class="px-1.5 py-px text-[10px] rounded border cursor-pointer transition-colors
+        {app.defaultAlt === a
+          ? 'text-primary border-primary bg-primary/10'
+          : 'text-muted-foreground border-border hover:text-foreground'}"
+        onclick={() => {
+          app.defaultAlt = a;
+          saveSettings();
+        }}>{a}</button
+      >
     {/each}
     <Button variant="outline" size="xs" onclick={applyAltAll}>{t('cat.all')}</Button>
     <Button variant="outline" size="xs" onclick={validateMission}>{t('wp.validate')}</Button>
-    <Button variant="outline" size="xs" onclick={applyTerrainFollow} disabled={terrainLoading || app.waypoints.length < 1}>{terrainLoading ? t('terrain.loading') : t('terrain.follow')}</Button>
-    <Button variant="outline" size="xs" onclick={() => panels.open('terrainProfile')} disabled={app.waypoints.length < 2}>{t('terrain.profile')}</Button>
-    <Button size="xs" class="bg-orange-700 hover:bg-orange-800 text-white font-bold" onclick={uploadMission} disabled={uploading}>{uploading ? t('toast.uploading') : t('wp.upload')}</Button>
+    <Button
+      variant="outline"
+      size="xs"
+      onclick={applyTerrainFollow}
+      disabled={terrainLoading || app.waypoints.length < 1}
+      >{terrainLoading ? t('terrain.loading') : t('terrain.follow')}</Button
+    >
+    <Button
+      variant="outline"
+      size="xs"
+      onclick={() => panels.open('terrainProfile')}
+      disabled={app.waypoints.length < 2}>{t('terrain.profile')}</Button
+    >
+    <Button
+      size="xs"
+      class="bg-orange-700 hover:bg-orange-800 text-white font-bold"
+      onclick={uploadMission}
+      disabled={uploading}>{uploading ? t('toast.uploading') : t('wp.upload')}</Button
+    >
   </div>
   <div class="flex gap-1 mt-1.5 items-center flex-wrap">
     <Button variant="secondary" size="xs" onclick={saveMission}>{t('wp.save')}</Button>
     <Button variant="secondary" size="xs" onclick={loadMission}>{t('wp.load')}</Button>
-    <Button variant="secondary" size="xs" class="gap-1" onclick={toggleLibrary}><BookOpen size={12} />{t('wp.library')}</Button>
+    <Button variant="secondary" size="xs" class="gap-1" onclick={toggleLibrary}
+      ><BookOpen size={12} />{t('wp.library')}</Button
+    >
     <Button variant="secondary" size="xs" onclick={exportKml}>{t('wp.export')}</Button>
     <Button variant="secondary" size="xs" onclick={importKml}>{t('wp.import')}</Button>
     <Button variant="secondary" size="xs" onclick={reverseRoute}>{t('wp.reverse')}</Button>
-    <Button variant="secondary" size="xs" onclick={() => showCircleGen = !showCircleGen}>{t('wp.circle')}</Button>
+    <Button variant="secondary" size="xs" onclick={() => (showCircleGen = !showCircleGen)}>{t('wp.circle')}</Button>
     <Button variant="secondary" size="xs" onclick={undo} disabled={app.undoStack.length === 0}>{t('wp.undo')}</Button>
-    <Button variant="ghost" size="xs" onclick={async () => { if (app.waypoints.length === 0 || await showConfirm(t('confirm.clearWps').replace('{n}', String(app.waypoints.length)))) clearWaypoints(); }}>{t('wp.clear')}</Button>
+    <Button
+      variant="ghost"
+      size="xs"
+      onclick={async () => {
+        if (
+          app.waypoints.length === 0 ||
+          (await showConfirm(t('confirm.clearWps').replace('{n}', String(app.waypoints.length))))
+        )
+          clearWaypoints();
+      }}>{t('wp.clear')}</Button
+    >
   </div>
   {#if showCircleGen}
     <div class="flex gap-1 items-center mt-1.5 p-1.5 bg-muted rounded-lg flex-wrap">
       <label for="cr" class="text-[11px] text-muted-foreground">R:</label>
-      <input id="cr" type="number" bind:value={circleRadius} min="10" max="2000" step="10"
-             class="w-12 h-6 px-1 bg-input border border-border rounded text-xs text-foreground" />
+      <input
+        id="cr"
+        type="number"
+        bind:value={circleRadius}
+        min="10"
+        max="2000"
+        step="10"
+        class="w-12 h-6 px-1 bg-input border border-border rounded text-xs text-foreground"
+      />
       <span class="text-[11px] text-muted-foreground">m</span>
       <label for="cc" class="text-[11px] text-muted-foreground">N:</label>
-      <input id="cc" type="number" bind:value={circleCount} min="4" max="72" step="1"
-             class="w-12 h-6 px-1 bg-input border border-border rounded text-xs text-foreground" />
+      <input
+        id="cc"
+        type="number"
+        bind:value={circleCount}
+        min="4"
+        max="72"
+        step="1"
+        class="w-12 h-6 px-1 bg-input border border-border rounded text-xs text-foreground"
+      />
       <Button size="xs" onclick={genCircle}>Gen</Button>
     </div>
   {/if}
   {#if showLibrary}
     <div class="mt-2 p-2 bg-muted rounded-lg space-y-2">
       <div class="flex gap-1 items-center">
-        <input bind:value={libName} placeholder={t('wp.missionName')}
-               class="flex-1 h-7 px-2 bg-input border border-border rounded text-xs text-foreground"
-               onkeydown={(e) => { if (e.key === 'Enter') saveToLibrary(); }} />
+        <input
+          bind:value={libName}
+          placeholder={t('wp.missionName')}
+          class="flex-1 h-7 px-2 bg-input border border-border rounded text-xs text-foreground"
+          onkeydown={(e) => {
+            if (e.key === 'Enter') saveToLibrary();
+          }}
+        />
         <Button size="xs" onclick={saveToLibrary} disabled={!libName.trim()}>{t('wp.saveToLib')}</Button>
       </div>
       {#if libraryList.length === 0}
@@ -619,13 +814,20 @@
       {:else}
         <div class="max-h-40 overflow-auto space-y-1">
           {#each libraryList as m}
-            <div class="flex items-center gap-1 px-2 py-1 bg-card rounded border border-border hover:border-primary/50 transition-colors">
+            <div
+              class="flex items-center gap-1 px-2 py-1 bg-card rounded border border-border hover:border-primary/50 transition-colors"
+            >
               <button class="flex-1 text-left text-xs truncate cursor-pointer" onclick={() => loadFromLibrary(m.id)}>
                 <span class="font-medium text-foreground">{m.name}</span>
                 <span class="text-muted-foreground ml-1">({m.waypoints.length} WP)</span>
               </button>
-              <span class="text-[10px] text-muted-foreground shrink-0">{new Date(m.createdAt).toLocaleDateString()}</span>
-              <button class="shrink-0 text-muted-foreground hover:text-destructive cursor-pointer p-0.5" onclick={() => deleteFromLibrary(m.id)}>
+              <span class="text-[10px] text-muted-foreground shrink-0"
+                >{new Date(m.createdAt).toLocaleDateString()}</span
+              >
+              <button
+                class="shrink-0 text-muted-foreground hover:text-destructive cursor-pointer p-0.5"
+                onclick={() => deleteFromLibrary(m.id)}
+              >
                 <Trash2 size={12} />
               </button>
             </div>

@@ -30,9 +30,16 @@ export function speak(text: string) {
   if (speechSynthesis.pending) speechSynthesis.cancel();
   const u = new SpeechSynthesisUtterance(text);
   const langMap: Record<string, string> = {
-    zh: 'zh-CN', en: 'en-US', ja: 'ja-JP', ko: 'ko-KR',
-    de: 'de-DE', fr: 'fr-FR', es: 'es-ES', pt: 'pt-BR',
-    ru: 'ru-RU', ar: 'ar-SA',
+    zh: 'zh-CN',
+    en: 'en-US',
+    ja: 'ja-JP',
+    ko: 'ko-KR',
+    de: 'de-DE',
+    fr: 'fr-FR',
+    es: 'es-ES',
+    pt: 'pt-BR',
+    ru: 'ru-RU',
+    ar: 'ar-SA',
   };
   u.lang = langMap[i18nState.locale] || 'en-US';
   u.rate = 1.2;
@@ -52,7 +59,19 @@ let altInit = false;
 let descentNext = Infinity;
 let ascentIdx = 0;
 
-const RTL_MODES = ['返航', '旋翼返航', '智能返航', '降落', '旋翼降落', 'RTL', 'Q-RTL', 'Smart RTL', 'Land', 'Q-Land', 'Return'];
+const RTL_MODES = [
+  '返航',
+  '旋翼返航',
+  '智能返航',
+  '降落',
+  '旋翼降落',
+  'RTL',
+  'Q-RTL',
+  'Smart RTL',
+  'Land',
+  'Q-Land',
+  'Return',
+];
 
 const DESCENT_THRESHOLDS = [50, 40, 30, 20, 10, 8, 6, 4, 2];
 const ASCENT_THRESHOLDS = [10, 20, 30, 50, 100];
@@ -76,7 +95,7 @@ export function checkAlerts(connected: boolean, armed: boolean, remaining: numbe
 
   const mode = app.drone.mode;
   if (mode && prevMode && mode !== prevMode) {
-    if (RTL_MODES.some(m => mode.includes(m))) beep(440, 300, 2, 150);
+    if (RTL_MODES.some((m) => mode.includes(m))) beep(440, 300, 2, 150);
     speak(t('audio.modeSwitch').replace('{mode}', mode));
   }
   prevMode = mode;
@@ -101,7 +120,10 @@ export function checkAlerts(connected: boolean, armed: boolean, remaining: numbe
   if (connected && linkAge > 3 && Date.now() - linkLostBeepT > 5000) {
     beep(200, 800, 1);
     linkLostBeepT = Date.now();
-    if (!linkLostSpoken) { speak(t('audio.linkDelay')); linkLostSpoken = true; }
+    if (!linkLostSpoken) {
+      speak(t('audio.linkDelay'));
+      linkLostSpoken = true;
+    }
   }
   if (connected && linkAge >= 0 && linkAge < 2) linkLostSpoken = false;
 
@@ -124,8 +146,8 @@ function checkAltCallouts(alt: number, armed: boolean) {
   }
   if (!altInit) {
     altPrev = alt;
-    descentNext = DESCENT_THRESHOLDS.find(th => th <= alt) ?? 0;
-    ascentIdx = ASCENT_THRESHOLDS.findIndex(th => th > alt);
+    descentNext = DESCENT_THRESHOLDS.find((th) => th <= alt) ?? 0;
+    ascentIdx = ASCENT_THRESHOLDS.findIndex((th) => th > alt);
     if (ascentIdx < 0) ascentIdx = ASCENT_THRESHOLDS.length;
     altInit = true;
     return;
@@ -139,7 +161,7 @@ function checkAltCallouts(alt: number, armed: boolean) {
     ascentIdx++;
   }
   if (ascentIdx > 0 && alt < ASCENT_THRESHOLDS[ascentIdx - 1] - 5) {
-    ascentIdx = ASCENT_THRESHOLDS.findIndex(th => th > alt);
+    ascentIdx = ASCENT_THRESHOLDS.findIndex((th) => th > alt);
     if (ascentIdx < 0) ascentIdx = ASCENT_THRESHOLDS.length;
   }
 

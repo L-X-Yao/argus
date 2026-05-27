@@ -24,7 +24,7 @@ def _pad(p: bytes, n: int) -> bytes:
     about the wire-level truncation. `pl` still reflects the original size, so
     conditional reads on extension fields remain correct.
     """
-    return p if len(p) >= n else p + b'\x00' * (n - len(p))
+    return p if len(p) >= n else p + b"\x00" * (n - len(p))
 
 
 # ArduPilot: libraries/GCS_MAVLink/GCS_Common.cpp:3166 — GCS_MAVLINK::send_heartbeat
@@ -49,11 +49,12 @@ def handle_heartbeat(p: bytes, pl: int, link: DroneLink) -> None:
     if ap > 0 and ap != 8 and ap != v.autopilot:
         v.autopilot = ap
     if old_vtype != v.vtype_raw and v.vtype_raw > 0:
-        link.add_event(lt('vehicle_type', link.locale) % link._get_vehicle_info()[2], 'vehicle_type')
+        link.add_event(lt("vehicle_type", link.locale) % link._get_vehicle_info()[2], "vehicle_type")
     new_armed = bool(p[6] & 0x80)
     if new_armed != v.armed:
-        link.add_event(lt('armed', link.locale) if new_armed else lt('disarmed', link.locale),
-                       'armed' if new_armed else 'disarmed')
+        link.add_event(
+            lt("armed", link.locale) if new_armed else lt("disarmed", link.locale), "armed" if new_armed else "disarmed"
+        )
         if new_armed:
             v.armed_time = time.time()
             v.max_alt = v.max_speed = v.total_dist = 0
@@ -65,16 +66,18 @@ def handle_heartbeat(p: bytes, pl: int, link: DroneLink) -> None:
             bat = link.battery
             bat_used = (bat._bat_start_pct - bat.remaining) if bat._bat_start_pct >= 0 and bat.remaining >= 0 else -1
             v.flight_summary = {
-                'duration': dur, 'max_alt': round(v.max_alt, 1),
-                'max_speed': round(v.max_speed, 1), 'total_dist': round(v.total_dist),
-                'bat_used': bat_used,
+                "duration": dur,
+                "max_alt": round(v.max_alt, 1),
+                "max_speed": round(v.max_speed, 1),
+                "total_dist": round(v.total_dist),
+                "bat_used": bat_used,
             }
             bat.bat_time_remaining = -1
     v.armed = new_armed
     v.sysid = link._raw_sysid
     if not link.connected:
         link.connected = True
-        link.add_event(lt('connected', link.locale) % v.sysid, 'connected')
+        link.add_event(lt("connected", link.locale) % v.sysid, "connected")
 
 
 # ArduPilot: libraries/GCS_MAVLink/GCS_Common.cpp:6082 — GCS_MAVLINK::send_attitude
@@ -83,9 +86,9 @@ def handle_attitude(p: bytes, pl: int, link: DroneLink) -> None:
         return
     p = _pad(p, 16)
     a = link.attitude
-    a.roll = struct.unpack_from('<f', p, 4)[0] * 57.2958
-    a.pitch = struct.unpack_from('<f', p, 8)[0] * 57.2958
-    a.yaw = struct.unpack_from('<f', p, 12)[0] * 57.2958
+    a.roll = struct.unpack_from("<f", p, 4)[0] * 57.2958
+    a.pitch = struct.unpack_from("<f", p, 8)[0] * 57.2958
+    a.yaw = struct.unpack_from("<f", p, 12)[0] * 57.2958
     if a.yaw < 0:
         a.yaw += 360
 
@@ -96,19 +99,19 @@ def handle_global_position_int(p: bytes, pl: int, link: DroneLink) -> None:
         return
     p = _pad(p, 28)
     a = link.attitude
-    a.lat = struct.unpack_from('<i', p, 4)[0] / 1e7
-    a.lon = struct.unpack_from('<i', p, 8)[0] / 1e7
-    a.alt_msl = struct.unpack_from('<i', p, 12)[0] / 1000.0
-    a.alt_rel = struct.unpack_from('<i', p, 16)[0] / 1000.0
+    a.lat = struct.unpack_from("<i", p, 4)[0] / 1e7
+    a.lon = struct.unpack_from("<i", p, 8)[0] / 1e7
+    a.alt_msl = struct.unpack_from("<i", p, 12)[0] / 1000.0
+    a.alt_rel = struct.unpack_from("<i", p, 16)[0] / 1000.0
     if pl >= 22:
-        a.vx = struct.unpack_from('<h', p, 20)[0] / 100.0
+        a.vx = struct.unpack_from("<h", p, 20)[0] / 100.0
     if pl >= 24:
-        a.vy = struct.unpack_from('<h', p, 22)[0] / 100.0
+        a.vy = struct.unpack_from("<h", p, 22)[0] / 100.0
     if pl >= 26:
-        a.vz = struct.unpack_from('<h', p, 24)[0] / 100.0
-    a.gs = (a.vx ** 2 + a.vy ** 2) ** 0.5
+        a.vz = struct.unpack_from("<h", p, 24)[0] / 100.0
+    a.gs = (a.vx**2 + a.vy**2) ** 0.5
     if pl >= 28:
-        a.hdg = struct.unpack_from('<H', p, 26)[0] / 100.0
+        a.hdg = struct.unpack_from("<H", p, 26)[0] / 100.0
     # Only auto-infer home on first valid fix. We require a non-trivial fix
     # (>~111 m from null island) to avoid latching the (0,0) startup placeholder
     # the FC emits before GPS lock. An equator-based real home is fine because
@@ -118,11 +121,11 @@ def handle_global_position_int(p: bytes, pl: int, link: DroneLink) -> None:
         a.home_lat = a.lat
         a.home_lon = a.lon
         a._home_set = True
-        link.add_event(lt('home_set', link.locale) % (a.lat, a.lon), 'home_set')
+        link.add_event(lt("home_set", link.locale) % (a.lat, a.lon), "home_set")
     if a._home_set:
         dlat = (a.lat - a.home_lat) * 111320
         dlon = (a.lon - a.home_lon) * 111320 * math.cos(math.radians(a.lat))
-        a.dist_home = (dlat ** 2 + dlon ** 2) ** 0.5
+        a.dist_home = (dlat**2 + dlon**2) ** 0.5
     v = link.vehicle
     if v.armed:
         if a.alt_rel > v.max_alt:
@@ -130,9 +133,10 @@ def handle_global_position_int(p: bytes, pl: int, link: DroneLink) -> None:
         if a.gs > v.max_speed:
             v.max_speed = a.gs
         if a._prev_pos:
-            dp = ((a.lat - a._prev_pos[0]) * 111320) ** 2 + \
-                 ((a.lon - a._prev_pos[1]) * 111320 * math.cos(math.radians(a.lat))) ** 2
-            v.total_dist += dp ** 0.5
+            dp = ((a.lat - a._prev_pos[0]) * 111320) ** 2 + (
+                (a.lon - a._prev_pos[1]) * 111320 * math.cos(math.radians(a.lat))
+            ) ** 2
+            v.total_dist += dp**0.5
         a._prev_pos = (a.lat, a.lon)
 
 
@@ -144,9 +148,9 @@ def handle_sys_status(p: bytes, pl: int, link: DroneLink) -> None:
     bat = link.battery
     bat.voltage = (p[14] | (p[15] << 8)) / 1000.0
     if pl >= 18:
-        bat.current = struct.unpack_from('<h', p, 16)[0] / 100.0
+        bat.current = struct.unpack_from("<h", p, 16)[0] / 100.0
     if pl > 30:
-        bat.remaining = struct.unpack_from('<b', p, 30)[0]
+        bat.remaining = struct.unpack_from("<b", p, 30)[0]
     if bat.remaining >= 0 and link.vehicle.armed:
         now = time.time()
         bat._bat_history.append((now, bat.remaining))
@@ -179,8 +183,8 @@ def handle_home_position(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 1:
         return
     p = _pad(p, 20)
-    hlat = struct.unpack_from('<i', p, 0)[0] / 1e7
-    hlon = struct.unpack_from('<i', p, 4)[0] / 1e7
+    hlat = struct.unpack_from("<i", p, 0)[0] / 1e7
+    hlon = struct.unpack_from("<i", p, 4)[0] / 1e7
     # FC only sends HOME_POSITION when home is actually set
     # (GCS_Common.cpp:3064 `if (!AP::ahrs().home_is_set()) return`),
     # so trust it even for equator coordinates.
@@ -195,21 +199,43 @@ def handle_mission_item_reached(p: bytes, pl: int, link: DroneLink) -> None:
         return
     p = _pad(p, 2)
     seq = p[0] | (p[1] << 8)
-    link.add_event(lt('wp_reached', link.locale) % seq, 'wp_reached')
+    link.add_event(lt("wp_reached", link.locale) % seq, "wp_reached")
 
 
 _CMD_NAMES_ZH = {
-    22: '起飞', 176: '模式', 181: '继电器', 241: '校准', 300: '任务开始',
-    400: '解锁/锁定', 410: '引导',
-    42424: '罗盘校准', 42425: '接受罗盘校准', 42426: '取消罗盘校准',
+    22: "起飞",
+    176: "模式",
+    181: "继电器",
+    241: "校准",
+    300: "任务开始",
+    400: "解锁/锁定",
+    410: "引导",
+    42424: "罗盘校准",
+    42425: "接受罗盘校准",
+    42426: "取消罗盘校准",
 }
 _CMD_NAMES_EN = {
-    22: 'Takeoff', 176: 'Mode', 181: 'Relay', 241: 'Calibration', 300: 'Mission Start',
-    400: 'Arm/Disarm', 410: 'Guided',
-    42424: 'Compass Cal', 42425: 'Accept Compass Cal', 42426: 'Cancel Compass Cal',
+    22: "Takeoff",
+    176: "Mode",
+    181: "Relay",
+    241: "Calibration",
+    300: "Mission Start",
+    400: "Arm/Disarm",
+    410: "Guided",
+    42424: "Compass Cal",
+    42425: "Accept Compass Cal",
+    42426: "Cancel Compass Cal",
 }
-_ACK_RESULTS_ZH = {0: '成功', 1: '暂时拒绝', 2: '拒绝', 3: '不支持', 4: '进行中', 5: '已取消'}
-_ACK_RESULTS_EN = {0: 'success', 1: 'temporarily rejected', 2: 'denied', 3: 'unsupported', 4: 'in progress', 5: 'cancelled'}
+_ACK_RESULTS_ZH = {0: "成功", 1: "暂时拒绝", 2: "拒绝", 3: "不支持", 4: "进行中", 5: "已取消"}
+_ACK_RESULTS_EN = {
+    0: "success",
+    1: "temporarily rejected",
+    2: "denied",
+    3: "unsupported",
+    4: "in progress",
+    5: "cancelled",
+}
+
 
 # ArduPilot: libraries/GCS_MAVLink/GCS_Common.cpp:1446 — GCS_MAVLINK_InProgress::send_ack
 def handle_command_ack(p: bytes, pl: int, link: DroneLink) -> None:
@@ -219,17 +245,20 @@ def handle_command_ack(p: bytes, pl: int, link: DroneLink) -> None:
         return
     p = _pad(p, 3)
     import struct
-    cmd_id = struct.unpack_from('<H', p, 0)[0]
+
+    cmd_id = struct.unpack_from("<H", p, 0)[0]
     result = p[2]
-    en = link.locale == 'en'
+    en = link.locale == "en"
     cmd_name = (_CMD_NAMES_EN if en else _CMD_NAMES_ZH).get(cmd_id, str(cmd_id))
-    result_text = (_ACK_RESULTS_EN if en else _ACK_RESULTS_ZH).get(result, 'unknown(%d)' % result if en else '未知(%d)' % result)
+    result_text = (_ACK_RESULTS_EN if en else _ACK_RESULTS_ZH).get(
+        result, "unknown(%d)" % result if en else "未知(%d)" % result
+    )
     if result == 4:
         return
     if result == 0 and cmd_id in (241, 42424, 42425, 42426):
         return
-    etype = 'cmd_ack_ok' if result == 0 else 'cmd_ack_fail'
-    link.add_event(lt('cmd_ack', link.locale) % (cmd_name, result_text), etype)
+    etype = "cmd_ack_ok" if result == 0 else "cmd_ack_fail"
+    link.add_event(lt("cmd_ack", link.locale) % (cmd_name, result_text), etype)
 
 
 # ArduPilot: libraries/AP_Compass/AP_Compass_Calibration.cpp:270 — Compass::send_mag_cal_progress
@@ -237,14 +266,14 @@ def handle_mag_cal_progress(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 1:
         return
     p = _pad(p, 17)
-    if getattr(link, '_mag_cal_done', False):
+    if getattr(link, "_mag_cal_done", False):
         return
     pct = p[16]
-    prev = getattr(link, '_mag_cal_pct', -1)
+    prev = getattr(link, "_mag_cal_pct", -1)
     if pct > prev:
         link._mag_cal_pct = pct
         if (pct // 5) != (prev // 5):
-            link.add_event(lt('mag_cal_pct', link.locale) % pct, 'cal_compass')
+            link.add_event(lt("mag_cal_pct", link.locale) % pct, "cal_compass")
 
 
 # ArduPilot: libraries/AP_Compass/AP_Compass_Calibration.cpp:309 — Compass::send_mag_cal_report
@@ -254,27 +283,27 @@ def handle_mag_cal_report(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 43:
         return
     p = _pad(p, 44)
-    if getattr(link, '_mag_cal_done', False):
+    if getattr(link, "_mag_cal_done", False):
         return
     cal_status = p[42]
     link._mag_cal_done = True
     link._mag_cal_pct = -1
     if cal_status == 4:
-        link.add_event(lt('mag_cal_done', link.locale), 'cal_compass')
-        link.add_event(lt('mag_cal_reboot', link.locale), 'cal_compass')
+        link.add_event(lt("mag_cal_done", link.locale), "cal_compass")
+        link.add_event(lt("mag_cal_reboot", link.locale), "cal_compass")
     else:
-        link.add_event(lt('mag_cal_fail', link.locale), 'cal_compass')
+        link.add_event(lt("mag_cal_fail", link.locale), "cal_compass")
 
 
 # ArduPilot: libraries/GCS_MAVLink/GCS_Common.cpp:2684 — GCS_MAVLINK::service_statustext
 def handle_statustext(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 2:
         return
-    text = bytes(p[1:51]).split(b'\x00')[0].decode('ascii', 'replace').strip()
+    text = bytes(p[1:51]).split(b"\x00")[0].decode("ascii", "replace").strip()
     if not text:
         return
-    if text.startswith('PreArm:') or text.startswith('Arm:'):
-        msg = text.split(':', 1)[1].strip()
+    if text.startswith("PreArm:") or text.startswith("Arm:"):
+        msg = text.split(":", 1)[1].strip()
         # PreArm checks run every ~5s and re-emit the same warnings until the
         # condition is fixed. Dedup against _prearm_messages so the event log
         # gets one entry per distinct cause, not one every cycle.
@@ -284,7 +313,7 @@ def handle_statustext(p: bytes, pl: int, link: DroneLink) -> None:
         if len(link._prearm_messages) > 20:
             link._prearm_messages = link._prearm_messages[-10:]
     text = filter_statustext(text, link.locale)
-    link.add_event(('%s: %s' % ('FC' if link.locale == 'en' else '飞控', text)), 'statustext')
+    link.add_event(("%s: %s" % ("FC" if link.locale == "en" else "飞控", text)), "statustext")
 
 
 # ArduPilot: libraries/GCS_MAVLink/GCS_Common.cpp:3394 — GCS_MAVLINK::send_servo_output_raw
@@ -295,9 +324,9 @@ def handle_servo_output(p: bytes, pl: int, link: DroneLink) -> None:
         return
     p = _pad(p, 37)
     rc = link.rc_servo
-    rc.servo_out = [struct.unpack_from('<H', p, 4 + i * 2)[0] for i in range(8)]
+    rc.servo_out = [struct.unpack_from("<H", p, 4 + i * 2)[0] for i in range(8)]
     if pl >= 37:
-        rc.servo_out += [struct.unpack_from('<H', p, 21 + i * 2)[0] for i in range(8)]
+        rc.servo_out += [struct.unpack_from("<H", p, 21 + i * 2)[0] for i in range(8)]
     else:
         rc.servo_out += [0] * 8
 
@@ -307,7 +336,7 @@ def handle_rc_channels(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 6:
         return
     p = _pad(p, 42)
-    link.rc_servo.rc_channels = [struct.unpack_from('<H', p, 4 + i * 2)[0] for i in range(16)]
+    link.rc_servo.rc_channels = [struct.unpack_from("<H", p, 4 + i * 2)[0] for i in range(16)]
     link.rc_servo.rc_rssi = p[41]
 
 
@@ -319,12 +348,12 @@ def handle_vibration(p: bytes, pl: int, link: DroneLink) -> None:
         return
     p = _pad(p, 32)
     d = link.diagnostic
-    d.vibe_x = struct.unpack_from('<f', p, 8)[0]
-    d.vibe_y = struct.unpack_from('<f', p, 12)[0]
-    d.vibe_z = struct.unpack_from('<f', p, 16)[0]
-    d.vibe_clip0 = struct.unpack_from('<I', p, 20)[0]
-    d.vibe_clip1 = struct.unpack_from('<I', p, 24)[0]
-    d.vibe_clip2 = struct.unpack_from('<I', p, 28)[0]
+    d.vibe_x = struct.unpack_from("<f", p, 8)[0]
+    d.vibe_y = struct.unpack_from("<f", p, 12)[0]
+    d.vibe_z = struct.unpack_from("<f", p, 16)[0]
+    d.vibe_clip0 = struct.unpack_from("<I", p, 20)[0]
+    d.vibe_clip1 = struct.unpack_from("<I", p, 24)[0]
+    d.vibe_clip2 = struct.unpack_from("<I", p, 28)[0]
 
 
 # ArduPilot: libraries/GCS_MAVLink/GCS_Common.cpp:3492 — GCS_MAVLINK::send_vfr_hud
@@ -335,7 +364,7 @@ def handle_vfr_hud(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 4:
         return
     p = _pad(p, 20)
-    airspeed, gs, alt, climb, heading, throttle = struct.unpack_from('<ffffhH', p)
+    airspeed, gs, alt, climb, heading, throttle = struct.unpack_from("<ffffhH", p)
     a = link.attitude
     a.airspeed = airspeed
     a.throttle = throttle
@@ -347,7 +376,7 @@ def handle_ekf_status(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 1:
         return
     p = _pad(p, 22)
-    vel, pos_h, pos_v, comp, terr, flags = struct.unpack_from('<fffffH', p)
+    vel, pos_h, pos_v, comp, terr, flags = struct.unpack_from("<fffffH", p)
     d = link.diagnostic
     d.ekf_vel_var = vel
     d.ekf_pos_h_var = pos_h
@@ -361,7 +390,7 @@ def handle_mount_status(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 1:
         return
     p = _pad(p, 12)
-    pitch_cdeg, _roll_cdeg, yaw_cdeg = struct.unpack_from('<iii', p)
+    pitch_cdeg, _roll_cdeg, yaw_cdeg = struct.unpack_from("<iii", p)
     d = link.diagnostic
     d.gimbal_pitch = pitch_cdeg / 100.0
     d.gimbal_yaw = yaw_cdeg / 100.0
@@ -375,7 +404,7 @@ def handle_gimbal_device_attitude_status(p: bytes, pl: int, link: DroneLink) -> 
     # Wire layout (MAVLink 2, sorted by size): time_boot_ms (u32, 0..3),
     # q[4] (float×4, 4..19), angular_velocity_{x,y,z} (float, 20..31),
     # failure_flags (u32, 32..35), flags (u16, 36..37).
-    w, x, y, z = struct.unpack_from('<4f', p, 4)
+    w, x, y, z = struct.unpack_from("<4f", p, 4)
     sinp = 2.0 * (w * y - z * x)
     pitch = math.copysign(math.pi / 2, sinp) if abs(sinp) >= 1.0 else math.asin(sinp)
     yaw = math.atan2(2.0 * (w * z + x * y), 1.0 - 2.0 * (y * y + z * z))
@@ -395,7 +424,7 @@ def handle_terrain_report(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 1:
         return
     p = _pad(p, 16)
-    link.diagnostic.terrain_alt = struct.unpack_from('<f', p, 8)[0]
+    link.diagnostic.terrain_alt = struct.unpack_from("<f", p, 8)[0]
 
 
 # ArduPilot: libraries/AP_WindVane/AP_WindVane.cpp:427 — AP_WindVane::send_wind
@@ -403,7 +432,7 @@ def handle_wind(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 1:
         return
     p = _pad(p, 12)
-    direction, speed, _ = struct.unpack_from('<fff', p)
+    direction, speed, _ = struct.unpack_from("<fff", p)
     link.diagnostic.wind_dir = direction % 360
     link.diagnostic.wind_speed = speed
 
@@ -418,18 +447,18 @@ def handle_autopilot_version(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 1:
         return
     p = _pad(p, 44)
-    fw_ver = struct.unpack_from('<I', p, 16)[0]
+    fw_ver = struct.unpack_from("<I", p, 16)[0]
     major = (fw_ver >> 24) & 0xFF
     minor = (fw_ver >> 16) & 0xFF
     patch = (fw_ver >> 8) & 0xFF
-    board = struct.unpack_from('<I', p, 28)[0]
+    board = struct.unpack_from("<I", p, 28)[0]
     git_bytes = bytes(p[36:44])
-    git = ''.join('%02x' % b for b in git_bytes if b != 0)[:8]
+    git = "".join("%02x" % b for b in git_bytes if b != 0)[:8]
     v = link.vehicle
-    v.fw_version = 'v%d.%d.%d' % (major, minor, patch)
+    v.fw_version = "v%d.%d.%d" % (major, minor, patch)
     v.fw_git = git
     v.board_id = board
-    link.add_event(lt('fw_info', link.locale) % (v.fw_version, v.fw_git), 'fw_info')
+    link.add_event(lt("fw_info", link.locale) % (v.fw_version, v.fw_git), "fw_info")
 
 
 # ArduPilot: libraries/GCS_MAVLink/MissionItemProtocol.cpp:135 — handle_mission_request_list
@@ -438,15 +467,15 @@ def handle_mission_count(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 1 or not m._dl_pending:
         return
     p = _pad(p, 3)
-    count = struct.unpack_from('<H', p, 0)[0]
+    count = struct.unpack_from("<H", p, 0)[0]
     m._dl_total = count
     m._dl_items = [None] * count
     if count > 0:
         _request_dl_item(link, 0)
-        link.add_event(lt('mission_dl_n', link.locale) % count, 'mission_dl_n')
+        link.add_event(lt("mission_dl_n", link.locale) % count, "mission_dl_n")
     else:
         m._dl_pending = False
-        link.add_event(lt('mission_dl_none', link.locale), 'mission_dl_none')
+        link.add_event(lt("mission_dl_none", link.locale), "mission_dl_none")
 
 
 def handle_mission_item_int(p: bytes, pl: int, link: DroneLink) -> None:
@@ -463,23 +492,32 @@ def handle_mission_item_int(p: bytes, pl: int, link: DroneLink) -> None:
     #   32 target_system, 33 target_component, 34 frame
     #   35 current, 36 autocontinue
     #   ext: 37 mission_type
-    p1 = struct.unpack_from('<f', p, 0)[0]
-    p2 = struct.unpack_from('<f', p, 4)[0]
-    p3 = struct.unpack_from('<f', p, 8)[0]
-    p4 = struct.unpack_from('<f', p, 12)[0]
-    lat = struct.unpack_from('<i', p, 16)[0] / 1e7
-    lon = struct.unpack_from('<i', p, 20)[0] / 1e7
-    alt = struct.unpack_from('<f', p, 24)[0]
-    seq = struct.unpack_from('<H', p, 28)[0]
-    cmd = struct.unpack_from('<H', p, 30)[0]
+    p1 = struct.unpack_from("<f", p, 0)[0]
+    p2 = struct.unpack_from("<f", p, 4)[0]
+    p3 = struct.unpack_from("<f", p, 8)[0]
+    p4 = struct.unpack_from("<f", p, 12)[0]
+    lat = struct.unpack_from("<i", p, 16)[0] / 1e7
+    lon = struct.unpack_from("<i", p, 20)[0] / 1e7
+    alt = struct.unpack_from("<f", p, 24)[0]
+    seq = struct.unpack_from("<H", p, 28)[0]
+    cmd = struct.unpack_from("<H", p, 30)[0]
     frame = p[34]
     current = p[35]
     autocontinue = p[36]
     if seq < m._dl_total:
         m._dl_items[seq] = {
-            'seq': seq, 'cmd': cmd, 'lat': lat, 'lon': lon, 'alt': alt,
-            'p1': p1, 'p2': p2, 'p3': p3, 'p4': p4,
-            'frame': frame, 'current': current, 'autocontinue': autocontinue,
+            "seq": seq,
+            "cmd": cmd,
+            "lat": lat,
+            "lon": lon,
+            "alt": alt,
+            "p1": p1,
+            "p2": p2,
+            "p3": p3,
+            "p4": p4,
+            "frame": frame,
+            "current": current,
+            "autocontinue": autocontinue,
         }
     if seq + 1 < m._dl_total:
         _request_dl_item(link, seq + 1)
@@ -489,35 +527,50 @@ def handle_mission_item_int(p: bytes, pl: int, link: DroneLink) -> None:
         wps = []
         pending_speed = 0.0
         for item in items:
-            if item['cmd'] == 178:
-                pending_speed = item.get('p2', 0)
-            elif item['cmd'] in (16, 18, 19, 82) and item['seq'] > 0:
-                wtype = 'loiter_turns' if item['cmd'] == 18 else ('loiter_time' if item['cmd'] == 19 else ('spline' if item['cmd'] == 82 else 'wp'))
-                wps.append({'lat': item['lat'], 'lon': item['lon'], 'alt': item['alt'],
-                            'drop': False, 'delay': item['p1'] if item['cmd'] == 16 else 0,
-                            'speed': pending_speed, 'type': wtype,
-                            'loiter_param': item['p1'] if item['cmd'] in (18, 19) else 0,
-                            # Preserve fields the previous round-trip dropped.
-                            # AP_Mission stores these per-item; re-uploading
-                            # without them changes plane acceptance radius /
-                            # loiter radius / yaw constraints.
-                            'p3': item.get('p3', 0), 'p4': item.get('p4', 0),
-                            'frame': item.get('frame', 3),
-                            'autocontinue': item.get('autocontinue', 1)})
+            if item["cmd"] == 178:
+                pending_speed = item.get("p2", 0)
+            elif item["cmd"] in (16, 18, 19, 82) and item["seq"] > 0:
+                wtype = (
+                    "loiter_turns"
+                    if item["cmd"] == 18
+                    else ("loiter_time" if item["cmd"] == 19 else ("spline" if item["cmd"] == 82 else "wp"))
+                )
+                wps.append(
+                    {
+                        "lat": item["lat"],
+                        "lon": item["lon"],
+                        "alt": item["alt"],
+                        "drop": False,
+                        "delay": item["p1"] if item["cmd"] == 16 else 0,
+                        "speed": pending_speed,
+                        "type": wtype,
+                        "loiter_param": item["p1"] if item["cmd"] in (18, 19) else 0,
+                        # Preserve fields the previous round-trip dropped.
+                        # AP_Mission stores these per-item; re-uploading
+                        # without them changes plane acceptance radius /
+                        # loiter radius / yaw constraints.
+                        "p3": item.get("p3", 0),
+                        "p4": item.get("p4", 0),
+                        "frame": item.get("frame", 3),
+                        "autocontinue": item.get("autocontinue", 1),
+                    }
+                )
                 pending_speed = 0.0
-            elif item['cmd'] == 181 and wps:
-                wps[-1]['drop'] = True
-        m._dl_messages.append({'type': 'mission_downloaded', 'waypoints': wps})
+            elif item["cmd"] == 181 and wps:
+                wps[-1]["drop"] = True
+        m._dl_messages.append({"type": "mission_downloaded", "waypoints": wps})
         if len(m._dl_messages) > 500:
             m._dl_messages = m._dl_messages[-200:]
-        link.add_event(lt('mission_dl_done', link.locale) % len(wps), 'mission_dl_done')
+        link.add_event(lt("mission_dl_done", link.locale) % len(wps), "mission_dl_done")
         from .pllink_proto import bm
-        link.send(bm(47, struct.pack('<BBB', link.vehicle.sysid, 1, 0), link.sq, 153))
+
+        link.send(bm(47, struct.pack("<BBB", link.vehicle.sysid, 1, 0), link.sq, 153))
 
 
 def _request_dl_item(link: DroneLink, seq: int) -> None:
     from .pllink_proto import bm
-    link.send(bm(51, struct.pack('<HBBB', seq, link.vehicle.sysid, 1, 0), link.sq, 196))
+
+    link.send(bm(51, struct.pack("<HBBB", seq, link.vehicle.sysid, 1, 0), link.sq, 196))
 
 
 # ArduPilot: libraries/GCS_MAVLink/MissionItemProtocol.cpp:357 — MissionItemProtocol::queued_request_send
@@ -529,6 +582,7 @@ def handle_mission_request(p: bytes, pl: int, link: DroneLink) -> None:
     mission_type = p[4]
     m = link.mission
     from . import commands as cmd_mod
+
     if mission_type == 1 and m._fence_pending:
         if seq < len(m._fence_items):
             cmd_mod.send_fence_item_int(link, m._fence_items[seq])
@@ -556,19 +610,25 @@ def handle_mission_ack(p: bytes, pl: int, link: DroneLink) -> None:
     if mission_type == 1 and m._fence_pending:
         m._fence_pending = False
         m._fence_ul_start_time = 0.0
-        link.add_event((lt('fence_ack_ok', link.locale) if mtype == 0 else lt('fence_ack_fail', link.locale) % mtype),
-                       'fence_ack_ok' if mtype == 0 else 'fence_ack_fail')
+        link.add_event(
+            (lt("fence_ack_ok", link.locale) if mtype == 0 else lt("fence_ack_fail", link.locale) % mtype),
+            "fence_ack_ok" if mtype == 0 else "fence_ack_fail",
+        )
     elif mission_type == 2 and m._rally_pending:
         m._rally_pending = False
         m._rally_ul_start_time = 0.0
         # No fence_ack_ok/fail-equivalent for rally; reuse mission text.
-        link.add_event((lt('mission_ack_ok', link.locale) if mtype == 0 else lt('mission_ack_fail', link.locale) % mtype),
-                       'mission_ack_ok' if mtype == 0 else 'mission_ack_fail')
+        link.add_event(
+            (lt("mission_ack_ok", link.locale) if mtype == 0 else lt("mission_ack_fail", link.locale) % mtype),
+            "mission_ack_ok" if mtype == 0 else "mission_ack_fail",
+        )
     elif mission_type == 0 and m._mission_pending:
         m._mission_pending = False
         m._mission_ul_start_time = 0.0
-        link.add_event((lt('mission_ack_ok', link.locale) if mtype == 0 else lt('mission_ack_fail', link.locale) % mtype),
-                       'mission_ack_ok' if mtype == 0 else 'mission_ack_fail')
+        link.add_event(
+            (lt("mission_ack_ok", link.locale) if mtype == 0 else lt("mission_ack_fail", link.locale) % mtype),
+            "mission_ack_ok" if mtype == 0 else "mission_ack_fail",
+        )
 
 
 # ArduPilot: libraries/AP_Logger/AP_Logger_MAVLinkLogTransfer.cpp:259 — AP_Logger::handle_log_send_listing
@@ -576,12 +636,12 @@ def handle_log_entry(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 1:
         return
     p = _pad(p, 14)
-    time_utc, size, log_id, num_logs, last_log_num = struct.unpack_from('<IIHHH', p, 0)
+    time_utc, size, log_id, num_logs, last_log_num = struct.unpack_from("<IIHHH", p, 0)
     lg = link.log_dl
-    lg._log_list.append({'id': log_id, 'size': size, 'time_utc': time_utc})
+    lg._log_list.append({"id": log_id, "size": size, "time_utc": time_utc})
     if log_id == last_log_num:
-        lg._log_messages.append({'type': 'log_list', 'logs': list(lg._log_list)})
-        link.add_event(lt('log_list_n', link.locale) % len(lg._log_list), 'log_list_n')
+        lg._log_messages.append({"type": "log_list", "logs": list(lg._log_list)})
+        link.add_event(lt("log_list_n", link.locale) % len(lg._log_list), "log_list_n")
 
 
 # ArduPilot: libraries/GCS_MAVLink/GCS_Common.cpp:304 — GCS_MAVLINK::send_battery_status
@@ -591,7 +651,7 @@ def handle_battery_status(p: bytes, pl: int, link: DroneLink) -> None:
     p = _pad(p, 36)
     cells = []
     for i in range(10):
-        v = struct.unpack_from('<H', p, 10 + i * 2)[0]
+        v = struct.unpack_from("<H", p, 10 + i * 2)[0]
         if v == 0xFFFF:
             break
         cells.append(v / 1000.0)
@@ -603,22 +663,28 @@ def handle_adsb_vehicle(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 1:
         return
     p = _pad(p, 38)
-    icao = struct.unpack_from('<I', p, 0)[0]
-    lat = struct.unpack_from('<i', p, 4)[0] / 1e7
-    lon = struct.unpack_from('<i', p, 8)[0] / 1e7
-    alt = struct.unpack_from('<i', p, 12)[0] / 1000.0
-    hdg = struct.unpack_from('<H', p, 16)[0] / 100.0
-    hor_vel = struct.unpack_from('<H', p, 18)[0] / 100.0
-    ver_vel = struct.unpack_from('<h', p, 20)[0] / 100.0
-    callsign = bytes(p[27:36]).split(b'\x00')[0].decode('ascii', 'replace').strip()
+    icao = struct.unpack_from("<I", p, 0)[0]
+    lat = struct.unpack_from("<i", p, 4)[0] / 1e7
+    lon = struct.unpack_from("<i", p, 8)[0] / 1e7
+    alt = struct.unpack_from("<i", p, 12)[0] / 1000.0
+    hdg = struct.unpack_from("<H", p, 16)[0] / 100.0
+    hor_vel = struct.unpack_from("<H", p, 18)[0] / 100.0
+    ver_vel = struct.unpack_from("<h", p, 20)[0] / 100.0
+    callsign = bytes(p[27:36]).split(b"\x00")[0].decode("ascii", "replace").strip()
     tr = link.traffic
     tr._adsb_vehicles[icao] = {
-        'icao': icao, 'lat': round(lat, 7), 'lon': round(lon, 7),
-        'alt': round(alt, 0), 'hdg': round(hdg, 0), 'speed': round(hor_vel, 1),
-        'vs': round(ver_vel, 1), 'callsign': callsign, 't': time.time(),
+        "icao": icao,
+        "lat": round(lat, 7),
+        "lon": round(lon, 7),
+        "alt": round(alt, 0),
+        "hdg": round(hdg, 0),
+        "speed": round(hor_vel, 1),
+        "vs": round(ver_vel, 1),
+        "callsign": callsign,
+        "t": time.time(),
     }
     if len(tr._adsb_vehicles) > 200:
-        oldest = min(tr._adsb_vehicles, key=lambda k: tr._adsb_vehicles[k]['t'])
+        oldest = min(tr._adsb_vehicles, key=lambda k: tr._adsb_vehicles[k]["t"])
         del tr._adsb_vehicles[oldest]
 
 
@@ -629,7 +695,7 @@ def handle_serial_control(p: bytes, pl: int, link: DroneLink) -> None:
     p = _pad(p, 79)
     count = p[8]
     if count > 0 and count <= 70:
-        text = bytes(p[9:9 + count]).decode('ascii', 'replace')
+        text = bytes(p[9 : 9 + count]).decode("ascii", "replace")
         link._console_buf.append(text)
         if len(link._console_buf) > 500:
             link._console_buf = link._console_buf[-250:]
@@ -644,11 +710,12 @@ def _emit_log_chunks(lg, log_id: int) -> None:
     lg._log_download_ofs). Each chunk goes out as a small base64 message
     rather than buffering the whole log for a single end-of-download blob."""
     import base64
+
     while lg._log_download_ofs - lg._log_emit_ofs >= _LOG_STREAM_CHUNK_SIZE:
         start = lg._log_emit_ofs
         endc = start + _LOG_STREAM_CHUNK_SIZE
-        b64 = base64.b64encode(bytes(lg._log_download_data[start:endc])).decode('ascii')
-        lg._log_messages.append({'type': 'log_chunk', 'id': log_id, 'ofs': start, 'data': b64})
+        b64 = base64.b64encode(bytes(lg._log_download_data[start:endc])).decode("ascii")
+        lg._log_messages.append({"type": "log_chunk", "id": log_id, "ofs": start, "data": b64})
         lg._log_emit_ofs = endc
 
 
@@ -656,15 +723,21 @@ def _finalize_log_download(lg, log_id: int, truncated: bool, link: DroneLink) ->
     """Emit any trailing partial chunk, then a final log_complete message
     (no data — the frontend has been accumulating chunks). Free the bytearray."""
     import base64
+
     final_size = lg._log_download_ofs
     if lg._log_emit_ofs < final_size:
-        b64 = base64.b64encode(bytes(lg._log_download_data[lg._log_emit_ofs:final_size])).decode('ascii')
-        lg._log_messages.append({'type': 'log_chunk', 'id': log_id, 'ofs': lg._log_emit_ofs, 'data': b64})
+        b64 = base64.b64encode(bytes(lg._log_download_data[lg._log_emit_ofs : final_size])).decode("ascii")
+        lg._log_messages.append({"type": "log_chunk", "id": log_id, "ofs": lg._log_emit_ofs, "data": b64})
         lg._log_emit_ofs = final_size
-    lg._log_messages.append({
-        'type': 'log_complete', 'id': log_id, 'size': final_size, 'truncated': truncated,
-    })
-    link.add_event(lt('log_dl_done', link.locale) % (log_id, final_size // 1024), 'log_dl_done')
+    lg._log_messages.append(
+        {
+            "type": "log_complete",
+            "id": log_id,
+            "size": final_size,
+            "truncated": truncated,
+        }
+    )
+    link.add_event(lt("log_dl_done", link.locale) % (log_id, final_size // 1024), "log_dl_done")
     lg._log_download_id = -1
     lg._log_download_data = bytearray()
     lg._log_emit_ofs = 0
@@ -678,7 +751,7 @@ def handle_log_data(p: bytes, pl: int, link: DroneLink) -> None:
         return
     p = _pad(p, 97)
     lg = link.log_dl
-    ofs, log_id, count = struct.unpack_from('<IHB', p, 0)
+    ofs, log_id, count = struct.unpack_from("<IHB", p, 0)
     if log_id != lg._log_download_id:
         return
     # FC documents count=0 as EOF / error per MAVLink common.xml: previously
@@ -688,7 +761,7 @@ def handle_log_data(p: bytes, pl: int, link: DroneLink) -> None:
     if count == 0:
         _finalize_log_download(lg, log_id, truncated=True, link=link)
         return
-    data = p[7:7 + count]
+    data = p[7 : 7 + count]
     end = ofs + count
     if end <= lg._log_download_size:
         lg._log_download_data[ofs:end] = data
@@ -700,25 +773,28 @@ def handle_log_data(p: bytes, pl: int, link: DroneLink) -> None:
     # would happen if we kept the whole log in memory and base64-encoded it
     # in one shot at the end (auditor finding P1).
     _emit_log_chunks(lg, log_id)
-    if not hasattr(link, '_log_progress_counter'):
+    if not hasattr(link, "_log_progress_counter"):
         link._log_progress_counter = 0
     link._log_progress_counter += 1
     if link._log_progress_counter >= 10 and end < lg._log_download_size:
         link._log_progress_counter = 0
-        lg._log_messages.append({
-            'type': 'log_progress',
-            'received': end,
-            'total': lg._log_download_size,
-        })
+        lg._log_messages.append(
+            {
+                "type": "log_progress",
+                "received": end,
+                "total": lg._log_download_size,
+            }
+        )
         if len(lg._log_messages) > 500:
             lg._log_messages = lg._log_messages[-200:]
     if end >= lg._log_download_size:
         _finalize_log_download(lg, log_id, truncated=False, link=link)
     else:
         from .pllink_proto import bm
+
         remaining = lg._log_download_size - end
         chunk = min(90 * 50, remaining)
-        link.send(bm(119, struct.pack('<IIHBB', end, chunk, log_id, link.vehicle.sysid, 1), link.sq, 116))
+        link.send(bm(119, struct.pack("<IIHBB", end, chunk, log_id, link.vehicle.sysid, 1), link.sq, 116))
 
 
 def init_handlers() -> None:

@@ -20,7 +20,12 @@
     const vz = app.drone.vz;
     const vb = Math.max(app.drone.vibe[0], app.drone.vibe[1], app.drone.vibe[2]);
     untrack(() => {
-      altData.push(alt); spdData.push(spd); batData.push(bat); curData.push(cur); vzData.push(vz); vibeData.push(vb);
+      altData.push(alt);
+      spdData.push(spd);
+      batData.push(bat);
+      curData.push(cur);
+      vzData.push(vz);
+      vibeData.push(vb);
       if (altData.length > MAX) altData.shift();
       if (spdData.length > MAX) spdData.shift();
       if (batData.length > MAX) batData.shift();
@@ -41,20 +46,32 @@
   function draw(canvas: HTMLCanvasElement | null, data: number[], color: string) {
     if (!canvas || data.length < 2) return;
     const ctx = canvas.getContext('2d')!;
-    const w = canvas.width = canvas.parentElement!.clientWidth;
+    const w = (canvas.width = canvas.parentElement!.clientWidth);
     const h = canvas.height;
     ctx.clearRect(0, 0, w, h);
-    let mn = Math.min(...data), mx = Math.max(...data);
-    if (mx === mn) { mx += 1; mn -= 1; }
+    let mn = Math.min(...data),
+      mx = Math.max(...data);
+    if (mx === mn) {
+      mx += 1;
+      mn -= 1;
+    }
     const rng = mx - mn;
-    ctx.strokeStyle = '#333'; ctx.lineWidth = 0.5;
-    for (let i = 0; i < 4; i++) { const y = h * i / 3; ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke(); }
-    ctx.fillStyle = '#666'; ctx.font = '9px monospace';
+    ctx.strokeStyle = '#333';
+    ctx.lineWidth = 0.5;
+    for (let i = 0; i < 4; i++) {
+      const y = (h * i) / 3;
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(w, y);
+      ctx.stroke();
+    }
+    ctx.fillStyle = '#666';
+    ctx.font = '9px monospace';
     ctx.fillText(mx.toFixed(1), 2, 10);
     ctx.fillText(mn.toFixed(1), 2, h - 3);
     const pts: [number, number][] = [];
     for (let i = 0; i < data.length; i++) {
-      pts.push([i / (data.length - 1) * w, (1 - (data[i] - mn) / rng) * (h - 4) + 2]);
+      pts.push([(i / (data.length - 1)) * w, (1 - (data[i] - mn) / rng) * (h - 4) + 2]);
     }
     const grad = ctx.createLinearGradient(0, 0, 0, h);
     grad.addColorStop(0, color + '30');
@@ -66,12 +83,16 @@
     ctx.lineTo(pts[pts.length - 1][0], h);
     ctx.closePath();
     ctx.fill();
-    ctx.strokeStyle = color; ctx.lineWidth = 1.5; ctx.beginPath();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
     for (let i = 0; i < pts.length; i++) {
-      if (i === 0) ctx.moveTo(pts[i][0], pts[i][1]); else ctx.lineTo(pts[i][0], pts[i][1]);
+      if (i === 0) ctx.moveTo(pts[i][0], pts[i][1]);
+      else ctx.lineTo(pts[i][0], pts[i][1]);
     }
     ctx.stroke();
-    ctx.fillStyle = color; ctx.font = 'bold 11px monospace';
+    ctx.fillStyle = color;
+    ctx.font = 'bold 11px monospace';
     ctx.fillText(data[data.length - 1].toFixed(1), w - 45, 12);
   }
 

@@ -33,18 +33,23 @@ vi.mock('./serial', () => ({
     // Clone — transport may reuse its buffer between writes.
     writes.push(new Uint8Array(data));
   }),
-  serialReadLoop: vi.fn((_conn: unknown, onChunk: (c: Uint8Array) => void) =>
-    new Promise<void>((resolve) => {
-      readLoopOnChunk = onChunk;
-      readLoopResolve = resolve;
-    }),
+  serialReadLoop: vi.fn(
+    (_conn: unknown, onChunk: (c: Uint8Array) => void) =>
+      new Promise<void>((resolve) => {
+        readLoopOnChunk = onChunk;
+        readLoopResolve = resolve;
+      }),
   ),
 }));
 
 vi.mock('./stores.svelte', () => ({
   app: { activeTransport: 'none' as 'none' | 'ws' | 'serial' },
-  addToast: vi.fn((text: string, level: string) => { toasts.push({ text, level }); }),
-  addEvent: vi.fn((ev: { text: string; event_type: string }) => { events.push(ev); }),
+  addToast: vi.fn((text: string, level: string) => {
+    toasts.push({ text, level });
+  }),
+  addEvent: vi.fn((ev: { text: string; event_type: string }) => {
+    events.push(ev);
+  }),
 }));
 
 vi.mock('./i18n.svelte', () => ({
@@ -69,15 +74,21 @@ vi.mock('./logStore.svelte', () => ({
 
 // Import AFTER mocks. Real modules under test:
 import {
-  connectSerial, disconnectSerial,
-  serialUploadMission, serialDownloadMission,
+  connectSerial,
+  disconnectSerial,
+  serialUploadMission,
+  serialDownloadMission,
   serialUploadFence,
-  serialLogList, serialLogDownload, serialLogCancel,
+  serialLogList,
+  serialLogDownload,
+  serialLogCancel,
   serialCalCompass,
 } from './transport';
 import { encodeFrame } from './mavlink/codec';
 import {
-  encodeMissionCount, encodeMissionItemInt, encodeMissionAck,
+  encodeMissionCount,
+  encodeMissionItemInt,
+  encodeMissionAck,
   encodeMissionRequestInt,
 } from './mavlink/messages';
 import * as logStoreMock from './logStore.svelte';
@@ -96,11 +107,21 @@ function fcFrame(msgId: number, payload: Uint8Array): Uint8Array {
 
 function mkMissionItemInt(seq: number, cmd: number, lat: number, lon: number, alt: number): Uint8Array {
   return encodeMissionItemInt(
-    1, 1,
-    seq, cmd, 3,
-    seq === 0 ? 1 : 0, 1, 0,
-    0, 0, 0, 0,
-    Math.trunc(lat * 1e7), Math.trunc(lon * 1e7), alt,
+    1,
+    1,
+    seq,
+    cmd,
+    3,
+    seq === 0 ? 1 : 0,
+    1,
+    0,
+    0,
+    0,
+    0,
+    0,
+    Math.trunc(lat * 1e7),
+    Math.trunc(lon * 1e7),
+    alt,
   );
 }
 
@@ -122,7 +143,7 @@ function mkLogEntry(id: number, size: number, timeUtc: number, lastLogNum: numbe
   dv.setUint32(0, timeUtc, true);
   dv.setUint32(4, size, true);
   dv.setUint16(8, id, true);
-  dv.setUint16(10, 1, true);  // num_logs (not used by transport)
+  dv.setUint16(10, 1, true); // num_logs (not used by transport)
   dv.setUint16(12, lastLogNum, true);
   return buf;
 }
@@ -215,7 +236,7 @@ describe('serialUploadMission', () => {
   it('fails loud on MISSION_ACK with non-zero type (rejected upload)', async () => {
     const wps = [{ lat: 30, lon: 120, alt: 50, drop: false, delay: 0, speed: 0, type: 'wp' as const, loiter_param: 0 }];
     const promise = serialUploadMission(wps, 30);
-    inject(fcFrame(47, encodeMissionAck(1, 1, 14)));  // MAV_MISSION_INVALID_PARAM7
+    inject(fcFrame(47, encodeMissionAck(1, 1, 14))); // MAV_MISSION_INVALID_PARAM7
     await expect(promise).resolves.toEqual({ ok: false, error: 'MISSION_ACK type=14' });
   });
 
@@ -239,8 +260,10 @@ describe('serialUploadMission', () => {
 describe('serialUploadFence', () => {
   it('sends MISSION_COUNT with mission_type=1 and items with command=5001', async () => {
     const poly = [
-      { lat: 30, lon: 120 }, { lat: 31, lon: 120 },
-      { lat: 31, lon: 121 }, { lat: 30, lon: 121 },
+      { lat: 30, lon: 120 },
+      { lat: 31, lon: 120 },
+      { lat: 31, lon: 121 },
+      { lat: 30, lon: 121 },
     ];
     const promise = serialUploadFence(poly);
     // First write: MISSION_COUNT (msg 44). Decode it and verify mission_type
@@ -248,7 +271,7 @@ describe('serialUploadFence', () => {
     const count = findWrite(44)!;
     // MAVLink 2 frame header is 10 bytes; payload follows. Payload[0..1]=count,
     // [2]=tgt_sys, [3]=tgt_comp, [4]=mission_type.
-    expect(count[10 + 4]).toBe(1);   // FENCE
+    expect(count[10 + 4]).toBe(1); // FENCE
     // Now drive the state machine through the 4-vertex upload.
     for (let seq = 0; seq < 4; seq++) {
       writes.length = 0;
@@ -267,7 +290,10 @@ describe('serialUploadFence', () => {
   });
 
   it('rejects polygons with < 3 vertices', async () => {
-    const res = await serialUploadFence([{ lat: 30, lon: 120 }, { lat: 31, lon: 121 }]);
+    const res = await serialUploadFence([
+      { lat: 30, lon: 120 },
+      { lat: 31, lon: 121 },
+    ]);
     expect(res.ok).toBe(false);
     expect(res.error).toMatch(/3 vertices/i);
   });
@@ -284,10 +310,10 @@ describe('serialDownloadMission', () => {
     expect(countWrites(43)).toBe(1);
     // FC: 4 items (HOME, TAKEOFF, WP, RTL) → 1 Waypoint after collapse.
     inject(fcFrame(44, encodeMissionCount(1, 1, 4)));
-    inject(fcFrame(73, mkMissionItemInt(0, 16, 0, 0, 0)));         // HOME
-    inject(fcFrame(73, mkMissionItemInt(1, 22, 0, 0, 30)));        // TAKEOFF
+    inject(fcFrame(73, mkMissionItemInt(0, 16, 0, 0, 0))); // HOME
+    inject(fcFrame(73, mkMissionItemInt(1, 22, 0, 0, 30))); // TAKEOFF
     inject(fcFrame(73, mkMissionItemInt(2, 16, 31.5, 121.2, 50))); // WP
-    inject(fcFrame(73, mkMissionItemInt(3, 20, 0, 0, 0)));         // RTL
+    inject(fcFrame(73, mkMissionItemInt(3, 20, 0, 0, 0))); // RTL
     const res = await promise;
     expect(res.ok).toBe(true);
     expect(res.waypoints?.length).toBe(1);
@@ -318,7 +344,7 @@ describe('serialLogList + serialLogDownload', () => {
     expect(countWrites(117)).toBe(1);
     // FC: 2 logs, last_log_num=2.
     inject(fcFrame(118, mkLogEntry(1, 1024, 1700000000, 2)));
-    inject(fcFrame(118, mkLogEntry(2, 2048, 1700001000, 2)));   // last
+    inject(fcFrame(118, mkLogEntry(2, 2048, 1700001000, 2))); // last
     const res = await promise;
     expect(res.ok).toBe(true);
     expect(logStoreMock.setLogList).toHaveBeenCalledTimes(1);
@@ -336,10 +362,10 @@ describe('serialLogList + serialLogDownload', () => {
     // GCS sent LOG_REQUEST_DATA for log 7.
     expect(countWrites(119)).toBe(1);
     // FC returns first chunk normally, then count=0 sentinel.
-    inject(fcFrame(120, mkLogData(0, 7, 90, new Uint8Array(90).fill(0xAA))));
+    inject(fcFrame(120, mkLogData(0, 7, 90, new Uint8Array(90).fill(0xaa))));
     // The state machine just sent the next LOG_REQUEST_DATA; flush.
     writes.length = 0;
-    inject(fcFrame(120, mkLogData(90, 7, 0, new Uint8Array(0))));  // EOF sentinel
+    inject(fcFrame(120, mkLogData(90, 7, 0, new Uint8Array(0)))); // EOF sentinel
     const res = await promise;
     expect(res.ok).toBe(false);
     expect(res.error).toMatch(/truncated/i);
@@ -359,14 +385,14 @@ describe('serialCalCompass + MAG_CAL events', () => {
     // pct=0 IS a bucket crossing (floor(0/5)=0 != floor(-1/5)=-1) — matches
     // backend handle_mag_cal_progress's `(pct // 5) != (prev // 5)` check at
     // mavlink_handlers.py:225 since Python's // floor-divides -1//5 to -1.
-    inject(fcFrame(191, mkMagCalProgress(0)));    // emit (bucket 0)
-    inject(fcFrame(191, mkMagCalProgress(5)));    // emit (bucket 1)
-    inject(fcFrame(191, mkMagCalProgress(6)));    // dedup
-    inject(fcFrame(191, mkMagCalProgress(9)));    // dedup
-    inject(fcFrame(191, mkMagCalProgress(10)));   // emit (bucket 2)
-    inject(fcFrame(191, mkMagCalProgress(11)));   // dedup
-    inject(fcFrame(191, mkMagCalProgress(15)));   // emit (bucket 3)
-    inject(fcFrame(191, mkMagCalProgress(20)));   // emit (bucket 4)
+    inject(fcFrame(191, mkMagCalProgress(0))); // emit (bucket 0)
+    inject(fcFrame(191, mkMagCalProgress(5))); // emit (bucket 1)
+    inject(fcFrame(191, mkMagCalProgress(6))); // dedup
+    inject(fcFrame(191, mkMagCalProgress(9))); // dedup
+    inject(fcFrame(191, mkMagCalProgress(10))); // emit (bucket 2)
+    inject(fcFrame(191, mkMagCalProgress(11))); // dedup
+    inject(fcFrame(191, mkMagCalProgress(15))); // emit (bucket 3)
+    inject(fcFrame(191, mkMagCalProgress(20))); // emit (bucket 4)
     const pctEvents = events.filter((e) => e.event_type === 'cal_compass');
     expect(pctEvents.length).toBe(5);
   });
@@ -375,8 +401,8 @@ describe('serialCalCompass + MAG_CAL events', () => {
     serialCalCompass();
     inject(fcFrame(191, mkMagCalProgress(50)));
     events.length = 0;
-    inject(fcFrame(192, mkMagCalReport(4)));      // MAG_CAL_SUCCESS
-    expect(events.length).toBe(2);                // done + reboot
+    inject(fcFrame(192, mkMagCalReport(4))); // MAG_CAL_SUCCESS
+    expect(events.length).toBe(2); // done + reboot
     // Subsequent progress frames suppressed.
     inject(fcFrame(191, mkMagCalProgress(99)));
     expect(events.filter((e) => e.event_type === 'cal_compass').length).toBe(2);
@@ -385,7 +411,7 @@ describe('serialCalCompass + MAG_CAL events', () => {
   it('MAG_CAL_REPORT with non-success status emits failure event', () => {
     serialCalCompass();
     events.length = 0;
-    inject(fcFrame(192, mkMagCalReport(5)));      // MAG_CAL_FAILED
+    inject(fcFrame(192, mkMagCalReport(5))); // MAG_CAL_FAILED
     expect(events.length).toBe(1);
     expect(events[0].text).toMatch(/Failed|failed|cal\.s\.compassFailed/i);
   });
@@ -402,13 +428,25 @@ describe('serialCalCompass + MAG_CAL events', () => {
 // ─────────────────────────────────────────────────────────────────────────
 
 describe('upload watchdogs', () => {
-  beforeEach(() => { vi.useFakeTimers(); });
-  afterEach(() => { vi.useRealTimers(); });
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
 
-  const oneWp = () => [{
-    lat: 30, lon: 120, alt: 50, drop: false, delay: 0, speed: 0,
-    type: 'wp' as const, loiter_param: 0,
-  }];
+  const oneWp = () => [
+    {
+      lat: 30,
+      lon: 120,
+      alt: 50,
+      drop: false,
+      delay: 0,
+      speed: 0,
+      type: 'wp' as const,
+      loiter_param: 0,
+    },
+  ];
 
   it('30s overall watchdog rejects upload when FC sends no MISSION_REQUEST', async () => {
     const promise = serialUploadMission(oneWp(), 30);
@@ -447,9 +485,7 @@ describe('log cancel', () => {
   it('serialLogCancel sends LOG_REQUEST_END (msg 122) and aborts the download', async () => {
     // Pre-seed the log list so serialLogDownload(7) finds the entry.
     type LogList = Array<{ id: number; size: number; time_utc: number }>;
-    (logStoreMock.logState as unknown as { list: LogList }).list = [
-      { id: 7, size: 1024, time_utc: 0 },
-    ];
+    (logStoreMock.logState as unknown as { list: LogList }).list = [{ id: 7, size: 1024, time_utc: 0 }];
     const promise = serialLogDownload(7);
     writes.length = 0;
     serialLogCancel();

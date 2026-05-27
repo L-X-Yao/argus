@@ -1,4 +1,5 @@
 """Stress tests for WSManager: high-frequency push, concurrent clients, rapid connect/disconnect."""
+
 import asyncio
 import json
 import sys
@@ -46,7 +47,7 @@ class TestHighFrequencyPush:
         mgr._clients = set(clients)
 
         for i in range(100):
-            await mgr.broadcast({'type': 'state', 'seq': i})
+            await mgr.broadcast({"type": "state", "seq": i})
 
         for ws in clients:
             assert ws.send_text.call_count == 100
@@ -59,15 +60,15 @@ class TestHighFrequencyPush:
         ws = make_ws()
         mgr._clients = {ws}
 
-        messages = [{'type': 'state', 'value': i, 'data': 'x' * 1000} for i in range(50)]
+        messages = [{"type": "state", "value": i, "data": "x" * 1000} for i in range(50)]
         for msg in messages:
             await mgr.broadcast(msg)
 
         assert ws.send_text.call_count == 50
         for i, call in enumerate(ws.send_text.call_args_list):
             received = json.loads(call[0][0])
-            assert received['value'] == i
-            assert received['data'] == 'x' * 1000
+            assert received["value"] == i
+            assert received["data"] == "x" * 1000
 
     @pytest.mark.asyncio
     async def test_high_frequency_does_not_skip_clients(self):
@@ -78,7 +79,7 @@ class TestHighFrequencyPush:
         mgr._clients = set(clients)
 
         for i in range(50):
-            await mgr.broadcast({'type': 'state', 'n': i})
+            await mgr.broadcast({"type": "state", "n": i})
 
         for ws in clients:
             assert ws.send_text.call_count == 50
@@ -91,7 +92,7 @@ class TestHighFrequencyPush:
         ws = make_ws()
         mgr._clients = {ws}
 
-        tasks = [mgr.broadcast({'type': 'state', 'seq': i}) for i in range(30)]
+        tasks = [mgr.broadcast({"type": "state", "seq": i}) for i in range(30)]
         await asyncio.gather(*tasks)
 
         assert ws.send_text.call_count == 30
@@ -108,13 +109,13 @@ class TestConcurrentClients:
         clients = [make_ws() for _ in range(50)]
         mgr._clients = set(clients)
 
-        await mgr.broadcast({'type': 'state', 'connected': True})
+        await mgr.broadcast({"type": "state", "connected": True})
 
         for ws in clients:
             assert ws.send_text.call_count == 1
             data = json.loads(ws.send_text.call_args[0][0])
-            assert data['type'] == 'state'
-            assert data['connected'] is True
+            assert data["type"] == "state"
+            assert data["connected"] is True
 
     @pytest.mark.asyncio
     async def test_client_count_with_many_clients(self):
@@ -133,10 +134,10 @@ class TestConcurrentClients:
         ok_clients = [make_ws() for _ in range(10)]
         fail_clients = [make_ws() for _ in range(5)]
         for ws in fail_clients:
-            ws.send_text.side_effect = ConnectionError('connection reset')
+            ws.send_text.side_effect = ConnectionError("connection reset")
         mgr._clients = set(ok_clients + fail_clients)
 
-        await mgr.broadcast({'type': 'state', 'test': True})
+        await mgr.broadcast({"type": "state", "test": True})
 
         assert mgr.client_count == 10
         for ws in ok_clients:
@@ -152,10 +153,10 @@ class TestConcurrentClients:
         ws_ok1 = make_ws()
         ws_ok2 = make_ws()
         ws_fail = make_ws()
-        ws_fail.send_text.side_effect = ConnectionError('broken pipe')
+        ws_fail.send_text.side_effect = ConnectionError("broken pipe")
         mgr._clients = {ws_ok1, ws_ok2, ws_fail}
 
-        await mgr.broadcast({'type': 'state', 'connected': False})
+        await mgr.broadcast({"type": "state", "connected": False})
 
         assert ws_ok1.send_text.call_count == 1
         assert ws_ok2.send_text.call_count == 1
@@ -196,7 +197,7 @@ class TestRapidConnectDisconnect:
 
         ws1.send_text = AsyncMock(side_effect=add_new_client)
 
-        await mgr.broadcast({'type': 'state'})
+        await mgr.broadcast({"type": "state"})
 
         # ws1 should have received; ws_new was added after snapshot
         assert ws1.send_text.call_count == 1
@@ -211,9 +212,9 @@ class TestRapidConnectDisconnect:
         mgr._clients = {ws1, ws2}
 
         # ws2 raises exception -> gets removed
-        ws2.send_text.side_effect = RuntimeError('disconnected')
+        ws2.send_text.side_effect = RuntimeError("disconnected")
 
-        await mgr.broadcast({'type': 'test'})
+        await mgr.broadcast({"type": "test"})
 
         assert ws2 not in mgr._clients
         assert ws1 in mgr._clients
@@ -227,7 +228,7 @@ class TestRapidConnectDisconnect:
         for cycle in range(20):
             ws = make_ws()
             mgr._clients.add(ws)
-            await mgr.broadcast({'type': 'state', 'cycle': cycle})
+            await mgr.broadcast({"type": "state", "cycle": cycle})
             assert ws.send_text.call_count == 1
             mgr._clients.discard(ws)
 
@@ -246,11 +247,11 @@ class TestMessageOrdering:
         mgr._clients = {ws}
 
         for i in range(100):
-            await mgr.broadcast({'type': 'state', 'seq': i})
+            await mgr.broadcast({"type": "state", "seq": i})
 
         for i, call in enumerate(ws.send_text.call_args_list):
             msg = json.loads(call[0][0])
-            assert msg['seq'] == i
+            assert msg["seq"] == i
 
     @pytest.mark.asyncio
     async def test_interleaved_state_and_event_ordering(self):
@@ -262,15 +263,15 @@ class TestMessageOrdering:
 
         sequence = []
         for i in range(20):
-            msg = {'type': 'state', 'seq': i} if i % 2 == 0 else {'type': 'event', 'seq': i}
+            msg = {"type": "state", "seq": i} if i % 2 == 0 else {"type": "event", "seq": i}
             await mgr.broadcast(msg)
             sequence.append(msg)
 
         assert ws.send_text.call_count == 20
         for i, call in enumerate(ws.send_text.call_args_list):
             received = json.loads(call[0][0])
-            assert received['seq'] == sequence[i]['seq']
-            assert received['type'] == sequence[i]['type']
+            assert received["seq"] == sequence[i]["seq"]
+            assert received["type"] == sequence[i]["type"]
 
     @pytest.mark.asyncio
     async def test_ordering_across_multiple_clients(self):
@@ -281,12 +282,12 @@ class TestMessageOrdering:
         mgr._clients = set(clients)
 
         for i in range(50):
-            await mgr.broadcast({'type': 'state', 'index': i})
+            await mgr.broadcast({"type": "state", "index": i})
 
         for ws in clients:
             for i, call in enumerate(ws.send_text.call_args_list):
                 msg = json.loads(call[0][0])
-                assert msg['index'] == i
+                assert msg["index"] == i
 
     @pytest.mark.asyncio
     async def test_delta_push_sequence_logic(self):
@@ -299,21 +300,21 @@ class TestMessageOrdering:
             state = link.get_state()
             if push_count % 10 == 1:
                 delta = state
-                results.append('full')
+                results.append("full")
             else:
                 delta = {k: v for k, v in state.items() if last_sent.get(k) != v}
-                delta['type'] = 'state'
-                delta['connected'] = state['connected']
-                results.append('delta')
+                delta["type"] = "state"
+                delta["connected"] = state["connected"]
+                results.append("delta")
             last_sent.update(state)
 
         # Push 1 and 11 and 21 should be full
-        assert results[0] == 'full'
-        assert results[10] == 'full'
-        assert results[20] == 'full'
+        assert results[0] == "full"
+        assert results[10] == "full"
+        assert results[20] == "full"
         # All others should be delta
         for i in [1, 2, 3, 4, 5, 6, 7, 8, 9]:
-            assert results[i] == 'delta'
+            assert results[i] == "delta"
 
 
 class TestBroadcastUnderLoad:
@@ -328,14 +329,14 @@ class TestBroadcastUnderLoad:
         mgr._clients = set(clients)
 
         large_state = link.get_state()
-        large_state['extra_data'] = list(range(1000))
+        large_state["extra_data"] = list(range(1000))
 
         await mgr.broadcast(large_state)
 
         for ws in clients:
             received = json.loads(ws.send_text.call_args[0][0])
-            assert received['extra_data'] == list(range(1000))
-            assert received['type'] == 'state'
+            assert received["extra_data"] == list(range(1000))
+            assert received["type"] == "state"
 
     @pytest.mark.asyncio
     async def test_state_mutation_between_broadcasts(self):
@@ -355,9 +356,9 @@ class TestBroadcastUnderLoad:
 
         first_msg = json.loads(ws.send_text.call_args_list[0][0][0])
         second_msg = json.loads(ws.send_text.call_args_list[1][0][0])
-        assert first_msg['roll'] == 0.0
-        assert second_msg['roll'] == 45.0
-        assert second_msg['pitch'] == -10.0
+        assert first_msg["roll"] == 0.0
+        assert second_msg["roll"] == 45.0
+        assert second_msg["pitch"] == -10.0
 
     @pytest.mark.asyncio
     async def test_no_message_loss_with_failing_clients_in_batch(self):
@@ -371,13 +372,13 @@ class TestBroadcastUnderLoad:
         async def flaky_send(text):
             call_count[0] += 1
             if call_count[0] == 5:
-                raise ConnectionError('connection dropped')
+                raise ConnectionError("connection dropped")
 
         ws_flaky.send_text = AsyncMock(side_effect=flaky_send)
         mgr._clients = {ws_ok, ws_flaky}
 
         for i in range(20):
-            await mgr.broadcast({'type': 'state', 'n': i})
+            await mgr.broadcast({"type": "state", "n": i})
 
         # ws_ok should have received all 20 messages
         assert ws_ok.send_text.call_count == 20
@@ -390,7 +391,7 @@ class TestBroadcastUnderLoad:
         mgr._clients = set()
 
         # Should complete without error
-        await mgr.broadcast({'type': 'state', 'connected': False})
+        await mgr.broadcast({"type": "state", "connected": False})
         assert mgr.client_count == 0
 
     @pytest.mark.asyncio
@@ -401,7 +402,7 @@ class TestBroadcastUnderLoad:
         clients = [make_ws() for _ in range(10)]
         mgr._clients = set(clients)
 
-        msg = {'type': 'state', 'connected': True, 'roll': 1.5, 'nested': {'a': [1, 2, 3]}}
+        msg = {"type": "state", "connected": True, "roll": 1.5, "nested": {"a": [1, 2, 3]}}
         await mgr.broadcast(msg)
 
         expected_text = json.dumps(msg)

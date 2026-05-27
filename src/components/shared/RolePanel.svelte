@@ -53,15 +53,26 @@
 
   function selectRole(r: Role) {
     currentRole = r;
-    try { localStorage.setItem('argus_role', r); } catch {}
+    try {
+      localStorage.setItem('argus_role', r);
+    } catch {}
     addToast(`${t('role.set')}: ${t('role.' + r)}`, 'info');
   }
 </script>
 
-<div role="dialog" aria-modal="true" tabindex="-1" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
-     onclick={(e) => { if (e.target === e.currentTarget) onclose(); }} onkeydown={(e) => { if (e.key === "Escape") onclose(); }}>
+<div
+  role="dialog"
+  aria-modal="true"
+  tabindex="-1"
+  class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+  onclick={(e) => {
+    if (e.target === e.currentTarget) onclose();
+  }}
+  onkeydown={(e) => {
+    if (e.key === 'Escape') onclose();
+  }}
+>
   <div class="bg-card border border-border rounded-xl shadow-2xl w-[350px] max-h-[85vh] flex flex-col overflow-hidden">
-
     <!-- Header -->
     <div class="flex items-center justify-between px-4 py-3 border-b border-border">
       <div class="flex items-center gap-2">
@@ -72,19 +83,19 @@
     </div>
 
     <div class="flex-1 min-h-0 overflow-y-auto p-4 space-y-2">
-
       {#each roles as role (role.id)}
         {@const active = currentRole === role.id}
-                <div
-role="presentation"           class="p-3 rounded-lg border transition-colors cursor-pointer
-            {active
-              ? 'bg-primary/10 border-primary/30'
-              : 'bg-muted/30 border-border hover:bg-muted/50'}"
+        <div
+          role="presentation"
+          class="p-3 rounded-lg border transition-colors cursor-pointer
+            {active ? 'bg-primary/10 border-primary/30' : 'bg-muted/30 border-border hover:bg-muted/50'}"
           onclick={() => selectRole(role.id)}
         >
           <div class="flex items-center gap-3">
-            <div class="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center
-              {active ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'}">
+            <div
+              class="shrink-0 w-8 h-8 rounded-lg flex items-center justify-center
+              {active ? 'bg-primary/20 text-primary' : 'bg-muted text-muted-foreground'}"
+            >
               <role.icon size={16} />
             </div>
             <div class="flex-1 min-w-0">
@@ -101,7 +112,6 @@ role="presentation"           class="p-3 rounded-lg border transition-colors cur
           </div>
         </div>
       {/each}
-
     </div>
   </div>
 </div>

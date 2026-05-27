@@ -33,14 +33,22 @@ import type { SerialConnection } from './serial';
 import { addToast, addEvent, app } from './stores.svelte';
 import { t } from './i18n.svelte';
 import {
-  buildMissionItems, buildFenceItems, missionItemsToWaypoints,
-  validateMissionWaypoints, validateFencePolygon,
+  buildMissionItems,
+  buildFenceItems,
+  missionItemsToWaypoints,
+  validateMissionWaypoints,
+  validateFencePolygon,
 } from './missionUpload';
 import type { MissionItem, RawMissionItem } from './missionUpload';
 import type { Waypoint } from './types';
 import {
-  logState, setLogList, startDownload,
-  appendLogChunkBinary, updateDownloadProgress, completeDownload, cancelDownload,
+  logState,
+  setLogList,
+  startDownload,
+  appendLogChunkBinary,
+  updateDownloadProgress,
+  completeDownload,
+  cancelDownload,
 } from './logStore.svelte';
 import type { LogEntry as LogEntryShape } from './logStore.svelte';
 
@@ -84,10 +92,7 @@ export function webSerialAvailable(): boolean {
  * Connect via WebSerial.
  * Returns true if connection was established.
  */
-export async function connectSerial(
-  baudRate: number,
-  handlers: Partial<MessageHandlers>,
-): Promise<boolean> {
+export async function connectSerial(baudRate: number, handlers: Partial<MessageHandlers>): Promise<boolean> {
   if (serial.conn) await disconnectSerial();
 
   try {
@@ -155,28 +160,32 @@ export async function connectSerial(
         else if (frame.msgId === 192) _onMagCalReport(_padView(frame.payload, 44));
         dispatchFrame(frame, serial.handlers);
       }
-    }).catch((e) => { console.error('[Serial] read loop error', e); }).finally(() => {
-      const wasRunning = serial.running;
-      serial.running = false;
-      if (wasRunning) {
-        addToast('Serial connection lost', 'error', 8000);
-        // Release the transport mutex so the user can switch to WS without
-        // having to click the (now-stale) USB button first.
-        if (app.activeTransport === 'serial') app.activeTransport = 'none';
-      }
-      // Surface a link-lost error to any in-flight upload promise so the
-      // MissionPanel doesn't wait the full 30s timeout.
-      if (upload?.pending) {
-        _resolveUpload({ ok: false, error: 'Serial link lost mid-upload' });
-      }
-      if (download.pending) {
-        _resolveDownload({ ok: false, error: 'Serial link lost mid-download' });
-      }
-      // Tear down any in-flight log operation so its watchdog doesn't
-      // fire spuriously after disconnect.
-      if (logSession.listPending) _resolveLogList({ ok: false, error: 'Serial link lost' });
-      if (logSession.dlPending) _abortLogDownload('Serial link lost mid-download');
-    });
+    })
+      .catch((e) => {
+        console.error('[Serial] read loop error', e);
+      })
+      .finally(() => {
+        const wasRunning = serial.running;
+        serial.running = false;
+        if (wasRunning) {
+          addToast('Serial connection lost', 'error', 8000);
+          // Release the transport mutex so the user can switch to WS without
+          // having to click the (now-stale) USB button first.
+          if (app.activeTransport === 'serial') app.activeTransport = 'none';
+        }
+        // Surface a link-lost error to any in-flight upload promise so the
+        // MissionPanel doesn't wait the full 30s timeout.
+        if (upload?.pending) {
+          _resolveUpload({ ok: false, error: 'Serial link lost mid-upload' });
+        }
+        if (download.pending) {
+          _resolveDownload({ ok: false, error: 'Serial link lost mid-download' });
+        }
+        // Tear down any in-flight log operation so its watchdog doesn't
+        // fire spuriously after disconnect.
+        if (logSession.listPending) _resolveLogList({ ok: false, error: 'Serial link lost' });
+        if (logSession.dlPending) _abortLogDownload('Serial link lost mid-download');
+      });
 
     return true;
   } catch {
@@ -201,7 +210,9 @@ export async function disconnectSerial(): Promise<void> {
 function sendSerialFrame(msgId: number, payload: Uint8Array): void {
   if (!serial.conn || !serial.running) return;
   const frame = encodeFrame(msgId, payload, 255, 190, serial.seq++);
-  serialWrite(serial.conn, frame).catch((e) => { console.error('[Serial] write error', e); });
+  serialWrite(serial.conn, frame).catch((e) => {
+    console.error('[Serial] write error', e);
+  });
 }
 
 // MAVLink 2 zero-trim defense for the in-loop interceptors that read at
@@ -218,35 +229,27 @@ function _padView(p: DataView, minBytes: number): DataView {
 
 function requestStreams(): void {
   const streams = [
-    [1, 2],   // RAW_SENSORS
-    [2, 2],   // EXTENDED_STATUS
-    [3, 2],   // RC_CHANNELS
-    [6, 5],   // POSITION
-    [10, 2],  // EXTRA1 (attitude)
-    [11, 2],  // EXTRA2 (VFR_HUD)
-    [12, 2],  // EXTRA3 (vibration, EKF)
+    [1, 2], // RAW_SENSORS
+    [2, 2], // EXTENDED_STATUS
+    [3, 2], // RC_CHANNELS
+    [6, 5], // POSITION
+    [10, 2], // EXTRA1 (attitude)
+    [11, 2], // EXTRA2 (VFR_HUD)
+    [12, 2], // EXTRA3 (vibration, EKF)
   ];
   for (const [id, rate] of streams) {
-    sendSerialFrame(66, encodeRequestDataStream(
-      serial.targetSysId, serial.targetCompId, id, rate, 1,
-    ));
+    sendSerialFrame(66, encodeRequestDataStream(serial.targetSysId, serial.targetCompId, id, rate, 1));
   }
 }
 
 /* ── Serial command API (mirrors ws.ts sendCommand) ── */
 
 export function serialSendArm(): void {
-  sendSerialFrame(76, encodeCommandLong(
-    serial.targetSysId, serial.targetCompId,
-    400, 0, 1, 0, 0, 0, 0, 0, 0,
-  ));
+  sendSerialFrame(76, encodeCommandLong(serial.targetSysId, serial.targetCompId, 400, 0, 1, 0, 0, 0, 0, 0, 0));
 }
 
 export function serialSendDisarm(): void {
-  sendSerialFrame(76, encodeCommandLong(
-    serial.targetSysId, serial.targetCompId,
-    400, 0, 0, 0, 0, 0, 0, 0, 0,
-  ));
+  sendSerialFrame(76, encodeCommandLong(serial.targetSysId, serial.targetCompId, 400, 0, 0, 0, 0, 0, 0, 0, 0));
 }
 
 export function serialSendMode(mode: number): void {
@@ -258,25 +261,18 @@ export function serialSendRtl(): void {
 }
 
 export function serialSendParamRequestAll(): void {
-  sendSerialFrame(21, encodeParamRequestList(
-    serial.targetSysId, serial.targetCompId,
-  ));
+  sendSerialFrame(21, encodeParamRequestList(serial.targetSysId, serial.targetCompId));
 }
 
 export function serialSendParamSet(name: string, value: number, type: number = 9): void {
-  sendSerialFrame(23, encodeParamSet(
-    serial.targetSysId, serial.targetCompId, name, value, type,
-  ));
+  sendSerialFrame(23, encodeParamSet(serial.targetSysId, serial.targetCompId, name, value, type));
 }
 
-export function serialSendCommandLong(
-  command: number,
-  p1 = 0, p2 = 0, p3 = 0, p4 = 0, p5 = 0, p6 = 0, p7 = 0,
-): void {
-  sendSerialFrame(76, encodeCommandLong(
-    serial.targetSysId, serial.targetCompId,
-    command, 0, p1, p2, p3, p4, p5, p6, p7,
-  ));
+export function serialSendCommandLong(command: number, p1 = 0, p2 = 0, p3 = 0, p4 = 0, p5 = 0, p6 = 0, p7 = 0): void {
+  sendSerialFrame(
+    76,
+    encodeCommandLong(serial.targetSysId, serial.targetCompId, command, 0, p1, p2, p3, p4, p5, p6, p7),
+  );
 }
 
 /**
@@ -287,9 +283,12 @@ export function serialSendCommandLong(
  * float slot but the AP handler casts to uint8). See AP_Mount.cpp:363-417.
  */
 export function serialGimbalPitchYaw(data: {
-  pitch?: number; yaw?: number;
-  pitch_rate?: number; yaw_rate?: number;
-  flags?: number; instance?: number;
+  pitch?: number;
+  yaw?: number;
+  pitch_rate?: number;
+  yaw_rate?: number;
+  flags?: number;
+  instance?: number;
 }): void {
   if (!isSerialConnected()) return;
   const f = (v: number | undefined): number => (v == null ? NaN : Number(v));
@@ -306,15 +305,15 @@ export function serialGimbalPitchYaw(data: {
   dv.setFloat32(4, yaw, true);
   dv.setFloat32(8, pitchRate, true);
   dv.setFloat32(12, yawRate, true);
-  dv.setInt32(16, flags | 0, true);     // x: GIMBAL_MANAGER_FLAGS bitfield
-  dv.setInt32(20, 0, true);              // y: unused
-  dv.setFloat32(24, instance, true);     // z: gimbal device id
-  dv.setUint16(28, 1000, true);          // command = MAV_CMD_DO_GIMBAL_MANAGER_PITCHYAW
+  dv.setInt32(16, flags | 0, true); // x: GIMBAL_MANAGER_FLAGS bitfield
+  dv.setInt32(20, 0, true); // y: unused
+  dv.setFloat32(24, instance, true); // z: gimbal device id
+  dv.setUint16(28, 1000, true); // command = MAV_CMD_DO_GIMBAL_MANAGER_PITCHYAW
   dv.setUint8(30, serial.targetSysId);
   dv.setUint8(31, serial.targetCompId);
-  dv.setUint8(32, 0);                    // frame (unused for COMMAND_INT)
-  dv.setUint8(33, 0);                    // current
-  dv.setUint8(34, 0);                    // autocontinue
+  dv.setUint8(32, 0); // frame (unused for COMMAND_INT)
+  dv.setUint8(33, 0); // current
+  dv.setUint8(34, 0); // autocontinue
   sendSerialFrame(75, payload);
 }
 
@@ -332,14 +331,14 @@ export function serialGimbalPitchYaw(data: {
 
 interface UploadState {
   items: MissionItem[];
-  missionType: number;   // 0=MISSION, 1=FENCE, 2=RALLY — passed through on
-                         // MISSION_COUNT + each MISSION_ITEM_INT so the FC's
-                         // AP_Mission/AP_Fence routes the upload correctly.
+  missionType: number; // 0=MISSION, 1=FENCE, 2=RALLY — passed through on
+  // MISSION_COUNT + each MISSION_ITEM_INT so the FC's
+  // AP_Mission/AP_Fence routes the upload correctly.
   resolve: (result: { ok: boolean; error?: string }) => void;
   itemTimer: ReturnType<typeof setTimeout> | null;
   overallTimer: ReturnType<typeof setTimeout> | null;
   pending: boolean;
-  lastSeq: number;  // last seq the FC requested, -1 before first MISSION_REQUEST
+  lastSeq: number; // last seq the FC requested, -1 before first MISSION_REQUEST
 }
 
 let upload: UploadState | null = null;
@@ -361,13 +360,26 @@ function _onMissionRequest(seq: number): void {
   }
   const item = upload.items[seq];
   upload.lastSeq = seq;
-  sendSerialFrame(73, encodeMissionItemInt(
-    serial.targetSysId, serial.targetCompId,
-    item.seq, item.command, item.frame,
-    item.current, item.autocontinue, upload.missionType,
-    item.p1, item.p2, item.p3, item.p4,
-    item.x, item.y, item.z,
-  ));
+  sendSerialFrame(
+    73,
+    encodeMissionItemInt(
+      serial.targetSysId,
+      serial.targetCompId,
+      item.seq,
+      item.command,
+      item.frame,
+      item.current,
+      item.autocontinue,
+      upload.missionType,
+      item.p1,
+      item.p2,
+      item.p3,
+      item.p4,
+      item.x,
+      item.y,
+      item.z,
+    ),
+  );
   // 5s per-item watchdog: if the FC never asks for the next seq, fail loud.
   if (upload.itemTimer) clearTimeout(upload.itemTimer);
   upload.itemTimer = setTimeout(() => {
@@ -392,7 +404,9 @@ export function isSerialMissionUploading(): boolean {
 function _startUpload(items: MissionItem[], missionType: number): Promise<{ ok: boolean; error?: string }> {
   return new Promise((resolve) => {
     upload = {
-      items, missionType, resolve,
+      items,
+      missionType,
+      resolve,
       itemTimer: null,
       overallTimer: setTimeout(() => {
         _resolveUpload({ ok: false, error: 'Mission upload timed out (30s overall)' });
@@ -400,14 +414,13 @@ function _startUpload(items: MissionItem[], missionType: number): Promise<{ ok: 
       pending: true,
       lastSeq: -1,
     };
-    sendSerialFrame(44, encodeMissionCount(
-      serial.targetSysId, serial.targetCompId, items.length, missionType,
-    ));
+    sendSerialFrame(44, encodeMissionCount(serial.targetSysId, serial.targetCompId, items.length, missionType));
   });
 }
 
 export async function serialUploadMission(
-  waypoints: Waypoint[], takeoffAlt: number,
+  waypoints: Waypoint[],
+  takeoffAlt: number,
 ): Promise<{ ok: boolean; error?: string }> {
   if (!isSerialConnected()) return { ok: false, error: 'Not connected via serial' };
   if (upload?.pending) return { ok: false, error: 'Another upload is in progress' };
@@ -438,16 +451,12 @@ export async function serialUploadFence(
 
 export function serialClearMission(): void {
   if (!isSerialConnected()) return;
-  sendSerialFrame(45, encodeMissionClearAll(
-    serial.targetSysId, serial.targetCompId, 0,
-  ));
+  sendSerialFrame(45, encodeMissionClearAll(serial.targetSysId, serial.targetCompId, 0));
 }
 
 export function serialMissionSetCurrent(seq: number): void {
   if (!isSerialConnected()) return;
-  sendSerialFrame(41, encodeMissionSetCurrent(
-    serial.targetSysId, serial.targetCompId, seq,
-  ));
+  sendSerialFrame(41, encodeMissionSetCurrent(serial.targetSysId, serial.targetCompId, seq));
 }
 
 /* ── Mission DOWNLOAD state machine (WebSerial direct mode) ─────────────
@@ -473,7 +482,11 @@ interface DownloadState {
 }
 
 const download: DownloadState = {
-  pending: false, resolve: null, items: [], total: 0, timer: null,
+  pending: false,
+  resolve: null,
+  items: [],
+  total: 0,
+  timer: null,
 };
 
 function _resetDownloadTimer(): void {
@@ -486,7 +499,10 @@ function _resetDownloadTimer(): void {
 function _resolveDownload(result: { ok: boolean; error?: string; waypoints?: Waypoint[] }): void {
   if (!download.pending) return;
   download.pending = false;
-  if (download.timer) { clearTimeout(download.timer); download.timer = null; }
+  if (download.timer) {
+    clearTimeout(download.timer);
+    download.timer = null;
+  }
   download.items = [];
   download.total = 0;
   const r = download.resolve;
@@ -507,9 +523,7 @@ function _onMissionCountDl(p: DataView): void {
     _resolveDownload({ ok: true, waypoints: [] });
     return;
   }
-  sendSerialFrame(51, encodeMissionRequestInt(
-    serial.targetSysId, serial.targetCompId, 0, 0,
-  ));
+  sendSerialFrame(51, encodeMissionRequestInt(serial.targetSysId, serial.targetCompId, 0, 0));
   _resetDownloadTimer();
 }
 
@@ -534,17 +548,23 @@ function _onMissionItemIntDl(p: DataView): void {
 
   if (seq < download.total) {
     download.items[seq] = {
-      seq, cmd,
-      lat: x / 1e7, lon: y / 1e7, alt: z,
-      p1, p2, p3, p4,
-      frame, current, autocontinue,
+      seq,
+      cmd,
+      lat: x / 1e7,
+      lon: y / 1e7,
+      alt: z,
+      p1,
+      p2,
+      p3,
+      p4,
+      frame,
+      current,
+      autocontinue,
     };
   }
 
   if (seq + 1 < download.total) {
-    sendSerialFrame(51, encodeMissionRequestInt(
-      serial.targetSysId, serial.targetCompId, seq + 1, 0,
-    ));
+    sendSerialFrame(51, encodeMissionRequestInt(serial.targetSysId, serial.targetCompId, seq + 1, 0));
     _resetDownloadTimer();
   } else {
     // Final item received — send the MISSION_ACK and collapse to Waypoints.
@@ -566,9 +586,7 @@ export async function serialDownloadMission(): Promise<{ ok: boolean; error?: st
     download.items = [];
     download.total = 0;
     _resetDownloadTimer();
-    sendSerialFrame(43, encodeMissionRequestList(
-      serial.targetSysId, serial.targetCompId, 0,
-    ));
+    sendSerialFrame(43, encodeMissionRequestList(serial.targetSysId, serial.targetCompId, 0));
   });
 }
 
@@ -589,8 +607,8 @@ export async function serialDownloadMission(): Promise<{ ok: boolean; error?: st
  */
 
 interface MagCalState {
-  pct: number;     // last %% emitted, -1 = none
-  done: boolean;   // one-shot to avoid double "complete" or progress-after-done
+  pct: number; // last %% emitted, -1 = none
+  done: boolean; // one-shot to avoid double "complete" or progress-after-done
 }
 
 const magCal: MagCalState = { pct: -1, done: false };
@@ -616,7 +634,7 @@ function _onMagCalProgress(p: DataView): void {
       event_type: 'cal_compass',
     });
   } else if (pct > magCal.pct) {
-    magCal.pct = pct;  // track the value so the next bucket cross fires
+    magCal.pct = pct; // track the value so the next bucket cross fires
   }
 }
 
@@ -631,13 +649,25 @@ function _onMagCalReport(p: DataView): void {
     // MAG_CAL_SUCCESS. Backend emits TWO events (done + reboot hint);
     // CalibrationPanel only reads the first for completion detection but
     // we replicate both so the message log looks identical.
-    addEvent({ type: 'event', time: new Date().toLocaleTimeString(),
-               text: t('cal.s.compassDone'), event_type: 'cal_compass' });
-    addEvent({ type: 'event', time: new Date().toLocaleTimeString(),
-               text: t('cal.s.compassReboot'), event_type: 'cal_compass' });
+    addEvent({
+      type: 'event',
+      time: new Date().toLocaleTimeString(),
+      text: t('cal.s.compassDone'),
+      event_type: 'cal_compass',
+    });
+    addEvent({
+      type: 'event',
+      time: new Date().toLocaleTimeString(),
+      text: t('cal.s.compassReboot'),
+      event_type: 'cal_compass',
+    });
   } else {
-    addEvent({ type: 'event', time: new Date().toLocaleTimeString(),
-               text: t('cal.s.compassFailed'), event_type: 'cal_compass' });
+    addEvent({
+      type: 'event',
+      time: new Date().toLocaleTimeString(),
+      text: t('cal.s.compassFailed'),
+      event_type: 'cal_compass',
+    });
   }
 }
 
@@ -722,7 +752,7 @@ export function serialCalAccelNext(): void {
  * Cancel:  GCS → LOG_REQUEST_END (122). Aborts any in-flight download.
  */
 
-const LOG_CHUNK_BYTES = 90 * 50;  // matches backend cmd_log_download
+const LOG_CHUNK_BYTES = 90 * 50; // matches backend cmd_log_download
 
 interface LogSessionState {
   listPending: boolean;
@@ -739,14 +769,25 @@ interface LogSessionState {
 }
 
 const logSession: LogSessionState = {
-  listPending: false, listResolve: null, listTimer: null, listEntries: [],
-  dlPending: false, dlResolve: null, dlTimer: null, dlId: -1, dlSize: 0, dlOfs: 0,
+  listPending: false,
+  listResolve: null,
+  listTimer: null,
+  listEntries: [],
+  dlPending: false,
+  dlResolve: null,
+  dlTimer: null,
+  dlId: -1,
+  dlSize: 0,
+  dlOfs: 0,
 };
 
 function _resolveLogList(result: { ok: boolean; error?: string }): void {
   if (!logSession.listPending) return;
   logSession.listPending = false;
-  if (logSession.listTimer) { clearTimeout(logSession.listTimer); logSession.listTimer = null; }
+  if (logSession.listTimer) {
+    clearTimeout(logSession.listTimer);
+    logSession.listTimer = null;
+  }
   const r = logSession.listResolve;
   logSession.listResolve = null;
   if (r) r(result);
@@ -778,7 +819,10 @@ function _onLogEntry(p: DataView): void {
 function _abortLogDownload(error: string): void {
   if (!logSession.dlPending) return;
   logSession.dlPending = false;
-  if (logSession.dlTimer) { clearTimeout(logSession.dlTimer); logSession.dlTimer = null; }
+  if (logSession.dlTimer) {
+    clearTimeout(logSession.dlTimer);
+    logSession.dlTimer = null;
+  }
   cancelDownload();
   const r = logSession.dlResolve;
   logSession.dlResolve = null;
@@ -790,7 +834,10 @@ function _finishLogDownload(truncated: boolean): void {
   const id = logSession.dlId;
   const size = logSession.dlOfs;
   logSession.dlPending = false;
-  if (logSession.dlTimer) { clearTimeout(logSession.dlTimer); logSession.dlTimer = null; }
+  if (logSession.dlTimer) {
+    clearTimeout(logSession.dlTimer);
+    logSession.dlTimer = null;
+  }
   // Pass empty b64 — the streaming chunks already populated logState._chunks;
   // completeDownload assembles + triggers the browser download.
   completeDownload(id, undefined, size);
@@ -831,10 +878,7 @@ function _onLogData(p: DataView): void {
   // LOG_REQUEST_DATA as harmless and won't retransmit already-acked chunks.
   const remaining = logSession.dlSize - logSession.dlOfs;
   const next = Math.min(LOG_CHUNK_BYTES, remaining);
-  sendSerialFrame(119, encodeLogRequestData(
-    serial.targetSysId, serial.targetCompId,
-    logId, logSession.dlOfs, next,
-  ));
+  sendSerialFrame(119, encodeLogRequestData(serial.targetSysId, serial.targetCompId, logId, logSession.dlOfs, next));
 }
 
 export function isSerialLogBusy(): boolean {
@@ -853,9 +897,7 @@ export async function serialLogList(): Promise<{ ok: boolean; error?: string }> 
     logSession.listTimer = setTimeout(() => {
       _resolveLogList({ ok: false, error: 'LOG_REQUEST_LIST timed out (no LOG_ENTRY in 5s)' });
     }, 5000);
-    sendSerialFrame(117, encodeLogRequestList(
-      serial.targetSysId, serial.targetCompId, 0, 0xFFFF,
-    ));
+    sendSerialFrame(117, encodeLogRequestList(serial.targetSysId, serial.targetCompId, 0, 0xffff));
   });
 }
 
@@ -879,17 +921,13 @@ export async function serialLogDownload(id: number): Promise<{ ok: boolean; erro
       _abortLogDownload('LOG_REQUEST_DATA timed out (no LOG_DATA in 5s)');
     }, 5000);
     const chunk = Math.min(LOG_CHUNK_BYTES, entry.size);
-    sendSerialFrame(119, encodeLogRequestData(
-      serial.targetSysId, serial.targetCompId, id, 0, chunk,
-    ));
+    sendSerialFrame(119, encodeLogRequestData(serial.targetSysId, serial.targetCompId, id, 0, chunk));
   });
 }
 
 export function serialLogCancel(): void {
   if (!isSerialConnected()) return;
-  sendSerialFrame(122, encodeLogRequestEnd(
-    serial.targetSysId, serial.targetCompId,
-  ));
+  sendSerialFrame(122, encodeLogRequestEnd(serial.targetSysId, serial.targetCompId));
   if (logSession.dlPending) _abortLogDownload('Cancelled');
   if (logSession.listPending) _resolveLogList({ ok: false, error: 'Cancelled' });
 }

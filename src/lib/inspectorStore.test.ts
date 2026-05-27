@@ -42,10 +42,16 @@ describe('updateInspector', () => {
   });
 
   it('preserves last_fields data', () => {
-    updateInspector([{
-      id: 0, name: 'ATTITUDE', hz: 10, count: 100, size: 28,
-      last_fields: { roll: 0.1, pitch: -0.2, yaw: 3.14 },
-    }]);
+    updateInspector([
+      {
+        id: 0,
+        name: 'ATTITUDE',
+        hz: 10,
+        count: 100,
+        size: 28,
+        last_fields: { roll: 0.1, pitch: -0.2, yaw: 3.14 },
+      },
+    ]);
     expect(inspectorState.messages[0].last_fields).toEqual({ roll: 0.1, pitch: -0.2, yaw: 3.14 });
   });
 });

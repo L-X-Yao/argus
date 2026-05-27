@@ -12,6 +12,7 @@ Targets the 66 uncovered lines identified by --cov-report=term-missing:
   - Command ack calibration suppression
   - Global position armed tracking with _prev_pos
 """
+
 from __future__ import annotations
 
 import struct
@@ -77,86 +78,86 @@ class TestShortPayloadReturns:
 
     def test_attitude_empty(self):
         link = make_link()
-        handle_attitude(b'', 0, link)
+        handle_attitude(b"", 0, link)
         assert link.attitude.roll == 0.0
 
     def test_global_position_int_empty(self):
         link = make_link()
-        handle_global_position_int(b'', 0, link)
+        handle_global_position_int(b"", 0, link)
         assert link.attitude.lat == 0.0
 
     def test_gps_raw_int_empty(self):
         link = make_link()
-        handle_gps_raw_int(b'', 0, link)
+        handle_gps_raw_int(b"", 0, link)
         assert link.gps.gps_fix == 0
 
     def test_mission_current_empty(self):
         link = make_link()
-        handle_mission_current(b'', 0, link)
+        handle_mission_current(b"", 0, link)
         assert link.mission.wp_seq == 0
 
     def test_home_position_empty(self):
         link = make_link()
-        handle_home_position(b'', 0, link)
+        handle_home_position(b"", 0, link)
         assert link.attitude.home_lat == 0.0
 
     def test_mission_item_reached_empty(self):
         link = make_link()
-        handle_mission_item_reached(b'', 0, link)
+        handle_mission_item_reached(b"", 0, link)
         assert len(link.events) == 0
 
     def test_command_ack_too_short(self):
         link = make_link()
-        handle_command_ack(b'\x00', 1, link)
+        handle_command_ack(b"\x00", 1, link)
         assert len(link.events) == 0
 
     def test_statustext_too_short(self):
         link = make_link()
-        handle_statustext(b'\x06', 1, link)
+        handle_statustext(b"\x06", 1, link)
         assert len(link.events) == 0
 
     def test_servo_output_too_short(self):
         link = make_link()
-        handle_servo_output(b'\x00' * 5, 5, link)
+        handle_servo_output(b"\x00" * 5, 5, link)
         assert link.rc_servo.servo_out == [0] * 16
 
     def test_rc_channels_too_short(self):
         link = make_link()
-        handle_rc_channels(b'\x00' * 5, 5, link)
+        handle_rc_channels(b"\x00" * 5, 5, link)
         assert link.rc_servo.rc_channels == [0] * 16
 
     def test_vibration_too_short(self):
         link = make_link()
-        handle_vibration(b'\x00' * 11, 11, link)
+        handle_vibration(b"\x00" * 11, 11, link)
         assert link.diagnostic.vibe_x == 0.0
 
     def test_vfr_hud_too_short(self):
         link = make_link()
-        handle_vfr_hud(b'\x00' * 3, 3, link)
+        handle_vfr_hud(b"\x00" * 3, 3, link)
         assert link.attitude.airspeed == 0.0
 
     def test_ekf_status_empty(self):
         link = make_link()
-        handle_ekf_status(b'', 0, link)
+        handle_ekf_status(b"", 0, link)
         assert link.diagnostic.ekf_vel_var == 0.0
 
     def test_mount_status_empty(self):
         link = make_link()
-        handle_mount_status(b'', 0, link)
+        handle_mount_status(b"", 0, link)
         assert link.diagnostic.gimbal_pitch == 0.0
 
     def test_gimbal_device_attitude_status_short(self):
         link = make_link()
-        handle_gimbal_device_attitude_status(b'\x00' * 10, 10, link)
+        handle_gimbal_device_attitude_status(b"\x00" * 10, 10, link)
         assert link.diagnostic.gimbal_pitch == 0.0
 
     def test_gimbal_device_attitude_status_identity_quat(self):
         link = make_link()
         # Identity quaternion [w=1, x=0, y=0, z=0] → pitch=0, yaw=0
-        p = struct.pack('<I', 0)  # time_boot_ms
-        p += struct.pack('<4f', 1.0, 0.0, 0.0, 0.0)  # q[w,x,y,z]
-        p += struct.pack('<3f', 0.0, 0.0, 0.0)  # angular velocities
-        p += struct.pack('<I', 0)  # failure_flags
+        p = struct.pack("<I", 0)  # time_boot_ms
+        p += struct.pack("<4f", 1.0, 0.0, 0.0, 0.0)  # q[w,x,y,z]
+        p += struct.pack("<3f", 0.0, 0.0, 0.0)  # angular velocities
+        p += struct.pack("<I", 0)  # failure_flags
         handle_gimbal_device_attitude_status(p, len(p), link)
         assert abs(link.diagnostic.gimbal_pitch) < 0.1
         assert abs(link.diagnostic.gimbal_yaw) < 0.1
@@ -164,55 +165,56 @@ class TestShortPayloadReturns:
     def test_gimbal_device_attitude_status_pitched_down(self):
         link = make_link()
         import math
+
         # 45° pitch down: w=cos(22.5°), x=0, y=sin(22.5°), z=0
         angle = math.radians(45)
         w = math.cos(angle / 2)
         y = math.sin(angle / 2)
-        p = struct.pack('<I', 1000)
-        p += struct.pack('<4f', w, 0.0, y, 0.0)
-        p += struct.pack('<3f', 0.0, 0.0, 0.0)
-        p += struct.pack('<I', 0)
+        p = struct.pack("<I", 1000)
+        p += struct.pack("<4f", w, 0.0, y, 0.0)
+        p += struct.pack("<3f", 0.0, 0.0, 0.0)
+        p += struct.pack("<I", 0)
         handle_gimbal_device_attitude_status(p, len(p), link)
         assert abs(link.diagnostic.gimbal_pitch - 45.0) < 0.5
 
     def test_terrain_report_empty(self):
         link = make_link()
-        handle_terrain_report(b'', 0, link)
+        handle_terrain_report(b"", 0, link)
         assert link.diagnostic.terrain_alt == -1.0
 
     def test_wind_empty(self):
         link = make_link()
-        handle_wind(b'', 0, link)
+        handle_wind(b"", 0, link)
         assert link.diagnostic.wind_dir == 0.0
 
     def test_autopilot_version_empty(self):
         link = make_link()
-        handle_autopilot_version(b'', 0, link)
-        assert link.vehicle.fw_version == ''
+        handle_autopilot_version(b"", 0, link)
+        assert link.vehicle.fw_version == ""
 
     def test_mission_request_empty(self):
         link = make_link()
-        handle_mission_request(b'', 0, link)
+        handle_mission_request(b"", 0, link)
         # no crash
 
     def test_log_entry_empty(self):
         link = make_link()
-        handle_log_entry(b'', 0, link)
+        handle_log_entry(b"", 0, link)
         assert len(link.log_dl._log_list) == 0
 
     def test_battery_status_too_short(self):
         link = make_link()
-        handle_battery_status(b'\x00' * 9, 9, link)
+        handle_battery_status(b"\x00" * 9, 9, link)
         assert len(link.battery.battery_cells) == 0
 
     def test_adsb_vehicle_empty(self):
         link = make_link()
-        handle_adsb_vehicle(b'', 0, link)
+        handle_adsb_vehicle(b"", 0, link)
         assert len(link.traffic._adsb_vehicles) == 0
 
     def test_serial_control_too_short(self):
         link = make_link()
-        handle_serial_control(b'\x00' * 8, 8, link)
+        handle_serial_control(b"\x00" * 8, 8, link)
         assert len(link._console_buf) == 0
 
 
@@ -234,7 +236,7 @@ class TestMagCalProgress:
         p[16] = 5
         handle_mag_cal_progress(p, len(p), link)
         assert link._mag_cal_pct == 5
-        assert any(e['event_type'] == 'cal_compass' for e in link.events)
+        assert any(e["event_type"] == "cal_compass" for e in link.events)
 
     def test_progress_skipped_when_done(self):
         link = make_link()
@@ -263,7 +265,7 @@ class TestMagCalReport:
         handle_mag_cal_report(p, len(p), link)
         assert link._mag_cal_done is True
         # Two events: cal done + reboot
-        cal_events = [e for e in link.events if e['event_type'] == 'cal_compass']
+        cal_events = [e for e in link.events if e["event_type"] == "cal_compass"]
         assert len(cal_events) == 2
 
     def test_failure_report(self):
@@ -272,7 +274,7 @@ class TestMagCalReport:
         p[42] = 2  # cal_status = FAILED
         handle_mag_cal_report(p, len(p), link)
         assert link._mag_cal_done is True
-        cal_events = [e for e in link.events if e['event_type'] == 'cal_compass']
+        cal_events = [e for e in link.events if e["event_type"] == "cal_compass"]
         assert len(cal_events) == 1  # just the failure event
 
     def test_report_skipped_when_already_done(self):
@@ -287,7 +289,7 @@ class TestMagCalReport:
         link = make_link()
         p = bytearray(42)  # too short (needs 43)
         handle_mag_cal_report(p, len(p), link)
-        assert not hasattr(link, '_mag_cal_done') or not link._mag_cal_done
+        assert not hasattr(link, "_mag_cal_done") or not link._mag_cal_done
 
 
 # ---------------------------------------------------------------------------
@@ -299,46 +301,46 @@ class TestCommandAckCalibrationSuppression:
     def test_cal_success_suppressed(self):
         """CMD 241 (cal) with result=0 (success) should NOT generate an event."""
         link = make_link()
-        p = struct.pack('<HB', 241, 0)
+        p = struct.pack("<HB", 241, 0)
         handle_command_ack(p, len(p), link)
         assert len(link.events) == 0
 
     def test_compass_cal_success_suppressed(self):
         """CMD 42424 (compass cal) with result=0 should NOT generate an event."""
         link = make_link()
-        p = struct.pack('<HB', 42424, 0)
+        p = struct.pack("<HB", 42424, 0)
         handle_command_ack(p, len(p), link)
         assert len(link.events) == 0
 
     def test_accept_compass_cal_success_suppressed(self):
         """CMD 42425 with result=0 should NOT generate an event."""
         link = make_link()
-        p = struct.pack('<HB', 42425, 0)
+        p = struct.pack("<HB", 42425, 0)
         handle_command_ack(p, len(p), link)
         assert len(link.events) == 0
 
     def test_cancel_compass_cal_success_suppressed(self):
         """CMD 42426 with result=0 should NOT generate an event."""
         link = make_link()
-        p = struct.pack('<HB', 42426, 0)
+        p = struct.pack("<HB", 42426, 0)
         handle_command_ack(p, len(p), link)
         assert len(link.events) == 0
 
     def test_cal_failure_not_suppressed(self):
         """CMD 241 with result=2 (denied) SHOULD generate an event."""
         link = make_link()
-        p = struct.pack('<HB', 241, 2)
+        p = struct.pack("<HB", 241, 2)
         handle_command_ack(p, len(p), link)
         assert len(link.events) == 1
-        assert link.events[0]['event_type'] == 'cmd_ack_fail'
+        assert link.events[0]["event_type"] == "cmd_ack_fail"
 
     def test_unknown_result_text(self):
         """Unknown result code uses fallback text."""
         link = make_link()
-        link.locale = 'en'
-        p = struct.pack('<HB', 400, 99)
+        link.locale = "en"
+        p = struct.pack("<HB", 400, 99)
         handle_command_ack(p, len(p), link)
-        assert 'unknown(99)' in link.events[0]['text']
+        assert "unknown(99)" in link.events[0]["text"]
 
 
 # ---------------------------------------------------------------------------
@@ -350,15 +352,15 @@ class TestStatustextEdgeCases:
     def test_empty_text_ignored(self):
         link = make_link()
         # severity byte + all-zero text (50 bytes)
-        p = b'\x06' + b'\x00' * 50
+        p = b"\x06" + b"\x00" * 50
         handle_statustext(p, len(p), link)
         assert len(link.events) == 0
 
     def test_prearm_dedup(self):
         """Same PreArm message repeated should not add a second event."""
         link = make_link()
-        link.locale = 'en'
-        msg = b'\x06' + b'PreArm: compass not calibrated\x00' + b'\x00' * 19
+        link.locale = "en"
+        msg = b"\x06" + b"PreArm: compass not calibrated\x00" + b"\x00" * 19
         handle_statustext(msg, len(msg), link)
         count1 = len(link.events)
         # Same message again
@@ -380,16 +382,12 @@ class TestGlobalPositionArmedTracking:
         link.attitude.home_lon = 108.0
 
         # First position
-        p1 = struct.pack('<IiiiihhhH', 1000,
-                         int(34.0 * 1e7), int(108.0 * 1e7), 0, 50_000,
-                         500, 300, 0, 0)
+        p1 = struct.pack("<IiiiihhhH", 1000, int(34.0 * 1e7), int(108.0 * 1e7), 0, 50_000, 500, 300, 0, 0)
         handle_global_position_int(p1, len(p1), link)
         assert link.attitude._prev_pos is not None
 
         # Second position slightly different
-        p2 = struct.pack('<IiiiihhhH', 2000,
-                         int(34.001 * 1e7), int(108.001 * 1e7), 0, 50_000,
-                         500, 300, 0, 0)
+        p2 = struct.pack("<IiiiihhhH", 2000, int(34.001 * 1e7), int(108.001 * 1e7), 0, 50_000, 500, 300, 0, 0)
         handle_global_position_int(p2, len(p2), link)
         assert link.vehicle.total_dist > 0
 
@@ -401,9 +399,7 @@ class TestGlobalPositionArmedTracking:
         link.attitude.home_lon = 108.0
 
         # vx=1000 cm/s = 10 m/s, vy=0
-        p = struct.pack('<IiiiihhhH', 1000,
-                        int(34.0 * 1e7), int(108.0 * 1e7), 0, 50_000,
-                        1000, 0, 0, 0)
+        p = struct.pack("<IiiiihhhH", 1000, int(34.0 * 1e7), int(108.0 * 1e7), 0, 50_000, 1000, 0, 0, 0)
         handle_global_position_int(p, len(p), link)
         assert link.vehicle.max_speed == 10.0
 
@@ -425,9 +421,9 @@ class TestBatteryTimeRemaining:
         link.battery._bat_history = [(now - 60, 80)]
         # Payload with remaining=75 to create new entry and trigger calc
         p = bytearray(31)
-        struct.pack_into('<H', p, 14, 12600)    # 12.6V
-        struct.pack_into('<h', p, 16, 500)       # 5A
-        struct.pack_into('<b', p, 30, 75)
+        struct.pack_into("<H", p, 14, 12600)  # 12.6V
+        struct.pack_into("<h", p, 16, 500)  # 5A
+        struct.pack_into("<b", p, 30, 75)
         # Need dt > 10 and dr > 0
         handle_sys_status(p, 31, link)
 
@@ -445,9 +441,9 @@ class TestBatteryTimeRemaining:
         link.battery._bat_history = [(now - 200, 90), (now - 10, 55)]
 
         p = bytearray(31)
-        struct.pack_into('<H', p, 14, 12000)
-        struct.pack_into('<h', p, 16, 500)
-        struct.pack_into('<b', p, 30, 50)
+        struct.pack_into("<H", p, 14, 12000)
+        struct.pack_into("<h", p, 16, 500)
+        struct.pack_into("<b", p, 30, 50)
         handle_sys_status(p, 31, link)
 
         # Old entry (200s ago) should be trimmed
@@ -460,15 +456,27 @@ class TestBatteryTimeRemaining:
 # ---------------------------------------------------------------------------
 
 
-def _make_mission_item(seq, cmd, lat=34.0, lon=108.0, alt=100.0,
-                       p1=0.0, p2=0.0, p3=0.0, p4=0.0,
-                       frame=3, current=0, autocontinue=1):
+def _make_mission_item(
+    seq, cmd, lat=34.0, lon=108.0, alt=100.0, p1=0.0, p2=0.0, p3=0.0, p4=0.0, frame=3, current=0, autocontinue=1
+):
     """Build a MISSION_ITEM_INT payload."""
-    return struct.pack('<ffffiif HH BBBBB',
-                       p1, p2, p3, p4,
-                       int(lat * 1e7), int(lon * 1e7), alt,
-                       seq, cmd,
-                       1, 1, frame, current, autocontinue)
+    return struct.pack(
+        "<ffffiif HH BBBBB",
+        p1,
+        p2,
+        p3,
+        p4,
+        int(lat * 1e7),
+        int(lon * 1e7),
+        alt,
+        seq,
+        cmd,
+        1,
+        1,
+        frame,
+        current,
+        autocontinue,
+    )
 
 
 class TestMissionDownloadFull:
@@ -494,11 +502,11 @@ class TestMissionDownloadFull:
         handle_mission_item_int(p2, len(p2), link)
 
         assert m._dl_pending is False
-        msgs = [msg for msg in m._dl_messages if msg['type'] == 'mission_downloaded']
+        msgs = [msg for msg in m._dl_messages if msg["type"] == "mission_downloaded"]
         assert len(msgs) == 1
-        wps = msgs[0]['waypoints']
+        wps = msgs[0]["waypoints"]
         assert len(wps) == 1  # only seq=2, seq=0 is home
-        assert wps[0]['speed'] == 5.0
+        assert wps[0]["speed"] == 5.0
 
     def test_cmd181_marks_drop(self):
         """DO_SET_RELAY (181) sets drop=True on the preceding waypoint."""
@@ -522,9 +530,9 @@ class TestMissionDownloadFull:
         handle_mission_item_int(p2, len(p2), link)
 
         assert m._dl_pending is False
-        wps = m._dl_messages[-1]['waypoints']
+        wps = m._dl_messages[-1]["waypoints"]
         assert len(wps) == 1
-        assert wps[0]['drop'] is True
+        assert wps[0]["drop"] is True
 
     def test_loiter_turns_type(self):
         """CMD 18 produces wtype='loiter_turns'."""
@@ -540,9 +548,9 @@ class TestMissionDownloadFull:
         p1 = _make_mission_item(1, 18, p1=3.0)
         handle_mission_item_int(p1, len(p1), link)
 
-        wps = m._dl_messages[-1]['waypoints']
-        assert wps[0]['type'] == 'loiter_turns'
-        assert wps[0]['loiter_param'] == 3.0
+        wps = m._dl_messages[-1]["waypoints"]
+        assert wps[0]["type"] == "loiter_turns"
+        assert wps[0]["loiter_param"] == 3.0
 
     def test_loiter_time_type(self):
         """CMD 19 produces wtype='loiter_time'."""
@@ -558,8 +566,8 @@ class TestMissionDownloadFull:
         p1 = _make_mission_item(1, 19, p1=10.0)
         handle_mission_item_int(p1, len(p1), link)
 
-        wps = m._dl_messages[-1]['waypoints']
-        assert wps[0]['type'] == 'loiter_time'
+        wps = m._dl_messages[-1]["waypoints"]
+        assert wps[0]["type"] == "loiter_time"
 
     def test_spline_type(self):
         """CMD 82 produces wtype='spline'."""
@@ -575,15 +583,15 @@ class TestMissionDownloadFull:
         p1 = _make_mission_item(1, 82)
         handle_mission_item_int(p1, len(p1), link)
 
-        wps = m._dl_messages[-1]['waypoints']
-        assert wps[0]['type'] == 'spline'
+        wps = m._dl_messages[-1]["waypoints"]
+        assert wps[0]["type"] == "spline"
 
     def test_dl_messages_overflow_trimmed(self):
         """When _dl_messages exceeds 500, it's trimmed to last 200."""
         link = make_link()
         link.send = lambda frame: None
         m = link.mission
-        m._dl_messages = [{'type': 'dummy'}] * 500
+        m._dl_messages = [{"type": "dummy"}] * 500
 
         m._dl_pending = True
         m._dl_total = 1
@@ -615,14 +623,26 @@ class TestMissionRequestFenceRally:
         m = link.mission
         m._fence_pending = True
         m._fence_items = [
-            {'seq': 0, 'frame': 3, 'cmd': 5001, 'current': 0, 'autocontinue': 0,
-             'p1': 0, 'p2': 0, 'p3': 0, 'p4': 0, 'lat': 34.0, 'lon': 108.0, 'alt': 100},
+            {
+                "seq": 0,
+                "frame": 3,
+                "cmd": 5001,
+                "current": 0,
+                "autocontinue": 0,
+                "p1": 0,
+                "p2": 0,
+                "p3": 0,
+                "p4": 0,
+                "lat": 34.0,
+                "lon": 108.0,
+                "alt": 100,
+            },
         ]
         # seq=0, target_sys=1, target_comp=1, mission_type=1 (fence)
-        p = struct.pack('<HBBB', 0, 1, 1, 1)
+        p = struct.pack("<HBBB", 0, 1, 1, 1)
         p = p[:2] + p[2:]  # Ensure 5 bytes
         p = bytearray(5)
-        struct.pack_into('<H', p, 0, 0)   # seq=0
+        struct.pack_into("<H", p, 0, 0)  # seq=0
         p[2] = 1  # target_system
         p[3] = 1  # target_component
         p[4] = 1  # mission_type = fence
@@ -635,11 +655,23 @@ class TestMissionRequestFenceRally:
         m = link.mission
         m._rally_pending = True
         m._rally_items = [
-            {'seq': 0, 'frame': 3, 'cmd': 5100, 'current': 0, 'autocontinue': 0,
-             'p1': 0, 'p2': 0, 'p3': 0, 'p4': 0, 'lat': 34.0, 'lon': 108.0, 'alt': 200},
+            {
+                "seq": 0,
+                "frame": 3,
+                "cmd": 5100,
+                "current": 0,
+                "autocontinue": 0,
+                "p1": 0,
+                "p2": 0,
+                "p3": 0,
+                "p4": 0,
+                "lat": 34.0,
+                "lon": 108.0,
+                "alt": 200,
+            },
         ]
         p = bytearray(5)
-        struct.pack_into('<H', p, 0, 0)  # seq=0
+        struct.pack_into("<H", p, 0, 0)  # seq=0
         p[2] = 1  # target_system
         p[3] = 1  # target_component
         p[4] = 2  # mission_type = rally
@@ -653,7 +685,7 @@ class TestMissionRequestFenceRally:
         m._fence_pending = True
         m._fence_items = []  # empty
         p = bytearray(5)
-        struct.pack_into('<H', p, 0, 5)  # seq=5, out of range
+        struct.pack_into("<H", p, 0, 5)  # seq=5, out of range
         p[4] = 1  # fence
         handle_mission_request(bytes(p), len(p), link)
         # No crash, no send
@@ -665,7 +697,7 @@ class TestMissionRequestFenceRally:
         m._rally_pending = True
         m._rally_items = []
         p = bytearray(5)
-        struct.pack_into('<H', p, 0, 3)  # seq=3, out of range
+        struct.pack_into("<H", p, 0, 3)  # seq=3, out of range
         p[4] = 2  # rally
         handle_mission_request(bytes(p), len(p), link)
 
@@ -682,11 +714,11 @@ class TestMissionAckFenceRally:
         m._fence_pending = True
         m._fence_ul_start_time = time.time()
         # mtype=3 (error), mission_type=1 (fence)
-        p = struct.pack('<BBBB', 1, 1, 3, 1)
+        p = struct.pack("<BBBB", 1, 1, 3, 1)
         handle_mission_ack(p, len(p), link)
         assert m._fence_pending is False
         assert m._fence_ul_start_time == 0.0
-        assert any(e['event_type'] == 'fence_ack_fail' for e in link.events)
+        assert any(e["event_type"] == "fence_ack_fail" for e in link.events)
 
     def test_rally_ack_ok(self):
         link = make_link()
@@ -694,11 +726,11 @@ class TestMissionAckFenceRally:
         m._rally_pending = True
         m._rally_ul_start_time = time.time()
         # mtype=0 (accepted), mission_type=2 (rally)
-        p = struct.pack('<BBBB', 1, 1, 0, 2)
+        p = struct.pack("<BBBB", 1, 1, 0, 2)
         handle_mission_ack(p, len(p), link)
         assert m._rally_pending is False
         assert m._rally_ul_start_time == 0.0
-        assert any(e['event_type'] == 'mission_ack_ok' for e in link.events)
+        assert any(e["event_type"] == "mission_ack_ok" for e in link.events)
 
     def test_rally_ack_fail(self):
         link = make_link()
@@ -706,10 +738,10 @@ class TestMissionAckFenceRally:
         m._rally_pending = True
         m._rally_ul_start_time = time.time()
         # mtype=5 (error), mission_type=2 (rally)
-        p = struct.pack('<BBBB', 1, 1, 5, 2)
+        p = struct.pack("<BBBB", 1, 1, 5, 2)
         handle_mission_ack(p, len(p), link)
         assert m._rally_pending is False
-        assert any(e['event_type'] == 'mission_ack_fail' for e in link.events)
+        assert any(e["event_type"] == "mission_ack_fail" for e in link.events)
 
     def test_mission_ack_fail(self):
         link = make_link()
@@ -717,11 +749,11 @@ class TestMissionAckFenceRally:
         m._mission_pending = True
         m._mission_ul_start_time = time.time()
         # mtype=2 (error), mission_type=0 (mission)
-        p = struct.pack('<BBBB', 1, 1, 2, 0)
+        p = struct.pack("<BBBB", 1, 1, 2, 0)
         handle_mission_ack(p, len(p), link)
         assert m._mission_pending is False
         assert m._mission_ul_start_time == 0.0
-        assert any(e['event_type'] == 'mission_ack_fail' for e in link.events)
+        assert any(e["event_type"] == "mission_ack_fail" for e in link.events)
 
 
 # ---------------------------------------------------------------------------
@@ -733,6 +765,7 @@ class TestLogChunking:
     def test_emit_log_chunks_streams_64kb(self):
         """_emit_log_chunks emits a chunk when data reaches 64KB."""
         from backend.state import LogState
+
         lg = LogState()
         lg._log_download_data = bytearray(65536 + 100)
         lg._log_download_ofs = 65536 + 100
@@ -741,14 +774,15 @@ class TestLogChunking:
         _emit_log_chunks(lg, log_id=5)
 
         assert len(lg._log_messages) == 1
-        assert lg._log_messages[0]['type'] == 'log_chunk'
-        assert lg._log_messages[0]['id'] == 5
-        assert lg._log_messages[0]['ofs'] == 0
+        assert lg._log_messages[0]["type"] == "log_chunk"
+        assert lg._log_messages[0]["id"] == 5
+        assert lg._log_messages[0]["ofs"] == 0
         assert lg._log_emit_ofs == 65536
 
     def test_emit_log_chunks_multiple(self):
         """Emits two chunks when data is >= 128KB."""
         from backend.state import LogState
+
         lg = LogState()
         size = 65536 * 2 + 50
         lg._log_download_data = bytearray(size)
@@ -764,27 +798,27 @@ class TestLogChunking:
         """_finalize_log_download emits the last partial chunk + log_complete."""
         link = make_link()
         lg = link.log_dl
-        lg._log_download_data = bytearray(b'\xAA' * 1000)
+        lg._log_download_data = bytearray(b"\xaa" * 1000)
         lg._log_download_ofs = 1000
         lg._log_emit_ofs = 0
         lg._log_download_id = 7
 
         _finalize_log_download(lg, log_id=7, truncated=False, link=link)
 
-        chunk_msgs = [m for m in lg._log_messages if m['type'] == 'log_chunk']
-        complete_msgs = [m for m in lg._log_messages if m['type'] == 'log_complete']
+        chunk_msgs = [m for m in lg._log_messages if m["type"] == "log_chunk"]
+        complete_msgs = [m for m in lg._log_messages if m["type"] == "log_complete"]
         assert len(chunk_msgs) == 1
-        assert chunk_msgs[0]['ofs'] == 0
+        assert chunk_msgs[0]["ofs"] == 0
         assert len(complete_msgs) == 1
-        assert complete_msgs[0]['truncated'] is False
-        assert complete_msgs[0]['size'] == 1000
+        assert complete_msgs[0]["truncated"] is False
+        assert complete_msgs[0]["size"] == 1000
         assert lg._log_download_id == -1
 
     def test_finalize_trims_overflow(self):
         """_finalize_log_download trims _log_messages when > 500."""
         link = make_link()
         lg = link.log_dl
-        lg._log_messages = [{'type': 'dummy'}] * 500
+        lg._log_messages = [{"type": "dummy"}] * 500
         lg._log_download_data = bytearray(100)
         lg._log_download_ofs = 100
         lg._log_emit_ofs = 0
@@ -809,13 +843,13 @@ class TestLogDataProgress:
         # Send 10 small chunks to trigger progress
         for i in range(10):
             data = bytes([i & 0xFF] * 10)
-            p = struct.pack('<IHB', i * 10, 10, 10) + data + b'\x00' * 80
+            p = struct.pack("<IHB", i * 10, 10, 10) + data + b"\x00" * 80
             handle_log_data(p, len(p), link)
 
-        progress_msgs = [m for m in lg._log_messages if m['type'] == 'log_progress']
+        progress_msgs = [m for m in lg._log_messages if m["type"] == "log_progress"]
         assert len(progress_msgs) >= 1
-        assert 'received' in progress_msgs[0]
-        assert 'total' in progress_msgs[0]
+        assert "received" in progress_msgs[0]
+        assert "total" in progress_msgs[0]
 
     def test_progress_messages_overflow_trimmed(self):
         """_log_messages gets trimmed if it exceeds 500 during progress emission."""
@@ -826,19 +860,19 @@ class TestLogDataProgress:
         lg._log_download_size = 100000
         lg._log_download_data = bytearray(100000)
         lg._log_download_ofs = 0
-        lg._log_messages = [{'type': 'dummy'}] * 499
+        lg._log_messages = [{"type": "dummy"}] * 499
         link._log_progress_counter = 9  # next chunk triggers progress
 
         # This chunk won't complete the download but will add progress msg
         data = bytes(10)
-        p = struct.pack('<IHB', 0, 10, 10) + data + b'\x00' * 80
+        p = struct.pack("<IHB", 0, 10, 10) + data + b"\x00" * 80
         handle_log_data(p, len(p), link)
 
         # 499 + 1 progress = 500. If > 500, trimmed
         # Actually the threshold is > 500 not >=, so 500 stays
         # Add another to push over
         link._log_progress_counter = 9
-        p2 = struct.pack('<IHB', 10, 10, 10) + data + b'\x00' * 80
+        p2 = struct.pack("<IHB", 10, 10, 10) + data + b"\x00" * 80
         handle_log_data(p2, len(p2), link)
 
         assert len(lg._log_messages) <= 500
@@ -859,16 +893,16 @@ class TestLogDataProgress:
         while ofs < total:
             chunk_size = min(90, total - ofs)
             data = bytes([ofs & 0xFF] * chunk_size)
-            p = struct.pack('<IHB', ofs, 1, chunk_size) + data + b'\x00' * (90 - chunk_size)
+            p = struct.pack("<IHB", ofs, 1, chunk_size) + data + b"\x00" * (90 - chunk_size)
             handle_log_data(p, len(p), link)
             ofs += chunk_size
 
-        chunk_msgs = [m for m in lg._log_messages if m['type'] == 'log_chunk']
-        complete_msgs = [m for m in lg._log_messages if m['type'] == 'log_complete']
+        chunk_msgs = [m for m in lg._log_messages if m["type"] == "log_chunk"]
+        complete_msgs = [m for m in lg._log_messages if m["type"] == "log_complete"]
         # At least one streaming chunk (64KB) + trailing partial
         assert len(chunk_msgs) >= 2
         assert len(complete_msgs) == 1
-        assert complete_msgs[0]['size'] == total
+        assert complete_msgs[0]["size"] == total
 
 
 # ---------------------------------------------------------------------------
@@ -879,17 +913,17 @@ class TestLogDataProgress:
 class TestRemainingShortPayloads:
     def test_sys_status_empty(self):
         link = make_link()
-        handle_sys_status(b'', 0, link)
+        handle_sys_status(b"", 0, link)
         assert link.battery.voltage == 0.0
 
     def test_mag_cal_progress_empty(self):
         link = make_link()
-        handle_mag_cal_progress(b'', 0, link)
-        assert not hasattr(link, '_mag_cal_pct')
+        handle_mag_cal_progress(b"", 0, link)
+        assert not hasattr(link, "_mag_cal_pct")
 
     def test_mission_ack_empty(self):
         link = make_link()
-        handle_mission_ack(b'', 0, link)
+        handle_mission_ack(b"", 0, link)
         assert len(link.events) == 0
 
 
@@ -903,10 +937,10 @@ class TestGimbalDeviceAttitudeStatus:
         """Quaternion [1,0,0,0] (identity) maps to pitch=0, yaw=0."""
         link = make_link()
         # time_boot_ms(u32) + q[4](f32x4) + angular_velocity(f32x3) + failure_flags(u32)
-        p = struct.pack('<I', 1000)            # time_boot_ms
-        p += struct.pack('<4f', 1.0, 0, 0, 0)  # quaternion identity
-        p += struct.pack('<3f', 0, 0, 0)        # angular velocity
-        p += struct.pack('<I', 0)               # failure_flags
+        p = struct.pack("<I", 1000)  # time_boot_ms
+        p += struct.pack("<4f", 1.0, 0, 0, 0)  # quaternion identity
+        p += struct.pack("<3f", 0, 0, 0)  # angular velocity
+        p += struct.pack("<I", 0)  # failure_flags
         handle_gimbal_device_attitude_status(p, len(p), link)
         assert abs(link.diagnostic.gimbal_pitch) < 0.1
         assert abs(link.diagnostic.gimbal_yaw) < 0.1
@@ -914,33 +948,35 @@ class TestGimbalDeviceAttitudeStatus:
     def test_pitch_down_45(self):
         """Quaternion for 45-degree pitch-down."""
         import math as m
+
         link = make_link()
         # pitch = -45 degrees about Y axis
         angle = m.radians(-45)
         w = m.cos(angle / 2)
         y = m.sin(angle / 2)
-        p = struct.pack('<I', 1000)
-        p += struct.pack('<4f', w, 0.0, y, 0.0)
-        p += struct.pack('<3f', 0, 0, 0)
-        p += struct.pack('<I', 0)
+        p = struct.pack("<I", 1000)
+        p += struct.pack("<4f", w, 0.0, y, 0.0)
+        p += struct.pack("<3f", 0, 0, 0)
+        p += struct.pack("<I", 0)
         handle_gimbal_device_attitude_status(p, len(p), link)
         assert abs(link.diagnostic.gimbal_pitch - (-45.0)) < 0.5
 
     def test_yaw_90(self):
         """Quaternion for 90-degree yaw."""
         import math as m
+
         link = make_link()
         angle = m.radians(90)
         w = m.cos(angle / 2)
         z = m.sin(angle / 2)
-        p = struct.pack('<I', 1000)
-        p += struct.pack('<4f', w, 0.0, 0.0, z)
-        p += struct.pack('<3f', 0, 0, 0)
-        p += struct.pack('<I', 0)
+        p = struct.pack("<I", 1000)
+        p += struct.pack("<4f", w, 0.0, 0.0, z)
+        p += struct.pack("<3f", 0, 0, 0)
+        p += struct.pack("<I", 0)
         handle_gimbal_device_attitude_status(p, len(p), link)
         assert abs(link.diagnostic.gimbal_yaw - 90.0) < 0.5
 
     def test_short_payload_ignored(self):
         link = make_link()
-        handle_gimbal_device_attitude_status(b'\x00' * 19, 19, link)
+        handle_gimbal_device_attitude_status(b"\x00" * 19, 19, link)
         assert link.diagnostic.gimbal_pitch == 0.0

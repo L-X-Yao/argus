@@ -23,8 +23,8 @@ def c16(d):
 
 def ple(p, s):
     x = xp(p)
-    h = struct.pack('<HB', len(p), s & 0xFF)
-    return bytes([0x50, 0x4C]) + h + x + struct.pack('<H', c16(h + x))
+    h = struct.pack("<HB", len(p), s & 0xFF)
+    return bytes([0x50, 0x4C]) + h + x + struct.pack("<H", c16(h + x))
 
 
 def pld(d):
@@ -36,9 +36,9 @@ def pld(d):
     t = 7 + l
     if len(d) < t:
         return None, 0
-    px = d[5:5+l]
-    cr = d[5+l] | (d[6+l] << 8)
-    h = struct.pack('<HB', l, d[4])
+    px = d[5 : 5 + l]
+    cr = d[5 + l] | (d[6 + l] << 8)
+    h = struct.pack("<HB", l, d[4])
     return (xp(px), t) if cr == c16(h + px) else (None, 2)
 
 
@@ -60,7 +60,6 @@ def bm(mid, p, s, ce, sysid=255, compid=1):
     # (or worse, parse the next bytes as the next frame). Reject early with a
     # clear ValueError — callers should chunk large payloads themselves.
     if len(p) > 255:
-        raise ValueError('MAVLink payload too long: %d bytes (max 255)' % len(p))
-    h = bytes([len(p), 0, 0, s & 0xFF, sysid & 0xFF, compid & 0xFF,
-               mid & 0xFF, (mid >> 8) & 0xFF, (mid >> 16) & 0xFF])
-    return b'\xfd' + h + p + struct.pack('<H', mc(h + p, ce))
+        raise ValueError("MAVLink payload too long: %d bytes (max 255)" % len(p))
+    h = bytes([len(p), 0, 0, s & 0xFF, sysid & 0xFF, compid & 0xFF, mid & 0xFF, (mid >> 8) & 0xFF, (mid >> 16) & 0xFF])
+    return b"\xfd" + h + p + struct.pack("<H", mc(h + p, ce))

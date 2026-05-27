@@ -23,9 +23,11 @@ from backend.state import (
 # Helpers
 # ---------------------------------------------------------------------------
 
+
 def make_drone_link():
     """Create a DroneLink instance for testing without connecting."""
     from backend.drone_link import DroneLink
+
     link = DroneLink()
     link.connected = True
     link.frame_count = 100
@@ -55,17 +57,19 @@ def make_drone_link():
 def build_mavlink_frame(msg_id=30, payload_len=28):
     """Build a valid MAVLink v2 frame for msg_id=30 (ATTITUDE)."""
     payload = bytes(payload_len)
-    header = bytes([
-        payload_len,  # payload len
-        0,            # incompat_flags
-        0,            # compat_flags
-        0,            # seq
-        1,            # sysid
-        1,            # compid
-        msg_id & 0xFF,
-        (msg_id >> 8) & 0xFF,
-        (msg_id >> 16) & 0xFF,
-    ])
+    header = bytes(
+        [
+            payload_len,  # payload len
+            0,  # incompat_flags
+            0,  # compat_flags
+            0,  # seq
+            1,  # sysid
+            1,  # compid
+            msg_id & 0xFF,
+            (msg_id >> 8) & 0xFF,
+            (msg_id >> 16) & 0xFF,
+        ]
+    )
     # CRC calculation (MAVLink CRC-16)
     crc = 0xFFFF
     for b in header + payload:
@@ -80,13 +84,14 @@ def build_mavlink_frame(msg_id=30, payload_len=28):
     crc = (crc >> 8) ^ (tmp << 8) ^ (tmp << 3) ^ (tmp >> 4)
     crc &= 0xFFFF
 
-    frame = b'\xfd' + header + payload + struct.pack('<H', crc)
+    frame = b"\xfd" + header + payload + struct.pack("<H", crc)
     return frame
 
 
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------
+
 
 class TestStateUpdateLatency:
     """Test that state field updates are fast."""
@@ -305,7 +310,7 @@ class TestEventBufferPerformance:
 
         start = time.perf_counter()
         for i in range(10000):
-            link.queue_ws({'type': 'test', 'i': i})
+            link.queue_ws({"type": "test", "i": i})
         elapsed = time.perf_counter() - start
         assert len(link._ws_queue) <= 2000
         assert elapsed < 0.2, f"10000 ws_queue appends took {elapsed:.4f}s (> 200ms)"

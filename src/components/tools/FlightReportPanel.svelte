@@ -16,20 +16,19 @@
   let vehicleInfo = $derived(
     [app.drone.vtype, app.drone.fw_version, app.drone.board_id ? `Board ${app.drone.board_id}` : '']
       .filter(Boolean)
-      .join(' / ') || '---'
+      .join(' / ') || '---',
   );
 
   /* ── Flight summary ── */
   let summary = $derived(app.drone.flight_summary);
 
   /* ── Recent events (last 50) ── */
-  let recentEvents = $derived(
-    app.events.slice(-50)
-  );
+  let recentEvents = $derived(app.events.slice(-50));
 
   /* ── Formatting helpers ── */
   function fmtDuration(s: number): string {
-    const m = Math.floor(s / 60), sec = s % 60;
+    const m = Math.floor(s / 60),
+      sec = s % 60;
     return `${m}m ${sec}s`;
   }
 
@@ -39,7 +38,9 @@
 
   /* ── Persist pilot name ── */
   function savePilot() {
-    try { localStorage.setItem('argus_pilot_name', pilotName); } catch {}
+    try {
+      localStorage.setItem('argus_pilot_name', pilotName);
+    } catch {}
   }
 
   /* ── Export report ── */
@@ -97,14 +98,31 @@
     URL.revokeObjectURL(a.href);
 
     if (exportTimer) clearTimeout(exportTimer);
-    exportTimer = setTimeout(() => { exporting = false; exportTimer = null; }, 1000);
+    exportTimer = setTimeout(() => {
+      exporting = false;
+      exportTimer = null;
+    }, 1000);
   }
 </script>
 
-<div role="dialog" aria-modal="true" tabindex="-1" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
-     onclick={(e) => { if (e.target === e.currentTarget) onclose(); }} onkeydown={(e) => { if (e.key === "Escape") onclose(); }}>
-  <div class="bg-card border border-border rounded-xl shadow-2xl w-[500px] max-h-[85vh] flex flex-col overflow-hidden" role="dialog" aria-modal="true" aria-label={t('report.title')}>
-
+<div
+  role="dialog"
+  aria-modal="true"
+  tabindex="-1"
+  class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+  onclick={(e) => {
+    if (e.target === e.currentTarget) onclose();
+  }}
+  onkeydown={(e) => {
+    if (e.key === 'Escape') onclose();
+  }}
+>
+  <div
+    class="bg-card border border-border rounded-xl shadow-2xl w-[500px] max-h-[85vh] flex flex-col overflow-hidden"
+    role="dialog"
+    aria-modal="true"
+    aria-label={t('report.title')}
+  >
     <!-- Header -->
     <div class="flex items-center justify-between px-4 py-3 border-b border-border">
       <div class="flex items-center gap-2">
@@ -115,18 +133,19 @@
     </div>
 
     <div class="flex-1 min-h-0 overflow-y-auto p-4 space-y-4">
-
       <!-- Editable form fields -->
       <div class="space-y-3">
         <!-- Pilot name -->
         <div class="space-y-1">
-          <span class="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{t('report.pilot')}</span>
+          <span class="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{t('report.pilot')}</span
+          >
           <input
             bind:value={pilotName}
             onblur={savePilot}
             placeholder={t('report.pilot')}
             class="w-full h-8 px-3 bg-input border border-border rounded-md text-xs text-foreground
-                   placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/50" />
+                   placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/50"
+          />
         </div>
 
         <!-- Date -->
@@ -136,42 +155,54 @@
             type="date"
             bind:value={reportDate}
             class="w-full h-8 px-3 bg-input border border-border rounded-md text-xs text-foreground
-                   focus:outline-none focus:ring-1 focus:ring-ring/50" />
+                   focus:outline-none focus:ring-1 focus:ring-ring/50"
+          />
         </div>
 
         <!-- Vehicle (read-only) -->
         <div class="space-y-1">
-          <span class="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{t('report.vehicle')}</span>
-          <div class="w-full h-8 px-3 flex items-center bg-muted/50 border border-border rounded-md text-xs text-foreground">
+          <span class="text-[11px] font-medium text-muted-foreground uppercase tracking-wider"
+            >{t('report.vehicle')}</span
+          >
+          <div
+            class="w-full h-8 px-3 flex items-center bg-muted/50 border border-border rounded-md text-xs text-foreground"
+          >
             {vehicleInfo}
           </div>
         </div>
 
         <!-- Weather -->
         <div class="space-y-1">
-          <span class="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{t('report.weather')}</span>
+          <span class="text-[11px] font-medium text-muted-foreground uppercase tracking-wider"
+            >{t('report.weather')}</span
+          >
           <input
             bind:value={weather}
             placeholder={t('report.weather')}
             class="w-full h-8 px-3 bg-input border border-border rounded-md text-xs text-foreground
-                   placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/50" />
+                   placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/50"
+          />
         </div>
 
         <!-- Notes -->
         <div class="space-y-1">
-          <span class="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{t('report.notes')}</span>
+          <span class="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{t('report.notes')}</span
+          >
           <textarea
             bind:value={notes}
             placeholder={t('report.notes')}
             rows="3"
             class="w-full px-3 py-2 bg-input border border-border rounded-md text-xs text-foreground
-                   placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-1 focus:ring-ring/50"></textarea>
+                   placeholder:text-muted-foreground resize-none focus:outline-none focus:ring-1 focus:ring-ring/50"
+          ></textarea>
         </div>
       </div>
 
       <!-- Auto-populated: Flight summary -->
       <div class="space-y-2">
-        <h3 class="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider border-b border-border pb-1">
+        <h3
+          class="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider border-b border-border pb-1"
+        >
           Flight Summary
         </h3>
         {#if summary}
@@ -206,7 +237,9 @@
 
       <!-- Auto-populated: Event log -->
       <div class="space-y-2">
-        <h3 class="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider border-b border-border pb-1">
+        <h3
+          class="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider border-b border-border pb-1"
+        >
           Event Log ({recentEvents.length})
         </h3>
         {#if recentEvents.length > 0}
@@ -222,7 +255,6 @@
           <p class="text-xs text-muted-foreground italic">No events recorded</p>
         {/if}
       </div>
-
     </div>
 
     <!-- Footer: Export button -->
@@ -232,6 +264,5 @@
         {exporting ? t('report.generating') : t('report.export')}
       </Button>
     </div>
-
   </div>
 </div>

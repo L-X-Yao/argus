@@ -16,7 +16,7 @@
 
   const M_PER_DEG_LAT = 111320;
   function mPerDegLon(lat: number): number {
-    return 111320 * Math.cos(lat * Math.PI / 180);
+    return 111320 * Math.cos((lat * Math.PI) / 180);
   }
 
   function generateCorridor() {
@@ -62,8 +62,8 @@
         }
 
         // Perpendicular: rotate direction 90 degrees to the right
-        const perpLat = (dx / len) * offset / M_PER_DEG_LAT;
-        const perpLon = (-dy / len) * offset / mPerDegLon(p.lat);
+        const perpLat = ((dx / len) * offset) / M_PER_DEG_LAT;
+        const perpLon = ((-dy / len) * offset) / mPerDegLon(p.lat);
 
         line.push({ lat: p.lat + perpLat, lon: p.lon + perpLon });
       }
@@ -100,8 +100,22 @@
   }
 </script>
 
-<div role="dialog" aria-modal="true" tabindex="-1" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center" onclick={onclose} onkeydown={(e) => { if (e.key === "Escape") onclose(); }}>
-    <div role="presentation" class="bg-card border border-border rounded-2xl overflow-hidden w-[450px] max-h-[80vh] shadow-2xl flex flex-col" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
+<div
+  role="dialog"
+  aria-modal="true"
+  tabindex="-1"
+  class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center"
+  onclick={onclose}
+  onkeydown={(e) => {
+    if (e.key === 'Escape') onclose();
+  }}
+>
+  <div
+    role="presentation"
+    class="bg-card border border-border rounded-2xl overflow-hidden w-[450px] max-h-[80vh] shadow-2xl flex flex-col"
+    onclick={(e) => e.stopPropagation()}
+    onkeydown={(e) => e.stopPropagation()}
+  >
     <div class="bg-gradient-to-r from-primary/20 to-primary/5 px-5 py-3 flex items-center justify-between shrink-0">
       <div class="flex items-center gap-2">
         <Route size={16} class="text-primary" />
@@ -130,20 +144,41 @@
       <div class="flex flex-col gap-2">
         <div class="flex items-center gap-2">
           <label for="cor-width" class="text-xs text-muted-foreground w-20 shrink-0">{t('corridor.width')}</label>
-          <input id="cor-width" type="number" min="10" max="1000" step="10" bind:value={width}
-                 class="w-20 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50" />
+          <input
+            id="cor-width"
+            type="number"
+            min="10"
+            max="1000"
+            step="10"
+            bind:value={width}
+            class="w-20 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50"
+          />
           <span class="text-xs text-muted-foreground">m</span>
         </div>
         <div class="flex items-center gap-2">
           <label for="cor-spacing" class="text-xs text-muted-foreground w-20 shrink-0">{t('corridor.spacing')}</label>
-          <input id="cor-spacing" type="number" min="5" max="200" step="5" bind:value={spacing}
-                 class="w-20 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50" />
+          <input
+            id="cor-spacing"
+            type="number"
+            min="5"
+            max="200"
+            step="5"
+            bind:value={spacing}
+            class="w-20 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50"
+          />
           <span class="text-xs text-muted-foreground">m</span>
         </div>
         <div class="flex items-center gap-2">
           <label for="cor-alt" class="text-xs text-muted-foreground w-20 shrink-0">{t('survey.altitude')}</label>
-          <input id="cor-alt" type="number" min="5" max="500" step="5" bind:value={altitude}
-                 class="w-20 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50" />
+          <input
+            id="cor-alt"
+            type="number"
+            min="5"
+            max="500"
+            step="5"
+            bind:value={altitude}
+            class="w-20 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50"
+          />
           <span class="text-xs text-muted-foreground">m</span>
         </div>
       </div>

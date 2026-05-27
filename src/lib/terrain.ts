@@ -31,18 +31,16 @@ export async function getElevation(lat: number, lon: number): Promise<number> {
  * API expects: /api/terrain/elevation?points=lat1,lon1;lat2,lon2;...
  * Returns:     { elevations: [elev1, elev2, ...] }
  */
-export async function getElevationProfile(
-  points: { lat: number; lon: number }[],
-): Promise<number[]> {
+export async function getElevationProfile(points: { lat: number; lon: number }[]): Promise<number[]> {
   if (points.length === 0) return [];
 
   // Check cache first — return early if every point is cached
-  const keys = points.map(p => `${p.lat.toFixed(4)},${p.lon.toFixed(4)}`);
-  const allCached = keys.every(k => elevationCache.has(k));
-  if (allCached) return keys.map(k => elevationCache.get(k)!);
+  const keys = points.map((p) => `${p.lat.toFixed(4)},${p.lon.toFixed(4)}`);
+  const allCached = keys.every((k) => elevationCache.has(k));
+  if (allCached) return keys.map((k) => elevationCache.get(k)!);
 
   // Build query string (semicolon-separated lat,lon pairs)
-  const pairs = points.map(p => `${p.lat.toFixed(6)},${p.lon.toFixed(6)}`).join(';');
+  const pairs = points.map((p) => `${p.lat.toFixed(6)},${p.lon.toFixed(6)}`).join(';');
   const url = apiUrl(`/api/terrain/elevation?points=${pairs}`);
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Terrain API ${res.status}`);
@@ -95,7 +93,7 @@ export function interpolateRoute(
     const a = waypoints[i];
     const b = waypoints[i + 1];
     const dlat = (b.lat - a.lat) * 111320;
-    const dlon = (b.lon - a.lon) * 111320 * Math.cos(a.lat * Math.PI / 180);
+    const dlon = (b.lon - a.lon) * 111320 * Math.cos((a.lat * Math.PI) / 180);
     const segLen = Math.sqrt(dlat * dlat + dlon * dlon);
     const steps = Math.max(1, Math.ceil(segLen / stepMeters));
 

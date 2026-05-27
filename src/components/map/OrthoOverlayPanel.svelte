@@ -74,7 +74,10 @@
     overlays.push({
       id: Date.now(),
       dataUrl: pendingDataUrl,
-      nwLat, nwLon, seLat, seLon,
+      nwLat,
+      nwLon,
+      seLat,
+      seLon,
       opacity: opacity / 100,
     });
     persist();
@@ -89,7 +92,7 @@
   }
 
   function removeOverlay(id: number) {
-    const idx = overlays.findIndex(o => o.id === id);
+    const idx = overlays.findIndex((o) => o.id === id);
     if (idx >= 0) {
       overlays.splice(idx, 1);
       persist();
@@ -97,10 +100,19 @@
   }
 </script>
 
-<div role="dialog" aria-modal="true" tabindex="-1" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
-     onclick={(e) => { if (e.target === e.currentTarget) onclose(); }} onkeydown={(e) => { if (e.key === "Escape") onclose(); }}>
+<div
+  role="dialog"
+  aria-modal="true"
+  tabindex="-1"
+  class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+  onclick={(e) => {
+    if (e.target === e.currentTarget) onclose();
+  }}
+  onkeydown={(e) => {
+    if (e.key === 'Escape') onclose();
+  }}
+>
   <div class="bg-card border border-border rounded-xl shadow-2xl w-[500px] max-h-[85vh] flex flex-col overflow-hidden">
-
     <!-- Header -->
     <div class="flex items-center justify-between px-4 py-3 border-b border-border">
       <div class="flex items-center gap-2">
@@ -111,10 +123,11 @@
     </div>
 
     <div class="flex-1 min-h-0 overflow-y-auto p-4 space-y-3">
-
       <!-- Upload button -->
-      <label class="flex items-center justify-center gap-2 w-full px-3 py-2 rounded-lg border border-dashed border-border
-                     bg-muted/20 hover:bg-muted/40 cursor-pointer transition-colors text-xs text-muted-foreground">
+      <label
+        class="flex items-center justify-center gap-2 w-full px-3 py-2 rounded-lg border border-dashed border-border
+                     bg-muted/20 hover:bg-muted/40 cursor-pointer transition-colors text-xs text-muted-foreground"
+      >
         <Upload size={14} />
         {pendingFileName || t('ortho.upload')}
         <input type="file" accept=".jpg,.jpeg,.png" class="hidden" onchange={handleUpload} />
@@ -126,13 +139,23 @@
         <div class="grid grid-cols-2 gap-2">
           <div class="flex items-center gap-1">
             <label for="nw-lat" class="text-[11px] text-muted-foreground w-8 shrink-0">{t('label.lat')}</label>
-            <input id="nw-lat" type="number" step="0.000001" bind:value={nwLat}
-                   class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50" />
+            <input
+              id="nw-lat"
+              type="number"
+              step="0.000001"
+              bind:value={nwLat}
+              class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50"
+            />
           </div>
           <div class="flex items-center gap-1">
             <label for="nw-lon" class="text-[11px] text-muted-foreground w-8 shrink-0">{t('label.lon')}</label>
-            <input id="nw-lon" type="number" step="0.000001" bind:value={nwLon}
-                   class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50" />
+            <input
+              id="nw-lon"
+              type="number"
+              step="0.000001"
+              bind:value={nwLon}
+              class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50"
+            />
           </div>
         </div>
 
@@ -140,13 +163,23 @@
         <div class="grid grid-cols-2 gap-2">
           <div class="flex items-center gap-1">
             <label for="se-lat" class="text-[11px] text-muted-foreground w-8 shrink-0">{t('label.lat')}</label>
-            <input id="se-lat" type="number" step="0.000001" bind:value={seLat}
-                   class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50" />
+            <input
+              id="se-lat"
+              type="number"
+              step="0.000001"
+              bind:value={seLat}
+              class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50"
+            />
           </div>
           <div class="flex items-center gap-1">
             <label for="se-lon" class="text-[11px] text-muted-foreground w-8 shrink-0">{t('label.lon')}</label>
-            <input id="se-lon" type="number" step="0.000001" bind:value={seLon}
-                   class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50" />
+            <input
+              id="se-lon"
+              type="number"
+              step="0.000001"
+              bind:value={seLon}
+              class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50"
+            />
           </div>
         </div>
       </div>
@@ -154,8 +187,13 @@
       <!-- Opacity slider -->
       <div class="flex items-center gap-3">
         <span class="text-xs text-muted-foreground w-16 shrink-0">{t('ortho.opacity')}</span>
-        <input type="range" min="0" max="100" bind:value={opacity}
-               class="flex-1 h-1 appearance-none bg-border rounded-full [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary" />
+        <input
+          type="range"
+          min="0"
+          max="100"
+          bind:value={opacity}
+          class="flex-1 h-1 appearance-none bg-border rounded-full [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-3 [&::-webkit-slider-thumb]:h-3 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-primary"
+        />
         <span class="text-xs font-mono text-foreground w-8 text-right">{opacity}%</span>
       </div>
 
@@ -181,8 +219,10 @@
                   {t('label.se')}: {ov.seLat.toFixed(4)}, {ov.seLon.toFixed(4)} | {Math.round(ov.opacity * 100)}%
                 </div>
               </div>
-              <button class="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-destructive hover:bg-destructive/10 rounded"
-                      onclick={() => removeOverlay(ov.id)}>
+              <button
+                class="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-destructive hover:bg-destructive/10 rounded"
+                onclick={() => removeOverlay(ov.id)}
+              >
                 <X size={13} />
               </button>
             </div>
@@ -196,7 +236,6 @@
           {t('ortho.hint')}
         </p>
       </div>
-
     </div>
   </div>
 </div>

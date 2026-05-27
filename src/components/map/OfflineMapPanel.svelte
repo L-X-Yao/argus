@@ -22,7 +22,10 @@
   // Snapshot drone position once on mount instead of via $effect, so the user's
   // manually-edited bounding box isn't clobbered by every telemetry frame.
   onMount(() => {
-    fetch(apiUrl('/api/tile_cache')).then(r => r.json()).then(d => cacheInfo = d).catch(() => {});
+    fetch(apiUrl('/api/tile_cache'))
+      .then((r) => r.json())
+      .then((d) => (cacheInfo = d))
+      .catch(() => {});
     if (app.drone.lat !== 0) {
       latMin = app.drone.lat - 0.05;
       latMax = app.drone.lat + 0.05;
@@ -35,8 +38,8 @@
     let total = 0;
     for (let z = zMin; z <= zMax; z++) {
       const n = 2 ** z;
-      const xRange = Math.ceil((lonMax - lonMin) / 360 * n) + 1;
-      const yRange = Math.ceil((latMax - latMin) / 180 * n) + 1;
+      const xRange = Math.ceil(((lonMax - lonMin) / 360) * n) + 1;
+      const yRange = Math.ceil(((latMax - latMin) / 180) * n) + 1;
       total += xRange * yRange;
     }
     return Math.min(total, 5000);
@@ -49,11 +52,22 @@
       const r = await fetch(apiUrl('/api/tile_bulk_download'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ lat_min: latMin, lat_max: latMax, lon_min: lonMin, lon_max: lonMax, z_min: zMin, z_max: zMax, style }),
+        body: JSON.stringify({
+          lat_min: latMin,
+          lat_max: latMax,
+          lon_min: lonMin,
+          lon_max: lonMax,
+          z_min: zMin,
+          z_max: zMax,
+          style,
+        }),
       });
       result = await r.json();
       addToast(t('offmap.done'), 'success');
-      fetch(apiUrl('/api/tile_cache')).then(r => r.json()).then(d => cacheInfo = d).catch(() => {});
+      fetch(apiUrl('/api/tile_cache'))
+        .then((r) => r.json())
+        .then((d) => (cacheInfo = d))
+        .catch(() => {});
     } catch (err: unknown) {
       addToast(err instanceof Error ? err.message : String(err), 'error');
     }
@@ -67,8 +81,22 @@
   }
 </script>
 
-<div role="dialog" aria-modal="true" tabindex="-1" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center" onclick={onclose} onkeydown={(e) => { if (e.key === "Escape") onclose(); }}>
-  <div class="bg-card border border-border rounded-2xl overflow-hidden w-[450px] shadow-2xl" role="presentation" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
+<div
+  role="dialog"
+  aria-modal="true"
+  tabindex="-1"
+  class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center"
+  onclick={onclose}
+  onkeydown={(e) => {
+    if (e.key === 'Escape') onclose();
+  }}
+>
+  <div
+    class="bg-card border border-border rounded-2xl overflow-hidden w-[450px] shadow-2xl"
+    role="presentation"
+    onclick={(e) => e.stopPropagation()}
+    onkeydown={(e) => e.stopPropagation()}
+  >
     <div class="bg-gradient-to-r from-primary/20 to-primary/5 px-5 py-3 flex items-center justify-between">
       <div class="flex items-center gap-2">
         <HardDrive size={16} class="text-primary" />
@@ -86,26 +114,58 @@
       <div class="grid grid-cols-2 gap-2 text-xs">
         <div>
           <span class="text-muted-foreground">{t('label.latMin')}</span>
-          <input type="number" step="0.01" bind:value={latMin} class="w-full h-7 px-2 bg-input border border-border rounded text-xs font-mono" />
+          <input
+            type="number"
+            step="0.01"
+            bind:value={latMin}
+            class="w-full h-7 px-2 bg-input border border-border rounded text-xs font-mono"
+          />
         </div>
         <div>
           <span class="text-muted-foreground">{t('label.latMax')}</span>
-          <input type="number" step="0.01" bind:value={latMax} class="w-full h-7 px-2 bg-input border border-border rounded text-xs font-mono" />
+          <input
+            type="number"
+            step="0.01"
+            bind:value={latMax}
+            class="w-full h-7 px-2 bg-input border border-border rounded text-xs font-mono"
+          />
         </div>
         <div>
           <span class="text-muted-foreground">{t('label.lonMin')}</span>
-          <input type="number" step="0.01" bind:value={lonMin} class="w-full h-7 px-2 bg-input border border-border rounded text-xs font-mono" />
+          <input
+            type="number"
+            step="0.01"
+            bind:value={lonMin}
+            class="w-full h-7 px-2 bg-input border border-border rounded text-xs font-mono"
+          />
         </div>
         <div>
           <span class="text-muted-foreground">{t('label.lonMax')}</span>
-          <input type="number" step="0.01" bind:value={lonMax} class="w-full h-7 px-2 bg-input border border-border rounded text-xs font-mono" />
+          <input
+            type="number"
+            step="0.01"
+            bind:value={lonMax}
+            class="w-full h-7 px-2 bg-input border border-border rounded text-xs font-mono"
+          />
         </div>
       </div>
       <div class="flex gap-3 items-center text-xs">
         <span class="text-muted-foreground">{t('offmap.zoomRange')}:</span>
-        <input type="number" min="1" max="18" bind:value={zMin} class="w-12 h-7 px-1 bg-input border border-border rounded text-xs text-center" />
+        <input
+          type="number"
+          min="1"
+          max="18"
+          bind:value={zMin}
+          class="w-12 h-7 px-1 bg-input border border-border rounded text-xs text-center"
+        />
         <span>—</span>
-        <input type="number" min="1" max="18" bind:value={zMax} class="w-12 h-7 px-1 bg-input border border-border rounded text-xs text-center" />
+        <input
+          type="number"
+          min="1"
+          max="18"
+          bind:value={zMax}
+          class="w-12 h-7 px-1 bg-input border border-border rounded text-xs text-center"
+        />
         <select bind:value={style} class="h-7 px-1 bg-input border border-border rounded text-xs">
           <option value="6">{t('label.satellite')}</option>
           <option value="7">{t('label.vector')}</option>
@@ -122,7 +182,9 @@
       {/if}
       <Button variant="default" class="w-full" onclick={startDownload} disabled={downloading}>
         <Download size={14} class="mr-1" />
-        {downloading ? t('offmap.downloading').replace('{done}', '...').replace('{total}', String(estimatedTiles)) : t('offmap.download')}
+        {downloading
+          ? t('offmap.downloading').replace('{done}', '...').replace('{total}', String(estimatedTiles))
+          : t('offmap.download')}
       </Button>
     </div>
   </div>

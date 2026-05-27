@@ -233,7 +233,8 @@ const messages: Record<string, string> = {
   'cat.all': '全て',
   'conn.timeout': '接続タイムアウト',
   'conn.reconnecting': '再接続中...',
-  'confirm.armAndFly': 'ミッションをアップロードして{alt}mに自動離陸しますか？\n手順：アップロード → アーム → 離陸 → ミッション開始',
+  'confirm.armAndFly':
+    'ミッションをアップロードして{alt}mに自動離陸しますか？\n手順：アップロード → アーム → 離陸 → ミッション開始',
   'confirm.clearWps': '{n}個のウェイポイントを全て消去しますか？',
   'ekf.title': 'ナビゲーションフィルター',
   'ekf.empty': 'EKFステータスを表示するには接続してください',
@@ -1053,6 +1054,5 @@ const messages: Record<string, string> = {
   'pid.target': '目標値',
   'pid.rateFF': 'レートFF',
 };
-
 
 export default messages;

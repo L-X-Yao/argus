@@ -14,9 +14,7 @@
     let msgs = [...inspectorState.messages];
     if (filter) {
       const q = filter.toLowerCase();
-      msgs = msgs.filter(m =>
-        String(m.id).includes(q) || m.name.toLowerCase().includes(q)
-      );
+      msgs = msgs.filter((m) => String(m.id).includes(q) || m.name.toLowerCase().includes(q));
     }
     msgs.sort((a, b) => b.hz - a.hz);
     return msgs;
@@ -62,24 +60,50 @@
   });
 </script>
 
-<div role="dialog" aria-modal="true" tabindex="-1" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center" onclick={onclose} onkeydown={(e) => { if (e.key === "Escape") onclose(); }}>
-    <div role="presentation" class="bg-card border border-border rounded-2xl overflow-hidden w-[700px] max-w-[90vw] max-h-[80vh] shadow-2xl flex flex-col" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
+<div
+  role="dialog"
+  aria-modal="true"
+  tabindex="-1"
+  class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center"
+  onclick={onclose}
+  onkeydown={(e) => {
+    if (e.key === 'Escape') onclose();
+  }}
+>
+  <div
+    role="presentation"
+    class="bg-card border border-border rounded-2xl overflow-hidden w-[700px] max-w-[90vw] max-h-[80vh] shadow-2xl flex flex-col"
+    onclick={(e) => e.stopPropagation()}
+    onkeydown={(e) => e.stopPropagation()}
+  >
     <div class="bg-gradient-to-r from-primary/20 to-primary/5 px-5 py-3 flex items-center justify-between shrink-0">
       <div class="flex items-center gap-2">
         <h3 class="text-base font-bold text-primary">{t('inspector.title')}</h3>
         {#if inspectorState.paused}
-          <span class="px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-warning/20 text-warning border border-warning/50 rounded">
+          <span
+            class="px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider bg-warning/20 text-warning border border-warning/50 rounded"
+          >
             {t('inspector.paused')}
           </span>
         {/if}
       </div>
       <div class="flex items-center gap-1">
-        <Button variant="ghost" size="icon-xs" onclick={togglePause}
-                title={inspectorState.paused ? t('inspector.resume') : t('inspector.pause')}
-                aria-label={inspectorState.paused ? t('inspector.resume') : t('inspector.pause')}>
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          onclick={togglePause}
+          title={inspectorState.paused ? t('inspector.resume') : t('inspector.pause')}
+          aria-label={inspectorState.paused ? t('inspector.resume') : t('inspector.pause')}
+        >
           {#if inspectorState.paused}<Play size={14} />{:else}<Pause size={14} />{/if}
         </Button>
-        <Button variant="ghost" size="icon-xs" onclick={clearMessages} title={t('inspector.clear')} aria-label={t('inspector.clear')}>
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          onclick={clearMessages}
+          title={t('inspector.clear')}
+          aria-label={t('inspector.clear')}
+        >
           <Trash2 size={14} />
         </Button>
         <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label={t('error.close')}><X size={16} /></Button>
@@ -115,10 +139,19 @@
           <tbody>
             {#each sorted as msg (msg.id)}
               <tr
-                class="border-b border-border/30 hover:bg-muted/50 cursor-pointer transition-colors {expandedId === msg.id ? 'bg-muted/30' : ''}"
-                tabindex="0" role="button"
+                class="border-b border-border/30 hover:bg-muted/50 cursor-pointer transition-colors {expandedId ===
+                msg.id
+                  ? 'bg-muted/30'
+                  : ''}"
+                tabindex="0"
+                role="button"
                 onclick={() => toggleExpand(msg.id)}
-                onkeydown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleExpand(msg.id); } }}
+                onkeydown={(e) => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    toggleExpand(msg.id);
+                  }
+                }}
               >
                 <td class="py-1 px-1 font-mono text-muted-foreground">{msg.id}</td>
                 <td class="py-1 px-1 font-semibold text-foreground">{msg.name}</td>
@@ -130,7 +163,9 @@
                 <tr>
                   <td colspan="5" class="px-1 pb-2">
                     <div class="bg-muted/40 border border-border/50 rounded-md p-2 mt-0.5">
-                      <div class="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 font-semibold">{t('inspector.lastValue')}</div>
+                      <div class="text-[10px] text-muted-foreground uppercase tracking-wider mb-1 font-semibold">
+                        {t('inspector.lastValue')}
+                      </div>
                       {#if msg.last_fields && Object.keys(msg.last_fields).length > 0}
                         <div class="grid grid-cols-2 gap-x-4 gap-y-0.5">
                           {#each Object.entries(msg.last_fields) as [key, val]}

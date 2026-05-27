@@ -1,4 +1,5 @@
 """Transport wrappers for TCP, UDP, and serial connections."""
+
 from __future__ import annotations
 
 import socket
@@ -14,7 +15,7 @@ class TcpWrapper:
         try:
             return self._sock.recv(n)
         except (TimeoutError, OSError):
-            return b''
+            return b""
 
     def write(self, data: bytes) -> None:
         self._sock.sendall(data)
@@ -24,11 +25,11 @@ class TcpWrapper:
 
 
 class UdpWrapper:
-    def __init__(self, port: int, host: str = ''):
+    def __init__(self, port: int, host: str = ""):
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self._sock.settimeout(cfg.UDP_READ_TIMEOUT)
-        self._sock.bind((host or '', port))
+        self._sock.bind((host or "", port))
         self._remote: tuple | None = None
         # Track when we last heard from _remote. If a different sender appears
         # while the current peer has been silent for `_PEER_HIJACK_GUARD`
@@ -41,6 +42,7 @@ class UdpWrapper:
     def read(self, n: int) -> bytes:
         try:
             import time as _t
+
             data, addr = self._sock.recvfrom(n)
             now = _t.monotonic()
             if self._remote is None or (
@@ -50,11 +52,11 @@ class UdpWrapper:
             elif addr != self._remote:
                 # Same socket, different sender, current peer still active —
                 # drop. Either a misdirected packet or an attempted hijack.
-                return b''
+                return b""
             self._remote_last_seen = now
             return data
         except (TimeoutError, OSError):
-            return b''
+            return b""
 
     def write(self, data: bytes) -> None:
         if self._remote:
@@ -68,22 +70,22 @@ class UdpWrapper:
 
 
 def open_port(port: str, baudrate: int):
-    if port.startswith('udp:'):
-        parts = port[4:].split(':')
+    if port.startswith("udp:"):
+        parts = port[4:].split(":")
         try:
             if len(parts) == 2:
                 host, udp_port = parts[0], int(parts[1])
             else:
-                host, udp_port = '', int(parts[0])
+                host, udp_port = "", int(parts[0])
         except ValueError:
-            raise OSError('Invalid UDP port: %s' % port)
+            raise OSError("Invalid UDP port: %s" % port)
         return UdpWrapper(udp_port, host)
-    elif port.startswith('tcp:'):
-        parts = port[4:].split(':')
+    elif port.startswith("tcp:"):
+        parts = port[4:].split(":")
         try:
             host, tcp_port = parts[0], int(parts[1])
         except (ValueError, IndexError):
-            raise OSError('Invalid TCP address: %s' % port)
+            raise OSError("Invalid TCP address: %s" % port)
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.settimeout(cfg.TCP_CONNECT_TIMEOUT)
         sock.connect((host, tcp_port))
@@ -91,6 +93,7 @@ def open_port(port: str, baudrate: int):
         return TcpWrapper(sock)
     else:
         import serial
+
         s = serial.Serial(port, baudrate, timeout=cfg.SERIAL_READ_TIMEOUT)
         s.reset_input_buffer()
         return s

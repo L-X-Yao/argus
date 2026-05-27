@@ -1,7 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import {
-  app, loadDownloadedMission, addWaypoint,
-} from './stores.svelte';
+import { app, loadDownloadedMission, addWaypoint } from './stores.svelte';
 import type { Waypoint } from './types';
 
 // --- Helpers ---
@@ -10,10 +8,16 @@ function makeStorage(): Storage {
   const store = new Map<string, string>();
   return {
     getItem: (k: string) => store.get(k) ?? null,
-    setItem: (k: string, v: string) => { store.set(k, v); },
-    removeItem: (k: string) => { store.delete(k); },
+    setItem: (k: string, v: string) => {
+      store.set(k, v);
+    },
+    removeItem: (k: string) => {
+      store.delete(k);
+    },
     clear: () => store.clear(),
-    get length() { return store.size; },
+    get length() {
+      return store.size;
+    },
     key: (i: number) => [...store.keys()][i] ?? null,
   };
 }
@@ -31,7 +35,7 @@ beforeEach(() => {
 
 describe('KML generation from waypoints', () => {
   function generateKml(waypoints: Waypoint[]): string {
-    const coords = waypoints.map(w => `${w.lon},${w.lat},${w.alt}`).join('\n');
+    const coords = waypoints.map((w) => `${w.lon},${w.lat},${w.alt}`).join('\n');
     return `<?xml version="1.0" encoding="UTF-8"?>
 <kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>Argus Mission</name>
 <Placemark><name>Route</name><LineString><coordinates>${coords}</coordinates></LineString></Placemark>
@@ -139,9 +143,7 @@ describe('loadDownloadedMission handles various input formats', () => {
 
   it('defaults missing optional fields', () => {
     // Simulate incomplete waypoint data from backend
-    const wps = [
-      { lat: 30, lon: 120, alt: 50 } as any,
-    ];
+    const wps = [{ lat: 30, lon: 120, alt: 50 } as any];
     loadDownloadedMission(wps);
     expect(app.waypoints[0].drop).toBe(false);
     expect(app.waypoints[0].delay).toBe(0);
@@ -188,7 +190,8 @@ describe('Parameter file parsing', () => {
       if (!trimmed || trimmed.startsWith('#')) continue;
       const parts = trimmed.split(/[\t,\s]+/);
       if (parts.length >= 2) {
-        const name = parts[0], val = parseFloat(parts[1]);
+        const name = parts[0],
+          val = parseFloat(parts[1]);
         if (!isNaN(val)) map.set(name, val);
       }
     }

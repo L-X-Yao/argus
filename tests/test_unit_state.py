@@ -1,4 +1,5 @@
 """Tests for backend/state.py — domain state dataclass correctness."""
+
 from backend.state import (
     AttitudeState,
     BatteryState,
@@ -74,7 +75,7 @@ class TestMutableIsolation:
     def test_mission_items_independent(self):
         m1 = MissionState()
         m2 = MissionState()
-        m1._mission_items.append({'seq': 0})
+        m1._mission_items.append({"seq": 0})
         assert len(m2._mission_items) == 0
 
     def test_rc_channels_independent(self):
@@ -86,7 +87,7 @@ class TestMutableIsolation:
     def test_log_data_independent(self):
         l1 = LogState()
         l2 = LogState()
-        l1._log_download_data.extend(b'\x01\x02')
+        l1._log_download_data.extend(b"\x01\x02")
         assert len(l2._log_download_data) == 0
 
 

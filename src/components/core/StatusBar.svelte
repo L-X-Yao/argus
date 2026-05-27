@@ -13,11 +13,17 @@
   let connForm = $state<ConnectionForm>();
 
   let linkBars = $derived(
-    !app.drone.connected || app.drone.link_age < 0 ? 0 :
-    app.drone.link_age < 0.5 ? 4 :
-    app.drone.link_age < 1 ? 3 :
-    app.drone.link_age < 2 ? 2 :
-    app.drone.link_age < 3 ? 1 : 0
+    !app.drone.connected || app.drone.link_age < 0
+      ? 0
+      : app.drone.link_age < 0.5
+        ? 4
+        : app.drone.link_age < 1
+          ? 3
+          : app.drone.link_age < 2
+            ? 2
+            : app.drone.link_age < 3
+              ? 1
+              : 0,
   );
   let barColor = $derived(linkBars >= 3 ? '#22c55e' : linkBars >= 2 ? '#eab308' : linkBars >= 1 ? '#ef4444' : '#666');
 
@@ -37,8 +43,7 @@
   });
 
   let battColor = $derived(
-    app.drone.remaining < 20 ? 'text-destructive' :
-    app.drone.remaining < 40 ? 'text-warning' : 'text-success'
+    app.drone.remaining < 20 ? 'text-destructive' : app.drone.remaining < 40 ? 'text-warning' : 'text-success',
   );
 
   const EMERGENCY_MODE_IDS = new Set([6, 9, 11, 20, 21]);
@@ -65,37 +70,44 @@
 
   let ekfLevel = $derived.by(() => {
     const f = app.drone.ekf_flags;
-    if ((f & EKF_CONST_POS) || (f & EKF_UNINITIALIZED)) return 'red';
+    if (f & EKF_CONST_POS || f & EKF_UNINITIALIZED) return 'red';
     const vars = [app.drone.ekf_vel, app.drone.ekf_pos_h, app.drone.ekf_pos_v, app.drone.ekf_compass];
-    if (vars.some(v => v > 0.8)) return 'yellow';
-    if (vars.every(v => v < 0.5)) return 'green';
+    if (vars.some((v) => v > 0.8)) return 'yellow';
+    if (vars.every((v) => v < 0.5)) return 'green';
     return 'yellow';
   });
 
   let ekfVariant = $derived(
-    ekfLevel === 'red' ? 'destructive' as const :
-    ekfLevel === 'yellow' ? 'secondary' as const : 'default' as const
+    ekfLevel === 'red'
+      ? ('destructive' as const)
+      : ekfLevel === 'yellow'
+        ? ('secondary' as const)
+        : ('default' as const),
   );
 
   let ekfLabel = $derived(
-    ekfLevel === 'red' ? t('status.navError') :
-    ekfLevel === 'yellow' ? t('status.navWarn') : t('status.nav')
+    ekfLevel === 'red' ? t('status.navError') : ekfLevel === 'yellow' ? t('status.navWarn') : t('status.nav'),
   );
 
   let ekfTooltip = $derived(
-    `${t('ekf.vel')}: ${app.drone.ekf_vel.toFixed(3)}\n${t('ekf.posH')}: ${app.drone.ekf_pos_h.toFixed(3)}\n${t('ekf.posV')}: ${app.drone.ekf_pos_v.toFixed(3)}\n${t('ekf.compass')}: ${app.drone.ekf_compass.toFixed(3)}\nFlags: 0x${app.drone.ekf_flags.toString(16).toUpperCase()}`
+    `${t('ekf.vel')}: ${app.drone.ekf_vel.toFixed(3)}\n${t('ekf.posH')}: ${app.drone.ekf_pos_h.toFixed(3)}\n${t('ekf.posV')}: ${app.drone.ekf_pos_v.toFixed(3)}\n${t('ekf.compass')}: ${app.drone.ekf_compass.toFixed(3)}\nFlags: 0x${app.drone.ekf_flags.toString(16).toUpperCase()}`,
   );
 
   function fmtBatTime(s: number): string {
-    const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60);
+    const h = Math.floor(s / 3600),
+      m = Math.floor((s % 3600) / 60);
     return h > 0 ? `~${h}h${m}m` : `~${m}m`;
   }
 
-  function downloadLog() { window.open(apiUrl('/api/log'), '_blank'); }
+  function downloadLog() {
+    window.open(apiUrl('/api/log'), '_blank');
+  }
 </script>
 
-<header class="flex items-center justify-between gap-3 px-3 max-sm:px-1.5 py-1.5 shrink-0 min-w-0 overflow-x-auto scrollbar-hide transition-colors duration-300
-  {app.drone.armed ? 'bg-destructive/8 border-b-2 border-destructive/60' : 'bg-card border-b-2 border-border'}">
+<header
+  class="flex items-center justify-between gap-3 px-3 max-sm:px-1.5 py-1.5 shrink-0 min-w-0 overflow-x-auto scrollbar-hide transition-colors duration-300
+  {app.drone.armed ? 'bg-destructive/8 border-b-2 border-destructive/60' : 'bg-card border-b-2 border-border'}"
+>
   <div class="flex items-center gap-2">
     <span class="text-sm font-bold text-primary tracking-wider max-sm:hidden">{t('app.name')}</span>
     <ConnectionForm bind:this={connForm} />
@@ -108,7 +120,11 @@
         <Badge variant="destructive" class="text-[10px] font-bold animate-pulse">{t('status.armed')}</Badge>
       {/if}
 
-      <span class="flex items-center gap-0.5" title="Link {app.drone.link_age >= 0 ? app.drone.link_age.toFixed(1) + 's' : '---'} · {msgRate} Hz" aria-label={t('ui.linkQuality').replace('{rate}', String(msgRate))}>
+      <span
+        class="flex items-center gap-0.5"
+        title="Link {app.drone.link_age >= 0 ? app.drone.link_age.toFixed(1) + 's' : '---'} · {msgRate} Hz"
+        aria-label={t('ui.linkQuality').replace('{rate}', String(msgRate))}
+      >
         <svg width="16" height="12" viewBox="0 0 16 12" class="shrink-0">
           <rect x="0" y="9" width="3" height="3" rx="0.5" fill={linkBars >= 1 ? barColor : '#555'} />
           <rect x="4.5" y="6" width="3" height="6" rx="0.5" fill={linkBars >= 2 ? barColor : '#555'} />
@@ -120,16 +136,21 @@
         {/if}
         {#if app.linkHistory.length > 3}
           {@const pts = app.linkHistory.slice(-20)}
-          {@const maxR = Math.max(...pts.map(p => p.rate), 1)}
+          {@const maxR = Math.max(...pts.map((p) => p.rate), 1)}
           <svg width="30" height="10" viewBox="0 0 30 10" class="shrink-0 opacity-50 max-sm:hidden">
-            <polyline fill="none" stroke={barColor} stroke-width="1"
-              points={pts.map((p, i) => `${(i / (pts.length - 1)) * 30},${10 - (p.rate / maxR) * 9}`).join(' ')} />
+            <polyline
+              fill="none"
+              stroke={barColor}
+              stroke-width="1"
+              points={pts.map((p, i) => `${(i / (pts.length - 1)) * 30},${10 - (p.rate / maxR) * 9}`).join(' ')}
+            />
           </svg>
         {/if}
       </span>
 
       <Badge variant={gpsVariant} class="font-mono text-[11px] gap-0.5">
-        <Satellite size={11} />{app.drone.gps_fix} {app.drone.gps_sats}
+        <Satellite size={11} />{app.drone.gps_fix}
+        {app.drone.gps_sats}
       </Badge>
 
       <Badge variant={ekfVariant} class="text-[11px]" title={ekfTooltip}>
@@ -143,38 +164,63 @@
         {ekfLabel}
       </Badge>
 
-      <span class="{battColor} font-bold tabular-nums flex items-center gap-1" title="{app.drone.voltage.toFixed(2)}V | {app.drone.current.toFixed(1)}A" aria-label={t('ui.battery').replace('{v}', app.drone.voltage.toFixed(1)).replace('{pct}', app.drone.remaining >= 0 ? String(app.drone.remaining) : '--')}>
+      <span
+        class="{battColor} font-bold tabular-nums flex items-center gap-1"
+        title="{app.drone.voltage.toFixed(2)}V | {app.drone.current.toFixed(1)}A"
+        aria-label={t('ui.battery')
+          .replace('{v}', app.drone.voltage.toFixed(1))
+          .replace('{pct}', app.drone.remaining >= 0 ? String(app.drone.remaining) : '--')}
+      >
         <svg width="22" height="12" viewBox="0 0 22 12" class="shrink-0">
-          <rect x="0.5" y="0.5" width="18" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1"/>
-          <rect x="19" y="3" width="2.5" height="6" rx="1" fill="currentColor" opacity="0.5"/>
+          <rect x="0.5" y="0.5" width="18" height="11" rx="2" fill="none" stroke="currentColor" stroke-width="1" />
+          <rect x="19" y="3" width="2.5" height="6" rx="1" fill="currentColor" opacity="0.5" />
           {#if app.drone.remaining >= 0}
-            <rect x="2" y="2" width="{Math.max(0, Math.min(15, app.drone.remaining / 100 * 15))}" height="8" rx="1"
-                  fill="{app.drone.remaining < 20 ? '#ef4444' : app.drone.remaining < 40 ? '#eab308' : '#22c55e'}"/>
+            <rect
+              x="2"
+              y="2"
+              width={Math.max(0, Math.min(15, (app.drone.remaining / 100) * 15))}
+              height="8"
+              rx="1"
+              fill={app.drone.remaining < 20 ? '#ef4444' : app.drone.remaining < 40 ? '#eab308' : '#22c55e'}
+            />
           {/if}
         </svg>
-        {app.drone.voltage.toFixed(1)}V{app.drone.remaining >= 0 ? ' ' + app.drone.remaining + '%' : ''}{app.drone.current > 0.1 ? ' ' + app.drone.current.toFixed(1) + 'A' : ''}{app.drone.bat_time > 0 ? ' ' + fmtBatTime(app.drone.bat_time) : ''}
+        {app.drone.voltage.toFixed(1)}V{app.drone.remaining >= 0 ? ' ' + app.drone.remaining + '%' : ''}{app.drone
+          .current > 0.1
+          ? ' ' + app.drone.current.toFixed(1) + 'A'
+          : ''}{app.drone.bat_time > 0 ? ' ' + fmtBatTime(app.drone.bat_time) : ''}
       </span>
 
       {#if app.drone.fw_version}
         <span class="text-muted-foreground text-[10px] max-sm:hidden">{app.drone.fw_version}</span>
       {/if}
       {#if app.drone.parse_errors > 0}
-        <span class="text-[9px] text-destructive/70 font-mono" title={t('tip.parseErrors')}>E:{app.drone.parse_errors}</span>
+        <span class="text-[9px] text-destructive/70 font-mono" title={t('tip.parseErrors')}
+          >E:{app.drone.parse_errors}</span
+        >
       {/if}
       {#if app.drone.vehicles && app.drone.vehicles.length > 0}
-        <button class="relative cursor-pointer bg-transparent border-none p-0"
-                onclick={() => showVehicles = !showVehicles}>
+        <button
+          class="relative cursor-pointer bg-transparent border-none p-0"
+          onclick={() => (showVehicles = !showVehicles)}
+        >
           <Badge variant="outline" class="text-[9px] font-mono gap-0.5">
             +{app.drone.vehicles.length}
           </Badge>
         </button>
         {#if showVehicles}
-                    <div role="presentation" class="absolute top-full right-0 mt-1 bg-card border border-border rounded-lg shadow-xl p-2 z-50 min-w-[200px]"
-               onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
+          <div
+            role="presentation"
+            class="absolute top-full right-0 mt-1 bg-card border border-border rounded-lg shadow-xl p-2 z-50 min-w-[200px]"
+            onclick={(e) => e.stopPropagation()}
+            onkeydown={(e) => e.stopPropagation()}
+          >
             {#each app.drone.vehicles as v}
               <div class="flex items-center gap-2 px-2 py-1 text-xs border-b border-border/50 last:border-0">
                 <span class="font-mono font-bold text-primary">#{v.sysid}</span>
-                <span class="{v.armed ? 'text-warning' : 'text-muted-foreground'}">{v.armed ? t('status.armed') : '---'}</span>
+                <span class={v.armed ? 'text-warning' : 'text-muted-foreground'}
+                  >{v.armed ? t('status.armed') : '---'}</span
+                >
                 <span class="text-muted-foreground ml-auto">{v.alt?.toFixed(0) || 0}m</span>
               </div>
             {/each}
@@ -183,7 +229,9 @@
       {/if}
 
       {#if app.drone.log_active}
-        <Button variant="outline" size="xs" onclick={downloadLog} class="text-success border-success/50">{t('status.log')}</Button>
+        <Button variant="outline" size="xs" onclick={downloadLog} class="text-success border-success/50"
+          >{t('status.log')}</Button
+        >
       {/if}
     {:else}
       {#if connForm?.isTimeout()}
@@ -198,15 +246,29 @@
       </span>
     {/if}
 
-    <Button variant="ghost" size="icon-xs" onclick={() => { app.audioMuted = !app.audioMuted; saveSettings(); }}
-            class={app.audioMuted ? 'opacity-40' : ''} title={app.audioMuted ? t('label.unmute') : t('label.mute')}
-            aria-label={app.audioMuted ? t('label.unmute') : t('label.mute')}>
+    <Button
+      variant="ghost"
+      size="icon-xs"
+      onclick={() => {
+        app.audioMuted = !app.audioMuted;
+        saveSettings();
+      }}
+      class={app.audioMuted ? 'opacity-40' : ''}
+      title={app.audioMuted ? t('label.unmute') : t('label.mute')}
+      aria-label={app.audioMuted ? t('label.unmute') : t('label.mute')}
+    >
       {#if app.audioMuted}<VolumeOff size={14} />{:else}<Volume2 size={14} />{/if}
     </Button>
     <Button variant="ghost" size="icon-xs" onclick={toggleTheme} title={t('tip.theme')} aria-label={t('tip.theme')}>
       {#if app.darkTheme}<Sun size={14} />{:else}<Moon size={14} />{/if}
     </Button>
-    <Button variant="ghost" size="icon-xs" onclick={onSettings} title={t('settings.title')} aria-label={t('settings.title')}>
+    <Button
+      variant="ghost"
+      size="icon-xs"
+      onclick={onSettings}
+      title={t('settings.title')}
+      aria-label={t('settings.title')}
+    >
       <Settings size={14} />
     </Button>
   </div>

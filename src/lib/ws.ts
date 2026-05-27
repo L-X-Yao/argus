@@ -22,7 +22,10 @@ export function connectWs(): void {
     setWsConnected(true);
     reconnectAttempts = 0;
     lastMessageTime = Date.now();
-    if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
     if (staleCheckTimer) clearInterval(staleCheckTimer);
     staleCheckTimer = setInterval(() => {
       if (lastMessageTime > 0 && Date.now() - lastMessageTime > 15000) {
@@ -44,9 +47,14 @@ export function connectWs(): void {
             const s = msg.flight_summary;
             saveFlightRecord({
               date: new Date().toISOString(),
-              duration: s.duration, maxAlt: s.max_alt, maxSpeed: s.max_speed,
-              totalDist: s.total_dist, batUsed: s.bat_used,
-              vtype: msg.vtype, fw: msg.fw_version, eventCount: app.events.length,
+              duration: s.duration,
+              maxAlt: s.max_alt,
+              maxSpeed: s.max_speed,
+              totalDist: s.total_dist,
+              batUsed: s.bat_used,
+              vtype: msg.vtype,
+              fw: msg.fw_version,
+              eventCount: app.events.length,
             });
           }
           updateState(msg);
@@ -55,28 +63,40 @@ export function connectWs(): void {
           addEvent(msg);
           switch (msg.event_type) {
             case 'armed':
-              addToast(t('toast.armed'), 'warn', 5000); break;
+              addToast(t('toast.armed'), 'warn', 5000);
+              break;
             case 'disarmed':
-              addToast(t('toast.disarmed'), 'success', 4000); break;
+              addToast(t('toast.disarmed'), 'success', 4000);
+              break;
             case 'connected':
               // Drop stale params from a previous vehicle so the new connection
               // starts with a clean slate.
               clearParams();
-              addToast(msg.text, 'success'); break;
-            case 'disconnected': case 'link_lost':
-              addToast(t('toast.disconnected'), 'info'); break;
+              addToast(msg.text, 'success');
+              break;
+            case 'disconnected':
+            case 'link_lost':
+              addToast(t('toast.disconnected'), 'info');
+              break;
             case 'mission_ack_ok':
-              addToast(msg.text, 'success'); break;
+              addToast(msg.text, 'success');
+              break;
             case 'mission_ack_fail':
-              addToast(msg.text, 'error'); break;
+              addToast(msg.text, 'error');
+              break;
             case 'fence_ack_ok':
-              addToast(msg.text, 'success'); app.fenceUploaded = true; break;
+              addToast(msg.text, 'success');
+              app.fenceUploaded = true;
+              break;
             case 'fence_ack_fail':
-              addToast(msg.text, 'error'); break;
+              addToast(msg.text, 'error');
+              break;
             case 'cmd_ack_fail':
-              addToast(msg.text, 'error', 5000); break;
+              addToast(msg.text, 'error', 5000);
+              break;
             case 'rtl':
-              addToast(msg.text, 'error', 8000); break;
+              addToast(msg.text, 'error', 8000);
+              break;
             default:
               break;
           }
@@ -123,7 +143,10 @@ export function connectWs(): void {
   ws.onclose = () => {
     setWsConnected(false);
     socket = null;
-    if (staleCheckTimer) { clearInterval(staleCheckTimer); staleCheckTimer = null; }
+    if (staleCheckTimer) {
+      clearInterval(staleCheckTimer);
+      staleCheckTimer = null;
+    }
     scheduleReconnect();
   };
 
@@ -137,7 +160,10 @@ function scheduleReconnect(): void {
   if (reconnectTimer) return;
   reconnectAttempts++;
   const delay = Math.min(1000 * Math.pow(1.5, reconnectAttempts), 30000);
-  reconnectTimer = setTimeout(() => { reconnectTimer = null; connectWs(); }, delay);
+  reconnectTimer = setTimeout(() => {
+    reconnectTimer = null;
+    connectWs();
+  }, delay);
 }
 
 type OutgoingMessage =

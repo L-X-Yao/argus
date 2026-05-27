@@ -13,8 +13,14 @@ export interface ChannelMap {
 }
 
 const DEFAULT_MAP: ChannelMap = {
-  roll: 0, pitch: 1, throttle: 3, yaw: 2,
-  invertRoll: false, invertPitch: true, invertThrottle: true, invertYaw: false,
+  roll: 0,
+  pitch: 1,
+  throttle: 3,
+  yaw: 2,
+  invertRoll: false,
+  invertPitch: true,
+  invertThrottle: true,
+  invertYaw: false,
 };
 
 class GamepadState {
@@ -40,7 +46,9 @@ export function loadGamepadMap() {
 }
 
 export function saveGamepadMap() {
-  try { localStorage.setItem('argus_gamepad_map', JSON.stringify(gamepad.channelMap)); } catch {}
+  try {
+    localStorage.setItem('argus_gamepad_map', JSON.stringify(gamepad.channelMap));
+  } catch {}
 }
 
 export function startGamepad() {
@@ -95,7 +103,7 @@ function poll() {
     applyDeadzone(gp.axes[3] || 0),
   ];
   gamepad.axes = axes;
-  gamepad.buttons = Array.from(gp.buttons).map(b => b.pressed);
+  gamepad.buttons = Array.from(gp.buttons).map((b) => b.pressed);
 
   const now = performance.now();
   if (now - lastSend < 50) return;

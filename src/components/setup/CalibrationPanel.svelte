@@ -2,8 +2,15 @@
   import { app } from '../../lib/stores.svelte';
   import { sendCommand } from '../../lib/ws';
   import {
-    isSerialConnected, serialCalCompass, serialCalCompassAccept, serialCalCancel,
-    serialCalGyro, serialCalLevel, serialCalBaro, serialCalAccel, serialCalAccelNext,
+    isSerialConnected,
+    serialCalCompass,
+    serialCalCompassAccept,
+    serialCalCancel,
+    serialCalGyro,
+    serialCalLevel,
+    serialCalBaro,
+    serialCalAccel,
+    serialCalAccelNext,
   } from '../../lib/transport';
   import { API_BASE } from '../../lib/backend';
   import { t } from '../../lib/i18n.svelte';
@@ -13,17 +20,38 @@
   // commands in backend/commands/_setup.py. accel_next in particular uses
   // the AP_AccelCal ACK reinterpretation cited in protocol_design.md #1.
   function dispatchCal(cmd: string): void {
-    if (!isSerialConnected()) { sendCommand(cmd); return; }
+    if (!isSerialConnected()) {
+      sendCommand(cmd);
+      return;
+    }
     switch (cmd) {
-      case 'cal_compass':        serialCalCompass();        return;
-      case 'cal_compass_accept': serialCalCompassAccept();  return;
-      case 'cal_cancel':         serialCalCancel();         return;
-      case 'cal_gyro':           serialCalGyro();           return;
-      case 'cal_level':          serialCalLevel();          return;
-      case 'cal_baro':           serialCalBaro();           return;
-      case 'cal_accel':          serialCalAccel();          return;
-      case 'cal_accel_next':     serialCalAccelNext();      return;
-      default:                   sendCommand(cmd);          return;
+      case 'cal_compass':
+        serialCalCompass();
+        return;
+      case 'cal_compass_accept':
+        serialCalCompassAccept();
+        return;
+      case 'cal_cancel':
+        serialCalCancel();
+        return;
+      case 'cal_gyro':
+        serialCalGyro();
+        return;
+      case 'cal_level':
+        serialCalLevel();
+        return;
+      case 'cal_baro':
+        serialCalBaro();
+        return;
+      case 'cal_accel':
+        serialCalAccel();
+        return;
+      case 'cal_accel_next':
+        serialCalAccelNext();
+        return;
+      default:
+        sendCommand(cmd);
+        return;
     }
   }
   import Button from '$lib/components/ui/button/button.svelte';
@@ -59,12 +87,48 @@
   // right, nose-down, nose-up, back. A 3-column grid then lays out row-by-row
   // in the same order ArduPilot prompts the user.
   const accelOrients: OrientDef[] = [
-    { id: 'level',     label: 'cal.orientLevel',    hint: 'cal.hintLevel',    img: `${API_BASE}/images/cal/VehicleDown.png`,       keywords: [] },
-    { id: 'left',      label: 'cal.orientLeft',     hint: 'cal.hintLeft',     img: `${API_BASE}/images/cal/VehicleLeft.png`,       keywords: [] },
-    { id: 'right',     label: 'cal.orientRight',    hint: 'cal.hintRight',    img: `${API_BASE}/images/cal/VehicleRight.png`,      keywords: [] },
-    { id: 'nose_down', label: 'cal.orientNoseDown', hint: 'cal.hintNoseDown', img: `${API_BASE}/images/cal/VehicleNoseDown.png`,   keywords: [] },
-    { id: 'nose_up',   label: 'cal.orientNoseUp',   hint: 'cal.hintNoseUp',   img: `${API_BASE}/images/cal/VehicleTailDown.png`,   keywords: [] },
-    { id: 'back',      label: 'cal.orientBack',     hint: 'cal.hintBack',     img: `${API_BASE}/images/cal/VehicleUpsideDown.png`, keywords: [] },
+    {
+      id: 'level',
+      label: 'cal.orientLevel',
+      hint: 'cal.hintLevel',
+      img: `${API_BASE}/images/cal/VehicleDown.png`,
+      keywords: [],
+    },
+    {
+      id: 'left',
+      label: 'cal.orientLeft',
+      hint: 'cal.hintLeft',
+      img: `${API_BASE}/images/cal/VehicleLeft.png`,
+      keywords: [],
+    },
+    {
+      id: 'right',
+      label: 'cal.orientRight',
+      hint: 'cal.hintRight',
+      img: `${API_BASE}/images/cal/VehicleRight.png`,
+      keywords: [],
+    },
+    {
+      id: 'nose_down',
+      label: 'cal.orientNoseDown',
+      hint: 'cal.hintNoseDown',
+      img: `${API_BASE}/images/cal/VehicleNoseDown.png`,
+      keywords: [],
+    },
+    {
+      id: 'nose_up',
+      label: 'cal.orientNoseUp',
+      hint: 'cal.hintNoseUp',
+      img: `${API_BASE}/images/cal/VehicleTailDown.png`,
+      keywords: [],
+    },
+    {
+      id: 'back',
+      label: 'cal.orientBack',
+      hint: 'cal.hintBack',
+      img: `${API_BASE}/images/cal/VehicleUpsideDown.png`,
+      keywords: [],
+    },
   ];
 
   // Order matters: "upside/inverted" must match before "up" to avoid misidentification
@@ -91,7 +155,8 @@
   // Filtering by timestamp (instead of a length cursor) survives backend events-array trim.
   let calRunStartTime = $state('');
 
-  const calPattern = /校准|calibrat|cal |gyro|compass|accel|baro|level|place|rotate|orientation|complete|success|完成|成功|失败|failed|progress/i;
+  const calPattern =
+    /校准|calibrat|cal |gyro|compass|accel|baro|level|place|rotate|orientation|complete|success|完成|成功|失败|failed|progress/i;
 
   function eventInRun(ev: { time: string; text: string }): boolean {
     if (!calRunStartTime) return false;
@@ -102,13 +167,13 @@
   }
 
   /* Display: last 20 cal-pattern events for the message log */
-  let calEvents = $derived(
-    app.events.filter(e => calPattern.test(e.text)).slice(-20)
-  );
+  let calEvents = $derived(app.events.filter((e) => calPattern.test(e.text)).slice(-20));
 
   /* ── Compass: pure-derived progress/done/failed ── */
   let compassParsed = $derived.by(() => {
-    let pct = 0, done = false, failed = false;
+    let pct = 0,
+      done = false,
+      failed = false;
     if (selected !== 'compass') return { pct, done, failed };
     for (const ev of app.events) {
       if (!eventInRun(ev)) continue;
@@ -123,14 +188,16 @@
     return { pct, done, failed };
   });
 
-  let compassProgress = $derived(
-    compassParsed.done ? 100 : Math.min(95, compassParsed.pct)
-  );
+  let compassProgress = $derived(compassParsed.done ? 100 : Math.min(95, compassParsed.pct));
 
   /* ── Accel: pure-derived per-orientation status ── */
   const EMPTY_STEPS: Record<AccelStep, StepStatus> = {
-    level: 'pending', nose_up: 'pending', nose_down: 'pending',
-    left: 'pending', right: 'pending', back: 'pending',
+    level: 'pending',
+    nose_up: 'pending',
+    nose_down: 'pending',
+    left: 'pending',
+    right: 'pending',
+    back: 'pending',
   };
 
   let accelParsed = $derived.by(() => {
@@ -172,14 +239,13 @@
 
   let accelSteps = $derived(accelParsed.steps);
   let accelActive = $derived(accelParsed.active);
-  let accelDoneCount = $derived(
-    accelOrients.filter(o => accelSteps[o.id] === 'done').length
-  );
+  let accelDoneCount = $derived(accelOrients.filter((o) => accelSteps[o.id] === 'done').length);
 
   /* ── Gyro/level/baro: simple done detector. Skips the "开始" event itself. ── */
   let simpleCalDone = $derived.by(() => {
     if (selected === 'compass' || selected === 'accel') return { done: false, failed: false };
-    let done = false, failed = false;
+    let done = false,
+      failed = false;
     for (const ev of app.events) {
       if (!eventInRun(ev)) continue;
       if (/开始|start/i.test(ev.text) && !/complete|完成|success|成功|done/i.test(ev.text)) continue;
@@ -213,7 +279,7 @@
   }
 
   function startCal() {
-    const ct = calTypes.find(c => c.id === selected);
+    const ct = calTypes.find((c) => c.id === selected);
     if (!ct) return;
     // Mark BEFORE sending; backend's "开始..." event arrives microseconds later
     // with time >= now, captured by the >= comparison in eventInRun. No backward
@@ -230,34 +296,19 @@
   }
 </script>
 
-<style>
-  @keyframes pulse-border {
-    0%, 100% { border-color: hsl(211 100% 50% / 0.5); box-shadow: 0 0 0 0 hsl(211 100% 50% / 0.3); }
-    50% { border-color: hsl(211 100% 50% / 1); box-shadow: 0 0 8px 2px hsl(211 100% 50% / 0.25); }
-  }
-  .cal-active-border {
-    animation: pulse-border 1.5s ease-in-out infinite;
-  }
-  @keyframes spin-slow {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
-  }
-  .spin-slow {
-    animation: spin-slow 3s linear infinite;
-  }
-  @keyframes gentle-pulse {
-    0%, 100% { opacity: 0.6; }
-    50% { opacity: 1; }
-  }
-  .gentle-pulse {
-    animation: gentle-pulse 2s ease-in-out infinite;
-  }
-</style>
-
-<div role="dialog" aria-modal="true" tabindex="-1" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
-     onclick={(e) => { if (e.target === e.currentTarget) onclose(); }} onkeydown={(e) => { if (e.key === "Escape") onclose(); }}>
+<div
+  role="dialog"
+  aria-modal="true"
+  tabindex="-1"
+  class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+  onclick={(e) => {
+    if (e.target === e.currentTarget) onclose();
+  }}
+  onkeydown={(e) => {
+    if (e.key === 'Escape') onclose();
+  }}
+>
   <div class="bg-card border border-border rounded-xl shadow-2xl w-[560px] max-h-[85vh] flex flex-col overflow-hidden">
-
     <!-- Header -->
     <div class="flex items-center justify-between px-4 py-3 border-b border-border">
       <h2 class="text-sm font-semibold text-primary uppercase tracking-wider">{t('cal.title')}</h2>
@@ -265,16 +316,17 @@
     </div>
 
     <div class="flex-1 min-h-0 overflow-y-auto p-4">
-
       <!-- Tab selector -->
       <div class="flex flex-wrap gap-1.5 mb-4">
         {#each calTypes as ct (ct.id)}
           <button
             class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-semibold rounded-md transition-all
               {selected === ct.id
-                ? 'bg-primary text-primary-foreground shadow-sm'
-                : 'bg-secondary text-secondary-foreground hover:bg-muted'}"
-            onclick={() => { if (!calibrating) selected = ct.id; }}
+              ? 'bg-primary text-primary-foreground shadow-sm'
+              : 'bg-secondary text-secondary-foreground hover:bg-muted'}"
+            onclick={() => {
+              if (!calibrating) selected = ct.id;
+            }}
             disabled={calibrating}
           >
             <ct.icon size={13} />{t(ct.labelKey)}
@@ -301,23 +353,44 @@
           <div class="grid grid-cols-3 gap-2 mb-3">
             {#each accelOrients as orient (orient.id)}
               {@const st = accelSteps[orient.id]}
-              <div class="flex flex-col items-center p-2 rounded-lg border-2 transition-all
-                {st === 'done'   ? 'border-green-500/60 bg-green-500/5' :
-                 st === 'active' ? 'border-primary/60 bg-primary/5 cal-active-border' :
-                                   'border-border/50 bg-muted/20'}">
-                <div class="w-20 h-16 flex items-center justify-center mb-1 rounded-md overflow-hidden
-                  {st === 'done' ? 'bg-green-900/30 ring-1 ring-green-500/40' : st === 'active' ? 'bg-primary/10 ring-1 ring-primary/40' : 'bg-muted/20'}">
-                  <img src={orient.img} alt={t(orient.label)}
-                       class="w-full h-full object-contain transition-all
-                         {st === 'done' ? '' : st === 'active' ? '' : 'opacity-40 grayscale'}" />
+              <div
+                class="flex flex-col items-center p-2 rounded-lg border-2 transition-all
+                {st === 'done'
+                  ? 'border-green-500/60 bg-green-500/5'
+                  : st === 'active'
+                    ? 'border-primary/60 bg-primary/5 cal-active-border'
+                    : 'border-border/50 bg-muted/20'}"
+              >
+                <div
+                  class="w-20 h-16 flex items-center justify-center mb-1 rounded-md overflow-hidden
+                  {st === 'done'
+                    ? 'bg-green-900/30 ring-1 ring-green-500/40'
+                    : st === 'active'
+                      ? 'bg-primary/10 ring-1 ring-primary/40'
+                      : 'bg-muted/20'}"
+                >
+                  <img
+                    src={orient.img}
+                    alt={t(orient.label)}
+                    class="w-full h-full object-contain transition-all
+                         {st === 'done' ? '' : st === 'active' ? '' : 'opacity-40 grayscale'}"
+                  />
                 </div>
 
                 <!-- Label + status icon -->
-                <span class="text-[11px] font-medium {st === 'done' ? 'text-green-400' : st === 'active' ? 'text-primary' : 'text-muted-foreground'}">
+                <span
+                  class="text-[11px] font-medium {st === 'done'
+                    ? 'text-green-400'
+                    : st === 'active'
+                      ? 'text-primary'
+                      : 'text-muted-foreground'}"
+                >
                   {t(orient.label)}
                 </span>
-                <span class="text-[10px] mt-0.5
-                  {st === 'done' ? 'text-green-500' : st === 'active' ? 'text-primary' : 'text-muted-foreground/50'}">
+                <span
+                  class="text-[10px] mt-0.5
+                  {st === 'done' ? 'text-green-500' : st === 'active' ? 'text-primary' : 'text-muted-foreground/50'}"
+                >
                   {st === 'done' ? t('cal.done') : st === 'active' ? t('cal.active') : t('cal.pending')}
                 </span>
               </div>
@@ -326,9 +399,11 @@
 
           <!-- Current step hint + confirm button -->
           {#if calibrating && accelActive}
-            {@const ao = accelOrients.find(o => o.id === accelActive)}
+            {@const ao = accelOrients.find((o) => o.id === accelActive)}
             {#if ao}
-              <div class="p-2.5 rounded-lg bg-primary/10 border border-primary/20 mb-3 flex items-center justify-between gap-2">
+              <div
+                class="p-2.5 rounded-lg bg-primary/10 border border-primary/20 mb-3 flex items-center justify-between gap-2"
+              >
                 <p class="text-xs text-primary font-medium">{t(ao.hint)}，{t('cal.holdStill')}</p>
                 <Button variant="default" size="sm" class="shrink-0" onclick={() => dispatchCal('cal_accel_next')}>
                   <ChevronRight size={14} class="mr-1" />{t('cal.accelNext')}
@@ -342,9 +417,9 @@
           {/if}
         </div>
 
-      <!-- ════════════════════════════════════════════ -->
-      <!-- COMPASS calibration panel                    -->
-      <!-- ════════════════════════════════════════════ -->
+        <!-- ════════════════════════════════════════════ -->
+        <!-- COMPASS calibration panel                    -->
+        <!-- ════════════════════════════════════════════ -->
       {:else if selected === 'compass'}
         <div class="mb-4">
           <p class="text-xs font-semibold text-foreground mb-1">{t('cal.compassTitle')}</p>
@@ -357,35 +432,87 @@
             <div class="relative w-[120px] h-[120px]">
               <svg viewBox="0 0 120 120" class="w-full h-full">
                 <!-- Background circle -->
-                <circle cx="60" cy="60" r="50" fill="none" stroke="hsl(var(--border))" stroke-width="6" opacity="0.4"/>
+                <circle cx="60" cy="60" r="50" fill="none" stroke="hsl(var(--border))" stroke-width="6" opacity="0.4" />
                 <!-- Progress arc -->
                 {#if calibrating || compassProgress > 0}
-                  <circle cx="60" cy="60" r="50" fill="none"
-                          stroke="{compassProgress >= 100 ? '#22c55e' : 'hsl(211,100%,50%)'}"
-                          stroke-width="6" stroke-linecap="round"
-                          stroke-dasharray="{Math.PI * 100}"
-                          stroke-dashoffset="{Math.PI * 100 * (1 - compassProgress / 100)}"
-                          transform="rotate(-90, 60, 60)"
-                          class="transition-all duration-500"/>
+                  <circle
+                    cx="60"
+                    cy="60"
+                    r="50"
+                    fill="none"
+                    stroke={compassProgress >= 100 ? '#22c55e' : 'hsl(211,100%,50%)'}
+                    stroke-width="6"
+                    stroke-linecap="round"
+                    stroke-dasharray={Math.PI * 100}
+                    stroke-dashoffset={Math.PI * 100 * (1 - compassProgress / 100)}
+                    transform="rotate(-90, 60, 60)"
+                    class="transition-all duration-500"
+                  />
                 {/if}
                 <!-- Center drone icon -->
                 <g transform="translate(60,60)">
-                  <rect x="-6" y="-6" width="12" height="12" rx="1.5"
-                        fill="{calibrating ? 'hsl(211,100%,50%)' : '#6b7280'}" opacity="0.7"/>
-                  <line x1="-6" y1="-6" x2="-14" y2="-14" stroke="{calibrating ? 'hsl(211,100%,50%)' : '#6b7280'}" stroke-width="1.5" stroke-linecap="round"/>
-                  <line x1="6" y1="-6" x2="14" y2="-14" stroke="{calibrating ? 'hsl(211,100%,50%)' : '#6b7280'}" stroke-width="1.5" stroke-linecap="round"/>
-                  <line x1="-6" y1="6" x2="-14" y2="14" stroke="{calibrating ? 'hsl(211,100%,50%)' : '#6b7280'}" stroke-width="1.5" stroke-linecap="round"/>
-                  <line x1="6" y1="6" x2="14" y2="14" stroke="{calibrating ? 'hsl(211,100%,50%)' : '#6b7280'}" stroke-width="1.5" stroke-linecap="round"/>
-                  <circle cx="-14" cy="-14" r="3" fill="{calibrating ? 'hsl(211,100%,50%)' : '#6b7280'}" opacity="0.5"/>
-                  <circle cx="14" cy="-14" r="3" fill="{calibrating ? 'hsl(211,100%,50%)' : '#6b7280'}" opacity="0.5"/>
-                  <circle cx="-14" cy="14" r="3" fill="{calibrating ? 'hsl(211,100%,50%)' : '#6b7280'}" opacity="0.5"/>
-                  <circle cx="14" cy="14" r="3" fill="{calibrating ? 'hsl(211,100%,50%)' : '#6b7280'}" opacity="0.5"/>
+                  <rect
+                    x="-6"
+                    y="-6"
+                    width="12"
+                    height="12"
+                    rx="1.5"
+                    fill={calibrating ? 'hsl(211,100%,50%)' : '#6b7280'}
+                    opacity="0.7"
+                  />
+                  <line
+                    x1="-6"
+                    y1="-6"
+                    x2="-14"
+                    y2="-14"
+                    stroke={calibrating ? 'hsl(211,100%,50%)' : '#6b7280'}
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                  />
+                  <line
+                    x1="6"
+                    y1="-6"
+                    x2="14"
+                    y2="-14"
+                    stroke={calibrating ? 'hsl(211,100%,50%)' : '#6b7280'}
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                  />
+                  <line
+                    x1="-6"
+                    y1="6"
+                    x2="-14"
+                    y2="14"
+                    stroke={calibrating ? 'hsl(211,100%,50%)' : '#6b7280'}
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                  />
+                  <line
+                    x1="6"
+                    y1="6"
+                    x2="14"
+                    y2="14"
+                    stroke={calibrating ? 'hsl(211,100%,50%)' : '#6b7280'}
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                  />
+                  <circle cx="-14" cy="-14" r="3" fill={calibrating ? 'hsl(211,100%,50%)' : '#6b7280'} opacity="0.5" />
+                  <circle cx="14" cy="-14" r="3" fill={calibrating ? 'hsl(211,100%,50%)' : '#6b7280'} opacity="0.5" />
+                  <circle cx="-14" cy="14" r="3" fill={calibrating ? 'hsl(211,100%,50%)' : '#6b7280'} opacity="0.5" />
+                  <circle cx="14" cy="14" r="3" fill={calibrating ? 'hsl(211,100%,50%)' : '#6b7280'} opacity="0.5" />
                 </g>
                 <!-- Rotation arrow (animated when calibrating) -->
                 {#if calibrating}
                   <g class="spin-slow" style="transform-origin: 60px 60px;">
-                    <path d="M60,6 A54,54 0 0,1 108,40" fill="none" stroke="hsl(211,100%,50%)" stroke-width="2" stroke-linecap="round" opacity="0.6"/>
-                    <polygon points="108,40 104,32 112,34" fill="hsl(211,100%,50%)" opacity="0.6"/>
+                    <path
+                      d="M60,6 A54,54 0 0,1 108,40"
+                      fill="none"
+                      stroke="hsl(211,100%,50%)"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      opacity="0.6"
+                    />
+                    <polygon points="108,40 104,32 112,34" fill="hsl(211,100%,50%)" opacity="0.6" />
                   </g>
                 {/if}
               </svg>
@@ -410,14 +537,14 @@
           </div>
         </div>
 
-      <!-- ════════════════════════════════════════════ -->
-      <!-- GYRO / LEVEL / BARO - simple "keep still"   -->
-      <!-- ════════════════════════════════════════════ -->
+        <!-- ════════════════════════════════════════════ -->
+        <!-- GYRO / LEVEL / BARO - simple "keep still"   -->
+        <!-- ════════════════════════════════════════════ -->
       {:else}
         {@const labels = {
-          gyro:  { titleKey: 'cal.gyroTitle', descKey: 'cal.gyroDesc', icon: t('cal.iconGyro') },
+          gyro: { titleKey: 'cal.gyroTitle', descKey: 'cal.gyroDesc', icon: t('cal.iconGyro') },
           level: { titleKey: 'cal.levelTitle', descKey: 'cal.levelDesc', icon: t('cal.iconLevel') },
-          baro:  { titleKey: 'cal.baroTitle', descKey: 'cal.baroDesc', icon: t('cal.iconBaro') },
+          baro: { titleKey: 'cal.baroTitle', descKey: 'cal.baroDesc', icon: t('cal.iconBaro') },
         }}
         {@const info = labels[selected]}
         <div class="mb-4">
@@ -429,20 +556,62 @@
             <div class="relative w-[100px] h-[100px] flex items-center justify-center">
               {#if calibrating}
                 <div class="absolute inset-0 rounded-full border-2 border-primary/40 gentle-pulse"></div>
-                <div class="absolute inset-2 rounded-full border-2 border-primary/25 gentle-pulse" style="animation-delay: 0.5s;"></div>
+                <div
+                  class="absolute inset-2 rounded-full border-2 border-primary/25 gentle-pulse"
+                  style="animation-delay: 0.5s;"
+                ></div>
               {/if}
               <svg viewBox="0 0 60 60" class="w-[56px] h-[56px]">
                 <!-- Simple flat drone -->
-                <rect x="22" y="22" width="16" height="16" rx="2"
-                      fill="{calibrating ? 'hsl(211,100%,50%)' : '#6b7280'}" opacity="0.8"/>
-                <line x1="22" y1="22" x2="10" y2="10" stroke="{calibrating ? 'hsl(211,100%,50%)' : '#6b7280'}" stroke-width="2" stroke-linecap="round"/>
-                <line x1="38" y1="22" x2="50" y2="10" stroke="{calibrating ? 'hsl(211,100%,50%)' : '#6b7280'}" stroke-width="2" stroke-linecap="round"/>
-                <line x1="22" y1="38" x2="10" y2="50" stroke="{calibrating ? 'hsl(211,100%,50%)' : '#6b7280'}" stroke-width="2" stroke-linecap="round"/>
-                <line x1="38" y1="38" x2="50" y2="50" stroke="{calibrating ? 'hsl(211,100%,50%)' : '#6b7280'}" stroke-width="2" stroke-linecap="round"/>
-                <circle cx="10" cy="10" r="5" fill="{calibrating ? 'hsl(211,100%,50%)' : '#6b7280'}" opacity="0.6"/>
-                <circle cx="50" cy="10" r="5" fill="{calibrating ? 'hsl(211,100%,50%)' : '#6b7280'}" opacity="0.6"/>
-                <circle cx="10" cy="50" r="5" fill="{calibrating ? 'hsl(211,100%,50%)' : '#6b7280'}" opacity="0.6"/>
-                <circle cx="50" cy="50" r="5" fill="{calibrating ? 'hsl(211,100%,50%)' : '#6b7280'}" opacity="0.6"/>
+                <rect
+                  x="22"
+                  y="22"
+                  width="16"
+                  height="16"
+                  rx="2"
+                  fill={calibrating ? 'hsl(211,100%,50%)' : '#6b7280'}
+                  opacity="0.8"
+                />
+                <line
+                  x1="22"
+                  y1="22"
+                  x2="10"
+                  y2="10"
+                  stroke={calibrating ? 'hsl(211,100%,50%)' : '#6b7280'}
+                  stroke-width="2"
+                  stroke-linecap="round"
+                />
+                <line
+                  x1="38"
+                  y1="22"
+                  x2="50"
+                  y2="10"
+                  stroke={calibrating ? 'hsl(211,100%,50%)' : '#6b7280'}
+                  stroke-width="2"
+                  stroke-linecap="round"
+                />
+                <line
+                  x1="22"
+                  y1="38"
+                  x2="10"
+                  y2="50"
+                  stroke={calibrating ? 'hsl(211,100%,50%)' : '#6b7280'}
+                  stroke-width="2"
+                  stroke-linecap="round"
+                />
+                <line
+                  x1="38"
+                  y1="38"
+                  x2="50"
+                  y2="50"
+                  stroke={calibrating ? 'hsl(211,100%,50%)' : '#6b7280'}
+                  stroke-width="2"
+                  stroke-linecap="round"
+                />
+                <circle cx="10" cy="10" r="5" fill={calibrating ? 'hsl(211,100%,50%)' : '#6b7280'} opacity="0.6" />
+                <circle cx="50" cy="10" r="5" fill={calibrating ? 'hsl(211,100%,50%)' : '#6b7280'} opacity="0.6" />
+                <circle cx="10" cy="50" r="5" fill={calibrating ? 'hsl(211,100%,50%)' : '#6b7280'} opacity="0.6" />
+                <circle cx="50" cy="50" r="5" fill={calibrating ? 'hsl(211,100%,50%)' : '#6b7280'} opacity="0.6" />
               </svg>
             </div>
             <p class="mt-3 text-[11px] {calibrating ? 'text-primary' : 'text-muted-foreground'}">
@@ -456,7 +625,9 @@
       <!-- Status messages (shared)                     -->
       <!-- ════════════════════════════════════════════ -->
       <div class="mb-4">
-        <p class="text-[11px] text-muted-foreground font-semibold uppercase tracking-wider mb-1.5">{t('cal.messages')}</p>
+        <p class="text-[11px] text-muted-foreground font-semibold uppercase tracking-wider mb-1.5">
+          {t('cal.messages')}
+        </p>
         <div class="rounded-lg border border-border bg-muted/30 min-h-[60px] max-h-[120px] overflow-y-auto p-2">
           {#if calEvents.length > 0}
             {#each calEvents as ev (ev.time + ev.text)}
@@ -481,14 +652,10 @@
 
       <!-- Action buttons -->
       <div class="flex gap-2">
-        <Button variant="default" class="flex-1"
-                onclick={startCal}
-                disabled={calibrating || !app.drone.connected}>
+        <Button variant="default" class="flex-1" onclick={startCal} disabled={calibrating || !app.drone.connected}>
           {t('cal.start')}
         </Button>
-        <Button variant="secondary" class="flex-1"
-                onclick={cancelCal}
-                disabled={!calibrating}>
+        <Button variant="secondary" class="flex-1" onclick={cancelCal} disabled={!calibrating}>
           {t('cal.cancel')}
         </Button>
       </div>
@@ -499,3 +666,43 @@
     </div>
   </div>
 </div>
+
+<style>
+  @keyframes pulse-border {
+    0%,
+    100% {
+      border-color: hsl(211 100% 50% / 0.5);
+      box-shadow: 0 0 0 0 hsl(211 100% 50% / 0.3);
+    }
+    50% {
+      border-color: hsl(211 100% 50% / 1);
+      box-shadow: 0 0 8px 2px hsl(211 100% 50% / 0.25);
+    }
+  }
+  .cal-active-border {
+    animation: pulse-border 1.5s ease-in-out infinite;
+  }
+  @keyframes spin-slow {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+  .spin-slow {
+    animation: spin-slow 3s linear infinite;
+  }
+  @keyframes gentle-pulse {
+    0%,
+    100% {
+      opacity: 0.6;
+    }
+    50% {
+      opacity: 1;
+    }
+  }
+  .gentle-pulse {
+    animation: gentle-pulse 2s ease-in-out infinite;
+  }
+</style>

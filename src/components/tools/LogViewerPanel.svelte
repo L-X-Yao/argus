@@ -37,7 +37,17 @@
   const TABLE_VISIBLE = 100;
 
   // Cached channel data for stats & rendering
-  let channelData = $state<{ label: string; color: string; series: { t: number[]; v: number[] }; min: number; max: number; avg: number; std: number }[]>([]);
+  let channelData = $state<
+    {
+      label: string;
+      color: string;
+      series: { t: number[]; v: number[] };
+      min: number;
+      max: number;
+      avg: number;
+      std: number;
+    }[]
+  >([]);
 
   function openFile() {
     const input = document.createElement('input');
@@ -52,7 +62,7 @@
       reader.onload = (ev: ProgressEvent<FileReader>) => {
         try {
           log = parseDFLog(ev.target!.result as ArrayBuffer);
-          selectedTypes = new Set(['ATT', 'GPS', 'BARO', 'BAT', 'VIBE'].filter(t => log!.types.includes(t)));
+          selectedTypes = new Set(['ATT', 'GPS', 'BARO', 'BAT', 'VIBE'].filter((t) => log!.types.includes(t)));
           addToast(t('logview.messages').replace('{n}', String(log.messages.length)), 'success');
           onlog?.(log);
           zoomStart = 0;
@@ -84,19 +94,24 @@
 
   // Compute channel data whenever selection or log changes
   $effect(() => {
-    if (!log || selectedTypes.size === 0) { channelData = []; return; }
+    if (!log || selectedTypes.size === 0) {
+      channelData = [];
+      return;
+    }
     const result: typeof channelData = [];
     let ci = 0;
     for (const tp of selectedTypes) {
       const fmt = log.formats.get(tp);
       if (!fmt) continue;
-      const numCols = fmt.columns.filter(c => c !== 'TimeUS' && c !== 'TimeMS');
+      const numCols = fmt.columns.filter((c) => c !== 'TimeUS' && c !== 'TimeMS');
       const col = numCols[0];
       if (!col) continue;
       const series = getTimeSeries(log, tp, col);
       if (series.t.length < 2) continue;
       const vals = series.v;
-      let min = Infinity, max = -Infinity, sum = 0;
+      let min = Infinity,
+        max = -Infinity,
+        sum = 0;
       for (let i = 0; i < vals.length; i++) {
         if (vals[i] < min) min = vals[i];
         if (vals[i] > max) max = vals[i];
@@ -112,7 +127,11 @@
       result.push({
         label: `${tp}.${col}`,
         color: CHANNEL_COLORS[ci % CHANNEL_COLORS.length],
-        series, min, max, avg, std
+        series,
+        min,
+        max,
+        avg,
+        std,
       });
       ci++;
     }
@@ -123,7 +142,7 @@
   $effect(() => {
     if (!canvasEl || !log || channelData.length === 0 || viewMode !== 'chart') return;
     const ctx = canvasEl.getContext('2d')!;
-    const w = canvasEl.width = canvasEl.parentElement!.clientWidth;
+    const w = (canvasEl.width = canvasEl.parentElement!.clientWidth);
     const h = canvasEl.height;
     ctx.clearRect(0, 0, w, h);
 
@@ -147,7 +166,10 @@
     ctx.lineWidth = 0.5;
     for (let i = 0; i <= 4; i++) {
       const y = (i / 4) * h;
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(w, y);
+      ctx.stroke();
     }
 
     // Draw each channel with its own Y-axis scale
@@ -169,7 +191,10 @@
         if (series.t[i] < tStart || series.t[i] > tEnd) continue;
         const x = plotLeft + ((series.t[i] - tStart) / tRange) * plotW;
         const y = h - ((series.v[i] - minV) / range) * (h - 30) - 15;
-        if (!started) { ctx.moveTo(x, y); started = true; } else ctx.lineTo(x, y);
+        if (!started) {
+          ctx.moveTo(x, y);
+          started = true;
+        } else ctx.lineTo(x, y);
       }
       ctx.stroke();
 
@@ -212,8 +237,14 @@
       ctx.strokeStyle = '#4fc3f7';
       ctx.lineWidth = 1;
       ctx.setLineDash([3, 3]);
-      ctx.beginPath(); ctx.moveTo(x1, 0); ctx.lineTo(x1, h); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(x2, 0); ctx.lineTo(x2, h); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x1, 0);
+      ctx.lineTo(x1, h);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x2, 0);
+      ctx.lineTo(x2, h);
+      ctx.stroke();
       ctx.setLineDash([]);
     }
 
@@ -224,7 +255,10 @@
       ctx.strokeStyle = '#fff';
       ctx.lineWidth = 0.8;
       ctx.setLineDash([2, 2]);
-      ctx.beginPath(); ctx.moveTo(mouseX, 0); ctx.lineTo(mouseX, h); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(mouseX, 0);
+      ctx.lineTo(mouseX, h);
+      ctx.stroke();
       ctx.setLineDash([]);
 
       // Compute values at cursor
@@ -234,10 +268,12 @@
       for (const ch of channelData) {
         // Binary search for nearest time
         const ts = ch.series.t;
-        let lo = 0, hi = ts.length - 1;
+        let lo = 0,
+          hi = ts.length - 1;
         while (lo < hi) {
           const mid = (lo + hi) >> 1;
-          if (ts[mid] < cursorT) lo = mid + 1; else hi = mid;
+          if (ts[mid] < cursorT) lo = mid + 1;
+          else hi = mid;
         }
         const idx = Math.max(0, Math.min(lo, ts.length - 1));
         vals.push({ label: ch.label, value: ch.series.v[idx], color: ch.color });
@@ -279,7 +315,10 @@
   }
 
   function onCanvasMouseUp(_e: MouseEvent) {
-    if (!isDragging || !canvasEl || !log) { isDragging = false; return; }
+    if (!isDragging || !canvasEl || !log) {
+      isDragging = false;
+      return;
+    }
     isDragging = false;
     const w = canvasEl.width;
     // Determine plot area
@@ -314,7 +353,7 @@
   // Table data: filtered messages for selected types
   let tableMessages = $derived.by(() => {
     if (!log || selectedTypes.size === 0) return [];
-    return log.messages.filter(m => selectedTypes.has(m.type));
+    return log.messages.filter((m) => selectedTypes.has(m.type));
   });
 
   let tableVisibleStart = $derived(Math.floor(tableScrollTop / TABLE_ROW_H));
@@ -329,12 +368,12 @@
     if (!log) return;
     const types = [...selectedTypes];
     let csv = 'time,' + types.join(',') + '\n';
-    const series = types.map(tp => {
+    const series = types.map((tp) => {
       const fmt = log!.formats.get(tp);
-      const col = fmt?.columns.filter(c => c !== 'TimeUS' && c !== 'TimeMS')[0] || '';
+      const col = fmt?.columns.filter((c) => c !== 'TimeUS' && c !== 'TimeMS')[0] || '';
       return getTimeSeries(log!, tp, col);
     });
-    const maxLen = Math.max(...series.map(s => s.t.length));
+    const maxLen = Math.max(...series.map((s) => s.t.length));
     for (let i = 0; i < Math.min(maxLen, 10000); i++) {
       const row = [series[0]?.t[i]?.toFixed(3) || ''];
       for (const s of series) row.push(s.v[i]?.toFixed(4) || '');
@@ -356,8 +395,22 @@
   }
 </script>
 
-<div role="dialog" aria-modal="true" tabindex="-1" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center" onclick={onclose} onkeydown={(e) => { if (e.key === "Escape") onclose(); }}>
-  <div class="bg-card border border-border rounded-2xl overflow-hidden w-[950px] max-h-[85vh] shadow-2xl flex flex-col" role="presentation" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
+<div
+  role="dialog"
+  aria-modal="true"
+  tabindex="-1"
+  class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center"
+  onclick={onclose}
+  onkeydown={(e) => {
+    if (e.key === 'Escape') onclose();
+  }}
+>
+  <div
+    class="bg-card border border-border rounded-2xl overflow-hidden w-[950px] max-h-[85vh] shadow-2xl flex flex-col"
+    role="presentation"
+    onclick={(e) => e.stopPropagation()}
+    onkeydown={(e) => e.stopPropagation()}
+  >
     <div class="bg-gradient-to-r from-primary/20 to-primary/5 px-5 py-3 flex items-center justify-between shrink-0">
       <div class="flex items-center gap-2">
         <FileText size={16} class="text-primary" />
@@ -367,17 +420,29 @@
       <div class="flex items-center gap-2">
         {#if log}
           <div class="flex border border-border rounded overflow-hidden">
-            <button class="px-2 py-0.5 text-[10px] transition-all {viewMode === 'chart' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}"
-              onclick={() => viewMode = 'chart'}>
+            <button
+              class="px-2 py-0.5 text-[10px] transition-all {viewMode === 'chart'
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:text-foreground'}"
+              onclick={() => (viewMode = 'chart')}
+            >
               <BarChart3 size={12} class="inline mr-0.5" />{t('logview.chart')}
             </button>
-            <button class="px-2 py-0.5 text-[10px] transition-all {viewMode === 'table' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}"
-              onclick={() => viewMode = 'table'}>
+            <button
+              class="px-2 py-0.5 text-[10px] transition-all {viewMode === 'table'
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:text-foreground'}"
+              onclick={() => (viewMode = 'table')}
+            >
               <Table2 size={12} class="inline mr-0.5" />{t('logview.table')}
             </button>
           </div>
-          <button class="px-2 py-0.5 text-[10px] rounded border transition-all {showStats ? 'bg-primary text-primary-foreground border-primary' : 'text-muted-foreground border-border hover:text-foreground'}"
-            onclick={() => showStats = !showStats}>
+          <button
+            class="px-2 py-0.5 text-[10px] rounded border transition-all {showStats
+              ? 'bg-primary text-primary-foreground border-primary'
+              : 'text-muted-foreground border-border hover:text-foreground'}"
+            onclick={() => (showStats = !showStats)}
+          >
             <Activity size={12} class="inline mr-0.5" />{t('logview.stats')}
           </button>
         {/if}
@@ -385,7 +450,9 @@
           {parsing ? t('logview.parsing') : t('logview.open')}
         </Button>
         {#if log}
-          <Button variant="outline" size="sm" onclick={exportCsv}><Download size={13} class="mr-1" />{t('logview.export')}</Button>
+          <Button variant="outline" size="sm" onclick={exportCsv}
+            ><Download size={13} class="mr-1" />{t('logview.export')}</Button
+          >
         {/if}
         <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label={t('error.close')}><X size={16} /></Button>
       </div>
@@ -407,9 +474,13 @@
 
         <div class="flex flex-wrap gap-1 mb-3">
           {#each log.types as tp}
-            <button class="px-2 py-0.5 text-[10px] rounded border cursor-pointer transition-all
-              {selectedTypes.has(tp) ? 'bg-primary text-primary-foreground border-primary' : 'text-muted-foreground border-border hover:text-foreground'}"
-              onclick={() => toggleType(tp)}>{tp}</button>
+            <button
+              class="px-2 py-0.5 text-[10px] rounded border cursor-pointer transition-all
+              {selectedTypes.has(tp)
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'text-muted-foreground border-border hover:text-foreground'}"
+              onclick={() => toggleType(tp)}>{tp}</button
+            >
           {/each}
         </div>
 
@@ -418,14 +489,20 @@
           <div class="flex-1 min-w-0">
             {#if viewMode === 'chart'}
               <div class="border border-border rounded-lg overflow-hidden relative">
-                <canvas bind:this={canvasEl} height="300" class="w-full cursor-crosshair"
+                <canvas
+                  bind:this={canvasEl}
+                  height="300"
+                  class="w-full cursor-crosshair"
                   onmousedown={onCanvasMouseDown}
                   onmousemove={onCanvasMouseMove}
                   onmouseup={onCanvasMouseUp}
                   ondblclick={onCanvasDblClick}
-                  onmouseleave={onCanvasMouseLeave}></canvas>
+                  onmouseleave={onCanvasMouseLeave}
+                ></canvas>
                 {#if zoomStart > 0 || zoomEnd < 1}
-                  <div class="absolute bottom-1 right-2 text-[9px] text-muted-foreground bg-black/50 px-1.5 py-0.5 rounded">
+                  <div
+                    class="absolute bottom-1 right-2 text-[9px] text-muted-foreground bg-black/50 px-1.5 py-0.5 rounded"
+                  >
                     {t('logview.zoomHint')}
                   </div>
                 {/if}
@@ -433,7 +510,9 @@
             {:else}
               <!-- Table view with virtual windowing -->
               <div class="border border-border rounded-lg overflow-hidden">
-                <div class="bg-muted/30 px-2 py-1 flex text-[10px] font-semibold text-muted-foreground border-b border-border">
+                <div
+                  class="bg-muted/30 px-2 py-1 flex text-[10px] font-semibold text-muted-foreground border-b border-border"
+                >
                   <span class="w-20 shrink-0">{t('logview.timestamp')}</span>
                   <span class="w-14 shrink-0">{t('logview.type')}</span>
                   <span class="flex-1">{t('logview.fields')}</span>
@@ -441,8 +520,11 @@
                 <div class="h-[280px] overflow-auto" onscroll={onTableScroll}>
                   <div style="height: {tableMessages.length * TABLE_ROW_H}px; position: relative;">
                     {#each tableVisibleRows as msg, i}
-                      <div class="flex px-2 text-[10px] font-mono items-center border-b border-border/30 hover:bg-muted/20"
-                        style="position: absolute; top: {(tableVisibleStart + i) * TABLE_ROW_H}px; height: {TABLE_ROW_H}px; left: 0; right: 0;">
+                      <div
+                        class="flex px-2 text-[10px] font-mono items-center border-b border-border/30 hover:bg-muted/20"
+                        style="position: absolute; top: {(tableVisibleStart + i) *
+                          TABLE_ROW_H}px; height: {TABLE_ROW_H}px; left: 0; right: 0;"
+                      >
                         <span class="w-20 shrink-0 text-muted-foreground">{msg.timestamp.toFixed(3)}s</span>
                         <span class="w-14 shrink-0 text-primary">{msg.type}</span>
                         <span class="flex-1 truncate text-foreground/80">{formatFieldValues(msg.fields)}</span>
@@ -460,7 +542,9 @@
           <!-- Statistics sidebar -->
           {#if showStats && channelData.length > 0}
             <div class="w-44 shrink-0 border border-border rounded-lg p-2 space-y-2 overflow-auto max-h-[340px]">
-              <div class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">{t('logview.stats')}</div>
+              <div class="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                {t('logview.stats')}
+              </div>
               {#each channelData as ch}
                 <div class="space-y-0.5">
                   <div class="text-[10px] font-semibold truncate" style="color: {ch.color}">{ch.label}</div>

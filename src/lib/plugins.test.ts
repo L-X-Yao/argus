@@ -85,7 +85,9 @@ describe('plugins', () => {
     it('subscribe and emit roundtrip works', () => {
       const api = createPluginAPI();
       let received: unknown = null;
-      const unsub = api.subscribe('test-event', (data) => { received = data; });
+      const unsub = api.subscribe('test-event', (data) => {
+        received = data;
+      });
       api.emit('test-event', { value: 42 });
       expect(received).toEqual({ value: 42 });
 
@@ -101,7 +103,9 @@ describe('plugins', () => {
 
     it('emit does not throw if listener throws', () => {
       const api = createPluginAPI();
-      api.subscribe('crash-event', () => { throw new Error('boom'); });
+      api.subscribe('crash-event', () => {
+        throw new Error('boom');
+      });
       expect(() => api.emit('crash-event', {})).not.toThrow();
     });
 
@@ -172,8 +176,7 @@ describe('plugins', () => {
     it('propagates fetch errors', async () => {
       vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network failure')));
 
-      await expect(loadPlugin('http://example.com/fail.js'))
-        .rejects.toThrow('Network failure');
+      await expect(loadPlugin('http://example.com/fail.js')).rejects.toThrow('Network failure');
     });
   });
 
@@ -206,7 +209,7 @@ describe('plugins', () => {
       expect(unmountFn).toHaveBeenCalled();
       expect((el as any).remove).toHaveBeenCalled();
       expect(panels.length).toBe(panelsBefore - 1);
-      expect(plugins.find(p => p.manifest.name === 'FakeForUnload')).toBeUndefined();
+      expect(plugins.find((p) => p.manifest.name === 'FakeForUnload')).toBeUndefined();
     });
 
     it('handles plugin without element or destroy/unmount', () => {
@@ -218,7 +221,7 @@ describe('plugins', () => {
       });
 
       expect(() => unloadPlugin('MinimalPlugin')).not.toThrow();
-      expect(plugins.find(p => p.manifest.name === 'MinimalPlugin')).toBeUndefined();
+      expect(plugins.find((p) => p.manifest.name === 'MinimalPlugin')).toBeUndefined();
     });
   });
 
@@ -242,7 +245,9 @@ describe('plugins', () => {
     it('calls registered listeners for the event', () => {
       const api = createPluginAPI();
       let received: unknown = null;
-      api.subscribe('plugin-ev', (d) => { received = d; });
+      api.subscribe('plugin-ev', (d) => {
+        received = d;
+      });
       emitPluginEvent('plugin-ev', { x: 1 });
       expect(received).toEqual({ x: 1 });
     });
@@ -253,7 +258,9 @@ describe('plugins', () => {
 
     it('swallows errors from listeners', () => {
       const api = createPluginAPI();
-      api.subscribe('error-ev', () => { throw new Error('kaboom'); });
+      api.subscribe('error-ev', () => {
+        throw new Error('kaboom');
+      });
       expect(() => emitPluginEvent('error-ev', null)).not.toThrow();
     });
   });

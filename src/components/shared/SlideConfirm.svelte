@@ -50,7 +50,9 @@
     if (slideState.visible) {
       progress = 0;
       done = false;
-      requestAnimationFrame(() => { if (trackEl) trackW = trackEl.clientWidth; });
+      requestAnimationFrame(() => {
+        if (trackEl) trackW = trackEl.clientWidth;
+      });
     }
   });
 
@@ -61,11 +63,27 @@
   });
 </script>
 
-<svelte:window onkeydown={(e) => { if (e.key === 'Escape' && slideState.visible) cancelSlide(); }} />
+<svelte:window
+  onkeydown={(e) => {
+    if (e.key === 'Escape' && slideState.visible) cancelSlide();
+  }}
+/>
 
 {#if slideState.visible}
-    <div role="presentation" class="slide-backdrop" onclick={cancelSlide} onkeydown={(e) => { if (e.key === 'Escape') cancelSlide(); }}>
-    <div role="presentation" class="slide-container" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
+  <div
+    role="presentation"
+    class="slide-backdrop"
+    onclick={cancelSlide}
+    onkeydown={(e) => {
+      if (e.key === 'Escape') cancelSlide();
+    }}
+  >
+    <div
+      role="presentation"
+      class="slide-container"
+      onclick={(e) => e.stopPropagation()}
+      onkeydown={(e) => e.stopPropagation()}
+    >
       <div bind:this={trackEl} class="slide-track">
         <div class="slide-fill" style="width: {progress * 100}%; background: {c.fill}"></div>
         <div class="slide-label" style="color: {c.bg}; opacity: {done ? 1 : 0.5}">
@@ -75,10 +93,22 @@
             {slideState.text}
           {/if}
         </div>
-        <div class="slide-handle" role="slider" tabindex="0" aria-label={slideState.text}
-             aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress * 100)}
-             style="background: {c.bg}; transform: translateX({offsetPx}px); transition: {dragging ? 'none' : 'transform 0.3s ease-out'}"
-             onpointerdown={onDown} onpointermove={onMove} onpointerup={onUp} onpointercancel={onUp}>
+        <div
+          class="slide-handle"
+          role="slider"
+          tabindex="0"
+          aria-label={slideState.text}
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round(progress * 100)}
+          style="background: {c.bg}; transform: translateX({offsetPx}px); transition: {dragging
+            ? 'none'
+            : 'transform 0.3s ease-out'}"
+          onpointerdown={onDown}
+          onpointermove={onMove}
+          onpointerup={onUp}
+          onpointercancel={onUp}
+        >
           {#if done}<Check size={18} />{:else}<ChevronRight size={18} />{/if}
         </div>
       </div>
@@ -88,10 +118,14 @@
 
 <style>
   .slide-backdrop {
-    position: fixed; inset: 0; z-index: 9998;
-    display: flex; align-items: flex-end; justify-content: center;
+    position: fixed;
+    inset: 0;
+    z-index: 9998;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
     padding-bottom: 5rem;
-    background: rgba(0,0,0,0.15);
+    background: rgba(0, 0, 0, 0.15);
     animation: fadeIn 0.15s ease-out;
   }
   .slide-container {
@@ -99,24 +133,66 @@
     animation: slideUp 0.2s ease-out;
   }
   .slide-track {
-    position: relative; height: 3rem; border-radius: 9999px; overflow: hidden;
-    background: hsl(var(--card) / 0.95); backdrop-filter: blur(12px);
-    border: 1px solid hsl(var(--border)); box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    position: relative;
+    height: 3rem;
+    border-radius: 9999px;
+    overflow: hidden;
+    background: hsl(var(--card) / 0.95);
+    backdrop-filter: blur(12px);
+    border: 1px solid hsl(var(--border));
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
   }
   .slide-fill {
-    position: absolute; inset: 0; right: auto; border-radius: 9999px;
+    position: absolute;
+    inset: 0;
+    right: auto;
+    border-radius: 9999px;
   }
   .slide-label {
-    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
-    font-size: 0.875rem; font-weight: 700; pointer-events: none; user-select: none;
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.875rem;
+    font-weight: 700;
+    pointer-events: none;
+    user-select: none;
   }
   .slide-handle {
-    position: absolute; top: 4px; left: 4px; width: 40px; height: 40px;
-    border-radius: 9999px; display: flex; align-items: center; justify-content: center;
-    cursor: grab; color: white; box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    position: absolute;
+    top: 4px;
+    left: 4px;
+    width: 40px;
+    height: 40px;
+    border-radius: 9999px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    color: white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
     touch-action: none;
   }
-  .slide-handle:active { cursor: grabbing; }
-  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-  @keyframes slideUp { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .slide-handle:active {
+    cursor: grabbing;
+  }
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+    to {
+      opacity: 1;
+    }
+  }
+  @keyframes slideUp {
+    from {
+      transform: translateY(10px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
 </style>

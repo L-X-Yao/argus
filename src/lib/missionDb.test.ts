@@ -4,7 +4,11 @@ import 'fake-indexeddb/auto';
 
 const sampleData = () => ({
   waypoints: [{ lat: 30, lon: 120, alt: 50, drop: false, delay: 0, speed: 0, type: 'wp' as const, loiter_param: 0 }],
-  fence: [{ lat: 30, lon: 120 }, { lat: 30.1, lon: 120.1 }, { lat: 30.05, lon: 120.05 }],
+  fence: [
+    { lat: 30, lon: 120 },
+    { lat: 30.1, lon: 120.1 },
+    { lat: 30.05, lon: 120.05 },
+  ],
   rally: [{ lat: 30, lon: 120, alt: 100 }],
   defaultAlt: 50,
 });
@@ -44,7 +48,7 @@ describe('missionDb', () => {
     await saveMission('Second', sampleData());
     const list = await listMissions();
     expect(list).toHaveLength(2);
-    const names = list.map(m => m.name);
+    const names = list.map((m) => m.name);
     expect(names).toContain('First');
     expect(names).toContain('Second');
   });

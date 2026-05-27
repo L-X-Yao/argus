@@ -11,7 +11,9 @@ export const paramState = new ParamState();
 
 const nameIndex = new Map<string, number>();
 
-export function handleParamBatch(params: { name: string; value: number; ptype: number; index: number; total: number; received: number }[]) {
+export function handleParamBatch(
+  params: { name: string; value: number; ptype: number; index: number; total: number; received: number }[],
+) {
   const arr = paramState.list.slice();
   for (const p of params) {
     const param: Param = { name: p.name, value: p.value, type: p.ptype, index: p.index };

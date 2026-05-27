@@ -1,4 +1,5 @@
 """Unit tests for multi-session concurrency: multiple WebSocket clients, per-client state, isolation."""
+
 import json
 import sys
 from pathlib import Path
@@ -38,7 +39,7 @@ class TestMultiClientStateReceiving:
         msg1 = json.loads(ws1.send_text.call_args[0][0])
         msg2 = json.loads(ws2.send_text.call_args[0][0])
         assert msg1 == msg2
-        assert msg1['type'] == 'state'
+        assert msg1["type"] == "state"
 
     @pytest.mark.asyncio
     async def test_three_clients_all_receive_updates(self):
@@ -56,7 +57,7 @@ class TestMultiClientStateReceiving:
         for ws in clients:
             assert ws.send_text.call_count == 5
             last_msg = json.loads(ws.send_text.call_args[0][0])
-            assert last_msg['roll'] == 40.0
+            assert last_msg["roll"] == 40.0
 
     @pytest.mark.asyncio
     async def test_clients_receive_events_independently(self):
@@ -67,8 +68,8 @@ class TestMultiClientStateReceiving:
         ws2 = make_ws()
         mgr._clients = {ws1, ws2}
 
-        link.add_event('Test event', 'info')
-        await mgr.broadcast({'type': 'event', 'text': 'Test event'})
+        link.add_event("Test event", "info")
+        await mgr.broadcast({"type": "event", "text": "Test event"})
 
         assert ws1.send_text.call_count == 1
         assert ws2.send_text.call_count == 1
@@ -93,8 +94,8 @@ class TestCommandIsolation:
 
         msg_commander = json.loads(ws_commander.send_text.call_args[0][0])
         msg_observer = json.loads(ws_observer.send_text.call_args[0][0])
-        assert msg_commander['roll'] == 25.5
-        assert msg_observer['roll'] == 25.5
+        assert msg_commander["roll"] == 25.5
+        assert msg_observer["roll"] == 25.5
 
     @pytest.mark.asyncio
     async def test_rapid_commands_from_multiple_clients_no_state_corruption(self):
@@ -117,8 +118,8 @@ class TestCommandIsolation:
             assert ws.send_text.call_count == 20
             # Last message should reflect final state
             last = json.loads(ws.send_text.call_args[0][0])
-            assert last['roll'] == 19.0
-            assert last['pitch'] == -19.0
+            assert last["roll"] == 19.0
+            assert last["pitch"] == -19.0
 
     @pytest.mark.asyncio
     async def test_inspector_data_shared_across_clients(self):
@@ -130,13 +131,13 @@ class TestCommandIsolation:
         mgr._clients = {ws1, ws2}
 
         link.inspector_enabled = True
-        inspector_msg = {'type': 'inspector', 'messages': link.get_inspector_data()}
+        inspector_msg = {"type": "inspector", "messages": link.get_inspector_data()}
         await mgr.broadcast(inspector_msg)
 
         msg1 = json.loads(ws1.send_text.call_args[0][0])
         msg2 = json.loads(ws2.send_text.call_args[0][0])
-        assert msg1['type'] == 'inspector'
-        assert msg2['type'] == 'inspector'
+        assert msg1["type"] == "inspector"
+        assert msg2["type"] == "inspector"
         assert msg1 == msg2
 
 
@@ -150,10 +151,10 @@ class TestClientDisconnectIsolation:
         mgr = WSManager(link)
         ws_alive = make_ws()
         ws_dead = make_ws()
-        ws_dead.send_text.side_effect = ConnectionError('connection closed')
+        ws_dead.send_text.side_effect = ConnectionError("connection closed")
         mgr._clients = {ws_alive, ws_dead}
 
-        await mgr.broadcast({'type': 'state', 'connected': True})
+        await mgr.broadcast({"type": "state", "connected": True})
 
         # Dead client is removed
         assert ws_dead not in mgr._clients
@@ -168,22 +169,22 @@ class TestClientDisconnectIsolation:
         mgr = WSManager(link)
         ws_alive = make_ws()
         ws_dead = make_ws()
-        ws_dead.send_text.side_effect = ConnectionError('gone')
+        ws_dead.send_text.side_effect = ConnectionError("gone")
         mgr._clients = {ws_alive, ws_dead}
 
         # First broadcast removes dead client
-        await mgr.broadcast({'type': 'state', 'seq': 0})
+        await mgr.broadcast({"type": "state", "seq": 0})
         assert mgr.client_count == 1
 
         # Subsequent broadcasts go only to alive client
         for i in range(1, 10):
-            await mgr.broadcast({'type': 'state', 'seq': i})
+            await mgr.broadcast({"type": "state", "seq": i})
 
         assert ws_alive.send_text.call_count == 10
         # Verify ordering
         for i, call in enumerate(ws_alive.send_text.call_args_list):
             msg = json.loads(call[0][0])
-            assert msg['seq'] == i
+            assert msg["seq"] == i
 
     @pytest.mark.asyncio
     async def test_multiple_disconnects_in_sequence(self):
@@ -193,16 +194,16 @@ class TestClientDisconnectIsolation:
         survivors = [make_ws() for _ in range(3)]
         victims = [make_ws() for _ in range(4)]
         for ws in victims:
-            ws.send_text.side_effect = ConnectionError('disconnected')
+            ws.send_text.side_effect = ConnectionError("disconnected")
         mgr._clients = set(survivors + victims)
 
-        await mgr.broadcast({'type': 'state', 'test': True})
+        await mgr.broadcast({"type": "state", "test": True})
 
         assert mgr.client_count == 3
         for ws in survivors:
             assert ws in mgr._clients
             msg = json.loads(ws.send_text.call_args[0][0])
-            assert msg['test'] is True
+            assert msg["test"] is True
 
 
 class TestPerClientLocale:
@@ -212,32 +213,32 @@ class TestPerClientLocale:
         """Default locale is 'zh'."""
         link = DroneLink()
         WSManager(link)
-        assert link.locale == 'zh'
+        assert link.locale == "zh"
 
     def test_set_locale_en(self):
         """Setting locale to 'en' changes link state."""
         link = DroneLink()
         WSManager(link)
-        link.locale = 'en'
-        assert link.locale == 'en'
+        link.locale = "en"
+        assert link.locale == "en"
         state = link.get_state()
         # English GPS fix names should be used
-        assert state['gps_fix'] in ('No GPS', 'No Fix', '2D Fix', '3D Fix', '3D DGPS', 'RTK Float', 'RTK Fix', '?')
+        assert state["gps_fix"] in ("No GPS", "No Fix", "2D Fix", "3D Fix", "3D DGPS", "RTK Float", "RTK Fix", "?")
 
     def test_locale_affects_state_output(self):
         """Different locale produces different mode labels in state."""
         link = DroneLink()
         WSManager(link)
 
-        link.locale = 'zh'
+        link.locale = "zh"
         state_zh = link.get_state()
 
-        link.locale = 'en'
+        link.locale = "en"
         state_en = link.get_state()
 
         # GPS fix names differ by locale
         # With default gps_fix=0, 'zh' gives Chinese text, 'en' gives English
-        assert state_zh['gps_fix'] != state_en['gps_fix'] or state_zh['gps_fix'] == '?'
+        assert state_zh["gps_fix"] != state_en["gps_fix"] or state_zh["gps_fix"] == "?"
 
     @pytest.mark.asyncio
     async def test_locale_change_reflected_in_broadcast(self):
@@ -247,12 +248,12 @@ class TestPerClientLocale:
         ws = make_ws()
         mgr._clients = {ws}
 
-        link.locale = 'en'
+        link.locale = "en"
         state = link.get_state()
         await mgr.broadcast(state)
 
         msg = json.loads(ws.send_text.call_args[0][0])
-        assert msg['type'] == 'state'
+        assert msg["type"] == "state"
 
 
 class TestPerClientInspector:
@@ -289,13 +290,13 @@ class TestPerClientInspector:
         mgr._clients = {ws1, ws2}
         link.inspector_enabled = True
 
-        inspector_msg = {'type': 'inspector', 'messages': link.get_inspector_data()}
+        inspector_msg = {"type": "inspector", "messages": link.get_inspector_data()}
         await mgr.broadcast(inspector_msg)
 
         for ws in [ws1, ws2]:
             msg = json.loads(ws.send_text.call_args[0][0])
-            assert msg['type'] == 'inspector'
-            assert isinstance(msg['messages'], list)
+            assert msg["type"] == "inspector"
+            assert isinstance(msg["messages"], list)
 
 
 class TestBroadcastOrderConsistency:
@@ -310,14 +311,14 @@ class TestBroadcastOrderConsistency:
         mgr._clients = set(clients)
 
         for i in range(30):
-            await mgr.broadcast({'type': 'state', 'seq': i})
+            await mgr.broadcast({"type": "state", "seq": i})
 
         # All clients should have same count and ordering
         for ws in clients:
             assert ws.send_text.call_count == 30
             for i, call in enumerate(ws.send_text.call_args_list):
                 msg = json.loads(call[0][0])
-                assert msg['seq'] == i
+                assert msg["seq"] == i
 
     @pytest.mark.asyncio
     async def test_interleaved_state_and_events_order_preserved(self):
@@ -330,9 +331,9 @@ class TestBroadcastOrderConsistency:
         messages = []
         for i in range(10):
             if i % 3 == 0:
-                msg = {'type': 'event', 'seq': i, 'text': f'event {i}'}
+                msg = {"type": "event", "seq": i, "text": f"event {i}"}
             else:
-                msg = {'type': 'state', 'seq': i, 'connected': True}
+                msg = {"type": "state", "seq": i, "connected": True}
             messages.append(msg)
             await mgr.broadcast(msg)
 
@@ -340,8 +341,8 @@ class TestBroadcastOrderConsistency:
             assert ws.send_text.call_count == 10
             for i, call in enumerate(ws.send_text.call_args_list):
                 received = json.loads(call[0][0])
-                assert received['seq'] == messages[i]['seq']
-                assert received['type'] == messages[i]['type']
+                assert received["seq"] == messages[i]["seq"]
+                assert received["type"] == messages[i]["type"]
 
     @pytest.mark.asyncio
     async def test_concurrent_gather_preserves_individual_broadcast_order(self):
@@ -353,12 +354,12 @@ class TestBroadcastOrderConsistency:
 
         # Sequentially broadcast numbered messages
         for i in range(50):
-            await mgr.broadcast({'type': 'state', 'n': i})
+            await mgr.broadcast({"type": "state", "n": i})
 
         # Verify order
         for i, call in enumerate(ws.send_text.call_args_list):
             msg = json.loads(call[0][0])
-            assert msg['n'] == i
+            assert msg["n"] == i
 
 
 class TestRapidMultiClientCommands:
@@ -378,8 +379,8 @@ class TestRapidMultiClientCommands:
 
         # All should be identical
         for s in states:
-            assert s['roll'] == 10.0
-            assert s['voltage'] == 12.6
+            assert s["roll"] == 10.0
+            assert s["voltage"] == 12.6
 
     @pytest.mark.asyncio
     async def test_state_mutation_between_client_reads(self):
@@ -391,8 +392,8 @@ class TestRapidMultiClientCommands:
         link.attitude.roll = 15.0
         state_after = link.get_state()
 
-        assert state_before['roll'] == 5.0
-        assert state_after['roll'] == 15.0
+        assert state_before["roll"] == 5.0
+        assert state_after["roll"] == 15.0
 
     @pytest.mark.asyncio
     async def test_many_clients_simultaneous_broadcast_no_crash(self):
@@ -419,13 +420,13 @@ class TestRapidMultiClientCommands:
         mgr._clients = {ws_pilot, ws_observer}
 
         # Assign roles
-        mgr._roles[id(ws_pilot)] = 'pilot'
+        mgr._roles[id(ws_pilot)] = "pilot"
         mgr._pilot_ws = ws_pilot
-        mgr._roles[id(ws_observer)] = 'observer'
+        mgr._roles[id(ws_observer)] = "observer"
 
         # Verify isolation
-        assert mgr._roles[id(ws_pilot)] == 'pilot'
-        assert mgr._roles[id(ws_observer)] == 'observer'
+        assert mgr._roles[id(ws_pilot)] == "pilot"
+        assert mgr._roles[id(ws_observer)] == "observer"
         assert mgr._pilot_ws is ws_pilot
 
     @pytest.mark.asyncio
@@ -435,19 +436,19 @@ class TestRapidMultiClientCommands:
         mgr = WSManager(link)
         ws_pilot = make_ws()
         ws_observer = make_ws()
-        ws_pilot.send_text.side_effect = ConnectionError('pilot disconnected')
+        ws_pilot.send_text.side_effect = ConnectionError("pilot disconnected")
         mgr._clients = {ws_pilot, ws_observer}
         mgr._pilot_ws = ws_pilot
-        mgr._roles[id(ws_pilot)] = 'pilot'
-        mgr._roles[id(ws_observer)] = 'observer'
+        mgr._roles[id(ws_pilot)] = "pilot"
+        mgr._roles[id(ws_observer)] = "observer"
 
-        await mgr.broadcast({'type': 'state', 'connected': True})
+        await mgr.broadcast({"type": "state", "connected": True})
 
         # Pilot removed, observer still gets messages
         assert ws_pilot not in mgr._clients
         assert ws_observer in mgr._clients
         msg = json.loads(ws_observer.send_text.call_args[0][0])
-        assert msg['connected'] is True
+        assert msg["connected"] is True
 
     @pytest.mark.asyncio
     async def test_client_count_tracks_additions_and_removals(self):

@@ -233,7 +233,8 @@ const messages: Record<string, string> = {
   'cat.all': 'Todos',
   'conn.timeout': 'Tiempo de conexión agotado',
   'conn.reconnecting': 'Reconectando...',
-  'confirm.armAndFly': '¿Subir misión y despegue automático a {alt}m?\nSecuencia: Subir → Armar → Despegar → Iniciar misión',
+  'confirm.armAndFly':
+    '¿Subir misión y despegue automático a {alt}m?\nSecuencia: Subir → Armar → Despegar → Iniciar misión',
   'confirm.clearWps': '¿Borrar los {n} waypoints?',
   'ekf.title': 'Filtro de navegación',
   'ekf.empty': 'Conecte para mostrar el estado EKF',
@@ -308,7 +309,8 @@ const messages: Record<string, string> = {
   'cal.level': 'Nivel',
   'cal.baro': 'Barómetro',
   'cal.accelTitle': 'Calibración de acelerómetro',
-  'cal.accelDesc': 'Siga las indicaciones para colocar el vehículo en 6 orientaciones. Mantenga quieto hasta que cada una se complete.',
+  'cal.accelDesc':
+    'Siga las indicaciones para colocar el vehículo en 6 orientaciones. Mantenga quieto hasta que cada una se complete.',
   'cal.accelHintBefore': 'Haga clic en "Iniciar" y siga las indicaciones del autopiloto en las 6 orientaciones.',
   'cal.progress': 'Progreso',
   'cal.orientLevel': 'Nivel',
@@ -864,7 +866,8 @@ const messages: Record<string, string> = {
   'ortho.opacity': 'Opacidad',
   'ortho.apply': 'Aplicar capa',
   'ortho.active': 'Capas activas',
-  'ortho.hint': 'Suba imágenes georreferenciadas (ortomosaico/capas de mapa) con coordenadas de esquina para superponer en el mapa',
+  'ortho.hint':
+    'Suba imágenes georreferenciadas (ortomosaico/capas de mapa) con coordenadas de esquina para superponer en el mapa',
   'ortho.imageLoaded': 'Imagen cargada',
   'ortho.invalidFile': 'Seleccione una imagen JPG/PNG',
   'ortho.noImage': 'Suba una imagen primero',
@@ -889,7 +892,8 @@ const messages: Record<string, string> = {
   'aiAnnot.annotations': 'Anotaciones',
   'aiAnnot.noAnnotations': 'Sin anotaciones',
   'aiAnnot.exported': 'Anotaciones exportadas',
-  'aiAnnot.hint': 'Cargue una imagen de inspección, luego haga clic y arrastre en el lienzo para dibujar rectángulos de anotación de defectos',
+  'aiAnnot.hint':
+    'Cargue una imagen de inspección, luego haga clic y arrastre en el lienzo para dibujar rectángulos de anotación de defectos',
   'sched.title': 'Programador de misiones',
   'sched.new': 'Nueva programación',
   'sched.name': 'Nombre',
@@ -1053,6 +1057,5 @@ const messages: Record<string, string> = {
   'pid.target': 'Objetivo',
   'pid.rateFF': 'Tasa FF',
 };
-
 
 export default messages;

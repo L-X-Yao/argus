@@ -32,8 +32,12 @@ let _plugins: PluginInstance[] = [];
 const _panelContainer: HTMLElement[] = [];
 const _listeners = new Map<string, Set<(data: unknown) => void>>();
 
-export function getPlugins(): PluginInstance[] { return _plugins; }
-export function getPanels(): HTMLElement[] { return _panelContainer; }
+export function getPlugins(): PluginInstance[] {
+  return _plugins;
+}
+export function getPanels(): HTMLElement[] {
+  return _panelContainer;
+}
 
 export function createPluginAPI(): PluginAPI {
   return {
@@ -54,12 +58,16 @@ export function createPluginAPI(): PluginAPI {
     subscribe(event: string, cb: (data: unknown) => void) {
       if (!_listeners.has(event)) _listeners.set(event, new Set());
       _listeners.get(event)!.add(cb);
-      return () => { _listeners.get(event)?.delete(cb); };
+      return () => {
+        _listeners.get(event)?.delete(cb);
+      };
     },
 
     emit(event: string, data: unknown) {
-      _listeners.get(event)?.forEach(cb => {
-        try { cb(data); } catch {}
+      _listeners.get(event)?.forEach((cb) => {
+        try {
+          cb(data);
+        } catch {}
       });
       window.dispatchEvent(new CustomEvent(`argus:${event}`, { detail: data }));
     },
@@ -74,7 +82,9 @@ export function createPluginAPI(): PluginAPI {
     },
 
     showToast(msg: string, level = 'info') {
-      import('./stores.svelte').then(m => m.addToast(msg, level as 'info' | 'warn' | 'error' | 'success')).catch(() => {});
+      import('./stores.svelte')
+        .then((m) => m.addToast(msg, level as 'info' | 'warn' | 'error' | 'success'))
+        .catch(() => {});
     },
   };
 }
@@ -102,7 +112,7 @@ export async function loadPlugin(url: string): Promise<PluginInstance> {
 }
 
 export function unloadPlugin(name: string) {
-  const idx = _plugins.findIndex(p => p.manifest.name === name);
+  const idx = _plugins.findIndex((p) => p.manifest.name === name);
   if (idx >= 0) {
     const p = _plugins[idx];
     if (typeof p.module.destroy === 'function') (p.module.destroy as () => void)();
@@ -117,7 +127,9 @@ export function unloadPlugin(name: string) {
 }
 
 export function emitPluginEvent(event: string, data: unknown) {
-  _listeners.get(event)?.forEach(cb => {
-    try { cb(data); } catch {}
+  _listeners.get(event)?.forEach((cb) => {
+    try {
+      cb(data);
+    } catch {}
   });
 }

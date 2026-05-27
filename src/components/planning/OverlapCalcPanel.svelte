@@ -17,10 +17,10 @@
   }
 
   const presets: CameraPreset[] = [
-    { name: 'DJI Phantom 4 Pro', focal: 8.8,  sw: 13.2, sh: 8.8,  iw: 5472, ih: 3648 },
-    { name: 'DJI Mavic 3',       focal: 12.29, sw: 17.3, sh: 13.0, iw: 5280, ih: 3956 },
-    { name: 'Sony A7R',          focal: 35,   sw: 35.9, sh: 24.0, iw: 7952, ih: 5304 },
-    { name: 'Custom',            focal: 0,    sw: 0,    sh: 0,    iw: 0,    ih: 0    },
+    { name: 'DJI Phantom 4 Pro', focal: 8.8, sw: 13.2, sh: 8.8, iw: 5472, ih: 3648 },
+    { name: 'DJI Mavic 3', focal: 12.29, sw: 17.3, sh: 13.0, iw: 5280, ih: 3956 },
+    { name: 'Sony A7R', focal: 35, sw: 35.9, sh: 24.0, iw: 7952, ih: 5304 },
+    { name: 'Custom', focal: 0, sw: 0, sh: 0, iw: 0, ih: 0 },
   ];
 
   let selectedPreset = $state(0);
@@ -46,26 +46,16 @@
 
   /* ── Derived calculations ── */
   let gsd = $derived(
-    focalLength > 0 && imageWidth > 0
-      ? (sensorWidth * altitude) / (focalLength * imageWidth) * 100
-      : 0
+    focalLength > 0 && imageWidth > 0 ? ((sensorWidth * altitude) / (focalLength * imageWidth)) * 100 : 0,
   );
 
-  let footprintW = $derived(
-    focalLength > 0 ? (sensorWidth * altitude) / focalLength : 0
-  );
+  let footprintW = $derived(focalLength > 0 ? (sensorWidth * altitude) / focalLength : 0);
 
-  let footprintH = $derived(
-    focalLength > 0 ? (sensorHeight * altitude) / focalLength : 0
-  );
+  let footprintH = $derived(focalLength > 0 ? (sensorHeight * altitude) / focalLength : 0);
 
-  let triggerDist = $derived(
-    footprintH * (1 - frontOverlap / 100)
-  );
+  let triggerDist = $derived(footprintH * (1 - frontOverlap / 100));
 
-  let lineSpacing = $derived(
-    footprintW * (1 - sideOverlap / 100)
-  );
+  let lineSpacing = $derived(footprintW * (1 - sideOverlap / 100));
 
   let hasResult = $derived(gsd > 0 && triggerDist > 0 && lineSpacing > 0);
 
@@ -76,15 +66,24 @@
         .replace('{s}', lineSpacing.toFixed(1))
         .replace('{f}', triggerDist.toFixed(1))
         .replace('{g}', gsd.toFixed(2)),
-      'success'
+      'success',
     );
   }
 </script>
 
-<div role="dialog" aria-modal="true" tabindex="-1" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
-     onclick={(e) => { if (e.target === e.currentTarget) onclose(); }} onkeydown={(e) => { if (e.key === "Escape") onclose(); }}>
+<div
+  role="dialog"
+  aria-modal="true"
+  tabindex="-1"
+  class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+  onclick={(e) => {
+    if (e.target === e.currentTarget) onclose();
+  }}
+  onkeydown={(e) => {
+    if (e.key === 'Escape') onclose();
+  }}
+>
   <div class="bg-card border border-border rounded-xl shadow-2xl w-[450px] max-h-[85vh] flex flex-col overflow-hidden">
-
     <!-- Header -->
     <div class="flex items-center justify-between px-4 py-3 border-b border-border">
       <div class="flex items-center gap-2">
@@ -95,14 +94,16 @@
     </div>
 
     <div class="flex-1 min-h-0 overflow-y-auto p-4">
-
       <!-- Camera preset selector -->
       <div class="mb-4">
         <label for="oc-preset" class="text-xs text-muted-foreground block mb-1">Camera</label>
-        <select id="oc-preset" value={selectedPreset}
-                onchange={(e) => applyPreset(Number((e.target as HTMLSelectElement).value))}
-                class="w-full h-8 px-2 bg-input border border-border rounded-md text-xs text-foreground
-                       focus:outline-none focus:ring-1 focus:ring-ring/50">
+        <select
+          id="oc-preset"
+          value={selectedPreset}
+          onchange={(e) => applyPreset(Number((e.target as HTMLSelectElement).value))}
+          class="w-full h-8 px-2 bg-input border border-border rounded-md text-xs text-foreground
+                       focus:outline-none focus:ring-1 focus:ring-ring/50"
+        >
           {#each presets as p, i}
             <option value={i}>{p.name}</option>
           {/each}
@@ -113,33 +114,75 @@
       <div class="grid grid-cols-2 gap-x-3 gap-y-2.5 mb-4">
         <div class="flex flex-col gap-0.5">
           <label for="oc-focal" class="text-[11px] text-muted-foreground">{t('overlap.focalLength')}</label>
-          <input id="oc-focal" type="number" min="1" max="500" step="0.1" bind:value={focalLength}
-                 class="h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground" />
+          <input
+            id="oc-focal"
+            type="number"
+            min="1"
+            max="500"
+            step="0.1"
+            bind:value={focalLength}
+            class="h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground"
+          />
         </div>
         <div class="flex flex-col gap-0.5">
           <label for="oc-alt" class="text-[11px] text-muted-foreground">{t('overlap.altitude')}</label>
-          <input id="oc-alt" type="number" min="5" max="1000" step="5" bind:value={altitude}
-                 class="h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground" />
+          <input
+            id="oc-alt"
+            type="number"
+            min="5"
+            max="1000"
+            step="5"
+            bind:value={altitude}
+            class="h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground"
+          />
         </div>
         <div class="flex flex-col gap-0.5">
           <label for="oc-sw" class="text-[11px] text-muted-foreground">{t('overlap.sensorWidth')}</label>
-          <input id="oc-sw" type="number" min="0.1" max="100" step="0.1" bind:value={sensorWidth}
-                 class="h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground" />
+          <input
+            id="oc-sw"
+            type="number"
+            min="0.1"
+            max="100"
+            step="0.1"
+            bind:value={sensorWidth}
+            class="h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground"
+          />
         </div>
         <div class="flex flex-col gap-0.5">
           <label for="oc-sh" class="text-[11px] text-muted-foreground">{t('overlap.sensorHeight')}</label>
-          <input id="oc-sh" type="number" min="0.1" max="100" step="0.1" bind:value={sensorHeight}
-                 class="h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground" />
+          <input
+            id="oc-sh"
+            type="number"
+            min="0.1"
+            max="100"
+            step="0.1"
+            bind:value={sensorHeight}
+            class="h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground"
+          />
         </div>
         <div class="flex flex-col gap-0.5">
           <label for="oc-iw" class="text-[11px] text-muted-foreground">{t('overlap.imageWidth')}</label>
-          <input id="oc-iw" type="number" min="100" max="20000" step="1" bind:value={imageWidth}
-                 class="h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground" />
+          <input
+            id="oc-iw"
+            type="number"
+            min="100"
+            max="20000"
+            step="1"
+            bind:value={imageWidth}
+            class="h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground"
+          />
         </div>
         <div class="flex flex-col gap-0.5">
           <label for="oc-ih" class="text-[11px] text-muted-foreground">{t('overlap.imageHeight')}</label>
-          <input id="oc-ih" type="number" min="100" max="20000" step="1" bind:value={imageHeight}
-                 class="h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground" />
+          <input
+            id="oc-ih"
+            type="number"
+            min="100"
+            max="20000"
+            step="1"
+            bind:value={imageHeight}
+            class="h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground"
+          />
         </div>
       </div>
 
@@ -147,12 +190,28 @@
       <div class="flex flex-col gap-2.5 mb-4">
         <div class="flex items-center gap-2">
           <label for="oc-front" class="text-xs text-muted-foreground w-24 shrink-0">{t('overlap.frontOverlap')}</label>
-          <input id="oc-front" type="range" min="10" max="95" step="5" bind:value={frontOverlap} class="flex-1 accent-primary" />
+          <input
+            id="oc-front"
+            type="range"
+            min="10"
+            max="95"
+            step="5"
+            bind:value={frontOverlap}
+            class="flex-1 accent-primary"
+          />
           <span class="text-xs text-muted-foreground min-w-[36px] text-right">{frontOverlap}%</span>
         </div>
         <div class="flex items-center gap-2">
           <label for="oc-side" class="text-xs text-muted-foreground w-24 shrink-0">{t('overlap.sideOverlap')}</label>
-          <input id="oc-side" type="range" min="10" max="95" step="5" bind:value={sideOverlap} class="flex-1 accent-primary" />
+          <input
+            id="oc-side"
+            type="range"
+            min="10"
+            max="95"
+            step="5"
+            bind:value={sideOverlap}
+            class="flex-1 accent-primary"
+          />
           <span class="text-xs text-muted-foreground min-w-[36px] text-right">{sideOverlap}%</span>
         </div>
       </div>
@@ -179,7 +238,7 @@
           </div>
           <div class="mt-2 pt-2 border-t border-primary/20 grid grid-cols-2 gap-2 text-[11px] text-muted-foreground">
             <span>Footprint: {footprintW.toFixed(1)} x {footprintH.toFixed(1)} m</span>
-            <span class="text-right">Coverage: {(footprintW * footprintH / 10000).toFixed(2)} ha</span>
+            <span class="text-right">Coverage: {((footprintW * footprintH) / 10000).toFixed(2)} ha</span>
           </div>
         </div>
       {:else}

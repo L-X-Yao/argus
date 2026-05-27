@@ -10,8 +10,8 @@ python run.py --sim                    # backend + simulator
 npm run dev                            # frontend dev server :5173
 
 npx svelte-check --tsconfig ./tsconfig.json   # 0 errors 0 warnings
-npx vitest run                                # frontend (619 tests)
-python -m pytest tests/test_unit_*.py tests/test_contract_*.py  # backend (1267 tests)
+npx vitest run                                # frontend tests
+python -m pytest tests/test_unit_*.py tests/test_contract_*.py  # backend tests
 ruff check backend/ scripts/ tests/           # Python lint
 ```
 

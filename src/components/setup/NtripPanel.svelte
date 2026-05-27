@@ -26,11 +26,14 @@
       const ev = app.events[i];
       if (ev.seq !== undefined && ev.seq <= _lastEventSeq) break;
       if (ev.event_type === 'ntrip_connected') {
-        connected = true; connecting = false;
+        connected = true;
+        connecting = false;
       } else if (ev.event_type === 'ntrip_disconnected') {
-        connected = false; connecting = false;
+        connected = false;
+        connecting = false;
       } else if (ev.event_type === 'ntrip_error') {
-        connected = false; connecting = false;
+        connected = false;
+        connecting = false;
         addToast(ev.text, 'error');
       }
     }
@@ -59,7 +62,11 @@
     }
     connecting = true;
     sendCommand('ntrip_start', undefined, {
-      host, port, mountpoint, username, password,
+      host,
+      port,
+      mountpoint,
+      username,
+      password,
     });
     addToast(t('ntrip.started'), 'info');
     // connected flips true only when backend emits 'ntrip_connected' event;
@@ -85,8 +92,18 @@
   });
 </script>
 
-<div role="dialog" aria-modal="true" tabindex="-1" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
-     onclick={(e) => { if (e.target === e.currentTarget) onclose(); }} onkeydown={(e) => { if (e.key === "Escape") onclose(); }}>
+<div
+  role="dialog"
+  aria-modal="true"
+  tabindex="-1"
+  class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+  onclick={(e) => {
+    if (e.target === e.currentTarget) onclose();
+  }}
+  onkeydown={(e) => {
+    if (e.key === 'Escape') onclose();
+  }}
+>
   <div class="bg-card border border-border rounded-xl shadow-2xl w-[380px] flex flex-col overflow-hidden">
     <div class="flex items-center justify-between px-4 py-3 border-b border-border">
       <div class="flex items-center gap-2">
@@ -106,23 +123,48 @@
       <!-- Connection form -->
       <div class="space-y-2">
         <div class="flex gap-2">
-          <input bind:value={host} placeholder={t('ntrip.host')} onchange={saveConfig}
-                 class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground" />
-          <input bind:value={port} type="number" placeholder={t('ntrip.port')} onchange={saveConfig}
-                 class="w-16 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground text-right" />
+          <input
+            bind:value={host}
+            placeholder={t('ntrip.host')}
+            onchange={saveConfig}
+            class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground"
+          />
+          <input
+            bind:value={port}
+            type="number"
+            placeholder={t('ntrip.port')}
+            onchange={saveConfig}
+            class="w-16 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground text-right"
+          />
         </div>
-        <input bind:value={mountpoint} placeholder={t('ntrip.mount')} onchange={saveConfig}
-               class="w-full h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground" />
+        <input
+          bind:value={mountpoint}
+          placeholder={t('ntrip.mount')}
+          onchange={saveConfig}
+          class="w-full h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground"
+        />
         <div class="flex gap-2">
-          <input bind:value={username} placeholder={t('ntrip.username')} onchange={saveConfig}
-                 class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground" />
-          <input bind:value={password} type="password" placeholder={t('ntrip.password')}
-                 class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground" />
+          <input
+            bind:value={username}
+            placeholder={t('ntrip.username')}
+            onchange={saveConfig}
+            class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground"
+          />
+          <input
+            bind:value={password}
+            type="password"
+            placeholder={t('ntrip.password')}
+            class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground"
+          />
         </div>
       </div>
 
-      <Button variant={connected ? 'destructive' : 'default'} class="w-full gap-2"
-              disabled={connecting} onclick={toggleNtrip}>
+      <Button
+        variant={connected ? 'destructive' : 'default'}
+        class="w-full gap-2"
+        disabled={connecting}
+        onclick={toggleNtrip}
+      >
         <Radio size={14} />
         {connected ? t('ntrip.stop') : connecting ? t('ntrip.connecting') : t('ntrip.start')}
       </Button>

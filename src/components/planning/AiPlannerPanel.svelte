@@ -44,7 +44,10 @@
         addToast(`AI: +${result.waypoints.length} waypoints`, 'success');
       }
     } else {
-      history.push({ role: 'ai', text: 'I can help with: circle routes, survey grids, adding waypoints by direction/distance, reversing routes. Try one of the examples below.' });
+      history.push({
+        role: 'ai',
+        text: 'I can help with: circle routes, survey grids, adding waypoints by direction/distance, reversing routes. Try one of the examples below.',
+      });
     }
     loading = false;
   }
@@ -72,9 +75,18 @@
       const wps = [];
       for (let i = 0; i < count; i++) {
         const angle = (i / count) * 2 * Math.PI;
-        const dlat = radius * Math.cos(angle) / 111320;
-        const dlon = radius * Math.sin(angle) / (111320 * Math.cos(center.lat * Math.PI / 180));
-        wps.push({ lat: center.lat + dlat, lon: center.lon + dlon, alt, drop: false, delay: 0, speed: 0, type: 'wp' as const, loiter_param: 0 });
+        const dlat = (radius * Math.cos(angle)) / 111320;
+        const dlon = (radius * Math.sin(angle)) / (111320 * Math.cos((center.lat * Math.PI) / 180));
+        wps.push({
+          lat: center.lat + dlat,
+          lon: center.lon + dlon,
+          alt,
+          drop: false,
+          delay: 0,
+          speed: 0,
+          type: 'wp' as const,
+          loiter_param: 0,
+        });
       }
       return { message: `Generated ${count}-point circle, radius ${radius}m, altitude ${alt}m`, waypoints: wps };
     }
@@ -95,8 +107,17 @@
         const y2 = i % 2 === 0 ? h / 2 : -h / 2;
         for (const y of [y1, y2]) {
           const dlat = y / 111320;
-          const dlon = x / (111320 * Math.cos(center.lat * Math.PI / 180));
-          wps.push({ lat: center.lat + dlat, lon: center.lon + dlon, alt, drop: false, delay: 0, speed: 0, type: 'wp' as const, loiter_param: 0 });
+          const dlon = x / (111320 * Math.cos((center.lat * Math.PI) / 180));
+          wps.push({
+            lat: center.lat + dlat,
+            lon: center.lon + dlon,
+            alt,
+            drop: false,
+            delay: 0,
+            speed: 0,
+            type: 'wp' as const,
+            loiter_param: 0,
+          });
         }
       }
       return { message: `Generated ${w}×${h}m survey grid, ${wps.length} waypoints at ${alt}m`, waypoints: wps };
@@ -118,12 +139,22 @@
       const altMatch = lower.match(/(\d+)\s*m?\s*(alt|高度)/i);
       const alt = altMatch ? parseInt(altMatch[1]) : ctx.defaultAlt;
       const base = ctx.currentPosition.lat !== 0 ? ctx.currentPosition : ctx.homePosition;
-      let dlat = 0, dlon = 0;
+      let dlat = 0,
+        dlon = 0;
       if (dir === 'north' || dir === '北') dlat = dist / 111320;
       if (dir === 'south' || dir === '南') dlat = -dist / 111320;
-      if (dir === 'east' || dir === '东') dlon = dist / (111320 * Math.cos(base.lat * Math.PI / 180));
-      if (dir === 'west' || dir === '西') dlon = -dist / (111320 * Math.cos(base.lat * Math.PI / 180));
-      const wp = { lat: base.lat + dlat, lon: base.lon + dlon, alt, drop: false, delay: 0, speed: 0, type: 'wp' as const, loiter_param: 0 };
+      if (dir === 'east' || dir === '东') dlon = dist / (111320 * Math.cos((base.lat * Math.PI) / 180));
+      if (dir === 'west' || dir === '西') dlon = -dist / (111320 * Math.cos((base.lat * Math.PI) / 180));
+      const wp = {
+        lat: base.lat + dlat,
+        lon: base.lon + dlon,
+        alt,
+        drop: false,
+        delay: 0,
+        speed: 0,
+        type: 'wp' as const,
+        loiter_param: 0,
+      };
       return { message: `Added waypoint ${dist}m ${dir} at ${alt}m`, waypoints: [wp] };
     }
 
@@ -131,8 +162,22 @@
   }
 </script>
 
-<div role="dialog" aria-modal="true" tabindex="-1" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center" onclick={onclose} onkeydown={(e) => { if (e.key === "Escape") onclose(); }}>
-  <div class="bg-card border border-border rounded-2xl overflow-hidden w-[550px] max-h-[80vh] shadow-2xl flex flex-col" role="presentation" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
+<div
+  role="dialog"
+  aria-modal="true"
+  tabindex="-1"
+  class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center"
+  onclick={onclose}
+  onkeydown={(e) => {
+    if (e.key === 'Escape') onclose();
+  }}
+>
+  <div
+    class="bg-card border border-border rounded-2xl overflow-hidden w-[550px] max-h-[80vh] shadow-2xl flex flex-col"
+    role="presentation"
+    onclick={(e) => e.stopPropagation()}
+    onkeydown={(e) => e.stopPropagation()}
+  >
     <div class="bg-gradient-to-r from-purple-500/20 to-primary/5 px-5 py-3 flex items-center justify-between shrink-0">
       <div class="flex items-center gap-2">
         <Sparkles size={16} class="text-purple-400" />
@@ -146,30 +191,43 @@
         <p class="text-xs text-muted-foreground mb-2">{t('panel.aiPlanner.desc')}</p>
         <div class="space-y-1.5">
           {#each EXAMPLES as ex}
-            <button class="block w-full text-left px-3 py-2 text-xs text-muted-foreground bg-muted/50 rounded-lg hover:bg-muted transition-colors cursor-pointer border-none"
-                    onclick={() => { prompt = ex; }}>"{ex}"</button>
+            <button
+              class="block w-full text-left px-3 py-2 text-xs text-muted-foreground bg-muted/50 rounded-lg hover:bg-muted transition-colors cursor-pointer border-none"
+              onclick={() => {
+                prompt = ex;
+              }}>"{ex}"</button
+            >
           {/each}
         </div>
       {/if}
       {#each history as msg}
         <div class="flex {msg.role === 'user' ? 'justify-end' : 'justify-start'}">
-          <div class="max-w-[80%] px-3 py-2 rounded-xl text-xs
-            {msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'}">
+          <div
+            class="max-w-[80%] px-3 py-2 rounded-xl text-xs
+            {msg.role === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted text-foreground'}"
+          >
             {msg.text}
           </div>
         </div>
       {/each}
       {#if loading}
         <div class="flex justify-start">
-          <div class="px-3 py-2 bg-muted rounded-xl"><Loader2 size={14} class="animate-spin text-muted-foreground" /></div>
+          <div class="px-3 py-2 bg-muted rounded-xl">
+            <Loader2 size={14} class="animate-spin text-muted-foreground" />
+          </div>
         </div>
       {/if}
     </div>
 
     <div class="px-5 py-3 border-t border-border flex gap-2">
-      <input bind:value={prompt} placeholder={t('panel.aiPlanner.placeholder')}
-             class="flex-1 h-8 px-3 text-xs bg-input border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/50"
-             onkeydown={(e) => { if (e.key === 'Enter') send(); }} />
+      <input
+        bind:value={prompt}
+        placeholder={t('panel.aiPlanner.placeholder')}
+        class="flex-1 h-8 px-3 text-xs bg-input border border-border rounded-lg text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring/50"
+        onkeydown={(e) => {
+          if (e.key === 'Enter') send();
+        }}
+      />
       <Button variant="default" size="sm" onclick={send} disabled={loading}>
         <Send size={13} />
       </Button>

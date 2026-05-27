@@ -54,7 +54,7 @@
     const N = data.length;
     const result = new Array(N);
     for (let i = 0; i < N; i++) {
-      result[i] = data[i] * 0.5 * (1 - Math.cos(2 * Math.PI * i / N));
+      result[i] = data[i] * 0.5 * (1 - Math.cos((2 * Math.PI * i) / N));
     }
     return result;
   }
@@ -107,11 +107,12 @@
     peaks.sort((a, b) => b.val - a.val);
     const topPeaks = peaks.slice(0, count);
 
-    return topPeaks.map(p => {
+    return topPeaks.map((p) => {
       const peakFreq = freq[p.idx];
       // Estimate bandwidth at -3dB (half power)
       const threshold = p.val * 0.707;
-      let lo = p.idx, hi = p.idx;
+      let lo = p.idx,
+        hi = p.idx;
       while (lo > 0 && mag[lo] > threshold) lo--;
       while (hi < mag.length - 1 && mag[hi] > threshold) hi++;
       const bw = freq[hi] - freq[lo];
@@ -158,7 +159,7 @@
 
     // Draw
     const ctx = canvasEl.getContext('2d')!;
-    const w = canvasEl.width = canvasEl.parentElement!.clientWidth;
+    const w = (canvasEl.width = canvasEl.parentElement!.clientWidth);
     const h = canvasEl.height;
     ctx.clearRect(0, 0, w, h);
     ctx.fillStyle = '#0d1117';
@@ -172,7 +173,10 @@
     ctx.lineWidth = 0.5;
     for (let f = 50; f <= maxFreqDisplay; f += 50) {
       const x = (f / maxFreqDisplay) * w;
-      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, h);
+      ctx.stroke();
       ctx.fillStyle = '#555';
       ctx.font = '9px monospace';
       ctx.fillText(`${f}`, x + 2, h - 2);
@@ -188,7 +192,10 @@
       } else {
         y = h - (i / 4) * (h - 20) - 10;
       }
-      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(w, y); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(w, y);
+      ctx.stroke();
     }
 
     // Y-axis labels
@@ -222,7 +229,10 @@
         ctx.strokeStyle = harmonicColors[n - 1];
         ctx.lineWidth = 1;
         ctx.setLineDash([6, 3]);
-        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, h); ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(x, 0);
+        ctx.lineTo(x, h);
+        ctx.stroke();
         ctx.setLineDash([]);
         ctx.fillStyle = harmonicColors[n - 1];
         ctx.font = 'bold 9px monospace';
@@ -246,7 +256,8 @@
       } else {
         y = h - (mag[i] / maxMag) * (h - 20) - 10;
       }
-      if (i === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
     }
     ctx.stroke();
 
@@ -255,7 +266,10 @@
     ctx.strokeStyle = '#f44336';
     ctx.lineWidth = 1;
     ctx.setLineDash([4, 4]);
-    ctx.beginPath(); ctx.moveTo(peakX, 0); ctx.lineTo(peakX, h); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(peakX, 0);
+    ctx.lineTo(peakX, h);
+    ctx.stroke();
     ctx.setLineDash([]);
     ctx.fillStyle = '#f44336';
     ctx.font = 'bold 11px monospace';
@@ -269,7 +283,10 @@
       ctx.strokeStyle = '#ffb74d';
       ctx.lineWidth = 0.8;
       ctx.setLineDash([3, 3]);
-      ctx.beginPath(); ctx.moveTo(nx, 0); ctx.lineTo(nx, h); ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(nx, 0);
+      ctx.lineTo(nx, h);
+      ctx.stroke();
       ctx.setLineDash([]);
       ctx.fillStyle = '#ffb74d';
       ctx.font = '9px monospace';
@@ -278,8 +295,22 @@
   });
 </script>
 
-<div role="dialog" aria-modal="true" tabindex="-1" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center" onclick={onclose} onkeydown={(e) => { if (e.key === "Escape") onclose(); }}>
-  <div class="bg-card border border-border rounded-2xl overflow-hidden w-[750px] max-h-[85vh] shadow-2xl flex flex-col" role="presentation" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
+<div
+  role="dialog"
+  aria-modal="true"
+  tabindex="-1"
+  class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center"
+  onclick={onclose}
+  onkeydown={(e) => {
+    if (e.key === 'Escape') onclose();
+  }}
+>
+  <div
+    class="bg-card border border-border rounded-2xl overflow-hidden w-[750px] max-h-[85vh] shadow-2xl flex flex-col"
+    role="presentation"
+    onclick={(e) => e.stopPropagation()}
+    onkeydown={(e) => e.stopPropagation()}
+  >
     <div class="bg-gradient-to-r from-primary/20 to-primary/5 px-5 py-3 flex items-center justify-between shrink-0">
       <div class="flex items-center gap-2">
         <BarChart3 size={16} class="text-primary" />
@@ -299,26 +330,46 @@
         <div class="flex items-center gap-2 mb-3">
           <span class="text-xs font-semibold text-muted-foreground">{t('fft.source')}:</span>
           {#each SOURCES as src}
-            <button class="px-2 py-0.5 text-[10px] rounded border cursor-pointer transition-all
-              {source === src.key ? 'bg-primary text-primary-foreground border-primary' : 'text-muted-foreground border-border hover:text-foreground'}"
-              onclick={() => source = src.key}>{t(src.label)}</button>
+            <button
+              class="px-2 py-0.5 text-[10px] rounded border cursor-pointer transition-all
+              {source === src.key
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'text-muted-foreground border-border hover:text-foreground'}"
+              onclick={() => (source = src.key)}>{t(src.label)}</button
+            >
           {/each}
         </div>
 
         <!-- Controls row: toggles + RPM input -->
         <div class="flex items-center gap-3 mb-3 flex-wrap">
-          <button class="px-2 py-0.5 text-[10px] rounded border cursor-pointer transition-all
-            {useHanning ? 'bg-primary text-primary-foreground border-primary' : 'text-muted-foreground border-border hover:text-foreground'}"
-            onclick={() => useHanning = !useHanning}>{t('fft.hanning')}</button>
-          <button class="px-2 py-0.5 text-[10px] rounded border cursor-pointer transition-all
-            {useWelch ? 'bg-primary text-primary-foreground border-primary' : 'text-muted-foreground border-border hover:text-foreground'}"
-            onclick={() => useWelch = !useWelch}>{t('fft.welch')}</button>
-          <button class="px-2 py-0.5 text-[10px] rounded border cursor-pointer transition-all
-            {logScale ? 'bg-primary text-primary-foreground border-primary' : 'text-muted-foreground border-border hover:text-foreground'}"
-            onclick={() => logScale = !logScale}>{t('fft.logScale')}</button>
+          <button
+            class="px-2 py-0.5 text-[10px] rounded border cursor-pointer transition-all
+            {useHanning
+              ? 'bg-primary text-primary-foreground border-primary'
+              : 'text-muted-foreground border-border hover:text-foreground'}"
+            onclick={() => (useHanning = !useHanning)}>{t('fft.hanning')}</button
+          >
+          <button
+            class="px-2 py-0.5 text-[10px] rounded border cursor-pointer transition-all
+            {useWelch
+              ? 'bg-primary text-primary-foreground border-primary'
+              : 'text-muted-foreground border-border hover:text-foreground'}"
+            onclick={() => (useWelch = !useWelch)}>{t('fft.welch')}</button
+          >
+          <button
+            class="px-2 py-0.5 text-[10px] rounded border cursor-pointer transition-all
+            {logScale
+              ? 'bg-primary text-primary-foreground border-primary'
+              : 'text-muted-foreground border-border hover:text-foreground'}"
+            onclick={() => (logScale = !logScale)}>{t('fft.logScale')}</button
+          >
           <span class="text-[10px] text-muted-foreground ml-2">{t('fft.rpmBase')}:</span>
-          <input type="text" class="w-16 px-1.5 py-0.5 text-[10px] bg-background border border-border rounded font-mono text-foreground"
-            placeholder={t('fft.rpmPlaceholder')} bind:value={rpmInput} />
+          <input
+            type="text"
+            class="w-16 px-1.5 py-0.5 text-[10px] bg-background border border-border rounded font-mono text-foreground"
+            placeholder={t('fft.rpmPlaceholder')}
+            bind:value={rpmInput}
+          />
         </div>
 
         <div class="border border-border rounded-lg overflow-hidden">
@@ -332,7 +383,9 @@
             <div class="space-y-1.5">
               {#each notchPeaks as peak, i}
                 <div class="flex items-center gap-3 text-[10px]">
-                  <span class="text-muted-foreground font-semibold w-14">{t('fft.peakN').replace('{n}', String(i + 1))}</span>
+                  <span class="text-muted-foreground font-semibold w-14"
+                    >{t('fft.peakN').replace('{n}', String(i + 1))}</span
+                  >
                   <span class="font-mono text-foreground">{peak.freq.toFixed(1)} Hz</span>
                   <span class="text-muted-foreground">{t('fft.notchBw')}:</span>
                   <span class="font-mono text-foreground">{peak.bw.toFixed(1)} Hz</span>
@@ -344,13 +397,21 @@
                 <p class="text-[10px] font-semibold text-muted-foreground mb-1">{t('fft.notchParam')}:</p>
                 <div class="grid grid-cols-2 gap-x-4 gap-y-0.5 text-[10px] font-mono">
                   <span class="text-muted-foreground">INS_HNTCH_ENABLE</span><span class="text-foreground">1</span>
-                  <span class="text-muted-foreground">INS_HNTCH_FREQ</span><span class="text-foreground">{notchPeaks[0].freq.toFixed(0)}</span>
-                  <span class="text-muted-foreground">INS_HNTCH_BW</span><span class="text-foreground">{notchPeaks[0].bw.toFixed(0)}</span>
+                  <span class="text-muted-foreground">INS_HNTCH_FREQ</span><span class="text-foreground"
+                    >{notchPeaks[0].freq.toFixed(0)}</span
+                  >
+                  <span class="text-muted-foreground">INS_HNTCH_BW</span><span class="text-foreground"
+                    >{notchPeaks[0].bw.toFixed(0)}</span
+                  >
                   <span class="text-muted-foreground">INS_HNTCH_MODE</span><span class="text-foreground">0</span>
                   {#if notchPeaks.length > 1}
                     <span class="text-muted-foreground">INS_HNTC2_ENABLE</span><span class="text-foreground">1</span>
-                    <span class="text-muted-foreground">INS_HNTC2_FREQ</span><span class="text-foreground">{notchPeaks[1].freq.toFixed(0)}</span>
-                    <span class="text-muted-foreground">INS_HNTC2_BW</span><span class="text-foreground">{notchPeaks[1].bw.toFixed(0)}</span>
+                    <span class="text-muted-foreground">INS_HNTC2_FREQ</span><span class="text-foreground"
+                      >{notchPeaks[1].freq.toFixed(0)}</span
+                    >
+                    <span class="text-muted-foreground">INS_HNTC2_BW</span><span class="text-foreground"
+                      >{notchPeaks[1].bw.toFixed(0)}</span
+                    >
                   {/if}
                 </div>
               </div>

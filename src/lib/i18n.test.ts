@@ -19,12 +19,12 @@ const enKeys = extractKeys('locales/en.ts');
 
 describe('i18n key parity', () => {
   it('every ZH key has an EN key', () => {
-    const missing = [...zhKeys].filter(k => !enKeys.has(k));
+    const missing = [...zhKeys].filter((k) => !enKeys.has(k));
     expect(missing, `ZH keys missing from EN: ${missing.join(', ')}`).toEqual([]);
   });
 
   it('every EN key has a ZH key', () => {
-    const extra = [...enKeys].filter(k => !zhKeys.has(k));
+    const extra = [...enKeys].filter((k) => !zhKeys.has(k));
     expect(extra, `EN keys missing from ZH: ${extra.join(', ')}`).toEqual([]);
   });
 
@@ -38,7 +38,7 @@ describe('i18n key parity', () => {
 // These test the runtime behavior of i18n functions.
 
 // Mock the lazy locale loaders before importing the module
-vi.mock('./locales/ja', () => ({ default: { 'app.name': 'Argus-JA', 'item': 'アイテム {n}' } }));
+vi.mock('./locales/ja', () => ({ default: { 'app.name': 'Argus-JA', item: 'アイテム {n}' } }));
 vi.mock('./locales/ko', () => ({ default: { 'app.name': 'Argus-KO' } }));
 vi.mock('./locales/de', () => ({ default: { 'app.name': 'Argus-DE' } }));
 
@@ -46,9 +46,15 @@ vi.mock('./locales/de', () => ({ default: { 'app.name': 'Argus-DE' } }));
 const localStorageMock = {
   _store: {} as Record<string, string>,
   getItem: vi.fn((key: string) => localStorageMock._store[key] ?? null),
-  setItem: vi.fn((key: string, val: string) => { localStorageMock._store[key] = val; }),
-  removeItem: vi.fn((key: string) => { delete localStorageMock._store[key]; }),
-  clear: vi.fn(() => { localStorageMock._store = {}; }),
+  setItem: vi.fn((key: string, val: string) => {
+    localStorageMock._store[key] = val;
+  }),
+  removeItem: vi.fn((key: string) => {
+    delete localStorageMock._store[key];
+  }),
+  clear: vi.fn(() => {
+    localStorageMock._store = {};
+  }),
 };
 vi.stubGlobal('localStorage', localStorageMock);
 

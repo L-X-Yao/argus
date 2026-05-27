@@ -63,20 +63,20 @@ function makeMavFrame(msgId: number, payload: Uint8Array, sysId = 1, compId = 1,
 
 describe('CRC-16/MCRF4XX', () => {
   it('returns 0xFFFF for empty input', () => {
-    expect(crc16(new Uint8Array([]))).toBe(0xFFFF);
+    expect(crc16(new Uint8Array([]))).toBe(0xffff);
   });
 
   it('computes correct value for single byte 0x00', () => {
     const result = crc16(new Uint8Array([0x00]));
     // Verified empirically against the implementation
-    expect(result).toBe(0x0F87);
+    expect(result).toBe(0x0f87);
   });
 
   it('produces a 16-bit value for multi-byte input', () => {
     const data = new Uint8Array([0x01, 0x02, 0x03]);
     const result = crc16(data);
     expect(result).toBeGreaterThan(0);
-    expect(result).toBeLessThanOrEqual(0xFFFF);
+    expect(result).toBeLessThanOrEqual(0xffff);
   });
 
   it('different inputs produce different CRCs', () => {
@@ -86,15 +86,15 @@ describe('CRC-16/MCRF4XX', () => {
   });
 
   it('supports custom initial value', () => {
-    const a = crc16(new Uint8Array([0x42]), 0xFFFF);
+    const a = crc16(new Uint8Array([0x42]), 0xffff);
     const b = crc16(new Uint8Array([0x42]), 0x0000);
     expect(a).not.toBe(b);
   });
 
   it('crcAccumulate matches byte-at-a-time computation', () => {
-    const data = new Uint8Array([0xAA, 0xBB, 0xCC, 0xDD]);
+    const data = new Uint8Array([0xaa, 0xbb, 0xcc, 0xdd]);
     const wholeCrc = crc16(data);
-    let runningCrc = 0xFFFF;
+    let runningCrc = 0xffff;
     for (const b of data) {
       runningCrc = crcAccumulate(b, runningCrc);
     }
@@ -130,16 +130,16 @@ describe('encodeFrame', () => {
     const payload = new Uint8Array([0, 0, 0, 0, 6, 8, 0, 0, 3]);
     const frame = encodeFrame(0, payload, 255, 190, 42);
 
-    expect(frame[0]).toBe(0xFD);   // STX
-    expect(frame[1]).toBe(9);      // payload length
-    expect(frame[2]).toBe(0);      // incompat_flags
-    expect(frame[3]).toBe(0);      // compat_flags
-    expect(frame[4]).toBe(42);     // seq
-    expect(frame[5]).toBe(255);    // sysid
-    expect(frame[6]).toBe(190);    // compid
-    expect(frame[7]).toBe(0);      // msgid byte 0
-    expect(frame[8]).toBe(0);      // msgid byte 1
-    expect(frame[9]).toBe(0);      // msgid byte 2
+    expect(frame[0]).toBe(0xfd); // STX
+    expect(frame[1]).toBe(9); // payload length
+    expect(frame[2]).toBe(0); // incompat_flags
+    expect(frame[3]).toBe(0); // compat_flags
+    expect(frame[4]).toBe(42); // seq
+    expect(frame[5]).toBe(255); // sysid
+    expect(frame[6]).toBe(190); // compid
+    expect(frame[7]).toBe(0); // msgid byte 0
+    expect(frame[8]).toBe(0); // msgid byte 1
+    expect(frame[9]).toBe(0); // msgid byte 2
   });
 
   it('total frame length = 10 + payload + 2', () => {
@@ -166,12 +166,12 @@ describe('encodeFrame', () => {
   });
 
   it('payload bytes appear at offset 10', () => {
-    const payload = new Uint8Array([0xDE, 0xAD, 0xBE, 0xEF]);
+    const payload = new Uint8Array([0xde, 0xad, 0xbe, 0xef]);
     const frame = encodeFrame(0, payload, 1, 1, 0);
-    expect(frame[10]).toBe(0xDE);
-    expect(frame[11]).toBe(0xAD);
-    expect(frame[12]).toBe(0xBE);
-    expect(frame[13]).toBe(0xEF);
+    expect(frame[10]).toBe(0xde);
+    expect(frame[11]).toBe(0xad);
+    expect(frame[12]).toBe(0xbe);
+    expect(frame[13]).toBe(0xef);
   });
 
   it('appends valid CRC that parseFrames accepts', () => {
@@ -213,7 +213,7 @@ describe('parseFrames', () => {
   });
 
   it('roundtrip preserves payload bytes', () => {
-    const payload = new Uint8Array([0xAA, 0xBB, 0xCC]);
+    const payload = new Uint8Array([0xaa, 0xbb, 0xcc]);
     const encoded = encodeFrame(253, payload, 1, 1, 0);
     const { frames } = parseFrames(encoded);
     expect(frames.length).toBe(1);
@@ -224,7 +224,7 @@ describe('parseFrames', () => {
   it('rejects frame with corrupted CRC (last byte flipped)', () => {
     const payload = new Uint8Array([0, 0, 0, 0, 6, 8, 0, 0, 3]);
     const encoded = encodeFrame(0, payload, 255, 190, 0);
-    encoded[encoded.length - 1] ^= 0xFF;
+    encoded[encoded.length - 1] ^= 0xff;
     const { frames } = parseFrames(encoded);
     expect(frames.length).toBe(0);
   });
@@ -285,7 +285,7 @@ describe('parseFrames', () => {
     const valid1 = encodeFrame(0, new Uint8Array([0, 0, 0, 0, 6, 8, 0, 0, 3]), 1, 1, 10);
     const valid2 = encodeFrame(0, new Uint8Array([0, 0, 0, 0, 6, 8, 0, 0, 3]), 1, 1, 99);
     // Corrupt CRC of first frame
-    valid1[valid1.length - 1] ^= 0xFF;
+    valid1[valid1.length - 1] ^= 0xff;
     const buf = new Uint8Array(valid1.length + valid2.length);
     buf.set(valid1);
     buf.set(valid2, valid1.length);
@@ -313,7 +313,7 @@ describe('parseFrames', () => {
 
   it('extracts valid frame even with trailing incomplete frame', () => {
     const full = encodeFrame(0, new Uint8Array([0, 0, 0, 0, 6, 8, 0, 0, 3]), 1, 1, 10);
-    const trailer = new Uint8Array([0xFD, 0x05, 0x00]); // incomplete second frame
+    const trailer = new Uint8Array([0xfd, 0x05, 0x00]); // incomplete second frame
     const combined = new Uint8Array(full.length + trailer.length);
     combined.set(full);
     combined.set(trailer, full.length);
@@ -333,11 +333,11 @@ describe('message decoders', () => {
     const buf = new Uint8Array(9);
     const dv = new DataView(buf.buffer);
     dv.setUint32(0, 12345, true); // customMode
-    dv.setUint8(4, 2);           // type (quadrotor)
-    dv.setUint8(5, 3);           // autopilot (ArduPilot)
-    dv.setUint8(6, 0x81);        // baseMode
-    dv.setUint8(7, 4);           // systemStatus
-    dv.setUint8(8, 3);           // mavlinkVersion
+    dv.setUint8(4, 2); // type (quadrotor)
+    dv.setUint8(5, 3); // autopilot (ArduPilot)
+    dv.setUint8(6, 0x81); // baseMode
+    dv.setUint8(7, 4); // systemStatus
+    dv.setUint8(8, 3); // mavlinkVersion
     const hb = decodeHeartbeat(new DataView(buf.buffer));
     expect(hb.customMode).toBe(12345);
     expect(hb.type).toBe(2);
@@ -350,10 +350,10 @@ describe('message decoders', () => {
   it('decodeAttitude converts radians to degrees', () => {
     const buf = new Uint8Array(16);
     const dv = new DataView(buf.buffer);
-    dv.setUint32(0, 0, true);                             // time_boot_ms
-    dv.setFloat32(4, Math.PI / 4, true);                   // roll
-    dv.setFloat32(8, -Math.PI / 6, true);                  // pitch
-    dv.setFloat32(12, Math.PI, true);                      // yaw
+    dv.setUint32(0, 0, true); // time_boot_ms
+    dv.setFloat32(4, Math.PI / 4, true); // roll
+    dv.setFloat32(8, -Math.PI / 6, true); // pitch
+    dv.setFloat32(12, Math.PI, true); // yaw
     const att = decodeAttitude(dv);
     expect(att.roll).toBeCloseTo(45, 3);
     expect(att.pitch).toBeCloseTo(-30, 3);
@@ -363,15 +363,15 @@ describe('message decoders', () => {
   it('decodeGlobalPositionInt scales lat/lon/alt correctly', () => {
     const buf = new Uint8Array(28);
     const dv = new DataView(buf.buffer);
-    dv.setUint32(0, 0, true);               // time_boot_ms
-    dv.setInt32(4, 473977420, true);         // lat (47.3977420)
-    dv.setInt32(8, 85327780, true);          // lon (8.5327780)
-    dv.setInt32(12, 408000, true);           // alt MSL (408.0 m)
-    dv.setInt32(16, 50000, true);            // alt relative (50.0 m)
-    dv.setInt16(20, 150, true);              // vx (1.50 m/s)
-    dv.setInt16(22, -200, true);             // vy (-2.00 m/s)
-    dv.setInt16(24, 10, true);               // vz (0.10 m/s)
-    dv.setUint16(26, 18000, true);           // hdg (180.00 deg)
+    dv.setUint32(0, 0, true); // time_boot_ms
+    dv.setInt32(4, 473977420, true); // lat (47.3977420)
+    dv.setInt32(8, 85327780, true); // lon (8.5327780)
+    dv.setInt32(12, 408000, true); // alt MSL (408.0 m)
+    dv.setInt32(16, 50000, true); // alt relative (50.0 m)
+    dv.setInt16(20, 150, true); // vx (1.50 m/s)
+    dv.setInt16(22, -200, true); // vy (-2.00 m/s)
+    dv.setInt16(24, 10, true); // vz (0.10 m/s)
+    dv.setUint16(26, 18000, true); // hdg (180.00 deg)
     const gpi = decodeGlobalPositionInt(dv);
     expect(gpi.lat).toBeCloseTo(47.397742, 5);
     expect(gpi.lon).toBeCloseTo(8.532778, 5);
@@ -411,8 +411,8 @@ describe('message decoders', () => {
   it('decodeCommandAck reads command and result', () => {
     const buf = new Uint8Array(3);
     const dv = new DataView(buf.buffer);
-    dv.setUint16(0, 400, true);  // MAV_CMD_COMPONENT_ARM_DISARM
-    dv.setUint8(2, 0);           // MAV_RESULT_ACCEPTED
+    dv.setUint16(0, 400, true); // MAV_CMD_COMPONENT_ARM_DISARM
+    dv.setUint8(2, 0); // MAV_RESULT_ACCEPTED
     const ack = decodeCommandAck(dv);
     expect(ack.command).toBe(400);
     expect(ack.result).toBe(0);
@@ -458,8 +458,8 @@ describe('message decoders', () => {
     const buf = new Uint8Array(31);
     const dv = new DataView(buf.buffer);
     dv.setUint16(14, 12600, true); // voltage = 12.6V
-    dv.setInt16(16, 1500, true);   // current = 15.00A
-    dv.setInt8(30, 85);            // remaining = 85%
+    dv.setInt16(16, 1500, true); // current = 15.00A
+    dv.setInt8(30, 85); // remaining = 85%
     const ss = decodeSysStatus(dv);
     expect(ss.voltage).toBeCloseTo(12.6, 2);
     expect(ss.current).toBeCloseTo(15.0, 2);
@@ -515,12 +515,12 @@ describe('message decoders', () => {
   it('decodeVibration reads xyz and clip counts', () => {
     const buf = new Uint8Array(32);
     const dv = new DataView(buf.buffer);
-    dv.setFloat32(8, 0.5, true);   // x
-    dv.setFloat32(12, 1.2, true);  // y
-    dv.setFloat32(16, 0.3, true);  // z
-    dv.setUint32(20, 10, true);    // clip0
-    dv.setUint32(24, 20, true);    // clip1
-    dv.setUint32(28, 30, true);    // clip2
+    dv.setFloat32(8, 0.5, true); // x
+    dv.setFloat32(12, 1.2, true); // y
+    dv.setFloat32(16, 0.3, true); // z
+    dv.setUint32(20, 10, true); // clip0
+    dv.setUint32(24, 20, true); // clip1
+    dv.setUint32(28, 30, true); // clip2
     const v = decodeVibration(dv);
     expect(v.x).toBeCloseTo(0.5, 2);
     expect(v.y).toBeCloseTo(1.2, 2);
@@ -540,9 +540,9 @@ describe('message encoders', () => {
     const hb = encodeHeartbeat();
     expect(hb.length).toBe(9);
     const dv = new DataView(hb.buffer);
-    expect(dv.getUint8(4)).toBe(6);  // MAV_TYPE_GCS
-    expect(dv.getUint8(5)).toBe(8);  // MAV_AUTOPILOT_INVALID
-    expect(dv.getUint8(8)).toBe(3);  // mavlink_version
+    expect(dv.getUint8(4)).toBe(6); // MAV_TYPE_GCS
+    expect(dv.getUint8(5)).toBe(8); // MAV_AUTOPILOT_INVALID
+    expect(dv.getUint8(8)).toBe(3); // mavlink_version
   });
 
   it('encodeHeartbeat accepts custom sysType and autopilot', () => {
@@ -557,19 +557,19 @@ describe('message encoders', () => {
     expect(cmd.length).toBe(33);
     const dv = new DataView(cmd.buffer);
     expect(dv.getFloat32(0, true)).toBeCloseTo(1, 0); // p1
-    expect(dv.getUint16(28, true)).toBe(400);           // command
-    expect(dv.getUint8(30)).toBe(1);                    // targetSys
-    expect(dv.getUint8(31)).toBe(1);                    // targetComp
-    expect(dv.getUint8(32)).toBe(0);                    // confirmation
+    expect(dv.getUint16(28, true)).toBe(400); // command
+    expect(dv.getUint8(30)).toBe(1); // targetSys
+    expect(dv.getUint8(31)).toBe(1); // targetComp
+    expect(dv.getUint8(32)).toBe(0); // confirmation
   });
 
   it('encodeSetMode produces 6-byte payload', () => {
     const sm = encodeSetMode(1, 209, 5);
     expect(sm.length).toBe(6);
     const dv = new DataView(sm.buffer);
-    expect(dv.getUint32(0, true)).toBe(5);  // customMode
-    expect(dv.getUint8(4)).toBe(1);          // targetSys
-    expect(dv.getUint8(5)).toBe(209);        // baseMode
+    expect(dv.getUint32(0, true)).toBe(5); // customMode
+    expect(dv.getUint8(4)).toBe(1); // targetSys
+    expect(dv.getUint8(5)).toBe(209); // baseMode
   });
 
   it('encodeParamRequestList produces 2-byte payload', () => {
@@ -584,8 +584,8 @@ describe('message encoders', () => {
     expect(ps.length).toBe(23);
     const dv = new DataView(ps.buffer);
     expect(dv.getFloat32(0, true)).toBeCloseTo(130, 0);
-    expect(dv.getUint8(4)).toBe(1);  // targetSys
-    expect(dv.getUint8(5)).toBe(1);  // targetComp
+    expect(dv.getUint8(4)).toBe(1); // targetSys
+    expect(dv.getUint8(5)).toBe(1); // targetComp
     // param name starts at offset 6
     const nameBytes = ps.slice(6, 6 + 7);
     expect(new TextDecoder().decode(nameBytes)).toBe('THR_MIN');
@@ -597,10 +597,10 @@ describe('message encoders', () => {
     expect(rds.length).toBe(6);
     const dv = new DataView(rds.buffer);
     expect(dv.getUint16(0, true)).toBe(10); // rate
-    expect(dv.getUint8(2)).toBe(1);          // targetSys
-    expect(dv.getUint8(3)).toBe(1);          // targetComp
-    expect(dv.getUint8(4)).toBe(2);          // streamId
-    expect(dv.getUint8(5)).toBe(1);          // startStop
+    expect(dv.getUint8(2)).toBe(1); // targetSys
+    expect(dv.getUint8(3)).toBe(1); // targetComp
+    expect(dv.getUint8(4)).toBe(2); // streamId
+    expect(dv.getUint8(5)).toBe(1); // startStop
   });
 
   it('encodeMissionCount default mission type → 4 bytes (trim-friendly)', () => {
@@ -613,23 +613,33 @@ describe('message encoders', () => {
   });
 
   it('encodeMissionCount appends extension byte when non-zero', () => {
-    const mc = encodeMissionCount(1, 1, 3, 2);   // mission_type=2 (RALLY)
+    const mc = encodeMissionCount(1, 1, 3, 2); // mission_type=2 (RALLY)
     expect(mc.length).toBe(5);
     expect(mc[4]).toBe(2);
   });
 
   it('encodeMissionItemInt produces 38-byte payload with correct field layout', () => {
     const mi = encodeMissionItemInt(
-      1, 1,
-      5, 16, 3,           // seq, command (NAV_WAYPOINT), frame (REL_ALT)
-      0, 1, 0,            // current, autocontinue, missionType
-      0, 0, 0, 0,         // p1..p4
-      300000000, 1200000000, 50.5,  // x=30°*1e7, y=120°*1e7, alt=50.5m
+      1,
+      1,
+      5,
+      16,
+      3, // seq, command (NAV_WAYPOINT), frame (REL_ALT)
+      0,
+      1,
+      0, // current, autocontinue, missionType
+      0,
+      0,
+      0,
+      0, // p1..p4
+      300000000,
+      1200000000,
+      50.5, // x=30°*1e7, y=120°*1e7, alt=50.5m
     );
     expect(mi.length).toBe(38);
     const dv = new DataView(mi.buffer);
-    expect(dv.getInt32(16, true)).toBe(300000000);   // lat int32
-    expect(dv.getInt32(20, true)).toBe(1200000000);  // lon int32
+    expect(dv.getInt32(16, true)).toBe(300000000); // lat int32
+    expect(dv.getInt32(20, true)).toBe(1200000000); // lon int32
     expect(dv.getFloat32(24, true)).toBeCloseTo(50.5, 2);
     expect(dv.getUint16(28, true)).toBe(5);
     expect(dv.getUint16(30, true)).toBe(16);
@@ -639,10 +649,7 @@ describe('message encoders', () => {
   });
 
   it('encodeMissionItemInt round-trips via decodeMissionItemInt', () => {
-    const mi = encodeMissionItemInt(
-      1, 1, 7, 22, 3, 0, 1, 0,
-      0, 0, 0, 0, -120000000, 450000000, 30,
-    );
+    const mi = encodeMissionItemInt(1, 1, 7, 22, 3, 0, 1, 0, 0, 0, 0, 0, -120000000, 450000000, 30);
     const decoded = decodeMissionItemInt(new DataView(mi.buffer));
     expect(decoded.seq).toBe(7);
     expect(decoded.command).toBe(22);
@@ -670,7 +677,7 @@ describe('message encoders', () => {
     const buf = new Uint8Array(5);
     const dv = new DataView(buf.buffer);
     dv.setUint16(0, 42, true);
-    dv.setUint8(4, 2);  // mission_type=RALLY
+    dv.setUint8(4, 2); // mission_type=RALLY
     const req = decodeMissionRequest(dv);
     expect(req.seq).toBe(42);
     expect(req.missionType).toBe(2);
@@ -682,7 +689,7 @@ describe('message encoders', () => {
     expect(rl.length).toBe(6);
     const dv = new DataView(rl.buffer);
     expect(dv.getUint16(0, true)).toBe(0);
-    expect(dv.getUint16(2, true)).toBe(0xFFFF);
+    expect(dv.getUint16(2, true)).toBe(0xffff);
     expect(dv.getUint8(4)).toBe(1);
     expect(dv.getUint8(5)).toBe(1);
   });
@@ -699,9 +706,9 @@ describe('message encoders', () => {
     const rd = encodeLogRequestData(1, 1, 7, 8192, 4500);
     expect(rd.length).toBe(12);
     const dv = new DataView(rd.buffer);
-    expect(dv.getUint32(0, true)).toBe(8192);    // ofs
-    expect(dv.getUint32(4, true)).toBe(4500);    // count
-    expect(dv.getUint16(8, true)).toBe(7);       // id
+    expect(dv.getUint32(0, true)).toBe(8192); // ofs
+    expect(dv.getUint32(4, true)).toBe(4500); // count
+    expect(dv.getUint16(8, true)).toBe(7); // id
     expect(dv.getUint8(10)).toBe(1);
     expect(dv.getUint8(11)).toBe(1);
   });
@@ -718,11 +725,11 @@ describe('message encoders', () => {
     // decoder uses match the wire format.
     const buf = new Uint8Array(14);
     const dv = new DataView(buf.buffer);
-    dv.setUint32(0, 1700000000, true);  // time_utc
-    dv.setUint32(4, 524288, true);      // size (512KB)
-    dv.setUint16(8, 3, true);           // id
-    dv.setUint16(10, 5, true);          // num_logs
-    dv.setUint16(12, 5, true);          // last_log_num
+    dv.setUint32(0, 1700000000, true); // time_utc
+    dv.setUint32(4, 524288, true); // size (512KB)
+    dv.setUint16(8, 3, true); // id
+    dv.setUint16(10, 5, true); // num_logs
+    dv.setUint16(12, 5, true); // last_log_num
     const entry = decodeLogEntry(dv);
     expect(entry.timeUtc).toBe(1700000000);
     expect(entry.size).toBe(524288);
@@ -736,11 +743,11 @@ describe('message encoders', () => {
     expect(rl.length).toBe(3);
     expect(rl[0]).toBe(1);
     expect(rl[1]).toBe(1);
-    expect(rl[2]).toBe(0);   // default mission_type=MISSION
+    expect(rl[2]).toBe(0); // default mission_type=MISSION
   });
 
   it('encodeMissionRequestList honors non-zero mission type', () => {
-    const rl = encodeMissionRequestList(1, 1, 2);  // RALLY
+    const rl = encodeMissionRequestList(1, 1, 2); // RALLY
     expect(rl[2]).toBe(2);
   });
 
@@ -755,14 +762,14 @@ describe('message encoders', () => {
   });
 
   it('encodeMissionRequestInt round-trips via decodeMissionRequest', () => {
-    const ri = encodeMissionRequestInt(1, 1, 7, 1);  // FENCE
+    const ri = encodeMissionRequestInt(1, 1, 7, 1); // FENCE
     const req = decodeMissionRequest(new DataView(ri.buffer));
     expect(req.seq).toBe(7);
     expect(req.missionType).toBe(1);
   });
 
   it('encodeMissionAck default 3-byte payload (no mission_type extension)', () => {
-    const ack = encodeMissionAck(1, 1, 0);  // ACCEPTED
+    const ack = encodeMissionAck(1, 1, 0); // ACCEPTED
     expect(ack.length).toBe(3);
     // decodeMissionAck reads `type` at offset 2.
     const padded = new Uint8Array(4);
@@ -787,15 +794,15 @@ describe('message encoders', () => {
     // We mirror QGC: command=0, result=1. Wire format byte-checks below.
     const ack = encodeCommandAck(0, 1);
     expect(ack.length).toBe(3);
-    expect(ack[0]).toBe(0);  // command byte 0 (uint16 LE)
-    expect(ack[1]).toBe(0);  // command byte 1
-    expect(ack[2]).toBe(1);  // result = TEMPORARILY_REJECTED
+    expect(ack[0]).toBe(0); // command byte 0 (uint16 LE)
+    expect(ack[1]).toBe(0); // command byte 1
+    expect(ack[2]).toBe(1); // result = TEMPORARILY_REJECTED
   });
 
   it('encodeCommandAck round-trips via decodeCommandAck after zero-padding', () => {
     // decodeCommandAck expects the full 10-byte layout; MAVLink 2 trim-aware
     // receivers (including AP) zero-pad. Verify we read back the same fields.
-    const ack = encodeCommandAck(3, 1);  // a MAVProxy-style ACK
+    const ack = encodeCommandAck(3, 1); // a MAVProxy-style ACK
     const padded = new Uint8Array(10);
     padded.set(ack);
     const decoded = decodeCommandAck(new DataView(padded.buffer));
@@ -807,9 +814,9 @@ describe('message encoders', () => {
     // Build a 97-byte LOG_DATA payload with count=42 and known data.
     const buf = new Uint8Array(97);
     const dv = new DataView(buf.buffer);
-    dv.setUint32(0, 1024, true);   // ofs
-    dv.setUint16(4, 7, true);      // id
-    dv.setUint8(6, 42);            // count
+    dv.setUint32(0, 1024, true); // ofs
+    dv.setUint16(4, 7, true); // id
+    dv.setUint8(6, 42); // count
     for (let i = 0; i < 42; i++) buf[7 + i] = i + 1;
     const data = decodeLogData(dv);
     expect(data.ofs).toBe(1024);
@@ -911,12 +918,14 @@ describe('dispatchFrame', () => {
     const trimmed = new Uint8Array([0x90, 0x01]);
     const frame = makeMavFrame(77, trimmed);
     let observedResult: number | undefined;
-    expect(() => dispatchFrame(frame, {
-      onCommandAck: (msg) => {
-        observedResult = msg.result;
-        expect(msg.command).toBe(400);
-      },
-    })).not.toThrow();
+    expect(() =>
+      dispatchFrame(frame, {
+        onCommandAck: (msg) => {
+          observedResult = msg.result;
+          expect(msg.command).toBe(400);
+        },
+      }),
+    ).not.toThrow();
     expect(observedResult).toBe(0);
   });
 
@@ -926,9 +935,13 @@ describe('dispatchFrame', () => {
     const trimmed = new Uint8Array([255, 1]);
     const frame = makeMavFrame(47, trimmed);
     let observedType: number | undefined;
-    expect(() => dispatchFrame(frame, {
-      onMissionAck: (msg) => { observedType = msg.type; },
-    })).not.toThrow();
+    expect(() =>
+      dispatchFrame(frame, {
+        onMissionAck: (msg) => {
+          observedType = msg.type;
+        },
+      }),
+    ).not.toThrow();
     expect(observedType).toBe(0);
   });
 });
@@ -975,7 +988,11 @@ describe('new WebSerial decoders', () => {
     new DataView(buf.buffer).setUint16(0, 7, true);
     const frame = makeMavFrame(46, buf);
     let observed: number | undefined;
-    dispatchFrame(frame, { onMissionItemReached: (m) => { observed = m.seq; } });
+    dispatchFrame(frame, {
+      onMissionItemReached: (m) => {
+        observed = m.seq;
+      },
+    });
     expect(observed).toBe(7);
   });
 
@@ -983,13 +1000,17 @@ describe('new WebSerial decoders', () => {
     const buf = makePayload(14);
     const dv = new DataView(buf.buffer);
     dv.setUint32(0, 1700000000, true); // time_utc
-    dv.setUint32(4, 102400, true);     // size
-    dv.setUint16(8, 5, true);          // id
-    dv.setUint16(10, 1, true);         // num_logs
-    dv.setUint16(12, 5, true);         // last_log_num
+    dv.setUint32(4, 102400, true); // size
+    dv.setUint16(8, 5, true); // id
+    dv.setUint16(10, 1, true); // num_logs
+    dv.setUint16(12, 5, true); // last_log_num
     const frame = makeMavFrame(118, buf);
     let entry: { id: number; size: number } | undefined;
-    dispatchFrame(frame, { onLogEntry: (m) => { entry = m; } });
+    dispatchFrame(frame, {
+      onLogEntry: (m) => {
+        entry = m;
+      },
+    });
     expect(entry?.id).toBe(5);
     expect(entry?.size).toBe(102400);
   });
@@ -997,11 +1018,15 @@ describe('new WebSerial decoders', () => {
   it('dispatches MOUNT_STATUS (158) and scales cdeg to deg', () => {
     const buf = makePayload(14);
     const dv = new DataView(buf.buffer);
-    dv.setInt32(0, -4500, true);   // pitch_cdeg
-    dv.setInt32(8, 9000, true);    // yaw_cdeg
+    dv.setInt32(0, -4500, true); // pitch_cdeg
+    dv.setInt32(8, 9000, true); // yaw_cdeg
     const frame = makeMavFrame(158, buf);
     let observed: { pitch: number; yaw: number } | undefined;
-    dispatchFrame(frame, { onMountStatus: (m) => { observed = m; } });
+    dispatchFrame(frame, {
+      onMountStatus: (m) => {
+        observed = m;
+      },
+    });
     expect(observed?.pitch).toBeCloseTo(-45.0, 1);
     expect(observed?.yaw).toBeCloseTo(90.0, 1);
   });
@@ -1014,12 +1039,16 @@ describe('new WebSerial decoders', () => {
     dv.setFloat32(8, 0.3, true);
     dv.setFloat32(12, 0.4, true);
     dv.setFloat32(16, 0.5, true);
-    dv.setUint16(20, 0x1F, true);
+    dv.setUint16(20, 0x1f, true);
     const frame = makeMavFrame(193, buf);
     let observed: { compassVar: number; flags: number } | undefined;
-    dispatchFrame(frame, { onEkfStatus: (m) => { observed = m; } });
+    dispatchFrame(frame, {
+      onEkfStatus: (m) => {
+        observed = m;
+      },
+    });
     expect(observed?.compassVar).toBeCloseTo(0.4, 3);
-    expect(observed?.flags).toBe(0x1F);
+    expect(observed?.flags).toBe(0x1f);
   });
 
   it('dispatches BATTERY_STATUS (147) and stops at 0xFFFF cell sentinel', () => {
@@ -1030,12 +1059,16 @@ describe('new WebSerial decoders', () => {
     dv.setUint16(12, 3700, true);
     dv.setUint16(14, 3700, true);
     dv.setUint16(16, 3700, true);
-    dv.setUint16(18, 0xFFFF, true);
+    dv.setUint16(18, 0xffff, true);
     dv.setInt16(30, 1000, true);
     dv.setInt8(35, 80);
     const frame = makeMavFrame(147, buf);
     let observed: { cells: number[]; remaining: number } | undefined;
-    dispatchFrame(frame, { onBatteryStatus: (m) => { observed = m; } });
+    dispatchFrame(frame, {
+      onBatteryStatus: (m) => {
+        observed = m;
+      },
+    });
     expect(observed?.cells.length).toBe(4);
     expect(observed?.cells[0]).toBeCloseTo(3.7, 2);
     expect(observed?.remaining).toBe(80);
@@ -1044,12 +1077,16 @@ describe('new WebSerial decoders', () => {
   it('dispatches MAG_CAL_PROGRESS (191) reading completion_pct at offset 16', () => {
     const buf = makePayload(27);
     const dv = new DataView(buf.buffer);
-    dv.setUint8(12, 0);     // compass_id
-    dv.setUint8(14, 3);     // cal_status
-    dv.setUint8(16, 42);    // completion_pct
+    dv.setUint8(12, 0); // compass_id
+    dv.setUint8(14, 3); // cal_status
+    dv.setUint8(16, 42); // completion_pct
     const frame = makeMavFrame(191, buf);
     let observed: number | undefined;
-    dispatchFrame(frame, { onMagCalProgress: (m) => { observed = m.completionPct; } });
+    dispatchFrame(frame, {
+      onMagCalProgress: (m) => {
+        observed = m.completionPct;
+      },
+    });
     expect(observed).toBe(42);
   });
 
@@ -1058,22 +1095,30 @@ describe('new WebSerial decoders', () => {
     buf[42] = 4; // SUCCESS
     const frame = makeMavFrame(192, buf);
     let observed: number | undefined;
-    dispatchFrame(frame, { onMagCalReport: (m) => { observed = m.calStatus; } });
+    dispatchFrame(frame, {
+      onMagCalReport: (m) => {
+        observed = m.calStatus;
+      },
+    });
     expect(observed).toBe(4);
   });
 
   it('dispatches ADSB_VEHICLE (246) decoding callsign', () => {
     const buf = makePayload(38);
     const dv = new DataView(buf.buffer);
-    dv.setUint32(0, 0xABCDEF, true);
-    dv.setInt32(4, 340000000, true);   // lat
+    dv.setUint32(0, 0xabcdef, true);
+    dv.setInt32(4, 340000000, true); // lat
     dv.setInt32(8, -1184000000, true); // lon
     const enc = new TextEncoder().encode('UAL123');
     buf.set(enc, 27);
     const frame = makeMavFrame(246, buf);
     let observed: { icao: number; callsign: string; lat: number } | undefined;
-    dispatchFrame(frame, { onAdsbVehicle: (m) => { observed = m; } });
-    expect(observed?.icao).toBe(0xABCDEF);
+    dispatchFrame(frame, {
+      onAdsbVehicle: (m) => {
+        observed = m;
+      },
+    });
+    expect(observed?.icao).toBe(0xabcdef);
     expect(observed?.callsign).toBe('UAL123');
     expect(observed?.lat).toBeCloseTo(34.0, 4);
   });

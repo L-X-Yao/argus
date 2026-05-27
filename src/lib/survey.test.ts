@@ -52,8 +52,8 @@ describe('polygonArea', () => {
     const sq = [
       { lat: 34.258, lon: 108.942 },
       { lat: 34.258 + side / 111320, lon: 108.942 },
-      { lat: 34.258 + side / 111320, lon: 108.942 + side / (111320 * Math.cos(34.258 * Math.PI / 180)) },
-      { lat: 34.258, lon: 108.942 + side / (111320 * Math.cos(34.258 * Math.PI / 180)) },
+      { lat: 34.258 + side / 111320, lon: 108.942 + side / (111320 * Math.cos((34.258 * Math.PI) / 180)) },
+      { lat: 34.258, lon: 108.942 + side / (111320 * Math.cos((34.258 * Math.PI) / 180)) },
     ];
     const area = polygonArea(sq);
     expect(area).toBeGreaterThan(9000);
@@ -120,7 +120,7 @@ describe('generateSpiral', () => {
     const wps = generateSpiral(center, maxRadius, 20, 50);
     const last = wps[wps.length - 1];
     const dlat = (last.lat - center.lat) * 111320;
-    const dlon = (last.lon - center.lon) * 111320 * Math.cos(center.lat * Math.PI / 180);
+    const dlon = (last.lon - center.lon) * 111320 * Math.cos((center.lat * Math.PI) / 180);
     const dist = Math.sqrt(dlat * dlat + dlon * dlon);
     expect(dist).toBeGreaterThan(maxRadius * 0.8);
     expect(dist).toBeLessThan(maxRadius * 1.2);
@@ -161,7 +161,7 @@ describe('generateOrbit', () => {
     const wps = generateOrbit(center, radius, 16, 50);
     for (const wp of wps) {
       const dlat = (wp.lat - center.lat) * 111320;
-      const dlon = (wp.lon - center.lon) * 111320 * Math.cos(center.lat * Math.PI / 180);
+      const dlon = (wp.lon - center.lon) * 111320 * Math.cos((center.lat * Math.PI) / 180);
       const dist = Math.sqrt(dlat * dlat + dlon * dlon);
       expect(dist).toBeGreaterThan(radius * 0.9);
       expect(dist).toBeLessThan(radius * 1.1);

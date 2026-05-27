@@ -1,4 +1,5 @@
 """Unit tests: constants — no English leaks in mode names/buttons."""
+
 import sys
 from pathlib import Path
 
@@ -26,36 +27,36 @@ from backend.constants import (
 
 
 def _has_english(text):
-    return any('a' <= c <= 'z' or 'A' <= c <= 'Z' for c in text)
+    return any("a" <= c <= "z" or "A" <= c <= "Z" for c in text)
 
 
 class TestModeNames:
     def test_copter_modes_chinese(self):
         for mid, name in COPTER_MODES.items():
-            assert not _has_english(name), f'COPTER mode {mid} has English: {name}'
+            assert not _has_english(name), f"COPTER mode {mid} has English: {name}"
 
     def test_plane_modes_chinese(self):
         for mid, name in PLANE_MODES.items():
-            clean = name.replace('A', '').replace('B', '')
-            assert not _has_english(clean), f'PLANE mode {mid} has English: {name}'
+            clean = name.replace("A", "").replace("B", "")
+            assert not _has_english(clean), f"PLANE mode {mid} has English: {name}"
 
     def test_fix_names_chinese(self):
         for fix, name in FIX_NAMES.items():
-            english_only = all('a' <= c <= 'z' or 'A' <= c <= 'Z' or c.isdigit() for c in name.replace(' ', ''))
-            if english_only and name not in ('2D', '3D', 'RTK'):
-                assert False, f'FIX {fix} may leak: {name}'
+            english_only = all("a" <= c <= "z" or "A" <= c <= "Z" or c.isdigit() for c in name.replace(" ", ""))
+            if english_only and name not in ("2D", "3D", "RTK"):
+                assert False, f"FIX {fix} may leak: {name}"
 
 
 class TestButtons:
     def test_copter_buttons_chinese(self):
         for mid, name in COPTER_BTNS:
-            assert not _has_english(name), f'COPTER button {mid} has English: {name}'
-            assert mid in COPTER_MODES, f'COPTER button {mid} not in COPTER_MODES'
+            assert not _has_english(name), f"COPTER button {mid} has English: {name}"
+            assert mid in COPTER_MODES, f"COPTER button {mid} not in COPTER_MODES"
 
     def test_plane_buttons_chinese(self):
         for mid, name in PLANE_BTNS:
-            assert not _has_english(name), f'PLANE button {mid} has English: {name}'
-            assert mid in PLANE_MODES, f'PLANE button {mid} not in PLANE_MODES'
+            assert not _has_english(name), f"PLANE button {mid} has English: {name}"
+            assert mid in PLANE_MODES, f"PLANE button {mid} not in PLANE_MODES"
 
 
 class TestCompleteness:
@@ -112,39 +113,44 @@ class TestEnglishModes:
 class TestIsPlane:
     def test_zh_copter(self):
         from backend.drone_link import DroneLink
+
         link = DroneLink()
         link.vehicle.vtype_raw = 2
         _, _, vn = link._get_vehicle_info()
-        assert vn == '多旋翼'
+        assert vn == "多旋翼"
 
     def test_en_copter(self):
         from backend.drone_link import DroneLink
+
         link = DroneLink()
         link.vehicle.vtype_raw = 2
-        link.locale = 'en'
+        link.locale = "en"
         _, _, vn = link._get_vehicle_info()
-        assert vn == 'Multirotor'
+        assert vn == "Multirotor"
 
     def test_en_plane(self):
         from backend.drone_link import DroneLink
+
         link = DroneLink()
         link.vehicle.vtype_raw = 1
-        link.locale = 'en'
+        link.locale = "en"
         _, _, vn = link._get_vehicle_info()
-        assert vn == 'Fixed Wing'
+        assert vn == "Fixed Wing"
 
     def test_en_rover(self):
         from backend.drone_link import DroneLink
+
         link = DroneLink()
         link.vehicle.vtype_raw = 10
-        link.locale = 'en'
+        link.locale = "en"
         _, _, vn = link._get_vehicle_info()
-        assert vn == 'Rover'
+        assert vn == "Rover"
 
     def test_en_sub(self):
         from backend.drone_link import DroneLink
+
         link = DroneLink()
         link.vehicle.vtype_raw = 12
-        link.locale = 'en'
+        link.locale = "en"
         _, _, vn = link._get_vehicle_info()
-        assert vn == 'Sub'
+        assert vn == "Sub"

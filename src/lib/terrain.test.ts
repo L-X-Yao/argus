@@ -44,7 +44,7 @@ describe('interpolateRoute', () => {
       { lat: 34.268, lon: 108.942 },
     ];
     const result = interpolateRoute(wps, 50);
-    const intermediates = result.filter(p => p.wpIndex === -1);
+    const intermediates = result.filter((p) => p.wpIndex === -1);
     expect(intermediates.length).toBeGreaterThan(0);
   });
 
@@ -61,12 +61,12 @@ describe('interpolateRoute', () => {
   it('handles three-waypoint route correctly', () => {
     const wps = [
       { lat: 34.258, lon: 108.942 },
-      { lat: 34.260, lon: 108.942 },
-      { lat: 34.260, lon: 108.944 },
+      { lat: 34.26, lon: 108.942 },
+      { lat: 34.26, lon: 108.944 },
     ];
     const result = interpolateRoute(wps, 100);
     // Should have waypoint indices 0, 1, 2 somewhere in the result
-    const wpIndices = result.filter(p => p.wpIndex >= 0).map(p => p.wpIndex);
+    const wpIndices = result.filter((p) => p.wpIndex >= 0).map((p) => p.wpIndex);
     expect(wpIndices).toContain(0);
     expect(wpIndices).toContain(1);
     expect(wpIndices).toContain(2);

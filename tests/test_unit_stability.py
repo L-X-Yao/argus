@@ -1,4 +1,5 @@
 """Long-running stability tests for backend components."""
+
 import struct
 import sys
 import threading
@@ -20,7 +21,7 @@ def _make_link():
     link.sq = 0
     link.add_event = MagicMock()
     link.send = MagicMock()
-    link.locale = 'zh'
+    link.locale = "zh"
     link.vehicle = MagicMock()
     link.vehicle.sysid = 1
     return link
@@ -35,8 +36,8 @@ def _make_ws():
 
 
 def _param_value_payload(name: str, value: float, index: int, total: int, ptype: int = 9) -> bytes:
-    name_bytes = name.encode('ascii')[:16].ljust(16, b'\x00')
-    return struct.pack('<f', value) + struct.pack('<HH', total, index) + name_bytes + struct.pack('<B', ptype)
+    name_bytes = name.encode("ascii")[:16].ljust(16, b"\x00")
+    return struct.pack("<f", value) + struct.pack("<HH", total, index) + name_bytes + struct.pack("<B", ptype)
 
 
 class TestStateManagerRapidUpdates:
@@ -78,8 +79,8 @@ class TestStateManagerRapidUpdates:
                 link.battery.voltage = float(i % 100)
                 state = link.get_state()
                 assert isinstance(state, dict)
-                assert 'roll' in state
-                assert 'voltage' in state
+                assert "roll" in state
+                assert "voltage" in state
             except Exception as e:
                 errors.append(e)
         assert errors == [], f"Errors during rapid get_state: {errors}"
@@ -88,7 +89,7 @@ class TestStateManagerRapidUpdates:
         link = DroneLink()
         errors = []
         stop = threading.Event()
-        iterations = {'writer': 0, 'reader': 0}
+        iterations = {"writer": 0, "reader": 0}
 
         def writer():
             i = 0
@@ -99,9 +100,9 @@ class TestStateManagerRapidUpdates:
                     link.battery.voltage = 10.0 + (i % 100) * 0.01
                     link.gps.gps_sats = i % 20
                 except Exception as e:
-                    errors.append(('writer', e))
+                    errors.append(("writer", e))
                 i += 1
-            iterations['writer'] = i
+            iterations["writer"] = i
 
         def reader():
             i = 0
@@ -110,9 +111,9 @@ class TestStateManagerRapidUpdates:
                     state = link.get_state()
                     assert isinstance(state, dict)
                 except Exception as e:
-                    errors.append(('reader', e))
+                    errors.append(("reader", e))
                 i += 1
-            iterations['reader'] = i
+            iterations["reader"] = i
 
         w = threading.Thread(target=writer, daemon=True)
         r = threading.Thread(target=reader, daemon=True)
@@ -122,8 +123,8 @@ class TestStateManagerRapidUpdates:
         r.join(timeout=30)
         stop.set()
         assert errors == [], f"Errors during concurrent rapid updates: {errors}"
-        assert iterations['writer'] > 0
-        assert iterations['reader'] > 0
+        assert iterations["writer"] > 0
+        assert iterations["reader"] > 0
 
 
 class TestWSManagerConnectDisconnect:
@@ -156,13 +157,13 @@ class TestWSManagerConnectDisconnect:
         # Add 100 clients that will fail on send
         for _ in range(100):
             ws = _make_ws()
-            ws.send_text.side_effect = ConnectionError('connection closed')
+            ws.send_text.side_effect = ConnectionError("connection closed")
             mgr._clients.add(ws)
 
         assert mgr.client_count == 100
 
         # Broadcast should remove all failed clients without error
-        await mgr.broadcast({'type': 'state', 'connected': False})
+        await mgr.broadcast({"type": "state", "connected": False})
         assert mgr.client_count == 0
 
     @pytest.mark.asyncio
@@ -177,12 +178,12 @@ class TestWSManagerConnectDisconnect:
             if i % 2 == 0:
                 good_clients.append(ws)
             else:
-                ws.send_text.side_effect = ConnectionError('closed')
+                ws.send_text.side_effect = ConnectionError("closed")
                 bad_clients.append(ws)
             mgr._clients.add(ws)
 
         assert mgr.client_count == 100
-        await mgr.broadcast({'type': 'state', 'connected': True})
+        await mgr.broadcast({"type": "state", "connected": True})
 
         # All bad clients removed, good clients remain
         assert mgr.client_count == 50
@@ -201,7 +202,7 @@ class TestWSManagerConnectDisconnect:
             ws = _make_ws()
             mgr._clients.add(ws)
             try:
-                await mgr.broadcast({'type': 'state', 'cycle': cycle})
+                await mgr.broadcast({"type": "state", "cycle": cycle})
                 assert ws.send_text.call_count == 1
             except Exception as e:
                 errors.append(e)
@@ -219,7 +220,7 @@ class TestEventBufferBounds:
         link = DroneLink()
         # Add 200 events, buffer should cap
         for i in range(200):
-            link.add_event(f'event_{i}', 'test')
+            link.add_event(f"event_{i}", "test")
 
         # DroneLink caps at 100, trimming to last 50
         assert len(link.events) <= 100
@@ -227,16 +228,16 @@ class TestEventBufferBounds:
     def test_events_trimmed_to_last_50(self):
         link = DroneLink()
         for i in range(200):
-            link.add_event(f'event_{i}', 'test')
+            link.add_event(f"event_{i}", "test")
 
         # After trimming, should have the most recent events
-        assert link.events[-1]['text'] == 'event_199'
+        assert link.events[-1]["text"] == "event_199"
         assert len(link.events) <= 100
 
     def test_ws_queue_capped_at_2000(self):
         link = DroneLink()
         for i in range(3000):
-            link.queue_ws({'type': 'test', 'i': i})
+            link.queue_ws({"type": "test", "i": i})
 
         # queue_ws caps at 2000, trimming to last 1000
         assert len(link._ws_queue) <= 2000
@@ -244,10 +245,10 @@ class TestEventBufferBounds:
     def test_ws_queue_retains_recent(self):
         link = DroneLink()
         for i in range(3000):
-            link.queue_ws({'type': 'test', 'i': i})
+            link.queue_ws({"type": "test", "i": i})
 
         # Most recent messages should be preserved
-        assert link._ws_queue[-1]['i'] == 2999
+        assert link._ws_queue[-1]["i"] == 2999
 
 
 class TestParamManagerStability:
@@ -260,7 +261,7 @@ class TestParamManagerStability:
 
         # Set the same param 100 times
         for _ in range(100):
-            p = _param_value_payload('BATT_CAPACITY', 5000.0, 0, 10)
+            p = _param_value_payload("BATT_CAPACITY", 5000.0, 0, 10)
             mgr.handle_param_value(p, len(p))
 
         # received_count should be 1 since it's the same parameter
@@ -274,7 +275,7 @@ class TestParamManagerStability:
         mgr.total_count = 2500
 
         for i in range(2500):
-            name = 'P%04d' % i
+            name = "P%04d" % i
             p = _param_value_payload(name, float(i), i, 2500)
             mgr.handle_param_value(p, len(p))
 
@@ -286,14 +287,13 @@ class TestParamManagerStability:
         link = _make_link()
         mgr = ParamManager(link)
         mgr.params = {
-            f'PARAM_{i}': {'name': f'PARAM_{i}', 'value': float(i), 'type': 9, 'index': i}
-            for i in range(100)
+            f"PARAM_{i}": {"name": f"PARAM_{i}", "value": float(i), "type": 9, "index": i} for i in range(100)
         }
 
         errors = []
         for i in range(100):
             try:
-                mgr.set_param(f'PARAM_{i}', float(i * 2))
+                mgr.set_param(f"PARAM_{i}", float(i * 2))
             except Exception as e:
                 errors.append(e)
 
@@ -307,7 +307,7 @@ class TestParamManagerStability:
 
         # Short payloads should be ignored silently
         for _ in range(100):
-            mgr.handle_param_value(b'\x00' * 10, 10)
+            mgr.handle_param_value(b"\x00" * 10, 10)
 
         assert len(mgr.params) == 0
         assert mgr.received_count == 0
@@ -321,13 +321,13 @@ class TestParamManagerStability:
         for i in range(200):
             if i % 2 == 0:
                 # Valid payload
-                name = 'V%04d' % (i // 2)
+                name = "V%04d" % (i // 2)
                 p = _param_value_payload(name, float(i), i // 2, 200)
                 mgr.handle_param_value(p, len(p))
                 valid_count += 1
             else:
                 # Invalid short payload
-                mgr.handle_param_value(b'\x00' * 5, 5)
+                mgr.handle_param_value(b"\x00" * 5, 5)
 
         assert mgr.received_count == valid_count
         assert len(mgr.params) == valid_count

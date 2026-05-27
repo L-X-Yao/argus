@@ -28,7 +28,10 @@ function open(): Promise<IDBDatabase> {
         store.createIndex('createdAt', 'createdAt', { unique: false });
       }
     };
-    req.onsuccess = () => { _db = req.result; resolve(_db); };
+    req.onsuccess = () => {
+      _db = req.result;
+      resolve(_db);
+    };
     req.onerror = () => reject(req.error);
   });
 }

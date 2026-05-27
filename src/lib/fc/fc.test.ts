@@ -39,7 +39,7 @@ describe('ArduPilot adapter', () => {
   it('allModes returns FlightMode objects', () => {
     const modes = ardupilotAdapter.allModes(false);
     expect(modes.length).toBeGreaterThan(10);
-    const rtl = modes.find(m => m.name === 'RTL');
+    const rtl = modes.find((m) => m.name === 'RTL');
     expect(rtl?.category).toBe('emergency');
   });
 
@@ -51,7 +51,7 @@ describe('ArduPilot adapter', () => {
 
 describe('PX4 adapter', () => {
   it('resolves PX4 mode names', () => {
-    const posctl = (3 << 16); // main=3 (POSCTL)
+    const posctl = 3 << 16; // main=3 (POSCTL)
     expect(px4Adapter.modeName(posctl, false)).toBe('Position');
   });
 
@@ -67,7 +67,7 @@ describe('PX4 adapter', () => {
 
   it('allModes includes Return mode as emergency', () => {
     const modes = px4Adapter.allModes(false);
-    const rtl = modes.find(m => m.name === 'Return');
+    const rtl = modes.find((m) => m.name === 'Return');
     expect(rtl).toBeDefined();
     expect(rtl?.category).toBe('emergency');
   });

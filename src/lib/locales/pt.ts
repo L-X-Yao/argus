@@ -233,7 +233,8 @@ const messages: Record<string, string> = {
   'cat.all': 'Todos',
   'conn.timeout': 'Tempo de conexão esgotado',
   'conn.reconnecting': 'Reconectando...',
-  'confirm.armAndFly': 'Enviar missão e decolagem automática a {alt}m?\nSequência: Enviar → Armar → Decolar → Iniciar missão',
+  'confirm.armAndFly':
+    'Enviar missão e decolagem automática a {alt}m?\nSequência: Enviar → Armar → Decolar → Iniciar missão',
   'confirm.clearWps': 'Limpar todos os {n} waypoints?',
   'ekf.title': 'Filtro de navegação',
   'ekf.empty': 'Conecte para exibir o estado EKF',
@@ -308,7 +309,8 @@ const messages: Record<string, string> = {
   'cal.level': 'Nível',
   'cal.baro': 'Barômetro',
   'cal.accelTitle': 'Calibração do acelerômetro',
-  'cal.accelDesc': 'Siga as instruções para posicionar o veículo em 6 orientações. Mantenha parado até concluir cada uma.',
+  'cal.accelDesc':
+    'Siga as instruções para posicionar o veículo em 6 orientações. Mantenha parado até concluir cada uma.',
   'cal.accelHintBefore': 'Clique em "Iniciar" e siga as instruções do autopiloto nas 6 orientações.',
   'cal.progress': 'Progresso',
   'cal.orientLevel': 'Nível',
@@ -864,7 +866,8 @@ const messages: Record<string, string> = {
   'ortho.opacity': 'Opacidade',
   'ortho.apply': 'Aplicar camada',
   'ortho.active': 'Camadas ativas',
-  'ortho.hint': 'Envie imagens georreferenciadas (ortomosaico/camadas de mapa) com coordenadas de canto para sobrepor no mapa',
+  'ortho.hint':
+    'Envie imagens georreferenciadas (ortomosaico/camadas de mapa) com coordenadas de canto para sobrepor no mapa',
   'ortho.imageLoaded': 'Imagem carregada',
   'ortho.invalidFile': 'Selecione uma imagem JPG/PNG',
   'ortho.noImage': 'Envie uma imagem primeiro',
@@ -889,7 +892,8 @@ const messages: Record<string, string> = {
   'aiAnnot.annotations': 'Anotações',
   'aiAnnot.noAnnotations': 'Sem anotações',
   'aiAnnot.exported': 'Anotações exportadas',
-  'aiAnnot.hint': 'Carregue uma imagem de inspeção, depois clique e arraste no canvas para desenhar retângulos de anotação de defeitos',
+  'aiAnnot.hint':
+    'Carregue uma imagem de inspeção, depois clique e arraste no canvas para desenhar retângulos de anotação de defeitos',
   'sched.title': 'Agendador de missões',
   'sched.new': 'Novo agendamento',
   'sched.name': 'Nome',
@@ -1053,6 +1057,5 @@ const messages: Record<string, string> = {
   'pid.target': 'Alvo',
   'pid.rateFF': 'Taxa FF',
 };
-
 
 export default messages;

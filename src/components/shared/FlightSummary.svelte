@@ -7,7 +7,8 @@
   let { summary, onclose }: { summary: FlightSummary; onclose: () => void } = $props();
 
   function fmtTime(s: number): string {
-    const m = Math.floor(s / 60), sec = s % 60;
+    const m = Math.floor(s / 60),
+      sec = s % 60;
     return `${m}:${sec < 10 ? '0' : ''}${sec}`;
   }
   function fmtDist(d: number): string {
@@ -27,7 +28,9 @@
       `${t('summary.dist')}: ${fmtDist(summary.total_dist)}`,
       `${t('summary.avgSpd')}: ${avgSpeed} m/s`,
       summary.bat_used >= 0 ? `${t('summary.batUsed')}: ${summary.bat_used}%` : '',
-    ].filter(Boolean).join('\n');
+    ]
+      .filter(Boolean)
+      .join('\n');
     const blob = new Blob([lines], { type: 'text/plain' });
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
@@ -37,8 +40,22 @@
   }
 </script>
 
-<div role="dialog" aria-modal="true" tabindex="-1" class="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9999] flex items-center justify-center" onclick={onclose} onkeydown={(e) => { if (e.key === "Escape") onclose(); }}>
-    <div role="presentation" class="bg-card border border-border rounded-2xl overflow-hidden min-w-[340px] shadow-2xl" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
+<div
+  role="dialog"
+  aria-modal="true"
+  tabindex="-1"
+  class="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9999] flex items-center justify-center"
+  onclick={onclose}
+  onkeydown={(e) => {
+    if (e.key === 'Escape') onclose();
+  }}
+>
+  <div
+    role="presentation"
+    class="bg-card border border-border rounded-2xl overflow-hidden min-w-[340px] shadow-2xl"
+    onclick={(e) => e.stopPropagation()}
+    onkeydown={(e) => e.stopPropagation()}
+  >
     <div class="bg-gradient-to-r from-primary/20 to-primary/5 px-5 py-3 flex items-center justify-between">
       <div>
         <h3 class="text-base font-bold text-primary">{t('summary.title')}</h3>
@@ -48,28 +65,36 @@
     </div>
     <div class="px-5 py-3 grid grid-cols-2 gap-3">
       <div class="flex items-center gap-2.5 py-1.5">
-        <div class="w-8 h-8 rounded-lg bg-blue-500/15 flex items-center justify-center shrink-0"><Clock size={16} class="text-blue-400" /></div>
+        <div class="w-8 h-8 rounded-lg bg-blue-500/15 flex items-center justify-center shrink-0">
+          <Clock size={16} class="text-blue-400" />
+        </div>
         <div>
           <div class="text-[10px] text-muted-foreground">{t('summary.duration')}</div>
           <div class="text-sm font-bold tabular-nums">{fmtTime(summary.duration)}</div>
         </div>
       </div>
       <div class="flex items-center gap-2.5 py-1.5">
-        <div class="w-8 h-8 rounded-lg bg-sky-500/15 flex items-center justify-center shrink-0"><ArrowUp size={16} class="text-sky-400" /></div>
+        <div class="w-8 h-8 rounded-lg bg-sky-500/15 flex items-center justify-center shrink-0">
+          <ArrowUp size={16} class="text-sky-400" />
+        </div>
         <div>
           <div class="text-[10px] text-muted-foreground">{t('summary.maxAlt')}</div>
           <div class="text-sm font-bold tabular-nums">{summary.max_alt} m</div>
         </div>
       </div>
       <div class="flex items-center gap-2.5 py-1.5">
-        <div class="w-8 h-8 rounded-lg bg-green-500/15 flex items-center justify-center shrink-0"><Gauge size={16} class="text-green-400" /></div>
+        <div class="w-8 h-8 rounded-lg bg-green-500/15 flex items-center justify-center shrink-0">
+          <Gauge size={16} class="text-green-400" />
+        </div>
         <div>
           <div class="text-[10px] text-muted-foreground">{t('summary.maxSpd')}</div>
           <div class="text-sm font-bold tabular-nums">{summary.max_speed} m/s</div>
         </div>
       </div>
       <div class="flex items-center gap-2.5 py-1.5">
-        <div class="w-8 h-8 rounded-lg bg-teal-500/15 flex items-center justify-center shrink-0"><Route size={16} class="text-teal-400" /></div>
+        <div class="w-8 h-8 rounded-lg bg-teal-500/15 flex items-center justify-center shrink-0">
+          <Route size={16} class="text-teal-400" />
+        </div>
         <div>
           <div class="text-[10px] text-muted-foreground">{t('summary.dist')}</div>
           <div class="text-sm font-bold tabular-nums">{fmtDist(summary.total_dist)}</div>
@@ -77,7 +102,9 @@
       </div>
       {#if summary.bat_used >= 0}
         <div class="flex items-center gap-2.5 py-1.5">
-          <div class="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center shrink-0"><BatteryLow size={16} class="text-amber-400" /></div>
+          <div class="w-8 h-8 rounded-lg bg-amber-500/15 flex items-center justify-center shrink-0">
+            <BatteryLow size={16} class="text-amber-400" />
+          </div>
           <div>
             <div class="text-[10px] text-muted-foreground">{t('summary.batUsed')}</div>
             <div class="text-sm font-bold tabular-nums">{summary.bat_used}%</div>
@@ -85,7 +112,9 @@
         </div>
       {/if}
       <div class="flex items-center gap-2.5 py-1.5">
-        <div class="w-8 h-8 rounded-lg bg-purple-500/15 flex items-center justify-center shrink-0"><Gauge size={16} class="text-purple-400" /></div>
+        <div class="w-8 h-8 rounded-lg bg-purple-500/15 flex items-center justify-center shrink-0">
+          <Gauge size={16} class="text-purple-400" />
+        </div>
         <div>
           <div class="text-[10px] text-muted-foreground">{t('summary.avgSpd')}</div>
           <div class="text-sm font-bold tabular-nums">{avgSpeed} m/s</div>

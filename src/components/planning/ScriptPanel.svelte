@@ -41,15 +41,21 @@ log("Alt: " + drone.alt_rel + "m");
 
   function saveScript() {
     const name = window.prompt('Script name:') || 'Untitled';
-    scripts = [...scripts.filter(s => s.name !== name), { name, code }];
-    try { localStorage.setItem('argus_scripts', JSON.stringify(scripts)); } catch {}
+    scripts = [...scripts.filter((s) => s.name !== name), { name, code }];
+    try {
+      localStorage.setItem('argus_scripts', JSON.stringify(scripts));
+    } catch {}
     addToast(`Saved: ${name}`, 'success');
   }
 
-  function loadScript(s: { name: string; code: string }) { code = s.code; }
+  function loadScript(s: { name: string; code: string }) {
+    code = s.code;
+  }
   function deleteScript(name: string) {
-    scripts = scripts.filter(s => s.name !== name);
-    try { localStorage.setItem('argus_scripts', JSON.stringify(scripts)); } catch {}
+    scripts = scripts.filter((s) => s.name !== name);
+    try {
+      localStorage.setItem('argus_scripts', JSON.stringify(scripts));
+    } catch {}
   }
 
   async function runScript() {
@@ -65,18 +71,28 @@ log("Alt: " + drone.alt_rel + "m");
         sendCommand(cmd, undefined, data);
         logs.push(`[CMD] ${cmd} ${JSON.stringify(data || {})}`);
       },
-      wait: (ms: number) => new Promise((resolve, reject) => {
-        const timer = setTimeout(resolve, Math.min(ms, 10000));
-        const check = setInterval(() => { if (_aborted) { clearTimeout(timer); clearInterval(check); reject(new Error('Script aborted')); } }, 100);
-        setTimeout(() => clearInterval(check), Math.min(ms, 10000) + 200);
-      }),
-      log: (msg: string) => { logs.push(String(msg)); output = [...logs]; },
+      wait: (ms: number) =>
+        new Promise((resolve, reject) => {
+          const timer = setTimeout(resolve, Math.min(ms, 10000));
+          const check = setInterval(() => {
+            if (_aborted) {
+              clearTimeout(timer);
+              clearInterval(check);
+              reject(new Error('Script aborted'));
+            }
+          }, 100);
+          setTimeout(() => clearInterval(check), Math.min(ms, 10000) + 200);
+        }),
+      log: (msg: string) => {
+        logs.push(String(msg));
+        output = [...logs];
+      },
     };
 
     // User-authored automation scripts execute intentionally in this GCS context.
     // The API surface is restricted to read-only drone state + command sending.
     try {
-      const AsyncFunction = Object.getPrototypeOf(async function(){}).constructor;
+      const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
       const fn = new AsyncFunction('drone', 'send', 'wait', 'log', 'waypoints', code);
       await fn(api.drone, api.send, api.wait, api.log, api.waypoints);
       logs.push('[OK] Script completed');
@@ -88,8 +104,22 @@ log("Alt: " + drone.alt_rel + "m");
   }
 </script>
 
-<div role="dialog" aria-modal="true" tabindex="-1" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center" onclick={onclose} onkeydown={(e) => { if (e.key === "Escape") onclose(); }}>
-  <div class="bg-card border border-border rounded-2xl overflow-hidden w-[700px] max-h-[85vh] shadow-2xl flex flex-col" role="presentation" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
+<div
+  role="dialog"
+  aria-modal="true"
+  tabindex="-1"
+  class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center"
+  onclick={onclose}
+  onkeydown={(e) => {
+    if (e.key === 'Escape') onclose();
+  }}
+>
+  <div
+    class="bg-card border border-border rounded-2xl overflow-hidden w-[700px] max-h-[85vh] shadow-2xl flex flex-col"
+    role="presentation"
+    onclick={(e) => e.stopPropagation()}
+    onkeydown={(e) => e.stopPropagation()}
+  >
     <div class="bg-gradient-to-r from-green-500/20 to-primary/5 px-5 py-3 flex items-center justify-between shrink-0">
       <div class="flex items-center gap-2">
         <FileText size={16} class="text-green-400" />
@@ -108,21 +138,37 @@ log("Alt: " + drone.alt_rel + "m");
         <div class="w-36 border-r border-border overflow-y-auto p-2 space-y-1">
           {#each scripts as s}
             <div class="flex items-center gap-1 group">
-              <button class="flex-1 text-left text-xs px-2 py-1 rounded hover:bg-muted transition-colors truncate cursor-pointer border-none bg-transparent text-foreground"
-                      onclick={() => loadScript(s)}>{s.name}</button>
-              <button class="opacity-0 group-hover:opacity-60 text-destructive border-none bg-transparent cursor-pointer px-0.5"
-                      onclick={() => deleteScript(s.name)}><Trash2 size={10} /></button>
+              <button
+                class="flex-1 text-left text-xs px-2 py-1 rounded hover:bg-muted transition-colors truncate cursor-pointer border-none bg-transparent text-foreground"
+                onclick={() => loadScript(s)}>{s.name}</button
+              >
+              <button
+                class="opacity-0 group-hover:opacity-60 text-destructive border-none bg-transparent cursor-pointer px-0.5"
+                onclick={() => deleteScript(s.name)}><Trash2 size={10} /></button
+              >
             </div>
           {/each}
         </div>
       {/if}
       <div class="flex-1 flex flex-col min-h-0">
-        <textarea bind:value={code}
+        <textarea
+          bind:value={code}
           class="flex-1 min-h-[200px] p-3 bg-black/80 text-green-300 font-mono text-xs resize-none border-none outline-none"
-          spellcheck="false"></textarea>
+          spellcheck="false"
+        ></textarea>
         <div class="h-32 overflow-y-auto bg-black/90 border-t border-border p-2 font-mono text-[11px]">
           {#each output as line}
-            <div class="{line.startsWith('[ERROR]') ? 'text-destructive' : line.startsWith('[CMD]') ? 'text-warning' : line.startsWith('[OK]') ? 'text-success' : 'text-muted-foreground'}">{line}</div>
+            <div
+              class={line.startsWith('[ERROR]')
+                ? 'text-destructive'
+                : line.startsWith('[CMD]')
+                  ? 'text-warning'
+                  : line.startsWith('[OK]')
+                    ? 'text-success'
+                    : 'text-muted-foreground'}
+            >
+              {line}
+            </div>
           {/each}
           {#if output.length === 0}
             <span class="text-muted-foreground/40">Output will appear here...</span>

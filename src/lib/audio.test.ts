@@ -50,12 +50,19 @@ beforeEach(() => {
     gain: { value: 0 },
   };
 
-  vi.stubGlobal('AudioContext', class {
-    currentTime = 0;
-    destination = {};
-    createOscillator() { return { ...mockOsc }; }
-    createGain() { return { ...mockGain }; }
-  });
+  vi.stubGlobal(
+    'AudioContext',
+    class {
+      currentTime = 0;
+      destination = {};
+      createOscillator() {
+        return { ...mockOsc };
+      }
+      createGain() {
+        return { ...mockGain };
+      }
+    },
+  );
 
   vi.stubGlobal('speechSynthesis', {
     pending: false,
@@ -63,13 +70,18 @@ beforeEach(() => {
     speak: vi.fn((u: SpeechSynthesisUtterance) => utterances.push(u)),
   });
 
-  vi.stubGlobal('SpeechSynthesisUtterance', class {
-    text: string;
-    lang = '';
-    rate = 1;
-    volume = 1;
-    constructor(text: string) { this.text = text; }
-  });
+  vi.stubGlobal(
+    'SpeechSynthesisUtterance',
+    class {
+      text: string;
+      lang = '';
+      rate = 1;
+      volume = 1;
+      constructor(text: string) {
+        this.text = text;
+      }
+    },
+  );
 
   // Reset audio module's internal state by cycling through a "disarmed, disconnected" state
   checkAlerts(false, false, -1, 0);

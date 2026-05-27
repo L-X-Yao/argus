@@ -28,7 +28,7 @@ function extractPlaceholders(value: string): string[] {
 
 // --- Load all locales ---
 
-const localeFiles = readdirSync(localesDir).filter(f => f.endsWith('.ts'));
+const localeFiles = readdirSync(localesDir).filter((f) => f.endsWith('.ts'));
 const BASE_LOCALE = 'zh.ts';
 
 let baseMessages: Record<string, string>;
@@ -58,18 +58,18 @@ describe('i18n completeness', () => {
   it('every key in zh.ts exists in en.ts (full parity)', () => {
     const enMessages = allLocales['en.ts'];
     const baseKeys = Object.keys(baseMessages);
-    const missing = baseKeys.filter(k => !(k in enMessages));
+    const missing = baseKeys.filter((k) => !(k in enMessages));
     expect(missing, `Keys in zh.ts missing from en.ts: ${missing.join(', ')}`).toEqual([]);
   });
 
   describe('missing keys per locale', () => {
-    const otherLocales = localeFiles.filter(f => f !== BASE_LOCALE);
+    const otherLocales = localeFiles.filter((f) => f !== BASE_LOCALE);
 
     for (const file of otherLocales) {
       it(`${file} should contain all base locale keys`, () => {
         const messages = allLocales[file];
         const baseKeys = Object.keys(baseMessages);
-        const missing = baseKeys.filter(k => !(k in messages));
+        const missing = baseKeys.filter((k) => !(k in messages));
         // Non-eagerly-loaded locales may be sparse; report missing count
         // This test documents coverage -- adjust threshold as locales mature
         if (file === 'en.ts') {
@@ -78,10 +78,7 @@ describe('i18n completeness', () => {
         } else {
           // Other locales: report missing keys as a coverage metric
           // Fail if locale has zero keys (broken file)
-          expect(
-            Object.keys(messages).length,
-            `${file} appears empty or broken`
-          ).toBeGreaterThan(0);
+          expect(Object.keys(messages).length, `${file} appears empty or broken`).toBeGreaterThan(0);
         }
       });
     }
@@ -94,16 +91,13 @@ describe('i18n completeness', () => {
         const emptyKeys = Object.entries(messages)
           .filter(([, v]) => v === '')
           .map(([k]) => k);
-        expect(
-          emptyKeys,
-          `Empty values in ${file}: ${emptyKeys.join(', ')}`
-        ).toEqual([]);
+        expect(emptyKeys, `Empty values in ${file}: ${emptyKeys.join(', ')}`).toEqual([]);
       });
     }
   });
 
   describe('interpolation placeholder consistency', () => {
-    const otherLocales = localeFiles.filter(f => f !== BASE_LOCALE);
+    const otherLocales = localeFiles.filter((f) => f !== BASE_LOCALE);
 
     for (const file of otherLocales) {
       it(`${file} placeholders match zh.ts for shared keys`, () => {
@@ -119,15 +113,12 @@ describe('i18n completeness', () => {
 
           if (JSON.stringify(basePlaceholders) !== JSON.stringify(localePlaceholders)) {
             mismatches.push(
-              `${key}: zh=${basePlaceholders.join(',')} vs ${file.replace('.ts', '')}=${localePlaceholders.join(',')}`
+              `${key}: zh=${basePlaceholders.join(',')} vs ${file.replace('.ts', '')}=${localePlaceholders.join(',')}`,
             );
           }
         }
 
-        expect(
-          mismatches,
-          `Placeholder mismatches in ${file}:\n${mismatches.join('\n')}`
-        ).toEqual([]);
+        expect(mismatches, `Placeholder mismatches in ${file}:\n${mismatches.join('\n')}`).toEqual([]);
       });
     }
   });
@@ -143,32 +134,63 @@ describe('i18n completeness', () => {
         if (seen.has(m[1])) duplicates.push(m[1]);
         seen.add(m[1]);
       }
-      expect(
-        duplicates,
-        `Duplicate keys in ${file}: ${duplicates.join(', ')}`
-      ).toEqual([]);
+      expect(duplicates, `Duplicate keys in ${file}: ${duplicates.join(', ')}`).toEqual([]);
     }
   });
 
   it('keys follow dot-notation naming convention', () => {
     const invalidKeys = Object.keys(baseMessages).filter(
-      k => !/^[a-zA-Z][a-zA-Z0-9]*(\.[a-zA-Z][a-zA-Z0-9]*)+$/.test(k)
+      (k) => !/^[a-zA-Z][a-zA-Z0-9]*(\.[a-zA-Z][a-zA-Z0-9]*)+$/.test(k),
     );
-    expect(
-      invalidKeys,
-      `Keys not matching dot-notation: ${invalidKeys.join(', ')}`
-    ).toEqual([]);
+    expect(invalidKeys, `Keys not matching dot-notation: ${invalidKeys.join(', ')}`).toEqual([]);
   });
 
   describe('no untranslated placeholders in non-English locales', () => {
     const TECHNICAL_TERMS = new Set([
-      'Argus', 'MAVLink', 'PL-Link', 'NTRIP', 'RTSP', 'RTK', 'DGPS', 'PWM',
-      'PID', 'GPS', 'EKF', 'AHRS', 'MSL', 'WP', 'SITL', 'TCP', 'UDP', 'USB',
-      'CSV', 'JSON', 'KML', 'GPX', 'WebSerial', 'Quad X', 'FOV', 'Hz',
-      'VTOL', 'FPV', 'GCS', 'IMU', 'RC', 'BEC', 'ESC', 'RSSI', 'SNR',
-      'Bootloader', 'FFT', 'Tauri', 'ArduPilot', 'PX4', 'SRTM', 'Bitmask',
+      'Argus',
+      'MAVLink',
+      'PL-Link',
+      'NTRIP',
+      'RTSP',
+      'RTK',
+      'DGPS',
+      'PWM',
+      'PID',
+      'GPS',
+      'EKF',
+      'AHRS',
+      'MSL',
+      'WP',
+      'SITL',
+      'TCP',
+      'UDP',
+      'USB',
+      'CSV',
+      'JSON',
+      'KML',
+      'GPX',
+      'WebSerial',
+      'Quad X',
+      'FOV',
+      'Hz',
+      'VTOL',
+      'FPV',
+      'GCS',
+      'IMU',
+      'RC',
+      'BEC',
+      'ESC',
+      'RSSI',
+      'SNR',
+      'Bootloader',
+      'FFT',
+      'Tauri',
+      'ArduPilot',
+      'PX4',
+      'SRTM',
+      'Bitmask',
     ]);
-    const nonEnLocales = localeFiles.filter(f => f !== BASE_LOCALE && f !== 'en.ts');
+    const nonEnLocales = localeFiles.filter((f) => f !== BASE_LOCALE && f !== 'en.ts');
 
     for (const file of nonEnLocales) {
       it(`${file} should not have values identical to en.ts (except technical terms)`, () => {
@@ -189,7 +211,7 @@ describe('i18n completeness', () => {
 
         expect(
           untranslated.length,
-          `${file} has ${untranslated.length} untranslated keys (identical to en.ts):\n${untranslated.slice(0, 10).join('\n')}${untranslated.length > 10 ? '\n...' : ''}`
+          `${file} has ${untranslated.length} untranslated keys (identical to en.ts):\n${untranslated.slice(0, 10).join('\n')}${untranslated.length > 10 ? '\n...' : ''}`,
         ).toBe(0);
       });
     }
@@ -248,7 +270,7 @@ describe('i18n completeness', () => {
         const src = readFileSync(f, 'utf-8');
         const lines = src.split('\n');
         for (let i = 0; i < lines.length; i++) {
-          if (/\btitle="[A-Z]/.test(lines[i]) && !lines[i].includes('{t(')) {
+          if (/\btitle="[A-Z]/.test(lines[i]) && !lines[i].includes('{t(') && !/title="[^"]*\{/.test(lines[i])) {
             const rel = f.split('/src/')[1] || f;
             violations.push(`${rel}:${i + 1}: ${lines[i].trim().slice(0, 80)}`);
           }

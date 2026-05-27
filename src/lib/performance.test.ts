@@ -6,10 +6,7 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import {
-  app, updateState, addEvent, addWaypoint, deleteWaypoint,
-  generateCircle, addToast,
-} from './stores.svelte';
+import { app, updateState, addEvent, addWaypoint, deleteWaypoint, generateCircle, addToast } from './stores.svelte';
 import { parseFrames, encodeFrame } from './mavlink/codec';
 import { t, i18nState } from './i18n.svelte';
 
@@ -17,10 +14,16 @@ function makeStorage(): Storage {
   const store = new Map<string, string>();
   return {
     getItem: (k: string) => store.get(k) ?? null,
-    setItem: (k: string, v: string) => { store.set(k, v); },
-    removeItem: (k: string) => { store.delete(k); },
+    setItem: (k: string, v: string) => {
+      store.set(k, v);
+    },
+    removeItem: (k: string) => {
+      store.delete(k);
+    },
     clear: () => store.clear(),
-    get length() { return store.size; },
+    get length() {
+      return store.size;
+    },
     key: (i: number) => [...store.keys()][i] ?? null,
   };
 }
@@ -70,7 +73,7 @@ describe('MAVLink codec throughput', () => {
 
     const start = performance.now();
     for (let i = 0; i < 5000; i++) {
-      encodeFrame(0, payload, 255, 190, i & 0xFF);
+      encodeFrame(0, payload, 255, 190, i & 0xff);
     }
     const elapsed = performance.now() - start;
     expect(elapsed).toBeLessThan(1000);
@@ -93,7 +96,7 @@ describe('MAVLink codec throughput', () => {
 
     const start = performance.now();
     for (let i = 0; i < 5000; i++) {
-      const encoded = encodeFrame(0, payload, 255, 190, i & 0xFF);
+      const encoded = encodeFrame(0, payload, 255, 190, i & 0xff);
       const { frames } = parseFrames(encoded);
       expect(frames.length).toBe(1);
     }
@@ -253,8 +256,18 @@ describe('Toast deduplication performance', () => {
 describe('i18n lookup performance', () => {
   it('10000 t() calls in < 100ms', () => {
     i18nState.locale = 'zh';
-    const keys = ['app.name', 'app.subtitle', 'tab.fly', 'tab.plan', 'conn.connect',
-                  'conn.disconnect', 'status.armed', 'ctrl.arm', 'ctrl.disarm', 'phase.flying'];
+    const keys = [
+      'app.name',
+      'app.subtitle',
+      'tab.fly',
+      'tab.plan',
+      'conn.connect',
+      'conn.disconnect',
+      'status.armed',
+      'ctrl.arm',
+      'ctrl.disarm',
+      'phase.flying',
+    ];
 
     const start = performance.now();
     for (let i = 0; i < 10000; i++) {

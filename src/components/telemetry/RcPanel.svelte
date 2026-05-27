@@ -3,8 +3,24 @@
   import Badge from '$lib/components/ui/badge/badge.svelte';
   import { t } from '../../lib/i18n.svelte';
 
-  const LABELS = $derived([t('rc.roll'), t('rc.pitch'), t('rc.throttle'), t('rc.yaw'), 'CH5', 'CH6', 'CH7', 'CH8',
-                  'CH9', 'CH10', 'CH11', 'CH12', 'CH13', 'CH14', 'CH15', 'CH16']);
+  const LABELS = $derived([
+    t('rc.roll'),
+    t('rc.pitch'),
+    t('rc.throttle'),
+    t('rc.yaw'),
+    'CH5',
+    'CH6',
+    'CH7',
+    'CH8',
+    'CH9',
+    'CH10',
+    'CH11',
+    'CH12',
+    'CH13',
+    'CH14',
+    'CH15',
+    'CH16',
+  ]);
 
   function barWidth(v: number): number {
     return Math.max(0, Math.min(100, (v - 800) / 12));
@@ -30,7 +46,10 @@
           <div class="flex items-center gap-1.5 text-[11px]">
             <span class="w-7 text-right text-muted-foreground text-[10px] shrink-0">{LABELS[i]}</span>
             <div class="flex-1 h-2.5 bg-muted rounded-full relative overflow-hidden">
-              <div class="h-full rounded-full transition-all duration-150 {barColor(val)}" style="width:{barWidth(val)}%"></div>
+              <div
+                class="h-full rounded-full transition-all duration-150 {barColor(val)}"
+                style="width:{barWidth(val)}%"
+              ></div>
               <div class="absolute left-1/2 top-0 w-px h-full bg-border"></div>
             </div>
             <span class="w-8 text-right font-mono text-muted-foreground text-[10px] shrink-0">{val}</span>

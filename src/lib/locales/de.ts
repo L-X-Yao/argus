@@ -233,7 +233,8 @@ const messages: Record<string, string> = {
   'cat.all': 'Alle',
   'conn.timeout': 'Verbindungszeitüberschreitung',
   'conn.reconnecting': 'Verbinde erneut...',
-  'confirm.armAndFly': 'Mission hochladen und automatisch auf {alt}m starten?\nAblauf: Hochladen → Entsichern → Starten → Mission beginnen',
+  'confirm.armAndFly':
+    'Mission hochladen und automatisch auf {alt}m starten?\nAblauf: Hochladen → Entsichern → Starten → Mission beginnen',
   'confirm.clearWps': 'Alle {n} Wegpunkte löschen?',
   'ekf.title': 'Navigationsfilter',
   'ekf.empty': 'Verbinden, um EKF-Status anzuzeigen',
@@ -308,7 +309,8 @@ const messages: Record<string, string> = {
   'cal.level': 'Waagerecht',
   'cal.baro': 'Barometer-Kal.',
   'cal.accelTitle': 'Beschleunigungssensor-Kalibrierung',
-  'cal.accelDesc': 'Folgen Sie den Anweisungen, um das Fahrzeug in 6 Ausrichtungen zu platzieren. Halten Sie es ruhig, bis jede abgeschlossen ist.',
+  'cal.accelDesc':
+    'Folgen Sie den Anweisungen, um das Fahrzeug in 6 Ausrichtungen zu platzieren. Halten Sie es ruhig, bis jede abgeschlossen ist.',
   'cal.accelHintBefore': '„Start" klicken und dann den Autopilot-Anweisungen für alle 6 Ausrichtungen folgen.',
   'cal.progress': 'Fortschritt',
   'cal.orientLevel': 'Waagerecht',
@@ -864,7 +866,8 @@ const messages: Record<string, string> = {
   'ortho.opacity': 'Deckkraft',
   'ortho.apply': 'Overlay anwenden',
   'ortho.active': 'Aktive Overlays',
-  'ortho.hint': 'Georeferenzierte Bilder (Orthomosaik/Kartenüberlagerungen) mit Eckkoordinaten hochladen, um sie auf der Karte anzuzeigen',
+  'ortho.hint':
+    'Georeferenzierte Bilder (Orthomosaik/Kartenüberlagerungen) mit Eckkoordinaten hochladen, um sie auf der Karte anzuzeigen',
   'ortho.imageLoaded': 'Bild geladen',
   'ortho.invalidFile': 'Bitte ein JPG/PNG-Bild wählen',
   'ortho.noImage': 'Zuerst ein Bild hochladen',
@@ -889,7 +892,8 @@ const messages: Record<string, string> = {
   'aiAnnot.annotations': 'Annotationen',
   'aiAnnot.noAnnotations': 'Keine Annotationen',
   'aiAnnot.exported': 'Annotationen exportiert',
-  'aiAnnot.hint': 'Inspektionsbild laden, dann auf der Leinwand klicken und ziehen, um Rechteck-Annotationen für Mängel zu zeichnen',
+  'aiAnnot.hint':
+    'Inspektionsbild laden, dann auf der Leinwand klicken und ziehen, um Rechteck-Annotationen für Mängel zu zeichnen',
   'sched.title': 'Missionsplaner',
   'sched.new': 'Neuer Zeitplan',
   'sched.name': 'Bezeichnung',
@@ -911,7 +915,8 @@ const messages: Record<string, string> = {
   'sched.runNow': 'Jetzt ausführen',
   'sched.confirmRun': 'Mission jetzt starten?',
   'sched.empty': 'Keine geplanten Missionen',
-  'sched.hint': 'Wiederkehrende Missionen planen (Drone-in-a-Box). Automatische Ausführung benötigt einen Backend-Dienst.',
+  'sched.hint':
+    'Wiederkehrende Missionen planen (Drone-in-a-Box). Automatische Ausführung benötigt einen Backend-Dienst.',
   'sched.status.pending': 'Ausstehend',
   'sched.status.active': 'Aktiv',
   'sched.status.completed': 'Abgeschlossen',
@@ -1053,6 +1058,5 @@ const messages: Record<string, string> = {
   'pid.target': 'Sollwert',
   'pid.rateFF': 'Rate-FF',
 };
-
 
 export default messages;

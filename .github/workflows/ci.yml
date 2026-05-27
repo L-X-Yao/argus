@@ -105,6 +105,31 @@ jobs:
         env:
           ARGUS_NO_BROWSER: '1'
 
+      - name: Start backend (simulator)
+        run: python run.py --sim &
+        env:
+          ARGUS_NO_BROWSER: '1'
+
+      - name: Wait for backend
+        run: |
+          for i in $(seq 1 30); do
+            curl -sf http://localhost:8100/health && break
+            sleep 1
+          done
+
+      - name: Run E2E tests (backend-required specs)
+        run: >-
+          npx playwright test --config=tests/playwright.config.ts --project=chromium
+          tests/e2e/connected-flow.spec.ts
+          tests/e2e/connection.spec.ts
+          tests/e2e/drone-control.spec.ts
+          tests/e2e/event-log.spec.ts
+          tests/e2e/params.spec.ts
+          tests/e2e/websocket.spec.ts
+          tests/e2e/memory.spec.ts
+        env:
+          ARGUS_NO_BROWSER: '1'
+
       - name: Upload test artifacts
         if: failure()
         uses: actions/upload-artifact@v4

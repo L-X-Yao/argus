@@ -18,8 +18,10 @@
     }
   }
   function sendGimbalPitchYaw(data: {
-    pitch?: number; yaw?: number;
-    pitch_rate?: number; yaw_rate?: number;
+    pitch?: number;
+    yaw?: number;
+    pitch_rate?: number;
+    yaw_rate?: number;
     flags?: number;
   }): void {
     if (isSerialConnected()) serialGimbalPitchYaw(data);
@@ -127,8 +129,22 @@
   }
 </script>
 
-<div role="dialog" aria-modal="true" tabindex="-1" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center" onclick={onclose} onkeydown={(e) => { if (e.key === "Escape") onclose(); }}>
-    <div role="presentation" class="bg-card border border-border rounded-2xl overflow-hidden w-[420px] max-h-[85vh] shadow-2xl flex flex-col" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
+<div
+  role="dialog"
+  aria-modal="true"
+  tabindex="-1"
+  class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center"
+  onclick={onclose}
+  onkeydown={(e) => {
+    if (e.key === 'Escape') onclose();
+  }}
+>
+  <div
+    role="presentation"
+    class="bg-card border border-border rounded-2xl overflow-hidden w-[420px] max-h-[85vh] shadow-2xl flex flex-col"
+    onclick={(e) => e.stopPropagation()}
+    onkeydown={(e) => e.stopPropagation()}
+  >
     <!-- Header -->
     <div class="bg-gradient-to-r from-primary/20 to-primary/5 px-5 py-3 flex items-center justify-between shrink-0">
       <div class="flex items-center gap-2">
@@ -139,7 +155,6 @@
     </div>
 
     <div class="overflow-y-auto px-5 py-3 space-y-4">
-
       <!-- Live gimbal status -->
       {#if livePitch !== null || liveYaw !== null}
         <div class="bg-muted/30 rounded-lg p-2 flex items-center gap-4">
@@ -154,7 +169,9 @@
       <!-- Gimbal angle control -->
       <div class="space-y-2">
         <div class="flex items-center justify-between">
-          <div class="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">{t('gimbal.angleControl')}</div>
+          <div class="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+            {t('gimbal.angleControl')}
+          </div>
           <label class="flex items-center gap-1.5 text-[11px] cursor-pointer select-none">
             <input type="checkbox" bind:checked={rateMode} class="accent-primary cursor-pointer" />
             <span class="text-muted-foreground">{t('gimbal.rateMode')}</span>
@@ -163,14 +180,28 @@
         <div class="space-y-1.5">
           <div class="flex items-center gap-2">
             <label for="gimbal-pitch" class="text-xs text-muted-foreground w-14 shrink-0">{t('gimbal.pitch')}</label>
-            <input id="gimbal-pitch" type="range" min={rateMode ? -90 : -90} max={rateMode ? 90 : 30} step="1" bind:value={pitch}
-                   class="flex-1 h-1.5 accent-primary" />
+            <input
+              id="gimbal-pitch"
+              type="range"
+              min={rateMode ? -90 : -90}
+              max={rateMode ? 90 : 30}
+              step="1"
+              bind:value={pitch}
+              class="flex-1 h-1.5 accent-primary"
+            />
             <span class="text-xs font-mono text-foreground w-12 text-right">{pitch}{rateMode ? '°/s' : '°'}</span>
           </div>
           <div class="flex items-center gap-2">
             <label for="gimbal-yaw" class="text-xs text-muted-foreground w-14 shrink-0">{t('gimbal.yaw')}</label>
-            <input id="gimbal-yaw" type="range" min="-180" max="180" step="1" bind:value={yaw}
-                   class="flex-1 h-1.5 accent-primary" />
+            <input
+              id="gimbal-yaw"
+              type="range"
+              min="-180"
+              max="180"
+              step="1"
+              bind:value={yaw}
+              class="flex-1 h-1.5 accent-primary"
+            />
             <span class="text-xs font-mono text-foreground w-12 text-right">{yaw}{rateMode ? '°/s' : '°'}</span>
           </div>
         </div>
@@ -202,7 +233,12 @@
           <Button variant="default" size="sm" class="flex-1 gap-1.5" onclick={takePhoto}>
             <Camera size={14} />{t('camera.photo')}
           </Button>
-          <Button variant={recording ? 'destructive' : 'secondary'} size="sm" class="flex-1 gap-1.5" onclick={toggleVideo}>
+          <Button
+            variant={recording ? 'destructive' : 'secondary'}
+            size="sm"
+            class="flex-1 gap-1.5"
+            onclick={toggleVideo}
+          >
             {#if recording}
               <VideoOff size={14} />{t('camera.videoStop')}
             {:else}
@@ -213,8 +249,15 @@
         <div class="flex items-center gap-2">
           <ZoomIn size={14} class="text-muted-foreground shrink-0" />
           <label for="camera-zoom" class="text-xs text-muted-foreground w-10 shrink-0">{t('camera.zoom')}</label>
-          <input id="camera-zoom" type="range" min="1" max="30" step="0.5" bind:value={zoomLevel}
-                 class="flex-1 h-1.5 accent-primary" />
+          <input
+            id="camera-zoom"
+            type="range"
+            min="1"
+            max="30"
+            step="0.5"
+            bind:value={zoomLevel}
+            class="flex-1 h-1.5 accent-primary"
+          />
           <span class="text-xs font-mono text-foreground w-10 text-right">{zoomLevel}x</span>
           <Button variant="outline" size="sm" class="h-7 px-2 text-xs" onclick={setZoom}>{t('gimbal.apply')}</Button>
         </div>
@@ -229,18 +272,35 @@
         <div class="flex flex-col gap-2">
           <div class="flex items-center gap-2">
             <label for="roi-lat" class="text-xs text-muted-foreground w-10 shrink-0">Lat</label>
-            <input id="roi-lat" type="number" step="0.000001" bind:value={roiLat}
-                   class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50" />
+            <input
+              id="roi-lat"
+              type="number"
+              step="0.000001"
+              bind:value={roiLat}
+              class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50"
+            />
           </div>
           <div class="flex items-center gap-2">
             <label for="roi-lon" class="text-xs text-muted-foreground w-10 shrink-0">Lon</label>
-            <input id="roi-lon" type="number" step="0.000001" bind:value={roiLon}
-                   class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50" />
+            <input
+              id="roi-lon"
+              type="number"
+              step="0.000001"
+              bind:value={roiLon}
+              class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50"
+            />
           </div>
           <div class="flex items-center gap-2">
             <label for="roi-alt" class="text-xs text-muted-foreground w-10 shrink-0">Alt</label>
-            <input id="roi-alt" type="number" min="0" max="500" step="5" bind:value={roiAlt}
-                   class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50" />
+            <input
+              id="roi-alt"
+              type="number"
+              min="0"
+              max="500"
+              step="5"
+              bind:value={roiAlt}
+              class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50"
+            />
             <span class="text-xs text-muted-foreground">m</span>
           </div>
         </div>

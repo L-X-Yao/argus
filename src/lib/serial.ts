@@ -23,8 +23,8 @@ export { BAUD_RATES };
 const KNOWN_FC_FILTERS: SerialPortFilter[] = [
   { usbVendorId: 0x1209 }, // STM32 bootloader (generic)
   { usbVendorId: 0x0483 }, // STMicroelectronics
-  { usbVendorId: 0x26AC }, // 3DRobotics / Pixhawk
-  { usbVendorId: 0x2DAE }, // Holybro
+  { usbVendorId: 0x26ac }, // 3DRobotics / Pixhawk
+  { usbVendorId: 0x2dae }, // Holybro
   { usbVendorId: 0x3162 }, // CubePilot
   { usbVendorId: 0x2341 }, // Arduino (for testing)
 ];
@@ -62,7 +62,9 @@ export async function openSerial(baudRate: number = 115200): Promise<SerialConne
           writer.releaseLock();
         }
       } catch {}
-      try { await port.close(); } catch {}
+      try {
+        await port.close();
+      } catch {}
     },
   };
 }
@@ -83,10 +85,7 @@ export async function serialWrite(conn: SerialConnection, data: Uint8Array): Pro
  * Read loop — reads from serial port and calls onData for each chunk.
  * Returns when the port is closed or an error occurs.
  */
-export async function serialReadLoop(
-  conn: SerialConnection,
-  onData: (chunk: Uint8Array) => void,
-): Promise<void> {
+export async function serialReadLoop(conn: SerialConnection, onData: (chunk: Uint8Array) => void): Promise<void> {
   const reader = conn.readable.getReader();
   try {
     while (true) {

@@ -8,9 +8,22 @@
 
   let drawingFence = $state(false);
 
-  function startDraw() { app.fencePolygon = []; app.fenceUploaded = false; drawingFence = true; app.drawingFence = true; }
-  function finishDraw() { drawingFence = false; app.drawingFence = false; }
-  function clearFence() { app.fencePolygon = []; app.fenceUploaded = false; app.drawingFence = false; drawingFence = false; }
+  function startDraw() {
+    app.fencePolygon = [];
+    app.fenceUploaded = false;
+    drawingFence = true;
+    app.drawingFence = true;
+  }
+  function finishDraw() {
+    drawingFence = false;
+    app.drawingFence = false;
+  }
+  function clearFence() {
+    app.fencePolygon = [];
+    app.fenceUploaded = false;
+    app.drawingFence = false;
+    drawingFence = false;
+  }
 
   function fmtArea(): string {
     if (app.fencePolygon.length < 3) return '---';
@@ -19,9 +32,9 @@
     let area = 0;
     for (let i = 0; i < pts.length; i++) {
       const j = (i + 1) % pts.length;
-      const x1 = (pts[i].lon - origin.lon) * 111320 * Math.cos(origin.lat * Math.PI / 180);
+      const x1 = (pts[i].lon - origin.lon) * 111320 * Math.cos((origin.lat * Math.PI) / 180);
       const y1 = (pts[i].lat - origin.lat) * 111320;
-      const x2 = (pts[j].lon - origin.lon) * 111320 * Math.cos(origin.lat * Math.PI / 180);
+      const x2 = (pts[j].lon - origin.lon) * 111320 * Math.cos((origin.lat * Math.PI) / 180);
       const y2 = (pts[j].lat - origin.lat) * 111320;
       area += x1 * y2 - x2 * y1;
     }
@@ -56,7 +69,9 @@
             app.fenceUploaded = false;
             addToast(t('fence.loaded').replace('{n}', String(pts.length)), 'success');
           }
-        } catch { addToast(t('fence.loadFail'), 'error'); }
+        } catch {
+          addToast(t('fence.loadFail'), 'error');
+        }
       };
       reader.readAsText(file);
     };
@@ -64,7 +79,10 @@
   }
 
   function uploadFence() {
-    if (app.fencePolygon.length < 3) { addToast(t('fence.min3'), 'error'); return; }
+    if (app.fencePolygon.length < 3) {
+      addToast(t('fence.min3'), 'error');
+      return;
+    }
     addToast(t('fence.uploading'), 'info');
     if (isSerialConnected()) {
       // WebSerial direct: run the MISSION protocol with mission_type=1 in
@@ -85,8 +103,7 @@
 
   function exportKml() {
     if (app.fencePolygon.length < 3) return;
-    const coords = [...app.fencePolygon, app.fencePolygon[0]]
-      .map(p => `${p.lon},${p.lat},0`).join('\n');
+    const coords = [...app.fencePolygon, app.fencePolygon[0]].map((p) => `${p.lon},${p.lat},0`).join('\n');
     const kml = `<?xml version="1.0" encoding="UTF-8"?>
 <kml xmlns="http://www.opengis.net/kml/2.2"><Document><name>${t('fence.kmlName')}</name>
 <Style id="fence"><LineStyle><color>ff4444ff</color><width>2</width></LineStyle>
@@ -116,9 +133,11 @@
   </div>
   {#if app.fencePolygon.length < 3 && !drawingFence}
     <div class="flex gap-2">
-      <button class="flex-1 py-2.5 bg-transparent border-2 border-dashed border-destructive/50 rounded-lg cursor-pointer
+      <button
+        class="flex-1 py-2.5 bg-transparent border-2 border-dashed border-destructive/50 rounded-lg cursor-pointer
                       text-sm font-bold text-destructive hover:bg-destructive/5 transition-colors"
-              onclick={startDraw}>{t('fence.draw')}</button>
+        onclick={startDraw}>{t('fence.draw')}</button
+      >
       <Button variant="outline" size="sm" onclick={loadFence}>{t('fence.load')}</Button>
     </div>
     <div class="text-[11px] text-muted-foreground mt-1 text-center">{t('fence.drawHint')}</div>
@@ -131,7 +150,9 @@
       <Button variant="ghost" size="xs" onclick={clearFence}>{t('map.cancel')}</Button>
     </div>
   {:else}
-    <div class="text-xs text-muted-foreground mb-2">{t('fence.vertexSummary').replace('{n}', String(app.fencePolygon.length))} | {fmtArea()}</div>
+    <div class="text-xs text-muted-foreground mb-2">
+      {t('fence.vertexSummary').replace('{n}', String(app.fencePolygon.length))} | {fmtArea()}
+    </div>
     <div class="flex flex-wrap gap-1">
       <Button variant="default" size="xs" onclick={uploadFence}>{t('fence.upload')}</Button>
       <Button variant="outline" size="xs" onclick={startDraw}>{t('fence.redraw')}</Button>

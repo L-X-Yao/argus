@@ -5,8 +5,12 @@ import type { FcAdapter, FcType, FlightMode } from './interface';
  * - bits [24..31] = main mode
  * - bits [16..23] = sub mode
  */
-function mainMode(customMode: number): number { return (customMode >> 16) & 0xFF; }
-function subMode(customMode: number): number { return (customMode >> 24) & 0xFF; }
+function mainMode(customMode: number): number {
+  return (customMode >> 16) & 0xff;
+}
+function subMode(customMode: number): number {
+  return (customMode >> 24) & 0xff;
+}
 
 const PX4_MAIN_MANUAL = 1;
 const PX4_MAIN_ALTCTL = 2;
@@ -30,20 +34,20 @@ function px4ModeId(main: number, sub: number = 0): number {
 }
 
 const MODES: Record<string, { main: number; sub: number; name: string; category: FlightMode['category'] }> = {
-  manual:     { main: PX4_MAIN_MANUAL, sub: 0, name: 'Manual', category: 'manual' },
+  manual: { main: PX4_MAIN_MANUAL, sub: 0, name: 'Manual', category: 'manual' },
   stabilized: { main: PX4_MAIN_STABILIZED, sub: 0, name: 'Stabilized', category: 'manual' },
-  acro:       { main: PX4_MAIN_ACRO, sub: 0, name: 'Acro', category: 'manual' },
-  rattitude:  { main: PX4_MAIN_RATTITUDE, sub: 0, name: 'Rattitude', category: 'manual' },
-  altctl:     { main: PX4_MAIN_ALTCTL, sub: 0, name: 'Altitude', category: 'assisted' },
-  posctl:     { main: PX4_MAIN_POSCTL, sub: 0, name: 'Position', category: 'assisted' },
-  offboard:   { main: PX4_MAIN_OFFBOARD, sub: 0, name: 'Offboard', category: 'auto' },
-  mission:    { main: PX4_MAIN_AUTO, sub: PX4_AUTO_MISSION, name: 'Mission', category: 'auto' },
-  hold:       { main: PX4_MAIN_AUTO, sub: PX4_AUTO_LOITER, name: 'Hold', category: 'auto' },
-  rtl:        { main: PX4_MAIN_AUTO, sub: PX4_AUTO_RTL, name: 'Return', category: 'emergency' },
-  takeoff:    { main: PX4_MAIN_AUTO, sub: PX4_AUTO_TAKEOFF, name: 'Takeoff', category: 'auto' },
-  land:       { main: PX4_MAIN_AUTO, sub: PX4_AUTO_LAND, name: 'Land', category: 'emergency' },
-  follow:     { main: PX4_MAIN_AUTO, sub: PX4_AUTO_FOLLOW, name: 'Follow', category: 'auto' },
-  precland:   { main: PX4_MAIN_AUTO, sub: PX4_AUTO_PRECLAND, name: 'Precision Land', category: 'auto' },
+  acro: { main: PX4_MAIN_ACRO, sub: 0, name: 'Acro', category: 'manual' },
+  rattitude: { main: PX4_MAIN_RATTITUDE, sub: 0, name: 'Rattitude', category: 'manual' },
+  altctl: { main: PX4_MAIN_ALTCTL, sub: 0, name: 'Altitude', category: 'assisted' },
+  posctl: { main: PX4_MAIN_POSCTL, sub: 0, name: 'Position', category: 'assisted' },
+  offboard: { main: PX4_MAIN_OFFBOARD, sub: 0, name: 'Offboard', category: 'auto' },
+  mission: { main: PX4_MAIN_AUTO, sub: PX4_AUTO_MISSION, name: 'Mission', category: 'auto' },
+  hold: { main: PX4_MAIN_AUTO, sub: PX4_AUTO_LOITER, name: 'Hold', category: 'auto' },
+  rtl: { main: PX4_MAIN_AUTO, sub: PX4_AUTO_RTL, name: 'Return', category: 'emergency' },
+  takeoff: { main: PX4_MAIN_AUTO, sub: PX4_AUTO_TAKEOFF, name: 'Takeoff', category: 'auto' },
+  land: { main: PX4_MAIN_AUTO, sub: PX4_AUTO_LAND, name: 'Land', category: 'emergency' },
+  follow: { main: PX4_MAIN_AUTO, sub: PX4_AUTO_FOLLOW, name: 'Follow', category: 'auto' },
+  precland: { main: PX4_MAIN_AUTO, sub: PX4_AUTO_PRECLAND, name: 'Precision Land', category: 'auto' },
 };
 
 const PX4_BTNS: [number, string][] = [
@@ -74,26 +78,45 @@ export const px4Adapter: FcAdapter = {
     return `PX4_${main}_${sub}`;
   },
 
-  modeButtons(): [number, string][] { return PX4_BTNS; },
+  modeButtons(): [number, string][] {
+    return PX4_BTNS;
+  },
 
   allModes(): FlightMode[] {
-    return Object.values(MODES).map(m => ({
+    return Object.values(MODES).map((m) => ({
       id: px4ModeId(m.main, m.sub),
       name: m.name,
       category: m.category,
     }));
   },
 
-  armBaseMode(): number { return 209; },
-  rtlModeId(): number { return px4ModeId(PX4_MAIN_AUTO, PX4_AUTO_RTL); },
-  holdModeId(): number { return px4ModeId(PX4_MAIN_AUTO, PX4_AUTO_LOITER); },
-  autoModeId(): number { return px4ModeId(PX4_MAIN_AUTO, PX4_AUTO_MISSION); },
+  armBaseMode(): number {
+    return 209;
+  },
+  rtlModeId(): number {
+    return px4ModeId(PX4_MAIN_AUTO, PX4_AUTO_RTL);
+  },
+  holdModeId(): number {
+    return px4ModeId(PX4_MAIN_AUTO, PX4_AUTO_LOITER);
+  },
+  autoModeId(): number {
+    return px4ModeId(PX4_MAIN_AUTO, PX4_AUTO_MISSION);
+  },
 
   vehicleTypeName(mavType: number): string {
     const map: Record<number, string> = {
-      1: 'Fixed Wing', 2: 'Quadrotor', 3: 'Coaxial', 4: 'Helicopter',
-      10: 'Rover', 12: 'Submarine', 13: 'Hexarotor', 14: 'Octorotor',
-      19: 'VTOL Duo', 20: 'VTOL Quad', 21: 'VTOL Tilt', 22: 'VTOL Standard',
+      1: 'Fixed Wing',
+      2: 'Quadrotor',
+      3: 'Coaxial',
+      4: 'Helicopter',
+      10: 'Rover',
+      12: 'Submarine',
+      13: 'Hexarotor',
+      14: 'Octorotor',
+      19: 'VTOL Duo',
+      20: 'VTOL Quad',
+      21: 'VTOL Tilt',
+      22: 'VTOL Standard',
     };
     return map[mavType] || `Type ${mavType}`;
   },

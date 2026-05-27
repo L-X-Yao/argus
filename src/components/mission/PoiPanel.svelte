@@ -46,8 +46,22 @@
   }
 </script>
 
-<div role="dialog" aria-modal="true" tabindex="-1" class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center" onclick={onclose} onkeydown={(e) => { if (e.key === "Escape") onclose(); }}>
-    <div role="presentation" class="bg-card border border-border rounded-2xl overflow-hidden w-[350px] max-h-[80vh] shadow-2xl flex flex-col" onclick={(e) => e.stopPropagation()} onkeydown={(e) => e.stopPropagation()}>
+<div
+  role="dialog"
+  aria-modal="true"
+  tabindex="-1"
+  class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center"
+  onclick={onclose}
+  onkeydown={(e) => {
+    if (e.key === 'Escape') onclose();
+  }}
+>
+  <div
+    role="presentation"
+    class="bg-card border border-border rounded-2xl overflow-hidden w-[350px] max-h-[80vh] shadow-2xl flex flex-col"
+    onclick={(e) => e.stopPropagation()}
+    onkeydown={(e) => e.stopPropagation()}
+  >
     <div class="bg-gradient-to-r from-primary/20 to-primary/5 px-5 py-3 flex items-center justify-between shrink-0">
       <div class="flex items-center gap-2">
         <Crosshair size={16} class="text-primary" />
@@ -72,26 +86,41 @@
       <div class="flex flex-col gap-2">
         <div class="flex items-center gap-2">
           <label for="poi-lat" class="text-xs text-muted-foreground w-10 shrink-0">Lat</label>
-          <input id="poi-lat" type="number" step="0.000001" bind:value={lat}
-                 class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50" />
+          <input
+            id="poi-lat"
+            type="number"
+            step="0.000001"
+            bind:value={lat}
+            class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50"
+          />
         </div>
         <div class="flex items-center gap-2">
           <label for="poi-lon" class="text-xs text-muted-foreground w-10 shrink-0">Lon</label>
-          <input id="poi-lon" type="number" step="0.000001" bind:value={lon}
-                 class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50" />
+          <input
+            id="poi-lon"
+            type="number"
+            step="0.000001"
+            bind:value={lon}
+            class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50"
+          />
         </div>
         <div class="flex items-center gap-2">
           <label for="poi-alt" class="text-xs text-muted-foreground w-10 shrink-0">Alt</label>
-          <input id="poi-alt" type="number" min="0" max="500" step="5" bind:value={alt}
-                 class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50" />
+          <input
+            id="poi-alt"
+            type="number"
+            min="0"
+            max="500"
+            step="5"
+            bind:value={alt}
+            class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50"
+          />
           <span class="text-xs text-muted-foreground">m</span>
         </div>
       </div>
 
       {#if app.drone.connected}
-        <Button variant="outline" size="sm" class="w-full" onclick={prefillFromDrone}>
-          Drone pos
-        </Button>
+        <Button variant="outline" size="sm" class="w-full" onclick={prefillFromDrone}>Drone pos</Button>
       {/if}
 
       <div class="flex gap-2">

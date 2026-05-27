@@ -9,10 +9,7 @@
   let { onclose }: { onclose: () => void } = $props();
 
   const CH_COUNT = 8;
-  const CH_LABELS = $derived([
-    t('rc.roll'), t('rc.pitch'), t('rc.throttle'), t('rc.yaw'),
-    'CH5', 'CH6', 'CH7', 'CH8',
-  ]);
+  const CH_LABELS = $derived([t('rc.roll'), t('rc.pitch'), t('rc.throttle'), t('rc.yaw'), 'CH5', 'CH6', 'CH7', 'CH8']);
 
   let step = $state(1);
   let trimValues = $state<number[]>(Array(CH_COUNT).fill(1500));
@@ -38,9 +35,7 @@
     });
   });
 
-  let allRangeOk = $derived(
-    minValues.every((min, i) => maxValues[i] - min > 300)
-  );
+  let allRangeOk = $derived(minValues.every((min, i) => maxValues[i] - min > 300));
 
   /* ── Helpers ── */
   function barWidth(v: number): number {
@@ -91,7 +86,7 @@
       sendCommand('param_set', undefined, { name: `RC${ch}_REVERSED`, value: rev ? 1 : 0 });
     }
     writing = false;
-    const revCount = reversed.filter(r => r).length;
+    const revCount = reversed.filter((r) => r).length;
     const msg = t('rccal.writeDone').replace('{n}', String(CH_COUNT * 4));
     addToast(msg + (revCount > 0 ? ` (${revCount} reversed)` : ''), 'success');
   }
@@ -104,10 +99,19 @@
   }
 </script>
 
-<div role="dialog" aria-modal="true" tabindex="-1" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
-     onclick={(e) => { if (e.target === e.currentTarget) onclose(); }} onkeydown={(e) => { if (e.key === "Escape") onclose(); }}>
+<div
+  role="dialog"
+  aria-modal="true"
+  tabindex="-1"
+  class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
+  onclick={(e) => {
+    if (e.target === e.currentTarget) onclose();
+  }}
+  onkeydown={(e) => {
+    if (e.key === 'Escape') onclose();
+  }}
+>
   <div class="bg-card border border-border rounded-xl shadow-2xl w-[600px] max-h-[85vh] flex flex-col overflow-hidden">
-
     <!-- Header -->
     <div class="flex items-center justify-between px-4 py-3 border-b border-border">
       <div class="flex items-center gap-2">
@@ -118,21 +122,24 @@
     </div>
 
     <div class="flex-1 min-h-0 overflow-y-auto p-4">
-
       <!-- Step indicator -->
       <div class="flex items-center justify-center gap-2 mb-5">
         {#each [1, 2, 3] as s}
           <div class="flex items-center gap-2">
-            <div class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all
+            <div
+              class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all
               {step === s
                 ? 'bg-primary text-primary-foreground shadow-md'
                 : step > s
                   ? 'bg-green-500/80 text-white'
-                  : 'bg-muted text-muted-foreground'}">
+                  : 'bg-muted text-muted-foreground'}"
+            >
               {s}
             </div>
-            <span class="text-[11px] font-medium
-              {step === s ? 'text-foreground' : 'text-muted-foreground'}">
+            <span
+              class="text-[11px] font-medium
+              {step === s ? 'text-foreground' : 'text-muted-foreground'}"
+            >
               {t(`rccal.step${s}`)}
             </span>
             {#if s < 3}
@@ -148,9 +155,9 @@
           <p class="text-sm text-muted-foreground">{t('cal.connectFirst')}</p>
         </div>
 
-      <!-- ════════════════════════════════════════════ -->
-      <!-- STEP 1 — Center Sticks                       -->
-      <!-- ════════════════════════════════════════════ -->
+        <!-- ════════════════════════════════════════════ -->
+        <!-- STEP 1 — Center Sticks                       -->
+        <!-- ════════════════════════════════════════════ -->
       {:else if step === 1}
         <p class="text-[11px] text-muted-foreground mb-4">{t('rccal.center')}</p>
 
@@ -160,8 +167,10 @@
             <div class="flex items-center gap-2 text-[11px]">
               <span class="w-14 text-right text-muted-foreground text-[10px] shrink-0 font-medium">{CH_LABELS[i]}</span>
               <div class="flex-1 h-3 bg-muted rounded-full relative overflow-hidden">
-                <div class="h-full rounded-full bg-primary transition-all duration-100"
-                     style="width:{barWidth(val)}%"></div>
+                <div
+                  class="h-full rounded-full bg-primary transition-all duration-100"
+                  style="width:{barWidth(val)}%"
+                ></div>
                 <div class="absolute left-1/2 top-0 w-px h-full bg-border"></div>
               </div>
               <span class="w-10 text-right font-mono text-muted-foreground text-[10px] shrink-0">{val}</span>
@@ -169,15 +178,18 @@
           {/each}
         </div>
 
-        <Button variant="default" class="w-full"
-                onclick={recordTrim}
-                disabled={!connected || !app.drone.rc || app.drone.rc.length < CH_COUNT}>
+        <Button
+          variant="default"
+          class="w-full"
+          onclick={recordTrim}
+          disabled={!connected || !app.drone.rc || app.drone.rc.length < CH_COUNT}
+        >
           {t('rccal.recordTrim')}
         </Button>
 
-      <!-- ════════════════════════════════════════════ -->
-      <!-- STEP 2 — Full Range                          -->
-      <!-- ════════════════════════════════════════════ -->
+        <!-- ════════════════════════════════════════════ -->
+        <!-- STEP 2 — Full Range                          -->
+        <!-- ════════════════════════════════════════════ -->
       {:else if step === 2}
         <p class="text-[11px] text-muted-foreground mb-4">{t('rccal.move')}</p>
 
@@ -188,30 +200,40 @@
             <div class="flex items-center gap-2 text-[11px]">
               <span class="w-14 text-right text-muted-foreground text-[10px] shrink-0 font-medium">{CH_LABELS[i]}</span>
               <div class="flex-1 h-3 bg-muted rounded-full relative overflow-hidden">
-                <div class="h-full rounded-full transition-all duration-100
+                <div
+                  class="h-full rounded-full transition-all duration-100
                   {range > 300 ? 'bg-green-500' : 'bg-primary'}"
-                     style="width:{barWidth(val)}%"></div>
+                  style="width:{barWidth(val)}%"
+                ></div>
                 <div class="absolute left-1/2 top-0 w-px h-full bg-border"></div>
               </div>
-              <span class="w-10 text-right font-mono text-[10px] shrink-0
-                {range > 300 ? 'text-green-400' : 'text-muted-foreground'}">{val}</span>
+              <span
+                class="w-10 text-right font-mono text-[10px] shrink-0
+                {range > 300 ? 'text-green-400' : 'text-muted-foreground'}">{val}</span
+              >
               <span class="w-20 text-right font-mono text-[9px] text-muted-foreground shrink-0">
-                {t('rccal.min')}:{minValues[i]} {t('rccal.max')}:{maxValues[i]}
+                {t('rccal.min')}:{minValues[i]}
+                {t('rccal.max')}:{maxValues[i]}
               </span>
             </div>
           {/each}
         </div>
 
-        <Button variant="default" class="w-full"
-                onclick={() => { step = 3; }}
-                disabled={!allRangeOk}>
+        <Button
+          variant="default"
+          class="w-full"
+          onclick={() => {
+            step = 3;
+          }}
+          disabled={!allRangeOk}
+        >
           {t('rccal.next')}
           <ChevronRight size={14} />
         </Button>
 
-      <!-- ════════════════════════════════════════════ -->
-      <!-- STEP 3 — Review & Write                      -->
-      <!-- ════════════════════════════════════════════ -->
+        <!-- ════════════════════════════════════════════ -->
+        <!-- STEP 3 — Review & Write                      -->
+        <!-- ════════════════════════════════════════════ -->
       {:else if step === 3}
         <p class="text-[11px] text-muted-foreground mb-4">{t('rccal.done')}</p>
 
@@ -239,13 +261,10 @@
         </div>
 
         <div class="flex gap-2">
-          <Button variant="default" class="flex-1"
-                  onclick={writeToFc}
-                  disabled={writing}>
+          <Button variant="default" class="flex-1" onclick={writeToFc} disabled={writing}>
             {t('rccal.write')}
           </Button>
-          <Button variant="secondary" class="flex-1"
-                  onclick={resetWizard}>
+          <Button variant="secondary" class="flex-1" onclick={resetWizard}>
             {t('rccal.reset')}
           </Button>
         </div>

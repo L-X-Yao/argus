@@ -20,18 +20,38 @@
   let prevLon = 0;
 
   interface TileSourceDef {
-    name: string; sat: string; vec: string; label: string | null;
-    gcj02: boolean; region: string;
+    name: string;
+    sat: string;
+    vec: string;
+    label: string | null;
+    gcj02: boolean;
+    region: string;
   }
   const SOURCES: Record<string, TileSourceDef> = {
-    amap:          { name: 'Amap',             sat: '6',            vec: '7',             label: '8',         gcj02: true,  region: 'china' },
-    google_sat:    { name: 'Google Satellite',  sat: 'google_sat',   vec: 'google_street', label: null,        gcj02: false, region: 'global' },
-    google_hybrid: { name: 'Google Hybrid',     sat: 'google_hybrid',vec: 'google_street', label: null,        gcj02: false, region: 'global' },
-    osm:           { name: 'OpenStreetMap',     sat: 'osm_sat',      vec: 'osm',           label: null,        gcj02: false, region: 'global' },
-    esri:          { name: 'Esri Topo',         sat: 'osm_sat',      vec: 'esri_topo',     label: null,        gcj02: false, region: 'global' },
+    amap: { name: 'Amap', sat: '6', vec: '7', label: '8', gcj02: true, region: 'china' },
+    google_sat: {
+      name: 'Google Satellite',
+      sat: 'google_sat',
+      vec: 'google_street',
+      label: null,
+      gcj02: false,
+      region: 'global',
+    },
+    google_hybrid: {
+      name: 'Google Hybrid',
+      sat: 'google_hybrid',
+      vec: 'google_street',
+      label: null,
+      gcj02: false,
+      region: 'global',
+    },
+    osm: { name: 'OpenStreetMap', sat: 'osm_sat', vec: 'osm', label: null, gcj02: false, region: 'global' },
+    esri: { name: 'Esri Topo', sat: 'osm_sat', vec: 'esri_topo', label: null, gcj02: false, region: 'global' },
   };
 
-  function curSource(): TileSourceDef { return SOURCES[app.tileSource] || SOURCES['osm']; }
+  function curSource(): TileSourceDef {
+    return SOURCES[app.tileSource] || SOURCES['osm'];
+  }
   let useGcj = $derived(curSource().gcj02);
   function toMap(lat: number, lon: number): [number, number] {
     return useGcj ? toGcj(lat, lon) : [lat, lon];
@@ -129,9 +149,7 @@
             encoding: 'terrarium',
           },
         },
-        layers: [
-          { id: 'raster', type: 'raster', source: 'raster-tiles' },
-        ],
+        layers: [{ id: 'raster', type: 'raster', source: 'raster-tiles' }],
         terrain: { source: 'terrain-dem', exaggeration: 1.3 },
         sky: {
           'sky-color': '#199EF3',
@@ -274,8 +292,14 @@
         return;
       }
       addWaypoint({
-        lat: wlat, lon: wlon, alt: app.defaultAlt,
-        drop: false, delay: 0, speed: 0, type: 'wp', loiter_param: 0,
+        lat: wlat,
+        lon: wlon,
+        alt: app.defaultAlt,
+        drop: false,
+        delay: 0,
+        speed: 0,
+        type: 'wp',
+        loiter_param: 0,
       });
     });
 
@@ -309,7 +333,10 @@
   }
 
   function toggleMeasure(mode: 'distance' | 'area') {
-    if (measuring && measureMode === mode) { clearMeasure(); return; }
+    if (measuring && measureMode === mode) {
+      clearMeasure();
+      return;
+    }
     clearMeasure();
     measureMode = mode;
     measuring = true;
@@ -320,7 +347,10 @@
     measurePts = [];
     measureVertMarkers.forEach((m) => m.remove());
     measureVertMarkers = [];
-    if (measureLabel) { measureLabel.remove(); measureLabel = null; }
+    if (measureLabel) {
+      measureLabel.remove();
+      measureLabel = null;
+    }
     const src = map?.getSource('measure') as maplibregl.GeoJSONSource | undefined;
     if (src) src.setData({ type: 'FeatureCollection', features: [] });
   }
@@ -336,11 +366,14 @@
     const src = map?.getSource('measure') as maplibregl.GeoJSONSource | undefined;
     if (!src) return;
 
-    if (measureLabel) { measureLabel.remove(); measureLabel = null; }
+    if (measureLabel) {
+      measureLabel.remove();
+      measureLabel = null;
+    }
 
     if (measureMode === 'area') {
       if (lonLats.length >= 3) {
-        const ring = [...lonLats, lonLats[0]];  // closed
+        const ring = [...lonLats, lonLats[0]]; // closed
         src.setData({
           type: 'Feature',
           geometry: { type: 'Polygon', coordinates: [ring] },
@@ -370,9 +403,7 @@
         for (let i = 1; i < measurePts.length; i++) {
           total += segDist(measurePts[i - 1], measurePts[i]);
         }
-        measureLabel = labelMarker(
-          lonLats[lonLats.length - 1], fmtDist(total), '#ff5252',
-        );
+        measureLabel = labelMarker(lonLats[lonLats.length - 1], fmtDist(total), '#ff5252');
       }
     }
   }
@@ -404,15 +435,24 @@
     if (homeMarker) homeMarker.remove();
     wpMarkers.forEach((m) => m.remove());
     wpMarkers = [];
-    if (wpPopup) { wpPopup.remove(); wpPopup = null; }
+    if (wpPopup) {
+      wpPopup.remove();
+      wpPopup = null;
+    }
     fenceVertMarkers.forEach((m) => m.remove());
     fenceVertMarkers = [];
     surveyVertMarkers.forEach((m) => m.remove());
     surveyVertMarkers = [];
     measureVertMarkers.forEach((m) => m.remove());
     measureVertMarkers = [];
-    if (measureLabel) { measureLabel.remove(); measureLabel = null; }
-    if (replayMarker) { replayMarker.remove(); replayMarker = null; }
+    if (measureLabel) {
+      measureLabel.remove();
+      measureLabel = null;
+    }
+    if (replayMarker) {
+      replayMarker.remove();
+      replayMarker = null;
+    }
     adsbMarkers.forEach((m) => m.remove());
     adsbMarkers.clear();
     if (map) map.remove();
@@ -427,7 +467,9 @@
 
     if (!droneMarker) {
       const el = document.createElement('div');
-      const svg = createSvgElement('<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><polygon points="16,4 8,28 16,22 24,28" fill="#4fc3f7" stroke="#fff" stroke-width="1.5"/></svg>');
+      const svg = createSvgElement(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32"><polygon points="16,4 8,28 16,22 24,28" fill="#4fc3f7" stroke="#fff" stroke-width="1.5"/></svg>',
+      );
       el.appendChild(svg);
       el.style.transform = `rotate(${d.hdg}deg)`;
       droneMarker = new maplibregl.Marker({ element: el, rotationAlignment: 'map' })
@@ -456,11 +498,11 @@
     if (d.home_lat !== 0 && !homeMarker) {
       const [hlat, hlon] = toMap(d.home_lat, d.home_lon);
       const hel = document.createElement('div');
-      const hsvg = createSvgElement('<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="#4caf50" stroke="#fff" stroke-width="2"/><text x="10" y="14" text-anchor="middle" fill="white" font-size="10" font-weight="bold">H</text></svg>');
+      const hsvg = createSvgElement(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="#4caf50" stroke="#fff" stroke-width="2"/><text x="10" y="14" text-anchor="middle" fill="white" font-size="10" font-weight="bold">H</text></svg>',
+      );
       hel.appendChild(hsvg);
-      homeMarker = new maplibregl.Marker({ element: hel })
-        .setLngLat([hlon, hlat])
-        .addTo(map!);
+      homeMarker = new maplibregl.Marker({ element: hel }).setLngLat([hlon, hlat]).addTo(map!);
     }
   });
 
@@ -490,7 +532,10 @@
     // negligible. Closures capture the current index at marker creation.
     wpMarkers.forEach((m) => m.remove());
     wpMarkers = [];
-    if (wpPopup) { wpPopup.remove(); wpPopup = null; }
+    if (wpPopup) {
+      wpPopup.remove();
+      wpPopup = null;
+    }
 
     wps.forEach((wp, i) => {
       const [mlat, mlon] = toMap(wp.lat, wp.lon);
@@ -501,13 +546,12 @@
       el.textContent = String(i + 1);
       if (wp.drop) {
         const badge = document.createElement('div');
-        badge.style.cssText = 'position:absolute;top:-5px;right:-5px;width:8px;height:8px;border-radius:50%;background:#ff5722;border:1px solid white';
+        badge.style.cssText =
+          'position:absolute;top:-5px;right:-5px;width:8px;height:8px;border-radius:50%;background:#ff5722;border:1px solid white';
         el.appendChild(badge);
       }
 
-      const m = new maplibregl.Marker({ element: el, draggable: true })
-        .setLngLat([mlon, mlat])
-        .addTo(map!);
+      const m = new maplibregl.Marker({ element: el, draggable: true }).setLngLat([mlon, mlat]).addTo(map!);
 
       m.on('dragend', () => {
         const ll = m.getLngLat();
@@ -549,17 +593,19 @@
         altVal.textContent = `${wp.alt}m`;
         popupEl.appendChild(altVal);
         if (wp.speed) {
-          popupEl.appendChild(document.createTextNode(
-            ` · ${t('label.spd')}: ${wp.speed}m/s`,
-          ));
+          popupEl.appendChild(document.createTextNode(` · ${t('label.spd')}: ${wp.speed}m/s`));
         }
 
         const btn = document.createElement('button');
         btn.textContent = t('label.delete');
-        btn.style.cssText = 'display:block;margin-top:6px;padding:3px 10px;background:#d32f2f;color:white;border:none;border-radius:3px;cursor:pointer;font-size:11px;font-weight:600';
+        btn.style.cssText =
+          'display:block;margin-top:6px;padding:3px 10px;background:#d32f2f;color:white;border:none;border-radius:3px;cursor:pointer;font-size:11px;font-weight:600';
         btn.addEventListener('click', () => {
           deleteWaypoint(i);
-          if (wpPopup) { wpPopup.remove(); wpPopup = null; }
+          if (wpPopup) {
+            wpPopup.remove();
+            wpPopup = null;
+          }
         });
         popupEl.appendChild(btn);
 
@@ -626,9 +672,7 @@
       // matching 2D FenceLayer.svelte:34.
       const el = document.createElement('div');
       el.style.cssText = `width:10px;height:10px;border-radius:50%;background:${i === 0 ? '#fff' : '#f44336'};border:2px solid #f44336;box-shadow:0 0 3px rgba(0,0,0,0.6)`;
-      fenceVertMarkers.push(
-        new maplibregl.Marker({ element: el }).setLngLat(pt).addTo(map!),
-      );
+      fenceVertMarkers.push(new maplibregl.Marker({ element: el }).setLngLat(pt).addTo(map!));
     });
   });
 
@@ -670,9 +714,7 @@
     lonLats.forEach((pt, i) => {
       const el = document.createElement('div');
       el.style.cssText = `width:10px;height:10px;border-radius:50%;background:${i === 0 ? '#fff' : '#ab47bc'};border:2px solid #ab47bc;box-shadow:0 0 3px rgba(0,0,0,0.6)`;
-      surveyVertMarkers.push(
-        new maplibregl.Marker({ element: el }).setLngLat(pt).addTo(map!),
-      );
+      surveyVertMarkers.push(new maplibregl.Marker({ element: el }).setLngLat(pt).addTo(map!));
     });
   });
 
@@ -687,11 +729,16 @@
     const trailSrc = map.getSource('replay-trail') as maplibregl.GeoJSONSource | undefined;
 
     if (!rp) {
-      if (replayMarker) { replayMarker.remove(); replayMarker = null; }
+      if (replayMarker) {
+        replayMarker.remove();
+        replayMarker = null;
+      }
       replayTrail = [];
       if (trailSrc) {
         trailSrc.setData({
-          type: 'Feature', geometry: { type: 'LineString', coordinates: [] }, properties: {},
+          type: 'Feature',
+          geometry: { type: 'LineString', coordinates: [] },
+          properties: {},
         });
       }
       return;
@@ -704,12 +751,13 @@
       // Orange arrow SVG — same shape as 2D ReplayLayer.svelte:23-27.
       const svg = createSvgElement(
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="-12 -12 24 24" width="28" height="28">' +
-        '<polygon points="0,-10 -7,8 0,4 7,8" fill="#ffa726" stroke="white" stroke-width="1"/></svg>',
+          '<polygon points="0,-10 -7,8 0,4 7,8" fill="#ffa726" stroke="white" stroke-width="1"/></svg>',
       );
       el.appendChild(svg);
       el.style.transform = `rotate(${rp.yaw}deg)`;
       replayMarker = new maplibregl.Marker({ element: el, rotationAlignment: 'map' })
-        .setLngLat([mlon, mlat]).addTo(map);
+        .setLngLat([mlon, mlat])
+        .addTo(map);
     } else {
       replayMarker.setLngLat([mlon, mlat]);
       (replayMarker.getElement() as HTMLElement).style.transform = `rotate(${rp.yaw}deg)`;
@@ -754,17 +802,17 @@
       arrow.style.cssText = `transform:rotate(${a.hdg}deg);transform-origin:center`;
       const svg = createSvgElement(
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="-10 -10 20 20" width="20" height="20">' +
-        '<polygon points="0,-8 -5,6 0,3 5,6" fill="#ffc107" stroke="#333" stroke-width="0.5"/></svg>',
+          '<polygon points="0,-8 -5,6 0,3 5,6" fill="#ffc107" stroke="#333" stroke-width="0.5"/></svg>',
       );
       arrow.appendChild(svg);
       el.appendChild(arrow);
       const label = document.createElement('div');
-      label.style.cssText = 'position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-size:8px;color:#ffc107;font-weight:bold;white-space:nowrap;text-shadow:0 0 2px #000';
+      label.style.cssText =
+        'position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-size:8px;color:#ffc107;font-weight:bold;white-space:nowrap;text-shadow:0 0 2px #000';
       label.textContent = a.callsign || a.icao.toString(16);
       el.appendChild(label);
 
-      const m = new maplibregl.Marker({ element: el, rotationAlignment: 'map' })
-        .setLngLat([mlon, mlat]).addTo(map!);
+      const m = new maplibregl.Marker({ element: el, rotationAlignment: 'map' }).setLngLat([mlon, mlat]).addTo(map!);
       adsbMarkers.set(a.icao, m);
     }
     // Remove markers for ICAOs no longer in the traffic list.
@@ -792,7 +840,10 @@
     if (map.getLayer('raster')) map.removeLayer('raster');
     if (map.getSource('raster-tiles')) map.removeSource('raster-tiles');
     map.addSource('raster-tiles', {
-      type: 'raster', tiles: [url], tileSize: 256, maxzoom: 18,
+      type: 'raster',
+      tiles: [url],
+      tileSize: 256,
+      maxzoom: 18,
     });
     // Insert raster BELOW all overlays so waypoint/fence/measure stay visible.
     const firstOverlay = map.getLayer('waypoint-line') ? 'waypoint-line' : undefined;
@@ -805,40 +856,76 @@
 
   <div class="absolute top-2.5 left-2.5 z-10 flex gap-1">
     <div class="map-btn">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+        ><path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" /></svg
+      >
       3D {t('map.satellite')}
     </div>
 
-    <button class="map-btn {measuring && measureMode === 'distance' ? '!text-red-400 !border-red-400' : ''}"
-            onclick={() => toggleMeasure('distance')} title={t('map.measure')}>
+    <button
+      class="map-btn {measuring && measureMode === 'distance' ? '!text-red-400 !border-red-400' : ''}"
+      onclick={() => toggleMeasure('distance')}
+      title={t('map.measure')}
+    >
       <Ruler size={13} />{t('map.measure')}
     </button>
-    <button class="map-btn {measuring && measureMode === 'area' ? '!text-red-400 !border-red-400' : ''}"
-            onclick={() => toggleMeasure('area')} title={t('map.area')}>
+    <button
+      class="map-btn {measuring && measureMode === 'area' ? '!text-red-400 !border-red-400' : ''}"
+      onclick={() => toggleMeasure('area')}
+      title={t('map.area')}
+    >
       <Square size={13} />{t('map.area')}
     </button>
-    <button class="map-btn {app.drawingFence ? '!text-red-400 !border-red-400' : ''}"
-            onclick={toggleFenceDraw} title={t('map.fence')}>
+    <button
+      class="map-btn {app.drawingFence ? '!text-red-400 !border-red-400' : ''}"
+      onclick={toggleFenceDraw}
+      title={t('map.fence')}
+    >
       <ShieldAlert size={13} />{t('map.fence')}
     </button>
-    <button class="map-btn {app.drawingPolygon ? '!text-purple-400 !border-purple-400' : ''}"
-            onclick={toggleSurveyDraw} title={t('map.survey')}>
+    <button
+      class="map-btn {app.drawingPolygon ? '!text-purple-400 !border-purple-400' : ''}"
+      onclick={toggleSurveyDraw}
+      title={t('map.survey')}
+    >
       <Grid3x3 size={13} />{t('map.survey')}
     </button>
     {#if app.fencePolygon.length > 0 || app.surveyPolygon.length > 0 || measuring}
-      <button class="map-btn" onclick={() => { clearMeasure(); clearFence(); }} title={t('label.clear')}>
+      <button
+        class="map-btn"
+        onclick={() => {
+          clearMeasure();
+          clearFence();
+        }}
+        title={t('label.clear')}
+      >
         <XIcon size={13} />
       </button>
     {/if}
   </div>
 
   {#if app.drone.connected}
-    <div class="absolute bottom-2 left-2.5 z-10 bg-card/85 backdrop-blur text-muted-foreground px-2 py-0.5 rounded text-[11px] font-mono">
+    <div
+      class="absolute bottom-2 left-2.5 z-10 bg-card/85 backdrop-blur text-muted-foreground px-2 py-0.5 rounded text-[11px] font-mono"
+    >
       {app.drone.lat.toFixed(6)}, {app.drone.lon.toFixed(6)} | {app.drone.alt_rel.toFixed(1)}m AGL
     </div>
   {/if}
 </div>
 
 <style>
-  .map-btn { display:inline-flex; align-items:center; gap:3px; padding:4px 10px; background:hsl(var(--card) / 0.92); border:1px solid hsl(var(--border)); border-radius:6px; cursor:pointer; font-size:12px; font-weight:600; color:hsl(var(--muted-foreground)); backdrop-filter:blur(4px); }
+  .map-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 4px 10px;
+    background: hsl(var(--card) / 0.92);
+    border: 1px solid hsl(var(--border));
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: 600;
+    color: hsl(var(--muted-foreground));
+    backdrop-filter: blur(4px);
+  }
 </style>

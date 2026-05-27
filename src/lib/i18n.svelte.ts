@@ -36,20 +36,28 @@ export function t(key: string): string {
 
 export function setLocale(l: Locale) {
   i18nState.locale = l;
-  try { localStorage.setItem('argus_locale', l); } catch {}
+  try {
+    localStorage.setItem('argus_locale', l);
+  } catch {}
   if (!loadedDicts[l]) {
-    LOCALE_LOADERS[l]().then(mod => {
-      loadedDicts[l] = mod.default;
-      _dictVersion++;
-    }).catch(() => {});
+    LOCALE_LOADERS[l]()
+      .then((mod) => {
+        loadedDicts[l] = mod.default;
+        _dictVersion++;
+      })
+      .catch(() => {});
   }
   _syncCallback?.(l);
 }
 
 let _syncCallback: ((l: Locale) => void) | null = null;
-export function onLocaleChange(cb: (l: Locale) => void) { _syncCallback = cb; }
+export function onLocaleChange(cb: (l: Locale) => void) {
+  _syncCallback = cb;
+}
 
-export function getLocale(): Locale { return i18nState.locale; }
+export function getLocale(): Locale {
+  return i18nState.locale;
+}
 
 export function tp(key: string, count: number): string {
   const tmpl = t(key);
@@ -66,11 +74,22 @@ export function tp(key: string, count: number): string {
 export function fmtDate(date: Date | string): string {
   const d = typeof date === 'string' ? new Date(date) : date;
   const localeMap: Record<string, string> = {
-    zh: 'zh-CN', en: 'en-US', ja: 'ja-JP', ko: 'ko-KR',
-    de: 'de-DE', fr: 'fr-FR', es: 'es-ES', pt: 'pt-BR',
-    ru: 'ru-RU', ar: 'ar-SA',
+    zh: 'zh-CN',
+    en: 'en-US',
+    ja: 'ja-JP',
+    ko: 'ko-KR',
+    de: 'de-DE',
+    fr: 'fr-FR',
+    es: 'es-ES',
+    pt: 'pt-BR',
+    ru: 'ru-RU',
+    ar: 'ar-SA',
   };
-  return d.toLocaleDateString(localeMap[i18nState.locale] || 'en-US', { year: 'numeric', month: 'short', day: 'numeric' });
+  return d.toLocaleDateString(localeMap[i18nState.locale] || 'en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+  });
 }
 
 export function fmtTime(seconds: number): string {
@@ -99,10 +118,12 @@ export function loadLocale() {
     if (saved && VALID_LOCALES.includes(saved as Locale)) {
       i18nState.locale = saved as Locale;
       if (!loadedDicts[saved as Locale]) {
-        LOCALE_LOADERS[saved as Locale]().then(mod => {
-          loadedDicts[saved as Locale] = mod.default;
-          _dictVersion++;
-        }).catch(() => {});
+        LOCALE_LOADERS[saved as Locale]()
+          .then((mod) => {
+            loadedDicts[saved as Locale] = mod.default;
+            _dictVersion++;
+          })
+          .catch(() => {});
       }
     }
   } catch {}

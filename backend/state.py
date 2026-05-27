@@ -63,8 +63,8 @@ class VehicleState:
     autopilot: int = 0
     force_plane: bool | None = None
     sysid: int = 1
-    fw_version: str = ''
-    fw_git: str = ''
+    fw_version: str = ""
+    fw_git: str = ""
     board_id: int = 0
     flight_summary: dict | None = None
     max_alt: float = 0.0

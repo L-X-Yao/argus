@@ -1,4 +1,5 @@
 """Tests for backend/param_manager.py — MAVLink PARAM protocol."""
+
 import json
 import struct
 import sys
@@ -13,17 +14,17 @@ from backend.param_manager import ParamManager
 
 def _make_link() -> MagicMock:
     link = MagicMock()
-    link.locale = 'en'
+    link.locale = "en"
     link.vehicle.sysid = 1
     link.sq = 0
     return link
 
 
 def _param_payload(name: str, value: float, index: int, total: int, ptype: int = 9) -> bytes:
-    p = struct.pack('<f', value)
-    p += struct.pack('<HH', total, index)
-    p += name.encode('ascii')[:16].ljust(16, b'\x00')
-    p += struct.pack('<B', ptype)
+    p = struct.pack("<f", value)
+    p += struct.pack("<HH", total, index)
+    p += name.encode("ascii")[:16].ljust(16, b"\x00")
+    p += struct.pack("<B", ptype)
     return p
 
 
@@ -41,7 +42,7 @@ class TestRequestAll:
     def test_clears_and_fetches(self):
         link = _make_link()
         mgr = ParamManager(link)
-        mgr.params = {'old': {'value': 1}}
+        mgr.params = {"old": {"value": 1}}
         mgr.request_all()
         assert len(mgr.params) == 0
         assert mgr.fetching is True
@@ -54,17 +55,17 @@ class TestHandleParamValue:
     def test_parses_single_param(self):
         link = _make_link()
         mgr = ParamManager(link)
-        p = _param_payload('BATT_CAPACITY', 5000.0, 0, 3)
+        p = _param_payload("BATT_CAPACITY", 5000.0, 0, 3)
         mgr.handle_param_value(p, len(p))
-        assert 'BATT_CAPACITY' in mgr.params
-        assert mgr.params['BATT_CAPACITY']['value'] == 5000.0
+        assert "BATT_CAPACITY" in mgr.params
+        assert mgr.params["BATT_CAPACITY"]["value"] == 5000.0
         assert mgr.received_count == 1
         assert mgr.total_count == 3
 
     def test_duplicate_param_not_double_counted(self):
         link = _make_link()
         mgr = ParamManager(link)
-        p = _param_payload('BATT_CAPACITY', 5000.0, 0, 3)
+        p = _param_payload("BATT_CAPACITY", 5000.0, 0, 3)
         mgr.handle_param_value(p, len(p))
         mgr.handle_param_value(p, len(p))
         assert mgr.received_count == 1
@@ -73,7 +74,7 @@ class TestHandleParamValue:
         link = _make_link()
         mgr = ParamManager(link)
         mgr.fetching = True
-        names = ['PARAM_A', 'PARAM_B', 'PARAM_C']
+        names = ["PARAM_A", "PARAM_B", "PARAM_C"]
         for i, name in enumerate(names):
             p = _param_payload(name, float(i), i, 3)
             mgr.handle_param_value(p, len(p))
@@ -83,7 +84,7 @@ class TestHandleParamValue:
     def test_short_payload_ignored(self):
         link = _make_link()
         mgr = ParamManager(link)
-        mgr.handle_param_value(b'\x00' * 10, 10)
+        mgr.handle_param_value(b"\x00" * 10, 10)
         assert len(mgr.params) == 0
 
     def test_messages_capped(self):
@@ -91,7 +92,7 @@ class TestHandleParamValue:
         mgr = ParamManager(link)
         mgr.fetching = True
         for i in range(2100):
-            name = f'P{i:04d}'[:16]
+            name = f"P{i:04d}"[:16]
             p = _param_payload(name, float(i), i, 2100)
             mgr.handle_param_value(p, len(p))
         assert len(mgr._messages) <= 2000
@@ -101,15 +102,15 @@ class TestSetParam:
     def test_sends_param_set(self):
         link = _make_link()
         mgr = ParamManager(link)
-        mgr.params = {'THR_MAX': {'name': 'THR_MAX', 'value': 80.0, 'type': 9, 'index': 0}}
-        mgr.set_param('THR_MAX', 90.0)
+        mgr.params = {"THR_MAX": {"name": "THR_MAX", "value": 80.0, "type": 9, "index": 0}}
+        mgr.set_param("THR_MAX", 90.0)
         link.send.assert_called_once()
         link.add_event.assert_called_once()
 
     def test_unknown_param_uses_default_type(self):
         link = _make_link()
         mgr = ParamManager(link)
-        mgr.set_param('NEW_PARAM', 42.0)
+        mgr.set_param("NEW_PARAM", 42.0)
         link.send.assert_called_once()
 
 
@@ -118,22 +119,22 @@ class TestSaveToFile:
         link = _make_link()
         mgr = ParamManager(link)
         mgr.params = {
-            'A': {'name': 'A', 'value': 1.0, 'type': 9, 'index': 0},
-            'B': {'name': 'B', 'value': 2.0, 'type': 9, 'index': 1},
+            "A": {"name": "A", "value": 1.0, "type": 9, "index": 0},
+            "B": {"name": "B", "value": 2.0, "type": 9, "index": 1},
         }
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
             path = f.name
         result = mgr.save_to_file(path)
         assert result == path
         with open(path) as f:
             data = json.load(f)
-        assert data == {'A': 1.0, 'B': 2.0}
+        assert data == {"A": 1.0, "B": 2.0}
         Path(path).unlink()
 
     def test_auto_path(self):
         link = _make_link()
         mgr = ParamManager(link)
-        mgr.params = {'X': {'name': 'X', 'value': 1.0, 'type': 9, 'index': 0}}
+        mgr.params = {"X": {"name": "X", "value": 1.0, "type": 9, "index": 0}}
         path = mgr.save_to_file()
         assert Path(path).exists()
         Path(path).unlink()
@@ -144,22 +145,22 @@ class TestLoadFromFile:
         link = _make_link()
         mgr = ParamManager(link)
         mgr.params = {
-            'A': {'name': 'A', 'value': 1.0, 'type': 9, 'index': 0},
-            'B': {'name': 'B', 'value': 2.0, 'type': 9, 'index': 1},
+            "A": {"name": "A", "value": 1.0, "type": 9, "index": 0},
+            "B": {"name": "B", "value": 2.0, "type": 9, "index": 1},
         }
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
-            json.dump({'A': 1.0, 'B': 5.0}, f)
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            json.dump({"A": 1.0, "B": 5.0}, f)
             path = f.name
         changed = mgr.load_from_file(path)
-        assert 'B' in changed
-        assert 'A' not in changed
+        assert "B" in changed
+        assert "A" not in changed
         Path(path).unlink()
 
     def test_invalid_json_returns_empty(self):
         link = _make_link()
         mgr = ParamManager(link)
-        with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
-            f.write('not json{{{')
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            f.write("not json{{{")
             path = f.name
         changed = mgr.load_from_file(path)
         assert changed == []
@@ -168,7 +169,7 @@ class TestLoadFromFile:
     def test_missing_file_returns_empty(self):
         link = _make_link()
         mgr = ParamManager(link)
-        changed = mgr.load_from_file('/nonexistent/path.json')
+        changed = mgr.load_from_file("/nonexistent/path.json")
         assert changed == []
 
 
@@ -177,7 +178,7 @@ class TestHandleParamValueEdgeCases:
         """Line 71: pl < 1 early return."""
         link = _make_link()
         mgr = ParamManager(link)
-        mgr.handle_param_value(b'', 0)
+        mgr.handle_param_value(b"", 0)
         assert len(mgr.params) == 0
         assert mgr.received_count == 0
 
@@ -185,18 +186,18 @@ class TestHandleParamValueEdgeCases:
         """All-zero payload produces empty name and must be discarded."""
         link = _make_link()
         mgr = ParamManager(link)
-        payload = b'\x00' * 25
+        payload = b"\x00" * 25
         mgr.handle_param_value(payload, 25)
-        assert '' not in mgr.params
+        assert "" not in mgr.params
         assert mgr.received_count == 0
 
     def test_index_0xFFFF_not_added_to_received_indices(self):
         """AP replies with index=0xFFFF for PARAM_REQUEST_READ by name."""
         link = _make_link()
         mgr = ParamManager(link)
-        p = _param_payload('THR_MAX', 80.0, 0xFFFF, 10)
+        p = _param_payload("THR_MAX", 80.0, 0xFFFF, 10)
         mgr.handle_param_value(p, len(p))
-        assert 'THR_MAX' in mgr.params
+        assert "THR_MAX" in mgr.params
         assert mgr.received_count == 1
         assert 0xFFFF not in mgr._received_indices
 
@@ -206,16 +207,16 @@ class TestSetParamValidation:
         """Lines 125-126: NaN value rejected."""
         link = _make_link()
         mgr = ParamManager(link)
-        mgr.set_param('THR_MAX', float('nan'))
+        mgr.set_param("THR_MAX", float("nan"))
         link.send.assert_not_called()
         link.add_event.assert_called_once()
-        assert 'NaN' in link.add_event.call_args[0][0]
+        assert "NaN" in link.add_event.call_args[0][0]
 
     def test_positive_inf_rejected(self):
         """Lines 125-126: +Inf value rejected."""
         link = _make_link()
         mgr = ParamManager(link)
-        mgr.set_param('THR_MAX', float('inf'))
+        mgr.set_param("THR_MAX", float("inf"))
         link.send.assert_not_called()
         link.add_event.assert_called_once()
 
@@ -223,7 +224,7 @@ class TestSetParamValidation:
         """Lines 125-126: -Inf value rejected."""
         link = _make_link()
         mgr = ParamManager(link)
-        mgr.set_param('THR_MAX', float('-inf'))
+        mgr.set_param("THR_MAX", float("-inf"))
         link.send.assert_not_called()
 
 
@@ -298,9 +299,9 @@ class TestCheckTimeout:
         assert mgr.fetching is False
         link.add_event.assert_called_once()
         # Check timeout message was appended
-        timeout_msgs = [m for m in mgr._messages if m.get('type') == 'param_timeout']
+        timeout_msgs = [m for m in mgr._messages if m.get("type") == "param_timeout"]
         assert len(timeout_msgs) == 1
-        assert timeout_msgs[0]['missing'] == 7
+        assert timeout_msgs[0]["missing"] == 7
 
     def test_gap_fill_then_timeout(self):
         """Both gap fill and timeout fire when both conditions met."""
@@ -328,4 +329,4 @@ class TestGetStatus:
         mgr.total_count = 100
         mgr.fetching = True
         status = mgr.get_status()
-        assert status == {'param_count': 50, 'param_total': 100, 'param_fetching': True}
+        assert status == {"param_count": 50, "param_total": 100, "param_fetching": True}
