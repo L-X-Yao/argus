@@ -101,7 +101,7 @@ class WSManager:
                                 {
                                     "type": "connect_result",
                                     "ok": False,
-                                    "error": "Invalid port",
+                                    "error": lt("err_connect", self.link.locale),
                                 }
                             )
                         )

@@ -356,9 +356,8 @@ class DroneLink:
             except OSError:
                 pass
             self._ser = None
-        with self._state_lock:
-            self.connected = False
-            self._buf = b""
+        self._reset_session_state()
+        self._buf = b""
         self._protocol = "auto"
         try:
             self._ser = self._open_port(self._last_port, self._last_baud)
