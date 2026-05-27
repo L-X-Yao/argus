@@ -292,6 +292,15 @@ export function flightCmd(name: string, param?: number, data?: Record<string, un
         serialSendCommandLong(192, 0, 0, 0, 0,
           (data?.lat as number) ?? 0, (data?.lon as number) ?? 0, (data?.alt as number) ?? 30);
         return;
+      case 'param_set':
+        serialSendParamSet(data?.name as string, data?.value as number);
+        return;
+      case 'param_request_all': serialSendParamRequestAll(); return;
+      // MAV_CMD_PREFLIGHT_STORAGE p1=1 = save params to flash
+      case 'param_save': serialSendCommandLong(245, 1); return;
+      // MAV_CMD_PREFLIGHT_REBOOT_SHUTDOWN p1=1 = reboot autopilot
+      case 'reboot': serialSendCommandLong(246, 1); return;
+      case 'reboot_bootloader': serialSendCommandLong(246, 3); return;
     }
   }
   import('./ws').then((ws) => ws.sendCommand(name, param, data));

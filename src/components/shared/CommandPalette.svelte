@@ -238,7 +238,7 @@
         icon: Download,
         handler: () => {
           onnavigate('params');
-          sendCommand('param_request_all');
+          flightCmd('param_request_all');
         },
         available: connected,
       },
@@ -621,7 +621,7 @@
         label: t('fw.rebootNormal'),
         category: t('cmd.catConn'),
         icon: RotateCcw,
-        handler: () => sendCommand('reboot'),
+        handler: () => flightCmd('reboot'),
         available: connected,
       },
     ];

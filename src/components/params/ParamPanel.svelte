@@ -1,7 +1,7 @@
 <script lang="ts">
   import { paramState } from '../../lib/paramStore.svelte';
   import { app, addToast } from '../../lib/stores.svelte';
-  import { sendCommand } from '../../lib/ws';
+  import { flightCmd } from '../../lib/transport';
   import { t } from '../../lib/i18n.svelte';
   import { apiUrl } from '../../lib/backend';
   import type { Param } from '../../lib/types';
@@ -203,7 +203,7 @@
       addToast(`${t('param.outOfRange')} ${r[0]} ~ ${r[1]}`, 'warn');
     }
     const name = editName;
-    sendCommand('param_set', undefined, { name, value: val });
+    flightCmd('param_set', undefined, { name, value: val });
     modified.add(name);
     modified = new Set(modified);
     editName = null;
@@ -222,8 +222,8 @@
     return v.toFixed(4);
   }
 
-  function requestAll() { sendCommand('param_request_all'); }
-  function saveParams() { sendCommand('param_save'); addToast(t('param.saved'), 'success'); }
+  function requestAll() { flightCmd('param_request_all'); }
+  function saveParams() { flightCmd('param_save'); addToast(t('param.saved'), 'success'); }
 
   function exportParams() {
     if (!paramState.list.length) return;
@@ -256,7 +256,7 @@
 
   function toggleBitmaskBit(name: string, currentVal: number, bit: number) {
     const newVal = currentVal ^ (1 << bit);
-    sendCommand('param_set', undefined, { name, value: newVal });
+    flightCmd('param_set', undefined, { name, value: newVal });
     modified.add(name);
     modified = new Set(modified);
     addToast(`${name} = ${newVal}`, 'info', 2000);
@@ -339,7 +339,7 @@
           if (isNaN(val)) continue;
           const cur = existing.get(name);
           if (cur !== undefined && Math.abs(cur - val) > 1e-6) {
-            sendCommand('param_set', undefined, { name, value: val });
+            flightCmd('param_set', undefined, { name, value: val });
             modified.add(name);
             changed++;
           }
@@ -389,7 +389,7 @@
           {#if valLabel}<span class="text-[10px] text-primary/70 truncate">{valLabel}</span>{/if}
           {#if hasDefaultDiff(p.name, p.value)}
             <button class="text-[9px] text-muted-foreground/60 hover:text-warning px-0.5 cursor-pointer bg-transparent border-none"
-                    onclick={() => { sendCommand('param_set', undefined, { name: p.name, value: getMeta()[p.name]!.default! }); modified.add(p.name); modified = new Set(modified); }}
+                    onclick={() => { flightCmd('param_set', undefined, { name: p.name, value: getMeta()[p.name]!.default! }); modified.add(p.name); modified = new Set(modified); }}
                     title={t('tip.resetDefault').replace('{v}', String(getMeta()[p.name]!.default))}>↩</button>
           {/if}
           {#if compareActive}

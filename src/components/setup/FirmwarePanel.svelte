@@ -1,6 +1,6 @@
 <script lang="ts">
   import { app, showConfirm, addToast } from '../../lib/stores.svelte';
-  import { sendCommand } from '../../lib/ws';
+  import { flightCmd } from '../../lib/transport';
   import { t } from '../../lib/i18n.svelte';
   import { apiUrl } from '../../lib/backend';
   import Button from '$lib/components/ui/button/button.svelte';
@@ -96,13 +96,13 @@
 
   async function rebootBootloader() {
     if (await showConfirm(t('fw.reboot') + '?', true)) {
-      sendCommand('reboot_bootloader');
+      flightCmd('reboot_bootloader');
     }
   }
 
   async function rebootNormal() {
     if (await showConfirm(t('fw.rebootNormal') + '?', false)) {
-      sendCommand('reboot');
+      flightCmd('reboot');
     }
   }
 
