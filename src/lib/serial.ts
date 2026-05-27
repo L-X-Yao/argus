@@ -8,6 +8,7 @@
 export interface SerialConnection {
   readable: ReadableStream<Uint8Array>;
   writable: WritableStream<Uint8Array>;
+  _writer: WritableStreamDefaultWriter<Uint8Array>;
   close(): Promise<void>;
   info: { usbVendorId?: number; usbProductId?: number };
 }
@@ -44,10 +45,12 @@ export async function openSerial(baudRate: number = 115200): Promise<SerialConne
   const readable = port.readable as ReadableStream<Uint8Array>;
   const writable = port.writable as WritableStream<Uint8Array>;
   const info = port.getInfo();
+  const writer = writable.getWriter();
 
   return {
     readable,
     writable,
+    _writer: writer,
     info: { usbVendorId: info.usbVendorId, usbProductId: info.usbProductId },
     async close() {
       try {
@@ -56,11 +59,10 @@ export async function openSerial(baudRate: number = 115200): Promise<SerialConne
           await reader.cancel();
           reader.releaseLock();
         }
-        if (writable.locked) {
-          const writer = writable.getWriter();
-          await writer.close();
-          writer.releaseLock();
-        }
+      } catch {}
+      try {
+        await writer.close();
+        writer.releaseLock();
       } catch {}
       try {
         await port.close();
@@ -71,14 +73,12 @@ export async function openSerial(baudRate: number = 115200): Promise<SerialConne
 
 /**
  * Write data to a serial connection.
+ *
+ * Uses the connection's persistent writer — safe to call concurrently;
+ * the Streams API queues writes internally.
  */
 export async function serialWrite(conn: SerialConnection, data: Uint8Array): Promise<void> {
-  const writer = conn.writable.getWriter();
-  try {
-    await writer.write(data);
-  } finally {
-    writer.releaseLock();
-  }
+  await conn._writer.write(data);
 }
 
 /**
