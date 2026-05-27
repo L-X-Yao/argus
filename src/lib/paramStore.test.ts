@@ -90,6 +90,27 @@ describe('clearParams', () => {
   });
 });
 
+describe('param edit round-trip precision', () => {
+  const cases = [
+    0, 1, -1, 0.001, 0.123456, 99.9999, 100, 100.5,
+    3.4028235e+38, -3.4028235e+38, 1e-7, 16777216, 16777217,
+  ];
+
+  for (const v of cases) {
+    it(`String(${v}) → parseFloat preserves value`, () => {
+      const roundTrip = parseFloat(String(v));
+      expect(roundTrip).toBe(v);
+    });
+  }
+
+  it('export line preserves value (tab-separated)', () => {
+    const value = 99.9999;
+    const line = `PARAM_NAME\t${value}`;
+    const parsed = parseFloat(line.split('\t')[1]);
+    expect(parsed).toBe(value);
+  });
+});
+
 describe('handleParamBatch edge cases', () => {
   it('ignores empty batch array', () => {
     handleParamBatch([]);
