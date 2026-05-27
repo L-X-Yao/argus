@@ -8,6 +8,7 @@
   import { Ruler, Square, ShieldAlert, Grid3x3, X as XIcon } from '@lucide/svelte';
   import { segDist } from '../../lib/missionIO';
   import { polygonArea } from '../../lib/survey';
+  import { fmtDist } from '../../lib/units';
   import maplibregl from 'maplibre-gl';
   import 'maplibre-gl/dist/maplibre-gl.css';
 
@@ -92,12 +93,6 @@
   let measureLabel: maplibregl.Marker | null = null;
 
   // Distance + area math: reuse the shared helpers (lib/missionIO.segDist
-  // and lib/survey.polygonArea) — both already covered by vitest. fmtDist /
-  // fmtArea stay local for visual consistency with 2D MapView's measure
-  // labels (it inlines the same format strings).
-  function fmtDist(m: number): string {
-    return m < 1000 ? `${m.toFixed(0)}m` : `${(m / 1000).toFixed(2)}km`;
-  }
   function fmtArea(m2: number): string {
     if (m2 < 10000) return `${m2.toFixed(0)} m²`;
     if (m2 < 1e6) return `${(m2 / 10000).toFixed(2)} ha`;

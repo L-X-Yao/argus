@@ -1,6 +1,7 @@
 <script lang="ts">
   import { app } from '../../lib/stores.svelte';
   import { t } from '../../lib/i18n.svelte';
+  import { fmtDist } from '../../lib/units';
   import { X, AlertTriangle, Plane as PlaneIcon } from '@lucide/svelte';
   import Button from '$lib/components/ui/button/button.svelte';
   import Switch from '$lib/components/ui/switch/switch.svelte';
@@ -90,10 +91,6 @@
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   }
 
-  function fmtDist(m: number): string {
-    if (m < 1000) return `${Math.round(m)} m`;
-    return `${(m / 1000).toFixed(1)} km`;
-  }
 
   /* ── Airport list with distance, sorted by distance ── */
   let airportList = $derived.by(() => {

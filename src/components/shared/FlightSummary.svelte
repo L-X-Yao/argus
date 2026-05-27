@@ -3,6 +3,7 @@
   import Button from '$lib/components/ui/button/button.svelte';
   import { X, Clock, ArrowUp, Gauge, Route, BatteryLow } from '@lucide/svelte';
   import { t } from '../../lib/i18n.svelte';
+  import { fmtDist } from '../../lib/units';
 
   let { summary, onclose }: { summary: FlightSummary; onclose: () => void } = $props();
 
@@ -10,9 +11,6 @@
     const m = Math.floor(s / 60),
       sec = s % 60;
     return `${m}:${sec < 10 ? '0' : ''}${sec}`;
-  }
-  function fmtDist(d: number): string {
-    return d < 1000 ? d.toFixed(0) + 'm' : (d / 1000).toFixed(1) + 'km';
   }
 
   let avgSpeed = $derived(summary.duration > 0 ? (summary.total_dist / summary.duration).toFixed(1) : '---');

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { app, isPlane } from '../../lib/stores.svelte';
   import { t } from '../../lib/i18n.svelte';
+  import { fmtDist } from '../../lib/units';
 
   const d = app.drone;
 
@@ -31,9 +32,6 @@
 
   let eta = $derived(d.gs > 0.5 ? Math.round(remainingDist / d.gs) : -1);
 
-  function fmtDist(m: number): string {
-    return m < 1000 ? `${m.toFixed(0)}m` : `${(m / 1000).toFixed(1)}km`;
-  }
   function fmtEta(s: number): string {
     if (s < 0) return '---';
     const m = Math.floor(s / 60),
