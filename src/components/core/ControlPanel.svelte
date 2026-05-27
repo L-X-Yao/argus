@@ -9,7 +9,15 @@
     loadDownloadedMission,
   } from '../../lib/stores.svelte';
   import { sendCommand } from '../../lib/ws';
-  import { isSerialConnected, serialDownloadMission, serialClearMission } from '../../lib/transport';
+  import {
+    isSerialConnected,
+    serialDownloadMission,
+    serialClearMission,
+    serialSendArm,
+    serialSendDisarm,
+    serialSendMode,
+    serialSendCommandLong,
+  } from '../../lib/transport';
   import { t } from '../../lib/i18n.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
   import {
@@ -69,37 +77,54 @@
             : 'text-green-400',
   );
 
+  function cmd(name: string, param?: number, data?: Record<string, unknown>) {
+    if (isSerialConnected()) {
+      if (name === 'arm') return serialSendArm();
+      if (name === 'disarm') return serialSendDisarm();
+      // ArduPilot: p2=21196 is the magic force-arm/disarm key
+      if (name === 'force_disarm') return serialSendCommandLong(400, 0, 21196, 0, 0, 0, 0, 0);
+      if (name === 'mode') return serialSendMode(param!);
+      if (name === 'rtl') return serialSendMode(isPlane() ? 11 : 6);
+      if (name === 'takeoff') return serialSendCommandLong(22, 0, 0, 0, 0, 0, 0, data?.alt as number ?? 30);
+      if (name === 'mission_start') {
+        serialSendMode(isPlane() ? 10 : 3);
+        return;
+      }
+    }
+    sendCommand(name, param, data);
+  }
+
   function arm() {
-    showSlide(t('slide.arm'), 'orange', () => sendCommand('arm'));
+    showSlide(t('slide.arm'), 'orange', () => cmd('arm'));
   }
   function disarm() {
-    sendCommand('disarm');
+    cmd('disarm');
   }
   function rtl() {
-    showSlide(t('slide.rtl'), 'red', () => sendCommand('rtl'));
+    showSlide(t('slide.rtl'), 'red', () => cmd('rtl'));
   }
   function forceDisarm() {
-    showSlide(t('slide.forceDisarm'), 'red', () => sendCommand('force_disarm'));
+    showSlide(t('slide.forceDisarm'), 'red', () => cmd('force_disarm'));
   }
   function pauseMode() {
-    sendCommand('mode', isPlane() ? 19 : 5);
+    cmd('mode', isPlane() ? 19 : 5);
   }
   function takeoff() {
     showSlide(`${t('slide.takeoff')} ${app.defaultAlt}m`, 'teal', () =>
-      sendCommand('takeoff', undefined, { alt: app.defaultAlt }),
+      cmd('takeoff', undefined, { alt: app.defaultAlt }),
     );
   }
   function startMission() {
-    showSlide(t('slide.mission'), 'blue', () => sendCommand('mission_start'));
+    showSlide(t('slide.mission'), 'blue', () => cmd('mission_start'));
   }
   async function drop() {
-    if (await showConfirm(t('ctrl.drop') + '?', true)) sendCommand('drop');
+    if (await showConfirm(t('ctrl.drop') + '?', true)) cmd('drop');
   }
   function adjustAlt(delta: number) {
     const d = app.drone;
     if (!d.connected || !d.armed || d.lat === 0) return;
     const newAlt = Math.max(5, Math.round(d.alt_rel + delta));
-    sendCommand('guided_goto', undefined, { lat: d.lat, lon: d.lon, alt: newAlt });
+    cmd('guided_goto', undefined, { lat: d.lat, lon: d.lon, alt: newAlt });
     addToast(`${t('ctrl.altitude')} → ${newAlt}m`, 'info', 2000);
   }
 </script>
@@ -122,7 +147,7 @@
           variant={app.drone.mode_id === id ? 'default' : 'secondary'}
           size="sm"
           class="w-full justify-start"
-          onclick={() => sendCommand('mode', id)}>{name}</Button
+          onclick={() => cmd('mode', id)}>{name}</Button
         >
       {/each}
     </div>
@@ -192,7 +217,7 @@
           variant={app.drone.mode_id === id ? 'default' : 'secondary'}
           size="sm"
           class="w-full justify-start"
-          onclick={() => sendCommand('mode', id)}>{name}</Button
+          onclick={() => cmd('mode', id)}>{name}</Button
         >
       {/each}
     </div>
@@ -220,7 +245,7 @@
       <Button size="sm" class="flex-1 bg-orange-700 hover:bg-orange-800 text-white font-bold" onclick={drop}>
         <Package size={12} />{t('ctrl.drop')}
       </Button>
-      <Button size="sm" variant="secondary" class="flex-1" onclick={() => sendCommand('drop_stop')}
+      <Button size="sm" variant="secondary" class="flex-1" onclick={() => cmd('drop_stop')}
         >{t('ctrl.dropStop')}</Button
       >
     </div>
@@ -231,7 +256,7 @@
           variant={app.drone.mode_id === id ? 'default' : 'secondary'}
           size="sm"
           class="w-full justify-start"
-          onclick={() => sendCommand('mode', id)}>{name}</Button
+          onclick={() => cmd('mode', id)}>{name}</Button
         >
       {/each}
     </div>
@@ -250,7 +275,7 @@
       <Button size="sm" class="flex-1 bg-orange-700 hover:bg-orange-800 text-white font-bold" onclick={drop}
         >{t('ctrl.drop')}</Button
       >
-      <Button size="sm" variant="secondary" class="flex-1" onclick={() => sendCommand('drop_stop')}
+      <Button size="sm" variant="secondary" class="flex-1" onclick={() => cmd('drop_stop')}
         >{t('ctrl.dropStop')}</Button
       >
     </div>
@@ -261,7 +286,7 @@
           variant={app.drone.mode_id === id ? 'default' : 'secondary'}
           size="sm"
           class="w-full justify-start"
-          onclick={() => sendCommand('mode', id)}>{name}</Button
+          onclick={() => cmd('mode', id)}>{name}</Button
         >
       {/each}
     </div>
@@ -275,7 +300,7 @@
     <Button
       size="sm"
       class="w-full bg-teal-700 hover:bg-teal-800 text-white gap-1.5"
-      onclick={() => sendCommand('mode', isPlane() ? 20 : 9)}
+      onclick={() => cmd('mode', isPlane() ? 20 : 9)}
     >
       <ArrowDown size={14} />{t('ctrl.land')}
     </Button>
