@@ -26,6 +26,7 @@ const COPTER_MODES: Record<number, string> = {
   25: 'SystemID',
   26: 'Heli_Autorotate',
   27: 'Auto RTL',
+  28: 'Turtle',
 };
 
 const PLANE_MODES: Record<number, string> = {
@@ -41,8 +42,10 @@ const PLANE_MODES: Record<number, string> = {
   10: 'Auto',
   11: 'RTL',
   12: 'Loiter',
+  13: 'Takeoff',
   14: 'Avoid_ADSB',
   15: 'Guided',
+  16: 'Initialising',
   17: 'QStabilize',
   18: 'QHover',
   19: 'QLoiter',
@@ -52,6 +55,7 @@ const PLANE_MODES: Record<number, string> = {
   23: 'QAcro',
   24: 'Thermal',
   25: 'Loiter to QLand',
+  26: 'Autoland',
 };
 
 const COPTER_BTNS: [number, string][] = [
@@ -94,9 +98,13 @@ export const ardupilotAdapter: FcAdapter = {
 
   allModes(isPlane: boolean): FlightMode[] {
     const map = isPlane ? PLANE_MODES : COPTER_MODES;
-    const emergencyIds = new Set([6, 9, 11, 17, 20, 21]);
-    const manualIds = isPlane ? new Set([0, 2, 4]) : new Set([0, 1, 13, 14]);
-    const autoIds = new Set([3, 10]);
+    const emergencyIds = isPlane
+      ? new Set([11, 20, 21, 25, 26]) // RTL, QLand, QRTL, Loiter2QLand, Autoland
+      : new Set([6, 9, 17, 19, 21, 26, 27]); // RTL, Land, Brake, AvoidADSB, SmartRTL, Autorotate, AutoRTL
+    const manualIds = isPlane
+      ? new Set([0, 2, 3, 4, 17, 23]) // Manual, Stabilize, Training, Acro, QStabilize, QAcro
+      : new Set([0, 1, 13, 14]); // Stabilize, Acro, Sport, Flip
+    const autoIds = isPlane ? new Set([10, 13, 15]) : new Set([3, 4]); // Auto+Takeoff+Guided / Auto+Guided
     return Object.entries(map).map(([id, name]) => {
       const n = parseInt(id);
       let category: FlightMode['category'] = 'assisted';

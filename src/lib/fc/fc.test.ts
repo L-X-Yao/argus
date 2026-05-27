@@ -22,12 +22,15 @@ describe('ArduPilot adapter', () => {
     expect(ardupilotAdapter.modeName(0, false)).toBe('Stabilize');
     expect(ardupilotAdapter.modeName(5, false)).toBe('Loiter');
     expect(ardupilotAdapter.modeName(6, false)).toBe('RTL');
+    expect(ardupilotAdapter.modeName(28, false)).toBe('Turtle');
   });
 
   it('resolves plane mode names', () => {
     expect(ardupilotAdapter.modeName(0, true)).toBe('Manual');
     expect(ardupilotAdapter.modeName(10, true)).toBe('Auto');
     expect(ardupilotAdapter.modeName(11, true)).toBe('RTL');
+    expect(ardupilotAdapter.modeName(13, true)).toBe('Takeoff');
+    expect(ardupilotAdapter.modeName(26, true)).toBe('Autoland');
   });
 
   it('returns mode buttons', () => {
@@ -36,11 +39,19 @@ describe('ArduPilot adapter', () => {
     expect(btns[0]).toEqual([2, 'AltHold']);
   });
 
-  it('allModes returns FlightMode objects', () => {
-    const modes = ardupilotAdapter.allModes(false);
-    expect(modes.length).toBeGreaterThan(10);
-    const rtl = modes.find((m) => m.name === 'RTL');
-    expect(rtl?.category).toBe('emergency');
+  it('allModes returns FlightMode objects with correct categories', () => {
+    const copterModes = ardupilotAdapter.allModes(false);
+    expect(copterModes.length).toBeGreaterThan(10);
+    expect(copterModes.find((m) => m.name === 'RTL')?.category).toBe('emergency');
+    expect(copterModes.find((m) => m.name === 'Brake')?.category).toBe('emergency');
+    expect(copterModes.find((m) => m.name === 'Stabilize')?.category).toBe('manual');
+    expect(copterModes.find((m) => m.name === 'Auto')?.category).toBe('auto');
+
+    const planeModes = ardupilotAdapter.allModes(true);
+    expect(planeModes.find((m) => m.name === 'QStabilize')?.category).toBe('manual');
+    expect(planeModes.find((m) => m.name === 'Training')?.category).toBe('manual');
+    expect(planeModes.find((m) => m.name === 'RTL')?.category).toBe('emergency');
+    expect(planeModes.find((m) => m.name === 'Takeoff')?.category).toBe('auto');
   });
 
   it('RTL mode IDs', () => {

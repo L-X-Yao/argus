@@ -2,8 +2,8 @@ import type { FcAdapter, FcType, FlightMode } from './interface';
 
 /**
  * PX4 custom_mode is a 32-bit value where:
- * - bits [24..31] = main mode
- * - bits [16..23] = sub mode
+ * - bits [16..23] = main mode
+ * - bits [24..31] = sub mode
  */
 function mainMode(customMode: number): number {
   return (customMode >> 16) & 0xff;
