@@ -1055,6 +1055,9 @@ const messages: Record<string, string> = {
   'pid.actual': 'Факт',
   'pid.target': 'Цель',
   'pid.rateFF': 'Коэфф. FF',
+  'poi.notSet': 'ROI: Не задан',
+  'poi.dronePos': 'Позиция дрона',
+  'wp.gen': 'Создать',
 };
 
 export default messages;

@@ -80,7 +80,7 @@
           <div class="text-xs text-muted-foreground">{roiAlt}m</div>
         </div>
       {:else}
-        <div class="text-xs text-muted-foreground italic">ROI: Not set</div>
+        <div class="text-xs text-muted-foreground italic">{t('poi.notSet')}</div>
       {/if}
 
       <div class="flex flex-col gap-2">
@@ -120,7 +120,7 @@
       </div>
 
       {#if app.drone.connected}
-        <Button variant="outline" size="sm" class="w-full" onclick={prefillFromDrone}>Drone pos</Button>
+        <Button variant="outline" size="sm" class="w-full" onclick={prefillFromDrone}>{t('poi.dronePos')}</Button>
       {/if}
 
       <div class="flex gap-2">

@@ -27,7 +27,7 @@ def cmd_mission_start(link: DroneLink, param, data: dict):
         try:
             send_cmd(link, 300)
         except OSError:
-            link.add_event("Mission start command failed", "cmd_ack_fail")
+            link.add_event(lt("err_mission_start", link.locale), "cmd_ack_fail")
 
     with _timer_lock:
         if _mission_timer:
@@ -55,6 +55,10 @@ def cmd_mission_set_current(link: DroneLink, param, data: dict):
 
 def cmd_mission_clear(link: DroneLink, param, data: dict):
     link.send(bm(45, bytes([link.vehicle.sysid, 1, 0]), link.sq, 232))
+    link.mission._mission_items = []
+    link.mission._seq_to_wp = {}
+    link.mission._mission_pending = False
+    link.mission._mission_ul_start_time = 0.0
     link.add_event(lt("mission_clear", link.locale), "mission_clear")
 
 
@@ -64,13 +68,13 @@ def cmd_mission_upload(link: DroneLink, param, data: dict):
     if not wps:
         return {"ok": False, "error": lt("err_no_wp", link.locale)}
     if len(wps) > 500:
-        return {"ok": False, "error": "Mission too large (max 500 WP)"}
+        return {"ok": False, "error": lt("err_mission_too_large", link.locale)}
     # ArduPlane rejects MAV_CMD_NAV_SPLINE_WAYPOINT with
     # MAV_MISSION_UNSUPPORTED (AP_Mission.cpp:1153-1158); the partial mission
     # would be discarded. Reject the whole upload here so the user gets a
     # clear error rather than a confusing FC ack failure.
     if link.is_plane() and any(wp.get("type") == "spline" for wp in wps):
-        return {"ok": False, "error": "Spline waypoints are not supported on ArduPlane"}
+        return {"ok": False, "error": lt("err_spline_plane", link.locale)}
     for wp in wps:
         try:
             lat, lon = float(wp.get("lat", 0)), float(wp.get("lon", 0))
@@ -299,4 +303,4 @@ def _upload_rally(link: DroneLink, points: list) -> None:
     m._rally_ul_start_time = time.time()
     count = len(items)
     link.send(bm(44, struct.pack("<HBB", count, link.vehicle.sysid, 1) + bytes([2]), link.sq, 221))
-    link.add_event(lt("rally_uploaded", link.locale) % count, "rally_uploaded")
+    link.add_event(lt("rally_uploading", link.locale) % count, "rally_uploading")

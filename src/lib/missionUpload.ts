@@ -39,11 +39,11 @@ export interface MissionItem {
 
 const NAV_FRAME_CMDS = new Set([16, 18, 19, 21, 22, 82]);
 
-function navCmdFor(wpType: Waypoint['type']): { cmd: number; p1Source: 'loiter_param' | 'delay' } {
-  if (wpType === 'loiter_turns') return { cmd: 18, p1Source: 'loiter_param' };
-  if (wpType === 'loiter_time') return { cmd: 19, p1Source: 'loiter_param' };
-  if (wpType === 'spline') return { cmd: 82, p1Source: 'delay' };
-  return { cmd: 16, p1Source: 'delay' };
+function navCmdFor(wpType: Waypoint['type']): { cmd: number; p1Source: 'loiter_param' | 'delay'; defaultP1: number } {
+  if (wpType === 'loiter_turns') return { cmd: 18, p1Source: 'loiter_param', defaultP1: 3 };
+  if (wpType === 'loiter_time') return { cmd: 19, p1Source: 'loiter_param', defaultP1: 10 };
+  if (wpType === 'spline') return { cmd: 82, p1Source: 'delay', defaultP1: 0 };
+  return { cmd: 16, p1Source: 'delay', defaultP1: 0 };
 }
 
 export function buildMissionItems(waypoints: Waypoint[], takeoffAlt: number): MissionItem[] {
@@ -77,8 +77,8 @@ export function buildMissionItems(waypoints: Waypoint[], takeoffAlt: number): Mi
     if (speed > 0) {
       push(178, 1, speed, 0, 0, 0, 0, 0); // DO_CHANGE_SPEED
     }
-    const { cmd: navCmd, p1Source } = navCmdFor(wp.type);
-    const navP1 = p1Source === 'loiter_param' ? Number(wp.loiter_param ?? 3) : Number(wp.delay ?? 0);
+    const { cmd: navCmd, p1Source, defaultP1 } = navCmdFor(wp.type);
+    const navP1 = p1Source === 'loiter_param' ? Number(wp.loiter_param ?? defaultP1) : Number(wp.delay ?? 0);
     push(navCmd, navP1, 0, 0, 0, wp.lat, wp.lon, wp.alt ?? takeoffAlt);
 
     if (wp.cmd_servo) {

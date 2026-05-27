@@ -1056,6 +1056,9 @@ const messages: Record<string, string> = {
   'pid.actual': 'Real',
   'pid.target': 'Objetivo',
   'pid.rateFF': 'Tasa FF',
+  'poi.notSet': 'ROI: No establecido',
+  'poi.dronePos': 'Posición del dron',
+  'wp.gen': 'Generar',
 };
 
 export default messages;

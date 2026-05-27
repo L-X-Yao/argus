@@ -1052,6 +1052,9 @@ const messages: Record<string, string> = {
   'pid.actual': '실측값',
   'pid.target': '목표값',
   'pid.rateFF': '레이트 FF',
+  'poi.notSet': 'ROI: 미설정',
+  'poi.dronePos': '드론 위치',
+  'wp.gen': '생성',
 };
 
 export default messages;

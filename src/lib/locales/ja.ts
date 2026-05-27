@@ -1053,6 +1053,9 @@ const messages: Record<string, string> = {
   'pid.actual': '実測値',
   'pid.target': '目標値',
   'pid.rateFF': 'レートFF',
+  'poi.notSet': 'ROI: 未設定',
+  'poi.dronePos': 'ドローン位置',
+  'wp.gen': '生成',
 };
 
 export default messages;

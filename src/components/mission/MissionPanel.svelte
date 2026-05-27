@@ -793,7 +793,7 @@
         step="1"
         class="w-12 h-6 px-1 bg-input border border-border rounded text-xs text-foreground"
       />
-      <Button size="xs" onclick={genCircle}>Gen</Button>
+      <Button size="xs" onclick={genCircle}>{t('wp.gen')}</Button>
     </div>
   {/if}
   {#if showLibrary}

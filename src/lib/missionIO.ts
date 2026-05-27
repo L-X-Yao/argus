@@ -8,20 +8,22 @@ export function parseQgcWaypoints(text: string): Waypoint[] {
     const cols = trimmed.split('\t');
     if (cols.length < 12) continue;
     const cmd = parseInt(cols[3]);
-    if (cmd !== 16 && cmd !== 82) continue;
+    if (cmd !== 16 && cmd !== 18 && cmd !== 19 && cmd !== 82) continue;
     const lat = parseFloat(cols[8]),
       lon = parseFloat(cols[9]),
       alt = parseFloat(cols[10]);
     if (Math.abs(lat) < 0.001) continue;
+    const type: Waypoint['type'] =
+      cmd === 18 ? 'loiter_turns' : cmd === 19 ? 'loiter_time' : cmd === 82 ? 'spline' : 'wp';
     wps.push({
       lat,
       lon,
       alt,
       drop: false,
-      delay: parseFloat(cols[4]) || 0,
+      delay: cmd === 16 ? parseFloat(cols[4]) || 0 : 0,
       speed: 0,
-      type: cmd === 82 ? 'spline' : 'wp',
-      loiter_param: 0,
+      type,
+      loiter_param: cmd === 18 || cmd === 19 ? parseFloat(cols[4]) || 0 : 0,
     });
   }
   return wps;
@@ -33,21 +35,23 @@ export function parseQgcPlan(text: string): Waypoint[] {
   const wps: Waypoint[] = [];
   for (const item of items) {
     const cmd = item.command;
-    if (cmd !== 16 && cmd !== 82) continue;
+    if (cmd !== 16 && cmd !== 18 && cmd !== 19 && cmd !== 82) continue;
     const params = item.params || [];
     const lat = params[4] ?? 0,
       lon = params[5] ?? 0,
       alt = params[6] ?? 30;
     if (Math.abs(lat) < 0.001) continue;
+    const type: Waypoint['type'] =
+      cmd === 18 ? 'loiter_turns' : cmd === 19 ? 'loiter_time' : cmd === 82 ? 'spline' : 'wp';
     wps.push({
       lat,
       lon,
       alt,
       drop: false,
-      delay: params[0] || 0,
+      delay: cmd === 16 ? params[0] || 0 : 0,
       speed: 0,
-      type: cmd === 82 ? 'spline' : 'wp',
-      loiter_param: 0,
+      type,
+      loiter_param: cmd === 18 || cmd === 19 ? params[0] || 0 : 0,
     });
   }
   return wps;

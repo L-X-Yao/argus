@@ -1052,6 +1052,9 @@ const messages: Record<string, string> = {
   'pid.actual': 'فعلي',
   'pid.target': 'مستهدف',
   'pid.rateFF': 'معدل FF',
+  'poi.notSet': 'ROI: غير محدد',
+  'poi.dronePos': 'موقع الطائرة',
+  'wp.gen': 'إنشاء',
 };
 
 export default messages;
