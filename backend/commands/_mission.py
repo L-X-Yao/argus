@@ -6,6 +6,7 @@ import time
 from typing import TYPE_CHECKING
 
 from ..config import cfg
+from ..crc_extras import CRC_EXTRA
 from ..locale_text import lt
 from ..pllink_proto import bm
 from ._helpers import send_cmd, send_fence_count, send_mission_count, send_set_mode
@@ -49,12 +50,12 @@ def cmd_mission_set_current(link: DroneLink, param, data: dict):
         if idx == wp_index:
             seq = s
             break
-    link.send(bm(41, struct.pack("<HBB", seq, link.vehicle.sysid, 1), link.sq, 28))
+    link.send(bm(41, struct.pack("<HBB", seq, link.vehicle.sysid, 1), link.sq, CRC_EXTRA[41]))
     link.add_event(lt("mission_set_current", link.locale) % (wp_index + 1), "mission_set_current")
 
 
 def cmd_mission_clear(link: DroneLink, param, data: dict):
-    link.send(bm(45, bytes([link.vehicle.sysid, 1, 0]), link.sq, 232))
+    link.send(bm(45, bytes([link.vehicle.sysid, 1, 0]), link.sq, CRC_EXTRA[45]))
     link.mission._mission_items = []
     link.mission._seq_to_wp = {}
     link.mission._mission_pending = False
@@ -121,7 +122,7 @@ def cmd_mission_download(link: DroneLink, param, data: dict):
     link.mission._dl_items = []
     link.mission._dl_start_time = time.time()
     link.add_event(lt("mission_dl", link.locale), "mission_dl")
-    link.send(bm(43, struct.pack("<BBB", link.vehicle.sysid, 1, 0), link.sq, 132))
+    link.send(bm(43, struct.pack("<BBB", link.vehicle.sysid, 1, 0), link.sq, CRC_EXTRA[43]))
 
 
 def check_mission_dl_timeout(link: DroneLink) -> None:
@@ -302,5 +303,5 @@ def _upload_rally(link: DroneLink, points: list) -> None:
     m._rally_pending = True
     m._rally_ul_start_time = time.time()
     count = len(items)
-    link.send(bm(44, struct.pack("<HBB", count, link.vehicle.sysid, 1) + bytes([2]), link.sq, 221))
+    link.send(bm(44, struct.pack("<HBB", count, link.vehicle.sysid, 1) + bytes([2]), link.sq, CRC_EXTRA[44]))
     link.add_event(lt("rally_uploading", link.locale) % count, "rally_uploading")

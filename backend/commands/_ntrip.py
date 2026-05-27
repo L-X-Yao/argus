@@ -20,6 +20,7 @@ import struct
 import threading
 from typing import TYPE_CHECKING
 
+from ..crc_extras import CRC_EXTRA
 from ..locale_text import lt
 from ..log import logger
 from ..pllink_proto import bm
@@ -58,7 +59,7 @@ def _inject_chunk(link, chunk: bytes, *, is_first: bool, is_last: bool) -> None:
         flags |= 0x08
     p = struct.pack("<BB", flags, len(chunk))
     p += chunk + b"\x00" * (_RTCM_CHUNK - len(chunk))
-    link.send(bm(233, p, link.sq, 35))
+    link.send(bm(233, p, link.sq, CRC_EXTRA[233]))
 
 
 def _ntrip_loop(

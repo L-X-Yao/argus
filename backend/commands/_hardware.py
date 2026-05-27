@@ -5,6 +5,7 @@ import math
 import struct
 from typing import TYPE_CHECKING
 
+from ..crc_extras import CRC_EXTRA
 from ..locale_text import lt
 from ..pllink_proto import bm
 from ._helpers import send_cmd, send_cmd_int, send_serial_control
@@ -39,7 +40,7 @@ def cmd_guided_goto(link: DroneLink, param, data: dict):
     send_set_mode(link, gm)
     link.add_event(lt("guided", link.locale) % (lat7 / 1e7, lon7 / 1e7, alt), "guided")
     p = struct.pack("<IiifffffffffHBBB", 0, lat7, lon7, alt, 0, 0, 0, 0, 0, 0, 0, 0, 0x0FF8, link.vehicle.sysid, 1, 6)
-    link.send(bm(86, p, link.sq, 5))
+    link.send(bm(86, p, link.sq, CRC_EXTRA[86]))
 
 
 def cmd_switch_vehicle(link: DroneLink, param, data: dict):
@@ -90,7 +91,7 @@ def cmd_inject_rtcm(link: DroneLink, param, data: dict):
             flags |= 0x08
         p = struct.pack("<BB", flags, len(chunk))
         p += chunk + b"\x00" * (180 - len(chunk))
-        link.send(bm(233, p, link.sq, 35))
+        link.send(bm(233, p, link.sq, CRC_EXTRA[233]))
 
 
 # --- RC / Motor ---
@@ -105,7 +106,7 @@ def cmd_rc_override(link: DroneLink, param, data: dict):
         for i in range(8):
             p += struct.pack("<H", max(0, min(65535, int(channels[i]))))
         p += struct.pack("<BB", link.vehicle.sysid, 1)
-        link.send(bm(70, p, link.sq, 124))
+        link.send(bm(70, p, link.sq, CRC_EXTRA[70]))
     except (TypeError, ValueError):
         return {"ok": False, "error": lt("err_channel_data", link.locale)}
 

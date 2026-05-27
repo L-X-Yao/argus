@@ -5,6 +5,7 @@ import time
 from typing import TYPE_CHECKING
 
 from ..config import cfg
+from ..crc_extras import CRC_EXTRA
 from ..pllink_proto import bm
 
 if TYPE_CHECKING:
@@ -26,7 +27,7 @@ def send_cmd(link: DroneLink, command: int, p1=0, p2=0, p3=0, p4=0, p5=0, p6=0, 
         1,
         0,
     )
-    link.send(bm(76, payload, link.sq, 152))
+    link.send(bm(76, payload, link.sq, CRC_EXTRA[76]))
 
 
 def send_cmd_int(
@@ -63,20 +64,20 @@ def send_cmd_int(
         0,
         0,
     )
-    link.send(bm(75, payload, link.sq, 158))
+    link.send(bm(75, payload, link.sq, CRC_EXTRA[75]))
 
 
 def send_set_mode(link: DroneLink, mode: int) -> None:
     payload = struct.pack("<IBB", mode, link.vehicle.sysid, 0x01)
-    link.send(bm(11, payload, link.sq, 89))
+    link.send(bm(11, payload, link.sq, CRC_EXTRA[11]))
 
 
 def send_mission_count(link: DroneLink, count: int) -> None:
-    link.send(bm(44, struct.pack("<HBB", count, link.vehicle.sysid, 1) + bytes([0]), link.sq, 221))
+    link.send(bm(44, struct.pack("<HBB", count, link.vehicle.sysid, 1) + bytes([0]), link.sq, CRC_EXTRA[44]))
 
 
 def send_fence_count(link: DroneLink, count: int) -> None:
-    link.send(bm(44, struct.pack("<HBB", count, link.vehicle.sysid, 1) + bytes([1]), link.sq, 221))
+    link.send(bm(44, struct.pack("<HBB", count, link.vehicle.sysid, 1) + bytes([1]), link.sq, CRC_EXTRA[44]))
 
 
 def send_fence_item_int(link: DroneLink, item: dict) -> None:
@@ -100,7 +101,7 @@ def send_fence_item_int(link: DroneLink, item: dict) -> None:
         1,
         1,
     )
-    link.send(bm(73, p, link.sq, 38))
+    link.send(bm(73, p, link.sq, CRC_EXTRA[73]))
 
 
 def send_rally_item_int(link: DroneLink, item: dict) -> None:
@@ -126,7 +127,7 @@ def send_rally_item_int(link: DroneLink, item: dict) -> None:
         1,
         2,
     )
-    link.send(bm(73, p, link.sq, 38))
+    link.send(bm(73, p, link.sq, CRC_EXTRA[73]))
 
 
 def send_mission_item_int(link: DroneLink, wp: dict) -> None:
@@ -151,7 +152,7 @@ def send_mission_item_int(link: DroneLink, wp: dict) -> None:
         1,
         0,
     )
-    link.send(bm(73, p, link.sq, 38))
+    link.send(bm(73, p, link.sq, CRC_EXTRA[73]))
 
 
 def send_serial_control(link: DroneLink, text: str) -> None:
@@ -159,7 +160,7 @@ def send_serial_control(link: DroneLink, text: str) -> None:
     flags = 0x06
     p = struct.pack("<IHBBB", 0, 0, 10, flags, len(data))
     p += data + b"\x00" * (70 - len(data))
-    link.send(bm(126, p, link.sq, 220))
+    link.send(bm(126, p, link.sq, CRC_EXTRA[126]))
 
 
 def send_heartbeat(link: DroneLink) -> None:
@@ -169,7 +170,7 @@ def send_heartbeat(link: DroneLink) -> None:
     # we sent system_status=0 (MAV_STATE_UNINIT) which some FC monitoring
     # tools display as "GCS not ready".
     payload = struct.pack("<IBBBBB", 0, 6, 8, 0, 4, 3)
-    link.send(bm(0, payload, link.sq, 50))
+    link.send(bm(0, payload, link.sq, CRC_EXTRA[0]))
 
 
 def request_streams(link: DroneLink) -> None:
@@ -192,6 +193,6 @@ def request_streams(link: DroneLink) -> None:
     ]
     for mid, interval in streams:
         payload = struct.pack("<fffffffHBBB", float(mid), float(interval), 0, 0, 0, 0, 0, 511, link.vehicle.sysid, 1, 0)
-        link.send(bm(76, payload, link.sq, 152))
+        link.send(bm(76, payload, link.sq, CRC_EXTRA[76]))
         time.sleep(cfg.STREAM_REQUEST_SPACING)
     send_cmd(link, 512, p1=148.0)

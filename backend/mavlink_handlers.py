@@ -6,6 +6,7 @@ import time
 from typing import TYPE_CHECKING
 
 from . import mavlink_dispatch
+from .crc_extras import CRC_EXTRA
 from .locale_text import lt
 from .statustext_filter import filter_statustext
 
@@ -563,13 +564,13 @@ def handle_mission_item_int(p: bytes, pl: int, link: DroneLink) -> None:
         link.add_event(lt("mission_dl_done", link.locale) % len(wps), "mission_dl_done")
         from .pllink_proto import bm
 
-        link.send(bm(47, struct.pack("<BBB", link.vehicle.sysid, 1, 0), link.sq, 153))
+        link.send(bm(47, struct.pack("<BBB", link.vehicle.sysid, 1, 0), link.sq, CRC_EXTRA[47]))
 
 
 def _request_dl_item(link: DroneLink, seq: int) -> None:
     from .pllink_proto import bm
 
-    link.send(bm(51, struct.pack("<HBBB", seq, link.vehicle.sysid, 1, 0), link.sq, 196))
+    link.send(bm(51, struct.pack("<HBBB", seq, link.vehicle.sysid, 1, 0), link.sq, CRC_EXTRA[51]))
 
 
 # ArduPilot: libraries/GCS_MAVLink/MissionItemProtocol.cpp:357 — MissionItemProtocol::queued_request_send
@@ -793,7 +794,7 @@ def handle_log_data(p: bytes, pl: int, link: DroneLink) -> None:
 
         remaining = lg._log_download_size - end
         chunk = min(90 * 50, remaining)
-        link.send(bm(119, struct.pack("<IIHBB", end, chunk, log_id, link.vehicle.sysid, 1), link.sq, 116))
+        link.send(bm(119, struct.pack("<IIHBB", end, chunk, log_id, link.vehicle.sysid, 1), link.sq, CRC_EXTRA[119]))
 
 
 def init_handlers() -> None:

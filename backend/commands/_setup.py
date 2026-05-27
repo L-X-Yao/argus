@@ -3,6 +3,7 @@ from __future__ import annotations
 import struct
 from typing import TYPE_CHECKING
 
+from ..crc_extras import CRC_EXTRA
 from ..locale_text import lt
 from ..pllink_proto import bm
 from ._helpers import send_cmd
@@ -56,7 +57,7 @@ def cmd_cal_accel_next(link: DroneLink, param, data: dict):
     # result=1. We mirror QGC. sysid/compid match what cmd_cal_accel used to
     # start the cal (bm() defaults: sysid=255, compid=1).
     payload = struct.pack("<HB", 0, 1)
-    link.send(bm(77, payload, link.sq, 143))
+    link.send(bm(77, payload, link.sq, CRC_EXTRA[77]))
 
 
 def cmd_cal_cancel(link: DroneLink, param, data: dict):
@@ -130,7 +131,7 @@ def cmd_log_list(link: DroneLink, param, data: dict):
     if link.log_dl._log_download_id != -1:
         return {"ok": False, "error": lt("err_log_busy", link.locale)}
     link.log_dl._log_list = []
-    link.send(bm(117, struct.pack("<HHBB", 0, 0xFFFF, link.vehicle.sysid, 1), link.sq, 128))
+    link.send(bm(117, struct.pack("<HHBB", 0, 0xFFFF, link.vehicle.sysid, 1), link.sq, CRC_EXTRA[117]))
     link.add_event(lt("log_list_req", link.locale), "log_list_req")
 
 
@@ -153,11 +154,11 @@ def cmd_log_download(link: DroneLink, param, data: dict):
     lg._log_download_ofs = 0
     link.add_event(lt("log_dl", link.locale) % (log_id, log_entry["size"] // 1024), "log_dl")
     chunk = min(90 * 50, log_entry["size"])
-    link.send(bm(119, struct.pack("<IIHBB", 0, chunk, log_id, link.vehicle.sysid, 1), link.sq, 116))
+    link.send(bm(119, struct.pack("<IIHBB", 0, chunk, log_id, link.vehicle.sysid, 1), link.sq, CRC_EXTRA[119]))
 
 
 def cmd_log_cancel(link: DroneLink, param, data: dict):
-    link.send(bm(122, struct.pack("<BB", link.vehicle.sysid, 1), link.sq, 203))
+    link.send(bm(122, struct.pack("<BB", link.vehicle.sysid, 1), link.sq, CRC_EXTRA[122]))
     lg = link.log_dl
     lg._log_download_id = -1
     # Free the buffer (auditor finding C6) — could be ~100MB after a partial

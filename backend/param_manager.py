@@ -52,10 +52,11 @@ class ParamManager:
         # values from a previous (now invalidated) fetch.
         self._messages.clear()
         self._link.add_event(lt("param_reading", self._link.locale), "param_reading")
+        from .crc_extras import CRC_EXTRA
         from .pllink_proto import bm
 
         payload = struct.pack("<BB", self._link.vehicle.sysid, 1)
-        self._link.send(bm(21, payload, self._link.sq, 159))
+        self._link.send(bm(21, payload, self._link.sq, CRC_EXTRA[21]))
 
     def _request_one(self, index: int) -> None:
         # MAV PARAM_REQUEST_READ msg id 20, CRC extra 214.
@@ -64,10 +65,11 @@ class ParamManager:
         #   2      target_system (u8)
         #   3      target_component (u8)
         #   4..19  param_id (char[16]) — empty when looking up by index
+        from .crc_extras import CRC_EXTRA
         from .pllink_proto import bm
 
         payload = struct.pack("<hBB", index, self._link.vehicle.sysid, 1) + b"\x00" * 16
-        self._link.send(bm(20, payload, self._link.sq, 214))
+        self._link.send(bm(20, payload, self._link.sq, CRC_EXTRA[20]))
 
     def handle_param_value(self, p: bytes, pl: int) -> None:
         if pl < 1:
@@ -140,6 +142,7 @@ class ParamManager:
             return
         param = self.params.get(name)
         ptype = param["type"] if param else 9
+        from .crc_extras import CRC_EXTRA
         from .pllink_proto import bm
 
         name_bytes = name.encode("ascii")[:16].ljust(16, b"\x00")
@@ -149,7 +152,7 @@ class ParamManager:
             + name_bytes
             + struct.pack("<B", ptype)
         )
-        self._link.send(bm(23, payload, self._link.sq, 168))
+        self._link.send(bm(23, payload, self._link.sq, CRC_EXTRA[23]))
         self._link.add_event(lt("param_set", self._link.locale) % (name, value), "param_set")
 
     def save_to_file(self, path: str | None = None) -> str:

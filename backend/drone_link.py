@@ -29,6 +29,7 @@ from .constants import (
     SUB_MODES,
     SUB_MODES_EN,
 )
+from .crc_extras import CRC_EXTRA as _CRC_EXTRA
 from .locale_text import lt
 from .log import logger
 from .mavlink_handlers import init_handlers
@@ -45,58 +46,6 @@ from .state import (
     TrafficState,
     VehicleState,
 )
-
-_CRC_EXTRA = {
-    0: 50,
-    1: 124,
-    22: 220,
-    24: 24,
-    30: 39,
-    33: 104,
-    35: 244,
-    36: 222,
-    40: 230,
-    42: 28,
-    43: 132,
-    44: 221,
-    46: 11,
-    47: 153,
-    51: 196,
-    65: 118,
-    70: 124,
-    73: 38,
-    74: 20,
-    77: 143,
-    83: 22,
-    85: 140,
-    87: 150,
-    105: 93,
-    116: 76,
-    117: 128,
-    118: 56,
-    119: 116,
-    120: 134,
-    125: 203,
-    126: 220,
-    136: 1,
-    147: 154,
-    148: 178,
-    158: 134,
-    163: 127,
-    168: 1,
-    178: 47,
-    191: 92,
-    192: 36,
-    193: 71,
-    233: 35,
-    241: 90,
-    242: 104,
-    246: 184,
-    253: 83,
-    285: 137,
-    310: 28,
-    311: 95,
-}
 
 _MSG_NAMES = {
     0: "HEARTBEAT",
