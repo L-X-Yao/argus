@@ -166,7 +166,18 @@ export function computeFFT(values: number[], sampleRate: number): { freq: number
   const re = values.slice(0, N);
   const im = new Array(N).fill(0);
 
-  for (let s = 1; s <= Math.log2(N); s++) {
+  // Bit-reversal permutation — required for Cooley-Tukey DIT
+  const logN = Math.log2(N);
+  for (let i = 0; i < N; i++) {
+    let rev = 0;
+    for (let b = 0; b < logN; b++) rev |= ((i >> b) & 1) << (logN - 1 - b);
+    if (rev > i) {
+      [re[i], re[rev]] = [re[rev], re[i]];
+      [im[i], im[rev]] = [im[rev], im[i]];
+    }
+  }
+
+  for (let s = 1; s <= logN; s++) {
     const m = 1 << s;
     const wm_re = Math.cos((-2 * Math.PI) / m);
     const wm_im = Math.sin((-2 * Math.PI) / m);

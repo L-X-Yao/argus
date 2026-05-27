@@ -259,11 +259,7 @@ describe('computeFFT', () => {
     expect(result.mag).toEqual([]);
   });
 
-  it('detects a pure sine wave — peak has high magnitude', () => {
-    // The FFT implementation uses iterative Cooley-Tukey without explicit
-    // bit-reversal reorder, so the bin-to-frequency mapping is scrambled.
-    // We verify the output contains a strong peak rather than checking exact
-    // frequency placement, which is sufficient for UI spectrum display.
+  it('detects a pure sine wave at the correct frequency bin', () => {
     const N = 256;
     const fs = 400;
     const f0 = 50;
@@ -271,12 +267,11 @@ describe('computeFFT', () => {
     const { freq, mag } = computeFFT(signal, fs);
 
     expect(freq.length).toBeGreaterThan(0);
-    // Find the peak magnitude
-    const peakMag = Math.max(...mag);
-    // A sine wave should produce a clear peak well above noise floor
-    expect(peakMag).toBeGreaterThan(0.3);
-    // Most bins should be much weaker than the peak
-    const weakBins = mag.filter((m) => m < peakMag * 0.1);
+    const peakIdx = mag.indexOf(Math.max(...mag));
+    // 50 Hz at 400 Hz sample rate, N=256 → bin 32 → freq[31] = 50 Hz
+    expect(freq[peakIdx]).toBeCloseTo(f0, 0);
+    expect(Math.max(...mag)).toBeGreaterThan(0.3);
+    const weakBins = mag.filter((m) => m < Math.max(...mag) * 0.1);
     expect(weakBins.length).toBeGreaterThan(mag.length * 0.8);
   });
 
