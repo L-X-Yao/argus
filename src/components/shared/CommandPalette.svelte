@@ -9,6 +9,7 @@
     serialCalGyro,
     serialCalLevel,
     serialCalAccel,
+    flightCmd,
   } from '../../lib/transport';
   import { t, i18nState, setLocale } from '../../lib/i18n.svelte';
   import { isPlane, saveSettings, showSlide, showConfirm } from '../../lib/stores.svelte';
@@ -123,7 +124,7 @@
         category: t('cmd.catFlight'),
         shortcut: 'A',
         icon: Zap,
-        handler: () => showSlide(t('slide.arm'), 'orange', () => sendCommand('arm')),
+        handler: () => showSlide(t('slide.arm'), 'orange', () => flightCmd('arm')),
         available: connected && !d.armed,
       },
       {
@@ -132,7 +133,7 @@
         category: t('cmd.catFlight'),
         shortcut: 'D',
         icon: Zap,
-        handler: () => sendCommand('disarm'),
+        handler: () => flightCmd('disarm'),
         available: connected && d.armed,
       },
       {
@@ -140,7 +141,7 @@
         label: t('ctrl.forceDisarm'),
         category: t('cmd.catFlight'),
         icon: ShieldAlert,
-        handler: () => showSlide(t('slide.forceDisarm'), 'red', () => sendCommand('force_disarm')),
+        handler: () => showSlide(t('slide.forceDisarm'), 'red', () => flightCmd('force_disarm')),
         available: connected && d.armed,
       },
       {
@@ -150,7 +151,7 @@
         icon: Play,
         handler: () =>
           showSlide(`${t('slide.takeoff')} ${app.defaultAlt}m`, 'teal', () =>
-            sendCommand('takeoff', undefined, { alt: app.defaultAlt }),
+            flightCmd('takeoff', undefined, { alt: app.defaultAlt }),
           ),
         available: connected && d.armed,
       },
@@ -160,7 +161,7 @@
         category: t('cmd.catFlight'),
         shortcut: 'R',
         icon: CornerDownLeft,
-        handler: () => showSlide(t('slide.rtl'), 'red', () => sendCommand('rtl')),
+        handler: () => showSlide(t('slide.rtl'), 'red', () => flightCmd('rtl')),
         available: connected,
       },
       {
@@ -169,7 +170,7 @@
         category: t('cmd.catFlight'),
         shortcut: 'Space',
         icon: Pause,
-        handler: () => sendCommand('mode', isPlane() ? 19 : 5),
+        handler: () => flightCmd('mode', isPlane() ? 19 : 5),
         available: connected,
       },
       {
@@ -177,7 +178,7 @@
         label: t('ctrl.startMission'),
         category: t('cmd.catFlight'),
         icon: Play,
-        handler: () => showSlide(t('slide.mission'), 'blue', () => sendCommand('mission_start')),
+        handler: () => showSlide(t('slide.mission'), 'blue', () => flightCmd('mission_start')),
         available: connected,
       },
       {
@@ -185,7 +186,7 @@
         label: t('ctrl.land'),
         category: t('cmd.catFlight'),
         icon: Download,
-        handler: () => sendCommand('mode', isPlane() ? 20 : 9),
+        handler: () => flightCmd('mode', isPlane() ? 20 : 9),
         available: connected && d.armed,
       },
 
@@ -632,7 +633,7 @@
           label: modeName,
           category: t('ctrl.mode'),
           icon: Plane,
-          handler: () => sendCommand('mode', modeId),
+          handler: () => flightCmd('mode', modeId),
           available: true,
         });
       }

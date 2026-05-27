@@ -30,7 +30,7 @@ import {
 } from './mavlink';
 import { openSerial, serialWrite, serialReadLoop, isWebSerialSupported } from './serial';
 import type { SerialConnection } from './serial';
-import { addToast, addEvent, app } from './stores.svelte';
+import { addToast, addEvent, app, isPlane as _isPlane } from './stores.svelte';
 import { t } from './i18n.svelte';
 import {
   buildMissionItems,
@@ -269,6 +269,32 @@ export function serialSendCommandLong(command: number, p1 = 0, p2 = 0, p3 = 0, p
     76,
     encodeCommandLong(serial.targetSysId, serial.targetCompId, command, 0, p1, p2, p3, p4, p5, p6, p7),
   );
+}
+
+/**
+ * Unified flight command dispatcher — routes through WebSerial when
+ * USB-connected, otherwise falls back to the WebSocket backend.
+ * Import this instead of calling sendCommand() for flight-critical ops.
+ */
+export function flightCmd(name: string, param?: number, data?: Record<string, unknown>): void {
+  if (isSerialConnected()) {
+    switch (name) {
+      case 'arm': serialSendArm(); return;
+      case 'disarm': serialSendDisarm(); return;
+      case 'force_disarm': serialSendCommandLong(400, 0, 21196); return;
+      case 'mode': serialSendMode(param!); return;
+      case 'rtl': serialSendMode(_isPlane() ? 11 : 6); return;
+      case 'takeoff': serialSendCommandLong(22, 0, 0, 0, 0, 0, 0, (data?.alt as number) ?? 30); return;
+      case 'mission_start': serialSendMode(_isPlane() ? 10 : 3); return;
+      case 'drop': serialSendCommandLong(181, 0, 0); return;
+      case 'drop_stop': serialSendCommandLong(181, 0, 1); return;
+      case 'guided_goto':
+        serialSendCommandLong(192, 0, 0, 0, 0,
+          (data?.lat as number) ?? 0, (data?.lon as number) ?? 0, (data?.alt as number) ?? 30);
+        return;
+    }
+  }
+  import('./ws').then((ws) => ws.sendCommand(name, param, data));
 }
 
 /**
