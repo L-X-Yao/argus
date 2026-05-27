@@ -1062,6 +1062,8 @@ const messages: Record<string, string> = {
   'overlap.footprint': 'بصمة الصورة',
   'overlap.coverage': 'التغطية',
   'overlap.apply': 'تطبيق على المسح',
+  'fw.downloadFailed': 'فشل التنزيل',
+  'fw.uploadFailed': 'فشل الرفع',
 };
 
 export default messages;

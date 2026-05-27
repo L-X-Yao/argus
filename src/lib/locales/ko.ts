@@ -1062,6 +1062,8 @@ const messages: Record<string, string> = {
   'overlap.footprint': '촬영 범위',
   'overlap.coverage': '커버리지',
   'overlap.apply': '측량에 적용',
+  'fw.downloadFailed': '다운로드 실패',
+  'fw.uploadFailed': '업로드 실패',
 };
 
 export default messages;

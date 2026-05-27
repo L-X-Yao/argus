@@ -1067,6 +1067,8 @@ const messages: Record<string, string> = {
   'overlap.footprint': 'Empreinte',
   'overlap.coverage': 'Couverture',
   'overlap.apply': 'Appliquer au relevé',
+  'fw.downloadFailed': 'Échec du téléchargement',
+  'fw.uploadFailed': 'Échec de l\'envoi',
 };
 
 export default messages;

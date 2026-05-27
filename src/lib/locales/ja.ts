@@ -1063,6 +1063,8 @@ const messages: Record<string, string> = {
   'overlap.footprint': 'フットプリント',
   'overlap.coverage': 'カバレッジ',
   'overlap.apply': '測量に適用',
+  'fw.downloadFailed': 'ダウンロード失敗',
+  'fw.uploadFailed': 'アップロード失敗',
 };
 
 export default messages;

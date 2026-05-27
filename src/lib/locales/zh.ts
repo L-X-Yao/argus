@@ -138,6 +138,8 @@ const messages: Record<string, string> = {
   'fw.downloaded': '已下载',
   'fw.fetchFailed': '获取固件列表失败',
   'fw.noOnline': '无在线版本',
+  'fw.downloadFailed': '下载失败',
+  'fw.uploadFailed': '上传失败',
   'ntrip.title': 'RTK / NTRIP',
   'ntrip.rtkStatus': 'RTK 状态',
   'ntrip.start': '连接 NTRIP',

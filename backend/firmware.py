@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import base64
 import ipaddress
 import logging
@@ -36,7 +37,11 @@ async def api_firmware_upload(file: UploadFile):
     if not safe_name[:-4]:
         return {"ok": False, "error": "Only .apj files accepted"}
     FIRMWARE_DIR.mkdir(exist_ok=True)
-    dest = FIRMWARE_DIR / safe_name
+    dest = (FIRMWARE_DIR / safe_name).resolve()
+    try:
+        dest.relative_to(FIRMWARE_DIR.resolve())
+    except ValueError:
+        return {"ok": False, "error": "Invalid filename"}
     tmp = dest.with_suffix(".apj.tmp")
     total = 0
     too_large = False
@@ -68,8 +73,7 @@ async def api_firmware_list():
     return {"files": files}
 
 
-@router.get("/api/firmware/online")
-async def api_firmware_online(board_id: int = 0):
+def _fetch_online_versions(board_id: int) -> dict:
     board_info = _BOARD_MAP.get(board_id)
     if not board_info:
         return {"versions": [], "error": "Unknown board_id"}
@@ -92,21 +96,18 @@ async def api_firmware_online(board_id: int = 0):
                     "size": 0,
                 }
             )
-    except (OSError, urllib.error.URLError):
-        pass
+    except (OSError, urllib.error.URLError) as e:
+        logging.getLogger("gcs").warning("firmware online fetch failed: %s", e)
+        return {"versions": [], "error": "Cannot reach firmware server"}
     return {"versions": versions[-10:]}
 
 
-@router.post("/api/firmware/download")
-async def api_firmware_download(request: Request):
-    body = await request.json()
-    fw_url = body.get("url", "")
-    raw_filename = body.get("filename", "firmware.apj")
-    if not fw_url:
-        return {"ok": False, "error": "Invalid params"}
-    filename = Path(raw_filename).name
-    if not filename.endswith(".apj") or filename in ("", ".", ".."):
-        return {"ok": False, "error": "Invalid params"}
+@router.get("/api/firmware/online")
+async def api_firmware_online(board_id: int = 0):
+    return await asyncio.to_thread(_fetch_online_versions, board_id)
+
+
+def _download_firmware(fw_url: str, filename: str) -> dict:
     parsed = urlparse(fw_url)
     if parsed.scheme != "https" or not parsed.hostname:
         return {"ok": False, "error": "Only HTTPS URLs allowed"}
@@ -154,3 +155,16 @@ async def api_firmware_download(request: Request):
     except (OSError, urllib.error.URLError) as e:
         logging.getLogger("gcs").warning("firmware download failed: %s", e)
         return {"ok": False, "error": "Download failed (check server logs)"}
+
+
+@router.post("/api/firmware/download")
+async def api_firmware_download(request: Request):
+    body = await request.json()
+    fw_url = body.get("url", "")
+    raw_filename = body.get("filename", "firmware.apj")
+    if not fw_url:
+        return {"ok": False, "error": "Invalid params"}
+    filename = Path(raw_filename).name
+    if not filename.endswith(".apj") or filename in ("", ".", ".."):
+        return {"ok": False, "error": "Invalid params"}
+    return await asyncio.to_thread(_download_firmware, fw_url, filename)

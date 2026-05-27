@@ -1066,6 +1066,8 @@ const messages: Record<string, string> = {
   'overlap.footprint': 'Pegada da imagem',
   'overlap.coverage': 'Cobertura',
   'overlap.apply': 'Aplicar ao levantamento',
+  'fw.downloadFailed': 'Falha no download',
+  'fw.uploadFailed': 'Falha no upload',
 };
 
 export default messages;

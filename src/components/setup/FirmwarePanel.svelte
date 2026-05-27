@@ -51,10 +51,10 @@
         addToast(`${t('fw.downloaded')}: ${fw.version}`, 'success');
         await loadList();
       } else {
-        addToast(data.error || 'Download failed', 'error');
+        addToast(data.error || t('fw.downloadFailed'), 'error');
       }
     } catch {
-      addToast('Download failed', 'error');
+      addToast(t('fw.downloadFailed'), 'error');
     }
   }
 
@@ -83,10 +83,10 @@
           addToast(`${t('fw.uploaded')}: ${data.filename} (${(data.size / 1024).toFixed(0)} KB)`, 'success');
           await loadList();
         } else {
-          addToast(data.error || 'Upload failed', 'error');
+          addToast(data.error || t('fw.uploadFailed'), 'error');
         }
       } catch (e) {
-        addToast('Upload failed', 'error');
+        addToast(t('fw.uploadFailed'), 'error');
       } finally {
         uploading = false;
       }

@@ -138,6 +138,8 @@ const messages: Record<string, string> = {
   'fw.downloaded': 'Downloaded',
   'fw.fetchFailed': 'Failed to fetch firmware list',
   'fw.noOnline': 'No online versions',
+  'fw.downloadFailed': 'Download failed',
+  'fw.uploadFailed': 'Upload failed',
   'ntrip.title': 'RTK / NTRIP',
   'ntrip.rtkStatus': 'RTK Status',
   'ntrip.start': 'Connect NTRIP',
