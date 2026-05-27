@@ -17,15 +17,15 @@ describe('FC adapter detection', () => {
   });
 });
 
-describe('ArduPilot adapter', () => {
-  it('resolves copter mode names', () => {
+describe('ArduPilot adapter (backed by modeStore)', () => {
+  it('resolves copter mode names from backend constants', () => {
     expect(ardupilotAdapter.modeName(0, false)).toBe('Stabilize');
     expect(ardupilotAdapter.modeName(5, false)).toBe('Loiter');
     expect(ardupilotAdapter.modeName(6, false)).toBe('RTL');
     expect(ardupilotAdapter.modeName(28, false)).toBe('Turtle');
   });
 
-  it('resolves plane mode names', () => {
+  it('resolves plane mode names from backend constants', () => {
     expect(ardupilotAdapter.modeName(0, true)).toBe('Manual');
     expect(ardupilotAdapter.modeName(10, true)).toBe('Auto');
     expect(ardupilotAdapter.modeName(11, true)).toBe('RTL');
@@ -33,10 +33,11 @@ describe('ArduPilot adapter', () => {
     expect(ardupilotAdapter.modeName(26, true)).toBe('Autoland');
   });
 
-  it('returns mode buttons', () => {
+  it('returns mode buttons from backend constants', () => {
     const btns = ardupilotAdapter.modeButtons(false);
     expect(btns.length).toBeGreaterThan(0);
-    expect(btns[0]).toEqual([2, 'AltHold']);
+    // Button order and names now match backend constants.py COPTER_BTNS_EN
+    expect(btns[0]).toEqual([0, 'Stabilize']);
   });
 
   it('allModes returns FlightMode objects with correct categories', () => {
@@ -48,7 +49,7 @@ describe('ArduPilot adapter', () => {
     expect(copterModes.find((m) => m.name === 'Auto')?.category).toBe('auto');
 
     const planeModes = ardupilotAdapter.allModes(true);
-    expect(planeModes.find((m) => m.name === 'QStabilize')?.category).toBe('manual');
+    expect(planeModes.find((m) => m.name === 'Q-Stabilize')?.category).toBe('manual');
     expect(planeModes.find((m) => m.name === 'Training')?.category).toBe('manual');
     expect(planeModes.find((m) => m.name === 'RTL')?.category).toBe('emergency');
     expect(planeModes.find((m) => m.name === 'Takeoff')?.category).toBe('auto');

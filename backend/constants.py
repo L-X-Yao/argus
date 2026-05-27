@@ -208,3 +208,32 @@ PLANE_BTNS_EN = [
 ROVER_BTNS_EN = [[0, "Manual"], [4, "Hold"], [10, "Auto"], [15, "Guided"], [11, "RTL"]]
 SUB_BTNS_EN = [[0, "Stabilize"], [2, "Depth Hold"], [16, "PosHold"], [3, "Auto"], [4, "Guided"]]
 FIX_NAMES_EN = {0: "No Fix", 1: "No Fix", 2: "2D", 3: "3D", 4: "DGPS", 5: "RTK Float", 6: "RTK Fixed"}
+
+# Category classification for mode quick-switch UI grouping.
+# manual=direct stick control, assisted=stabilised, auto=autonomous, emergency=safety
+COPTER_CATEGORIES: dict[int, str] = {
+    0: "manual", 1: "manual", 2: "assisted", 3: "auto", 4: "auto",
+    5: "assisted", 6: "emergency", 7: "auto", 9: "emergency",
+    11: "assisted", 13: "manual", 14: "manual", 15: "assisted",
+    16: "assisted", 17: "emergency", 18: "auto", 19: "emergency",
+    20: "auto", 21: "emergency", 22: "assisted", 23: "assisted",
+    24: "assisted", 25: "auto", 26: "emergency", 27: "emergency", 28: "emergency",
+}
+PLANE_CATEGORIES: dict[int, str] = {
+    0: "manual", 1: "auto", 2: "manual", 3: "manual", 4: "manual",
+    5: "assisted", 6: "assisted", 7: "assisted", 8: "assisted",
+    10: "auto", 11: "emergency", 12: "assisted", 13: "auto",
+    14: "emergency", 15: "auto", 16: "auto",
+    17: "manual", 18: "assisted", 19: "assisted", 20: "emergency",
+    21: "emergency", 22: "assisted", 23: "manual", 24: "assisted",
+    25: "emergency", 26: "emergency",
+}
+ROVER_CATEGORIES: dict[int, str] = {
+    0: "manual", 1: "manual", 3: "assisted", 4: "assisted", 5: "assisted",
+    6: "auto", 7: "assisted", 8: "auto", 9: "auto",
+    10: "auto", 11: "emergency", 12: "emergency", 15: "auto", 16: "auto",
+}
+SUB_CATEGORIES: dict[int, str] = {
+    0: "manual", 1: "manual", 2: "assisted", 3: "auto", 4: "auto",
+    7: "auto", 9: "emergency", 16: "assisted", 19: "manual", 20: "auto", 21: "assisted",
+}
