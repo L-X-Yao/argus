@@ -96,6 +96,14 @@ _T = {
     "ntrip_connected": ("NTRIP 已连接: %s", "NTRIP connected: %s"),
     "ntrip_disconnected": ("NTRIP 已断开", "NTRIP disconnected"),
     "ntrip_error": ("NTRIP 错误: %s", "NTRIP error: %s"),
+    "err_ntrip_resolve": ("无法解析 NTRIP 主机", "Cannot resolve NTRIP host"),
+    "err_channel_data": ("无效的通道数据", "Invalid channel data"),
+    "err_motor_duration": ("时长须在 0-30 秒", "Duration must be 0-30s"),
+    "err_gimbal_angle": ("云台角度超限", "Gimbal angle out of range"),
+    "err_gimbal_instance": ("云台编号超限", "Gimbal instance out of range"),
+    "err_unknown_board": ("未知主板 ID", "Unknown board_id"),
+    "err_invalid_params": ("无效参数", "Invalid params"),
+    "err_invalid_filename": ("无效文件名", "Invalid filename"),
 }
 
 

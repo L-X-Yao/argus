@@ -107,7 +107,7 @@ def cmd_rc_override(link: DroneLink, param, data: dict):
         p += struct.pack("<BB", link.vehicle.sysid, 1)
         link.send(bm(70, p, link.sq, 124))
     except (TypeError, ValueError):
-        return {"ok": False, "error": "Invalid channel data"}
+        return {"ok": False, "error": lt("err_channel_data", link.locale)}
 
 
 def cmd_motor_test(link: DroneLink, param, data: dict):
@@ -123,7 +123,7 @@ def cmd_motor_test(link: DroneLink, param, data: dict):
         return {"ok": False, "error": "Throttle must be 0-100%"}
     duration = float(data.get("duration", 2))
     if not 0 < duration <= 30:
-        return {"ok": False, "error": "Duration must be 0-30s"}
+        return {"ok": False, "error": lt("err_motor_duration", link.locale)}
     link.add_event(lt("motor_test", link.locale) % (motor + 1, throttle), "motor_test")
     send_cmd(link, 209, p1=float(motor + 1), p2=0, p3=throttle, p4=duration, p5=1)
 
@@ -141,7 +141,7 @@ def cmd_gimbal_angle(link: DroneLink, param, data: dict):
     pitch = float(data.get("pitch", 0))
     yaw = float(data.get("yaw", 0))
     if not -90 <= pitch <= 90 or not -180 <= yaw <= 180:
-        return {"ok": False, "error": "Gimbal angle out of range"}
+        return {"ok": False, "error": lt("err_gimbal_angle", link.locale)}
     send_cmd(link, 205, p1=pitch, p3=yaw, p7=2)
 
 
@@ -189,7 +189,7 @@ def cmd_gimbal_pitchyaw(link: DroneLink, param, data: dict):
         return {"ok": False, "error": "flags must fit in int32"}
     instance = int(data.get("instance", 0))
     if not 0 <= instance <= 6:
-        return {"ok": False, "error": "Gimbal instance out of range"}
+        return {"ok": False, "error": lt("err_gimbal_instance", link.locale)}
 
     send_cmd_int(link, 1000, p1=pitch, p2=yaw, p3=pitch_rate, p4=yaw_rate, x=flags, y=0, z=float(instance), frame=0)
 

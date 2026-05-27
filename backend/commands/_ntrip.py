@@ -186,7 +186,7 @@ def cmd_ntrip_start(link: DroneLink, param, data: dict):
     try:
         addrs = socket.getaddrinfo(host, port)
     except socket.gaierror:
-        return {"ok": False, "error": "Cannot resolve NTRIP host"}
+        return {"ok": False, "error": lt("err_ntrip_resolve", link.locale)}
     for _fam, *_rest, sockaddr in addrs:
         try:
             ip = ipaddress.ip_address(sockaddr[0])
