@@ -1055,6 +1055,7 @@ const messages: Record<string, string> = {
   'poi.notSet': 'ROI: غير محدد',
   'poi.dronePos': 'موقع الطائرة',
   'wp.gen': 'إنشاء',
+  'conn.serialLost': 'اتصال السلسلة مفقود',
 };
 
 export default messages;

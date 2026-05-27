@@ -512,6 +512,7 @@ const messages: Record<string, string> = {
   'conn.serialDisconnected': 'USB disconnected',
   'conn.serialFailed': 'USB connection failed',
   'conn.serialBusy': 'Disconnect USB direct first to use the network link',
+  'conn.serialLost': 'Serial connection lost',
   'conn.wsBusy': 'Disconnect the network link first to use USB direct',
   'auth.title': 'Authentication',
   'auth.tokenLabel': 'Access Token',

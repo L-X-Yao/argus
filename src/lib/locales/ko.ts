@@ -1055,6 +1055,7 @@ const messages: Record<string, string> = {
   'poi.notSet': 'ROI: 미설정',
   'poi.dronePos': '드론 위치',
   'wp.gen': '생성',
+  'conn.serialLost': '시리얼 연결 끊김',
 };
 
 export default messages;

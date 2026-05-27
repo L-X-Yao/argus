@@ -1058,6 +1058,7 @@ const messages: Record<string, string> = {
   'poi.notSet': 'ROI: Не задан',
   'poi.dronePos': 'Позиция дрона',
   'wp.gen': 'Создать',
+  'conn.serialLost': 'Серийное соединение потеряно',
 };
 
 export default messages;

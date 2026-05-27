@@ -168,7 +168,7 @@ export async function connectSerial(baudRate: number, handlers: Partial<MessageH
         const wasRunning = serial.running;
         serial.running = false;
         if (wasRunning) {
-          addToast('Serial connection lost', 'error', 8000);
+          addToast(t('conn.serialLost'), 'error', 8000);
           // Release the transport mutex so the user can switch to WS without
           // having to click the (now-stale) USB button first.
           if (app.activeTransport === 'serial') app.activeTransport = 'none';
@@ -253,11 +253,7 @@ export function serialSendDisarm(): void {
 }
 
 export function serialSendMode(mode: number): void {
-  sendSerialFrame(11, encodeSetMode(serial.targetSysId, 209, mode));
-}
-
-export function serialSendRtl(): void {
-  serialSendMode(11); // RTL mode for copter
+  sendSerialFrame(11, encodeSetMode(serial.targetSysId, 0x01, mode));
 }
 
 export function serialSendParamRequestAll(): void {

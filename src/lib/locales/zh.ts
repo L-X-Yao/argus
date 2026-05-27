@@ -512,6 +512,7 @@ const messages: Record<string, string> = {
   'conn.serialDisconnected': 'USB 已断开',
   'conn.serialFailed': 'USB 连接失败',
   'conn.serialBusy': '请先断开 USB 直连再使用网络连接',
+  'conn.serialLost': '串口连接丢失',
   'conn.wsBusy': '请先断开网络连接再使用 USB 直连',
   'auth.title': '身份验证',
   'auth.tokenLabel': '访问令牌',

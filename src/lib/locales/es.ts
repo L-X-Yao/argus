@@ -1059,6 +1059,7 @@ const messages: Record<string, string> = {
   'poi.notSet': 'ROI: No establecido',
   'poi.dronePos': 'Posición del dron',
   'wp.gen': 'Generar',
+  'conn.serialLost': 'Conexión serial perdida',
 };
 
 export default messages;
