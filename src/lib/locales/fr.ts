@@ -1069,6 +1069,9 @@ const messages: Record<string, string> = {
   'overlap.apply': 'Appliquer au relevé',
   'fw.downloadFailed': 'Échec du téléchargement',
   'fw.uploadFailed': 'Échec de l\'envoi',
+  'failsafe.actionContinue': 'Continuer la mission',
+  'failsafe.actionSmartRtlLand': 'SmartRTL ou atterrissage',
+  'failsafe.actionTerminate': 'Arrêt moteurs',
 };
 
 export default messages;

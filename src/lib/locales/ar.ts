@@ -1064,6 +1064,9 @@ const messages: Record<string, string> = {
   'overlap.apply': 'تطبيق على المسح',
   'fw.downloadFailed': 'فشل التنزيل',
   'fw.uploadFailed': 'فشل الرفع',
+  'failsafe.actionContinue': 'متابعة المهمة',
+  'failsafe.actionSmartRtlLand': 'العودة الذكية أو الهبوط',
+  'failsafe.actionTerminate': 'إنهاء',
 };
 
 export default messages;

@@ -1067,6 +1067,9 @@ const messages: Record<string, string> = {
   'overlap.apply': 'Применить к съёмке',
   'fw.downloadFailed': 'Ошибка скачивания',
   'fw.uploadFailed': 'Ошибка загрузки',
+  'failsafe.actionContinue': 'Продолжить миссию',
+  'failsafe.actionSmartRtlLand': 'SmartRTL или посадка',
+  'failsafe.actionTerminate': 'Прекратить',
 };
 
 export default messages;

@@ -1064,6 +1064,9 @@ const messages: Record<string, string> = {
   'overlap.apply': '측량에 적용',
   'fw.downloadFailed': '다운로드 실패',
   'fw.uploadFailed': '업로드 실패',
+  'failsafe.actionContinue': '미션 계속',
+  'failsafe.actionSmartRtlLand': '스마트RTL 또는 착륙',
+  'failsafe.actionTerminate': '비행 종료',
 };
 
 export default messages;

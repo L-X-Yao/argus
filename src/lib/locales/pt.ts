@@ -1068,6 +1068,9 @@ const messages: Record<string, string> = {
   'overlap.apply': 'Aplicar ao levantamento',
   'fw.downloadFailed': 'Falha no download',
   'fw.uploadFailed': 'Falha no upload',
+  'failsafe.actionContinue': 'Continuar missão',
+  'failsafe.actionSmartRtlLand': 'SmartRTL ou pouso',
+  'failsafe.actionTerminate': 'Terminar',
 };
 
 export default messages;
