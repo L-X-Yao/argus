@@ -244,8 +244,6 @@ def handle_command_ack(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 2:
         return
     p = _pad(p, 3)
-    import struct
-
     cmd_id = struct.unpack_from("<H", p, 0)[0]
     result = p[2]
     en = link.locale == "en"
