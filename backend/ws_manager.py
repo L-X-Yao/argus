@@ -108,7 +108,7 @@ class WSManager:
                         continue
                     baud = sanitize_baud(baud)
                     protocol = sanitize_protocol(protocol)
-                    ok = self.link.connect(port, baud, protocol=protocol)
+                    ok = await asyncio.to_thread(self.link.connect, port, baud, protocol=protocol)
                     await ws.send_text(
                         json.dumps(
                             {
@@ -119,7 +119,7 @@ class WSManager:
                         )
                     )
                 elif msg_type == "disconnect":
-                    self.link.disconnect()
+                    await asyncio.to_thread(self.link.disconnect)
                     await ws.send_text(
                         json.dumps(
                             {
