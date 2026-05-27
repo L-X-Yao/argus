@@ -27,7 +27,7 @@
     10: 'Auto', 11: 'RTL', 12: 'Loiter', 13: 'Takeoff', 14: 'AvoidADSB',
     15: 'Guided', 17: 'QStabilize', 18: 'QHover', 19: 'QLoiter',
     20: 'QLand', 21: 'QRTL', 22: 'QAutoTune', 23: 'QAcro', 24: 'Thermal',
-    25: 'Loiter2QLand',
+    25: 'Loiter2QLand', 26: 'Autoland',
   };
 
   const PWM_RANGES = [
