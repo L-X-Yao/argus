@@ -27,6 +27,11 @@ _SINGLE_LINE_RE = re.compile(r"""['"]([a-zA-Z][a-zA-Z0-9._]*)['"]\s*:\s*['"](.*)
 _KEY_ONLY_RE = re.compile(r"""['"]([a-zA-Z][a-zA-Z0-9._]*)['"]\s*:\s*$""")
 
 
+def _unescape_ts(s: str) -> str:
+    """Inverse of _escape_ts: \\\\ → \\ and \\' → '. Single left-to-right pass."""
+    return re.sub(r"\\(['\\])", r"\1", s)
+
+
 def parse_keys(path: Path) -> dict[str, str]:
     out: dict[str, str] = {}
     lines = path.read_text(encoding="utf-8").splitlines()
@@ -35,7 +40,7 @@ def parse_keys(path: Path) -> dict[str, str]:
         line = lines[i]
         m = _SINGLE_LINE_RE.search(line)
         if m:
-            out[m.group(1)] = m.group(2)
+            out[m.group(1)] = _unescape_ts(m.group(2))
             i += 1
             continue
         m = _KEY_ONLY_RE.search(line)
@@ -49,7 +54,7 @@ def parse_keys(path: Path) -> dict[str, str]:
                     val_line.startswith('"') and val_line.endswith('"')
                 ):
                     val_line = val_line[1:-1]
-                out[key] = val_line
+                out[key] = _unescape_ts(val_line)
                 i += 2
                 continue
         i += 1

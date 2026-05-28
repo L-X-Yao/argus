@@ -61,6 +61,15 @@ class TestSyncLocalesEscaping:
         from sync_locales import _escape_ts
         assert _escape_ts("Hello World") == "Hello World"
 
+    def test_escape_unescape_round_trip(self):
+        """Running --write twice must not double-escape — _unescape_ts inverts _escape_ts."""
+        import sys
+        from pathlib import Path
+        sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+        from sync_locales import _escape_ts, _unescape_ts
+        for raw in ("it's here", "path\\to\\file", "Hello", "\\'", "'\\", "a\\b'c"):
+            assert _unescape_ts(_escape_ts(raw)) == raw, f"round-trip failed for {raw!r}"
+
 
 class TestLocaleFormatStrings:
     # Matches Python %-format conversions: optional %(name), flags, width, .precision, length, then conversion letter.
