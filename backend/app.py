@@ -94,20 +94,22 @@ async def api_session(request: Request):
 async def api_version():
     import subprocess
 
-    git_hash = ""
-    try:
-        git_hash = (
-            subprocess.check_output(
-                ["git", "rev-parse", "--short", "HEAD"],
-                cwd=str(ROOT_DIR),
-                timeout=cfg.GIT_HASH_TIMEOUT,
-                stderr=subprocess.DEVNULL,
+    def _git_hash() -> str:
+        try:
+            return (
+                subprocess.check_output(
+                    ["git", "rev-parse", "--short", "HEAD"],
+                    cwd=str(ROOT_DIR),
+                    timeout=cfg.GIT_HASH_TIMEOUT,
+                    stderr=subprocess.DEVNULL,
+                )
+                .decode()
+                .strip()
             )
-            .decode()
-            .strip()
-        )
-    except (OSError, subprocess.SubprocessError):
-        pass
+        except (OSError, subprocess.SubprocessError):
+            return ""
+
+    git_hash = await aio(_git_hash)
     return {
         "version": VERSION,
         "git": git_hash,

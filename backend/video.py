@@ -76,8 +76,6 @@ def _ffmpeg_available() -> bool:
 @router.get("/api/video")
 async def video_stream(url: str = ""):
     """Proxy RTSP/video stream as MJPEG for browser display."""
-    global _active_proc
-
     if not url:
         return {"error": "No video URL provided"}
     url_err = _validate_video_url(url)

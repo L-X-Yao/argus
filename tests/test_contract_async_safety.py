@@ -31,6 +31,7 @@ _BLOCKING_PATTERNS = [
     re.compile(r"shutil\.rmtree\("),
     re.compile(r"sqlite3\.connect\("),
     re.compile(r"(?<!asyncio\.)(?<!\.)time\.sleep\("),
+    re.compile(r"subprocess\.(?:check_output|check_call|call|run)\("),
 ]
 
 # Exemption patterns: if ANY of these appear on the same line, the line is safe
