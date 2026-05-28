@@ -326,6 +326,14 @@ const _serialDispatch: Record<string, CmdHandler> = {
   camera_video_start: () => serialSendCommandLong(2500),
   camera_video_stop: () => serialSendCommandLong(2501),
   camera_zoom: (_, d) => serialSendCommandLong(531, 1, (d?.zoom as number) ?? 0),
+  // MAV_CMD_DO_MOTOR_TEST (209): p1=motor(1-based), p2=THROTTLE_PERCENT(0), p3=%, p4=duration, p5=count
+  // ArduPilot: GCS_MAVLink_Copter.cpp:702 — GCS_MAVLINK_Copter::handle_command_long_packet
+  motor_test: (_, d) => serialSendCommandLong(209,
+    ((d?.motor as number) ?? 0) + 1, 0, (d?.throttle as number) ?? 5,
+    (d?.duration as number) ?? 2, 1),
+  motor_test_stop: () => {
+    for (let i = 1; i <= 8; i++) serialSendCommandLong(209, i, 0, 0, 0, 1);
+  },
 };
 
 /**

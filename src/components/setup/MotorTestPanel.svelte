@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import { app, isPlane } from '../../lib/stores.svelte';
-  import { sendCommand } from '../../lib/ws';
+  import { dispatch } from '../../lib/transport';
   import { t } from '../../lib/i18n.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
   import { X, AlertTriangle, Zap, Square } from '@lucide/svelte';
@@ -20,7 +20,7 @@
 
   function spinMotor(index: number) {
     if (!connected) return;
-    sendCommand('motor_test', undefined, {
+    dispatch('motor_test', undefined, {
       motor: index,
       throttle: throttle,
       duration: duration,
@@ -47,7 +47,7 @@
   }
 
   function stopAll() {
-    sendCommand('motor_test_stop');
+    dispatch('motor_test_stop');
     for (let i = 0; i < MOTOR_COUNT; i++) {
       stopTimer(i);
     }
