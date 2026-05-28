@@ -76,6 +76,21 @@ const serial: SerialState = {
   handlers: {},
 };
 
+// Coalesce repeated dispatch('mission_start') calls — match backend _timer_lock semantics.
+let _missionStartTimer: ReturnType<typeof setTimeout> | null = null;
+
+// wp_index → MAVLink seq, populated after a successful serialDownloadMission. Used by
+// mission_set_current so "goto WP N" sends the correct seq even when DO_CHANGE_SPEED items
+// shift the layout. Cleared on disconnect, mission_clear, and at the start of every download.
+const _wpToSeq = new Map<number, number>();
+
+function _clearMissionStartTimer(): void {
+  if (_missionStartTimer !== null) {
+    clearTimeout(_missionStartTimer);
+    _missionStartTimer = null;
+  }
+}
+
 export function getTransportMode(): TransportMode {
   return serial.conn ? 'serial' : 'websocket';
 }
@@ -205,6 +220,8 @@ export async function disconnectSerial(): Promise<void> {
     serial.conn = null;
   }
   serial.buf = new Uint8Array(0);
+  _clearMissionStartTimer();
+  _wpToSeq.clear();
 }
 
 function sendSerialFrame(msgId: number, payload: Uint8Array): void {
@@ -317,28 +334,43 @@ const _serialDispatch: Record<string, CmdHandler> = {
   // Backend cmd_mission_start: switch to AUTO, then send MAV_CMD_MISSION_START (300) after a delay.
   // Copter requires the explicit MISSION_START — switching to AUTO alone leaves it idle while disarmed-on-ground.
   // AP source: ModeAuto::start in ArduCopter/mode_auto.cpp.
+  // Delay mirrors cfg.MISSION_START_DELAY = 0.3 in backend/config.py. Timer is cancelled on re-entry so
+  // double-tap doesn't queue two MISSION_START sends (matches backend's _timer_lock + .cancel() pattern).
   mission_start: () => {
     serialSendMode(_isPlane() ? 10 : 3);
-    setTimeout(() => serialSendCommandLong(300), 1000);
+    if (_missionStartTimer !== null) clearTimeout(_missionStartTimer);
+    _missionStartTimer = setTimeout(() => {
+      _missionStartTimer = null;
+      serialSendCommandLong(300);
+    }, 300);
   },
   mission_clear: () => serialClearMission(),
-  // Mission seq mapping: backend prepends HOME (seq 0) + TAKEOFF (seq 1), so user-facing wp_index 0
-  // corresponds to MAVLink seq 2. Mirror backend's `seq = wp_index + 2` fallback (commands/_mission.py:48).
-  // For missions with DO_CHANGE_SPEED inserts, this is still slightly off — but at least it doesn't divert to HOME.
-  mission_set_current: (_, d) => serialMissionSetCurrent(((d?.wp_index as number) ?? 0) + 2),
+  // Mission seq mapping: backend prepends HOME (seq 0) + TAKEOFF (seq 1), and inserts DO_CHANGE_SPEED (178)
+  // before any waypoint with speed > 0. _seqToWp (populated on serialDownloadMission completion) gives the
+  // accurate mapping. Falls back to `wp_index + 2` when no map exists, matching backend cmd_mission_set_current
+  // (commands/_mission.py:47-52) — that fallback is wrong when speed inserts exist, but at least it doesn't divert to HOME.
+  mission_set_current: (_, d) => {
+    const wpIndex = (d?.wp_index as number) ?? 0;
+    const seq = _wpToSeq.get(wpIndex) ?? wpIndex + 2;
+    serialMissionSetCurrent(seq);
+  },
   // MAV_CMD_DO_PARACHUTE (181). p2: 0=RELEASE, 1=DISABLE, 2=ENABLE. AP source: AP_Parachute::handle_msg.
   drop: () => serialSendCommandLong(181, 0, 0),
   drop_stop: () => serialSendCommandLong(181, 0, 1),
   // SET_POSITION_TARGET_GLOBAL_INT (msg 86) with int32 lat/lon × 1e7 — cm-level precision vs MAV_CMD float32's 1-3m.
   // Mirror backend cmd_guided_goto (_hardware.py): switch to GUIDED first (Plane=15, Copter=4), then msg 86.
   // ArduPilot rejects DO_REPOSITION outside GUIDED unless CHANGE_MODE flag is set — using msg 86 sidesteps that.
+  // Validation mirrors backend's coord bounds — silently drop on invalid (matches motor_test pattern; the dispatch
+  // table has no error-return path, but NaN/zero would write a (0,0) "Null Island" waypoint).
   guided_goto: (_, d) => {
+    const lat = (d?.lat as number) ?? 0;
+    const lon = (d?.lon as number) ?? 0;
+    const alt = (d?.alt as number) ?? 30;
+    if (!Number.isFinite(lat) || !Number.isFinite(lon) || !Number.isFinite(alt)) return;
+    if (Math.abs(lat) < 0.001 && Math.abs(lon) < 0.001) return;
+    if (lat < -90 || lat > 90 || lon < -180 || lon > 180 || alt < -500 || alt > 100000) return;
     serialSendMode(_isPlane() ? 15 : 4);
-    serialSendPositionTargetGlobal(
-      (d?.lat as number) ?? 0,
-      (d?.lon as number) ?? 0,
-      (d?.alt as number) ?? 30,
-    );
+    serialSendPositionTargetGlobal(lat, lon, alt);
   },
   // MAV_CMD_DO_SET_ROI (201) with p1=3 = ROI_LOCATION mode. cmd 197 is DO_SET_ROI_NONE per common.xml —
   // it CLEARS the ROI and ignores lat/lon, so the previous wiring made setRoi() and clearRoi() identical.
@@ -381,9 +413,9 @@ const _serialDispatch: Record<string, CmdHandler> = {
   // MAV_CMD_DO_DIGICAM_CONTROL (203): p5=1 is the shoot command. Sending all zeros is a no-op AP_Camera ignores.
   // Mirrors backend cmd_camera_trigger (_hardware.py:198-202).
   camera_trigger: () => serialSendCommandLong(203, 0, 0, 0, 0, 1),
-  // MAV_CMD_VIDEO_START_CAPTURE (2500): p1=stream_id (0=all), p2=status_freq (0=quiet), p3=target_camera (0=all).
-  // Backend cmd_camera_video_start sends p3=1 but AP also accepts 0 (broadcast). MAV_CMD_VIDEO_STOP_CAPTURE (2501).
-  camera_video_start: () => serialSendCommandLong(2500),
+  // MAV_CMD_VIDEO_START_CAPTURE (2500): p1=stream_id (0=all), p2=status_freq (0=quiet), p3=target_camera (1).
+  // Mirrors backend cmd_camera_video_start (_hardware.py:205-206) — explicit camera id targeting. STOP=2501.
+  camera_video_start: () => serialSendCommandLong(2500, 0, 0, 1),
   camera_video_stop: () => serialSendCommandLong(2501),
   // MAV_CMD_SET_CAMERA_ZOOM (531): p1=zoom_type (1=CAMERA_ZOOM_TYPE_CONTINUOUS), p2=zoom_value.
   camera_zoom: (_, d) => serialSendCommandLong(531, 1, (d?.zoom as number) ?? 0),
@@ -598,6 +630,7 @@ export async function serialUploadFence(
 export function serialClearMission(): void {
   if (!isSerialConnected()) return;
   sendSerialFrame(45, encodeMissionClearAll(serial.targetSysId, serial.targetCompId, 0));
+  _wpToSeq.clear();
 }
 
 export function serialMissionSetCurrent(seq: number): void {
@@ -717,7 +750,25 @@ function _onMissionItemIntDl(p: DataView): void {
     sendSerialFrame(47, encodeMissionAck(serial.targetSysId, serial.targetCompId, 0, 0));
     const items: RawMissionItem[] = download.items.filter((i): i is RawMissionItem => i !== null);
     const waypoints = missionItemsToWaypoints(items);
+    _buildWpToSeqMap(items);
     _resolveDownload({ ok: true, waypoints });
+  }
+}
+
+// Mirror missionItemsToWaypoints' iteration order: walk by seq, skip DO_CHANGE_SPEED (178),
+// skip seq 0 (HOME, cmd 16) and the various non-nav DO_* / TAKEOFF / RTL items, and only count
+// the nav-WP family (cmd 16/18/19/82 with seq > 0). Result is parallel-indexed with the waypoints
+// the UI sees, so mission_set_current's wp_index lookup hits the right seq.
+function _buildWpToSeqMap(items: RawMissionItem[]): void {
+  _wpToSeq.clear();
+  const sorted = [...items].sort((a, b) => a.seq - b.seq);
+  let wpIndex = 0;
+  for (const item of sorted) {
+    if (item.cmd === 178) continue;  // DO_CHANGE_SPEED — carries forward, doesn't consume a wp
+    if ((item.cmd === 16 || item.cmd === 18 || item.cmd === 19 || item.cmd === 82) && item.seq > 0) {
+      _wpToSeq.set(wpIndex, item.seq);
+      wpIndex++;
+    }
   }
 }
 
@@ -731,6 +782,7 @@ export async function serialDownloadMission(): Promise<{ ok: boolean; error?: st
     download.resolve = resolve;
     download.items = [];
     download.total = 0;
+    _wpToSeq.clear();  // stale map from previous download would otherwise mislead mission_set_current
     _resetDownloadTimer();
     sendSerialFrame(43, encodeMissionRequestList(serial.targetSysId, serial.targetCompId, 0));
   });

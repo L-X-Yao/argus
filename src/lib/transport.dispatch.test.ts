@@ -248,16 +248,35 @@ describe('_serialDispatch wire-byte semantics', () => {
   });
 
   // ── mission_start: AUTO mode + delayed MISSION_START (300) ───────────
-  it('mission_start sets AUTO mode then sends MAV_CMD_MISSION_START (300) after delay', async () => {
+  it('mission_start sets AUTO mode then sends MAV_CMD_MISSION_START (300) after 300ms', async () => {
     vi.useFakeTimers();
     _isPlaneFlag = false;
     dispatch('mission_start');
     expect(writes.length).toBe(1);
     expect(decodeSetMode(writes[0]).customMode).toBe(3);  // Copter AUTO
-    // Cmd 300 fires after 1s — advance timers, then await microtasks.
-    await vi.advanceTimersByTimeAsync(1000);
+    // Delay = cfg.MISSION_START_DELAY = 0.3s in backend/config.py.
+    await vi.advanceTimersByTimeAsync(300);
     expect(writes.length).toBe(2);
     expect(decodeCommandLong(writes[1]).command).toBe(300);
+    vi.useRealTimers();
+  });
+
+  it('mission_start double-tap coalesces — second call cancels first timer', async () => {
+    vi.useFakeTimers();
+    _isPlaneFlag = false;
+    dispatch('mission_start');
+    expect(writes.length).toBe(1);  // SET_MODE
+    // Tap again before the 300ms delay elapses — the first timer should be cancelled.
+    await vi.advanceTimersByTimeAsync(100);
+    dispatch('mission_start');
+    expect(writes.length).toBe(2);  // SET_MODE #2 fires immediately; cmd 300 NOT yet
+    await vi.advanceTimersByTimeAsync(300);
+    // After the full delay from the SECOND call, exactly one cmd 300 should land — not two.
+    const cmd300Writes = writes.filter((w) => {
+      try { return decodeCommandLong(w).command === 300; }
+      catch { return false; }
+    });
+    expect(cmd300Writes.length).toBe(1);
     vi.useRealTimers();
   });
 
@@ -293,6 +312,21 @@ describe('_serialDispatch wire-byte semantics', () => {
     expect(decodePositionTargetGlobal(writes[1]).alt).toBe(50);
   });
 
+  it('guided_goto drops Null Island (lat≈0, lon≈0) — no SET_MODE, no target sent', () => {
+    dispatch('guided_goto', undefined, { lat: 0, lon: 0, alt: 30 });
+    expect(filterAppFrames(writes).length).toBe(0);
+  });
+
+  it('guided_goto drops NaN coords', () => {
+    dispatch('guided_goto', undefined, { lat: NaN, lon: -74, alt: 30 });
+    expect(filterAppFrames(writes).length).toBe(0);
+  });
+
+  it('guided_goto drops out-of-range lat', () => {
+    dispatch('guided_goto', undefined, { lat: 91, lon: 0, alt: 30 });
+    expect(filterAppFrames(writes).length).toBe(0);
+  });
+
   // ── do_set_roi: cmd 201 (NOT 197), p1=3 ──────────────────────────────
   it('do_set_roi sends MAV_CMD_DO_SET_ROI (201) with p1=3, NOT 197 (DO_SET_ROI_NONE)', () => {
     dispatch('do_set_roi', undefined, { lat: 40.7, lon: -74, alt: 50 });
@@ -311,6 +345,13 @@ describe('_serialDispatch wire-byte semantics', () => {
     const cmd = decodeCommandLong(writes[0]);
     expect(cmd.command).toBe(203);
     expect(cmd.p5).toBe(1);  // shoot command — all zeros is a no-op
+  });
+
+  it('camera_video_start sends VIDEO_START_CAPTURE (2500) with p3=1 to match backend', () => {
+    dispatch('camera_video_start');
+    const cmd = decodeCommandLong(writes[0]);
+    expect(cmd.command).toBe(2500);
+    expect(cmd.p3).toBe(1);
   });
 
   // ── param_save split: save_to_flash hits FC NVRAM, save falls through to WS

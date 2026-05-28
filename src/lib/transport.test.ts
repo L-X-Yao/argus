@@ -83,6 +83,8 @@ import {
   serialLogDownload,
   serialLogCancel,
   serialCalCompass,
+  dispatch,
+  serialClearMission,
 } from './transport';
 import { encodeFrame } from './mavlink/codec';
 import {
@@ -549,5 +551,57 @@ describe('download with multi-item mission', () => {
     expect(res.waypoints![0].lat).toBeCloseTo(34.258, 4);
     // GCS should have sent MISSION_ACK (msg 47)
     expect(countWrites(47)).toBe(1);
+  });
+});
+
+describe('mission_set_current seq map (post-download)', () => {
+  // Decode MISSION_SET_CURRENT (msg 41) seq from a captured write frame.
+  // Wire layout: byte 10 = first payload byte; seq = uint16 little-endian.
+  function decodeSeq(w: Uint8Array): number {
+    const dv = new DataView(w.buffer, w.byteOffset + 10, 2);
+    return dv.getUint16(0, true);
+  }
+
+  it('uses downloaded seq map when DO_CHANGE_SPEED shifts the layout', async () => {
+    // Mission layout: HOME(0) TAKEOFF(1) WP_A(2) SPEED(3) WP_B(4) RTL(5)
+    // wp_index 0 → seq 2 (matches +2 fallback)
+    // wp_index 1 → seq 4 (NOT seq 3 = SPEED, NOT seq 1+2=3 from fallback)
+    const promise = serialDownloadMission();
+    inject(fcFrame(44, encodeMissionCount(1, 1, 6)));
+    inject(fcFrame(73, mkMissionItemInt(0, 16, 0, 0, 0)));            // HOME
+    inject(fcFrame(73, mkMissionItemInt(1, 22, 0, 0, 30)));           // TAKEOFF
+    inject(fcFrame(73, mkMissionItemInt(2, 16, 34.258, 108.942, 50))); // WP A
+    inject(fcFrame(73, mkMissionItemInt(3, 178, 0, 0, 0)));           // DO_CHANGE_SPEED
+    inject(fcFrame(73, mkMissionItemInt(4, 16, 34.259, 108.943, 50))); // WP B
+    inject(fcFrame(73, mkMissionItemInt(5, 20, 0, 0, 0)));            // RTL
+    await promise;
+    writes.length = 0;
+
+    // Goto WP B (wp_index=1). With the map, seq should be 4. Without the map (broken case), seq would be 3.
+    dispatch('mission_set_current', undefined, { wp_index: 1 });
+    expect(countWrites(41)).toBe(1);
+    expect(decodeSeq(findWrite(41)!)).toBe(4);
+  });
+
+  it('falls back to wp_index + 2 when no mission has been downloaded', () => {
+    dispatch('mission_set_current', undefined, { wp_index: 3 });
+    expect(decodeSeq(findWrite(41)!)).toBe(5);
+  });
+
+  it('clears the seq map on mission_clear so a follow-up goto uses the fallback', async () => {
+    const promise = serialDownloadMission();
+    inject(fcFrame(44, encodeMissionCount(1, 1, 3)));
+    inject(fcFrame(73, mkMissionItemInt(0, 16, 0, 0, 0)));
+    inject(fcFrame(73, mkMissionItemInt(1, 22, 0, 0, 30)));
+    inject(fcFrame(73, mkMissionItemInt(2, 16, 34.258, 108.942, 50)));
+    await promise;
+    writes.length = 0;
+    // wp_index 0 was at seq 2 in the downloaded mission. Same seq from the +2 fallback,
+    // so to distinguish: clear, then a goto whose fallback would be different from any map entry.
+    serialClearMission();
+    writes.length = 0;
+    // After clear, no map. wp_index=5 → fallback seq=7 (no map could have produced this).
+    dispatch('mission_set_current', undefined, { wp_index: 5 });
+    expect(decodeSeq(findWrite(41)!)).toBe(7);
   });
 });

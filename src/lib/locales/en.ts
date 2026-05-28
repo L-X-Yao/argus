@@ -96,7 +96,7 @@ const messages: Record<string, string> = {
   'param.search': 'Search params...',
   'param.invalidNum': 'Invalid number',
   'param.outOfRange': 'Out of range',
-  'param.saved': 'Parameters saved',
+  'param.saved': 'Parameter backup file saved',
   'param.exported': 'Exported {n} parameters',
   'param.imported': 'Wrote {n} changed parameters',
   'param.compare': 'Compare',
