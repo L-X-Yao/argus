@@ -185,8 +185,10 @@ class ParamManager:
             return []
         changed = []
         for name, value in data.items():
-            # bool is a subclass of int — exclude it so JSON `true`/`false` don't become 1.0/0.0 on the wire
-            if isinstance(value, bool) or not isinstance(value, (int, float)):
+            # bool is a subclass of int — exclude it so JSON `true`/`false` don't become 1.0/0.0 on the wire.
+            # Also exclude non-finite floats (Inf/-Inf): set_param rejects them, but without this guard
+            # `changed.append` + `time.sleep` still run, inflating param_loaded count and load time.
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
                 continue
             current = self.params.get(name)
             if current and abs(current["value"] - value) > 1e-7:

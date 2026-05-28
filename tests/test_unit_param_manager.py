@@ -212,6 +212,22 @@ class TestLoadFromFile:
         assert changed == []
         mgr.set_param.assert_not_called()
 
+    def test_inf_values_skipped_so_changed_count_stays_honest(self):
+        """JSON Infinity must be filtered before the count_appender. set_param would reject
+        Inf but `changed.append` + `time.sleep` still execute, inflating the load summary."""
+        link = _make_link()
+        mgr = ParamManager(link)
+        mgr.set_param = MagicMock()
+        mgr.params = {"A": {"name": "A", "value": 50.0, "type": 9, "index": 0}}
+        # Python json.load accepts the non-standard `Infinity` literal by default.
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            f.write('{"A": Infinity}')
+            path = f.name
+        changed = mgr.load_from_file(path)
+        Path(path).unlink()
+        assert changed == []
+        mgr.set_param.assert_not_called()
+
 
 class TestHandleParamValueEdgeCases:
     def test_zero_length_payload_ignored(self):
