@@ -85,7 +85,7 @@ export const CRC_EXTRA: Record<number, number> = {
   191: 92, // MAG_CAL_PROGRESS
   192: 36, // MAG_CAL_REPORT
   193: 71, // EKF_STATUS_REPORT
-  233: 35, // GPS_INPUT
+  233: 35, // GPS_RTCM_DATA
   241: 90, // VIBRATION
   242: 104, // HOME_POSITION
   246: 184, // ADSB_VEHICLE

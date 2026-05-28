@@ -82,7 +82,7 @@ _MSG_NAMES: dict[int, str] = {
     191: "MAG_CAL_PROGRESS",
     192: "MAG_CAL_REPORT",
     193: "EKF_STATUS_REPORT",
-    233: "GPS_INPUT",
+    233: "GPS_RTCM_DATA",
     241: "VIBRATION",
     242: "HOME_POSITION",
     246: "ADSB_VEHICLE",

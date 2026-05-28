@@ -53,7 +53,7 @@ export const MODE_TABLES: Record<VehicleType, Record<number, ModeEntry>> = {
     11: { en: 'RTL', zh: '返航', category: 'emergency' },
     12: { en: 'Loiter', zh: '盘旋', category: 'assisted' },
     13: { en: 'Takeoff', zh: '起飞', category: 'auto' },
-    14: { en: 'AvoidADSB', zh: '空速校准', category: 'emergency' },
+    14: { en: 'AvoidADSB', zh: '自动避让', category: 'emergency' },
     15: { en: 'Guided', zh: '引导', category: 'auto' },
     16: { en: 'Initialising', zh: '初始化', category: 'auto' },
     17: { en: 'Q-Stabilize', zh: '旋翼自稳', category: 'manual' },
