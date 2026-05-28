@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import math
 import struct
 import urllib.error
@@ -33,11 +34,8 @@ async def api_terrain_elevation(request: Request):
                     points.append((lat, lon))
             except ValueError:
                 pass
-    elevations = []
-    for lat, lon in points:
-        elev = await _get_srtm_elevation(lat, lon)
-        elevations.append(elev)
-    return {"elevations": elevations}
+    elevations = await asyncio.gather(*(_get_srtm_elevation(lat, lon) for lat, lon in points))
+    return {"elevations": list(elevations)}
 
 
 async def _get_srtm_elevation(lat: float, lon: float) -> float:
