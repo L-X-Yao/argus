@@ -234,6 +234,23 @@ class TestCmdNtripStartFullPath:
         time.sleep(0.5)
         assert link.ntrip_thread is None  # thread exited after connection error
 
+    def test_crlf_in_host_rejected(self):
+        """CRLF in host would inject an extra HTTP header — must be rejected."""
+        link = make_link()
+        r = cmd_ntrip_start(
+            link,
+            None,
+            {
+                "host": "rtk.example.com\r\nX-Evil: injected",
+                "port": 2101,
+                "mountpoint": "M",
+                "username": "u",
+                "password": "p",
+            },
+        )
+        assert r and r["ok"] is False
+        assert r["error"]
+
     def test_crlf_in_credentials_rejected(self):
         link = make_link()
         r = cmd_ntrip_start(

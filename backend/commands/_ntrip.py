@@ -176,7 +176,9 @@ def cmd_ntrip_start(link: DroneLink, param, data: dict):
     if not mountpoint or len(mountpoint) > 100:
         return {"ok": False, "error": lt("err_ntrip_mount", link.locale)}
     # Reject CR/LF in any field that goes into the HTTP request — prevents
-    # request smuggling via crafted user/pass/mountpoint.
+    # header injection via crafted host/mountpoint/credentials.
+    if any(c in host for c in ("\r", "\n")):
+        return {"ok": False, "error": lt("err_ntrip_host", link.locale)}
     if any(c in mountpoint for c in ("\r", "\n")):
         return {"ok": False, "error": lt("err_ntrip_mount_chars", link.locale)}
     username = str(data.get("username", ""))[:128]
