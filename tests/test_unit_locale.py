@@ -35,3 +35,28 @@ class TestTextTable:
 
     def test_key_count(self):
         assert len(_T) >= 50
+
+
+class TestSyncLocalesEscaping:
+    """Tests for the _escape_ts helper in scripts/sync_locales.py."""
+
+    def test_apostrophe_escaped(self):
+        import sys
+        from pathlib import Path
+        sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+        from sync_locales import _escape_ts
+        assert _escape_ts("it's here") == r"it\'s here"
+
+    def test_backslash_escaped(self):
+        import sys
+        from pathlib import Path
+        sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+        from sync_locales import _escape_ts
+        assert _escape_ts("path\\to\\file") == r"path\\to\\file"
+
+    def test_plain_string_unchanged(self):
+        import sys
+        from pathlib import Path
+        sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
+        from sync_locales import _escape_ts
+        assert _escape_ts("Hello World") == "Hello World"

@@ -56,6 +56,11 @@ def parse_keys(path: Path) -> dict[str, str]:
     return out
 
 
+def _escape_ts(s: str) -> str:
+    """Escape a value for use inside a TypeScript single-quoted string literal."""
+    return s.replace("\\", "\\\\").replace("'", "\\'")
+
+
 def sync_file(path: Path, ref_keys: list[str], fallback: dict[str, str], write: bool) -> int:
     existing = parse_keys(path)
     missing = [k for k in ref_keys if k not in existing]
@@ -67,7 +72,7 @@ def sync_file(path: Path, ref_keys: list[str], fallback: dict[str, str], write: 
     if missing and write:
         src = path.read_text(encoding="utf-8")
         insert_before = "};"
-        new_lines = "\n".join(f"  '{k}': '{fallback[k]}'," for k in missing)
+        new_lines = "\n".join(f"  '{k}': '{_escape_ts(fallback[k])}'," for k in missing)
         src = src.replace(insert_before, new_lines + "\n" + insert_before, 1)
         path.write_text(src, encoding="utf-8")
 
