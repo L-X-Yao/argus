@@ -105,7 +105,7 @@ _T = {
     "err_invalid_params": ("无效参数", "Invalid params"),
     "err_invalid_filename": ("无效文件名", "Invalid filename"),
     "err_motor_index": ("电机编号须为 0-7", "Motor index must be 0-7"),
-    "err_throttle_range": ("油门须为 0-100%%", "Throttle must be 0-100%%"),
+    "err_throttle_range": ("油门须为 0-100%", "Throttle must be 0-100%"),
     "err_zoom_range": ("缩放须为 0.1-100", "Zoom must be 0.1-100"),
     "err_ntrip_host": ("NTRIP 主机名无效 (1-255 字符)", "NTRIP host required (1-255 chars)"),
     "err_ntrip_port_type": ("NTRIP 端口须为整数", "NTRIP port must be int"),
