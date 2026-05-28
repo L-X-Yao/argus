@@ -148,10 +148,14 @@ async def video_stream(url: str = ""):
                     else:
                         break
         finally:
-            proc.kill()
+            try:
+                proc.kill()
+            except OSError:
+                pass
             proc.wait()
             with _proc_lock:
-                _active_proc = None
+                if _active_proc is proc:
+                    _active_proc = None
 
     return StreamingResponse(
         generate(),

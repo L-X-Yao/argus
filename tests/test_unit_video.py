@@ -176,6 +176,41 @@ class TestDuplicateProcessPrevention:
         first_proc.kill.assert_called_once()
 
 
+class TestGenerateFinallyDoesNotOrphanLaterProc:
+    """generate() finally must not clear _active_proc if a newer proc replaced it."""
+
+    def test_stale_finally_leaves_active_proc_intact(self):
+        """If proc2 is stored in _active_proc before proc1's finally runs,
+        proc1's finally block must not clobber it with None."""
+        proc1 = MagicMock()
+        proc1.kill = MagicMock()
+        proc1.wait = MagicMock()
+        proc1.returncode = 0
+
+        proc2 = MagicMock()
+        proc2.kill = MagicMock()
+        proc2.wait = MagicMock()
+
+        # Simulate: proc2 was started and stored as the current active proc.
+        with _proc_lock:
+            video_module._active_proc = proc2
+
+        # Now simulate proc1's generate() finally block running.
+        # Before the fix this would unconditionally set _active_proc = None.
+        try:
+            proc1.kill()
+        except OSError:
+            pass
+        proc1.wait()
+        with _proc_lock:
+            if video_module._active_proc is proc1:
+                video_module._active_proc = None
+
+        # proc2 must still be the active proc — not orphaned.
+        with _proc_lock:
+            assert video_module._active_proc is proc2
+
+
 class TestCleanupOnStop:
     def test_stop_clears_global_reference(self, client):
         mock_proc = MagicMock()
