@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { app, addWaypoint, addToast, showConfirm } from '../../lib/stores.svelte';
   import { dispatch } from '../../lib/transport';
+  import { fmtDist } from '../../lib/units';
   import { toGcj, toWgs } from '../../lib/gcj02';
   import { API_BASE } from '../../lib/backend';
   import MapControls from './MapControls.svelte';
@@ -301,7 +302,7 @@
         measureLine = L.polyline(pts, { color: '#ff5252', weight: 2, dashArray: '4,4' }).addTo(map!);
         if (measureLabel) map!.removeLayer(measureLabel);
         const last = measurePts[measurePts.length - 1].ll;
-        const txt = total < 1000 ? `${total.toFixed(0)}m` : `${(total / 1000).toFixed(2)}km`;
+        const txt = fmtDist(total);
         measureLabel = L.marker([last.lat, last.lng], {
           icon: L.divIcon({
             className: '',
