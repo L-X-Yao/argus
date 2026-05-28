@@ -25,7 +25,8 @@ export function saveFlightRecord(record: Omit<FlightRecord, 'id'>): void {
 
 export function loadFlightRecords(): FlightRecord[] {
   try {
-    return JSON.parse(localStorage.getItem(DB_KEY) || '[]');
+    const data = JSON.parse(localStorage.getItem(DB_KEY) || '[]');
+    return Array.isArray(data) ? data : [];
   } catch {
     return [];
   }

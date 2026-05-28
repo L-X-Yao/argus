@@ -116,12 +116,16 @@ describe('flightDb', () => {
     expect(loadFlightRecords()).toEqual([]);
   });
 
-  it('handles non-array JSON in localStorage', () => {
+  it('handles non-array JSON in localStorage — returns empty array', () => {
     localStorage.setItem('argus_flights', '{"not": "an array"}');
-    // JSON.parse succeeds but it's not an array - behavior depends on implementation
-    // loadFlightRecords returns whatever JSON.parse gives
-    const result = loadFlightRecords();
-    expect(result).toBeDefined();
+    expect(loadFlightRecords()).toEqual([]);
+  });
+
+  it('saveFlightRecord does not crash when localStorage has non-array JSON', () => {
+    localStorage.setItem('argus_flights', '"just a string"');
+    expect(() => saveFlightRecord(SAMPLE)).not.toThrow();
+    const records = loadFlightRecords();
+    expect(records.length).toBe(1);
   });
 
   it('id auto-increments from max existing id', () => {
