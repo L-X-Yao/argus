@@ -57,6 +57,7 @@ def handle_heartbeat(p: bytes, pl: int, link: DroneLink) -> None:
             lt("armed", link.locale) if new_armed else lt("disarmed", link.locale), "armed" if new_armed else "disarmed"
         )
         if new_armed:
+            v.flight_summary = None  # clear previous record so ws.ts guard fires on next disarm
             v.armed_time = time.time()
             v.max_alt = v.max_speed = v.total_dist = 0
             link.attitude._prev_pos = None
