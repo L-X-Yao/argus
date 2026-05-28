@@ -150,7 +150,7 @@
   /* ── Save to flash ── */
 
   function saveToFlash() {
-    dispatch('param_save');
+    dispatch('param_save_to_flash');
     addToast(t('pid.saved'), 'success');
   }
 </script>

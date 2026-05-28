@@ -274,6 +274,25 @@ export function serialSendCommandLong(command: number, p1 = 0, p2 = 0, p3 = 0, p
   );
 }
 
+// SET_POSITION_TARGET_GLOBAL_INT (msg 86, 53 bytes). Mirrors backend cmd_guided_goto's struct.pack at
+// backend/commands/_hardware.py:42 — int32 lat/lon × 1e7 for cm-level precision (float32 in COMMAND_LONG
+// loses precision at typical lat magnitudes). type_mask 0x0FF8 ignores velocity, accel, yaw, yaw_rate.
+// frame=6 = MAV_FRAME_GLOBAL_RELATIVE_ALT_INT (alt relative to home).
+export function serialSendPositionTargetGlobal(lat: number, lon: number, alt: number): void {
+  const buf = new ArrayBuffer(53);
+  const dv = new DataView(buf);
+  dv.setUint32(0, 0, true);                          // time_boot_ms
+  dv.setInt32(4, Math.trunc(lat * 1e7), true);       // lat_int
+  dv.setInt32(8, Math.trunc(lon * 1e7), true);       // lon_int
+  dv.setFloat32(12, alt, true);                       // alt (relative)
+  // vx/vy/vz/afx/afy/afz/yaw/yaw_rate at offsets 16..48 stay 0 (default ArrayBuffer fill)
+  dv.setUint16(48, 0x0FF8, true);                     // type_mask
+  dv.setUint8(50, serial.targetSysId);                // target_system
+  dv.setUint8(51, serial.targetCompId);               // target_component
+  dv.setUint8(52, 6);                                 // coordinate_frame = MAV_FRAME_GLOBAL_RELATIVE_ALT_INT
+  sendSerialFrame(86, new Uint8Array(buf));
+}
+
 /**
  * Serial command dispatch table. Each entry maps a command name to a
  * function that sends it via WebSerial MAVLink. Commands not in this
@@ -284,22 +303,55 @@ type CmdHandler = (param?: number, data?: Record<string, unknown>) => void;
 const _serialDispatch: Record<string, CmdHandler> = {
   arm: () => serialSendArm(),
   disarm: () => serialSendDisarm(),
+  // 21196 = force-bypass magic from MAV_CMD_COMPONENT_ARM_DISARM. AP source: AP_Arming::handle_aux_function.
   force_disarm: () => serialSendCommandLong(400, 0, 21196),
   mode: (p) => serialSendMode(p!),
+  // Plane RTL=11 (NOT 21=QRTL), Copter RTL=6. AP source: ArduPlane/mode.h, ArduCopter/mode.h `enum class Number`.
   rtl: () => serialSendMode(_isPlane() ? 11 : 6),
-  takeoff: (_, d) => serialSendCommandLong(22, 0, 0, 0, 0, 0, 0, (d?.alt as number) ?? 30),
-  mission_start: () => serialSendMode(_isPlane() ? 10 : 3),
+  // MAV_CMD_NAV_TAKEOFF (22): p7=alt. AP source ArduPlane/quadplane.cpp:3948 (QuadPlane::do_user_takeoff)
+  // rejects unless control_mode == mode_guided — switch Plane to GUIDED (15) first to match backend cmd_takeoff.
+  takeoff: (_, d) => {
+    if (_isPlane()) serialSendMode(15);
+    serialSendCommandLong(22, 0, 0, 0, 0, 0, 0, (d?.alt as number) ?? 30);
+  },
+  // Backend cmd_mission_start: switch to AUTO, then send MAV_CMD_MISSION_START (300) after a delay.
+  // Copter requires the explicit MISSION_START — switching to AUTO alone leaves it idle while disarmed-on-ground.
+  // AP source: ModeAuto::start in ArduCopter/mode_auto.cpp.
+  mission_start: () => {
+    serialSendMode(_isPlane() ? 10 : 3);
+    setTimeout(() => serialSendCommandLong(300), 1000);
+  },
   mission_clear: () => serialClearMission(),
-  mission_set_current: (_, d) => serialMissionSetCurrent((d?.wp_index as number) ?? 0),
+  // Mission seq mapping: backend prepends HOME (seq 0) + TAKEOFF (seq 1), so user-facing wp_index 0
+  // corresponds to MAVLink seq 2. Mirror backend's `seq = wp_index + 2` fallback (commands/_mission.py:48).
+  // For missions with DO_CHANGE_SPEED inserts, this is still slightly off — but at least it doesn't divert to HOME.
+  mission_set_current: (_, d) => serialMissionSetCurrent(((d?.wp_index as number) ?? 0) + 2),
+  // MAV_CMD_DO_PARACHUTE (181). p2: 0=RELEASE, 1=DISABLE, 2=ENABLE. AP source: AP_Parachute::handle_msg.
   drop: () => serialSendCommandLong(181, 0, 0),
   drop_stop: () => serialSendCommandLong(181, 0, 1),
-  guided_goto: (_, d) => serialSendCommandLong(192, 0, 0, 0, 0,
-    (d?.lat as number) ?? 0, (d?.lon as number) ?? 0, (d?.alt as number) ?? 30),
-  do_set_roi: (_, d) => serialSendCommandLong(197, 0, 0, 0, 0,
+  // SET_POSITION_TARGET_GLOBAL_INT (msg 86) with int32 lat/lon × 1e7 — cm-level precision vs MAV_CMD float32's 1-3m.
+  // Mirror backend cmd_guided_goto (_hardware.py): switch to GUIDED first (Plane=15, Copter=4), then msg 86.
+  // ArduPilot rejects DO_REPOSITION outside GUIDED unless CHANGE_MODE flag is set — using msg 86 sidesteps that.
+  guided_goto: (_, d) => {
+    serialSendMode(_isPlane() ? 15 : 4);
+    serialSendPositionTargetGlobal(
+      (d?.lat as number) ?? 0,
+      (d?.lon as number) ?? 0,
+      (d?.alt as number) ?? 30,
+    );
+  },
+  // MAV_CMD_DO_SET_ROI (201) with p1=3 = ROI_LOCATION mode. cmd 197 is DO_SET_ROI_NONE per common.xml —
+  // it CLEARS the ROI and ignores lat/lon, so the previous wiring made setRoi() and clearRoi() identical.
+  // AP source: AP_Mount handle_command DO_SET_ROI branch in libraries/AP_Mount/AP_Mount.cpp.
+  do_set_roi: (_, d) => serialSendCommandLong(201, 3, 0, 0, 0,
     (d?.lat as number) ?? 0, (d?.lon as number) ?? 0, (d?.alt as number) ?? 0),
   param_set: (_, d) => serialSendParamSet(d?.name as string, d?.value as number),
   param_request_all: () => serialSendParamRequestAll(),
-  param_save: () => serialSendCommandLong(245, 1),
+  // MAV_CMD_PREFLIGHT_STORAGE (245), p1=1: write running params to FC NVRAM. AP source: GCS_MAVLINK::handle_command_preflight_storage.
+  // `param_save` is intentionally NOT in this table — it writes a host-side JSON backup over WS, which serial can't do
+  // (would silently do the wrong thing). UIs that want FC flash use `param_save_to_flash` explicitly.
+  param_save_to_flash: () => serialSendCommandLong(245, 1),
+  // MAV_CMD_PREFLIGHT_REBOOT_SHUTDOWN (246). p1: 1=reboot autopilot, 3=reboot to bootloader. AP source: GCS_MAVLINK::handle_preflight_reboot.
   reboot: () => serialSendCommandLong(246, 1),
   reboot_bootloader: () => serialSendCommandLong(246, 3),
   rc_override: (_, d) => {
@@ -323,11 +375,17 @@ const _serialDispatch: Record<string, CmdHandler> = {
   cal_accel_next: () => serialCalAccelNext(),
   log_cancel: () => serialLogCancel(),
   gimbal_pitchyaw: (_, d) => serialGimbalPitchYaw(d as Parameters<typeof serialGimbalPitchYaw>[0]),
+  // MAV_CMD_DO_MOUNT_CONTROL (205): p1=pitch, p3=yaw, p7=MAV_MOUNT_MODE_MAVLINK_TARGETING (2). AP source: AP_Mount.cpp:363-417.
   gimbal_angle: (_, d) => serialSendCommandLong(205,
     (d?.pitch as number) ?? 0, 0, (d?.yaw as number) ?? 0, 0, 0, 0, 2),
-  camera_trigger: () => serialSendCommandLong(203),
+  // MAV_CMD_DO_DIGICAM_CONTROL (203): p5=1 is the shoot command. Sending all zeros is a no-op AP_Camera ignores.
+  // Mirrors backend cmd_camera_trigger (_hardware.py:198-202).
+  camera_trigger: () => serialSendCommandLong(203, 0, 0, 0, 0, 1),
+  // MAV_CMD_VIDEO_START_CAPTURE (2500): p1=stream_id (0=all), p2=status_freq (0=quiet), p3=target_camera (0=all).
+  // Backend cmd_camera_video_start sends p3=1 but AP also accepts 0 (broadcast). MAV_CMD_VIDEO_STOP_CAPTURE (2501).
   camera_video_start: () => serialSendCommandLong(2500),
   camera_video_stop: () => serialSendCommandLong(2501),
+  // MAV_CMD_SET_CAMERA_ZOOM (531): p1=zoom_type (1=CAMERA_ZOOM_TYPE_CONTINUOUS), p2=zoom_value.
   camera_zoom: (_, d) => serialSendCommandLong(531, 1, (d?.zoom as number) ?? 0),
   // MAV_CMD_DO_MOTOR_TEST (209): p1=motor(1-based), p2=THROTTLE_PERCENT(0), p3=%, p4=duration, p5=count
   // ArduPilot: GCS_MAVLink_Copter.cpp:702 — GCS_MAVLINK_Copter::handle_command_long_packet

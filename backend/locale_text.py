@@ -52,6 +52,7 @@ _T = {
     "param_done": ("参数: %d 个已读取 (%.1fs)", "Params: %d read (%.1fs)"),
     "param_set": ("参数: %s → %.4g", "Param: %s → %.4g"),
     "param_saved": ("参数: 已保存 %d 个 → %s", "Params: %d saved → %s"),
+    "param_saved_to_flash": ("参数: 已写入飞控存储", "Params: written to FC storage"),
     "param_loaded": ("参数: 已加载 %d 个, %d 个变更", "Params: %d loaded, %d changed"),
     "mission_dl": ("任务: 正在下载...", "Mission: downloading..."),
     "mission_dl_n": ("任务下载: 共 %d 项", "Mission download: %d items"),

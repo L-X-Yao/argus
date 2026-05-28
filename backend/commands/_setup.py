@@ -87,8 +87,18 @@ def cmd_param_set(link: DroneLink, param, data: dict):
 
 
 def cmd_param_save(link: DroneLink, param, data: dict):
+    # Writes a JSON backup to the GCS host filesystem (different from `param_save_to_flash`).
     path = link.param_mgr.save_to_file()
     return {"ok": True, "path": path}
+
+
+def cmd_param_save_to_flash(link: DroneLink, param, data: dict):
+    # MAV_CMD_PREFLIGHT_STORAGE (245), p1=1: write running params to FC non-volatile storage.
+    # AP source: GCS_MAVLINK::handle_command_preflight_storage in libraries/GCS_MAVLink/GCS_Common.cpp.
+    # AP typically auto-persists params on PARAM_SET, so this is a defensive write — useful when
+    # users want explicit "save to flash" semantics independent of the JSON backup written by cmd_param_save.
+    send_cmd(link, 245, p1=1)
+    link.add_event(lt("param_saved_to_flash", link.locale), "param_saved_to_flash")
 
 
 def cmd_param_load(link: DroneLink, param, data: dict):
