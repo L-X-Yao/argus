@@ -41,12 +41,19 @@ class TestCommandExecute:
         link.vehicle.vtype_raw = 2
         execute("rtl", None, link)
         assert any("返航" in e["text"] for e in link.events)
+        # MAVLink v2 frame: 10-byte header + payload; SET_MODE payload starts at byte 10.
+        # Payload layout: mode(uint32 LE) + sysid(u8) + base_mode(u8)
+        raw = link._ser.write.call_args[0][0]
+        assert raw[10:14] == b"\x06\x00\x00\x00"  # mode=6 for copter RTL
 
     def test_rtl_plane(self):
         link = make_link()
         link.vehicle.vtype_raw = 1
         execute("rtl", None, link)
         assert any("返航" in e["text"] for e in link.events)
+        # Plane RTL must use mode 11 (standard RTL), NOT mode 21 (Q-RTL/QuadPlane)
+        raw = link._ser.write.call_args[0][0]
+        assert raw[10:14] == b"\x0b\x00\x00\x00"  # mode=11 for plane RTL
 
     def test_mode_change(self):
         link = make_link()

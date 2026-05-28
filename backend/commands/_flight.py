@@ -25,7 +25,9 @@ def cmd_force_disarm(link: DroneLink, param, data: dict):
 
 
 def cmd_rtl(link: DroneLink, param, data: dict):
-    rm = 21 if link.is_plane() else 6
+    # Plane RTL = mode 11 (standard NAV_RTL); mode 21 is Q-RTL (QuadPlane only).
+    # ArduPilot: libraries/AP_Vehicle/AP_Vehicle.cpp — matches modeStore.ts PLANE_MODES[11]
+    rm = 11 if link.is_plane() else 6
     link.add_event(lt("rtl", link.locale) % rm, "rtl")
     send_set_mode(link, rm)
 
