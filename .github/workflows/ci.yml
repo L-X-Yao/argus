@@ -31,6 +31,12 @@ jobs:
       - name: Install Node deps
         run: npm ci
 
+      - name: Verify codegen is up to date
+        run: |
+          python scripts/sync_modes.py
+          python scripts/sync_crc.py
+          git diff --exit-code src/lib/modeStore.ts src/lib/mavlink/crc.ts || (echo "ERROR: Run scripts/sync_modes.py and scripts/sync_crc.py to regenerate" && exit 1)
+
       - name: Ruff lint
         run: ruff check backend/ scripts/ tests/
 

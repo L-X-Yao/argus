@@ -244,6 +244,7 @@ class DroneLink:
             self.connected = False
             self.vehicle.vtype_raw = 0
             self.vehicle.force_plane = None
+            self.vehicle.flight_summary = None
             self.attitude._prev_pos = None
             self.attitude._home_set = False
             # Force a re-fire of request_streams() on the next heartbeat by
