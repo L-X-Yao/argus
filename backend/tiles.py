@@ -214,7 +214,7 @@ async def api_tile_bulk_download(request: Request):
 async def api_tile_cache_clear():
     global _tile_count
     if TILE_CACHE.exists():
-        shutil.rmtree(TILE_CACHE)
+        await aio(shutil.rmtree, TILE_CACHE)
     _tile_count = 0
     return {"ok": True}
 
@@ -238,14 +238,21 @@ async def api_mbtiles_tile(name: str, z: int, x: int, y: int):
     if not path.exists():
         return Response(status_code=404, content="not found")
     tms_y = (1 << z) - 1 - y
-    try:
+
+    def _read_mbtile() -> bytes | None:
         conn = sqlite3.connect(str(path))
-        row = conn.execute(
-            "SELECT tile_data FROM tiles WHERE zoom_level=? AND tile_column=? AND tile_row=?", (z, x, tms_y)
-        ).fetchone()
-        conn.close()
-        if row:
-            return Response(content=row[0], media_type="image/png", headers={"Cache-Control": "public, max-age=604800"})
+        try:
+            row = conn.execute(
+                "SELECT tile_data FROM tiles WHERE zoom_level=? AND tile_column=? AND tile_row=?", (z, x, tms_y)
+            ).fetchone()
+            return row[0] if row else None
+        finally:
+            conn.close()
+
+    try:
+        data = await aio(_read_mbtile)
+        if data:
+            return Response(content=data, media_type="image/png", headers={"Cache-Control": "public, max-age=604800"})
     except (OSError, sqlite3.Error):
         pass
     return Response(status_code=404, content="tile not found")
