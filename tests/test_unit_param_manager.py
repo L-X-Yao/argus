@@ -172,6 +172,32 @@ class TestLoadFromFile:
         changed = mgr.load_from_file("/nonexistent/path.json")
         assert changed == []
 
+    def test_json_array_at_root_returns_empty_with_event(self):
+        """JSON list at root must not raise AttributeError — emits an error event."""
+        link = _make_link()
+        mgr = ParamManager(link)
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            json.dump([1, 2, 3], f)
+            path = f.name
+        changed = mgr.load_from_file(path)
+        Path(path).unlink()
+        assert changed == []
+        event_types = [call.args[1] for call in link.add_event.call_args_list]
+        assert "param_load_err" in event_types
+
+    def test_non_numeric_values_skipped(self):
+        """String values in param file must be skipped, not raise TypeError."""
+        link = _make_link()
+        mgr = ParamManager(link)
+        mgr.params = {"A": {"name": "A", "value": 1.0, "type": 9, "index": 0}}
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            json.dump({"A": "bad_value", "B": 5.0}, f)
+            path = f.name
+        changed = mgr.load_from_file(path)
+        Path(path).unlink()
+        assert "A" not in changed  # skipped (bad type)
+        assert "B" not in changed  # skipped (not in current params)
+
 
 class TestHandleParamValueEdgeCases:
     def test_zero_length_payload_ignored(self):

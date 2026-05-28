@@ -180,8 +180,13 @@ class ParamManager:
         except (json.JSONDecodeError, OSError) as e:
             self._link.add_event(lt("param_load_err", self._link.locale) % e, "param_load_err")
             return []
+        if not isinstance(data, dict):
+            self._link.add_event(lt("param_load_err", self._link.locale) % "not a JSON object", "param_load_err")
+            return []
         changed = []
         for name, value in data.items():
+            if not isinstance(value, (int, float)):
+                continue
             current = self.params.get(name)
             if current and abs(current["value"] - value) > 1e-7:
                 self.set_param(name, value)
