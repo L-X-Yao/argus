@@ -45,6 +45,8 @@ export function connectWs(): void {
         case 'state':
           if (msg.flight_summary && !app.drone.flight_summary) {
             const s = msg.flight_summary;
+            // Delta states omit unchanged fields — fall back to current app
+            // state for vtype/fw_version if they weren't included in this push.
             saveFlightRecord({
               date: new Date().toISOString(),
               duration: s.duration,
@@ -52,8 +54,8 @@ export function connectWs(): void {
               maxSpeed: s.max_speed,
               totalDist: s.total_dist,
               batUsed: s.bat_used,
-              vtype: msg.vtype,
-              fw: msg.fw_version,
+              vtype: msg.vtype ?? app.drone.vtype,
+              fw: msg.fw_version ?? app.drone.fw_version,
               eventCount: app.events.length,
             });
           }

@@ -129,6 +129,24 @@ describe('message handling', () => {
     expect(updateState).toHaveBeenCalled();
   });
 
+  it('flight_summary from delta uses app.drone fallback for vtype/fw_version', async () => {
+    // Delta states omit unchanged fields — vtype and fw_version may be absent.
+    // The flight record must still capture the correct vehicle/firmware info.
+    const { app } = await import('./stores.svelte');
+    app.drone = { ...app.drone, vtype: 'Quadrotor', fw_version: 'v4.3.0', flight_summary: null };
+    await freshConnect();
+    mockWs.onopen?.(new Event('open'));
+    const flightSummary = { duration: 120, max_alt: 50, max_speed: 10, total_dist: 300, bat_used: 20 };
+    // Delta: has flight_summary but NOT vtype/fw_version
+    mockWs.onmessage?.(new MessageEvent('message', {
+      data: JSON.stringify({ type: 'state', flight_summary: flightSummary }),
+    }));
+    const { saveFlightRecord } = await import('./flightDb');
+    expect(saveFlightRecord).toHaveBeenCalledWith(
+      expect.objectContaining({ vtype: 'Quadrotor', fw: 'v4.3.0' }),
+    );
+  });
+
   it('dispatches event messages', async () => {
     await fire({ type: 'event', text: 'test', event_type: 'test', time: '00:00:00' });
     const { addEvent } = await import('./stores.svelte');
