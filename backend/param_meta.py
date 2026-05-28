@@ -37,10 +37,13 @@ def get_metadata(vehicle: str) -> dict:
     if cache_path.exists():
         age = time.time() - cache_path.stat().st_mtime
         if age < CACHE_TTL:
-            with open(cache_path, encoding="utf-8") as f:
-                data = json.load(f)
-            _cache[vehicle] = data
-            return data
+            try:
+                with open(cache_path, encoding="utf-8") as f:
+                    data = json.load(f)
+                _cache[vehicle] = data
+                return data
+            except (OSError, json.JSONDecodeError):
+                pass  # fall through to re-fetch
 
     try:
         req = urllib.request.Request(_URLS[vehicle], headers={"User-Agent": "Mozilla/5.0"})
@@ -53,10 +56,13 @@ def get_metadata(vehicle: str) -> dict:
         return data
     except (OSError, json.JSONDecodeError, ValueError, ET.ParseError):
         if cache_path.exists():
-            with open(cache_path, encoding="utf-8") as f:
-                data = json.load(f)
-            _cache[vehicle] = data
-            return data
+            try:
+                with open(cache_path, encoding="utf-8") as f:
+                    data = json.load(f)
+                _cache[vehicle] = data
+                return data
+            except (OSError, json.JSONDecodeError):
+                pass
         return {}
 
 

@@ -227,6 +227,43 @@ class TestGetMetadata:
             result = get_metadata("copter")
         assert result == {}
 
+    def test_fresh_cache_corrupted_falls_through_to_network(self, tmp_path):
+        """Corrupted fresh cache must not raise — falls through to network fetch."""
+        import backend.param_meta as pm
+
+        cache_file = tmp_path / "copter.json"
+        cache_file.write_text("{NOT VALID JSON{{")  # corrupted
+
+        mock_resp = MagicMock()
+        mock_resp.read.return_value = SAMPLE_XML
+
+        with (
+            patch.object(pm, "CACHE_DIR", tmp_path),
+            patch.object(pm, "CACHE_TTL", 99999),
+            patch("urllib.request.urlopen", return_value=mock_resp),
+        ):
+            result = get_metadata("copter")
+        assert "ANGLE_MAX" in result  # got fresh data from network, no exception
+
+    def test_stale_fallback_cache_corrupted_returns_empty(self, tmp_path):
+        """Corrupted stale fallback cache must not raise — returns {} gracefully."""
+        import backend.param_meta as pm
+
+        cache_file = tmp_path / "copter.json"
+        cache_file.write_text("{NOT VALID JSON{{")  # corrupted
+        old_time = time.time() - 999999
+        import os
+
+        os.utime(cache_file, (old_time, old_time))
+
+        with (
+            patch.object(pm, "CACHE_DIR", tmp_path),
+            patch.object(pm, "CACHE_TTL", 1),
+            patch("urllib.request.urlopen", side_effect=OSError("no network")),
+        ):
+            result = get_metadata("copter")
+        assert result == {}  # both network and stale cache failed — empty dict, no exception
+
     def test_case_insensitive_vehicle(self):
         """Vehicle name is lowercased (line 29)."""
         import backend.param_meta as pm
