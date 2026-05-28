@@ -29,7 +29,11 @@ class UdpWrapper:
         self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self._sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         self._sock.settimeout(cfg.UDP_READ_TIMEOUT)
-        self._sock.bind((host or "", port))
+        try:
+            self._sock.bind((host or "", port))
+        except OSError:
+            self._sock.close()
+            raise
         self._remote: tuple | None = None
         # Track when we last heard from _remote. If a different sender appears
         # while the current peer has been silent for `_PEER_HIJACK_GUARD`
@@ -88,7 +92,11 @@ def open_port(port: str, baudrate: int):
             raise OSError("Invalid TCP address: %s" % port)
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.settimeout(cfg.TCP_CONNECT_TIMEOUT)
-        sock.connect((host, tcp_port))
+        try:
+            sock.connect((host, tcp_port))
+        except OSError:
+            sock.close()
+            raise
         sock.settimeout(cfg.TCP_READ_TIMEOUT)
         return TcpWrapper(sock)
     else:

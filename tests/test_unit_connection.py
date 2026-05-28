@@ -2,6 +2,8 @@
 
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from backend.connection import TcpWrapper, UdpWrapper, open_port
 
 
@@ -153,3 +155,21 @@ class TestUdpWrapper:
         with patch("backend.connection.socket.socket", return_value=mock_sock):
             UdpWrapper(14550, "0.0.0.0")
         mock_sock.bind.assert_called_once_with(("0.0.0.0", 14550))
+
+    def test_udp_socket_closed_when_bind_fails(self):
+        """Socket must be closed if bind() raises so the fd is not leaked."""
+        mock_sock = MagicMock()
+        mock_sock.bind.side_effect = OSError("address in use")
+        with patch("backend.connection.socket.socket", return_value=mock_sock), pytest.raises(OSError):
+            UdpWrapper(14550)
+        mock_sock.close.assert_called_once()
+
+
+class TestTcpSocketCleanup:
+    def test_tcp_socket_closed_when_connect_fails(self):
+        """Socket must be closed if connect() raises so the fd is not leaked."""
+        mock_sock = MagicMock()
+        mock_sock.connect.side_effect = OSError("connection refused")
+        with patch("backend.connection.socket.socket", return_value=mock_sock), pytest.raises(OSError):
+            open_port("tcp:127.0.0.1:5770", 57600)
+        mock_sock.close.assert_called_once()
