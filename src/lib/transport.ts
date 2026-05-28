@@ -228,14 +228,17 @@ function _padView(p: DataView, minBytes: number): DataView {
 }
 
 function requestStreams(): void {
+  // Rates match the backend's SET_MESSAGE_INTERVAL table in _helpers.py:
+  // ATTITUDE (stream 10) and POSITION (stream 6) run at 10Hz so the
+  // heading needle and position arrow animate as smoothly as the WS path.
   const streams = [
-    [1, 2], // RAW_SENSORS
-    [2, 2], // EXTENDED_STATUS
-    [3, 2], // RC_CHANNELS
-    [6, 5], // POSITION
-    [10, 2], // EXTRA1 (attitude)
-    [11, 2], // EXTRA2 (VFR_HUD)
-    [12, 2], // EXTRA3 (vibration, EKF)
+    [1, 2],  // RAW_SENSORS
+    [2, 2],  // EXTENDED_STATUS (SYS_STATUS, battery)
+    [3, 2],  // RC_CHANNELS, SERVO_OUTPUT_RAW
+    [6, 10], // POSITION — GLOBAL_POSITION_INT at 10Hz (was 5Hz)
+    [10, 10], // EXTRA1 — ATTITUDE at 10Hz (was 2Hz)
+    [11, 2], // EXTRA2 — VFR_HUD
+    [12, 2], // EXTRA3 — VIBRATION, EKF_STATUS
   ];
   for (const [id, rate] of streams) {
     sendSerialFrame(66, encodeRequestDataStream(serial.targetSysId, serial.targetCompId, id, rate, 1));
