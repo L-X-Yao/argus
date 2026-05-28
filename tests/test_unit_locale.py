@@ -63,10 +63,14 @@ class TestSyncLocalesEscaping:
 
 
 class TestLocaleFormatStrings:
+    # Matches Python %-format conversions: optional %(name), flags, width, .precision, length, then conversion letter.
+    # Doesn't match %% — that's a literal percent, not a real specifier.
+    _CONVERSION = r'(?:\([^)]+\))?[-+#0 ]*\d*\.?\d*[hlL]?[diouxXeEfFgGcrsab]'
+
     def test_no_bare_double_percent_in_non_format_strings(self):
         """Strings with %% but no format specifier produce literal %% in the UI."""
         import re
-        has_format = re.compile(r'%[diouxXeEfFgGcrsab]')
+        has_format = re.compile(r'%' + self._CONVERSION)
         for key, (zh, en) in _T.items():
             for locale_str in (zh, en):
                 if '%%' in locale_str:
@@ -78,7 +82,7 @@ class TestLocaleFormatStrings:
     def test_format_arg_counts_match_between_locales(self):
         """zh and en strings for the same key should require the same number of format args."""
         import re
-        spec_re = re.compile(r'%(?:%|[diouxXeEfFgGcrsab])')
+        spec_re = re.compile(r'%(?:%|' + self._CONVERSION + ')')
         def count_args(s):
             return sum(1 for m in spec_re.finditer(s) if m.group() != '%%')
         for key, (zh, en) in _T.items():
