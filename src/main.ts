@@ -7,7 +7,8 @@ const ERROR_LOG_MAX = 50;
 
 function logError(source: string, message: string) {
   try {
-    const log: { t: string; s: string; m: string }[] = JSON.parse(localStorage.getItem(ERROR_LOG_KEY) || '[]');
+    const parsed = JSON.parse(localStorage.getItem(ERROR_LOG_KEY) || '[]');
+    const log: { t: string; s: string; m: string }[] = Array.isArray(parsed) ? parsed : [];
     log.push({ t: new Date().toISOString(), s: source, m: message.slice(0, 500) });
     if (log.length > ERROR_LOG_MAX) log.splice(0, log.length - ERROR_LOG_MAX);
     localStorage.setItem(ERROR_LOG_KEY, JSON.stringify(log));
@@ -24,7 +25,8 @@ window.addEventListener('unhandledrejection', (e) => {
 
 export function getErrorLog(): { t: string; s: string; m: string }[] {
   try {
-    return JSON.parse(localStorage.getItem(ERROR_LOG_KEY) || '[]');
+    const parsed = JSON.parse(localStorage.getItem(ERROR_LOG_KEY) || '[]');
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
     return [];
   }
