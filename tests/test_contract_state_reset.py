@@ -12,7 +12,6 @@ Verifies:
 from __future__ import annotations
 
 import struct
-from dataclasses import fields
 from unittest.mock import MagicMock
 
 import pytest
@@ -114,15 +113,6 @@ class TestResetMatchesDataclassDefaults:
     where someone adds a field with a non-zero default but forgets to add it
     to the reset method.
     """
-
-    def _get_defaults(self, dc_class) -> dict:
-        """Return a dict of {field_name: default_value} for a dataclass."""
-        result = {}
-        for f in fields(dc_class):
-            if f.default is not f.default_factory:  # has a simple default
-                result[f.name] = f.default
-            # fields with default_factory (list, dict, bytearray) — check separately
-        return result
 
     def test_vehicle_reset_fields_match_defaults(self, link):
         link._reset_session_state()
