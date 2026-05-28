@@ -232,7 +232,7 @@ function requestStreams(): void {
   // ATTITUDE (stream 10) and POSITION (stream 6) run at 10Hz so the
   // heading needle and position arrow animate as smoothly as the WS path.
   const streams = [
-    [1, 2],  // RAW_SENSORS
+    [1, 4],  // RAW_SENSORS — GPS_RAW_INT at 4Hz to match WS _helpers.py:186
     [2, 2],  // EXTENDED_STATUS (SYS_STATUS, battery)
     [3, 2],  // RC_CHANNELS, SERVO_OUTPUT_RAW
     [6, 10], // POSITION — GLOBAL_POSITION_INT at 10Hz (was 5Hz)

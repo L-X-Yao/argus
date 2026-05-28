@@ -147,6 +147,27 @@ describe('message handling', () => {
     );
   });
 
+  it('flight_summary prefers msg.vtype/fw_version over app.drone fallback', async () => {
+    // Regression guard: if the operands of `??` ever swap, this catches it.
+    const { app } = await import('./stores.svelte');
+    app.drone = { ...app.drone, vtype: 'OLD', fw_version: 'v0.0.0', flight_summary: null };
+    await freshConnect();
+    mockWs.onopen?.(new Event('open'));
+    const flightSummary = { duration: 120, max_alt: 50, max_speed: 10, total_dist: 300, bat_used: 20 };
+    mockWs.onmessage?.(new MessageEvent('message', {
+      data: JSON.stringify({
+        type: 'state',
+        flight_summary: flightSummary,
+        vtype: 'Plane',
+        fw_version: 'v4.5.0',
+      }),
+    }));
+    const { saveFlightRecord } = await import('./flightDb');
+    expect(saveFlightRecord).toHaveBeenCalledWith(
+      expect.objectContaining({ vtype: 'Plane', fw: 'v4.5.0' }),
+    );
+  });
+
   it('dispatches event messages', async () => {
     await fire({ type: 'event', text: 'test', event_type: 'test', time: '00:00:00' });
     const { addEvent } = await import('./stores.svelte');
