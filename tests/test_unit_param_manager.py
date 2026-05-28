@@ -198,6 +198,20 @@ class TestLoadFromFile:
         assert "A" not in changed  # skipped (bad type)
         assert "B" not in changed  # skipped (not in current params)
 
+    def test_bool_values_skipped(self):
+        """JSON booleans must be skipped — bool is subclass of int in Python."""
+        link = _make_link()
+        mgr = ParamManager(link)
+        mgr.set_param = MagicMock()
+        mgr.params = {"A": {"name": "A", "value": 0.0, "type": 9, "index": 0}}
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as f:
+            json.dump({"A": True}, f)  # would become 1.0 without the bool guard
+            path = f.name
+        changed = mgr.load_from_file(path)
+        Path(path).unlink()
+        assert changed == []
+        mgr.set_param.assert_not_called()
+
 
 class TestHandleParamValueEdgeCases:
     def test_zero_length_payload_ignored(self):

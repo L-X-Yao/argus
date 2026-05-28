@@ -185,7 +185,8 @@ class ParamManager:
             return []
         changed = []
         for name, value in data.items():
-            if not isinstance(value, (int, float)):
+            # bool is a subclass of int — exclude it so JSON `true`/`false` don't become 1.0/0.0 on the wire
+            if isinstance(value, bool) or not isinstance(value, (int, float)):
                 continue
             current = self.params.get(name)
             if current and abs(current["value"] - value) > 1e-7:
