@@ -27,7 +27,7 @@
     "format:check": "prettier --check 'src/**/*.{ts,svelte}' && ruff format --check backend/ scripts/ tests/"
   },
   "devDependencies": {
-    "@internationalized/date": "^3.12.1",
+    "@internationalized/date": "^3.12.2",
     "@lucide/svelte": "^1.16.0",
     "@playwright/test": "^1.49.0",
     "@sveltejs/vite-plugin-svelte": "^7.1.2",
