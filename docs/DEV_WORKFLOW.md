@@ -48,10 +48,13 @@ usbipd unbind --busid=2-1                    # remove the share
 
 ## Session record / replay — hardware sessions as offline assets
 
-Every live connection automatically records the raw MAVLink stream (both
-directions) to `logs/argus_*.tlog` alongside the telemetry CSV. The format is
-standard tlog (8-byte big-endian µs timestamp per message) — readable by
-pymavlink `mavlogdump.py` and Mission Planner.
+Every live connection automatically records every **validated** MAVLink frame
+(both directions) to `logs/argus_*.tlog` alongside the telemetry CSV. The
+format is standard tlog (8-byte big-endian µs timestamp per message) —
+readable by pymavlink `mavlogdump.py` and Mission Planner. Frames that fail
+CRC or carry unknown msg ids are dropped before recording (they surface in
+`parse_errors` / the unknown-id log instead) — the tlog captures exactly what
+drove state, not the raw wire noise.
 
 This shrinks the code→hardware→observe loop: an FC quirk captured once on the
 Windows box replays forever in WSL, no hardware attached.

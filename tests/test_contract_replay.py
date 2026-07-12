@@ -141,6 +141,17 @@ class TestReadTlog:
         with pytest.raises(ValueError, match="truncated"):
             read_tlog(str(path))
 
+    @pytest.mark.parametrize("keep", [9, 10])
+    def test_truncation_inside_header_raises_valueerror_not_indexerror(self, tmp_path, keep):
+        """Reviewer finding: a record cut at exactly ts+magic (9 B) or
+        ts+magic+len (10 B) — a disk-full short write — used to raise a bare
+        IndexError that escaped every OSError handler upstream, killing the
+        WS session (connect path) or the link thread (auto-reconnect path)."""
+        path = tmp_path / "s.tlog"
+        path.write_bytes((struct.pack(">Q", 1) + heartbeat())[:keep])
+        with pytest.raises(ValueError, match="truncated"):
+            read_tlog(str(path))
+
     def test_empty_file_ok(self, tmp_path):
         path = tmp_path / "s.tlog"
         path.write_bytes(b"")
@@ -229,6 +240,21 @@ class TestReplayWrapper:
             got += w.read(1024)
         assert got == SESSION[0]
         assert w.read(1024) == b""  # frame 2 is 30 s away — not due
+
+    def test_silence_gap_clamped_so_replay_crosses_it(self, tmp_path, monkeypatch):
+        """Reviewer finding: an in-log silence gap longer than
+        LINK_LOST_TIMEOUT tripped the auto-reconnect, which reopened the
+        replay from the top — the session looped over its prefix forever.
+        Gaps must be clamped so the replay always makes progress."""
+        monkeypatch.setattr(ReplayWrapper, "GAP_CLAMP_WALL", 0.05)
+        path = tmp_path / "s.tlog"
+        write_tlog(path, SESSION[:2], spacing_usec=30_000_000)  # 30 s gap
+        w = ReplayWrapper(str(path))
+        got = b""
+        deadline = time.monotonic() + 2
+        while len(got) < len(b"".join(SESSION[:2])) and time.monotonic() < deadline:
+            got += w.read(1024)
+        assert got == b"".join(SESSION[:2])  # crossed the gap within 2 s wall
 
     def test_speed_factor_accelerates(self, tmp_path):
         path = tmp_path / "s.tlog"

@@ -37,7 +37,11 @@ def read_tlog(path: str, include_gcs: bool = False) -> list[tuple[int, bytes]]:
     records: list[tuple[int, bytes]] = []
     ofs = 0
     while ofs < len(data):
-        if ofs + 9 > len(data):
+        # Need ts(8) + magic + payload_len + incompat_flags readable before
+        # the header fields below are touched — a disk-full short write can
+        # truncate anywhere, and an off-by-two here surfaced as a bare
+        # IndexError that escaped past every OSError handler upstream.
+        if ofs + 11 > len(data):
             raise ValueError("truncated tlog record at byte %d in %s" % (ofs, path))
         (ts,) = struct.unpack_from(">Q", data, ofs)
         magic = data[ofs + 8]

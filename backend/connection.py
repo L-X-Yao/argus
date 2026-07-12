@@ -83,7 +83,14 @@ class ReplayWrapper:
     Writes are discarded — commands sent during a replay go nowhere.
     At end-of-log read() returns b"" forever; the link-lost auto-reconnect
     path then reopens the port, which restarts the replay from the top.
+
+    In-log silence gaps are clamped to GAP_CLAMP_WALL wall-seconds: a
+    recorded session containing a link outage longer than LINK_LOST_TIMEOUT
+    would otherwise trip the auto-reconnect mid-log, restart the replay from
+    the top, and loop over the same prefix forever.
     """
+
+    GAP_CLAMP_WALL = 1.0
 
     def __init__(self, path: str, speed: float = 1.0):
         from .replay import read_tlog
@@ -108,7 +115,13 @@ class ReplayWrapper:
         elapsed = (time.monotonic() - self._t0_wall) * self._speed
         due = (self._records[self._idx][0] - self._t0_log) / 1e6
         if elapsed < due:
-            time.sleep(min(0.05, (due - elapsed) / self._speed))
+            wall_wait = (due - elapsed) / self._speed
+            if wall_wait > self.GAP_CLAMP_WALL:
+                # Fast-forward the wall origin through recorded silence so
+                # the remaining wait is exactly the clamp (see class doc).
+                self._t0_wall -= wall_wait - self.GAP_CLAMP_WALL
+                wall_wait = self.GAP_CLAMP_WALL
+            time.sleep(min(0.05, wall_wait))
             return b""
         # Batch every frame that is already due (param bursts exceed the
         # one-frame-per-loop-tick rate), capped near n per the read contract.
