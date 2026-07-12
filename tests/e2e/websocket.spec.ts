@@ -23,7 +23,8 @@ test.describe('WebSocket real-time data', () => {
   });
 
   test('message rate displayed', async ({ page }) => {
-    await expect(page.locator('body')).toContainText(/\d+\s*Hz/, { timeout: 15000 });
+    // Hz is in the link-quality title attribute, not visible text.
+    await expect(page.locator('[title*="Hz"]').first()).toBeVisible({ timeout: 15000 });
   });
 
   test('link quality visualization renders', async ({ page }) => {

@@ -17,8 +17,11 @@ test.describe('Connected flow — full lifecycle', () => {
     await connectSimulator(page);
     const buttons = page.locator('button', { hasText: /Stabilize|Alt Hold|Loiter|Auto|RTL|Land|自稳|定高|悬停|自动|返航|降落/ });
     await expect(buttons.first()).toBeVisible({ timeout: 10000 });
+    // Default layout: RTL + pause-to-Loiter quick actions in the nav bar.
+    // The four-button mode group only renders with the map expanded
+    // (MapControls is gated on app.mapExpanded).
     const count = await buttons.count();
-    expect(count).toBeGreaterThanOrEqual(3);
+    expect(count).toBeGreaterThanOrEqual(2);
   });
 
   test('clicking mode button sends mode switch', async ({ page }) => {
@@ -38,7 +41,7 @@ test.describe('Connected flow — full lifecycle', () => {
 
   test('controls panel opens and shows arm button', async ({ page }) => {
     await connectSimulator(page);
-    const controlsBtn = page.locator('button', { hasText: /Controls|控制/ }).first();
+    const controlsBtn = page.locator('button', { hasText: /Controls|操控|控制/ }).first();
     if (await controlsBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
       await controlsBtn.click();
       await page.waitForTimeout(1000);

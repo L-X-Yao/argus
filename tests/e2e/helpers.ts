@@ -4,6 +4,14 @@ export async function connectSimulator(page: Page) {
   await page.goto('/');
   await page.waitForTimeout(1500);
 
+  // Idempotent: the backend link is global, so a prior test (or spec) that
+  // failed before its cleanup leaves the UI connected — in that state the
+  // port input doesn't render and fill() would burn the whole test timeout.
+  const disconnectBtn = page.locator('button', { hasText: /^断开$|^Disconnect$/ });
+  if (await disconnectBtn.isVisible({ timeout: 500 }).catch(() => false)) {
+    return;
+  }
+
   const portInput = page.locator('input.port-input').first();
   await portInput.fill('tcp:localhost:5770');
   await page.waitForTimeout(300);

@@ -1,12 +1,19 @@
 import { test, expect } from '@playwright/test';
-import { connectSimulator } from './helpers';
+import { connectSimulator, disconnectIfConnected } from './helpers';
 
 test.describe.configure({ mode: 'serial' });
 
 test.describe('Connection flow', () => {
+  test.afterEach(async ({ page }) => {
+    await disconnectIfConnected(page);
+  });
+
   test('connect to simulator via default port', async ({ page }) => {
     await connectSimulator(page);
-    await expect(page.locator('body')).toContainText(/Stabilize|Loiter|Guided|Auto|Manual|AltHold/, { timeout: 10000 });
+    await expect(page.locator('body')).toContainText(
+      /Stabilize|Loiter|Guided|Auto|Manual|AltHold|自稳|悬停|引导|自动|手动|定高/,
+      { timeout: 10000 },
+    );
   });
 
   test('shows telemetry after connection', async ({ page }) => {
