@@ -106,7 +106,10 @@ jobs:
           chmod +x ~/sitl/arducopter
           mkdir -p /tmp/sitl-run && cd /tmp/sitl-run
           # CMAC home — matches the waypoint/fence coords in sitl_verify.py
-          ~/sitl/arducopter --model + --speedup 8 -w \
+          # stdbuf: SITL gets SIGKILLed at job teardown, so block-buffered
+          # stdout loses its tail — exactly the lines that say why a boot
+          # stalled. Line-buffer the log.
+          stdbuf -oL -eL ~/sitl/arducopter --model + --speedup 8 -w \
             --defaults ~/sitl/copter.parm \
             --home -35.363261,149.165230,584,353 > sitl.log 2>&1 &
           # Passive listen check only. SITL's SERIAL0 boot-gates on its
@@ -121,7 +124,8 @@ jobs:
 
       - name: Start backend
         run: |
-          python -m uvicorn backend.app:app --host 127.0.0.1 --port 8100 --log-level warning &
+          ARGUS_LOG_LEVEL=DEBUG python -m uvicorn backend.app:app --host 127.0.0.1 --port 8100 \
+            --log-level info > /tmp/sitl-run/backend.log 2>&1 &
           for i in $(seq 1 30); do
             curl -sf http://127.0.0.1:8100/health > /dev/null && exit 0
             sleep 1
@@ -131,12 +135,21 @@ jobs:
       - name: Run SITL verification
         run: python tests/sitl_verify.py
 
-      - name: Upload SITL log on failure
+      - name: Diagnostics
+        if: failure()
+        run: |
+          echo "── arducopter process ──"; ps -o pid,pcpu,pmem,etime,args -C arducopter || true
+          echo "── TCP 5760 ──"; ss -tn | grep 5760 || true
+          echo "── sitl.log tail ──"; tail -40 /tmp/sitl-run/sitl.log || true
+          echo "── backend.log tail ──"; tail -40 /tmp/sitl-run/backend.log || true
+          echo "── session ──"; curl -s http://127.0.0.1:8100/session || true
+
+      - name: Upload logs on failure
         if: failure()
         uses: actions/upload-artifact@v4
         with:
           name: sitl-smoke-logs
-          path: /tmp/sitl-run/sitl.log
+          path: /tmp/sitl-run/*.log
           retention-days: 7
 
   e2e:
