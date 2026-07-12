@@ -36,9 +36,10 @@ test.describe('PWA offline capabilities', () => {
     expect(manifest.short_name).toBe('Argus');
     expect(manifest.display).toBe('standalone');
     expect(manifest.start_url).toBe('/');
-    expect(manifest.icons).toHaveLength(2);
+    expect(manifest.icons).toHaveLength(3);
     expect(manifest.icons[0].sizes).toBe('192x192');
     expect(manifest.icons[1].sizes).toBe('512x512');
+    expect(manifest.icons[2].purpose).toBe('maskable');
   });
 
   test('app shell is served from cache when offline', async ({ page }) => {
@@ -64,9 +65,14 @@ test.describe('PWA offline capabilities', () => {
     await page.goto('/');
     await page.waitForTimeout(3000);
 
-    // Collect asset URLs that were loaded
+    // Collect asset URLs that were loaded. Resolve the cache name at
+    // runtime — hardcoding the versioned name (argus-gcs-v3.3) broke every
+    // time sw.js bumped CACHE_NAME.
     const cachedAssets = await page.evaluate(async () => {
-      const cache = await caches.open('argus-gcs-v3.3');
+      const names = await caches.keys();
+      const name = names.find((n) => n.startsWith('argus-gcs-'));
+      if (!name) return [];
+      const cache = await caches.open(name);
       const keys = await cache.keys();
       return keys.map((r) => new URL(r.url).pathname);
     });

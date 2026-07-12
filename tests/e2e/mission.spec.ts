@@ -59,7 +59,7 @@ test.describe('Mission planning', () => {
     if (await circleBtn.isVisible()) {
       await circleBtn.click();
       await page.waitForTimeout(300);
-      await expect(page.locator('button', { hasText: 'Gen' })).toBeVisible({ timeout: 3000 });
+      await expect(page.locator('button', { hasText: /Gen|生成/ })).toBeVisible({ timeout: 3000 });
     }
   });
 });

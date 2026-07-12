@@ -8,8 +8,9 @@ test.describe('Accessibility', () => {
     const skipLink = page.locator('a[href="#main-content"]');
     await expect(skipLink).toHaveCount(1);
 
-    // The skip link should contain appropriate text
-    await expect(skipLink).toContainText(/skip to content/i);
+    // The skip link should contain appropriate text (app defaults to zh
+    // locale when localStorage is empty — accept either language)
+    await expect(skipLink).toContainText(/skip to content|跳转到内容/i);
 
     // It should become visible on focus (sr-only -> not sr-only)
     await skipLink.focus();
