@@ -125,12 +125,13 @@ jobs:
           chmod +x ~/sitl/arducopter
           mkdir -p /tmp/sitl-run && cd /tmp/sitl-run
           # CMAC home — matches the waypoint/fence coords in sitl_verify.py
-          # stdbuf: SITL gets SIGKILLed at job teardown, so block-buffered
-          # stdout loses its tail — exactly the lines that say why a boot
-          # stalled. Line-buffer the log.
-          stdbuf -oL -eL ~/sitl/arducopter --model + --speedup 8 -w \
+          # setsid + nohup + </dev/null: a plain '&' child dies with its
+          # step's process group here (foreground probe survives its full
+          # window; the identical backgrounded launch died mid-boot twice).
+          # stdbuf line-buffers the log so a kill can't eat the tail.
+          setsid nohup stdbuf -oL -eL ~/sitl/arducopter --model + --speedup 8 -w \
             --defaults ~/sitl/copter.parm \
-            --home -35.363261,149.165230,584,353 > sitl.log 2>&1 &
+            --home -35.363261,149.165230,584,353 > sitl.log 2>&1 < /dev/null &
           # Passive listen check only. SITL's SERIAL0 boot-gates on its
           # first TCP client; a probe that connects and drops left the
           # backend unable to connect afterwards (observed in CI: sitl.log
