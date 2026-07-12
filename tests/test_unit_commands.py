@@ -651,10 +651,13 @@ class TestRcOverride:
 
 
 class TestExecuteDispatch:
-    def test_unknown_command(self):
+    def test_unknown_command_fails_loud(self):
+        """Unknown command names must produce an error cmd_result, not
+        silence — a caller with a stale command name would otherwise wait
+        forever (found via sitl_verify sending a renamed command)."""
         link = make_link()
         result = execute("nonexistent_xyz", None, link)
-        assert result is None
+        assert result == {"ok": False, "error": "unknown command: nonexistent_xyz"}
 
     def test_exception_caught(self):
         import backend.commands as cmd_mod

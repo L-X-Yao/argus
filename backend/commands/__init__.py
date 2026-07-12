@@ -138,4 +138,11 @@ def execute(cmd: str, param, link: DroneLink, data: dict | None = None) -> dict 
 
             logging.getLogger(__name__).exception("Command '%s' failed", cmd)
             return {"ok": False, "error": str(exc)[:200]}
-    return None
+    # Fail loud: an unregistered command name (client/backend version skew,
+    # typo in a driving script) used to vanish without any reply, leaving
+    # the caller waiting on a cmd_result forever. Found when sitl_verify.py
+    # sent a stale command name and silently got nothing back.
+    import logging
+
+    logging.getLogger(__name__).warning("Unknown command %r dropped", cmd)
+    return {"ok": False, "error": "unknown command: %s" % cmd}

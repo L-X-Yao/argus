@@ -132,12 +132,16 @@ class TestCommandExecuteErrorHandling:
         finally:
             del cmd_module._DISPATCH["_test_long"]
 
-    def test_unknown_command_returns_none(self):
+    def test_unknown_command_returns_error_without_dispatch(self):
+        """Unknown names must not reach any handler (no side effects on the
+        link) and must fail loud with an error cmd_result — silence left
+        callers with stale command names waiting forever."""
         from unittest.mock import MagicMock
 
         link = MagicMock()
         result = execute("nonexistent_cmd_xyz", None, link)
-        assert result is None
+        assert result == {"ok": False, "error": "unknown command: nonexistent_cmd_xyz"}
+        link.send.assert_not_called()
 
 
 # ─── WS Input Validation Config Tests ─────────────────────────────
