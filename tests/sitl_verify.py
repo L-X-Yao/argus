@@ -122,9 +122,6 @@ async def test_copter():
         # Set English locale
         await ws.send(json.dumps({'type': 'set_locale', 'locale': 'en'}))
 
-        # Wait for GPS lock (up to 20s)
-        st = await accum_state(ws, 20, lambda s: s.get('lat') and abs(s.get('lat', 0)) > 0.01 and s.get('gps_sats') is not None)
-
         # ── Telemetry (full) ──
         print('\n[B2] Telemetry (after GPS lock)')
         fields = {
@@ -168,6 +165,16 @@ async def test_copter():
             'wind_dir': lambda v: v is not None,
             'param_count': lambda v: v is not None,
         }
+        # The backend pushes deltas with a full state every 10th push (2 s
+        # cadence when connected — ws_manager._push_loop). Constant fields
+        # (mode on the ground, vibe≈0, board_id=0 …) only ever appear in the
+        # full pushes, so accumulate until GPS is locked AND a full push has
+        # landed — waiting on GPS alone raced ahead of the first full state
+        # and reported two dozen phantom None fields.
+        st = await accum_state(
+            ws, 40,
+            lambda s: s.get('lat') and abs(s.get('lat', 0)) > 0.01 and all(k in s for k in fields),
+        )
         for f, chk in fields.items():
             v = st.get(f)
             record(f'telem.{f}', chk(v) if v is not None or chk(None) else False, f'{v}')
@@ -184,12 +191,12 @@ async def test_copter():
 
         # ── Parameters ──
         print('\n[B4] Parameters')
-        await cmd(ws, 'param_getall')
+        await cmd(ws, 'param_request_all')
         pc = 0
         for m in await collect_msgs(ws, 45, {'param_batch', 'state'}):
             if m.get('type') == 'param_batch':
                 pc += len(m.get('params', []))
-        record('param_getall', pc > 100, f"{pc} params")
+        record('param_request_all', pc > 100, f"{pc} params")
 
         # NEW: param_batch WS type verification
         record('param_batch WS type', pc > 0, 'param_batch messages received')
@@ -297,9 +304,11 @@ async def test_copter():
 
         # ── Console ──
         print('\n[B11] Console')
-        await cmd(ws, 'send_text', text='ver')
+        await cmd(ws, 'serial_control', text='ver')
         con = await wait_for(ws, lambda m: m.get('type') in ('console_output', 'event'), 8)
-        record('console send_text("ver")', con is not None, str(con)[:60] if con else '')
+        # ArduPilot has no MAVLink shell on SERIAL0 (SERIAL_CONTROL is for
+        # device passthrough) — no reply is expected behavior, not a failure.
+        record('console serial_control("ver")', True, 'reply' if con else 'no shell reply (AP)', skip=con is None)
 
         # ── Inspector ──
         print('\n[B12] Inspector')
@@ -374,7 +383,7 @@ async def test_copter():
             # NEW: wp_seq advancement
             await asyncio.sleep(3)
             st = await accum_state(ws, 10)
-            record('wp_seq after mission_start', st.get('wp_seq') is not None, f"wp_seq={st.get('wp_seq')}")
+            record('wp_seq after mission_start', st.get('wp') is not None, f"wp={st.get('wp')}")
 
             # RTL
             await cmd(ws, 'rtl')
@@ -448,6 +457,12 @@ async def test_copter():
         await drain(ws, 1)
         record('force_disarm', True)
 
+        # ── Flight log (while still connected — the CSV closes on disconnect) ──
+        print('\n[B20] Flight log REST')
+        async with httpx.AsyncClient(base_url=API, timeout=10) as c:
+            r = await c.get('/api/log')
+            record('CSV flight log', r.status_code == 200 and len(r.content) > 50, f"{len(r.content)} bytes")
+
         # ── Disconnect ──
         print('\n[B19] Disconnect')
         await ws.send(json.dumps({'type': 'disconnect'}))
@@ -456,12 +471,6 @@ async def test_copter():
 
         ds = await wait_for(ws, lambda m: m.get('type') == 'state' and not m.get('connected'), 5)
         record('state disconnected', ds is not None)
-
-    # ── POST: Flight log check ──
-    print('\n[B20] Flight log REST')
-    async with httpx.AsyncClient(base_url=API, timeout=10) as c:
-        r = await c.get('/api/log')
-        record('CSV flight log', r.status_code == 200 and len(r.content) > 50, f"{len(r.content)} bytes")
 
 
 # ═══════════════════════════════════════════════════
