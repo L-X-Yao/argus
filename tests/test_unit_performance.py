@@ -254,18 +254,23 @@ class TestMavlinkParseThroughput:
 class TestPLLinkThroughput:
     """Test PL-Link encode/decode throughput."""
 
+    # Thresholds guard against algorithmic pathology (an accidental O(n^2)
+    # would be 10-100x), not micro-perf: GitHub's 2026-07 runner image is
+    # ~13% slower than the old one and pushed the previous 1s/1s/2s limits
+    # into flake territory (1.13s observed on a green codebase).
+
     def test_encode_10000(self):
-        """Encode 10000 PL-Link frames in < 1s."""
+        """Encode 10000 PL-Link frames in < 3s."""
         payload = bytes(32)  # typical MAVLink payload size
 
         start = time.perf_counter()
         for i in range(10000):
             ple(payload, i & 0xFF)
         elapsed = time.perf_counter() - start
-        assert elapsed < 1.0, f"10000 PL-Link encodes took {elapsed:.4f}s (> 1s)"
+        assert elapsed < 3.0, f"10000 PL-Link encodes took {elapsed:.4f}s (> 3s)"
 
     def test_decode_10000(self):
-        """Decode 10000 PL-Link frames in < 1s."""
+        """Decode 10000 PL-Link frames in < 3s."""
         payload = bytes(32)
         encoded = ple(payload, 0x42)
 
@@ -274,10 +279,10 @@ class TestPLLinkThroughput:
             result, consumed = pld(encoded)
             assert result is not None
         elapsed = time.perf_counter() - start
-        assert elapsed < 1.0, f"10000 PL-Link decodes took {elapsed:.4f}s (> 1s)"
+        assert elapsed < 3.0, f"10000 PL-Link decodes took {elapsed:.4f}s (> 3s)"
 
     def test_roundtrip_10000(self):
-        """Encode then decode 10000 PL-Link frames in < 2s."""
+        """Encode then decode 10000 PL-Link frames in < 6s."""
         payload = bytes(range(32))
 
         start = time.perf_counter()
@@ -286,7 +291,7 @@ class TestPLLinkThroughput:
             result, consumed = pld(encoded)
             assert result == payload
         elapsed = time.perf_counter() - start
-        assert elapsed < 2.0, f"10000 PL-Link roundtrips took {elapsed:.4f}s (> 2s)"
+        assert elapsed < 6.0, f"10000 PL-Link roundtrips took {elapsed:.4f}s (> 6s)"
 
 
 class TestEventBufferPerformance:
