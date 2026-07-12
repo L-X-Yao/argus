@@ -109,8 +109,12 @@ jobs:
           ~/sitl/arducopter --model + --speedup 8 -w \
             --defaults ~/sitl/copter.parm \
             --home -35.363261,149.165230,584,353 > sitl.log 2>&1 &
+          # Passive listen check only. SITL's SERIAL0 boot-gates on its
+          # first TCP client; a probe that connects and drops left the
+          # backend unable to connect afterwards (observed in CI: sitl.log
+          # shows exactly one consumed connection, verify aborts).
           for i in $(seq 1 30); do
-            (echo > /dev/tcp/127.0.0.1/5760) 2>/dev/null && exit 0
+            ss -tln | grep -q ':5760 ' && exit 0
             sleep 1
           done
           echo "SITL never opened TCP 5760" && exit 1
