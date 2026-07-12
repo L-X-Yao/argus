@@ -101,6 +101,25 @@ jobs:
           # ArduCopter-stable ref tracks the same release as the stable binary
           curl -sfL -o ~/sitl/copter.parm https://raw.githubusercontent.com/ArduPilot/ardupilot/ArduCopter-stable/Tools/autotest/default_params/copter.parm
 
+      - name: Probe SITL boot in foreground
+        run: |
+          # SITL has died silently mid-boot on this runner twice (log stops
+          # at "Smoothing reset", no signal message survives a backgrounded
+          # shell). Run it foreground under timeout with a held client
+          # connection so bash reports the terminating signal: 124 = alive
+          # through the window (good), 132 = SIGILL, 139 = SIGSEGV.
+          chmod +x ~/sitl/arducopter
+          mkdir -p /tmp/sitl-probe && cd /tmp/sitl-probe
+          (sleep 3; python3 -c 'import socket,time; s=socket.create_connection(("127.0.0.1",5760),timeout=10); time.sleep(25)') &
+          set +e
+          timeout 30 ~/sitl/arducopter --model + --speedup 8 -w \
+            --defaults ~/sitl/copter.parm \
+            --home -35.363261,149.165230,584,353
+          code=$?
+          set -e
+          echo "SITL foreground exit code: $code (124 = survived probe window)"
+          if [ "$code" != "124" ]; then exit 1; fi
+
       - name: Start ArduCopter SITL
         run: |
           chmod +x ~/sitl/arducopter
