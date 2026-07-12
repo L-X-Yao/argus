@@ -46,6 +46,36 @@ usbipd unbind --busid=2-1                    # remove the share
 
 (Re-bind only if you ever need a one-off WSL-side hardware test again.)
 
+## Session record / replay — hardware sessions as offline assets
+
+Every live connection automatically records the raw MAVLink stream (both
+directions) to `logs/argus_*.tlog` alongside the telemetry CSV. The format is
+standard tlog (8-byte big-endian µs timestamp per message) — readable by
+pymavlink `mavlogdump.py` and Mission Planner.
+
+This shrinks the code→hardware→observe loop: an FC quirk captured once on the
+Windows box replays forever in WSL, no hardware attached.
+
+**Replay into the running UI** — connect with a `replay:` port (optional
+`@speed` suffix); commands are discarded, the session loops at end-of-log:
+
+```
+replay:logs/argus_20260712_213300.tlog@10
+```
+
+**Replay into tests** — drive the real parse→dispatch→state path offline:
+
+```python
+from backend.replay import replay_into
+link = DroneLink()
+replay_into(link, "tests/fixtures/that_weird_calibration.tlog")
+assert link.get_state()["..."] == ...
+```
+
+When a hardware session exposes a bug, copy its tlog into `tests/fixtures/`
+and pin the fixed behavior with a replay test. Frame builders for synthetic
+sessions live in `tests/frame_builders.py`.
+
 ## Windows — hardware + demo station
 
 ### First-time setup (~15 minutes)

@@ -3,7 +3,6 @@ from __future__ import annotations
 import struct
 import threading
 import time
-from pathlib import Path
 
 from . import commands as cmd_module
 from . import mavlink_dispatch
@@ -110,6 +109,8 @@ class DroneLink:
         self._parse_errors = 0
         self._raw_sysid = 1
         self._logfile = None
+        self._tlog = None
+        self._tlog_lock = threading.Lock()  # tlog writes come from link thread (_process) AND API threads (send)
         self._last_log_time = 0.0
         self._last_port = ""
         self._last_baud = cfg.SERIAL_BAUD
@@ -190,6 +191,9 @@ class DroneLink:
                     else:
                         self._ser.write(frame)
                     self.sq += 1
+                    # Record the inner MAVLink frame (pre-pllink-wrap) so the
+                    # tlog stays pure MAVLink regardless of transport framing.
+                    self._record_tlog(frame)
                 except OSError:
                     logger.debug("send failed", exc_info=True)
                 except ValueError:
@@ -201,7 +205,7 @@ class DroneLink:
     def connect(self, port: str, baudrate: int = 57600, protocol: str = "auto") -> bool:
         if self._running:
             self.disconnect()
-        if port.startswith("udp:") or (port.startswith("tcp:") and protocol == "auto"):
+        if port.startswith(("udp:", "replay:")) or (port.startswith("tcp:") and protocol == "auto"):
             self._protocol = "standard"
         else:
             self._protocol = protocol
@@ -229,7 +233,10 @@ class DroneLink:
         self._last_port = port
         self._last_baud = baudrate
         self._reconnect_enabled = True
-        self._start_log()
+        # Replaying a recorded session must not re-record it (or spam CSV):
+        # a looping replay would otherwise mint duplicate log assets forever.
+        if not port.startswith("replay:"):
+            self._start_log()
         self._thread = threading.Thread(target=self._loop, daemon=True)
         self._thread.start()
         return True
@@ -451,15 +458,37 @@ class DroneLink:
         }
 
     def _start_log(self) -> None:
-        log_dir = Path(__file__).resolve().parent.parent / "logs"
+        log_dir = cfg.LOG_DIR
         log_dir.mkdir(exist_ok=True)
-        logname = str(log_dir / time.strftime("argus_%Y%m%d_%H%M%S.csv"))
+        stamp = time.strftime("argus_%Y%m%d_%H%M%S")
+        logname = str(log_dir / (stamp + ".csv"))
         self._logfile = open(logname, "w", encoding="utf-8")
         self._logfile.write(
             "time,roll,pitch,yaw,lat,lon,alt_rel,alt_msl,gs,vz,voltage,current,remaining,mode,mode_name,armed,gps_fix,sats,wp,hdg,dist,bat_time\n"
         )
+        # Raw MAVLink session log (both directions), replayable offline via
+        # backend/replay.py and standard tools. Format per pymavlink
+        # mavutil.mavlogfile.pre_message: each message prefixed with an
+        # 8-byte big-endian microsecond timestamp.
+        with self._tlog_lock:
+            self._tlog = open(str(log_dir / (stamp + ".tlog")), "wb")
         self._last_log_time = 0.0
         self.add_event(lt("log_file", self.locale) % logname, "log_file")
+
+    def _record_tlog(self, frame: bytes) -> None:
+        with self._tlog_lock:
+            if not self._tlog:
+                return
+            try:
+                self._tlog.write(struct.pack(">Q", int(time.time() * 1e6)) + frame)
+                self._tlog.flush()
+            except OSError:
+                # Disk full / file rotated away — drop recording, keep flying.
+                try:
+                    self._tlog.close()
+                except OSError:
+                    pass
+                self._tlog = None
 
     def _stop_log(self) -> None:
         with self._state_lock:
@@ -469,6 +498,13 @@ class DroneLink:
             except OSError:
                 pass
             self._logfile = None
+        with self._tlog_lock:
+            try:
+                if self._tlog:
+                    self._tlog.close()
+            except OSError:
+                pass
+            self._tlog = None
 
     def get_log_path(self) -> str | None:
         with self._state_lock:
@@ -596,13 +632,50 @@ class DroneLink:
                 self._protocol = "standard"
                 self.add_event(lt("proto_std", self.locale), "proto_std")
             else:
-                # Neither magic found in the first 256 bytes — drop them
-                # and wait for more. (Otherwise we'd spin parsing garbage.)
-                self._buf = self._buf[scan_len:]
-                return None, 0
+                # Neither magic found in the scan window — report the bytes
+                # as consumed and let feed()'s drain loop keep chewing.
+                # Returning 0 here (as this used to) breaks the drain loop,
+                # throttling noise-burst recovery to one window per read
+                # tick: a trimmed 32 KB burst took ~2.6 s to clear while
+                # real frames behind it sat unparsed.
+                return None, scan_len
         if self._protocol == "pllink":
             return pld(self._buf)
         return self._parse_mavlink_frame()
+
+    def feed(self, data: bytes) -> int:
+        """Append raw link bytes and drain every complete frame through the
+        real parse → dispatch → state path. This is the single ingest point
+        shared by the live link thread, offline replay (backend/replay.py),
+        and fault-injection tests — so what tests exercise IS the flight path.
+        Returns the number of frames processed."""
+        if data:
+            self._buf += data
+            if len(self._buf) > 65536:
+                self._buf = self._buf[-32768:]
+                self._parse_errors += 1
+        frames = 0
+        while len(self._buf) >= 7:
+            payload, consumed = self._next_frame()
+            if payload:
+                self._buf = self._buf[consumed:]
+                self.frame_count += 1
+                frames += 1
+                try:
+                    self._process(payload)
+                except (struct.error, ValueError, IndexError):
+                    self._parse_errors += 1
+                    if self._parse_errors == 1 or self._parse_errors % 100 == 0:
+                        import traceback
+
+                        logger.warning(
+                            "parse error #%d: %s", self._parse_errors, traceback.format_exc().splitlines()[-1]
+                        )
+            elif consumed > 0:
+                self._buf = self._buf[consumed:]
+            else:
+                break
+        return frames
 
     def _loop(self) -> None:
         last_hb = 0.0
@@ -651,33 +724,10 @@ class DroneLink:
                     time.sleep(0.1)
                     continue
                 data = ser.read(1024)
-                if data:
-                    self._buf += data
-                    if len(self._buf) > 65536:
-                        self._buf = self._buf[-32768:]
-                        self._parse_errors += 1
             except OSError:
                 time.sleep(0.1)
                 continue
-            while len(self._buf) >= 7:
-                payload, consumed = self._next_frame()
-                if payload:
-                    self._buf = self._buf[consumed:]
-                    self.frame_count += 1
-                    try:
-                        self._process(payload)
-                    except (struct.error, ValueError, IndexError):
-                        self._parse_errors += 1
-                        if self._parse_errors == 1 or self._parse_errors % 100 == 0:
-                            import traceback
-
-                            logger.warning(
-                                "parse error #%d: %s", self._parse_errors, traceback.format_exc().splitlines()[-1]
-                            )
-                elif consumed > 0:
-                    self._buf = self._buf[consumed:]
-                else:
-                    break
+            self.feed(data)
             self._write_log_line()
             self.param_mgr.check_timeout()
             self._check_mission_dl_timeout()
@@ -724,6 +774,7 @@ class DroneLink:
     def _process(self, payload: bytes) -> None:
         if len(payload) < 12 or payload[0] != 0xFD:
             return
+        self._record_tlog(payload)
         mid = payload[7] | (payload[8] << 8) | (payload[9] << 16)
         p = payload[10 : 10 + payload[1]]
         pl = payload[1]

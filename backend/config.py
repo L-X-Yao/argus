@@ -64,6 +64,7 @@ class Config:
 
     # Logging
     LOG_WRITE_INTERVAL: float = 0.25
+    LOG_DIR: Path = ROOT_DIR / "logs"
 
     # Tile cache
     TILE_CACHE_MAX: int = 50000

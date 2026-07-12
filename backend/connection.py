@@ -1,8 +1,9 @@
-"""Transport wrappers for TCP, UDP, and serial connections."""
+"""Transport wrappers for TCP, UDP, serial, and tlog-replay connections."""
 
 from __future__ import annotations
 
 import socket
+import time
 
 from .config import cfg
 
@@ -73,8 +74,76 @@ class UdpWrapper:
         self._sock.close()
 
 
+class ReplayWrapper:
+    """Streams a recorded .tlog back through the normal link loop, paced by
+    the recorded timestamps. Lets the full stack (backend parse → WS → UI)
+    be driven by a real-FC session with no hardware attached.
+
+    Port syntax: replay:<path>[@<speed>]  e.g. replay:logs/argus_x.tlog@10
+    Writes are discarded — commands sent during a replay go nowhere.
+    At end-of-log read() returns b"" forever; the link-lost auto-reconnect
+    path then reopens the port, which restarts the replay from the top.
+    """
+
+    def __init__(self, path: str, speed: float = 1.0):
+        from .replay import read_tlog
+
+        try:
+            # FC frames only — replaying recorded GCS heartbeats would
+            # fabricate vehicle state (see backend/replay.py GCS_SYSID).
+            self._records = read_tlog(path, include_gcs=False)
+        except ValueError as e:
+            raise OSError(str(e)) from e
+        if not self._records:
+            raise OSError("no FC frames in %s" % path)
+        self._speed = speed if speed > 0 else 1.0
+        self._idx = 0
+        self._t0_log = self._records[0][0]
+        self._t0_wall = time.monotonic()
+
+    def read(self, n: int) -> bytes:
+        if self._idx >= len(self._records):
+            time.sleep(0.05)  # EOF — mimic an idle transport, don't busy-spin
+            return b""
+        elapsed = (time.monotonic() - self._t0_wall) * self._speed
+        due = (self._records[self._idx][0] - self._t0_log) / 1e6
+        if elapsed < due:
+            time.sleep(min(0.05, (due - elapsed) / self._speed))
+            return b""
+        # Batch every frame that is already due (param bursts exceed the
+        # one-frame-per-loop-tick rate), capped near n per the read contract.
+        out = bytearray()
+        while self._idx < len(self._records) and len(out) < n:
+            ts, frame = self._records[self._idx]
+            if (ts - self._t0_log) / 1e6 > elapsed:
+                break
+            out += frame
+            self._idx += 1
+        return bytes(out)
+
+    def write(self, data: bytes) -> None:
+        pass
+
+    def close(self) -> None:
+        pass
+
+
+def _parse_replay_port(port: str) -> tuple[str, float]:
+    spec = port[len("replay:") :]
+    path, sep, speed_s = spec.rpartition("@")
+    if sep:
+        try:
+            return path, float(speed_s)
+        except ValueError:
+            pass  # '@' was part of the filename, not a speed suffix
+    return spec, 1.0
+
+
 def open_port(port: str, baudrate: int):
-    if port.startswith("udp:"):
+    if port.startswith("replay:"):
+        path, speed = _parse_replay_port(port)
+        return ReplayWrapper(path, speed)
+    elif port.startswith("udp:"):
         parts = port[4:].split(":")
         try:
             if len(parts) == 2:
