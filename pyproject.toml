@@ -6,11 +6,6 @@ readme = "README.md"
 license = {text = "MIT"}
 authors = [{name = "L-X-Yao", email = "lsc1476907630@gmail.com"}]
 requires-python = ">=3.10"
-
-[project.urls]
-Homepage = "https://github.com/L-X-Yao/argus"
-Repository = "https://github.com/L-X-Yao/argus"
-Issues = "https://github.com/L-X-Yao/argus/issues"
 dependencies = [
     "fastapi>=0.115.0,<1.0",
     "uvicorn[standard]>=0.34.0,<1.0",
@@ -18,6 +13,11 @@ dependencies = [
     "python-multipart>=0.0.9",
     "pyserial>=3.5",
 ]
+
+[project.urls]
+Homepage = "https://github.com/L-X-Yao/argus"
+Repository = "https://github.com/L-X-Yao/argus"
+Issues = "https://github.com/L-X-Yao/argus/issues"
 
 [project.optional-dependencies]
 dev = [
