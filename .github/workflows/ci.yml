@@ -115,10 +115,15 @@ jobs:
           # run). Slow runner CPU stretches the boot window into the
           # heartbeat's path — locally boot finishes in <1 s and the race
           # is unhittable. Home is CMAC, matching sitl_verify.py coords.
-          setsid nohup stdbuf -oL -eL ~/sitl/arducopter --model + --speedup 8 -w \
+          # Wrapper records HOW SITL ends: a backgrounded SITL has died
+          # before every verify while an identically-launched backend
+          # survives, and a foreground probe under timeout survives — so
+          # capture the exit status (128+N = signal N) instead of guessing.
+          setsid nohup bash -c '~/sitl/arducopter --model + --speedup 8 -w \
             --serial0 tcp:0 \
             --defaults ~/sitl/copter.parm \
-            --home -35.363261,149.165230,584,353 > sitl.log 2>&1 < /dev/null &
+            --home -35.363261,149.165230,584,353 >> sitl.log 2>&1; \
+            echo "=== SITL exited with status $? ===" >> sitl.log' < /dev/null &
           # Boot progresses unattended now; SERIAL2's bind is the last of
           # the serial-init lines. Give sensors/EKF a further beat past it
           # so no client traffic lands inside the fragile window.
@@ -147,6 +152,7 @@ jobs:
         if: failure()
         run: |
           echo "── arducopter process ──"; ps -o pid,pcpu,pmem,etime,args -C arducopter || true
+          echo "── dmesg (OOM / segv) ──"; sudo dmesg 2>/dev/null | tail -25 || true
           echo "── TCP 5760 ──"; ss -tn | grep 5760 || true
           echo "── sitl.log tail ──"; tail -40 /tmp/sitl-run/sitl.log || true
           echo "── backend.log tail ──"; tail -40 /tmp/sitl-run/backend.log || true
