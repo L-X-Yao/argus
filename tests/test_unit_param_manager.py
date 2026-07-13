@@ -339,6 +339,40 @@ class TestCheckTimeout:
 
         assert link.send.call_count == 10
 
+    def test_relists_when_initial_request_dropped(self):
+        """total_count still unknown (no PARAM_VALUE ever arrived) → re-send
+        PARAM_REQUEST_LIST. Without this, a single dropped msg 21 stalls the
+        whole fetch: gap-fill needs total_count and can never engage."""
+        link = _make_link()
+        mgr = ParamManager(link)
+        mgr.fetching = True
+        mgr.total_count = -1
+        mgr._list_attempts = 1  # the initial request_all() send
+        mgr._last_value_time = time.time() - 10.0
+        mgr._fetch_start = time.time()
+
+        mgr.check_timeout()
+
+        # Re-sent PARAM_REQUEST_LIST (msg 21), not a gap-fill READ.
+        link.send.assert_called_once()
+        sent = link.send.call_args[0][0]
+        mid = sent[7] | (sent[8] << 8) | (sent[9] << 16)
+        assert mid == 21
+        assert mgr._list_attempts == 2
+
+    def test_relist_respects_max_retries(self):
+        link = _make_link()
+        mgr = ParamManager(link)
+        mgr.fetching = True
+        mgr.total_count = -1
+        mgr._list_attempts = 4  # already past max (3)
+        mgr._last_value_time = time.time() - 10.0
+        mgr._fetch_start = time.time()
+
+        mgr.check_timeout()
+
+        link.send.assert_not_called()
+
     def test_timeout_stops_fetching(self):
         """Lines 188-192: after PARAM_FETCH_TIMEOUT, fetching stops."""
         link = _make_link()

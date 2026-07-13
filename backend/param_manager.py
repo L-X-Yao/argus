@@ -36,6 +36,7 @@ class ParamManager:
         self._received_indices: set[int] = set()
         self._last_value_time = 0.0
         self._gap_fill_attempts: dict[int, int] = {}  # index -> retry count
+        self._list_attempts = 0  # PARAM_REQUEST_LIST re-sends (dropped-request recovery)
         self._messages: list[dict] = []  # kept for backward compat with ws_manager cursor
 
     def request_all(self) -> None:
@@ -48,13 +49,20 @@ class ParamManager:
         self._last_value_time = self._fetch_start
         self._received_indices.clear()
         self._gap_fill_attempts.clear()
+        self._list_attempts = 0
         # Drop stale messages so the next ws_manager cursor doesn't replay
         # values from a previous (now invalidated) fetch.
         self._messages.clear()
         self._link.add_event(lt("param_reading", self._link.locale), "param_reading")
+        self._request_list()
+
+    def _request_list(self) -> None:
+        # MAV PARAM_REQUEST_LIST msg id 21: target_system u8 @0, target_component
+        # u8 @1. The FC replies with a PARAM_VALUE stream carrying param_count.
         from .crc_extras import CRC_EXTRA
         from .pllink_proto import bm
 
+        self._list_attempts += 1
         payload = struct.pack("<BB", self._link.vehicle.sysid, 1)
         self._link.send(bm(21, payload, self._link.sq, CRC_EXTRA[21]))
 
@@ -209,6 +217,15 @@ class ParamManager:
         # index gets up to 3 retries.
         gap_delay = getattr(cfg, "PARAM_GAP_FILL_DELAY", 2.0)
         max_retries = 3
+        # Dropped initial request: if not a single PARAM_VALUE has come back,
+        # total_count is still unknown and the gap-fill below (which needs it)
+        # can never engage — the whole fetch would silently time out. Re-send
+        # PARAM_REQUEST_LIST a few times before giving up. This is the common
+        # failure on a lossy/ churny link: one dropped msg 21 stalls everything.
+        if self.total_count <= 0 and now - self._last_value_time > gap_delay:
+            if self._list_attempts <= max_retries:
+                self._request_list()
+                self._last_value_time = now  # back off until next tick
         if self.total_count > 0 and now - self._last_value_time > gap_delay:
             missing = [i for i in range(self.total_count) if i not in self._received_indices]
             # Throttle: only send up to 10 per cycle so we don't flood the FC.
