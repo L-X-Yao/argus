@@ -1418,6 +1418,115 @@ class TestLoop:
         fail_events = [e for e in link.events if e["event_type"] == "reconnect_fail"]
         assert len(fail_events) >= 1
 
+    def test_loop_reconnect_retries_with_backoff_not_single_shot(self):
+        """Regression: a FAILED reconnect keeps retrying _open_port with
+        exponential backoff — it must NOT strand the link after one attempt.
+        The reconnect used to sit behind `if self.connected`, which
+        _reset_session_state flips False, so _open_port fired exactly once and
+        the W1 backoff never advanced past attempt 1 (dead code)."""
+        link = DroneLink()
+        link._running = True
+        link.connected = True
+        link.last_frame_time = time.time() - cfg.LINK_LOST_TIMEOUT - 1.0
+        link._reconnect_enabled = True
+        link._last_port = "tcp:localhost:5770"
+        link._last_baud = 57600
+        mock_ser = MagicMock()
+        mock_ser.read.side_effect = OSError("closed")
+        link._ser = mock_ser
+
+        delays: list[float] = []
+
+        def stop_sleep(d=0, *a, **kw):
+            delays.append(d)
+            if len(delays) > 6:
+                link._running = False
+
+        with (
+            patch.object(link, "_open_port", side_effect=OSError("down")) as mock_open,
+            patch("backend.drone_link.cmd_module.send_heartbeat"),
+            patch("backend.drone_link.cmd_module.request_streams"),
+            patch("backend.drone_link.time.sleep", side_effect=stop_sleep),
+        ):
+            link._loop()
+        assert mock_open.call_count >= 3, "reconnect must retry, not single-shot"
+        # Backoff = min(RECONNECT_DELAY * 2**min(n,5), 60): first step, non-decreasing, capped.
+        assert delays[0] == min(cfg.RECONNECT_DELAY * 2, 60.0)
+        assert delays == sorted(delays)
+        assert max(delays) <= 60.0
+
+    def test_loop_reconnect_recovers_after_transient_failure(self):
+        """A port that fails a couple reopen attempts then returns must
+        reconnect, reset the backoff counter, and clear _reconnecting — a brief
+        USB glitch auto-recovers instead of stranding on a closed serial."""
+        link = DroneLink()
+        link._running = True
+        link.connected = True
+        link.last_frame_time = time.time() - cfg.LINK_LOST_TIMEOUT - 1.0
+        link._reconnect_enabled = True
+        link._last_port = "tcp:localhost:5770"
+        link._last_baud = 57600
+        old_ser = MagicMock()
+        old_ser.read.side_effect = OSError("closed")
+        link._ser = old_ser
+        new_ser = MagicMock()
+        new_ser.read.return_value = b""
+
+        opens = {"n": 0}
+
+        def open_side_effect(*a, **kw):
+            opens["n"] += 1
+            if opens["n"] < 3:
+                raise OSError("still down")
+            return new_ser
+
+        sleeps = {"n": 0}
+
+        def stop_sleep(*a, **kw):
+            sleeps["n"] += 1
+            if sleeps["n"] > 6:
+                link._running = False
+
+        with (
+            patch.object(link, "_open_port", side_effect=open_side_effect),
+            patch("backend.drone_link.cmd_module.send_heartbeat"),
+            patch("backend.drone_link.cmd_module.request_streams"),
+            patch("backend.drone_link.time.sleep", side_effect=stop_sleep),
+        ):
+            link._loop()
+        assert link._reconnecting is False
+        assert link._reconnect_attempts == 0
+        assert link._ser is new_ser
+        reconn = [e for e in link.events if e["event_type"] == "reconnected"]
+        assert len(reconn) == 1
+
+    def test_loop_normal_tick_runs_both_watchdogs(self):
+        """Every normal tick calls the param AND mission-download watchdogs;
+        dropping either would silently strand a pending fetch/download."""
+        link = DroneLink()
+        link._running = True
+        link.connected = True
+        link.last_frame_time = time.time()  # fresh — no link-lost
+        mock_ser = MagicMock()
+        mock_ser.read.return_value = b""
+        link._ser = mock_ser
+
+        def stop_sleep(*a, **kw):
+            link._running = False
+
+        with (
+            patch("backend.drone_link.cmd_module.send_heartbeat"),
+            patch("backend.drone_link.cmd_module.request_streams"),
+            patch("backend.drone_link.time.sleep", side_effect=stop_sleep),
+            patch.object(link.param_mgr, "check_timeout") as mock_pt,
+            patch.object(link, "_check_mission_dl_timeout") as mock_mt,
+            patch.object(link, "feed"),
+            patch.object(link, "_write_log_line"),
+        ):
+            link._loop()
+        mock_pt.assert_called()
+        mock_mt.assert_called()
+
     def test_loop_request_streams_when_not_connected(self):
         """_loop requests streams when not connected and frame_count < 3."""
         link = DroneLink()

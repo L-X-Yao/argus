@@ -137,6 +137,10 @@ class DroneLink:
         # Exponential backoff counter for the in-loop silent reconnect path
         # (auditor W1). Resets to 0 on a successful reconnect.
         self._reconnect_attempts: int = 0
+        # Persistent "a reconnect is in progress" flag. Kept SEPARATE from the
+        # link-lost detection (which needs connected=True) so the retry keeps
+        # firing with backoff after _reset_session_state() sets connected=False.
+        self._reconnecting: bool = False
         # NTRIP client thread + stop signal (set by cmd_ntrip_start, cleared by
         # cmd_ntrip_stop or the thread itself on exit). Lives independent of
         # the FC link thread, but disconnect() kills it because the corrections
@@ -239,6 +243,10 @@ class DroneLink:
         self._last_port = port
         self._last_baud = baudrate
         self._reconnect_enabled = True
+        # Fresh manual connect cancels any auto-reconnect left over from a
+        # prior session and resets the backoff counter.
+        self._reconnecting = False
+        self._reconnect_attempts = 0
         # Replaying a recorded session must not re-record it (or spam CSV):
         # a looping replay would otherwise mint duplicate log assets forever.
         if not port.startswith("replay:"):
@@ -296,6 +304,7 @@ class DroneLink:
     def disconnect(self) -> None:
         self._running = False
         self._reconnect_enabled = False
+        self._reconnecting = False
         # Signal NTRIP thread to exit (if running). Don't join — the thread
         # is a daemon with a 2s recv timeout, it will tear down on its own.
         if self.ntrip_stop is not None:
@@ -325,6 +334,9 @@ class DroneLink:
                 pass
             self._ser = None
         self._reset_session_state()
+        # Manual reconnect supersedes any in-progress auto-reconnect + backoff.
+        self._reconnecting = False
+        self._reconnect_attempts = 0
         self._buf = b""
         self._protocol = "auto"
         try:
@@ -698,6 +710,14 @@ class DroneLink:
                 last_hb = now
                 if not self.connected and self.frame_count < 3:
                     cmd_module.request_streams(self)
+            # Link-lost DETECTION — fires once per drop (needs connected=True
+            # with stale frames). It arms the persistent _reconnecting flag; the
+            # actual reopen retry lives in its own block below. Keeping the two
+            # separate fixes a real regression: the reconnect used to sit INSIDE
+            # this `if self.connected` guard, but _reset_session_state() sets
+            # connected=False, so a single failed _open_port stranded the link —
+            # the branch never re-entered, _reconnect_attempts never advanced
+            # past 1, and the W1 backoff below was dead code.
             if self.connected and self.last_frame_time > 0 and now - self.last_frame_time > cfg.LINK_LOST_TIMEOUT:
                 self.add_event(lt("link_lost", self.locale), "link_lost")
                 # Clear pending uploads / log buffer / etc. — same hygiene as
@@ -705,31 +725,33 @@ class DroneLink:
                 # so request_streams() re-fires on the next heartbeat (C2).
                 self._reset_session_state()
                 if self._reconnect_enabled and self._last_port:
+                    self._reconnecting = True
                     self.add_event(lt("reconnecting", self.locale), "reconnecting")
-                    with self._lock:
-                        try:
-                            if self._ser:
-                                self._ser.close()
-                        except OSError:
-                            pass
-                    self._buf = b""
-                    self._protocol = "auto"
+            # Reconnect RETRY — persists across iterations until _open_port
+            # succeeds (or disconnect()/reconnect() clears the flag). Exponential
+            # backoff capped at 60s so a permanently-bad port (cable unplugged,
+            # host firewalled) doesn't hammer _open_port every tick (auditor W1).
+            if self._reconnecting:
+                with self._lock:
                     try:
-                        self._ser = self._open_port(self._last_port, self._last_baud)
-                        self.sq = 0
-                        self._reconnect_attempts = 0
-                        self.add_event(lt("reconnected", self.locale), "reconnected")
+                        if self._ser:
+                            self._ser.close()
                     except OSError:
-                        # Exponential backoff capped at 60s. Auditor W1:
-                        # without this the loop spun on a permanently-bad
-                        # port (cable unplugged, host firewalled) at the
-                        # fixed RECONNECT_DELAY cadence forever, masking
-                        # any other diagnostic the operator might check.
-                        self._reconnect_attempts += 1
-                        delay = min(cfg.RECONNECT_DELAY * (2 ** min(self._reconnect_attempts, 5)), 60.0)
-                        self.add_event(lt("reconnect_fail", self.locale), "reconnect_fail")
-                        time.sleep(delay)
-                    continue
+                        pass
+                self._buf = b""
+                self._protocol = "auto"
+                try:
+                    self._ser = self._open_port(self._last_port, self._last_baud)
+                    self.sq = 0
+                    self._reconnect_attempts = 0
+                    self._reconnecting = False
+                    self.add_event(lt("reconnected", self.locale), "reconnected")
+                except OSError:
+                    self._reconnect_attempts += 1
+                    delay = min(cfg.RECONNECT_DELAY * (2 ** min(self._reconnect_attempts, 5)), 60.0)
+                    self.add_event(lt("reconnect_fail", self.locale), "reconnect_fail")
+                    time.sleep(delay)
+                continue
             try:
                 ser = self._ser
                 if ser is None:
