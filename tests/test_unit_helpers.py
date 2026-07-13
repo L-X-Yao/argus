@@ -61,8 +61,8 @@ class TestRequestStreams:
                 request_streams(link)
             finally:
                 h.time.sleep = orig_sleep
-        # 9 SET_MESSAGE_INTERVAL + 1 send_cmd(512) = at least 10 writes
-        assert link._ser.write.call_count >= 10
+        # 11 SET_MESSAGE_INTERVAL + 1 send_cmd(512) = at least 12 writes
+        assert link._ser.write.call_count >= 12
 
 
 class TestSendFenceItemInt:

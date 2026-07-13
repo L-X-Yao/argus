@@ -190,6 +190,15 @@ def request_streams(link: DroneLink) -> None:
         (65, 500000),
         (241, 1000000),
         (74, 500000),
+        # MAG_CAL_PROGRESS / MAG_CAL_REPORT are not in the set above and only
+        # ride the FC-side SRx_EXTRA3 stream group otherwise — with SR params
+        # at 0 a compass cal completes on the FC while the GCS never sees a
+        # single 191/192 (found by tests/sitl_calibrate.py against real SITL).
+        # Interval-scheduling them is valid and idle-free: ArduPilot
+        # GCS_Common.cpp:1139 maps both in mavlink_id_to_ap_message, and their
+        # try_send_message cases (:6679/:6682) no-op while no cal is running.
+        (191, 500000),
+        (192, 500000),
     ]
     for mid, interval in streams:
         payload = struct.pack("<fffffffHBBB", float(mid), float(interval), 0, 0, 0, 0, 0, 511, link.vehicle.sysid, 1, 0)
