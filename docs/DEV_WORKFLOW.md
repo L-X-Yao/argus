@@ -79,6 +79,25 @@ When a hardware session exposes a bug, copy its tlog into `tests/fixtures/`
 and pin the fixed behavior with a replay test. Frame builders for synthetic
 sessions live in `tests/frame_builders.py`.
 
+### Calibration fixtures — recorded from real-firmware SITL
+
+`tests/fixtures/{magcal,accelcal}_sitl.tlog` are full calibration handshakes
+(onboard compass cal incl. accept; 6-position accel cal) recorded against the
+prebuilt ArduPilot SITL using its special `calibration` vehicle model, driven
+end-to-end through the backend's own command path.
+`tests/test_contract_calibration_replay.py` replays them every CI run — the
+offline regression for the calibration protocol, no hardware or SITL needed.
+
+Regenerate after changing anything FC-coupled in the calibration flow:
+
+```bash
+python tests/sitl_calibrate.py   # self-contained: boots SITL + backend, ~3 min
+```
+
+The recorder is also a live integration test — it dies loudly if any step of
+either handshake stalls (that is how the missing MAG_CAL_PROGRESS stream
+subscription was found).
+
 ## Windows — hardware + demo station
 
 ### First-time setup (~15 minutes)
