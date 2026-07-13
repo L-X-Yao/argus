@@ -162,6 +162,45 @@ function decodePositionTargetGlobal(bytes: Uint8Array): {
   };
 }
 
+function decodeCommandAck(bytes: Uint8Array): { command: number; result: number } {
+  const { msgId, payload } = decodeFrame(bytes, 3);
+  expect(msgId).toBe(77); // COMMAND_ACK
+  const dv = new DataView(payload.buffer, payload.byteOffset, payload.byteLength);
+  return { command: dv.getUint16(0, true), result: dv.getUint8(2) };
+}
+
+function decodeRcOverride(bytes: Uint8Array): { channels: number[]; targetSys: number; targetComp: number } {
+  const { msgId, payload } = decodeFrame(bytes, 18);
+  expect(msgId).toBe(70); // RC_CHANNELS_OVERRIDE
+  const dv = new DataView(payload.buffer, payload.byteOffset, payload.byteLength);
+  const channels: number[] = [];
+  for (let i = 0; i < 8; i++) channels.push(dv.getUint16(i * 2, true));
+  return { channels, targetSys: dv.getUint8(16), targetComp: dv.getUint8(17) };
+}
+
+interface CommandInt {
+  command: number;
+  p1: number;
+  p2: number;
+  x: number;
+  y: number;
+  z: number;
+}
+
+function decodeCommandInt(bytes: Uint8Array): CommandInt {
+  const { msgId, payload } = decodeFrame(bytes, 35);
+  expect(msgId).toBe(75); // COMMAND_INT
+  const dv = new DataView(payload.buffer, payload.byteOffset, payload.byteLength);
+  return {
+    p1: dv.getFloat32(0, true),
+    p2: dv.getFloat32(4, true),
+    x: dv.getInt32(16, true),
+    y: dv.getInt32(20, true),
+    z: dv.getFloat32(24, true),
+    command: dv.getUint16(28, true),
+  };
+}
+
 // Skip the connect-boot frames (heartbeat + REQUEST_DATA_STREAMs) and
 // return only msgIds that this test cares about.
 function filterAppFrames(allWrites: Uint8Array[]): Uint8Array[] {
@@ -424,5 +463,142 @@ describe('_serialDispatch wire-byte semantics', () => {
     expect(cmd.p3).toBe(10);  // throttle %
     expect(cmd.p4).toBe(2);   // duration s
     expect(cmd.p5).toBe(1);   // motor count
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// Calibration / gimbal / RC-override wire bytes — FC-coupled, previously
+// untested on the WebSerial path (only the backend twins had wire tests).
+// A "cleanup" of the deliberately spec-violating cal_accel_next COMMAND_ACK,
+// or a byte-offset regression in rc_override, would silently miscalibrate the
+// vehicle or drive the wrong control channel with no failing test.
+// ─────────────────────────────────────────────────────────────────────────
+describe('_serialDispatch calibration + gimbal + RC wire bytes', () => {
+  // ── cal_accel_next: the spec-violating COMMAND_ACK (the critical one) ──
+  it('cal_accel_next sends COMMAND_ACK(command=0, result=1) — NOT a MAV_CMD', () => {
+    // AP_AccelCal::handle_command_ack (AP_AccelCal.cpp:366-393) requires
+    // command<=6 and result==TEMPORARILY_REJECTED(1). QGC sends command=0,
+    // result=1; anyone "fixing" this to (42429, 0) breaks 6-position accel cal.
+    dispatch('cal_accel_next');
+    const ack = decodeCommandAck(writes[0]);
+    expect(ack.command).toBe(0);
+    expect(ack.result).toBe(1);
+  });
+
+  // ── compass cal COMMAND_LONGs ────────────────────────────────────────
+  it('cal_compass sends DO_START_MAG_CAL (42424) with p1=0 (all mags)', () => {
+    dispatch('cal_compass');
+    const cmd = decodeCommandLong(writes[0]);
+    expect(cmd.command).toBe(42424);
+    expect(cmd.p1).toBe(0);
+  });
+
+  it('cal_compass_accept sends DO_ACCEPT_MAG_CAL (42425)', () => {
+    dispatch('cal_compass_accept');
+    expect(decodeCommandLong(writes[0]).command).toBe(42425);
+  });
+
+  it('cal_cancel sends DO_CANCEL_MAG_CAL (42426)', () => {
+    dispatch('cal_cancel');
+    expect(decodeCommandLong(writes[0]).command).toBe(42426);
+  });
+
+  // ── PREFLIGHT_CALIBRATION (241) axis flags: each cal type sets a distinct
+  //    param, and swapping them would run the wrong calibration ──────────
+  it('cal_gyro sends PREFLIGHT_CALIBRATION (241) with p1=1 (gyro axis)', () => {
+    dispatch('cal_gyro');
+    const cmd = decodeCommandLong(writes[0]);
+    expect(cmd.command).toBe(241);
+    expect(cmd.p1).toBe(1);
+    expect(cmd.p3).toBe(0);
+    expect(cmd.p5).toBe(0);
+  });
+
+  it('cal_baro sends PREFLIGHT_CALIBRATION (241) with p3=1 (ground pressure)', () => {
+    dispatch('cal_baro');
+    const cmd = decodeCommandLong(writes[0]);
+    expect(cmd.command).toBe(241);
+    expect(cmd.p3).toBe(1);
+    expect(cmd.p1).toBe(0);
+  });
+
+  it('cal_level sends PREFLIGHT_CALIBRATION (241) with p5=4 (board level)', () => {
+    dispatch('cal_level');
+    const cmd = decodeCommandLong(writes[0]);
+    expect(cmd.command).toBe(241);
+    expect(cmd.p5).toBe(4);
+  });
+
+  it('cal_accel sends PREFLIGHT_CALIBRATION (241) with p5=1 (accel), distinct from level p5=4', () => {
+    dispatch('cal_accel');
+    const cmd = decodeCommandLong(writes[0]);
+    expect(cmd.command).toBe(241);
+    expect(cmd.p5).toBe(1);
+  });
+
+  // ── gimbal_pitchyaw: COMMAND_INT with flags-as-x bitfield ────────────
+  it('gimbal_pitchyaw sends COMMAND_INT (75) cmd=1000 with pitch/yaw + flags in x', () => {
+    dispatch('gimbal_pitchyaw', undefined, { pitch: 30, yaw: 45, flags: 5, instance: 2 });
+    const cmd = decodeCommandInt(writes[0]);
+    expect(cmd.command).toBe(1000); // MAV_CMD_DO_GIMBAL_MANAGER_PITCHYAW
+    expect(cmd.p1).toBeCloseTo(30, 3); // pitch
+    expect(cmd.p2).toBeCloseTo(45, 3); // yaw
+    expect(cmd.x).toBe(5); // GIMBAL_MANAGER_FLAGS bitfield rides x, not a param
+    expect(cmd.z).toBeCloseTo(2, 3); // instance rides z
+  });
+
+  it('gimbal_pitchyaw omitted angles become NaN (skip), not 0 (which would command level)', () => {
+    dispatch('gimbal_pitchyaw', undefined, { yaw: 90 });
+    const cmd = decodeCommandInt(writes[0]);
+    expect(Number.isNaN(cmd.p1)).toBe(true); // pitch omitted → NaN skip
+    expect(cmd.p2).toBeCloseTo(90, 3);
+  });
+
+  // ── rc_override: 8×uint16 channel packing to a live vehicle ──────────
+  it('rc_override packs 8 channels as little-endian uint16 into RC_CHANNELS_OVERRIDE (70)', () => {
+    dispatch('rc_override', undefined, { channels: [1500, 1600, 1700, 1800, 1000, 2000, 1234, 1899] });
+    const rc = decodeRcOverride(writes[0]);
+    expect(rc.channels).toEqual([1500, 1600, 1700, 1800, 1000, 2000, 1234, 1899]);
+  });
+
+  it('rc_override fills missing channels with 0 (release), not a stale value', () => {
+    dispatch('rc_override', undefined, { channels: [1500] });
+    const rc = decodeRcOverride(writes[0]);
+    expect(rc.channels[0]).toBe(1500);
+    expect(rc.channels.slice(1)).toEqual([0, 0, 0, 0, 0, 0, 0]);
+  });
+
+  it('rc_override with no channels sends nothing', () => {
+    dispatch('rc_override', undefined, {});
+    expect(filterAppFrames(writes).length).toBe(0);
+  });
+
+  // ── remaining simple passthroughs (bundled for completeness) ─────────
+  it('mode sends SET_MODE (11) with the requested custom mode', () => {
+    dispatch('mode', 5);
+    expect(decodeSetMode(writes[0]).customMode).toBe(5);
+  });
+
+  it('camera_zoom sends SET_CAMERA_ZOOM (531) p1=1 (continuous) p2=zoom', () => {
+    dispatch('camera_zoom', undefined, { zoom: 50 });
+    const cmd = decodeCommandLong(writes[0]);
+    expect(cmd.command).toBe(531);
+    expect(cmd.p1).toBe(1);
+    expect(cmd.p2).toBe(50);
+  });
+
+  it('camera_video_stop sends VIDEO_STOP_CAPTURE (2501)', () => {
+    dispatch('camera_video_stop');
+    expect(decodeCommandLong(writes[0]).command).toBe(2501);
+  });
+
+  it('motor_test_stop sends DO_MOTOR_TEST (209) with zero throttle for every motor', () => {
+    dispatch('motor_test_stop');
+    const cmds = filterAppFrames(writes).map(decodeCommandLong);
+    expect(cmds.length).toBe(8);
+    for (const cmd of cmds) {
+      expect(cmd.command).toBe(209);
+      expect(cmd.p3).toBe(0); // throttle 0 = stop
+    }
   });
 });
