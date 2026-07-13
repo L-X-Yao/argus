@@ -127,22 +127,36 @@ _DISPATCH = {
 }
 
 
+# Commands that never touch the FC — still allowed when an unsupported
+# autopilot is latched (switch_vehicle is how you'd escape to an ArduPilot
+# vehicle on a multi-vehicle link; ntrip_stop tears down the GCS-side client).
+_GCS_LOCAL = {"switch_vehicle", "clear_summary", "inspector_toggle", "ntrip_stop"}
+
+
 def execute(cmd: str, param, link: DroneLink, data: dict | None = None) -> dict | None:
     data = data or {}
     handler = _DISPATCH.get(cmd)
-    if handler:
-        try:
-            return handler(link, param, data)
-        except Exception as exc:
-            import logging
+    if not handler:
+        # Fail loud: an unregistered command name (client/backend version skew,
+        # typo in a driving script) used to vanish without any reply, leaving
+        # the caller waiting on a cmd_result forever. Found when sitl_verify.py
+        # sent a stale command name and silently got nothing back.
+        import logging
 
-            logging.getLogger(__name__).exception("Command '%s' failed", cmd)
-            return {"ok": False, "error": str(exc)[:200]}
-    # Fail loud: an unregistered command name (client/backend version skew,
-    # typo in a driving script) used to vanish without any reply, leaving
-    # the caller waiting on a cmd_result forever. Found when sitl_verify.py
-    # sent a stale command name and silently got nothing back.
-    import logging
+        logging.getLogger(__name__).warning("Unknown command %r dropped", cmd)
+        return {"ok": False, "error": "unknown command: %s" % cmd}
+    # 0 = no FC heartbeat latched yet, 3 = MAV_AUTOPILOT_ARDUPILOTMEGA
+    # (common.xml; 8 = INVALID never latches — see handle_heartbeat). Any other
+    # value is a known non-ArduPilot FC: our mode numbers, command params and
+    # calibration handshakes are ArduPilot-specific (CLAUDE.md ## PX4 Status),
+    # so sending them would do something unintended on the vehicle.
+    ap = link.vehicle.autopilot
+    if ap not in (0, 3) and cmd not in _GCS_LOCAL:
+        return {"ok": False, "error": "unsupported autopilot (%s): ArduPilot only" % ap}
+    try:
+        return handler(link, param, data)
+    except Exception as exc:
+        import logging
 
-    logging.getLogger(__name__).warning("Unknown command %r dropped", cmd)
-    return {"ok": False, "error": "unknown command: %s" % cmd}
+        logging.getLogger(__name__).exception("Command '%s' failed", cmd)
+        return {"ok": False, "error": str(exc)[:200]}

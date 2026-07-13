@@ -659,6 +659,32 @@ class TestExecuteDispatch:
         result = execute("nonexistent_xyz", None, link)
         assert result == {"ok": False, "error": "unknown command: nonexistent_xyz"}
 
+    def test_unsupported_autopilot_blocks_fc_commands(self):
+        """A latched non-ArduPilot FC (e.g. PX4=12) must refuse FC-bound
+        commands — our mode numbers and command params are ArduPilot-specific
+        and would do something unintended on another stack."""
+        link = make_link()
+        link.vehicle.autopilot = 12  # MAV_AUTOPILOT_PX4
+        for cmd in ("arm", "mode", "cal_accel", "param_set", "mission_start"):
+            r = execute(cmd, 0, link)
+            assert r == {"ok": False, "error": "unsupported autopilot (12): ArduPilot only"}
+        assert not link._ser.write.called
+
+    def test_unsupported_autopilot_allows_gcs_local_commands(self):
+        link = make_link()
+        link.vehicle.autopilot = 12
+        assert execute("switch_vehicle", 2, link) is None  # dispatched, no error
+        assert link.active_sysid == 2
+        execute("inspector_toggle", None, link)
+        assert link.inspector_enabled is True
+
+    def test_ardupilot_and_unlatched_autopilot_pass(self):
+        for ap in (0, 3):  # 0 = no heartbeat yet, 3 = ARDUPILOTMEGA
+            link = make_link()
+            link.vehicle.autopilot = ap
+            execute("arm", None, link)
+            assert link._ser.write.called
+
     def test_exception_caught(self):
         import backend.commands as cmd_mod
 

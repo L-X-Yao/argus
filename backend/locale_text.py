@@ -18,6 +18,10 @@ _T = {
     "vehicle_type": ("机型: %s", "Type: %s"),
     "armed": ("已解锁", "Armed"),
     "disarmed": ("已锁定", "Disarmed"),
+    "unsupported_fc": (
+        "!!! 非 ArduPilot 飞控 (%s) — 模式/校准/指令均按 ArduPilot 实现, 指令已禁用 !!!",
+        "!!! Non-ArduPilot FC (%s) — modes/calibration/commands are ArduPilot-only, commands disabled !!!",
+    ),
     "proto_pllink": ("协议: PL-Link", "Protocol: PL-Link"),
     "proto_std": ("协议: 标准", "Protocol: Standard"),
     "wp_reached": ("航点 %d 已到达", "Waypoint %d reached"),

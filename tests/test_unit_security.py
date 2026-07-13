@@ -100,6 +100,7 @@ class TestCommandExecuteErrorHandling:
         from unittest.mock import MagicMock
 
         link = MagicMock()
+        link.vehicle.autopilot = 3  # execute() gates on this before dispatch
 
         def bad_handler(_link, _param, _data):
             raise RuntimeError("simulated failure")
@@ -119,6 +120,7 @@ class TestCommandExecuteErrorHandling:
         from unittest.mock import MagicMock
 
         link = MagicMock()
+        link.vehicle.autopilot = 3  # execute() gates on this before dispatch
 
         def long_error_handler(_link, _param, _data):
             raise ValueError("x" * 500)

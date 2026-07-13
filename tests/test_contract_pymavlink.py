@@ -551,6 +551,31 @@ class TestIncomingHandlers:
         link._raw_sysid = 1
         handle_heartbeat(payload, pl, link)
         assert link.vehicle.autopilot == 12  # MAV_AUTOPILOT_PX4
+        # Fail loud: a non-ArduPilot FC must announce itself as unsupported —
+        # everything downstream assumes ArduPilot (CLAUDE.md ## PX4 Status).
+        warns = [e for e in link.events if e["event_type"] == "unsupported_fc"]
+        assert len(warns) == 1
+        assert "PX4" in warns[0]["text"]
+        # Latch: repeated PX4 heartbeats must not spam the event.
+        handle_heartbeat(payload, pl, link)
+        assert len([e for e in link.events if e["event_type"] == "unsupported_fc"]) == 1
+
+    def test_heartbeat_ardupilot_no_unsupported_event(self):
+        from backend.mavlink_handlers import handle_heartbeat
+
+        link = FakeLink()
+        msg = mavlink.MAVLink_heartbeat_message(
+            type=2,
+            autopilot=3,
+            base_mode=0,
+            system_status=4,
+            mavlink_version=3,
+            custom_mode=0,
+        )
+        payload, pl = _encode_payload(msg)
+        link._raw_sysid = 1
+        handle_heartbeat(payload, pl, link)
+        assert not [e for e in link.events if e["event_type"] == "unsupported_fc"]
 
     def test_heartbeat_invalid_autopilot_does_not_overwrite(self):
         # A GCS / data-link relay heartbeat (autopilot=8 = INVALID) must not

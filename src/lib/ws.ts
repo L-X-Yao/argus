@@ -99,6 +99,9 @@ export function connectWs(): void {
             case 'rtl':
               addToast(msg.text, 'error', 8000);
               break;
+            case 'unsupported_fc':
+              addToast(msg.text, 'error', 10000);
+              break;
             default:
               break;
           }

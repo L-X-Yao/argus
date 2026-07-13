@@ -49,6 +49,12 @@ def handle_heartbeat(p: bytes, pl: int, link: DroneLink) -> None:
     ap = p[5]
     if ap > 0 and ap != 8 and ap != v.autopilot:
         v.autopilot = ap
+        if ap != 3:
+            # Fail loud: everything downstream (mode names, command enums,
+            # calibration handshakes) is ArduPilot-specific, and commands.execute()
+            # refuses FC-bound commands while this value is latched.
+            name = "PX4" if ap == 12 else "autopilot=%d" % ap
+            link.add_event(lt("unsupported_fc", link.locale) % name, "unsupported_fc")
     if old_vtype != v.vtype_raw and v.vtype_raw > 0:
         link.add_event(lt("vehicle_type", link.locale) % link._get_vehicle_info()[2], "vehicle_type")
     new_armed = bool(p[6] & 0x80)

@@ -86,6 +86,7 @@ class TestWSTypeContract:
             "fence_ack_fail",
             "cmd_ack_fail",
             "rtl",
+            "unsupported_fc",
         }
         phantom = frontend - backend - event_subtypes - EXCLUDED_TYPES
         assert not phantom, (
