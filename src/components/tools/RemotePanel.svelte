@@ -32,12 +32,17 @@
     return () => clearInterval(id);
   });
 
-  /* ── Latency estimation ── */
+  /* ── Link freshness ──
+   * ms since the last telemetry frame. `age` is SECONDS (backend rounds to
+   * 0.1s in drone_link.py:433 as time.time() - last_frame_time), so it must be
+   * ×1000 for milliseconds — the previous Math.round(seconds) collapsed every
+   * healthy link to ~0 ms, making the 200/500 ms color thresholds dead. This is
+   * frame staleness (how far behind the link is), not a round-trip ping. */
   let latencyMs = $derived.by(() => {
     const hist = app.linkHistory;
     if (hist.length < 1) return -1;
     const last = hist[hist.length - 1];
-    return Math.round(last.age);
+    return Math.round(last.age * 1000);
   });
 
   /* ── Copy URL helper ── */
