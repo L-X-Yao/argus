@@ -5,10 +5,11 @@
  * Safety model: a due schedule NEVER auto-starts the mission. Every firing
  * pops the standard confirm dialog (repo convention: every call path to
  * mission_start guards on confirm) — the scheduler is a reminder + one-click
- * runner, not an unattended autostart.
+ * runner, not an unattended autostart. A due tick also never steals a dialog
+ * the user is already looking at; it waits for the next tick instead.
  */
 
-import { app, addToast, showConfirm } from './stores.svelte';
+import { app, addToast, confirmState, showConfirm } from './stores.svelte';
 import { dispatch } from './transport';
 import { t } from './i18n.svelte';
 
@@ -27,9 +28,13 @@ export interface Schedule {
 }
 
 const STORAGE_KEY = 'argus_schedules';
+const LOCK_KEY = 'argus_sched_lock';
 const TICK_MS = 15000;
+const LOCK_STALE_MS = 60000;
 
 export const schedulerState = $state({ schedules: [] as Schedule[] });
+
+const tabId = Math.random().toString(36).slice(2);
 
 function load(): Schedule[] {
   try {
@@ -77,37 +82,37 @@ export function deleteSchedule(id: number): void {
   }
 }
 
-function fmtLocal(ms: number): string {
-  const d = new Date(ms);
+function fmtLocal(d: Date): string {
   const p = (n: number) => String(n).padStart(2, '0');
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
 }
 
 /** Advance a repeating schedule past `now` (catch-up so a long-closed GCS
- * doesn't replay every missed occurrence); mark 'once' completed. */
+ * doesn't replay every missed occurrence); mark 'once' completed.
+ * daily/weekly step by CALENDAR days so the wall-clock time survives DST;
+ * custom steps by duration (hours are hours). */
 export function advanceSchedule(s: Schedule, now: number): void {
   if (s.frequency === 'once') {
     s.status = 'completed';
     return;
   }
-  const stepMs =
-    s.frequency === 'daily'
-      ? 24 * 3600_000
-      : s.frequency === 'weekly'
-        ? 7 * 24 * 3600_000
-        : Math.max(1, s.customHours) * 3600_000;
-  let due = Date.parse(s.startTime);
-  while (due <= now) due += stepMs;
-  s.startTime = fmtLocal(due);
+  const d = new Date(Date.parse(s.startTime));
+  while (d.getTime() <= now) {
+    if (s.frequency === 'daily') d.setDate(d.getDate() + 1);
+    else if (s.frequency === 'weekly') d.setDate(d.getDate() + 7);
+    else d.setTime(d.getTime() + Math.max(1, s.customHours) * 3600_000);
+  }
+  s.startTime = fmtLocal(d);
 }
 
-/** Confirm-gated firing shared by the timer and the panel's run-now button. */
-export async function fireSchedule(s: Schedule): Promise<void> {
+/** Confirm-gated firing shared by the timer and the panel's run-now button.
+ * Returns whether the user confirmed. */
+export async function fireSchedule(s: Schedule): Promise<boolean> {
   const note = s.autoArm ? t('sched.withAutoArm') : '';
   const ok = await showConfirm(`${s.name}: ${t('sched.confirmRun')}${note}`, true);
   if (!ok) {
     addToast(t('sched.skippedDeclined'), 'info');
-    return;
+    return false;
   }
   if (s.autoArm && !app.drone.armed) {
     dispatch('arm');
@@ -117,44 +122,102 @@ export async function fireSchedule(s: Schedule): Promise<void> {
   }
   dispatch('mission_start');
   addToast(t('sched.started'), 'success');
+  return true;
+}
+
+/** One tab fires at a time: localStorage lease, stolen only when stale.
+ * Two tabs of the same browser share schedules — without this both would
+ * pop a confirm for the same due entry (double mission_start). */
+function acquireFireLock(now: number): boolean {
+  try {
+    const raw = localStorage.getItem(LOCK_KEY);
+    if (raw) {
+      const [owner, ts] = raw.split(':');
+      if (owner !== tabId && now - Number(ts) < LOCK_STALE_MS) return false;
+    }
+    localStorage.setItem(LOCK_KEY, `${tabId}:${now}`);
+    return true;
+  } catch {
+    return true; // no storage — single-tab semantics anyway
+  }
+}
+
+function releaseFireLock(): void {
+  try {
+    const raw = localStorage.getItem(LOCK_KEY);
+    if (raw && raw.startsWith(`${tabId}:`)) localStorage.removeItem(LOCK_KEY);
+  } catch {
+    /* ignore */
+  }
 }
 
 let timer: ReturnType<typeof setInterval> | null = null;
 let firing = false;
 
 async function tick(): Promise<void> {
-  if (firing) return; // a confirm dialog is already up — don't stack
-  const now = Date.now();
-  for (const s of schedulerState.schedules) {
-    if (s.status !== 'pending') continue;
-    const due = Date.parse(s.startTime);
-    if (Number.isNaN(due) || now < due) continue;
-    if (!app.drone.connected) {
-      addToast(`${s.name}: ${t('sched.skippedOffline')}`, 'warn', 6000);
-      advanceSchedule(s, now);
+  if (firing) return; // our own confirm dialog is already up
+  // Never replace a dialog the user is interacting with (showConfirm would
+  // decline-and-replace it) — the schedule stays due, next tick retries.
+  if (confirmState.visible) return;
+  const tickNow = Date.now();
+  if (!acquireFireLock(tickNow)) return;
+  try {
+    // Snapshot: fireSchedule can await for minutes and the user may
+    // add/delete schedules from the panel meanwhile.
+    for (const s of [...schedulerState.schedules]) {
+      if (s.status !== 'pending') continue;
+      const due = Date.parse(s.startTime);
+      if (Number.isNaN(due) || tickNow < due) continue;
+      if (!schedulerState.schedules.includes(s)) continue; // deleted mid-round
+      if (!app.drone.connected) {
+        addToast(`${s.name}: ${t('sched.skippedOffline')}`, 'warn', 6000);
+        advanceSchedule(s, Date.now());
+        persistSchedules();
+        continue;
+      }
+      firing = true;
+      try {
+        await fireSchedule(s);
+      } finally {
+        firing = false;
+      }
+      if (!schedulerState.schedules.includes(s)) continue; // deleted while confirming
+      // Fresh clock: the confirm may have sat open longer than the repeat
+      // interval — advancing from the stale tick time would leave startTime
+      // in the past and refire within 15s (double mission_start).
+      advanceSchedule(s, Date.now());
       persistSchedules();
-      continue;
     }
-    firing = true;
-    try {
-      await fireSchedule(s);
-    } finally {
-      firing = false;
-    }
-    advanceSchedule(s, now);
-    persistSchedules();
+  } finally {
+    releaseFireLock();
   }
+}
+
+function onStorage(e: StorageEvent): void {
+  // Another tab edited the schedule list — reload instead of clobbering it
+  // on our next persist (deleted schedules used to resurrect this way).
+  if (e.key === STORAGE_KEY) schedulerState.schedules = load();
 }
 
 export function startScheduler(): void {
   if (timer) return;
   schedulerState.schedules = load();
   timer = setInterval(() => void tick(), TICK_MS);
+  try {
+    window.addEventListener('storage', onStorage);
+  } catch {
+    /* non-browser test env */
+  }
 }
 
 export function stopScheduler(): void {
   if (timer) {
     clearInterval(timer);
     timer = null;
+  }
+  try {
+    window.removeEventListener('storage', onStorage);
+  } catch {
+    /* non-browser test env */
   }
 }

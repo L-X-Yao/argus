@@ -5,6 +5,7 @@
     addSchedule,
     deleteSchedule,
     fireSchedule,
+    persistSchedules,
     type Frequency,
     type Schedule,
     type ScheduleStatus,
@@ -46,6 +47,16 @@
     formAutoArm = false;
     showForm = false;
     addToast(t('sched.created'), 'success');
+  }
+
+  async function runNow(s: Schedule) {
+    const confirmed = await fireSchedule(s);
+    // A manually-run 'once' schedule is done; repeating schedules keep their
+    // grid (a manual run doesn't shift the next scheduled occurrence).
+    if (confirmed && s.frequency === 'once') {
+      s.status = 'completed';
+      persistSchedules();
+    }
   }
 
   function fmtFreq(s: Schedule): string {
@@ -194,7 +205,7 @@
               <div class="flex items-center gap-1 shrink-0">
                 <button
                   class="p-1 text-primary hover:bg-primary/10 rounded"
-                  onclick={() => void fireSchedule(sched)}
+                  onclick={() => void runNow(sched)}
                   title={t('sched.runNow')}
                 >
                   <Play size={13} />

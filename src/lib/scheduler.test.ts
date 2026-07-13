@@ -7,6 +7,7 @@ vi.mock('./stores.svelte', () => ({
   app: { drone: { connected: true, armed: false } },
   addToast: vi.fn(),
   showConfirm: vi.fn(async () => true),
+  confirmState: { visible: false },
 }));
 vi.mock('./transport', () => ({
   dispatch: vi.fn(),
@@ -15,7 +16,7 @@ vi.mock('./i18n.svelte', () => ({
   t: (k: string) => k,
 }));
 
-import { app, addToast, showConfirm } from './stores.svelte';
+import { app, addToast, confirmState, showConfirm } from './stores.svelte';
 import { dispatch } from './transport';
 import {
   advanceSchedule,
@@ -186,6 +187,21 @@ describe('scheduler tick', () => {
     await vi.advanceTimersByTimeAsync(15000);
     expect(showConfirm).not.toHaveBeenCalled();
     expect(schedulerState.schedules[0].status).toBe('pending');
+  });
+
+  it('defers when another confirm dialog is already open', async () => {
+    // Never decline-and-replace a dialog the user is looking at — the
+    // schedule stays due and the next tick retries.
+    (confirmState as { visible: boolean }).visible = true;
+    seed({ startTime: '2020-01-01T00:00' });
+    startScheduler();
+    await vi.advanceTimersByTimeAsync(15000);
+    expect(showConfirm).not.toHaveBeenCalled();
+    expect(schedulerState.schedules[0].status).toBe('pending');
+    (confirmState as { visible: boolean }).visible = false;
+    await vi.advanceTimersByTimeAsync(15000);
+    expect(showConfirm).toHaveBeenCalledOnce();
+    expect(schedulerState.schedules[0].status).toBe('completed');
   });
 
   it('load() drops the legacy missionName field and active status', () => {

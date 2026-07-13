@@ -241,10 +241,31 @@ describe('confirm dialog', () => {
 
   it('resolveConfirm hides and resolves', async () => {
     const promise = showConfirm('test?');
+    confirmState.shownAt = Date.now() - 400; // past the input-arming window
     resolveConfirm(true);
     const result = await promise;
     expect(result).toBe(true);
     expect(confirmState.visible).toBe(false);
+  });
+
+  it('affirmative inside the arming window is ignored; decline passes', async () => {
+    // A dialog appearing under an in-flight Enter/click (scheduler-due
+    // confirm) must not be accepted by that same keystroke.
+    const promise = showConfirm('dangerous?', true);
+    resolveConfirm(true);
+    expect(confirmState.visible).toBe(true); // still open — accept ignored
+    resolveConfirm(false);
+    expect(await promise).toBe(false);
+    expect(confirmState.visible).toBe(false);
+  });
+
+  it('a second showConfirm declines the first instead of hanging it', async () => {
+    const first = showConfirm('first?');
+    const second = showConfirm('second?');
+    expect(await first).toBe(false); // resolved, not leaked
+    confirmState.shownAt = Date.now() - 400;
+    resolveConfirm(true);
+    expect(await second).toBe(true);
   });
 });
 

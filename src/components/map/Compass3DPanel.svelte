@@ -16,9 +16,19 @@
   let dragging = $state(false);
   let lastMouse = $state({ x: 0, y: 0 });
 
+  let wasConnected = false;
   $effect(() => {
     const d = app.drone;
-    if (!d.connected) return;
+    if (!d.connected) {
+      wasConnected = false;
+      return;
+    }
+    if (!wasConnected) {
+      // Fresh session (connect or reconnect) — a mixed old/new sphere from a
+      // different vehicle or mounting would mislead the calibration read.
+      wasConnected = true;
+      untrack(() => samples.splice(0, samples.length));
+    }
     // Raw magnetometer field in milligauss (backend RAW_IMU push) — during a
     // cal rotation these trace the sphere the calibrator is fitting.
     const raw = d.mag;

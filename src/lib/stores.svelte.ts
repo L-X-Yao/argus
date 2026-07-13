@@ -221,16 +221,27 @@ class ConfirmState {
   visible: boolean = $state(false);
   message: string = $state('');
   danger: boolean = $state(false);
+  // Timestamp of the last open — ConfirmDialog ignores confirm inputs for a
+  // short arming window so a dialog appearing under an in-flight Enter/click
+  // (e.g. a scheduler-due confirm) can't be accepted by accident.
+  shownAt: number = 0;
   _resolve: ((v: boolean) => void) | null = null;
 }
 export const confirmState = new ConfirmState();
 
 export function showConfirm(message: string, danger = false): Promise<boolean> {
   cancelSlide();
+  // A second showConfirm while one is open used to silently overwrite
+  // _resolve — the first caller's await hung forever. Resolve it as declined
+  // before replacing so no caller ever leaks.
+  if (confirmState.visible && confirmState._resolve) {
+    confirmState._resolve(false);
+  }
   return new Promise((resolve) => {
     confirmState.message = message;
     confirmState.danger = danger;
     confirmState.visible = true;
+    confirmState.shownAt = Date.now();
     confirmState._resolve = resolve;
   });
 }
@@ -264,6 +275,10 @@ export function cancelSlide() {
 }
 
 export function resolveConfirm(result: boolean) {
+  // Arming window: ignore an affirmative that lands right after the dialog
+  // opened — it was almost certainly aimed at something else (typing Enter,
+  // a click in flight when a scheduler confirm popped up). Declines pass.
+  if (result && Date.now() - confirmState.shownAt < 300) return;
   confirmState.visible = false;
   confirmState._resolve?.(result);
   confirmState._resolve = null;

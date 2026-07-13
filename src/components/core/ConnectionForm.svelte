@@ -191,6 +191,11 @@
           app.drone.vibe = [msg.x, msg.y, msg.z];
           app.drone.vibe_clip = [msg.clip0, msg.clip1, msg.clip2];
         },
+        onRawImu: (msg) => {
+          // RAW_SENSORS stream is already requested at connect — this keeps
+          // the compass-cal sphere fed on the WebSerial path too.
+          app.drone.mag = [msg.xmag, msg.ymag, msg.zmag];
+        },
         onHomePosition: (msg) => {
           app.drone.home_lat = msg.lat;
           app.drone.home_lon = msg.lon;

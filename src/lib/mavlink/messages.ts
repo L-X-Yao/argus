@@ -119,6 +119,15 @@ export interface HomePosition {
   alt: number;
 }
 
+// RAW_IMU (27) — mag fields only (milligauss); feeds the compass-cal sphere.
+// Layout per ArduPilot GCS_Common.cpp:2237 send_raw_imu: time_usec u64 @0,
+// acc/gyro i16 pairs, xmag/ymag/zmag i16 @20/22/24.
+export interface RawImu {
+  xmag: number;
+  ymag: number;
+  zmag: number;
+}
+
 export interface Vibration {
   x: number;
   y: number;
@@ -368,6 +377,14 @@ export function decodeHomePosition(p: DataView): HomePosition {
     lat: p.getInt32(0, true) / 1e7,
     lon: p.getInt32(4, true) / 1e7,
     alt: p.getInt32(8, true) / 1000,
+  };
+}
+
+export function decodeRawImu(p: DataView): RawImu {
+  return {
+    xmag: p.getInt16(20, true),
+    ymag: p.getInt16(22, true),
+    zmag: p.getInt16(24, true),
   };
 }
 
@@ -938,6 +955,9 @@ export function dispatchFrame(frame: MavFrame, handlers: Partial<MessageHandlers
     case 241:
       handlers.onVibration?.(decodeVibration(padPayload(pl, 32)), frame);
       break;
+    case 27:
+      handlers.onRawImu?.(decodeRawImu(padPayload(pl, 26)), frame);
+      break;
     case 168:
       handlers.onWind?.(decodeWind(padPayload(pl, 12)), frame);
       break;
@@ -1009,6 +1029,7 @@ export interface MessageHandlers {
   onMissionItemInt: (msg: MissionItemInt, frame: MavFrame) => void;
   onHomePosition: (msg: HomePosition, frame: MavFrame) => void;
   onVibration: (msg: Vibration, frame: MavFrame) => void;
+  onRawImu: (msg: RawImu, frame: MavFrame) => void;
   onWind: (msg: Wind, frame: MavFrame) => void;
   onStatusText: (msg: StatusText, frame: MavFrame) => void;
   onMissionRequest: (msg: MissionRequest, frame: MavFrame) => void;
