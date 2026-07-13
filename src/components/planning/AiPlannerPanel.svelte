@@ -15,7 +15,7 @@
     'Plan a rectangular survey at 50m altitude, 200m x 300m, centered on current position',
     'Create a 6-waypoint circle with 100m radius at 30m altitude',
     'Add a waypoint at 500m north of home at 40m',
-    'Reverse the current route and add a landing approach',
+    'Reverse the current route',
   ];
 
   async function send() {

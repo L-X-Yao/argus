@@ -213,7 +213,7 @@
       {#if !enabled}
         <div class="p-3 rounded-lg bg-primary/5 border border-primary/20">
           <p class="text-xs text-muted-foreground leading-relaxed">
-            {t('airspace.restricted')} — Enable the airspace overlay to see no-fly zone warnings on the map.
+            {t('airspace.restricted')} — Enable the airspace check to see airport no-fly proximity warnings in this panel (demo airport data; not a map overlay).
           </p>
         </div>
       {/if}
