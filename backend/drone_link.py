@@ -446,6 +446,7 @@ class DroneLink:
             "rc_rssi": rc.rc_rssi,
             "vibe": [round(d.vibe_x, 1), round(d.vibe_y, 1), round(d.vibe_z, 1)],
             "vibe_clip": [d.vibe_clip0, d.vibe_clip1, d.vibe_clip2],
+            "mag": [d.mag_x, d.mag_y, d.mag_z],
             "servo": rc.servo_out,
             "ekf_vel": round(d.ekf_vel_var, 4),
             "ekf_pos_h": round(d.ekf_pos_h_var, 4),

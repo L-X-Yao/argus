@@ -50,6 +50,8 @@ export interface DroneState {
   rc_rssi: number;
   vibe: number[];
   vibe_clip: number[];
+  // Raw magnetometer field (milligauss, RAW_IMU) — compass-cal sample sphere
+  mag: number[];
   servo: number[];
   ekf_vel: number;
   ekf_pos_h: number;
@@ -299,6 +301,7 @@ export const defaultState: DroneState = {
   rc_rssi: 0,
   vibe: [0, 0, 0],
   vibe_clip: [0, 0, 0],
+  mag: [0, 0, 0],
   servo: [],
   ekf_vel: 0,
   ekf_pos_h: 0,

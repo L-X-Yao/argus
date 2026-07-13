@@ -350,6 +350,19 @@ def handle_rc_channels(p: bytes, pl: int, link: DroneLink) -> None:
     link.rc_servo.rc_rssi = p[41]
 
 
+# ArduPilot: libraries/GCS_MAVLink/GCS_Common.cpp:2237 — GCS_MAVLINK::send_raw_imu
+# (mag = compass.get_field(0), milligauss). Layout: time_usec u64 @0,
+# acc i16 @8/10/12, gyro i16 @14/16/18, xmag/ymag/zmag i16 @20/22/24.
+def handle_raw_imu(p: bytes, pl: int, link: DroneLink) -> None:
+    if pl < 1:
+        return
+    p = _pad(p, 26)
+    d = link.diagnostic
+    d.mag_x = struct.unpack_from("<h", p, 20)[0]
+    d.mag_y = struct.unpack_from("<h", p, 22)[0]
+    d.mag_z = struct.unpack_from("<h", p, 24)[0]
+
+
 # ArduPilot: libraries/GCS_MAVLink/GCS_Common.cpp:3073 — GCS_MAVLINK::send_vibration
 def handle_vibration(p: bytes, pl: int, link: DroneLink) -> None:
     # Min check 12: vibration_x first useful field. Trim can drop trailing
@@ -821,6 +834,7 @@ def init_handlers() -> None:
     mavlink_dispatch.register(253, handle_statustext)
     mavlink_dispatch.register(36, handle_servo_output)
     mavlink_dispatch.register(65, handle_rc_channels)
+    mavlink_dispatch.register(27, handle_raw_imu)
     mavlink_dispatch.register(241, handle_vibration)
     mavlink_dispatch.register(74, handle_vfr_hud)
     mavlink_dispatch.register(193, handle_ekf_status)

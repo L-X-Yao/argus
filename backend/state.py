@@ -97,6 +97,11 @@ class MissionState:
 
 @dataclass
 class DiagnosticState:
+    # Raw magnetometer field (milligauss, RAW_IMU xmag/ymag/zmag) — drives
+    # the compass-calibration sample sphere in Compass3DPanel.
+    mag_x: int = 0
+    mag_y: int = 0
+    mag_z: int = 0
     vibe_x: float = 0.0
     vibe_y: float = 0.0
     vibe_z: float = 0.0

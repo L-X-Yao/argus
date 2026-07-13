@@ -19,10 +19,14 @@
   $effect(() => {
     const d = app.drone;
     if (!d.connected) return;
-    const raw = d.vibe;
-    if (raw[0] === 0 && raw[1] === 0 && raw[2] === 0) return;
+    // Raw magnetometer field in milligauss (backend RAW_IMU push) — during a
+    // cal rotation these trace the sphere the calibrator is fitting.
+    const raw = d.mag;
+    if (!raw || (raw[0] === 0 && raw[1] === 0 && raw[2] === 0)) return;
     // untrack the sample mutation so the effect isn't dirtied by its own write
     untrack(() => {
+      const last = samples[samples.length - 1];
+      if (last && last.x === raw[0] && last.y === raw[1] && last.z === raw[2]) return;
       samples.push({ x: raw[0], y: raw[1], z: raw[2] });
       if (samples.length > 2000) samples.splice(0, samples.length - 1500);
     });

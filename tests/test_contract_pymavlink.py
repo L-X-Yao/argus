@@ -495,6 +495,30 @@ class TestIncomingHandlers:
         handle_mission_ack(payload, pl, link)
         assert link.mission._mission_pending is False
 
+    def test_raw_imu_mag_fields(self):
+        # RAW_IMU mag (milligauss) feeds the compass-cal sample sphere —
+        # offsets must match GCS_Common.cpp:2237 send_raw_imu (xmag @20).
+        from backend.mavlink_handlers import handle_raw_imu
+
+        link = FakeLink()
+        msg = mavlink.MAVLink_raw_imu_message(
+            time_usec=1000,
+            xacc=1,
+            yacc=2,
+            zacc=3,
+            xgyro=4,
+            ygyro=5,
+            zgyro=6,
+            xmag=-321,
+            ymag=178,
+            zmag=456,
+        )
+        payload, pl = _encode_payload(msg)
+        handle_raw_imu(payload, pl, link)
+        assert link.diagnostic.mag_x == -321
+        assert link.diagnostic.mag_y == 178
+        assert link.diagnostic.mag_z == 456
+
     def test_heartbeat_armed_flag(self):
         from backend.mavlink_handlers import handle_heartbeat
 

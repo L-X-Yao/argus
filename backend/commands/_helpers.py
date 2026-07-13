@@ -199,6 +199,9 @@ def request_streams(link: DroneLink) -> None:
         # try_send_message cases (:6679/:6682) no-op while no cal is running.
         (191, 500000),
         (192, 500000),
+        # RAW_IMU at 5Hz feeds the compass-cal sample sphere (mag milligauss,
+        # GCS_Common.cpp:2237 send_raw_imu); ~220B/s — cheap even on radios.
+        (27, 200000),
     ]
     for mid, interval in streams:
         payload = struct.pack("<fffffffHBBB", float(mid), float(interval), 0, 0, 0, 0, 0, 511, link.vehicle.sysid, 1, 0)
