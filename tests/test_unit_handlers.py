@@ -764,6 +764,55 @@ class TestMissionItemInt:
         handle_mission_item_int(p, len(p), link)
         assert link.mission._dl_pending is False
 
+    @staticmethod
+    def _item(seq, cmd=16, lat=34.0, lon=108.0, alt=50.0):
+        p = struct.pack("<ffff", 0.0, 0.0, 0.0, 0.0)
+        p += struct.pack("<ii", int(lat * 1e7), int(lon * 1e7))
+        p += struct.pack("<f", alt)
+        p += struct.pack("<HH", seq, cmd)
+        p += struct.pack("<BBBBB", 1, 1, 3, 0, 1)
+        return p
+
+    def test_early_final_item_does_not_truncate(self):
+        # Regression: a final MISSION_ITEM_INT (seq == _dl_total-1) arriving
+        # before the middle items must NOT finalize the download and silently
+        # drop the gaps — that yields a truncated mission on read-back.
+        link = make_link()
+        link.mission._dl_pending = True
+        link.mission._dl_total = 3
+        link.mission._dl_items = [None] * 3
+        link.send = lambda frame: None
+        # Final item (seq 2) arrives first, out of order.
+        p = self._item(2)
+        handle_mission_item_int(p, len(p), link)
+        assert link.mission._dl_pending is True, "must not finalize while gaps remain"
+        # Fill seq 0, then seq 1 — only now is every slot present.
+        p = self._item(0)
+        handle_mission_item_int(p, len(p), link)
+        assert link.mission._dl_pending is True
+        p = self._item(1)
+        handle_mission_item_int(p, len(p), link)
+        assert link.mission._dl_pending is False
+        assert all(i is not None for i in link.mission._dl_items)
+        assert [i["seq"] for i in link.mission._dl_items] == [0, 1, 2]
+
+    def test_duplicate_item_completes_cleanly(self):
+        # A retransmitted (duplicate) item must not finalize early or corrupt
+        # the buffer; the download completes once the genuinely-missing seq lands.
+        link = make_link()
+        link.mission._dl_pending = True
+        link.mission._dl_total = 2
+        link.mission._dl_items = [None, None]
+        link.send = lambda frame: None
+        p = self._item(0)
+        handle_mission_item_int(p, len(p), link)
+        handle_mission_item_int(p, len(p), link)  # duplicate of seq 0
+        assert link.mission._dl_pending is True  # seq 1 still missing
+        p = self._item(1)
+        handle_mission_item_int(p, len(p), link)
+        assert link.mission._dl_pending is False
+        assert all(i is not None for i in link.mission._dl_items)
+
 
 # ── Mission Request ──────────────────────────────────────────────────────────
 

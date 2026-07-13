@@ -542,9 +542,19 @@ def handle_mission_item_int(p: bytes, pl: int, link: DroneLink) -> None:
             "current": current,
             "autocontinue": autocontinue,
         }
-    if seq + 1 < m._dl_total:
+    # Finalize only when EVERY slot is filled — not merely when the highest
+    # seq arrives. A duplicated or out-of-order final MISSION_ITEM_INT
+    # (seq == _dl_total-1) would otherwise trigger the else-branch while gaps
+    # remain, and the `[i for i in _dl_items if i is not None]` collapse below
+    # would silently drop the still-missing items → a truncated mission on
+    # read-back (re-uploading it then loses those waypoints). Requesting the
+    # lowest still-missing seq is idempotent — AP_Mission tolerates a repeated
+    # MISSION_REQUEST_INT — and the _dl watchdog still fails loud if the FC
+    # never supplies it.
+    next_missing = next((i for i, item in enumerate(m._dl_items) if item is None), None)
+    if next_missing is not None:
         m._dl_start_time = time.time()
-        _request_dl_item(link, seq + 1)
+        _request_dl_item(link, next_missing)
     else:
         m._dl_pending = False
         items = [i for i in m._dl_items if i is not None]

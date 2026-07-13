@@ -742,11 +742,16 @@ function _onMissionItemIntDl(p: DataView): void {
     };
   }
 
-  if (seq + 1 < download.total) {
-    sendSerialFrame(51, encodeMissionRequestInt(serial.targetSysId, serial.targetCompId, seq + 1, 0));
+  // Request the lowest still-missing seq, not blindly seq+1, and finalize only
+  // when every slot is filled. Mirrors backend handle_mission_item_int: a
+  // duplicated/out-of-order final MISSION_ITEM_INT (seq == total-1) must not
+  // finalize early and silently drop the gaps into a truncated mission.
+  const nextMissing = download.items.findIndex((i) => i === null);
+  if (nextMissing !== -1) {
+    sendSerialFrame(51, encodeMissionRequestInt(serial.targetSysId, serial.targetCompId, nextMissing, 0));
     _resetDownloadTimer();
   } else {
-    // Final item received — send the MISSION_ACK and collapse to Waypoints.
+    // All slots filled — send the MISSION_ACK and collapse to Waypoints.
     sendSerialFrame(47, encodeMissionAck(serial.targetSysId, serial.targetCompId, 0, 0));
     const items: RawMissionItem[] = download.items.filter((i): i is RawMissionItem => i !== null);
     const waypoints = missionItemsToWaypoints(items);
