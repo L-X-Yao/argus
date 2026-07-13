@@ -1,69 +1,29 @@
 <script lang="ts">
-  import { addToast, showConfirm } from '../../lib/stores.svelte';
-  import { dispatch } from '../../lib/transport';
+  import { addToast } from '../../lib/stores.svelte';
+  import {
+    schedulerState,
+    addSchedule,
+    deleteSchedule,
+    fireSchedule,
+    type Frequency,
+    type Schedule,
+    type ScheduleStatus,
+  } from '../../lib/scheduler.svelte';
   import { t } from '../../lib/i18n.svelte';
   import { X, Clock, Calendar, Play, Trash2 } from '@lucide/svelte';
   import Button from '$lib/components/ui/button/button.svelte';
 
   let { onclose }: { onclose: () => void } = $props();
 
-  const STORAGE_KEY = 'argus_schedules';
-
-  type Frequency = 'once' | 'daily' | 'weekly' | 'custom';
-  type ScheduleStatus = 'pending' | 'active' | 'completed';
-
-  interface Schedule {
-    id: number;
-    name: string;
-    missionName: string;
-    frequency: Frequency;
-    customHours: number;
-    startTime: string;
-    autoArm: boolean;
-    status: ScheduleStatus;
-  }
-
-  let schedules: Schedule[] = $state(loadSchedules());
   let showForm = $state(false);
 
   let formName = $state('');
-  let formMission = $state('current');
   let formFrequency: Frequency = $state('once');
   let formCustomHours = $state(24);
   let formStartTime = $state('');
   let formAutoArm = $state(false);
 
-  let savedMissions = $derived.by(() => {
-    const names: string[] = ['current'];
-    try {
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key?.startsWith('argus_mission_')) {
-          names.push(key.replace('argus_mission_', ''));
-        }
-      }
-    } catch {}
-    return names;
-  });
-
-  function loadSchedules(): Schedule[] {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) return parsed;
-      }
-    } catch {}
-    return [];
-  }
-
-  function persist() {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(schedules));
-    } catch {}
-  }
-
-  function addSchedule() {
+  function submit() {
     if (!formName.trim()) {
       addToast(t('sched.nameRequired'), 'warn');
       return;
@@ -72,45 +32,20 @@
       addToast(t('sched.timeRequired'), 'warn');
       return;
     }
-    schedules.push({
-      id: Date.now(),
+    addSchedule({
       name: formName.trim(),
-      missionName: formMission,
       frequency: formFrequency,
       customHours: formCustomHours,
       startTime: formStartTime,
       autoArm: formAutoArm,
-      status: 'pending',
     });
-    persist();
     formName = '';
-    formMission = 'current';
     formFrequency = 'once';
     formCustomHours = 24;
     formStartTime = '';
     formAutoArm = false;
     showForm = false;
     addToast(t('sched.created'), 'success');
-  }
-
-  function deleteSchedule(id: number) {
-    const idx = schedules.findIndex((s) => s.id === id);
-    if (idx >= 0) {
-      schedules.splice(idx, 1);
-      persist();
-    }
-  }
-
-  async function runNow(sched: Schedule) {
-    // mission_start is a dangerous command (starts the AUTO mission immediately
-    // on an armed vehicle). Require an explicit confirm — every other call
-    // path to mission_start in the codebase guards on confirm/showConfirm.
-    const ok = await showConfirm(t('sched.confirmRun') || 'Start mission now?', true);
-    if (!ok) return;
-    sched.status = 'active';
-    persist();
-    dispatch('mission_start');
-    addToast(t('sched.started'), 'success');
   }
 
   function fmtFreq(s: Schedule): string {
@@ -127,14 +62,7 @@
   }
 
   function statusColor(s: ScheduleStatus): string {
-    switch (s) {
-      case 'active':
-        return 'text-green-400';
-      case 'completed':
-        return 'text-muted-foreground';
-      default:
-        return 'text-yellow-400';
-    }
+    return s === 'completed' ? 'text-muted-foreground' : 'text-yellow-400';
   }
 </script>
 
@@ -178,20 +106,6 @@
               placeholder="..."
               class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50"
             />
-          </div>
-
-          <!-- Mission -->
-          <div class="flex items-center gap-2">
-            <label for="sched-mission" class="text-xs text-muted-foreground w-16 shrink-0">{t('sched.mission')}</label>
-            <select
-              id="sched-mission"
-              bind:value={formMission}
-              class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50"
-            >
-              {#each savedMissions as m}
-                <option value={m}>{m === 'current' ? t('sched.currentWp') : m}</option>
-              {/each}
-            </select>
           </div>
 
           <!-- Frequency -->
@@ -248,7 +162,7 @@
 
           <!-- Form actions -->
           <div class="flex gap-2">
-            <Button variant="default" size="sm" class="flex-1" onclick={addSchedule}>
+            <Button variant="default" size="sm" class="flex-1" onclick={submit}>
               {t('sched.create')}
             </Button>
             <Button variant="ghost" size="sm" onclick={() => (showForm = false)}>
@@ -259,9 +173,9 @@
       {/if}
 
       <!-- Schedule list -->
-      {#if schedules.length > 0}
+      {#if schedulerState.schedules.length > 0}
         <div class="space-y-1">
-          {#each schedules as sched (sched.id)}
+          {#each schedulerState.schedules as sched (sched.id)}
             <div class="flex items-start gap-2 bg-muted/20 rounded-lg p-2 group">
               <Clock size={14} class="text-primary mt-0.5 shrink-0" />
               <div class="flex-1 min-w-0">
@@ -272,8 +186,7 @@
                   </span>
                 </div>
                 <div class="text-[11px] text-muted-foreground">
-                  {sched.missionName === 'current' ? t('sched.currentWp') : sched.missionName}
-                  &middot; {fmtFreq(sched)}
+                  {fmtFreq(sched)}
                   &middot; {sched.startTime.replace('T', ' ')}
                   {#if sched.autoArm}&middot; {t('sched.autoArm')}{/if}
                 </div>
@@ -281,7 +194,7 @@
               <div class="flex items-center gap-1 shrink-0">
                 <button
                   class="p-1 text-primary hover:bg-primary/10 rounded"
-                  onclick={() => runNow(sched)}
+                  onclick={() => void fireSchedule(sched)}
                   title={t('sched.runNow')}
                 >
                   <Play size={13} />

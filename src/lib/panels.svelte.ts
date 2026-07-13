@@ -16,7 +16,6 @@ export type PanelId =
   | 'flightModes'
   | 'setupWizard'
   | 'paramDiff'
-  | 'multiVehicle'
   | 'flightReport'
   | 'logViewer'
   | 'fft'
@@ -87,7 +86,6 @@ export const PANEL_LOADERS: Record<PanelId, () => Promise<{ default: unknown }>>
   flightModes: () => import('../components/params/FlightModePanel.svelte'),
   setupWizard: () => import('../components/setup/SetupWizard.svelte'),
   paramDiff: () => import('../components/params/ParamDiffPanel.svelte'),
-  multiVehicle: () => import('../components/vehicle/MultiVehiclePanel.svelte'),
   flightReport: () => import('../components/tools/FlightReportPanel.svelte'),
   logViewer: () => import('../components/tools/LogViewerPanel.svelte'),
   fft: () => import('../components/tools/FFTPanel.svelte'),

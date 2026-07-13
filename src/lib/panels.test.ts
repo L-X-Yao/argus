@@ -78,7 +78,6 @@ describe('PANEL_LOADERS', () => {
       'flightModes',
       'setupWizard',
       'paramDiff',
-      'multiVehicle',
       'flightReport',
       'logViewer',
       'fft',
@@ -118,7 +117,9 @@ describe('PANEL_LOADERS', () => {
   });
 
   it('has exactly 42 panel loaders', () => {
-    expect(Object.keys(PANEL_LOADERS).length).toBe(43);
+    // MultiVehiclePanel removed 2026-07 (placeholder switch — FleetDashboard
+    // is the real multi-vehicle UI).
+    expect(Object.keys(PANEL_LOADERS).length).toBe(42);
   });
 
   it('shortcuts loader resolves immediately', async () => {

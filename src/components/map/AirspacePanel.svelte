@@ -143,6 +143,14 @@
     </div>
 
     <div class="flex-1 min-h-0 overflow-y-auto p-4 space-y-3">
+      <!-- Demo-data disclaimer: AIRPORTS below is a built-in sample list,
+           not an authoritative airspace source — say so where the user
+           would otherwise trust the warnings. -->
+      <div class="p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/30 flex items-center gap-2">
+        <AlertTriangle size={14} class="text-yellow-500 shrink-0" />
+        <span class="text-[11px] text-yellow-600 dark:text-yellow-400">{t('airspace.demoData')}</span>
+      </div>
+
       <!-- Violation warning -->
       {#if violation && enabled}
         <div class="p-3 rounded-lg bg-destructive/10 border border-destructive/30 flex items-center gap-2">

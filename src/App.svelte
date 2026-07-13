@@ -17,6 +17,7 @@
   import SlideConfirm from './components/shared/SlideConfirm.svelte';
   import { showConfirm, showSlide, undo } from './lib/stores.svelte';
   import { migrateLocalStorage } from './lib/migrate';
+  import { startScheduler } from './lib/scheduler.svelte';
   import { panels } from './lib/panels.svelte';
   import { apiUrl } from './lib/backend';
   import {
@@ -196,6 +197,7 @@
     loadLocale();
     loadSettings();
     checkAuth();
+    startScheduler();
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   });

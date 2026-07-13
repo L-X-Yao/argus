@@ -416,7 +416,7 @@
         label: t('multi.title'),
         category: t('cmd.catTools'),
         icon: Plane,
-        handler: () => openPanel('multiVehicle'),
+        handler: () => openPanel('fleet'),
         available: connected,
       },
       {

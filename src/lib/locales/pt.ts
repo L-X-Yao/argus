@@ -1071,6 +1071,11 @@ const messages: Record<string, string> = {
   'failsafe.actionContinue': 'Continuar missão',
   'failsafe.actionSmartRtlLand': 'SmartRTL ou pouso',
   'failsafe.actionTerminate': 'Terminar',
+  'sched.withAutoArm': ' (inclui armar automático)',
+  'sched.skippedDeclined': 'Execução ignorada',
+  'sched.skippedOffline': 'Agendamento vencido mas nenhum veículo conectado — ignorado',
+  'airspace.demoData': 'Dados de demonstração: lista de aeroportos de exemplo integrada — não são dados oficiais de espaço aéreo, não use para conformidade',
+  'role.notEnforced': 'Funções são apenas visuais por enquanto — nenhum comando está restrito',
 };
 
 export default messages;

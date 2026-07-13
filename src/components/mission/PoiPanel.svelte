@@ -24,7 +24,6 @@
     roiLon = lon;
     roiAlt = alt;
     roiSet = true;
-    // DO_SET_ROI not yet implemented in backend — store locally and notify user
     dispatch('do_set_roi', undefined, { lat, lon, alt });
     addToast(t('poi.set') + `: ${lat.toFixed(6)}, ${lon.toFixed(6)}, ${alt}m`, 'success');
   }

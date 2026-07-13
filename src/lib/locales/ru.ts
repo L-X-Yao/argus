@@ -1070,6 +1070,11 @@ const messages: Record<string, string> = {
   'failsafe.actionContinue': 'Продолжить миссию',
   'failsafe.actionSmartRtlLand': 'SmartRTL или посадка',
   'failsafe.actionTerminate': 'Прекратить',
+  'sched.withAutoArm': ' (с автоармингом)',
+  'sched.skippedDeclined': 'Этот запуск пропущен',
+  'sched.skippedOffline': 'Время расписания наступило, но аппарат не подключён — пропущено',
+  'airspace.demoData': 'Демо-данные: встроенный пример списка аэропортов — не являются официальными данными воздушного пространства, не использовать для соответствия требованиям',
+  'role.notEnforced': 'Роли пока только отображаются — команды не ограничиваются',
 };
 
 export default messages;

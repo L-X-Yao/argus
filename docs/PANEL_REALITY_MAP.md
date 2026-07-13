@@ -13,30 +13,33 @@ functions real, some dead/stubbed. `DEMO`: hardcoded data or cosmetic shell.
 
 | verdict | count | share |
 |---|---|---|
-| WIRED | 44 | 56% |
-| GCS-LOCAL | 26 | 33% |
-| PARTIAL | 5 | 6% |
+| WIRED | 46 | 60% |
+| GCS-LOCAL | 26 | 34% |
+| PARTIAL | 2 | 3% |
 | DEMO | 3 | 4% |
+
+(77 panels after the same-day fixes below; original audit found 78 with
+44/26/5/3.)
 
 Every `sendCommand`/`dispatch` name used by any panel exists in the backend
 dispatch table; every `fetch` route exists. No `Math.random` telemetry and no
 fake progress bars anywhere. The 8 problem panels below are the complete list.
 
-## Problem panels (the 8 that need a decision)
+## Problem panels — audit findings and same-day resolutions (2026-07-13)
 
-| panel | verdict | issue |
+| panel | audit finding | resolution |
 |---|---|---|
-| map/AirspacePanel | DEMO | "限飞区" warnings come from 50 **hardcoded** airports — could be mistaken for authoritative airspace data (safety-adjacent) |
-| planning/AiPlannerPanel | DEMO | "AI" is a local regex heuristic, no LLM/endpoint; does append real waypoints |
-| shared/RolePanel | DEMO | writes `argus_role` to localStorage; **nothing reads it** — RBAC is cosmetic, a "viewer" can still arm |
-| tools/RemotePanel | PARTIAL | 远程操控 = read-only session/link status + copy-URL; no tunnel/relay |
-| map/Compass3DPanel | PARTIAL | cal_compass command real, but the sample sphere plots `app.drone.vibe` (vibration) as if magnetometer samples — wrong data source |
-| vehicle/MultiVehiclePanel | PARTIAL | switchTo is an explicit no-op placeholder toast; the real `switch_vehicle` lives in FleetDashboard (duplicate panel) |
-| planning/AiAnnotationPanel | PARTIAL | manual bbox annotation + export real; `aiDetect()` is a toast stub |
-| planning/SchedulerPanel | PARTIAL | run-now fires real `mission_start`; but **no timer exists** — scheduled entries never auto-run, autoArm/mission-select fields ignored |
+| map/Compass3DPanel | sample sphere plotted `vibe` as if mag samples | FIXED — backend now parses RAW_IMU (27, subscribed 5Hz) and pushes `mag`; sphere plots the real field |
+| planning/SchedulerPanel | no timer; autoArm/mission-select ignored | FIXED — app-level scheduler service ticks all session, confirm-gated firing honoring autoArm; vestigial mission dropdown removed (saved-mission slots never existed) |
+| vehicle/MultiVehiclePanel | placeholder no-op switch, duplicate of FleetDashboard | REMOVED — palette entry now opens FleetDashboard |
+| map/AirspacePanel | 50 hardcoded airports could read as authoritative | LABELED — in-UI demo-data banner; data unchanged (still DEMO) |
+| shared/RolePanel | `argus_role` written, never enforced | LABELED — in-UI "display-only, not enforced" banner (still DEMO) |
+| planning/AiPlannerPanel | "AI" is a regex heuristic, no LLM | OPEN — product positioning call |
+| planning/AiAnnotationPanel | `aiDetect()` is a toast stub | OPEN — product positioning call |
+| tools/RemotePanel | no tunnel/relay behind 远程操控 | OPEN — product positioning call |
 
-Trivial cleanup: `mission/PoiPanel` carries a stale comment claiming
-`do_set_roi` is unimplemented — it has been implemented for some time.
+Trivial cleanup applied: `mission/PoiPanel`'s stale "do_set_roi not
+implemented" comment removed (the command has been implemented for a while).
 
 ## Cross-cutting findings
 
@@ -89,8 +92,8 @@ Format: `Panel | verdict | what it does / evidence`.
 
 | panel | verdict | note |
 |---|---|---|
-| AirspacePanel | DEMO | 50 hardcoded airports; localStorage toggle only |
-| Compass3DPanel | PARTIAL | real cal_compass; sphere plots vibe, not mag samples |
+| AirspacePanel | DEMO | 50 hardcoded airports (in-UI demo-data banner since 2026-07-13) |
+| Compass3DPanel | WIRED | real cal_compass; sphere plots real RAW_IMU mag field |
 | Map3DView | WIRED | maplibre 3D + tiles + guided_goto + live telemetry |
 | Mission3DPanel | GCS-LOCAL | client-side 3D render of local plan |
 | OfflineMapPanel | WIRED | /api/tile_bulk_download + /api/tile_cache |
@@ -104,7 +107,7 @@ Format: `Panel | verdict | what it does / evidence`.
 | FencePanel | WIRED | real fence_upload (+serial fallback), ack-driven |
 | MissionPanel | WIRED | mission_upload/set_current + /api/terrain/elevation, ack-driven |
 | MissionProgress | WIRED | live progress HUD from mode_id/wp_idx/gs |
-| PoiPanel | WIRED | do_set_roi real (in-code "not implemented" comment is stale) |
+| PoiPanel | WIRED | do_set_roi real |
 | SurveyPanel | GCS-LOCAL | survey grid generation (pure geometry) |
 | TerrainProfilePanel | GCS-LOCAL | profile chart via real /api/terrain/elevation |
 
@@ -167,7 +170,7 @@ Format: `Panel | verdict | what it does / evidence`.
 | AnnotationPanel | GCS-LOCAL | localStorage POI notes CRUD |
 | CustomDashboard | WIRED | tile dashboard of live telemetry; localStorage layout |
 | OverlapCalcPanel | GCS-LOCAL | GSD/overlap math; feeds surveySpacing to SurveyPanel |
-| SchedulerPanel | PARTIAL | run-now real; no timer, autoArm/mission-select ignored |
+| SchedulerPanel | WIRED | app-level timer, confirm-gated firing, autoArm honored |
 | ScriptPanel | WIRED | user JS with real send()/drone-state API |
 
 ### shared/
@@ -179,7 +182,7 @@ Format: `Panel | verdict | what it does / evidence`.
 | FlightSummary | WIRED | real post-flight stats; local export |
 | LoginDialog | WIRED | /api/auth/login token flow |
 | PreflightPanel | WIRED | readiness checks from live telemetry/prearm |
-| RolePanel | DEMO | argus_role written, never read — RBAC unenforced |
+| RolePanel | DEMO | RBAC unenforced (in-UI banner says display-only) |
 | SettingsPanel | GCS-LOCAL | localStorage settings feeding real commands; embeds FirmwarePanel |
 | SlideConfirm | GCS-LOCAL | slide gesture executing real command callbacks |
 
@@ -189,5 +192,4 @@ Format: `Panel | verdict | what it does / evidence`.
 |---|---|---|
 | FleetDashboard | WIRED | live per-vehicle cards + real switch_vehicle |
 | GimbalPanel | WIRED | gimbal/camera/ROI — all six commands real |
-| MultiVehiclePanel | PARTIAL | telemetry real; switchTo is placeholder no-op |
 | VideoOverlay | WIRED | /api/video proxy + AR overlay from live pose |

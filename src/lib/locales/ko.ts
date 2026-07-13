@@ -1067,6 +1067,11 @@ const messages: Record<string, string> = {
   'failsafe.actionContinue': '미션 계속',
   'failsafe.actionSmartRtlLand': '스마트RTL 또는 착륙',
   'failsafe.actionTerminate': '비행 종료',
+  'sched.withAutoArm': ' (자동 시동 포함)',
+  'sched.skippedDeclined': '이번 실행을 건너뛰었습니다',
+  'sched.skippedOffline': '예약 시간이 되었지만 기체가 연결되지 않아 건너뜀',
+  'airspace.demoData': '데모 데이터: 내장 공항 샘플 목록 — 공식 공역 데이터가 아니므로 규정 준수 판단에 사용하지 마세요',
+  'role.notEnforced': '역할은 현재 표시용일 뿐 — 아직 어떤 명령도 제한되지 않습니다',
 };
 
 export default messages;

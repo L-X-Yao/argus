@@ -1068,6 +1068,11 @@ const messages: Record<string, string> = {
   'failsafe.actionContinue': 'ミッション継続',
   'failsafe.actionSmartRtlLand': 'スマートRTLまたは着陸',
   'failsafe.actionTerminate': '飛行終了',
+  'sched.withAutoArm': '（自動アーム含む）',
+  'sched.skippedDeclined': '今回の実行をスキップしました',
+  'sched.skippedOffline': 'スケジュール時刻になりましたが機体未接続のためスキップ',
+  'airspace.demoData': 'デモデータ：内蔵の空港サンプルリストです。公式な空域データではないため、コンプライアンス判断には使用しないでください',
+  'role.notEnforced': 'ロールは現在表示のみで、コマンド制限はまだ行われません',
 };
 
 export default messages;

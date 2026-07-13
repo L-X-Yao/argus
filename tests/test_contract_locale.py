@@ -95,7 +95,6 @@ KNOWN_ORPHAN_LOCALE_KEYS: set[str] = {
     "safety.parachuteConfirm",
     "safety.terminate",
     "safety.terminateConfirm",
-    "sched.status.active",
     "sched.status.completed",
     "sched.status.pending",
     "settings.flightParams",

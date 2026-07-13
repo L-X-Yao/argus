@@ -83,6 +83,11 @@
     </div>
 
     <div class="flex-1 min-h-0 overflow-y-auto p-4 space-y-2">
+      <!-- Honesty banner: argus_role is written but nothing enforces it yet —
+           without this note a "viewer" selection looks like a safety control. -->
+      <div class="p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
+        <span class="text-[11px] text-yellow-600 dark:text-yellow-400">{t('role.notEnforced')}</span>
+      </div>
       {#each roles as role (role.id)}
         {@const active = currentRole === role.id}
         <div

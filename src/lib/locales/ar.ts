@@ -1067,6 +1067,11 @@ const messages: Record<string, string> = {
   'failsafe.actionContinue': 'متابعة المهمة',
   'failsafe.actionSmartRtlLand': 'العودة الذكية أو الهبوط',
   'failsafe.actionTerminate': 'إنهاء',
+  'sched.withAutoArm': ' (يشمل التسليح التلقائي)',
+  'sched.skippedDeclined': 'تم تخطي هذا التشغيل',
+  'sched.skippedOffline': 'حان موعد الجدولة لكن لا توجد مركبة متصلة — تم التخطي',
+  'airspace.demoData': 'بيانات تجريبية: قائمة مطارات مدمجة كنموذج — ليست بيانات مجال جوي رسمية، لا تستخدمها للامتثال',
+  'role.notEnforced': 'الأدوار للعرض فقط حالياً — لا يتم تقييد أي أوامر بعد',
 };
 
 export default messages;
