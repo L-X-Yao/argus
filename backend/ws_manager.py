@@ -36,6 +36,10 @@ class WSManager:
     def __init__(self, link: DroneLink):
         self.link = link
         self._clients: set[WebSocket] = set()
+        # Connection order (earliest first). `set` gives no ordering, so we
+        # track it separately to identify the session operator — the
+        # earliest-connected client — for the implicit-pilot rule below.
+        self._order: list[WebSocket] = []
         self._pilot_ws: WebSocket | None = None
         self._roles: dict[int, str] = {}
 
@@ -59,6 +63,7 @@ class WSManager:
     async def handle_client(self, ws: WebSocket) -> None:
         await ws.accept()
         self._clients.add(ws)
+        self._order.append(ws)
         try:
             recv_task = asyncio.create_task(self._receive_loop(ws))
             push_task = asyncio.create_task(self._push_loop(ws))
@@ -75,6 +80,7 @@ class WSManager:
             pass
         finally:
             self._clients.discard(ws)
+            self._order = [c for c in self._order if c is not ws]
             # Clear this client's role + pilot reference so the next observer
             # to call request_handoff doesn't auto-promote because the dead
             # ws is no longer `in self._clients` (auditor finding).
@@ -171,7 +177,21 @@ class WSManager:
                     # below covers the single-client case where no role has
                     # been set yet).
                     role = self._roles.get(id(ws))
-                    is_implicit_pilot = self._pilot_ws is None and role is None and self.client_count == 1
+                    # With no explicit pilot assigned, command authority belongs
+                    # to the earliest-connected client (the session operator);
+                    # later joiners observe. The previous `client_count == 1`
+                    # gate stripped the operator's authority the instant ANY
+                    # second client connected — an observer opening the page
+                    # silently disabled the operator's commands, with no way to
+                    # reclaim them (nothing in the frontend sends set_role /
+                    # request_handoff). Earliest-connected preserves the GCS
+                    # "one operator, rest observe" default with zero UI wiring.
+                    # Fallback (operator is None): tests populate _clients
+                    # directly, bypassing _order — a lone client still commands.
+                    operator = next((c for c in self._order if c in self._clients), None)
+                    if operator is None:
+                        operator = ws if self.client_count == 1 else None
+                    is_implicit_pilot = self._pilot_ws is None and role is None and operator is ws
                     if role != "pilot" and not is_implicit_pilot:
                         await ws.send_text(
                             json.dumps(

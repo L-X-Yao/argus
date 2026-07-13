@@ -454,6 +454,83 @@ class TestReceiveLoop:
 
 
 # ---------------------------------------------------------------------------
+# implicit-pilot ordering (multi-client command-lockout regression)
+# ---------------------------------------------------------------------------
+
+
+class TestImplicitPilotEarliest:
+    """With no explicit pilot assigned, command authority belongs to the
+    earliest-connected client (the session operator). The previous
+    `client_count == 1` gate locked out EVERY client the moment a second one
+    connected: an observer merely opening the page silently stripped the
+    operator's ability to command, with no UI path to reclaim it (nothing in
+    the frontend sends set_role / request_handoff)."""
+
+    @pytest.mark.asyncio
+    async def test_operator_keeps_command_after_observer_joins(self):
+        link = DroneLink()
+        mgr = WSManager(link)
+        op = make_ws()
+        obs = make_ws()
+        # Operator connected first, observer second; no explicit roles set.
+        mgr._clients.add(op)
+        mgr._clients.add(obs)
+        mgr._order = [op, obs]
+        msg = json.dumps({"type": "command", "cmd": "arm", "param": None})
+        op.receive_text.side_effect = [msg, WebSocketDisconnect()]
+        with patch("backend.ws_manager.commands.execute", return_value={"ok": True}) as mock_exec:
+            await mgr._receive_loop(op)
+            mock_exec.assert_called_once()
+        sent = json.loads(op.send_text.call_args[0][0])
+        assert sent["type"] == "cmd_result" and sent["ok"] is True
+
+    @pytest.mark.asyncio
+    async def test_late_observer_still_rejected(self):
+        """The observer (not earliest) cannot command while the operator holds
+        implicit authority — the security guard still blocks passive viewers."""
+        link = DroneLink()
+        mgr = WSManager(link)
+        op = make_ws()
+        obs = make_ws()
+        mgr._clients.add(op)
+        mgr._clients.add(obs)
+        mgr._order = [op, obs]
+        msg = json.dumps({"type": "command", "cmd": "arm", "param": None})
+        obs.receive_text.side_effect = [msg, WebSocketDisconnect()]
+        with patch("backend.ws_manager.commands.execute") as mock_exec:
+            await mgr._receive_loop(obs)
+            mock_exec.assert_not_called()
+        sent = json.loads(obs.send_text.call_args[0][0])
+        assert sent["type"] == "cmd_result" and sent["ok"] is False
+
+    @pytest.mark.asyncio
+    async def test_authority_transfers_when_operator_disconnects(self):
+        """When the earliest client has dropped from _clients (disconnected),
+        the next-earliest still-connected client inherits command authority."""
+        link = DroneLink()
+        mgr = WSManager(link)
+        gone = make_ws()
+        obs = make_ws()
+        mgr._clients.add(obs)  # only obs remains connected
+        mgr._order = [gone, obs]  # gone is earliest in order but not in _clients
+        msg = json.dumps({"type": "command", "cmd": "arm", "param": None})
+        obs.receive_text.side_effect = [msg, WebSocketDisconnect()]
+        with patch("backend.ws_manager.commands.execute", return_value={"ok": True}) as mock_exec:
+            await mgr._receive_loop(obs)
+            mock_exec.assert_called_once()
+
+    @pytest.mark.asyncio
+    async def test_handle_client_tracks_and_untracks_order(self):
+        """handle_client appends to _order on connect and removes on cleanup."""
+        link = DroneLink()
+        mgr = WSManager(link)
+        ws = make_ws()
+        ws.receive_text.side_effect = WebSocketDisconnect()
+        await mgr.handle_client(ws)
+        assert ws not in mgr._order  # cleaned up on disconnect
+
+
+# ---------------------------------------------------------------------------
 # _push_loop
 # ---------------------------------------------------------------------------
 
