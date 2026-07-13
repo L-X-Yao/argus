@@ -27,7 +27,12 @@ class TestOpenBrowser:
 class TestMain:
     @patch("backend.server.uvicorn.run")
     def test_default_args(self, mock_run):
-        with patch("sys.argv", ["server.py"]):
+        # Patch Thread: without --no-browser, main() spawns a daemon that
+        # polls http://127.0.0.1:8100/health every 0.3s for ~9s. Left running,
+        # that thread's real urlopen leaks into whatever test patches urlopen
+        # next (backend.tiles.urlreq is the same module object) — a cross-test
+        # flake that fails test_unit_tile_proxy's assert_called_once.
+        with patch("sys.argv", ["server.py"]), patch("backend.server.threading.Thread"):
             main()
         mock_run.assert_called_once()
         call_kwargs = mock_run.call_args
