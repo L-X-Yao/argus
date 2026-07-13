@@ -9,7 +9,10 @@ import pytest
 from fastapi import WebSocketDisconnect
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from unittest.mock import MagicMock as _MagicMock
+
 from backend.drone_link import DroneLink
+from backend.param_manager import ParamManager
 from backend.ws_manager import WSManager
 
 
@@ -981,3 +984,64 @@ class TestBroadcastEdge:
         mgr = WSManager(link)
         await mgr.broadcast({"type": "test"})
         assert mgr.client_count == 0
+
+
+def _make_link():
+    link = DroneLink()
+    link._ser = _MagicMock()
+    return link
+
+
+class TestParamCursorGeneration:
+    """The push loop delivers param_batch from _messages[param_cursor:], with a
+    strict-`>` length guard to reset on clear. That guard misses the case where
+    a new request_all() clears and refills to the SAME length within one push
+    cycle: cursor==len, nothing delivered → empty param panel (the CI flake).
+    request_all() bumps _fetch_gen; the loop resets the cursor on gen change.
+    These tests replicate that decision the way the other push tests do."""
+
+    @staticmethod
+    def _deliver(pmsg, cursor, gen_seen, gen_now):
+        # Mirror of ws_manager's param cursor block.
+        if gen_now != gen_seen:
+            cursor = 0
+            gen_seen = gen_now
+        if cursor > len(pmsg):
+            cursor = 0
+        delivered = []
+        if len(pmsg) > cursor:
+            delivered = pmsg[cursor:]
+            cursor = len(pmsg)
+        return delivered, cursor, gen_seen
+
+    def test_same_length_refill_delivers_all_via_gen(self):
+        m = ParamManager(_make_link())
+        # Prior fetch: 41 messages; a client connects now → cursor 41, gen 1.
+        m.request_all()
+        for i in range(41):
+            m._messages.append({"type": "param_value", "name": "P%d" % i, "value": i})
+        cursor, gen_seen = len(m._messages), m._fetch_gen
+        assert (cursor, gen_seen) == (41, 1)
+        # New fetch, clear + full refill within one push cycle → same length.
+        m.request_all()
+        for i in range(41):
+            m._messages.append({"type": "param_value", "name": "Q%d" % i, "value": i})
+        delivered, cursor, gen_seen = self._deliver(m._messages, cursor, gen_seen, m._fetch_gen)
+        assert len(delivered) == 41, "same-length refill must deliver every param"
+
+    def test_request_all_bumps_generation(self):
+        m = ParamManager(_make_link())
+        g0 = m._fetch_gen
+        m.request_all()
+        assert m._fetch_gen == g0 + 1
+        m.request_all()
+        assert m._fetch_gen == g0 + 2
+
+    def test_no_gen_change_keeps_incremental_delivery(self):
+        # Within one fetch, cursor advances normally without re-delivering.
+        pmsg = [{"type": "param_value", "name": "A", "value": 1}]
+        delivered, cursor, gen = self._deliver(pmsg, 0, 5, 5)
+        assert len(delivered) == 1 and cursor == 1
+        pmsg.append({"type": "param_value", "name": "B", "value": 2})
+        delivered, cursor, gen = self._deliver(pmsg, cursor, gen, 5)
+        assert len(delivered) == 1 and delivered[0]["name"] == "B"

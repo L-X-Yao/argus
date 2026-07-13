@@ -200,6 +200,7 @@ class WSManager:
         # position at trim time (auditor drone_link C5).
         event_seq_cursor = self.link._events_emitted_total
         param_cursor = len(self.link.param_mgr._messages)
+        param_gen = self.link.param_mgr._fetch_gen
         dl_cursor = len(self.link.mission._dl_messages)
         log_cursor = len(self.link.log_dl._log_messages)
         last_sent: dict = {}
@@ -223,6 +224,7 @@ class WSManager:
                     dlmsg = list(self.link.mission._dl_messages)
                     logmsg = list(self.link.log_dl._log_messages)
                     pmsg = list(self.link.param_mgr._messages)
+                    param_gen_now = self.link.param_mgr._fetch_gen
                 # Send any events with seq > our last-sent seq. The array may
                 # have trimmed older entries; if cursor < oldest-available
                 # seq, we accept the loss (the trimmed events are gone).
@@ -252,6 +254,14 @@ class WSManager:
                     for msg in logmsg[log_cursor:]:
                         await ws.send_text(json.dumps(msg))
                     log_cursor = len(logmsg)
+                # A new request_all() clears _messages and refills it. Reset the
+                # cursor on the generation change, not just on an observed length
+                # drop: if the clear+refill lands within one push cycle and the
+                # new length equals the old cursor, the length guard never fires
+                # and 0 params are delivered (empty panel — the CI params flake).
+                if param_gen_now != param_gen:
+                    param_cursor = 0
+                    param_gen = param_gen_now
                 if param_cursor > len(pmsg):
                     param_cursor = 0
                 if len(pmsg) > param_cursor:

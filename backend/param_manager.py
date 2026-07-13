@@ -38,6 +38,12 @@ class ParamManager:
         self._gap_fill_attempts: dict[int, int] = {}  # index -> retry count
         self._list_attempts = 0  # PARAM_REQUEST_LIST re-sends (dropped-request recovery)
         self._messages: list[dict] = []  # kept for backward compat with ws_manager cursor
+        # Bumped every request_all() (which clears _messages). ws_manager uses
+        # this to reset its length-based cursor: without it, a fresh fetch that
+        # refills to the SAME length as the prior one within a single push
+        # cycle collides on the strict-`>` reset guard and delivers 0 params
+        # (empty param panel). Same failure the event cursor solved with seq.
+        self._fetch_gen = 0
 
     def request_all(self) -> None:
         self.params.clear()
@@ -45,6 +51,7 @@ class ParamManager:
         self.received_count = 0
         self.fetching = True
         self._complete_emitted = False
+        self._fetch_gen += 1
         self._fetch_start = time.time()
         self._last_value_time = self._fetch_start
         self._received_indices.clear()
