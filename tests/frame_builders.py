@@ -16,11 +16,11 @@ def fc_frame(mid: int, payload: bytes, seq: int = 0) -> bytes:
     return bm(mid, payload, seq, CRC_EXTRA[mid], sysid=1, compid=1)
 
 
-def heartbeat(mode: int = 4, armed: bool = True, seq: int = 0) -> bytes:
+def heartbeat(mode: int = 4, armed: bool = True, seq: int = 0, autopilot: int = 3) -> bytes:
     # HEARTBEAT: custom_mode u32 @0, type u8 @4, autopilot u8 @5,
     # base_mode u8 @6 (0x80 = armed), system_status u8 @7, version u8 @8.
     base_mode = 0x80 | 0x10 if armed else 0x10
-    return fc_frame(0, struct.pack("<IBBBBB", mode, 2, 3, base_mode, 4, 3), seq)
+    return fc_frame(0, struct.pack("<IBBBBB", mode, 2, autopilot, base_mode, 4, 3), seq)
 
 
 def attitude(roll_rad: float = 0.1, seq: int = 0) -> bytes:

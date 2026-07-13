@@ -186,6 +186,21 @@ describe('message handling', () => {
     expect(handleParamBatch).toHaveBeenCalledWith([{ name: 'P', value: 1 }]);
   });
 
+  it('cmd_result error surfaces as toast', async () => {
+    // sendCommand is fire-and-forget; a refused command (e.g. the
+    // unsupported-autopilot gate) must not fail invisibly.
+    await fire({ type: 'cmd_result', ok: false, error: 'unsupported autopilot (12): ArduPilot only' });
+    const { addToast } = await import('./stores.svelte');
+    expect(addToast).toHaveBeenCalledWith(
+      'unsupported autopilot (12): ArduPilot only', 'error', 6000);
+  });
+
+  it('cmd_result success stays silent', async () => {
+    await fire({ type: 'cmd_result', ok: true });
+    const { addToast } = await import('./stores.svelte');
+    expect(addToast).not.toHaveBeenCalled();
+  });
+
   it('dispatches params_complete', async () => {
     await fire({ type: 'params_complete' });
     const { handleParamsComplete } = await import('./paramStore.svelte');

@@ -27,7 +27,6 @@ WS_TS = ROOT / "src" / "lib" / "ws.ts"
 # promise/callback patterns or dedicated message listeners.
 EXCLUDED_TYPES = {
     "connect_result",  # handled by sendConnect callback
-    "cmd_result",  # handled by sendCommand callback
     "role_update",  # multi-client role negotiation
     "handoff_request",  # pilot handoff protocol
     "handoff_granted",  # pilot handoff protocol

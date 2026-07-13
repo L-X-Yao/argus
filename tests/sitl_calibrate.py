@@ -77,6 +77,14 @@ def die(msg: str) -> None:
     sys.exit(1)
 
 
+def _kill(proc: subprocess.Popen | None) -> None:
+    if proc and proc.poll() is None:
+        try:
+            os.killpg(proc.pid, signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+
+
 def ensure_sitl_assets() -> None:
     SITL_DIR.mkdir(exist_ok=True)
     binp = SITL_DIR / "arducopter"
@@ -121,6 +129,7 @@ def boot_sitl() -> subprocess.Popen:
             time.sleep(3)
             return proc
         time.sleep(0.5)
+    _kill(proc)  # die() exits before main's finally — don't orphan the boot
     die(f"SITL never opened serial ports:\n{sitl_log.read_text()[-2000:]}")
 
 
@@ -153,7 +162,10 @@ class SimDriver:
 
     def __init__(self):
         self.conn = mavutil.mavlink_connection("tcp:127.0.0.1:5762", source_system=250)
-        self.conn.wait_heartbeat(timeout=30)
+        if self.conn.wait_heartbeat(timeout=30) is None:
+            # target_system would stay 0 and every DO_SET_SERVO would go out
+            # as broadcast — die instead of half-working by accident.
+            die("driver: no heartbeat on SERIAL1 (tcp:5762)")
         log(f"driver link up (sysid {self.conn.target_system})")
         # SIMSTATE (164) is ground truth for convergence checks; stream it at
         # 10 Hz regardless of SR1_* stream-group defaults.
@@ -327,9 +339,9 @@ async def drive_accelcal(ws, sim: SimDriver):
 
 async def main():
     ensure_sitl_assets()
-    sitl = boot_sitl()
-    backend = None
+    sitl = backend = None
     try:
+        sitl = boot_sitl()
         backend = boot_backend()
         sim = SimDriver()
         FIXTURES.mkdir(exist_ok=True)
@@ -345,9 +357,8 @@ async def main():
         log(f"fixture written: {dst_b} ({dst_b.stat().st_size} bytes)")
         log("DONE")
     finally:
-        for proc in (backend, sitl):
-            if proc and proc.poll() is None:
-                os.killpg(proc.pid, signal.SIGTERM)
+        _kill(backend)
+        _kill(sitl)
 
 
 if __name__ == "__main__":

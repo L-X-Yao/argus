@@ -106,6 +106,12 @@ export function connectWs(): void {
               break;
           }
           break;
+        case 'cmd_result':
+          // sendCommand is fire-and-forget — a refused command (unsupported
+          // autopilot gate, validation error, handler exception) would
+          // otherwise fail with no visible feedback anywhere.
+          if (msg.ok === false && msg.error) addToast(String(msg.error), 'error', 6000);
+          break;
         case 'param_batch':
           handleParamBatch(msg.params);
           break;

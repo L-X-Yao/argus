@@ -216,3 +216,48 @@ class TestMultiVehicleInterleave:
         hb2 = bm(0, struct.pack("<IBBBBB", 0, 2, 3, 0x10, 4, 3), 0, CRC_EXTRA[0], sysid=2)
         link.feed(heartbeat() + hb2)
         assert set(link._vehicles) == {1, 2}
+
+
+class TestUnsupportedFcSessionLifecycle:
+    """The unsupported-FC warning and command gate are per-session: a
+    reconnect may be a different vehicle, so both must re-arm (fresh-eyes
+    review F2: stale autopilot silently gated the next session, and a spent
+    warning flag hid the event on a same-FC reconnect)."""
+
+    def test_warns_once_per_session_then_rearms_on_reset(self):
+        from backend.commands import execute
+
+        link = DroneLink()
+        link.feed(heartbeat(autopilot=12))
+        assert link.vehicle.autopilot == 12
+        warns = lambda: sum(1 for e in link.events if e["event_type"] == "unsupported_fc")  # noqa: E731
+        assert warns() == 1
+        link.feed(heartbeat(autopilot=12, seq=1))
+        assert warns() == 1  # no per-heartbeat spam
+
+        r = execute("arm", None, link)
+        assert r == {"ok": False, "error": "unsupported autopilot (12): ArduPilot only"}
+
+        # Silent in-loop reconnect path: latch cleared, gate open until the
+        # next heartbeat, warning re-armed for the new session.
+        link._reset_session_state()
+        assert link.vehicle.autopilot == 0
+        link.feed(heartbeat(autopilot=12, seq=2))
+        assert warns() == 2
+
+    def test_px4_to_ardupilot_reconnect_ungates(self):
+        from backend.commands import execute
+
+        link = DroneLink()
+        link.feed(heartbeat(autopilot=12))
+        link._reset_session_state()
+        # New session is an ArduPilot vehicle — commands must flow again
+        # immediately (a stale 12 would refuse them until who-knows-when).
+        link.feed(heartbeat(autopilot=3, seq=1))
+        from unittest.mock import MagicMock
+
+        link._ser = MagicMock()
+        execute("arm", None, link)
+        assert link._ser.write.called
+        # only the pre-reset PX4 session warned; the AP session must not
+        assert sum(1 for e in link.events if e["event_type"] == "unsupported_fc") == 1

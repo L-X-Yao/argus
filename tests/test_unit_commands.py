@@ -677,6 +677,8 @@ class TestExecuteDispatch:
         assert link.active_sysid == 2
         execute("inspector_toggle", None, link)
         assert link.inspector_enabled is True
+        execute("set_vtype", None, link, data={"vtype": "plane"})
+        assert link.vehicle.force_plane is True
 
     def test_ardupilot_and_unlatched_autopilot_pass(self):
         for ap in (0, 3):  # 0 = no heartbeat yet, 3 = ARDUPILOTMEGA

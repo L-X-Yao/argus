@@ -49,10 +49,14 @@ def handle_heartbeat(p: bytes, pl: int, link: DroneLink) -> None:
     ap = p[5]
     if ap > 0 and ap != 8 and ap != v.autopilot:
         v.autopilot = ap
-        if ap != 3:
-            # Fail loud: everything downstream (mode names, command enums,
-            # calibration handshakes) is ArduPilot-specific, and commands.execute()
-            # refuses FC-bound commands while this value is latched.
+        # Fail loud: everything downstream (mode names, command enums,
+        # calibration handshakes) is ArduPilot-specific, and commands.execute()
+        # refuses FC-bound commands while this value is latched. Warn once per
+        # session (flag reset on connect/reconnect): on a mixed AP+PX4 link the
+        # shared VehicleState flaps last-heartbeat-wins, and a per-change event
+        # would fire every second forever.
+        if ap != 3 and not getattr(link, "_unsupported_fc_warned", False):
+            link._unsupported_fc_warned = True
             name = "PX4" if ap == 12 else "autopilot=%d" % ap
             link.add_event(lt("unsupported_fc", link.locale) % name, "unsupported_fc")
     if old_vtype != v.vtype_raw and v.vtype_raw > 0:

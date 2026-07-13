@@ -127,10 +127,10 @@ _DISPATCH = {
 }
 
 
-# Commands that never touch the FC — still allowed when an unsupported
-# autopilot is latched (switch_vehicle is how you'd escape to an ArduPilot
-# vehicle on a multi-vehicle link; ntrip_stop tears down the GCS-side client).
-_GCS_LOCAL = {"switch_vehicle", "clear_summary", "inspector_toggle", "ntrip_stop"}
+# Commands that never send anything to the FC — still allowed when an
+# unsupported autopilot is latched (ntrip_stop tears down the GCS-side
+# client; the others only mutate GCS display/selection state).
+_GCS_LOCAL = {"switch_vehicle", "set_vtype", "clear_summary", "inspector_toggle", "ntrip_stop"}
 
 
 def execute(cmd: str, param, link: DroneLink, data: dict | None = None) -> dict | None:

@@ -114,6 +114,14 @@ export interface ConnectResult {
   error: string;
 }
 
+// Reply to a ws 'command' message (backend/ws_manager.py receive_loop —
+// commands.execute()'s result dict spread onto {"type": "cmd_result"}).
+export interface CmdResult {
+  type: 'cmd_result';
+  ok: boolean;
+  error?: string;
+}
+
 export type AltMode = 'relative' | 'msl' | 'terrain';
 
 export interface Waypoint {
@@ -231,6 +239,7 @@ export type WSMessage =
   | DroneState
   | DroneEvent
   | ConnectResult
+  | CmdResult
   | ParamBatchMsg
   | ParamsCompleteMsg
   | ParamTimeoutMsg

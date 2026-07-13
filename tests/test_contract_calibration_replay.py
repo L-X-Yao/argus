@@ -157,7 +157,9 @@ class TestAccelcalFixtureWire:
         # AP_AccelCal prompt order (vehicle_test_suite.py:AccelCal expects
         # exactly these, in this order)
         expected = ["level", "LEFT", "RIGHT", "nose DOWN", "nose UP", "BACK"]
-        firsts = [next(i for i, t in enumerate(texts) if key in t) for key in expected]
+        missing = [key for key in expected if not any(key in t for t in texts)]
+        assert not missing, f"prompts never seen: {missing} in {texts}"
+        firsts = [min(i for i, t in enumerate(texts) if key in t) for key in expected]
         assert firsts == sorted(firsts), f"prompt order wrong: {texts}"
 
     def test_fc_reported_success(self):
