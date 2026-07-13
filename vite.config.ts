@@ -46,17 +46,21 @@ export default defineConfig({
     },
   },
   server: {
+    // Windows + Node >=17 may resolve localhost to ::1, but the backend binds
+    // IPv4-only 127.0.0.1 (run.py --host default) — pin both sides to IPv4.
+    // LAN debugging still works via `npm run dev -- --host 0.0.0.0`.
+    host: '127.0.0.1',
     port: 5173,
     proxy: {
       '/ws': {
-        target: 'ws://localhost:8100',
+        target: 'ws://127.0.0.1:8100',
         ws: true,
       },
       '/api': {
-        target: 'http://localhost:8100',
+        target: 'http://127.0.0.1:8100',
       },
       '/health': {
-        target: 'http://localhost:8100',
+        target: 'http://127.0.0.1:8100',
       },
     },
   },
