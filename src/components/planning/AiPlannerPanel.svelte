@@ -189,6 +189,9 @@
     <div class="flex-1 overflow-y-auto px-5 py-3 space-y-3">
       {#if history.length === 0}
         <p class="text-xs text-muted-foreground mb-2">{t('panel.aiPlanner.desc')}</p>
+        <div class="mb-2 p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/30">
+          <span class="text-[11px] text-yellow-600 dark:text-yellow-400">{t('panel.aiPlanner.localNote')}</span>
+        </div>
         <div class="space-y-1.5">
           {#each EXAMPLES as ex}
             <button

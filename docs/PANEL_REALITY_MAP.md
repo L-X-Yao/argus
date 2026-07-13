@@ -34,9 +34,9 @@ fake progress bars anywhere. The 8 problem panels below are the complete list.
 | vehicle/MultiVehiclePanel | placeholder no-op switch, duplicate of FleetDashboard | REMOVED — palette entry now opens FleetDashboard |
 | map/AirspacePanel | 50 hardcoded airports could read as authoritative | LABELED — in-UI demo-data banner; data unchanged (still DEMO) |
 | shared/RolePanel | `argus_role` written, never enforced | LABELED — in-UI "display-only, not enforced" banner (still DEMO) |
-| planning/AiPlannerPanel | "AI" is a regex heuristic, no LLM | OPEN — product positioning call |
-| planning/AiAnnotationPanel | `aiDetect()` is a toast stub | OPEN — product positioning call |
-| tools/RemotePanel | no tunnel/relay behind 远程操控 | OPEN — product positioning call |
+| planning/AiPlannerPanel | "AI" is a regex heuristic, no LLM | LABELED — in-UI note: local rule parser, not a cloud LLM (still functional) |
+| planning/AiAnnotationPanel | `aiDetect()` is a toast stub | LABELED — honest toast: auto-detect unavailable, annotate manually |
+| tools/RemotePanel | no tunnel/relay behind 远程操控 | LABELED — hint states no built-in tunnel; needs reachable backend |
 
 Trivial cleanup applied: `mission/PoiPanel`'s stale "do_set_roi not
 implemented" comment removed (the command has been implemented for a while).

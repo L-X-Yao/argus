@@ -22,11 +22,12 @@ test.describe('Parameters panel', () => {
     await page.waitForTimeout(500);
 
     const readBtn = page.locator('button', { hasText: /读取|Read/ }).first();
-    if (await readBtn.isVisible()) {
-      await readBtn.click();
-      await page.waitForTimeout(5000);
-      await expect(page.locator('body')).toContainText(/\d+/, { timeout: 10000 });
-    }
+    await readBtn.click();
+    // Assert params actually loaded, not just "some digit is on the page"
+    // (the old /\d+/ passed even with zero params — it would have masked the
+    // dropped-PARAM_REQUEST_LIST bug fixed in param_manager). The search input
+    // only renders once the list is populated.
+    await expect(page.locator('input[type="text"]').first()).toBeVisible({ timeout: 15000 });
   });
 
   // The params view renders an empty state (just the read-params button)

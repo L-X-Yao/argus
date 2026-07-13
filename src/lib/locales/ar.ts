@@ -762,7 +762,7 @@ const messages: Record<string, string> = {
   'remote.status': 'حالة التحكم عن بعد',
   'remote.clients': 'العملاء المتصلون',
   'remote.latency': 'زمن الاستجابة',
-  'remote.hint': 'الخادم في الموقع، التحكم عبر المتصفح من أي مكان',
+  'remote.hint': 'ينسخ عنوان هذه الصفحة فقط؛ يتطلب الوصول عن بُعد أن يكون الخادم قابلاً للوصول (نفس الشبكة المحلية / VPN / إعادة توجيه المنافذ) — بدون نفق مدمج',
   'role.pilot': 'طيار',
   'role.observer': 'مراقب',
   'role.commander': 'قائد',
@@ -885,7 +885,7 @@ const messages: Record<string, string> = {
   'aiAnnot.high': 'عالية',
   'aiAnnot.export': 'تصدير التعليقات',
   'aiAnnot.aiDetect': 'كشف AI',
-  'aiAnnot.connectAi': 'وصّل نقطة نهاية خدمة AI في الإعدادات',
+  'aiAnnot.connectAi': 'الكشف التلقائي غير متوفر في هذا الإصدار — قم بالتوصيف يدوياً برسم مربعات',
   'aiAnnot.annotations': 'التعليقات',
   'aiAnnot.noAnnotations': 'لا توجد تعليقات',
   'aiAnnot.exported': 'تم تصدير التعليقات',
@@ -1072,6 +1072,7 @@ const messages: Record<string, string> = {
   'sched.skippedOffline': 'حان موعد الجدولة لكن لا توجد مركبة متصلة — تم التخطي',
   'airspace.demoData': 'بيانات تجريبية: قائمة مطارات مدمجة كنموذج — ليست بيانات مجال جوي رسمية، لا تستخدمها للامتثال',
   'role.notEnforced': 'الأدوار للعرض فقط حالياً — لا يتم تقييد أي أوامر بعد',
+  'panel.aiPlanner.localNote': 'محلل قواعد محلي (يعمل دون اتصال) — ليس نموذجاً لغوياً سحابياً؛ يتعرف على مجموعة ثابتة من كلمات الأوامر',
 };
 
 export default messages;

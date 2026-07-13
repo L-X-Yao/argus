@@ -763,7 +763,7 @@ const messages: Record<string, string> = {
   'remote.status': 'Статус удалённого',
   'remote.clients': 'Подключённые клиенты',
   'remote.latency': 'Задержка',
-  'remote.hint': 'Сервер развёрнут на объекте, управление через браузер откуда угодно',
+  'remote.hint': 'Копирует только URL этой страницы; для удалённого доступа нужен достижимый бэкенд (та же ЛВС / VPN / проброс портов) — встроенного туннеля нет',
   'role.pilot': 'Пилот',
   'role.observer': 'Наблюдатель',
   'role.commander': 'Командир',
@@ -887,7 +887,7 @@ const messages: Record<string, string> = {
   'aiAnnot.high': 'Высокая',
   'aiAnnot.export': 'Экспорт аннотаций',
   'aiAnnot.aiDetect': 'AI-обнаружение',
-  'aiAnnot.connectAi': 'Подключите AI-сервис в настройках',
+  'aiAnnot.connectAi': 'Автоопределение недоступно в этой сборке — размечайте вручную, рисуя рамки',
   'aiAnnot.annotations': 'Аннотации',
   'aiAnnot.noAnnotations': 'Нет аннотаций',
   'aiAnnot.exported': 'Аннотации экспортированы',
@@ -1075,6 +1075,7 @@ const messages: Record<string, string> = {
   'sched.skippedOffline': 'Время расписания наступило, но аппарат не подключён — пропущено',
   'airspace.demoData': 'Демо-данные: встроенный пример списка аэропортов — не являются официальными данными воздушного пространства, не использовать для соответствия требованиям',
   'role.notEnforced': 'Роли пока только отображаются — команды не ограничиваются',
+  'panel.aiPlanner.localNote': 'Локальный разбор по правилам (работает офлайн) — не облачная LLM; распознаёт фиксированный набор команд',
 };
 
 export default messages;

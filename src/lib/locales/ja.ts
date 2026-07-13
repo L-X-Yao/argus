@@ -763,7 +763,7 @@ const messages: Record<string, string> = {
   'remote.status': 'リモート状態',
   'remote.clients': '接続クライアント',
   'remote.latency': 'レイテンシ',
-  'remote.hint': 'バックエンドを現場に設置し、ブラウザからどこでも操作',
+  'remote.hint': 'このページのURLをコピーするだけです。リモートアクセスにはバックエンドへの到達性（同一LAN／VPN／ポート転送）が必要で、内蔵トンネルはありません',
   'role.pilot': 'パイロット',
   'role.observer': 'オブザーバー',
   'role.commander': 'コマンダー',
@@ -886,7 +886,7 @@ const messages: Record<string, string> = {
   'aiAnnot.high': '高',
   'aiAnnot.export': 'アノテーションエクスポート',
   'aiAnnot.aiDetect': 'AI検出',
-  'aiAnnot.connectAi': '設定でAIサービスエンドポイントを接続',
+  'aiAnnot.connectAi': 'このビルドでは自動検出は利用できません — 手動で枠を描いて注釈してください',
   'aiAnnot.annotations': 'アノテーション',
   'aiAnnot.noAnnotations': 'アノテーションなし',
   'aiAnnot.exported': 'アノテーションをエクスポートしました',
@@ -1073,6 +1073,7 @@ const messages: Record<string, string> = {
   'sched.skippedOffline': 'スケジュール時刻になりましたが機体未接続のためスキップ',
   'airspace.demoData': 'デモデータ：内蔵の空港サンプルリストです。公式な空域データではないため、コンプライアンス判断には使用しないでください',
   'role.notEnforced': 'ロールは現在表示のみで、コマンド制限はまだ行われません',
+  'panel.aiPlanner.localNote': 'ローカルのルール解析（オフライン対応）— クラウドLLMではなく、固定のコマンド語を認識します',
 };
 
 export default messages;

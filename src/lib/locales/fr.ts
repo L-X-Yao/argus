@@ -764,7 +764,7 @@ const messages: Record<string, string> = {
   'remote.status': 'État distant',
   'remote.clients': 'Clients connectés',
   'remote.latency': 'Latence',
-  'remote.hint': "Backend déployé sur site, contrôle par navigateur depuis n'importe où",
+  'remote.hint': 'Copie uniquement l\'URL de cette page ; l\'accès distant nécessite un backend joignable (même LAN / VPN / redirection de port) — pas de tunnel intégré',
   'role.pilot': 'Pilote',
   'role.observer': 'Observateur',
   'role.commander': 'Commandant',
@@ -888,7 +888,7 @@ const messages: Record<string, string> = {
   'aiAnnot.high': 'Élevé',
   'aiAnnot.export': 'Exporter les annotations',
   'aiAnnot.aiDetect': 'Détection IA',
-  'aiAnnot.connectAi': "Configurer le point d'accès du service IA dans les paramètres",
+  'aiAnnot.connectAi': 'La détection automatique n\'est pas disponible dans cette version — annotez manuellement en dessinant des cadres',
   'aiAnnot.annotations': 'Annotations IA',
   'aiAnnot.noAnnotations': 'Aucune annotation',
   'aiAnnot.exported': 'Annotations exportées',
@@ -1077,6 +1077,7 @@ const messages: Record<string, string> = {
   'sched.skippedOffline': 'Planification échue mais aucun véhicule connecté — ignorée',
   'airspace.demoData': 'Données de démonstration : liste d\'aéroports intégrée — pas de données d\'espace aérien officielles, ne pas utiliser pour la conformité',
   'role.notEnforced': 'Les rôles sont pour l\'instant décoratifs — aucune commande n\'est restreinte',
+  'panel.aiPlanner.localNote': 'Analyseur de règles local (hors ligne) — pas un LLM cloud ; reconnaît un ensemble fixe de commandes',
 };
 
 export default messages;

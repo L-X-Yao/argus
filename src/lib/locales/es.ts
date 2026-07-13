@@ -764,7 +764,7 @@ const messages: Record<string, string> = {
   'remote.status': 'Estado remoto',
   'remote.clients': 'Clientes conectados',
   'remote.latency': 'Latencia',
-  'remote.hint': 'Backend desplegado en sitio, control vía navegador desde cualquier lugar',
+  'remote.hint': 'Solo copia la URL de esta página; el acceso remoto requiere que el backend sea accesible (misma LAN / VPN / reenvío de puertos) — sin túnel integrado',
   'role.pilot': 'Piloto',
   'role.observer': 'Observador',
   'role.commander': 'Comandante',
@@ -888,7 +888,7 @@ const messages: Record<string, string> = {
   'aiAnnot.high': 'Alta',
   'aiAnnot.export': 'Exportar anotaciones',
   'aiAnnot.aiDetect': 'Detección IA',
-  'aiAnnot.connectAi': 'Conecte el servicio de IA en ajustes',
+  'aiAnnot.connectAi': 'La detección automática no está disponible en esta versión — anota manualmente dibujando cajas',
   'aiAnnot.annotations': 'Anotaciones',
   'aiAnnot.noAnnotations': 'Sin anotaciones',
   'aiAnnot.exported': 'Anotaciones exportadas',
@@ -1076,6 +1076,7 @@ const messages: Record<string, string> = {
   'sched.skippedOffline': 'Programación vencida pero sin vehículo conectado — omitida',
   'airspace.demoData': 'Datos de demostración: lista de aeropuertos de ejemplo integrada — no son datos oficiales de espacio aéreo, no usar para cumplimiento',
   'role.notEnforced': 'Los roles son solo visuales por ahora — ningún comando está restringido',
+  'panel.aiPlanner.localNote': 'Analizador de reglas local (sin conexión) — no es un LLM en la nube; reconoce un conjunto fijo de comandos',
 };
 
 export default messages;
