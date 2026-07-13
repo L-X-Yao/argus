@@ -58,7 +58,12 @@ def main():
     print('=' * 50)
 
     import os
-    if not os.environ.get('ARGUS_NO_BROWSER'):
+    if not (ROOT_DIR / 'dist' / 'index.html').exists():
+        # Without a build, backend/app.py never registers the "/" route —
+        # auto-opening :8100 would just show a 404.
+        print('[WEB] No production build (dist/) found — not opening a browser.')
+        print('[WEB] Dev mode: run "npm run dev" in another terminal, then open http://127.0.0.1:5173')
+    elif not os.environ.get('ARGUS_NO_BROWSER'):
         webbrowser.open('http://localhost:%d' % args.port)
 
     try:
