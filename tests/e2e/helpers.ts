@@ -20,7 +20,12 @@ export async function connectSimulator(page: Page) {
   await connectBtn.click();
 
   await expect(page.locator('button', { hasText: /^断开$|^Disconnect$/ })).toBeVisible({ timeout: 15000 });
-  await page.waitForTimeout(2000);
+  // Wait for actual telemetry, not just the Disconnect button: the backend
+  // link is global and shared across every spec, so on a busy CI run the
+  // heartbeat can lag the button by seconds. Downstream steps (param fetch,
+  // mode buttons) silently no-op against a not-yet-live link — the voltage
+  // readout in the StatusBar is the first proof the sim is actually pushing.
+  await expect(page.locator('body')).toContainText(/\d+\.\d+\s*V/, { timeout: 15000 });
 }
 
 export async function disconnectIfConnected(page: Page) {
