@@ -60,12 +60,14 @@ npm install        # Frontend dependencies
 pip install -e .   # Backend (uses pyproject.toml — pulls all required deps)
 ```
 
+> **Windows / recent Node note**: Node ≥17 may resolve `localhost` to IPv6 `::1`, while the backend binds IPv4-only `127.0.0.1` — use `127.0.0.1` in dev URLs.
+
 ### Option 1 — Real hardware (USB to Pixhawk)
 
 ```bash
-python run.py                  # Backend at http://localhost:8100
+python run.py                  # Backend at http://127.0.0.1:8100
 # In another shell:
-npm run dev                    # Dev server at http://localhost:5173
+npm run dev                    # Dev server at http://127.0.0.1:5173
 # Open the URL, plug in USB, pick your serial port from the dropdown
 ```
 
