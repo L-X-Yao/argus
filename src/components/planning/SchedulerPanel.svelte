@@ -3,6 +3,7 @@
   import {
     schedulerState,
     addSchedule,
+    advanceSchedule,
     deleteSchedule,
     fireSchedule,
     persistSchedules,
@@ -50,13 +51,17 @@
   }
 
   async function runNow(s: Schedule) {
-    const confirmed = await fireSchedule(s);
-    // A manually-run 'once' schedule is done; repeating schedules keep their
-    // grid (a manual run doesn't shift the next scheduled occurrence).
-    if (confirmed && s.frequency === 'once') {
+    const result = await fireSchedule(s);
+    if (result !== 'fired') return; // declined or stolen — leave the schedule as-is
+    if (s.frequency === 'once') {
       s.status = 'completed';
-      persistSchedules();
+    } else {
+      // Advance past now like the tick's post-fire path: a past-due repeating
+      // schedule left pending would be re-detected as due and pop a second
+      // confirm within one tick (TICK_MS).
+      advanceSchedule(s, Date.now());
     }
+    persistSchedules();
   }
 
   function fmtFreq(s: Schedule): string {

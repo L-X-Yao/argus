@@ -918,7 +918,6 @@ const messages: Record<string, string> = {
   'sched.hint':
     'Wiederkehrende Missionen planen (Drone-in-a-Box). Automatische Ausführung benötigt einen Backend-Dienst.',
   'sched.status.pending': 'Ausstehend',
-  'sched.status.active': 'Aktiv',
   'sched.status.completed': 'Abgeschlossen',
   'posSource.title': 'Positionsquellen',
   'posSource.sources': 'Positionsquellen',

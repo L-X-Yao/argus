@@ -914,7 +914,6 @@ const messages: Record<string, string> = {
   'sched.empty': 'スケジュール済みミッションなし',
   'sched.hint': '定期ミッションをスケジュール（ドローンインアボックス）。自動実行にはバックエンドデーモンが必要。',
   'sched.status.pending': '待機中',
-  'sched.status.active': 'アクティブ',
   'sched.status.completed': '完了',
   'posSource.title': '位置ソース',
   'posSource.sources': '位置ソース',

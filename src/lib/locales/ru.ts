@@ -916,7 +916,6 @@ const messages: Record<string, string> = {
   'sched.hint':
     'Планирование повторяющихся миссий (дрон-в-коробке). Для автоматического запуска требуется серверный демон.',
   'sched.status.pending': 'Ожидание',
-  'sched.status.active': 'Активно',
   'sched.status.completed': 'Завершено',
   'posSource.title': 'Источники позиции',
   'posSource.sources': 'Источники позиции',

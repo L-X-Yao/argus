@@ -913,7 +913,6 @@ const messages: Record<string, string> = {
   'sched.empty': '예약된 미션 없음',
   'sched.hint': '정기 미션 예약 (드론 인 어 박스). 자동 실행에는 백엔드 데몬이 필요합니다.',
   'sched.status.pending': '대기 중',
-  'sched.status.active': '활성',
   'sched.status.completed': '완료',
   'posSource.title': '위치 소스',
   'posSource.sources': '위치 소스',

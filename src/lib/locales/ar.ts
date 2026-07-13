@@ -913,7 +913,6 @@ const messages: Record<string, string> = {
   'sched.empty': 'لا توجد مهام مجدولة',
   'sched.hint': 'جدولة مهام متكررة (طائرة في صندوق). التنفيذ التلقائي يتطلب خادماً في الخلفية.',
   'sched.status.pending': 'قيد الانتظار',
-  'sched.status.active': 'نشط',
   'sched.status.completed': 'مكتمل',
   'posSource.title': 'مصادر الموقع',
   'posSource.sources': 'مصادر الموقع',

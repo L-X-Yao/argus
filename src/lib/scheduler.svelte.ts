@@ -105,14 +105,23 @@ export function advanceSchedule(s: Schedule, now: number): void {
   s.startTime = fmtLocal(d);
 }
 
+export type FireResult = 'fired' | 'declined' | 'stolen';
+
 /** Confirm-gated firing shared by the timer and the panel's run-now button.
- * Returns whether the user confirmed. */
-export async function fireSchedule(s: Schedule): Promise<boolean> {
+ * 'stolen' means another showConfirm caller (RTL keybind, mission clear, …)
+ * replaced our dialog and resolved it as false — the caller MUST NOT advance
+ * the schedule in that case (it was never actually offered to the user), or a
+ * routine unrelated action would silently mark a due mission completed. */
+export async function fireSchedule(s: Schedule): Promise<FireResult> {
   const note = s.autoArm ? t('sched.withAutoArm') : '';
   const ok = await showConfirm(`${s.name}: ${t('sched.confirmRun')}${note}`, true);
   if (!ok) {
+    // showConfirm's steal path resolves the old promise false and immediately
+    // makes its own dialog visible; a genuine decline sets visible=false. So a
+    // false with a dialog still up means ours was stolen, not declined.
+    if (confirmState.visible) return 'stolen';
     addToast(t('sched.skippedDeclined'), 'info');
-    return false;
+    return 'declined';
   }
   if (s.autoArm && !app.drone.armed) {
     dispatch('arm');
@@ -122,7 +131,7 @@ export async function fireSchedule(s: Schedule): Promise<boolean> {
   }
   dispatch('mission_start');
   addToast(t('sched.started'), 'success');
-  return true;
+  return 'fired';
 }
 
 /** One tab fires at a time: localStorage lease, stolen only when stale.
@@ -155,7 +164,17 @@ let timer: ReturnType<typeof setInterval> | null = null;
 let firing = false;
 
 async function tick(): Promise<void> {
-  if (firing) return; // our own confirm dialog is already up
+  if (firing) {
+    // Our confirm is still up. Renew the lease so a peer tab doesn't treat it
+    // as stale (LOCK_STALE_MS) and steal it mid-confirm — the await can sit
+    // for minutes on a mission-start decision.
+    try {
+      localStorage.setItem(LOCK_KEY, `${tabId}:${Date.now()}`);
+    } catch {
+      /* no storage */
+    }
+    return;
+  }
   // Never replace a dialog the user is interacting with (showConfirm would
   // decline-and-replace it) — the schedule stays due, next tick retries.
   if (confirmState.visible) return;
@@ -176,16 +195,24 @@ async function tick(): Promise<void> {
         continue;
       }
       firing = true;
+      let result: FireResult;
       try {
-        await fireSchedule(s);
+        result = await fireSchedule(s);
       } finally {
         firing = false;
       }
-      if (!schedulerState.schedules.includes(s)) continue; // deleted while confirming
+      // Stolen: another dialog replaced ours; the schedule was never offered.
+      // Leave it pending — the next tick retries once that dialog closes.
+      if (result === 'stolen') continue;
+      // Compare by id, not reference: an onStorage reload (peer-tab edit)
+      // rebuilds the array with fresh objects, so `s` may no longer be ===
+      // any element even though the schedule still exists. Mutate the live one.
+      const current = schedulerState.schedules.find((x) => x.id === s.id);
+      if (!current) continue; // genuinely deleted while confirming
       // Fresh clock: the confirm may have sat open longer than the repeat
       // interval — advancing from the stale tick time would leave startTime
       // in the past and refire within 15s (double mission_start).
-      advanceSchedule(s, Date.now());
+      advanceSchedule(current, Date.now());
       persistSchedules();
     }
   } finally {

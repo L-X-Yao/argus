@@ -917,7 +917,6 @@ const messages: Record<string, string> = {
   'sched.empty': 'Sem missões agendadas',
   'sched.hint': 'Agende missões recorrentes (drone em caixa). A execução automatizada requer um serviço backend.',
   'sched.status.pending': 'Pendente',
-  'sched.status.active': 'Ativa',
   'sched.status.completed': 'Concluída',
   'posSource.title': 'Fontes de posição',
   'posSource.sources': 'Fontes de posição',

@@ -114,16 +114,32 @@ describe('fireSchedule', () => {
   });
 
   it('starts the mission only after a confirmed dialog', async () => {
-    await fireSchedule(sched({}));
+    const r = await fireSchedule(sched({}));
+    expect(r).toBe('fired');
     expect(showConfirm).toHaveBeenCalledOnce();
     expect(dispatch).toHaveBeenCalledWith('mission_start');
   });
 
   it('declined confirm sends nothing', async () => {
     vi.mocked(showConfirm).mockResolvedValueOnce(false);
-    await fireSchedule(sched({}));
+    (confirmState as { visible: boolean }).visible = false; // genuine decline
+    const r = await fireSchedule(sched({}));
+    expect(r).toBe('declined');
     expect(dispatch).not.toHaveBeenCalled();
     expect(addToast).toHaveBeenCalledWith('sched.skippedDeclined', 'info');
+  });
+
+  it('stolen dialog returns "stolen" and shows no skip toast', async () => {
+    // showConfirm's steal path resolves false but leaves a (different) dialog
+    // visible. fireSchedule must report 'stolen' so the caller does NOT advance
+    // the schedule — else an unrelated RTL/clear confirm silently drops it.
+    vi.mocked(showConfirm).mockResolvedValueOnce(false);
+    (confirmState as { visible: boolean }).visible = true;
+    const r = await fireSchedule(sched({}));
+    expect(r).toBe('stolen');
+    expect(dispatch).not.toHaveBeenCalled();
+    expect(addToast).not.toHaveBeenCalled();
+    (confirmState as { visible: boolean }).visible = false;
   });
 
   it('autoArm arms first (2s settle) then starts', async () => {
@@ -187,6 +203,21 @@ describe('scheduler tick', () => {
     await vi.advanceTimersByTimeAsync(15000);
     expect(showConfirm).not.toHaveBeenCalled();
     expect(schedulerState.schedules[0].status).toBe('pending');
+  });
+
+  it('a stolen confirm leaves the schedule pending, not completed', async () => {
+    // Regression (bug_007): a stolen dialog must not silently mark a due 'once'
+    // schedule completed — it was never actually offered to the user.
+    vi.mocked(showConfirm).mockImplementationOnce(async () => {
+      (confirmState as { visible: boolean }).visible = true; // a thief's dialog is up
+      return false;
+    });
+    seed({ startTime: '2020-01-01T00:00' });
+    startScheduler();
+    await vi.advanceTimersByTimeAsync(15000);
+    expect(schedulerState.schedules[0].status).toBe('pending');
+    expect(dispatch).not.toHaveBeenCalledWith('mission_start');
+    (confirmState as { visible: boolean }).visible = false;
   });
 
   it('defers when another confirm dialog is already open', async () => {

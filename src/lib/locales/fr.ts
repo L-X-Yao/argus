@@ -918,7 +918,6 @@ const messages: Record<string, string> = {
   'sched.hint':
     "Planifier des missions récurrentes (drone-in-a-box). L'exécution automatique nécessite un service backend.",
   'sched.status.pending': 'En attente',
-  'sched.status.active': 'Actif',
   'sched.status.completed': 'Terminé',
   'posSource.title': 'Sources de position',
   'posSource.sources': 'Sources de position',
