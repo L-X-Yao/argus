@@ -11,9 +11,13 @@
  */
 import type { MessageHandlers } from './mavlink';
 import { app, addEvent, addToast } from './stores.svelte';
-import { t } from './i18n.svelte';
+import { t, i18nState } from './i18n.svelte';
+import { getModeName, vehicleType } from './modeStore';
 
 export function buildSerialHandlers(): Partial<MessageHandlers> {
+  // One-shot per connection, like the backend's _unsupported_fc_warned
+  // (reset on connect) — a mixed AP+GCS link must not toast every second.
+  let warnedUnsupported = false;
   return {
     onHeartbeat: (msg) => {
       if (!app.drone.connected) {
@@ -23,6 +27,23 @@ export function buildSerialHandlers(): Partial<MessageHandlers> {
       app.drone.vtype_raw = msg.type;
       app.drone.armed = (msg.baseMode & 128) !== 0;
       app.drone.mode_id = msg.customMode;
+      // Localized mode NAME — the WS path pushes get_state()'s "mode"
+      // (backend _get_vehicle_info: vtype → table → locale) and StatusBar
+      // reads it; until 2026-07-14 serial mode left it blank forever.
+      app.drone.mode = getModeName(vehicleType(msg.type), msg.customMode, i18nState.locale === 'zh' ? 'zh' : 'en');
+      // Autopilot latch mirrors backend handle_heartbeat
+      // (mavlink_handlers.py:49-51): ignore 0 (GENERIC/uninit) and 8
+      // (INVALID — GCS/relay heartbeats), latch anything else. transport.ts
+      // dispatch() refuses FC-bound serial commands while a non-ArduPilot
+      // value (not 0/3) is latched, mirroring commands.execute().
+      if (msg.autopilot > 0 && msg.autopilot !== 8 && msg.autopilot !== app.drone.autopilot) {
+        app.drone.autopilot = msg.autopilot;
+        if (msg.autopilot !== 3 && !warnedUnsupported) {
+          warnedUnsupported = true;
+          const name = msg.autopilot === 12 ? 'PX4' : `autopilot=${msg.autopilot}`;
+          addToast(t('conn.unsupportedFc').replace('{fc}', name), 'error', 10000);
+        }
+      }
     },
     onGlobalPositionInt: (msg) => {
       app.drone.lat = msg.lat;

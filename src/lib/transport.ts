@@ -255,7 +255,10 @@ function requestStreams(): void {
     [6, 10], // POSITION — GLOBAL_POSITION_INT at 10Hz (was 5Hz)
     [10, 10], // EXTRA1 — ATTITUDE at 10Hz (was 2Hz)
     [11, 2], // EXTRA2 — VFR_HUD
-    [12, 2], // EXTRA3 — VIBRATION, EKF_STATUS
+    // EXTRA3 also carries MAG_CAL_PROGRESS/REPORT (STREAM_EXTRA3_msgs in
+    // AP libraries/GCS_MAVLink/GCS_MAVLink_Parameters.cpp) — this stream
+    // request is what makes compass-cal progress reach the WebSerial path.
+    [12, 2], // EXTRA3 — VIBRATION, EKF_STATUS, MAG_CAL_*
   ];
   for (const [id, rate] of streams) {
     sendSerialFrame(66, encodeRequestDataStream(serial.targetSysId, serial.targetCompId, id, rate, 1));
@@ -499,6 +502,18 @@ const _serialDispatch: Record<string, CmdHandler> = {
  */
 export function dispatch(name: string, param?: number, data?: Record<string, unknown>): void {
   if (isSerialConnected()) {
+    // Mirror backend commands.execute (commands/__init__.py:153-155): once a
+    // non-ArduPilot autopilot is latched (0 = not yet known, 3 = ArduPilot),
+    // refuse FC-bound commands — every _serialDispatch entry is ArduPilot-
+    // specific (mode ids, cal handshakes, command params). The latch itself
+    // is set by the serial heartbeat handler (serialHandlers.ts).
+    const ap = app.drone?.autopilot;
+    // null/undefined = store not initialized yet — same as 0 (not latched).
+    if (ap != null && ap !== 0 && ap !== 3) {
+      const fcName = ap === 12 ? 'PX4' : `autopilot=${ap}`;
+      addToast(t('conn.unsupportedFc').replace('{fc}', fcName), 'error', 5000);
+      return;
+    }
     const handler = _serialDispatch[name];
     if (handler) { handler(param, data); return; }
   }

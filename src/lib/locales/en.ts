@@ -517,6 +517,7 @@ const messages: Record<string, string> = {
   'conn.serialFailed': 'USB connection failed',
   'conn.serialBusy': 'Disconnect USB direct first to use the network link',
   'conn.serialLost': 'Serial connection lost',
+  'conn.unsupportedFc': 'Non-ArduPilot FC ({fc}): commands are ArduPilot-only and have been disabled',
   'conn.wsBusy': 'Disconnect the network link first to use USB direct',
   'auth.title': 'Authentication',
   'auth.tokenLabel': 'Access Token',

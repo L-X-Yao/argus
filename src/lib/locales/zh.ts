@@ -517,6 +517,7 @@ const messages: Record<string, string> = {
   'conn.serialFailed': 'USB 连接失败',
   'conn.serialBusy': '请先断开 USB 直连再使用网络连接',
   'conn.serialLost': '串口连接丢失',
+  'conn.unsupportedFc': '非 ArduPilot 飞控({fc}):指令均按 ArduPilot 实现,已禁用',
   'conn.wsBusy': '请先断开网络连接再使用 USB 直连',
   'auth.title': '身份验证',
   'auth.tokenLabel': '访问令牌',

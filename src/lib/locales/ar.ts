@@ -1055,6 +1055,7 @@ const messages: Record<string, string> = {
   'poi.dronePos': 'موقع الطائرة',
   'wp.gen': 'إنشاء',
   'conn.serialLost': 'اتصال السلسلة مفقود',
+  'conn.unsupportedFc': 'وحدة تحكم غير ArduPilot ({fc}): الأوامر خاصة بـ ArduPilot وتم تعطيلها',
   'theme.dark': 'داكن',
   'theme.light': 'فاتح',
   'overlap.trigger': 'مسافة التصوير',

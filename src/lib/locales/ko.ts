@@ -1055,6 +1055,7 @@ const messages: Record<string, string> = {
   'poi.dronePos': '드론 위치',
   'wp.gen': '생성',
   'conn.serialLost': '시리얼 연결 끊김',
+  'conn.unsupportedFc': 'ArduPilot이 아닌 FC({fc}): 명령은 ArduPilot 전용이므로 비활성화되었습니다',
   'theme.dark': '다크',
   'theme.light': '라이트',
   'overlap.trigger': '촬영 간격',

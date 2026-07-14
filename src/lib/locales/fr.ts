@@ -1060,6 +1060,7 @@ const messages: Record<string, string> = {
   'poi.dronePos': 'Position du drone',
   'wp.gen': 'Générer',
   'conn.serialLost': 'Connexion série perdue',
+  'conn.unsupportedFc': 'FC non-ArduPilot ({fc}) : les commandes sont spécifiques à ArduPilot et ont été désactivées',
   'theme.dark': 'Sombre',
   'theme.light': 'Clair',
   'overlap.trigger': 'Déclenchement',

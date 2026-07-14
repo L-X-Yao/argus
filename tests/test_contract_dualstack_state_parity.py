@@ -37,36 +37,12 @@ from pathlib import Path
 import pytest
 from pymavlink.dialects.v20 import ardupilotmega as mavlink
 
+from backend import mavlink_dispatch
 from backend.drone_link import DroneLink
-from backend.mavlink_handlers import (
-    handle_attitude,
-    handle_global_position_int,
-    handle_gps_raw_int,
-    handle_heartbeat,
-    handle_home_position,
-    handle_raw_imu,
-    handle_rc_channels,
-    handle_sys_status,
-    handle_vfr_hud,
-    handle_vibration,
-)
 
 ROOT = Path(__file__).resolve().parent.parent
 FIXTURE = json.loads((ROOT / "tests" / "fixtures" / "parity_frames.json").read_text(encoding="utf-8"))
 FRAMES = {f["id"]: f for f in FIXTURE["frames"]}
-
-_HANDLERS = {
-    0: handle_heartbeat,
-    1: handle_sys_status,
-    24: handle_gps_raw_int,
-    27: handle_raw_imu,
-    30: handle_attitude,
-    33: handle_global_position_int,
-    65: handle_rc_channels,
-    74: handle_vfr_hud,
-    241: handle_vibration,
-    242: handle_home_position,
-}
 
 # Absolute tolerances sized to get_state()'s rounding quantum (half step + slack).
 _TOL = {
@@ -102,12 +78,18 @@ def state_dump(tmp_path_factory) -> dict[str, dict]:
 def _backend_state(spec: dict) -> dict:
     frame = bytes.fromhex(spec["hex"])
     mid = frame[7] | (frame[8] << 8) | (frame[9] << 16)
-    handler = _HANDLERS.get(mid)
-    assert handler is not None, f"{spec['id']}: no backend handler mapped for msg id {mid}"
     pl = frame[1]
-    payload = frame[10 : 10 + pl] + b"\x00" * (256 - pl)
-    link = DroneLink()
+    # Exact trimmed payload, like production _process — NOT zero-padded. Four
+    # fixture frames arrive MAVLink2-trimmed; padding here would hide a
+    # handler that forgot its _pad() call.
+    payload = frame[10 : 10 + pl]
+    link = DroneLink()  # constructing it registers the production dispatch table
+    link.locale = "en"  # get_state "mode" is localized; TS dump runs en
     link._raw_sysid = 1  # heartbeat handler copies the frame's sysid from here
+    # Resolve through the REAL registry, not a hand-copied handler map that
+    # could go stale against init_handlers().
+    handler = mavlink_dispatch._handlers.get(mid)
+    assert handler is not None, f"{spec['id']}: msg id {mid} not in production dispatch registry"
     handler(payload, pl, link)
     return link.get_state()
 
