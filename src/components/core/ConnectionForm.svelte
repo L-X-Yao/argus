@@ -1,10 +1,11 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { app, addToast, addEvent } from '../../lib/stores.svelte';
+  import { app, addToast } from '../../lib/stores.svelte';
   import { sendConnect, sendDisconnect } from '../../lib/ws';
   import { t } from '../../lib/i18n.svelte';
   import { apiUrl } from '../../lib/backend';
   import { webSerialAvailable, connectSerial, disconnectSerial, isSerialConnected } from '../../lib/transport';
+  import { buildSerialHandlers } from '../../lib/serialHandlers';
   import Button from '$lib/components/ui/button/button.svelte';
   import { Usb } from '@lucide/svelte';
 
@@ -148,64 +149,9 @@
     app.activeTransport = 'serial';
     serialConnecting = true;
     try {
-      const ok = await connectSerial(115200, {
-        onHeartbeat: (msg) => {
-          if (!app.drone.connected) {
-            app.drone.connected = true;
-            addToast(t('conn.serialConnected'), 'success');
-          }
-          app.drone.vtype_raw = msg.type;
-          app.drone.armed = (msg.baseMode & 128) !== 0;
-          app.drone.mode_id = msg.customMode;
-        },
-        onGlobalPositionInt: (msg) => {
-          app.drone.lat = msg.lat;
-          app.drone.lon = msg.lon;
-          app.drone.alt_msl = msg.altMsl;
-          app.drone.alt_rel = msg.altRel;
-          app.drone.vz = -msg.vz;
-          app.drone.hdg = msg.hdg;
-        },
-        onAttitude: (msg) => {
-          app.drone.roll = msg.roll;
-          app.drone.pitch = msg.pitch;
-          app.drone.yaw = msg.yaw;
-        },
-        onSysStatus: (msg) => {
-          app.drone.voltage = msg.voltage;
-          app.drone.current = msg.current;
-          app.drone.remaining = msg.remaining;
-        },
-        onGpsRawInt: (msg) => {
-          app.drone.gps_fix_raw = msg.fixType;
-          app.drone.gps_sats = msg.sats;
-        },
-        onVfrHud: (msg) => {
-          app.drone.gs = msg.groundspeed;
-        },
-        onRcChannels: (msg) => {
-          app.drone.rc = msg.channels;
-          app.drone.rc_rssi = msg.rssi;
-        },
-        onVibration: (msg) => {
-          app.drone.vibe = [msg.x, msg.y, msg.z];
-          app.drone.vibe_clip = [msg.clip0, msg.clip1, msg.clip2];
-        },
-        onRawImu: (msg) => {
-          // RAW_SENSORS stream is already requested at connect — this keeps
-          // the compass-cal sphere fed on the WebSerial path too.
-          app.drone.mag = [msg.xmag, msg.ymag, msg.zmag];
-        },
-        onHomePosition: (msg) => {
-          app.drone.home_lat = msg.lat;
-          app.drone.home_lon = msg.lon;
-        },
-        onStatusText: (msg) => {
-          // Use addEvent so the 200-entry cap in stores.svelte applies; a direct
-          // push would let serial-mode events grow unbounded.
-          addEvent({ type: 'event', time: new Date().toLocaleTimeString(), text: msg.text, event_type: 'statustext' });
-        },
-      });
+      // Telemetry→store mapping lives in serialHandlers.ts so the dual-stack
+      // state-parity contract can drive the real code.
+      const ok = await connectSerial(115200, buildSerialHandlers());
       if (!ok) {
         addToast(t('conn.serialFailed'), 'error');
         app.activeTransport = 'none';
