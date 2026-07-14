@@ -1,21 +1,15 @@
 <script lang="ts">
   import { app, addToast } from '../../lib/stores.svelte';
   import { dispatch } from '../../lib/transport';
-  import { isSerialConnected, serialSendCommandLong, serialGimbalPitchYaw } from '../../lib/transport';
   import { t } from '../../lib/i18n.svelte';
 
-  // Route gimbal_angle (MAV_CMD_DO_MOUNT_CONTROL 205, COMMAND_LONG) and the
-  // new gimbal_pitchyaw (MAV_CMD_DO_GIMBAL_MANAGER_PITCHYAW 1000, COMMAND_INT)
-  // through the WebSerial transport when active. camera_* / do_set_roi
-  // remain WS-only — they're not on the WebSerial expansion line yet.
+  // All gimbal/camera/ROI commands go through dispatch(): its table carries
+  // the WebSerial-native handlers (with backend-parity validation) and falls
+  // back to the WS backend otherwise. Calling serialSendCommandLong directly
+  // here would bypass those guards — the parity harness assumes dispatch()
+  // is the single entry point.
   function sendGimbalAngle(pitch: number, yaw: number): void {
-    if (isSerialConnected()) {
-      // p1=pitch, p3=yaw, p7=2 (MAV_MOUNT_MODE_MAVLINK_TARGETING) — mirrors
-      // backend cmd_gimbal_angle at backend/commands/_hardware.py:136-141.
-      serialSendCommandLong(205, pitch, 0, yaw, 0, 0, 0, 2);
-    } else {
-      dispatch('gimbal_angle', undefined, { pitch, yaw });
-    }
+    dispatch('gimbal_angle', undefined, { pitch, yaw });
   }
   function sendGimbalPitchYaw(data: {
     pitch?: number;
@@ -24,8 +18,7 @@
     yaw_rate?: number;
     flags?: number;
   }): void {
-    if (isSerialConnected()) serialGimbalPitchYaw(data);
-    else dispatch('gimbal_pitchyaw', undefined, data);
+    dispatch('gimbal_pitchyaw', undefined, data);
   }
   import { X, Aperture, Camera, Video, VideoOff, ZoomIn, Crosshair, RotateCcw } from '@lucide/svelte';
   import Button from '$lib/components/ui/button/button.svelte';

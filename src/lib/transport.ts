@@ -317,6 +317,13 @@ export function serialSendPositionTargetGlobal(lat: number, lon: number, alt: nu
  * capable command = one line here, no switch/case to maintain.
  */
 type CmdHandler = (param?: number, data?: Record<string, unknown>) => void;
+
+// Coerce a numeric field the way the backend does: undefined falls back to
+// the default (dict.get), everything else goes through Number() — with null
+// mapped to NaN because Python float(None)/int(None) raises and the backend
+// error-drops the whole command (a `?? default` here would silently
+// substitute a value instead). NaN then fails every range check below.
+const num = (v: unknown, dflt: number): number => (v === undefined ? dflt : v === null ? NaN : Number(v));
 const _serialDispatch: Record<string, CmdHandler> = {
   arm: () => serialSendArm(),
   disarm: () => serialSendDisarm(),
@@ -330,11 +337,11 @@ const _serialDispatch: Record<string, CmdHandler> = {
   // MAV_CMD_NAV_TAKEOFF (22): p7=alt. AP source ArduPlane/quadplane.cpp:3948 (QuadPlane::do_user_takeoff)
   // rejects unless control_mode == mode_guided — switch Plane to GUIDED (15) first to match backend cmd_takeoff.
   takeoff: (_, d) => {
-    const alt = (d?.alt as number) ?? 30;
+    const alt = num(d?.alt, 30);
     // Bounds mirror backend cmd_takeoff (_flight.py:47-49), and run BEFORE
     // the Plane mode switch so an invalid alt doesn't leak a bare GUIDED
     // transition the backend path would never have sent.
-    if (!Number.isFinite(alt) || alt < 1 || alt > 1000) return;
+    if (!(alt >= 1 && alt <= 1000)) return;
     if (_isPlane()) serialSendMode(15);
     serialSendCommandLong(22, 0, 0, 0, 0, 0, 0, alt);
   },
@@ -357,7 +364,10 @@ const _serialDispatch: Record<string, CmdHandler> = {
   // accurate mapping. Falls back to `wp_index + 2` when no map exists, matching backend cmd_mission_set_current
   // (commands/_mission.py:47-52) — that fallback is wrong when speed inserts exist, but at least it doesn't divert to HOME.
   mission_set_current: (_, d) => {
-    const wpIndex = (d?.wp_index as number) ?? 0;
+    // Math.trunc mirrors backend int(); NaN (incl. null input) drops like
+    // the backend's int(None) TypeError → error-drop.
+    const wpIndex = Math.trunc(num(d?.wp_index, 0));
+    if (!Number.isFinite(wpIndex)) return;
     const seq = _wpToSeq.get(wpIndex) ?? wpIndex + 2;
     serialMissionSetCurrent(seq);
   },
@@ -374,9 +384,9 @@ const _serialDispatch: Record<string, CmdHandler> = {
   // Validation mirrors backend's coord bounds — silently drop on invalid (matches motor_test pattern; the dispatch
   // table has no error-return path, but NaN/zero would write a (0,0) "Null Island" waypoint).
   guided_goto: (_, d) => {
-    const lat = (d?.lat as number) ?? 0;
-    const lon = (d?.lon as number) ?? 0;
-    const alt = (d?.alt as number) ?? 30;
+    const lat = num(d?.lat, 0);
+    const lon = num(d?.lon, 0);
+    const alt = num(d?.alt, 30);
     if (!Number.isFinite(lat) || !Number.isFinite(lon) || !Number.isFinite(alt)) return;
     if (Math.abs(lat) < 0.001 && Math.abs(lon) < 0.001) return;
     if (lat < -90 || lat > 90 || lon < -180 || lon > 180 || alt < -500 || alt > 100000) return;
@@ -386,8 +396,15 @@ const _serialDispatch: Record<string, CmdHandler> = {
   // MAV_CMD_DO_SET_ROI (201) with p1=3 = ROI_LOCATION mode. cmd 197 is DO_SET_ROI_NONE per common.xml —
   // it CLEARS the ROI and ignores lat/lon, so the previous wiring made setRoi() and clearRoi() identical.
   // AP source: AP_Mount handle_command DO_SET_ROI branch in libraries/AP_Mount/AP_Mount.cpp.
-  do_set_roi: (_, d) => serialSendCommandLong(201, 3, 0, 0, 0,
-    (d?.lat as number) ?? 0, (d?.lon as number) ?? 0, (d?.alt as number) ?? 0),
+  do_set_roi: (_, d) => {
+    const lat = num(d?.lat, 0);
+    const lon = num(d?.lon, 0);
+    const alt = num(d?.alt, 0);
+    // lat/lon bounds mirror backend cmd_do_set_roi (_hardware.py:220-226);
+    // (0,0) stays legal — it is the ROI-clear convention.
+    if (!(lat >= -90 && lat <= 90) || !(lon >= -180 && lon <= 180) || !Number.isFinite(alt)) return;
+    serialSendCommandLong(201, 3, 0, 0, 0, lat, lon, alt);
+  },
   param_set: (_, d) => serialSendParamSet(d?.name as string, d?.value as number),
   param_request_all: () => serialSendParamRequestAll(),
   // MAV_CMD_PREFLIGHT_STORAGE (245), p1=1: write running params to FC NVRAM. AP source: GCS_MAVLINK::handle_command_preflight_storage.
@@ -399,14 +416,23 @@ const _serialDispatch: Record<string, CmdHandler> = {
   reboot_bootloader: () => serialSendCommandLong(246, 3),
   rc_override: (_, d) => {
     const ch = d?.channels as number[];
-    // Backend cmd_rc_override (_hardware.py:100-103) refuses lists shorter
+    // Backend cmd_rc_override (_hardware.py:100-111) refuses lists shorter
     // than 8 channels rather than zero-filling: an accidental short array
     // would otherwise RELEASE channels 2..8 back to RC (0 = release) on a
-    // live vehicle. All production callers (gamepad, EscCalPanel) send all 8.
+    // live vehicle. Same for a null/non-numeric ELEMENT (backend int(None)
+    // raises → whole command error-drops), and in-range coercion clamps to
+    // u16 like the backend's max(0, min(65535, ...)) instead of wrapping.
+    // All production callers (gamepad, EscCalPanel) send all 8 as ints.
     if (ch && ch.length >= 8) {
+      const vals: number[] = [];
+      for (let i = 0; i < 8; i++) {
+        const v = ch[i] == null ? NaN : Number(ch[i]);
+        if (!Number.isFinite(v)) return;
+        vals.push(Math.max(0, Math.min(65535, Math.trunc(v))));
+      }
       const payload = new Uint8Array(18);
       const dv = new DataView(payload.buffer);
-      for (let i = 0; i < 8; i++) dv.setUint16(i * 2, ch[i] ?? 0, true);
+      for (let i = 0; i < 8; i++) dv.setUint16(i * 2, vals[i], true);
       dv.setUint8(16, serial.targetSysId);
       dv.setUint8(17, serial.targetCompId);
       sendSerialFrame(70, payload);
@@ -424,8 +450,8 @@ const _serialDispatch: Record<string, CmdHandler> = {
   gimbal_pitchyaw: (_, d) => serialGimbalPitchYaw(d as Parameters<typeof serialGimbalPitchYaw>[0]),
   // MAV_CMD_DO_MOUNT_CONTROL (205): p1=pitch, p3=yaw, p7=MAV_MOUNT_MODE_MAVLINK_TARGETING (2). AP source: AP_Mount.cpp:363-417.
   gimbal_angle: (_, d) => {
-    const pitch = (d?.pitch as number) ?? 0;
-    const yaw = (d?.yaw as number) ?? 0;
+    const pitch = num(d?.pitch, 0);
+    const yaw = num(d?.yaw, 0);
     // Bounds mirror backend cmd_gimbal_angle (_hardware.py:141-146); NaN
     // fails the range check and drops, same as the backend's float(nan).
     if (!(pitch >= -90 && pitch <= 90) || !(yaw >= -180 && yaw <= 180)) return;
@@ -442,7 +468,7 @@ const _serialDispatch: Record<string, CmdHandler> = {
   // Default 1 and bounds 0.1..100 mirror backend cmd_camera_zoom
   // (_hardware.py:213-217); the previous `?? 0` default silently diverged.
   camera_zoom: (_, d) => {
-    const zoom = (d?.zoom as number) ?? 1;
+    const zoom = num(d?.zoom, 1);
     if (!(zoom >= 0.1 && zoom <= 100)) return;
     serialSendCommandLong(531, 1, zoom);
   },
@@ -450,12 +476,14 @@ const _serialDispatch: Record<string, CmdHandler> = {
   // ArduPilot: GCS_MAVLink_Copter.cpp:702 — GCS_MAVLINK_Copter::handle_command_long_packet
   // Bounds match backend/commands/_hardware.py:120-127 — drop silently rather than blast FC with bad values.
   motor_test: (_, d) => {
-    const motor = (d?.motor as number) ?? 0;
-    const throttle = (d?.throttle as number) ?? 5;
-    const duration = (d?.duration as number) ?? 2;
-    if (motor < 0 || motor > 7) return;
-    if (throttle < 0 || throttle > 100) return;
-    if (duration <= 0 || duration > 30) return;
+    // Math.trunc(motor) mirrors backend int(); positive-form bounds so NaN
+    // (incl. null input) drops instead of slipping past `< 0 || > 7`.
+    const motor = Math.trunc(num(d?.motor, 0));
+    const throttle = num(d?.throttle, 5);
+    const duration = num(d?.duration, 2);
+    if (!(motor >= 0 && motor <= 7)) return;
+    if (!(throttle >= 0 && throttle <= 100)) return;
+    if (!(duration > 0 && duration <= 30)) return;
     serialSendCommandLong(209, motor + 1, 0, throttle, duration, 1);
   },
   motor_test_stop: () => {
@@ -480,6 +508,13 @@ export function dispatch(name: string, param?: number, data?: Record<string, unk
 /** @deprecated Use dispatch() instead */
 export const flightCmd = dispatch;
 
+/** True when `name` has a WebSerial-native handler. Used by the parity
+ * harness to reject typo'd op names that would otherwise pass vacuously
+ * (unknown names fall through to the WS backend and emit no serial frame). */
+export function hasSerialHandler(name: string): boolean {
+  return name in _serialDispatch;
+}
+
 /**
  * Gimbal pitch/yaw: wraps the COMMAND_INT (msg 75) path the gimbal manager
  * handler expects. Mirrors backend cmd_gimbal_pitchyaw at
@@ -501,17 +536,20 @@ export function serialGimbalPitchYaw(data: {
   const yaw = f(data.yaw);
   const pitchRate = f(data.pitch_rate);
   const yawRate = f(data.yaw_rate);
-  const flags = Number(data.flags ?? 0);
-  const instance = Number(data.instance ?? 0);
+  // Math.trunc mirrors backend int(); null → NaN (int(None) raises there).
+  const flags = Math.trunc(num(data.flags, 0));
+  const instance = Math.trunc(num(data.instance, 0));
 
   // Range validation mirrors backend cmd_gimbal_pitchyaw (_hardware.py:179-193):
-  // NaN means "skip this slot" and passes; a finite out-of-range value drops
-  // the whole command rather than clamping.
+  // NaN means "skip this slot" for the four angle/rate params; a finite
+  // out-of-range value drops the whole command rather than clamping. flags
+  // and instance are NOT skippable — NaN there must drop, hence the
+  // positive-form bounds.
   const inRange = (v: number, lo: number, hi: number): boolean => Number.isNaN(v) || (v >= lo && v <= hi);
   if (!inRange(pitch, -90, 90) || !inRange(yaw, -180, 180) ||
       !inRange(pitchRate, -180, 180) || !inRange(yawRate, -180, 180)) return;
-  if (flags < -0x80000000 || flags > 0x7fffffff) return;
-  if (instance < 0 || instance > 6) return;
+  if (!(flags >= -0x80000000 && flags <= 0x7fffffff)) return;
+  if (!(instance >= 0 && instance <= 6)) return;
 
   const payload = new Uint8Array(35);
   const dv = new DataView(payload.buffer);

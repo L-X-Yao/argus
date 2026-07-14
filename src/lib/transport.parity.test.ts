@@ -77,6 +77,7 @@ vi.mock('./ws', () => ({ sendCommand: vi.fn() }));
 import {
   connectSerial,
   dispatch,
+  hasSerialHandler,
   serialLogList,
   serialLogDownload,
   serialDownloadMission,
@@ -109,11 +110,6 @@ const fixturePath = fileURLToPath(new URL('../../tests/fixtures/parity_ops.json'
 const fixture: ParityFixture = JSON.parse(readFileSync(fixturePath, 'utf-8'));
 
 const msgIdOf = (frame: Uint8Array): number => frame[7] | (frame[8] << 8) | (frame[9] << 16);
-// Boot-time chatter (GCS heartbeat msg 0, REQUEST_DATA_STREAM msg 66) rides
-// the same port; every op's capture filters it out except the heartbeat op,
-// which exists precisely to compare that boot frame against the backend's.
-const appFrames = (all: Uint8Array[]): Uint8Array[] =>
-  all.filter((w) => msgIdOf(w) !== 0 && msgIdOf(w) !== 66);
 const toHex = (frames: Uint8Array[]): string[] =>
   frames.map((f) => Array.from(f).map((b) => b.toString(16).padStart(2, '0')).join(''));
 
@@ -131,9 +127,9 @@ async function driveUpload(
   missionType: number,
 ): Promise<{ ok: boolean; error?: string }> {
   const done = start();
-  // The MISSION_COUNT frame is the first app frame; its count field (u16 @0)
+  // The MISSION_COUNT frame is the first frame; its count field (u16 @0)
   // tells us how many MISSION_REQUEST_INTs to play back as the FC.
-  const countFrame = appFrames(H.writes)[0];
+  const countFrame = H.writes[0];
   expect(countFrame, 'upload sent no MISSION_COUNT').toBeDefined();
   expect(msgIdOf(countFrame)).toBe(44);
   const count = countFrame[10] | (countFrame[11] << 8);
@@ -146,7 +142,7 @@ describe('dual-stack parity dump', () => {
   it('captures wire frames for every fixture op', async () => {
     vi.useFakeTimers();
     const dump: Record<string, string[]> = {};
-
+    try {
     H.writes.length = 0;
     const ok = await connectSerial(115200, {});
     expect(ok).toBe(true);
@@ -154,10 +150,19 @@ describe('dual-stack parity dump', () => {
     await vi.advanceTimersByTimeAsync(1000);
     const bootHeartbeat = H.writes.find((w) => msgIdOf(w) === 0);
     expect(bootHeartbeat, 'no boot heartbeat captured').toBeDefined();
+    // Kill the 1 Hz heartbeat interval: from here on, every captured frame
+    // must come from the op under test — no msgId-based filtering that could
+    // hide a command handler spuriously emitting heartbeat/stream frames.
+    vi.clearAllTimers();
 
     for (const op of fixture.ops) {
       H.isPlane = op.plane === true;
       H.writes.length = 0;
+      if (op.kind === 'dispatch') {
+        // A typo'd op name would fall through to the (mocked) WS backend and
+        // "pass" every zero-frame expectation — reject it up front.
+        expect(hasSerialHandler(op.op!), `op '${op.op}' not in _serialDispatch`).toBe(true);
+      }
 
       switch (op.kind) {
         case 'boot_heartbeat':
@@ -169,7 +174,7 @@ describe('dual-stack parity dump', () => {
           break;
         case 'log_list': {
           const p = serialLogList();
-          dump[op.id] = toHex(appFrames(H.writes));
+          dump[op.id] = toHex(H.writes);
           await vi.advanceTimersByTimeAsync(6000); // let the watchdog resolve
           await p;
           continue;
@@ -178,14 +183,14 @@ describe('dual-stack parity dump', () => {
           H.logList.list.length = 0;
           H.logList.list.push({ ...op.log_entry!, time_utc: 0 });
           const p = serialLogDownload(op.log_entry!.id);
-          dump[op.id] = toHex(appFrames(H.writes));
+          dump[op.id] = toHex(H.writes);
           await vi.advanceTimersByTimeAsync(6000);
           await p;
           continue;
         }
         case 'mission_download': {
           const p = serialDownloadMission();
-          dump[op.id] = toHex(appFrames(H.writes));
+          dump[op.id] = toHex(H.writes);
           await vi.advanceTimersByTimeAsync(6000);
           await p;
           continue;
@@ -206,9 +211,11 @@ describe('dual-stack parity dump', () => {
         default:
           throw new Error(`unknown op kind: ${op.kind}`);
       }
-      dump[op.id] = toHex(appFrames(H.writes));
+      dump[op.id] = toHex(H.writes);
     }
-    vi.useRealTimers();
+    } finally {
+      vi.useRealTimers();
+    }
 
     // Sanity: every op captured; parity/pinned counts are plausible. The
     // real field-by-field assertions live in the pytest side.

@@ -33,6 +33,7 @@ from __future__ import annotations
 import json
 import math
 import os
+import shutil
 import subprocess
 import time
 from pathlib import Path
@@ -59,17 +60,24 @@ OPS = {op["id"]: op for op in FIXTURE["ops"]}
 
 @pytest.fixture(scope="module")
 def serial_dump(tmp_path_factory) -> dict[str, list[str]]:
+    # Skip ONLY when the toolchain is genuinely absent (backend-only checkout).
+    # A present-but-broken dump must FAIL, not skip: CI installs node_modules
+    # before pytest (ci.yml), so a skip there would silently disable the whole
+    # parity contract exactly when it has something to say. `node vitest.mjs`
+    # instead of `npx vitest` keeps this hermetic (no network install) and
+    # works on Windows checkouts, where the .bin shims aren't exec()able.
+    vitest_mjs = ROOT / "node_modules" / "vitest" / "vitest.mjs"
+    node = shutil.which("node")
+    if node is None or not vitest_mjs.exists():
+        pytest.skip("node/vitest not installed — cannot run the TS wire dump")
     out = tmp_path_factory.mktemp("parity") / "dump.json"
     env = {**os.environ, "PARITY_DUMP_PATH": str(out)}
-    try:
-        result = subprocess.run(
-            ["npx", "vitest", "run", "src/lib/transport.parity.test.ts"],
-            capture_output=True, text=True, cwd=str(ROOT), timeout=180, env=env,
-        )
-    except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
-        pytest.skip(f"vitest not runnable: {exc}")
+    result = subprocess.run(
+        [node, str(vitest_mjs), "run", "src/lib/transport.parity.test.ts"],
+        capture_output=True, text=True, cwd=str(ROOT), timeout=180, env=env,
+    )
     if result.returncode != 0 or not out.exists():
-        pytest.skip(f"vitest dump failed: {(result.stderr or result.stdout)[-400:]}")
+        pytest.fail(f"vitest wire dump failed:\n{(result.stderr or result.stdout)[-1500:]}")
     return json.loads(out.read_text(encoding="utf-8"))
 
 
@@ -194,6 +202,10 @@ class TestDualStackParity:
     @pytest.mark.parametrize("op_id", _ids("both_drop"))
     def test_both_drop(self, op_id: str, serial_dump: dict):
         op = OPS[op_id]
+        # A typo'd op name would also produce zero frames on both sides —
+        # reject it so both_drop can't pass vacuously. (The vitest dump makes
+        # the same check against _serialDispatch via hasSerialHandler.)
+        assert op["op"] in commands._DISPATCH, f"{op_id}: unknown backend command {op['op']!r}"
         assert _backend_frames(op) == [], f"{op_id}: backend sent frames for invalid input"
         assert serial_dump[op_id] == [], f"{op_id}: serial sent frames for invalid input"
 
