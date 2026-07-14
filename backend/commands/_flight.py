@@ -57,6 +57,9 @@ def cmd_takeoff(link: DroneLink, param, data: dict):
 
 
 def cmd_drop(link: DroneLink, param, data: dict):
+    # MAV_CMD_DO_SET_RELAY (181): p1=relay instance, p2=state. AP source:
+    # GCS_Common.cpp:5848 → AP_ServoRelayEvents::do_set_relay
+    # (AP_ServoRelayEvents.cpp:70). Drop rig on relay 0, active-low.
     link.add_event(lt("drop_on", link.locale), "drop_on")
     send_cmd(link, 181, p1=0, p2=0)
 

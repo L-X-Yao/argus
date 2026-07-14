@@ -561,11 +561,9 @@ describe('_serialDispatch calibration + gimbal + RC wire bytes', () => {
     expect(rc.channels).toEqual([1500, 1600, 1700, 1800, 1000, 2000, 1234, 1899]);
   });
 
-  it('rc_override fills missing channels with 0 (release), not a stale value', () => {
+  it('rc_override drops short channel lists (backend parity — zero-fill would release ch2-8)', () => {
     dispatch('rc_override', undefined, { channels: [1500] });
-    const rc = decodeRcOverride(writes[0]);
-    expect(rc.channels[0]).toBe(1500);
-    expect(rc.channels.slice(1)).toEqual([0, 0, 0, 0, 0, 0, 0]);
+    expect(filterAppFrames(writes).length).toBe(0);
   });
 
   it('rc_override with no channels sends nothing', () => {

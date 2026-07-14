@@ -322,14 +322,21 @@ const _serialDispatch: Record<string, CmdHandler> = {
   disarm: () => serialSendDisarm(),
   // 21196 = force-bypass magic from MAV_CMD_COMPONENT_ARM_DISARM. AP source: AP_Arming::handle_aux_function.
   force_disarm: () => serialSendCommandLong(400, 0, 21196),
-  mode: (p) => serialSendMode(p!),
+  // Backend cmd_mode returns without sending when param is None — mirror that
+  // instead of coercing undefined to custom_mode 0 (= Copter STABILIZE).
+  mode: (p) => { if (p == null) return; serialSendMode(p); },
   // Plane RTL=11 (NOT 21=QRTL), Copter RTL=6. AP source: ArduPlane/mode.h, ArduCopter/mode.h `enum class Number`.
   rtl: () => serialSendMode(_isPlane() ? 11 : 6),
   // MAV_CMD_NAV_TAKEOFF (22): p7=alt. AP source ArduPlane/quadplane.cpp:3948 (QuadPlane::do_user_takeoff)
   // rejects unless control_mode == mode_guided — switch Plane to GUIDED (15) first to match backend cmd_takeoff.
   takeoff: (_, d) => {
+    const alt = (d?.alt as number) ?? 30;
+    // Bounds mirror backend cmd_takeoff (_flight.py:47-49), and run BEFORE
+    // the Plane mode switch so an invalid alt doesn't leak a bare GUIDED
+    // transition the backend path would never have sent.
+    if (!Number.isFinite(alt) || alt < 1 || alt > 1000) return;
     if (_isPlane()) serialSendMode(15);
-    serialSendCommandLong(22, 0, 0, 0, 0, 0, 0, (d?.alt as number) ?? 30);
+    serialSendCommandLong(22, 0, 0, 0, 0, 0, 0, alt);
   },
   // Backend cmd_mission_start: switch to AUTO, then send MAV_CMD_MISSION_START (300) after a delay.
   // Copter requires the explicit MISSION_START — switching to AUTO alone leaves it idle while disarmed-on-ground.
@@ -354,7 +361,11 @@ const _serialDispatch: Record<string, CmdHandler> = {
     const seq = _wpToSeq.get(wpIndex) ?? wpIndex + 2;
     serialMissionSetCurrent(seq);
   },
-  // MAV_CMD_DO_PARACHUTE (181). p2: 0=RELEASE, 1=DISABLE, 2=ENABLE. AP source: AP_Parachute::handle_msg.
+  // MAV_CMD_DO_SET_RELAY (181): p1=relay instance, p2=state. AP source:
+  // GCS_Common.cpp:5848 routes to AP_ServoRelayEvents::do_set_relay
+  // (AP_ServoRelayEvents.cpp:70). The payload-drop rig hangs off relay 0,
+  // active-low: drop=state 0, drop_stop=state 1. Mirrors backend cmd_drop.
+  // (Previously mislabeled DO_PARACHUTE — that is cmd 208.)
   drop: () => serialSendCommandLong(181, 0, 0),
   drop_stop: () => serialSendCommandLong(181, 0, 1),
   // SET_POSITION_TARGET_GLOBAL_INT (msg 86) with int32 lat/lon × 1e7 — cm-level precision vs MAV_CMD float32's 1-3m.
@@ -388,7 +399,11 @@ const _serialDispatch: Record<string, CmdHandler> = {
   reboot_bootloader: () => serialSendCommandLong(246, 3),
   rc_override: (_, d) => {
     const ch = d?.channels as number[];
-    if (ch) {
+    // Backend cmd_rc_override (_hardware.py:100-103) refuses lists shorter
+    // than 8 channels rather than zero-filling: an accidental short array
+    // would otherwise RELEASE channels 2..8 back to RC (0 = release) on a
+    // live vehicle. All production callers (gamepad, EscCalPanel) send all 8.
+    if (ch && ch.length >= 8) {
       const payload = new Uint8Array(18);
       const dv = new DataView(payload.buffer);
       for (let i = 0; i < 8; i++) dv.setUint16(i * 2, ch[i] ?? 0, true);
@@ -408,8 +423,14 @@ const _serialDispatch: Record<string, CmdHandler> = {
   log_cancel: () => serialLogCancel(),
   gimbal_pitchyaw: (_, d) => serialGimbalPitchYaw(d as Parameters<typeof serialGimbalPitchYaw>[0]),
   // MAV_CMD_DO_MOUNT_CONTROL (205): p1=pitch, p3=yaw, p7=MAV_MOUNT_MODE_MAVLINK_TARGETING (2). AP source: AP_Mount.cpp:363-417.
-  gimbal_angle: (_, d) => serialSendCommandLong(205,
-    (d?.pitch as number) ?? 0, 0, (d?.yaw as number) ?? 0, 0, 0, 0, 2),
+  gimbal_angle: (_, d) => {
+    const pitch = (d?.pitch as number) ?? 0;
+    const yaw = (d?.yaw as number) ?? 0;
+    // Bounds mirror backend cmd_gimbal_angle (_hardware.py:141-146); NaN
+    // fails the range check and drops, same as the backend's float(nan).
+    if (!(pitch >= -90 && pitch <= 90) || !(yaw >= -180 && yaw <= 180)) return;
+    serialSendCommandLong(205, pitch, 0, yaw, 0, 0, 0, 2);
+  },
   // MAV_CMD_DO_DIGICAM_CONTROL (203): p5=1 is the shoot command. Sending all zeros is a no-op AP_Camera ignores.
   // Mirrors backend cmd_camera_trigger (_hardware.py:198-202).
   camera_trigger: () => serialSendCommandLong(203, 0, 0, 0, 0, 1),
@@ -418,7 +439,13 @@ const _serialDispatch: Record<string, CmdHandler> = {
   camera_video_start: () => serialSendCommandLong(2500, 0, 0, 1),
   camera_video_stop: () => serialSendCommandLong(2501),
   // MAV_CMD_SET_CAMERA_ZOOM (531): p1=zoom_type (1=CAMERA_ZOOM_TYPE_CONTINUOUS), p2=zoom_value.
-  camera_zoom: (_, d) => serialSendCommandLong(531, 1, (d?.zoom as number) ?? 0),
+  // Default 1 and bounds 0.1..100 mirror backend cmd_camera_zoom
+  // (_hardware.py:213-217); the previous `?? 0` default silently diverged.
+  camera_zoom: (_, d) => {
+    const zoom = (d?.zoom as number) ?? 1;
+    if (!(zoom >= 0.1 && zoom <= 100)) return;
+    serialSendCommandLong(531, 1, zoom);
+  },
   // MAV_CMD_DO_MOTOR_TEST (209): p1=motor(1-based), p2=THROTTLE_PERCENT(0), p3=%, p4=duration, p5=count
   // ArduPilot: GCS_MAVLink_Copter.cpp:702 — GCS_MAVLINK_Copter::handle_command_long_packet
   // Bounds match backend/commands/_hardware.py:120-127 — drop silently rather than blast FC with bad values.
@@ -476,6 +503,15 @@ export function serialGimbalPitchYaw(data: {
   const yawRate = f(data.yaw_rate);
   const flags = Number(data.flags ?? 0);
   const instance = Number(data.instance ?? 0);
+
+  // Range validation mirrors backend cmd_gimbal_pitchyaw (_hardware.py:179-193):
+  // NaN means "skip this slot" and passes; a finite out-of-range value drops
+  // the whole command rather than clamping.
+  const inRange = (v: number, lo: number, hi: number): boolean => Number.isNaN(v) || (v >= lo && v <= hi);
+  if (!inRange(pitch, -90, 90) || !inRange(yaw, -180, 180) ||
+      !inRange(pitchRate, -180, 180) || !inRange(yawRate, -180, 180)) return;
+  if (flags < -0x80000000 || flags > 0x7fffffff) return;
+  if (instance < 0 || instance > 6) return;
 
   const payload = new Uint8Array(35);
   const dv = new DataView(payload.buffer);

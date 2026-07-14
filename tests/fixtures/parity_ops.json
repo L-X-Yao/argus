@@ -10,9 +10,12 @@
     "Other kinds are choreographed flows implemented in code on both sides.",
     "expect: 'parity' = decoded frames must match field-by-field;",
     "        'both_drop' = both sides must emit zero frames;",
-    "        'pinned_divergence' = current behavior differs BY POLICY — the",
-    "        harness pins today's frame counts on each side so any change",
-    "        (either a fix or a new drift) resurfaces for an explicit decision."
+    "        'pinned_divergence' = behavior differs BY POLICY — pins today's",
+    "        frame counts on each side so any change (fix or new drift)",
+    "        resurfaces for an explicit decision. The 6 divergences found",
+    "        when the harness was built (2026-07-14) were aligned to the",
+    "        backend's validation policy the same day and are now both_drop;",
+    "        the mechanism stays for whatever the harness finds next."
   ],
   "golden_waypoints": [
     {"lat": 34.258, "lon": 108.942, "alt": 50, "type": "wp", "speed": 5, "delay": 0, "drop": false, "loiter_param": 0},
@@ -70,6 +73,7 @@
     {"id": "camera_video_start", "kind": "dispatch", "op": "camera_video_start", "expect": "parity"},
     {"id": "camera_video_stop", "kind": "dispatch", "op": "camera_video_stop", "expect": "parity"},
     {"id": "camera_zoom", "kind": "dispatch", "op": "camera_zoom", "data": {"zoom": 50}, "expect": "parity"},
+    {"id": "camera_zoom_default", "kind": "dispatch", "op": "camera_zoom", "data": {}, "expect": "parity"},
     {"id": "motor_test", "kind": "dispatch", "op": "motor_test", "data": {"motor": 0, "throttle": 10, "duration": 2}, "expect": "parity"},
     {"id": "motor_test_stop", "kind": "dispatch", "op": "motor_test_stop", "expect": "parity"},
 
@@ -83,11 +87,12 @@
     {"id": "guided_goto_null_island", "kind": "dispatch", "op": "guided_goto", "data": {"lat": 0, "lon": 0, "alt": 30}, "expect": "both_drop"},
     {"id": "guided_goto_bad_lat", "kind": "dispatch", "op": "guided_goto", "data": {"lat": 91, "lon": 0, "alt": 30}, "expect": "both_drop"},
 
-    {"id": "takeoff_out_of_range", "kind": "dispatch", "op": "takeoff", "data": {"alt": 5000}, "expect": "pinned_divergence", "backend_frames": 0, "serial_frames": 1},
-    {"id": "rc_override_short", "kind": "dispatch", "op": "rc_override", "data": {"channels": [1500]}, "expect": "pinned_divergence", "backend_frames": 0, "serial_frames": 1},
-    {"id": "camera_zoom_out_of_range", "kind": "dispatch", "op": "camera_zoom", "data": {"zoom": 0.05}, "expect": "pinned_divergence", "backend_frames": 0, "serial_frames": 1},
-    {"id": "gimbal_angle_out_of_range", "kind": "dispatch", "op": "gimbal_angle", "data": {"pitch": 200, "yaw": 0}, "expect": "pinned_divergence", "backend_frames": 0, "serial_frames": 1},
-    {"id": "gimbal_pitchyaw_out_of_range", "kind": "dispatch", "op": "gimbal_pitchyaw", "data": {"pitch": 200}, "expect": "pinned_divergence", "backend_frames": 0, "serial_frames": 1},
-    {"id": "mode_no_param", "kind": "dispatch", "op": "mode", "expect": "pinned_divergence", "backend_frames": 0, "serial_frames": 1}
+    {"id": "takeoff_out_of_range", "kind": "dispatch", "op": "takeoff", "data": {"alt": 5000}, "expect": "both_drop"},
+    {"id": "takeoff_out_of_range_plane", "kind": "dispatch", "op": "takeoff", "data": {"alt": 5000}, "plane": true, "expect": "both_drop"},
+    {"id": "rc_override_short", "kind": "dispatch", "op": "rc_override", "data": {"channels": [1500]}, "expect": "both_drop"},
+    {"id": "camera_zoom_out_of_range", "kind": "dispatch", "op": "camera_zoom", "data": {"zoom": 0.05}, "expect": "both_drop"},
+    {"id": "gimbal_angle_out_of_range", "kind": "dispatch", "op": "gimbal_angle", "data": {"pitch": 200, "yaw": 0}, "expect": "both_drop"},
+    {"id": "gimbal_pitchyaw_out_of_range", "kind": "dispatch", "op": "gimbal_pitchyaw", "data": {"pitch": 200}, "expect": "both_drop"},
+    {"id": "mode_no_param", "kind": "dispatch", "op": "mode", "expect": "both_drop"}
   ]
 }
