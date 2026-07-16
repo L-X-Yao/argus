@@ -365,13 +365,86 @@ describe('serialLogList + serialLogDownload', () => {
     expect(countWrites(119)).toBe(1);
     // FC returns first chunk normally, then count=0 sentinel.
     inject(fcFrame(120, mkLogData(0, 7, 90, new Uint8Array(90).fill(0xaa))));
-    // The state machine just sent the next LOG_REQUEST_DATA; flush.
+    // Window cadence: 200-byte window not exhausted yet, so no re-request
+    // went out; flush anyway to isolate the sentinel handling.
     writes.length = 0;
     inject(fcFrame(120, mkLogData(90, 7, 0, new Uint8Array(0)))); // EOF sentinel
     const res = await promise;
     expect(res.ok).toBe(false);
     expect(res.error).toMatch(/truncated/i);
     expect(logStoreMock.completeDownload).toHaveBeenCalled();
+  });
+
+  it('requests the next window only at the boundary — AP drops mid-burst requests', async () => {
+    // ArduPilot answers one LOG_REQUEST_DATA with one atomic burst of the
+    // whole window and silently drops same-channel requests that arrive
+    // mid-burst (AP_Logger_MAVLinkLogTransfer.cpp:111-118). The old
+    // per-frame re-request buried a real FC in duplicate windows — the
+    // 16 MB bench log sat at 0 KB (real-FC finding, 2026-07-16).
+    (logStoreMock.logState as unknown as { list: Array<{ id: number; size: number; time_utc: number }> }).list = [
+      { id: 3, size: 5000, time_utc: 0 },
+    ];
+    const promise = serialLogDownload(3);
+    expect(countWrites(119)).toBe(1);
+    // Window 1: 50 × 90 B. The GCS must stay silent until the last frame.
+    for (let ofs = 0; ofs < 4410; ofs += 90) {
+      inject(fcFrame(120, mkLogData(ofs, 3, 90, new Uint8Array(90).fill(1))));
+      expect(countWrites(119)).toBe(1);
+    }
+    inject(fcFrame(120, mkLogData(4410, 3, 90, new Uint8Array(90).fill(1)))); // boundary
+    expect(countWrites(119)).toBe(2);
+    const req = writes.filter((f) => f[7] === 119).at(-1)!;
+    const dv = new DataView(req.buffer, req.byteOffset + 10);
+    expect(dv.getUint32(0, true)).toBe(4500); // ofs resumes at the boundary
+    expect(dv.getUint32(4, true)).toBe(500); // remaining, capped by log size
+    expect(dv.getUint16(8, true)).toBe(3);
+    // Window 2 completes the download without further requests.
+    for (let ofs = 4500; ofs < 5000; ofs += 90) {
+      const n = Math.min(90, 5000 - ofs);
+      inject(fcFrame(120, mkLogData(ofs, 3, n, new Uint8Array(n).fill(2))));
+    }
+    const res = await promise;
+    expect(res.ok).toBe(true);
+    expect(countWrites(119)).toBe(2); // exactly one request per window
+  });
+
+  it('a short mid-window frame re-requests immediately (AP ended its transfer)', async () => {
+    (logStoreMock.logState as unknown as { list: Array<{ id: number; size: number; time_utc: number }> }).list = [
+      { id: 4, size: 9000, time_utc: 0 },
+    ];
+    const promise = serialLogDownload(4);
+    expect(countWrites(119)).toBe(1);
+    inject(fcFrame(120, mkLogData(0, 4, 90, new Uint8Array(90).fill(1))));
+    expect(countWrites(119)).toBe(1);
+    // AP short read (nbytes < 90) ends its transfer mid-window — the GCS
+    // must resume from the high-water mark instead of waiting forever.
+    inject(fcFrame(120, mkLogData(90, 4, 30, new Uint8Array(30).fill(2))));
+    expect(countWrites(119)).toBe(2);
+    const req = writes.filter((f) => f[7] === 119).at(-1)!;
+    const dv = new DataView(req.buffer, req.byteOffset + 10);
+    expect(dv.getUint32(0, true)).toBe(120);
+    expect(dv.getUint32(4, true)).toBe(4500);
+    serialLogCancel(); // tear down the pending promise + watchdog
+    await promise;
+  });
+
+  it('reconstructs zero-tailed chunks that MAVLink2 trimmed on the wire', async () => {
+    // A LOG_DATA whose data ends in zeros arrives trimmed; the machine must
+    // pad back to the advertised count — the old code silently shortened
+    // the chunk, corrupting the assembled log.
+    (logStoreMock.logState as unknown as { list: Array<{ id: number; size: number; time_utc: number }> }).list = [
+      { id: 9, size: 90, time_utc: 0 },
+    ];
+    const promise = serialLogDownload(9);
+    const head = new Uint8Array(3).fill(0xbb);
+    inject(fcFrame(120, mkLogData(0, 9, 90, head))); // payload carries 3 of 90 bytes
+    const res = await promise;
+    expect(res.ok).toBe(true);
+    const call = vi.mocked(logStoreMock.appendLogChunkBinary).mock.calls.at(-1)!;
+    const data = call[2] as Uint8Array;
+    expect(data.length).toBe(90);
+    expect(Array.from(data.slice(0, 3))).toEqual([0xbb, 0xbb, 0xbb]);
+    expect(data.slice(3).every((b) => b === 0)).toBe(true);
   });
 });
 

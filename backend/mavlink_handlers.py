@@ -823,11 +823,22 @@ def handle_log_data(p: bytes, pl: int, link: DroneLink) -> None:
             lg._log_messages = lg._log_messages[-200:]
     if end >= lg._log_download_size:
         _finalize_log_download(lg, log_id, truncated=False, link=link)
-    else:
+    elif end >= lg._log_window_end or count < 90:
+        # Request the NEXT window only when the current one is exhausted (or
+        # AP sent a short frame — a short read also ends its transfer).
+        # ArduPilot answers one LOG_REQUEST_DATA with one atomic burst of the
+        # whole window (AP_Logger_MAVLinkLogTransfer.cpp:337-341: offset/
+        # remaining advance per frame, end_log_transfer() at remaining==0 or
+        # nbytes<90) and SILENTLY DROPS any request that arrives mid-burst
+        # (:111-118, the MAVProxy-noise guard). The previous per-frame
+        # re-request therefore queued ~49 duplicate windows per window on a
+        # USB link (num_sends=250/tick) — the transfer drowned in its own
+        # requests and the UI sat at 0 KB.
         from .pllink_proto import bm
 
         remaining = lg._log_download_size - end
         chunk = min(90 * 50, remaining)
+        lg._log_window_end = end + chunk
         link.send(bm(119, struct.pack("<IIHBB", end, chunk, log_id, link.vehicle.sysid, 1), link.sq, CRC_EXTRA[119]))
 
 

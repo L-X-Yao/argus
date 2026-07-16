@@ -173,7 +173,9 @@ export async function connectSerial(baudRate: number, handlers: Partial<MessageH
         if (logSession.listPending && frame.msgId === 118) {
           _onLogEntry(_padView(frame.payload, 14));
         } else if (logSession.dlPending && frame.msgId === 120) {
-          _onLogData(_padView(frame.payload, 7));
+          // Full 97-byte pad: a zero-trimmed data tail must reconstruct to
+          // the advertised count, not get shortened (see _onLogData).
+          _onLogData(_padView(frame.payload, 97));
         }
         // Compass cal progress: translate binary MAG_CAL_PROGRESS (191) and
         // MAG_CAL_REPORT (192) into the same locale-aware event-stream
@@ -1053,11 +1055,15 @@ export function serialCalAccelNext(): void {
  * List: GCS → LOG_REQUEST_LIST (117). FC streams LOG_ENTRY (118) per log; the
  *       entry with id == last_log_num signals end-of-list and resolves the
  *       promise.
- * Download: GCS → LOG_REQUEST_DATA (119) with (ofs, count=4500). FC streams
- *           LOG_DATA (120) chunks ≤90 bytes. Matches backend's per-chunk
- *           re-request loop at backend/mavlink_handlers.py:660 so the FC
- *           sees an identical request cadence. count==0 in a LOG_DATA is
- *           AP_Logger's "EOF / log unreadable" signal — finalize as truncated.
+ * Download: GCS → LOG_REQUEST_DATA (119) with (ofs, count=4500). ArduPilot
+ *           answers ONE request with ONE atomic burst of LOG_DATA (120)
+ *           frames covering the whole window, then ends its transfer
+ *           (AP_Logger_MAVLinkLogTransfer.cpp:337-341); while the burst is
+ *           active it silently drops any new request on the same channel
+ *           (:111-118). So the GCS requests the next window only at the
+ *           window boundary — same cadence as backend handle_log_data.
+ *           count==0 in a LOG_DATA is AP_Logger's "EOF / log unreadable"
+ *           signal — finalize as truncated.
  * Cancel:  GCS → LOG_REQUEST_END (122). Aborts any in-flight download.
  */
 
@@ -1075,6 +1081,10 @@ interface LogSessionState {
   dlId: number;
   dlSize: number;
   dlOfs: number;
+  // End offset of the currently-requested LOG_REQUEST_DATA window — the
+  // next request may only go out once dlOfs reaches this boundary (twin of
+  // backend LogState._log_window_end).
+  dlWindowEnd: number;
 }
 
 const logSession: LogSessionState = {
@@ -1088,6 +1098,7 @@ const logSession: LogSessionState = {
   dlId: -1,
   dlSize: 0,
   dlOfs: 0,
+  dlWindowEnd: 0,
 };
 
 function _resolveLogList(result: { ok: boolean; error?: string }): void {
@@ -1156,8 +1167,10 @@ function _finishLogDownload(truncated: boolean): void {
 }
 
 function _onLogData(p: DataView): void {
-  // p is pre-padded to ≥7 bytes; the actual data chunk extends beyond and
-  // is clamped to min(count, byteLength-7) below to tolerate trimmed tails.
+  // p is pre-padded to the full 97-byte LOG_DATA payload, so a MAVLink2
+  // zero-trimmed tail reconstructs to exactly `count` bytes — taking only
+  // the untrimmed bytes here used to silently shorten zero-tailed chunks
+  // (backend handle_log_data pads to 97 for the same reason).
   const ofs = p.getUint32(0, true);
   const logId = p.getUint16(4, true);
   const count = p.getUint8(6);
@@ -1168,9 +1181,9 @@ function _onLogData(p: DataView): void {
     _finishLogDownload(true);
     return;
   }
-  const data = new Uint8Array(p.buffer, p.byteOffset + 7, Math.min(count, p.byteLength - 7));
+  const data = new Uint8Array(p.buffer, p.byteOffset + 7, count);
   appendLogChunkBinary(logId, ofs, data);
-  const end = ofs + data.length;
+  const end = ofs + count;
   if (end > logSession.dlOfs) logSession.dlOfs = end;
   updateDownloadProgress(logSession.dlOfs, logSession.dlSize);
 
@@ -1183,11 +1196,19 @@ function _onLogData(p: DataView): void {
     _finishLogDownload(false);
     return;
   }
-  // Mirror backend's per-chunk re-request — AP_Logger treats duplicate
-  // LOG_REQUEST_DATA as harmless and won't retransmit already-acked chunks.
-  const remaining = logSession.dlSize - logSession.dlOfs;
-  const next = Math.min(LOG_CHUNK_BYTES, remaining);
-  sendSerialFrame(119, encodeLogRequestData(serial.targetSysId, serial.targetCompId, logId, logSession.dlOfs, next));
+  if (logSession.dlOfs >= logSession.dlWindowEnd || count < 90) {
+    // Request the NEXT window only when this one is exhausted (or AP sent a
+    // short frame — a short read ends its transfer too). ArduPilot answers
+    // one LOG_REQUEST_DATA with one atomic burst of the whole window
+    // (AP_Logger_MAVLinkLogTransfer.cpp:337-341) and SILENTLY DROPS any
+    // request arriving mid-burst (:111-118). The previous per-frame
+    // re-request buried the FC in ~49 duplicate window requests per window
+    // — downloads never got past the noise (real-FC finding, 2026-07-16).
+    const remaining = logSession.dlSize - logSession.dlOfs;
+    const next = Math.min(LOG_CHUNK_BYTES, remaining);
+    logSession.dlWindowEnd = logSession.dlOfs + next;
+    sendSerialFrame(119, encodeLogRequestData(serial.targetSysId, serial.targetCompId, logId, logSession.dlOfs, next));
+  }
 }
 
 export function isSerialLogBusy(): boolean {
@@ -1230,6 +1251,7 @@ export async function serialLogDownload(id: number): Promise<{ ok: boolean; erro
       _abortLogDownload('LOG_REQUEST_DATA timed out (no LOG_DATA in 5s)');
     }, 5000);
     const chunk = Math.min(LOG_CHUNK_BYTES, entry.size);
+    logSession.dlWindowEnd = chunk;
     sendSerialFrame(119, encodeLogRequestData(serial.targetSysId, serial.targetCompId, id, 0, chunk));
   });
 }

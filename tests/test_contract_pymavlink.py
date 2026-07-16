@@ -901,6 +901,60 @@ class TestIncomingHandlers:
         handle_log_data(payload, pl, link)
         assert link.log_dl._log_download_data[:90] == chunk
 
+    def test_log_data_window_cadence(self):
+        """One LOG_REQUEST_DATA per window. ArduPilot answers a request with
+        one atomic burst of the whole window, then ends its transfer
+        (AP_Logger_MAVLinkLogTransfer.cpp:337-341) — and silently drops any
+        same-channel request that arrives mid-burst (:111-118). The previous
+        per-frame re-request buried a real FC in duplicate windows; the GCS
+        must stay silent until the window boundary."""
+        from backend.mavlink_handlers import handle_log_data
+
+        link = FakeLink()
+        lg = link.log_dl
+        lg._log_download_id = 5
+        lg._log_download_size = 9000
+        lg._log_download_data = bytearray(9000)
+        lg._log_download_ofs = 0
+        lg._log_window_end = 4500
+        for ofs in range(0, 4410, 90):
+            msg = mavlink.MAVLink_log_data_message(id=5, ofs=ofs, count=90, data=[7] * 90)
+            payload, pl = _encode_payload(msg)
+            handle_log_data(payload, pl, link)
+            assert link.captured == [], f"re-request sent mid-window at ofs {ofs}"
+        msg = mavlink.MAVLink_log_data_message(id=5, ofs=4410, count=90, data=[7] * 90)
+        payload, pl = _encode_payload(msg)
+        handle_log_data(payload, pl, link)
+        assert len(link.captured) == 1
+        req = _decode_one(link.captured[0])
+        assert req.get_msgId() == mavlink.MAVLINK_MSG_ID_LOG_REQUEST_DATA
+        assert (req.ofs, req.count, req.id) == (4500, 4500, 5)
+        assert lg._log_window_end == 9000
+
+    def test_log_data_short_frame_rerequests(self):
+        """count<90 mid-window = AP short read — its transfer ended
+        (AP_Logger_MAVLinkLogTransfer.cpp:339-341), so the GCS must
+        immediately resume from the high-water mark."""
+        from backend.mavlink_handlers import handle_log_data
+
+        link = FakeLink()
+        lg = link.log_dl
+        lg._log_download_id = 4
+        lg._log_download_size = 9000
+        lg._log_download_data = bytearray(9000)
+        lg._log_download_ofs = 0
+        lg._log_window_end = 4500
+        msg = mavlink.MAVLink_log_data_message(id=4, ofs=0, count=90, data=[1] * 90)
+        payload, pl = _encode_payload(msg)
+        handle_log_data(payload, pl, link)
+        assert link.captured == []
+        msg = mavlink.MAVLink_log_data_message(id=4, ofs=90, count=30, data=[2] * 30 + [0] * 60)
+        payload, pl = _encode_payload(msg)
+        handle_log_data(payload, pl, link)
+        assert len(link.captured) == 1
+        req = _decode_one(link.captured[0])
+        assert (req.ofs, req.count) == (120, 4500)
+
     def test_param_value(self):
         # param_manager is the entry point; handle_param_value forwards.
         link = FakeLink()
