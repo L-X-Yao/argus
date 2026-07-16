@@ -293,7 +293,7 @@ class DroneLink:
             self.log_dl._log_download_ofs = 0
             self.log_dl._log_emit_ofs = 0
             self.log_dl._log_window_end = 0
-            self.log_dl._log_received = 0
+            self.log_dl._log_recv_intervals = []
             self.log_dl._log_stall_retries = 0
             self.log_dl._log_last_data_time = 0.0
             self._prearm_messages = []

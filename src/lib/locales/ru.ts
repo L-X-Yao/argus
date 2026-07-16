@@ -163,6 +163,7 @@ const messages: Record<string, string> = {
   'toast.missionDown': 'Скачано {n} маршрутных точек',
   'toast.logList': 'Найдено {n} бортовых логов',
   'toast.logDone': 'Лог #{n} загружен',
+  'toast.logDoneTrunc': 'Лог #{n} неполный — потеря кадров или прерывание',
   'toast.uploading': 'Загрузка миссии...',
   'toast.missionOk': 'Миссия загружена',
   'toast.missionFail': 'Ошибка загрузки миссии',

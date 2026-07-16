@@ -229,6 +229,21 @@ describe('message handling', () => {
     await fire({ type: 'log_complete', id: 5, data: 'base64data', size: 1024 });
     const { completeDownload } = await import('./logStore.svelte');
     expect(completeDownload).toHaveBeenCalledWith(5, 'base64data', 1024);
+    const { addToast } = await import('./stores.svelte');
+    expect(vi.mocked(addToast).mock.calls.at(-1)).toEqual(['toast.logDone', 'success']);
+  });
+
+  it('log_complete with truncated=true delivers the file but toasts an error, not success', async () => {
+    // truncated covers the count==0 EOF sentinel, stall give-up, and detected
+    // frame-loss holes — a success toast here would silently bless a
+    // corrupted file (the WebSerial path already surfaces the reason).
+    await fire({ type: 'log_complete', id: 5, data: 'base64data', size: 1024, truncated: true });
+    const { completeDownload } = await import('./logStore.svelte');
+    expect(completeDownload).toHaveBeenCalledWith(5, 'base64data', 1024); // partial data still delivered
+    const { addToast } = await import('./stores.svelte');
+    const last = vi.mocked(addToast).mock.calls.at(-1)!;
+    expect(last[0]).toBe('toast.logDoneTrunc');
+    expect(last[1]).toBe('error');
   });
 
   it('dispatches log_chunk to appendLogChunk', async () => {

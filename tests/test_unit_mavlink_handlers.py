@@ -802,7 +802,7 @@ class TestLogChunking:
         lg._log_download_ofs = 1000
         # A clean download received every byte — without this the hole
         # detector would (correctly) flag the file as truncated.
-        lg._log_received = 1000
+        lg._log_recv_intervals = [(0, 1000)]
         lg._log_emit_ofs = 0
         lg._log_download_id = 7
 

@@ -146,10 +146,13 @@ class LogState:
     # forever. check_log_dl_stall() re-requests from the high-water mark.
     _log_last_data_time: float = 0.0
     _log_stall_retries: int = 0
-    # Raw count of accepted LOG_DATA payload bytes. Mid-window frame loss
-    # leaves zero-filled holes the high-water cadence never revisits; a
-    # received total short of the final size is the only tell.
-    _log_received: int = 0
+    # Coverage of accepted LOG_DATA byte ranges as sorted disjoint [start,end)
+    # intervals. Mid-window frame loss leaves zero-filled holes the high-water
+    # cadence never revisits; covered-bytes short of the final size is the
+    # only tell. Intervals (not a raw sum) because stall re-requests can
+    # legitimately overlap late frames of the old burst — an inflated sum
+    # would mask a real hole elsewhere.
+    _log_recv_intervals: list[tuple[int, int]] = field(default_factory=list)
     # Offset already streamed to the frontend as log_chunk messages. Lets
     # handle_log_data emit fresh chunks of CHUNK_SIZE bytes as the bytearray
     # high-water mark grows, instead of waiting for the whole log and

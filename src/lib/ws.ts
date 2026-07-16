@@ -137,7 +137,14 @@ export function connectWs(): void {
           break;
         case 'log_complete':
           completeDownload(msg.id, msg.data, msg.size);
-          addToast(t('toast.logDone').replace('{n}', String(msg.id)), 'success');
+          // truncated covers the count==0 EOF sentinel, stall give-up, and
+          // detected frame-loss holes — a success toast over a corrupted
+          // file would undo the honesty the backend just signalled.
+          if (msg.truncated) {
+            addToast(t('toast.logDoneTrunc').replace('{n}', String(msg.id)), 'error', 5000);
+          } else {
+            addToast(t('toast.logDone').replace('{n}', String(msg.id)), 'success');
+          }
           break;
         case 'inspector':
           updateInspector(msg.messages);

@@ -163,7 +163,7 @@ def cmd_log_download(link: DroneLink, param, data: dict):
     lg._log_download_size = log_entry["size"]
     lg._log_download_data = bytearray(log_entry["size"])
     lg._log_download_ofs = 0
-    lg._log_received = 0
+    lg._log_recv_intervals = []
     lg._log_stall_retries = 0
     # Arm the stall watchdog now so even a lost FIRST window gets retried
     # (check_log_dl_stall gates on last_data_time > 0).
@@ -190,7 +190,7 @@ def cmd_log_cancel(link: DroneLink, param, data: dict):
     # its first _log_emit_ofs bytes (finalize base64s only from that mark) —
     # only _finalize_log_download resets it, and cancel skips finalize.
     lg._log_emit_ofs = 0
-    lg._log_received = 0
+    lg._log_recv_intervals = []
     lg._log_stall_retries = 0
     lg._log_last_data_time = 0.0
     link.add_event(lt("log_dl_cancel", link.locale), "log_dl_cancel")

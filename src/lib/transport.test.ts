@@ -447,6 +447,49 @@ describe('serialLogList + serialLogDownload', () => {
     expect(data.slice(3).every((b) => b === 0)).toBe(true);
   });
 
+  it('drops a frame whose ofs+count exceeds the log size (corrupt ofs)', async () => {
+    // ofs shares count's threat model — unguarded, a garbage ofs would push
+    // the high-water mark past the size and completeDownload would allocate
+    // a buffer sized by the largest ofs+length (up to 4 GB for a u32 ofs).
+    (logStoreMock.logState as unknown as { list: Array<{ id: number; size: number; time_utc: number }> }).list = [
+      { id: 8, size: 1000, time_utc: 0 },
+    ];
+    const promise = serialLogDownload(8);
+    const appends = vi.mocked(logStoreMock.appendLogChunkBinary).mock.calls.length;
+    inject(fcFrame(120, mkLogData(990, 8, 90, new Uint8Array(90).fill(4))));
+    expect(vi.mocked(logStoreMock.appendLogChunkBinary).mock.calls.length).toBe(appends); // dropped
+    serialLogCancel();
+    await promise;
+  });
+
+  it('duplicate frames do not mask a real hole (coverage is intervals, not a sum)', async () => {
+    // After a stall re-request a late tail of the old burst can legitimately
+    // duplicate frames — a raw byte sum (90+90+90=270 > 200 here) would
+    // report the file complete while bytes 90..110 were never received.
+    (logStoreMock.logState as unknown as { list: Array<{ id: number; size: number; time_utc: number }> }).list = [
+      { id: 2, size: 200, time_utc: 0 },
+    ];
+    const promise = serialLogDownload(2);
+    inject(fcFrame(120, mkLogData(0, 2, 90, new Uint8Array(90).fill(9))));
+    inject(fcFrame(120, mkLogData(0, 2, 90, new Uint8Array(90).fill(9)))); // duplicate
+    inject(fcFrame(120, mkLogData(110, 2, 90, new Uint8Array(90).fill(9)))); // reaches size
+    const res = await promise;
+    expect(res.ok).toBe(false);
+    expect(res.error).toMatch(/missing/);
+  });
+
+  it('out-of-order frames merge into full coverage — arrival order is not completeness', async () => {
+    (logStoreMock.logState as unknown as { list: Array<{ id: number; size: number; time_utc: number }> }).list = [
+      { id: 1, size: 200, time_utc: 0 },
+    ];
+    const promise = serialLogDownload(1);
+    inject(fcFrame(120, mkLogData(90, 1, 90, new Uint8Array(90).fill(5)))); // middle first
+    inject(fcFrame(120, mkLogData(0, 1, 90, new Uint8Array(90).fill(5)))); // then the head (bridges)
+    inject(fcFrame(120, mkLogData(180, 1, 20, new Uint8Array(20).fill(5)))); // tail reaches size
+    const res = await promise;
+    expect(res.ok).toBe(true); // covered 0..200 with no hole despite the order
+  });
+
   it('clamps a corrupt count>90 instead of crashing the read loop', async () => {
     // count is a free u8 but the data field is uint8_t[90] (MAVLink
     // common.xml) — unclamped, the payload view would throw RangeError past

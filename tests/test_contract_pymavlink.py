@@ -1037,6 +1037,9 @@ class TestIncomingHandlers:
         complete = [m for m in lg._log_messages if m["type"] == "log_complete"]
         assert len(complete) == 1 and complete[0]["truncated"] is True
         assert any(e["event_type"] == "log_dl_stall_fail" for e in link.events)
+        # No contradictory "download complete" right after the failure event.
+        assert not any(e["event_type"] == "log_dl_done" for e in link.events)
+        assert any(e["event_type"] == "log_dl_done_part" for e in link.events)
 
     def test_log_dl_mid_window_hole_flags_truncated(self):
         """A frame lost mid-window leaves a zero-filled hole the high-water
@@ -1076,6 +1079,64 @@ class TestIncomingHandlers:
         assert lg._log_download_data[:90] == b"\x07" * 90
         assert lg._log_download_ofs == 90  # advanced by the clamped count
 
+    def test_log_data_out_of_range_ofs_dropped(self):
+        """ofs shares count's threat model: the GCS never requests beyond the
+        LOG_ENTRY size, so an out-of-range frame is never legitimate —
+        unguarded it would push the high-water mark past the size and
+        finalize would report a bogus length."""
+        from backend.mavlink_handlers import handle_log_data
+
+        link = FakeLink()
+        lg = link.log_dl
+        lg._log_download_id = 5
+        lg._log_download_size = 1000
+        lg._log_download_data = bytearray(1000)
+        msg = mavlink.MAVLink_log_data_message(id=5, ofs=990, count=90, data=[3] * 90)
+        payload, pl = _encode_payload(msg)
+        handle_log_data(payload, pl, link)
+        assert lg._log_download_ofs == 0  # dropped, no progress
+        assert lg._log_recv_intervals == []
+        assert lg._log_messages == []  # no finalize fired
+
+    def test_log_dl_duplicate_frames_do_not_mask_holes(self):
+        """Coverage must be intervals, not a raw byte sum: after a stall
+        re-request a late tail of the old burst can legitimately duplicate
+        frames — a raw sum (90+90+90=270 > 200 here) would report the file
+        complete while bytes 90..110 were never received."""
+        from backend.mavlink_handlers import handle_log_data
+
+        link = FakeLink()
+        lg = link.log_dl
+        lg._log_download_id = 5
+        lg._log_download_size = 200
+        lg._log_download_data = bytearray(200)
+        lg._log_window_end = 200
+        for ofs in (0, 0, 110):  # duplicate first frame, hole at 90..110
+            msg = mavlink.MAVLink_log_data_message(id=5, ofs=ofs, count=90, data=[9] * 90)
+            payload, pl = _encode_payload(msg)
+            handle_log_data(payload, pl, link)
+        complete = [m for m in lg._log_messages if m["type"] == "log_complete"]
+        assert len(complete) == 1 and complete[0]["truncated"] is True
+        assert any(e["event_type"] == "log_dl_holes" for e in link.events)
+
+    def test_mark_received_interval_merge_paths(self):
+        """Direct anchor for the coverage-merge algorithm: in-order extend,
+        contained duplicate, gap bridging (3-way merge), out-of-order insert."""
+        from backend.mavlink_handlers import _covered_bytes, _mark_received
+
+        iv: list[tuple[int, int]] = []
+        _mark_received(iv, 0, 90)
+        _mark_received(iv, 90, 180)  # in-order extend (fast path)
+        _mark_received(iv, 30, 60)  # contained duplicate — no-op
+        assert iv == [(0, 180)]
+        _mark_received(iv, 300, 390)  # leaves a gap
+        _mark_received(iv, 180, 300)  # bridges it — 3-way merge on the slow path
+        assert iv == [(0, 390)]
+        _mark_received(iv, 500, 590)
+        _mark_received(iv, 450, 480)  # out-of-order, disjoint, before the tail
+        assert iv == [(0, 390), (450, 480), (500, 590)]
+        assert _covered_bytes(iv) == 390 + 30 + 90
+
     def test_log_cancel_resets_stream_state(self):
         """cmd_log_cancel must reset _log_emit_ofs — stale, the NEXT download
         would silently skip emitting its first _log_emit_ofs bytes (finalize
@@ -1090,13 +1151,13 @@ class TestIncomingHandlers:
         lg._log_download_ofs = 5000
         lg._log_emit_ofs = 4096
         lg._log_window_end = 9000
-        lg._log_received = 5000
+        lg._log_recv_intervals = [(0, 5000)]
         lg._log_stall_retries = 2
         lg._log_last_data_time = 12345.0
         cmd_log_cancel(link, None, {})
         assert lg._log_emit_ofs == 0
         assert lg._log_window_end == 0
-        assert lg._log_received == 0
+        assert lg._log_recv_intervals == []
         assert lg._log_stall_retries == 0
         assert lg._log_last_data_time == 0.0
 

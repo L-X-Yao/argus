@@ -70,6 +70,7 @@ _T = {
     "log_list_n": ("日志: 获取到 %d 条", "Log: found %d entries"),
     "log_dl": ("日志: 下载 #%d (%d KB)...", "Log: downloading #%d (%d KB)..."),
     "log_dl_done": ("日志: #%d 下载完成 (%d KB)", "Log: #%d complete (%d KB)"),
+    "log_dl_done_part": ("日志: #%d 传输结束, 收到 %d KB (不完整)", "Log: #%d ended — %d KB received (incomplete)"),
     "log_dl_cancel": ("日志: 下载取消", "Log: download cancelled"),
     "log_dl_stall": ("日志: 传输停滞, 从 %d KB 处补发请求", "Log: transfer stalled — re-requesting from %d KB"),
     "log_dl_stall_fail": ("日志: 补发无响应, 已中止(保留已收数据)", "Log: stalled after retries — aborted (partial data kept)"),
