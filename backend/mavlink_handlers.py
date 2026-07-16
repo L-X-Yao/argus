@@ -738,6 +738,34 @@ def handle_serial_control(p: bytes, pl: int, link: DroneLink) -> None:
 _LOG_STREAM_CHUNK_SIZE = 65536  # 64KB chunks pushed to the frontend during download
 
 
+def _mark_received(intervals: list[tuple[int, int]], start: int, end: int) -> None:
+    """Merge the byte range [start, end) into a sorted, disjoint coverage
+    list (twin of transport.ts _markReceived). A raw byte SUM would over-count
+    duplicates — after a stall re-request, a late-buffered tail of the old
+    burst can legitimately overlap the new burst, and the inflated sum would
+    mask a real hole elsewhere in the file. In-order bursts extend the tail
+    interval in O(1)."""
+    if intervals:
+        s, e = intervals[-1]
+        if s <= start <= e:
+            if end > e:
+                intervals[-1] = (s, end)
+            return
+    intervals.append((start, end))
+    intervals.sort()
+    merged = [intervals[0]]
+    for s, e in intervals[1:]:
+        if s <= merged[-1][1]:
+            merged[-1] = (merged[-1][0], max(merged[-1][1], e))
+        else:
+            merged.append((s, e))
+    intervals[:] = merged
+
+
+def _covered_bytes(intervals: list[tuple[int, int]]) -> int:
+    return sum(e - s for s, e in intervals)
+
+
 def _emit_log_chunks(lg, log_id: int) -> None:
     """Emit any complete log_stream_chunk messages whose contents are now
     fully present in lg._log_download_data (between lg._log_emit_ofs and
@@ -760,10 +788,10 @@ def _finalize_log_download(lg, log_id: int, truncated: bool, link: DroneLink) ->
 
     final_size = lg._log_download_ofs
     # Mid-window frame loss leaves zero-filled holes that the window cadence
-    # never revisits. Duplicates can only over-count _log_received, so a
-    # received total SHORT of the final size is a definite loss — flag the
-    # file rather than shipping silently corrupted zeros.
-    missing = final_size - lg._log_received
+    # never revisits. Coverage intervals make the check exact — duplicates
+    # and re-request overlaps never inflate it — so covered < final_size is
+    # a definite loss: flag the file rather than shipping silent zeros.
+    missing = final_size - _covered_bytes(lg._log_recv_intervals)
     if not truncated and missing > 0:
         truncated = True
         link.add_event(lt("log_dl_holes", link.locale) % missing, "log_dl_holes")
@@ -779,11 +807,14 @@ def _finalize_log_download(lg, log_id: int, truncated: bool, link: DroneLink) ->
             "truncated": truncated,
         }
     )
-    link.add_event(lt("log_dl_done", link.locale) % (log_id, final_size // 1024), "log_dl_done")
+    # A truncated finalize (count==0 EOF, stall give-up, detected holes) must
+    # not announce "complete" right after a failure event — say what it is.
+    done_key = "log_dl_done_part" if truncated else "log_dl_done"
+    link.add_event(lt(done_key, link.locale) % (log_id, final_size // 1024), done_key)
     lg._log_download_id = -1
     lg._log_download_data = bytearray()
     lg._log_emit_ofs = 0
-    lg._log_received = 0
+    lg._log_recv_intervals = []
     lg._log_last_data_time = 0.0
     lg._log_stall_retries = 0
     if len(lg._log_messages) > 500:
@@ -815,11 +846,17 @@ def handle_log_data(p: bytes, pl: int, link: DroneLink) -> None:
     # Unclamped, the slice below would come up short and the bytearray slice
     # assignment would SHRINK the buffer, shifting every later byte left.
     count = min(count, 90)
-    lg._log_received += count
-    data = p[7 : 7 + count]
     end = ofs + count
-    if end <= lg._log_download_size:
-        lg._log_download_data[ofs:end] = data
+    # ofs shares count's threat model: every LOG_REQUEST_DATA we send is
+    # capped to the remaining bytes, so an out-of-range frame is never
+    # legitimate. Unguarded, a garbage ofs would push the high-water mark
+    # past the size and finalize would report a bogus length (the frontend
+    # sizes its assembly buffer from it — up to 4 GB for a u32 ofs).
+    if end > lg._log_download_size:
+        return
+    _mark_received(lg._log_recv_intervals, ofs, end)
+    data = p[7 : 7 + count]
+    lg._log_download_data[ofs:end] = data
     # Use max() so an out-of-order or duplicate chunk doesn't rewind progress
     # and trigger re-requesting already-received bytes (auditor finding C2).
     lg._log_download_ofs = max(lg._log_download_ofs, end)

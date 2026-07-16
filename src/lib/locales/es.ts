@@ -163,6 +163,7 @@ const messages: Record<string, string> = {
   'toast.missionDown': '{n} waypoints descargados',
   'toast.logList': '{n} registros a bordo encontrados',
   'toast.logDone': 'Descarga del registro #{n} completada',
+  'toast.logDoneTrunc': 'Registro #{n} incompleto — pérdida de tramas o interrupción',
   'toast.uploading': 'Subiendo misión...',
   'toast.missionOk': 'Misión subida',
   'toast.missionFail': 'Error al subir misión',

@@ -163,6 +163,7 @@ const messages: Record<string, string> = {
   'toast.missionDown': 'تم تنزيل {n} نقطة مسار',
   'toast.logList': 'تم العثور على {n} سجل',
   'toast.logDone': 'اكتمل تنزيل السجل #{n}',
+  'toast.logDoneTrunc': 'السجل #{n} غير مكتمل — فقدان إطارات أو انقطاع',
   'toast.uploading': 'جاري رفع المهمة...',
   'toast.missionOk': 'تم رفع المهمة',
   'toast.missionFail': 'فشل رفع المهمة',

@@ -185,6 +185,7 @@ const messages: Record<string, string> = {
   'toast.missionDown': 'Downloaded {n} waypoints',
   'toast.logList': 'Found {n} onboard logs',
   'toast.logDone': 'Log #{n} download complete',
+  'toast.logDoneTrunc': 'Log #{n} incomplete — frame loss or transfer aborted',
   'toast.uploading': 'Uploading mission...',
   'toast.missionOk': 'Mission uploaded',
   'toast.missionFail': 'Mission upload failed',

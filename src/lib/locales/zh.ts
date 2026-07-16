@@ -185,6 +185,7 @@ const messages: Record<string, string> = {
   'toast.missionDown': '已下载 {n} 个航点',
   'toast.logList': '获取到 {n} 条机载日志',
   'toast.logDone': '日志 #{n} 下载完成',
+  'toast.logDoneTrunc': '日志 #{n} 传输结束但不完整（丢帧/中断）',
   'toast.uploading': '上传任务中...',
   'toast.missionOk': '任务上传成功',
   'toast.missionFail': '任务上传失败',

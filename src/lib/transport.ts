@@ -1088,11 +1088,13 @@ interface LogSessionState {
   // Stall re-requests issued without progress (twin of backend
   // LogState._log_stall_retries); reset on every accepted frame.
   dlStallRetries: number;
-  // Raw count of accepted LOG_DATA payload bytes — mid-window frame loss
-  // leaves zero-filled holes the window cadence never revisits, and a
-  // received total short of the size is the only tell (twin of backend
-  // LogState._log_received).
-  dlReceived: number;
+  // Coverage of accepted LOG_DATA byte ranges as sorted disjoint [start,end)
+  // intervals — mid-window frame loss leaves zero-filled holes the window
+  // cadence never revisits, and covered-bytes short of the size is the only
+  // tell. Intervals (not a raw sum) because stall re-requests can
+  // legitimately overlap late frames of the old burst (twin of backend
+  // LogState._log_recv_intervals).
+  dlRecvIntervals: Array<[number, number]>;
 }
 
 const logSession: LogSessionState = {
@@ -1108,8 +1110,37 @@ const logSession: LogSessionState = {
   dlOfs: 0,
   dlWindowEnd: 0,
   dlStallRetries: 0,
-  dlReceived: 0,
+  dlRecvIntervals: [],
 };
+
+// Merge [start, end) into a sorted, disjoint coverage list (twin of backend
+// _mark_received). In-order bursts extend the tail interval in O(1).
+function _markReceived(intervals: Array<[number, number]>, start: number, end: number): void {
+  if (intervals.length > 0) {
+    const last = intervals[intervals.length - 1];
+    if (last[0] <= start && start <= last[1]) {
+      if (end > last[1]) last[1] = end;
+      return;
+    }
+  }
+  intervals.push([start, end]);
+  intervals.sort((a, b) => a[0] - b[0]);
+  const merged: Array<[number, number]> = [intervals[0]];
+  for (let i = 1; i < intervals.length; i++) {
+    const [s, e] = intervals[i];
+    const m = merged[merged.length - 1];
+    if (s <= m[1]) m[1] = Math.max(m[1], e);
+    else merged.push([s, e]);
+  }
+  intervals.length = 0;
+  intervals.push(...merged);
+}
+
+function _coveredBytes(intervals: Array<[number, number]>): number {
+  let sum = 0;
+  for (const [s, e] of intervals) sum += e - s;
+  return sum;
+}
 
 function _resolveLogList(result: { ok: boolean; error?: string }): void {
   if (!logSession.listPending) return;
@@ -1169,10 +1200,11 @@ function _finishLogDownload(truncated: boolean, reason?: string): void {
     logSession.dlTimer = null;
   }
   // Mid-window frame loss leaves zero-filled holes the window cadence never
-  // revisits. Duplicates can only over-count dlReceived, so a received total
-  // SHORT of the size is a definite loss — flag the file rather than shipping
-  // silently corrupted zeros (twin of backend _finalize_log_download).
-  const missing = size - logSession.dlReceived;
+  // revisits. Coverage intervals make the check exact — duplicates and
+  // re-request overlaps never inflate it — so covered short of the size is a
+  // definite loss: flag the file rather than shipping silently corrupted
+  // zeros (twin of backend _finalize_log_download).
+  const missing = size - _coveredBytes(logSession.dlRecvIntervals);
   if (!truncated && missing > 0) {
     truncated = true;
     reason = `Frame loss — ${missing} bytes missing (zero-filled)`;
@@ -1243,10 +1275,16 @@ function _onLogData(p: DataView): void {
     _finishLogDownload(true);
     return;
   }
+  const end = ofs + count;
+  // ofs shares count's threat model: every LOG_REQUEST_DATA we send is
+  // capped to the remaining bytes, so an out-of-range frame is never
+  // legitimate. Unguarded, a garbage ofs would push the high-water mark
+  // past the size — completeDownload sizes its assembly buffer from the
+  // largest ofs+length, up to 4 GB for a u32 ofs.
+  if (end > logSession.dlSize) return;
   const data = new Uint8Array(p.buffer, p.byteOffset + 7, count);
   appendLogChunkBinary(logId, ofs, data);
-  logSession.dlReceived += count;
-  const end = ofs + count;
+  _markReceived(logSession.dlRecvIntervals, ofs, end);
   if (end > logSession.dlOfs) logSession.dlOfs = end;
   updateDownloadProgress(logSession.dlOfs, logSession.dlSize);
 
@@ -1310,7 +1348,7 @@ export async function serialLogDownload(id: number): Promise<{ ok: boolean; erro
     logSession.dlId = id;
     logSession.dlSize = entry.size;
     logSession.dlOfs = 0;
-    logSession.dlReceived = 0;
+    logSession.dlRecvIntervals = [];
     logSession.dlStallRetries = 0;
     // Arm the stall watchdog now so even a lost FIRST window gets retried.
     _armDlWatchdog();

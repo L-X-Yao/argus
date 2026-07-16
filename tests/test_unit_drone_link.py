@@ -1241,6 +1241,29 @@ class TestLoop:
             link._loop()
             mock_hb.assert_called()
 
+    def test_loop_runs_log_dl_stall_checker(self):
+        """_loop must actually invoke check_log_dl_stall each tick — the six
+        stall tests call the function directly, so without this anchor the
+        main-loop wiring line could be deleted and the suite would stay green
+        while a real stalled download hung forever."""
+        link = DroneLink()
+        link._running = True
+        mock_ser = MagicMock()
+        mock_ser.read.return_value = b""
+        link._ser = mock_ser
+
+        def stop(*a, **kw):
+            link._running = False
+
+        with (
+            patch("backend.drone_link.cmd_module.send_heartbeat"),
+            patch("backend.drone_link.cmd_module.request_streams"),
+            patch("backend.mavlink_handlers.check_log_dl_stall") as mock_chk,
+            patch("backend.drone_link.time.sleep", side_effect=stop),
+        ):
+            link._loop()
+        mock_chk.assert_called_with(link)
+
     def test_loop_reads_serial_data(self):
         """_loop reads data from serial port and appends to _buf."""
         link = DroneLink()

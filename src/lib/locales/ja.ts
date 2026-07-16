@@ -163,6 +163,7 @@ const messages: Record<string, string> = {
   'toast.missionDown': '{n}個のウェイポイントをダウンロード',
   'toast.logList': '{n}個のオンボードログを検出',
   'toast.logDone': 'ログ #{n} ダウンロード完了',
+  'toast.logDoneTrunc': 'ログ #{n} は不完全です（フレーム損失/中断）',
   'toast.uploading': 'ミッションアップロード中...',
   'toast.missionOk': 'ミッションアップロード完了',
   'toast.missionFail': 'ミッションアップロード失敗',

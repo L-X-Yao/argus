@@ -163,6 +163,7 @@ const messages: Record<string, string> = {
   'toast.missionDown': '{n} points de passage téléchargés',
   'toast.logList': '{n} logs embarqués trouvés',
   'toast.logDone': 'Téléchargement du log #{n} terminé',
+  'toast.logDoneTrunc': 'Log #{n} incomplet — perte de trames ou interruption',
   'toast.uploading': 'Envoi de la mission...',
   'toast.missionOk': 'Mission téléversée',
   'toast.missionFail': 'Échec du téléversement de mission',

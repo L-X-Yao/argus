@@ -163,6 +163,7 @@ const messages: Record<string, string> = {
   'toast.missionDown': '{n}개의 웨이포인트를 다운로드했습니다',
   'toast.logList': '{n}개의 온보드 로그를 발견했습니다',
   'toast.logDone': '로그 #{n} 다운로드 완료',
+  'toast.logDoneTrunc': '로그 #{n} 불완전 — 프레임 손실/중단',
   'toast.uploading': '미션 업로드 중...',
   'toast.missionOk': '미션 업로드 완료',
   'toast.missionFail': '미션 업로드 실패',
