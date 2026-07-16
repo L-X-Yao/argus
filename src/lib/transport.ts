@@ -1085,6 +1085,14 @@ interface LogSessionState {
   // next request may only go out once dlOfs reaches this boundary (twin of
   // backend LogState._log_window_end).
   dlWindowEnd: number;
+  // Stall re-requests issued without progress (twin of backend
+  // LogState._log_stall_retries); reset on every accepted frame.
+  dlStallRetries: number;
+  // Raw count of accepted LOG_DATA payload bytes — mid-window frame loss
+  // leaves zero-filled holes the window cadence never revisits, and a
+  // received total short of the size is the only tell (twin of backend
+  // LogState._log_received).
+  dlReceived: number;
 }
 
 const logSession: LogSessionState = {
@@ -1099,6 +1107,8 @@ const logSession: LogSessionState = {
   dlSize: 0,
   dlOfs: 0,
   dlWindowEnd: 0,
+  dlStallRetries: 0,
+  dlReceived: 0,
 };
 
 function _resolveLogList(result: { ok: boolean; error?: string }): void {
@@ -1149,7 +1159,7 @@ function _abortLogDownload(error: string): void {
   if (r) r({ ok: false, error });
 }
 
-function _finishLogDownload(truncated: boolean): void {
+function _finishLogDownload(truncated: boolean, reason?: string): void {
   if (!logSession.dlPending) return;
   const id = logSession.dlId;
   const size = logSession.dlOfs;
@@ -1158,12 +1168,59 @@ function _finishLogDownload(truncated: boolean): void {
     clearTimeout(logSession.dlTimer);
     logSession.dlTimer = null;
   }
+  // Mid-window frame loss leaves zero-filled holes the window cadence never
+  // revisits. Duplicates can only over-count dlReceived, so a received total
+  // SHORT of the size is a definite loss — flag the file rather than shipping
+  // silently corrupted zeros (twin of backend _finalize_log_download).
+  const missing = size - logSession.dlReceived;
+  if (!truncated && missing > 0) {
+    truncated = true;
+    reason = `Frame loss — ${missing} bytes missing (zero-filled)`;
+  }
   // Pass empty b64 — the streaming chunks already populated logState._chunks;
   // completeDownload assembles + triggers the browser download.
   completeDownload(id, undefined, size);
   const r = logSession.dlResolve;
   logSession.dlResolve = null;
-  if (r) r({ ok: !truncated, error: truncated ? 'Download truncated (count=0 from FC)' : undefined });
+  if (r) r({ ok: !truncated, error: truncated ? (reason ?? 'Download truncated (count=0 from FC)') : undefined });
+}
+
+const LOG_DL_STALL_MS = 5000; // matches backend LOG_DL_STALL_TIMEOUT
+const LOG_DL_STALL_RETRIES = 3; // matches backend LOG_DL_STALL_RETRIES
+
+function _armDlWatchdog(): void {
+  if (logSession.dlTimer) clearTimeout(logSession.dlTimer);
+  logSession.dlTimer = setTimeout(_onDlStall, LOG_DL_STALL_MS);
+}
+
+// Stall watchdog — twin of backend check_log_dl_stall. The window cadence
+// only sends the next LOG_REQUEST_DATA from _onLogData, so a lost
+// window-boundary frame means no LOG_DATA ever arrives again and nothing
+// would re-request. Re-requesting the unreceived remainder from the
+// high-water mark is safe: AP already ended its burst when it sent the
+// (lost) boundary frame (AP_Logger_MAVLinkLogTransfer.cpp:337-341,
+// end_log_transfer() at remaining==0), and the :111-118 guard only drops
+// requests that arrive while a transfer is actively sending — an idle AP
+// honors the retry, a still-bursting AP harmlessly drops it. The old
+// behavior aborted outright and discarded every received chunk — a 16 MB
+// download lost to one dropped frame at 99%.
+function _onDlStall(): void {
+  if (!logSession.dlPending) return;
+  if (logSession.dlStallRetries >= LOG_DL_STALL_RETRIES) {
+    // Deliver what we have (zero-filled, flagged) instead of discarding —
+    // twin of backend check_log_dl_stall's finalize(truncated=True).
+    _finishLogDownload(true, 'FC stopped sending LOG_DATA (re-requests unanswered)');
+    return;
+  }
+  logSession.dlStallRetries += 1;
+  const remaining = logSession.dlSize - logSession.dlOfs;
+  const next = Math.min(LOG_CHUNK_BYTES, remaining);
+  logSession.dlWindowEnd = logSession.dlOfs + next;
+  sendSerialFrame(
+    119,
+    encodeLogRequestData(serial.targetSysId, serial.targetCompId, logSession.dlId, logSession.dlOfs, next)
+  );
+  _armDlWatchdog();
 }
 
 function _onLogData(p: DataView): void {
@@ -1173,24 +1230,30 @@ function _onLogData(p: DataView): void {
   // (backend handle_log_data pads to 97 for the same reason).
   const ofs = p.getUint32(0, true);
   const logId = p.getUint16(4, true);
-  const count = p.getUint8(6);
+  // The LOG_DATA data field is uint8_t[90] (MAVLink common.xml) but count is
+  // a free u8 — a corrupt frame that passes CRC could advertise up to 255.
+  // Unclamped, the Uint8Array view below would either throw RangeError past
+  // the buffer end (tearing down the whole read loop) or spill into the CRC
+  // and following-frame bytes.
+  const count = Math.min(p.getUint8(6), 90);
   if (logId !== logSession.dlId) return;
-  // FC count==0 is the AP_Logger "EOF / unreadable log" sentinel — see
-  // backend handle_log_data at backend/mavlink_handlers.py:631.
+  // FC count==0 is the AP_Logger "EOF / unreadable log" sentinel — see the
+  // count==0 branch in backend handle_log_data (backend/mavlink_handlers.py).
   if (count === 0) {
     _finishLogDownload(true);
     return;
   }
   const data = new Uint8Array(p.buffer, p.byteOffset + 7, count);
   appendLogChunkBinary(logId, ofs, data);
+  logSession.dlReceived += count;
   const end = ofs + count;
   if (end > logSession.dlOfs) logSession.dlOfs = end;
   updateDownloadProgress(logSession.dlOfs, logSession.dlSize);
 
-  if (logSession.dlTimer) clearTimeout(logSession.dlTimer);
-  logSession.dlTimer = setTimeout(() => {
-    _abortLogDownload('FC stopped sending LOG_DATA');
-  }, 5000);
+  // Any accepted frame is progress — re-arm the stall watchdog and forget
+  // past retries.
+  logSession.dlStallRetries = 0;
+  _armDlWatchdog();
 
   if (logSession.dlOfs >= logSession.dlSize) {
     _finishLogDownload(false);
@@ -1247,9 +1310,10 @@ export async function serialLogDownload(id: number): Promise<{ ok: boolean; erro
     logSession.dlId = id;
     logSession.dlSize = entry.size;
     logSession.dlOfs = 0;
-    logSession.dlTimer = setTimeout(() => {
-      _abortLogDownload('LOG_REQUEST_DATA timed out (no LOG_DATA in 5s)');
-    }, 5000);
+    logSession.dlReceived = 0;
+    logSession.dlStallRetries = 0;
+    // Arm the stall watchdog now so even a lost FIRST window gets retried.
+    _armDlWatchdog();
     const chunk = Math.min(LOG_CHUNK_BYTES, entry.size);
     logSession.dlWindowEnd = chunk;
     sendSerialFrame(119, encodeLogRequestData(serial.targetSysId, serial.targetCompId, id, 0, chunk));

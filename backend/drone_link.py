@@ -292,6 +292,10 @@ class DroneLink:
             self.log_dl._log_download_data = bytearray()
             self.log_dl._log_download_ofs = 0
             self.log_dl._log_emit_ofs = 0
+            self.log_dl._log_window_end = 0
+            self.log_dl._log_received = 0
+            self.log_dl._log_stall_retries = 0
+            self.log_dl._log_last_data_time = 0.0
             self._prearm_messages = []
         # param_mgr's `fetching` flag could otherwise stay True forever if a
         # PARAM_REQUEST_LIST was in flight when the link dropped (auditor W2)
@@ -765,12 +769,18 @@ class DroneLink:
             self._write_log_line()
             self.param_mgr.check_timeout()
             self._check_mission_dl_timeout()
+            self._check_log_dl_stall()
             time.sleep(cfg.MAIN_LOOP_SLEEP)
 
     def _check_mission_dl_timeout(self) -> None:
         from .commands._mission import check_mission_dl_timeout
 
         check_mission_dl_timeout(self)
+
+    def _check_log_dl_stall(self) -> None:
+        from .mavlink_handlers import check_log_dl_stall
+
+        check_log_dl_stall(self)
 
     def get_inspector_data(self) -> list[dict]:
         # _msg_stats is mutated by _process() under _state_lock; iterating it

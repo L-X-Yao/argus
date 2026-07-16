@@ -140,6 +140,16 @@ class LogState:
     # request that arrives mid-burst — so the GCS must not re-request until
     # progress reaches this boundary (AP_Logger_MAVLinkLogTransfer.cpp:111).
     _log_window_end: int = 0
+    # Stall watchdog (twin of transport.ts dlStallRetries). The window cadence
+    # sends the next request only from handle_log_data — if the boundary frame
+    # is lost, no LOG_DATA ever arrives again and the download would hang
+    # forever. check_log_dl_stall() re-requests from the high-water mark.
+    _log_last_data_time: float = 0.0
+    _log_stall_retries: int = 0
+    # Raw count of accepted LOG_DATA payload bytes. Mid-window frame loss
+    # leaves zero-filled holes the high-water cadence never revisits; a
+    # received total short of the final size is the only tell.
+    _log_received: int = 0
     # Offset already streamed to the frontend as log_chunk messages. Lets
     # handle_log_data emit fresh chunks of CHUNK_SIZE bytes as the bytearray
     # high-water mark grows, instead of waiting for the whole log and

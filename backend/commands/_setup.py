@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import struct
+import time
 from typing import TYPE_CHECKING
 
 from ..crc_extras import CRC_EXTRA
@@ -162,6 +163,11 @@ def cmd_log_download(link: DroneLink, param, data: dict):
     lg._log_download_size = log_entry["size"]
     lg._log_download_data = bytearray(log_entry["size"])
     lg._log_download_ofs = 0
+    lg._log_received = 0
+    lg._log_stall_retries = 0
+    # Arm the stall watchdog now so even a lost FIRST window gets retried
+    # (check_log_dl_stall gates on last_data_time > 0).
+    lg._log_last_data_time = time.time()
     link.add_event(lt("log_dl", link.locale) % (log_id, log_entry["size"] // 1024), "log_dl")
     chunk = min(90 * 50, log_entry["size"])
     # One LOG_REQUEST_DATA = one atomic AP burst; the next request may only
@@ -179,4 +185,12 @@ def cmd_log_cancel(link: DroneLink, param, data: dict):
     lg._log_download_data = bytearray()
     lg._log_download_size = 0
     lg._log_download_ofs = 0
+    lg._log_window_end = 0
+    # A stale emit offset would make the NEXT download silently skip emitting
+    # its first _log_emit_ofs bytes (finalize base64s only from that mark) —
+    # only _finalize_log_download resets it, and cancel skips finalize.
+    lg._log_emit_ofs = 0
+    lg._log_received = 0
+    lg._log_stall_retries = 0
+    lg._log_last_data_time = 0.0
     link.add_event(lt("log_dl_cancel", link.locale), "log_dl_cancel")

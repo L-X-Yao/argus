@@ -184,7 +184,10 @@ describe('dual-stack parity dump', () => {
           H.logList.list.push({ ...op.log_entry!, time_utc: 0 });
           const p = serialLogDownload(op.log_entry!.id);
           dump[op.id] = toHex(H.writes);
-          await vi.advanceTimersByTimeAsync(6000);
+          // The stall watchdog re-requests 3× (5s apart) before giving up —
+          // walk the full ladder so the promise settles (dump already
+          // captured; the retry frames land after it and writes reset per op).
+          await vi.advanceTimersByTimeAsync(21000);
           await p;
           continue;
         }
