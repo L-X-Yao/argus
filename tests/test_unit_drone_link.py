@@ -1264,6 +1264,55 @@ class TestLoop:
             link._loop()
         mock_chk.assert_called_with(link)
 
+    def test_loop_read_size_tracks_in_waiting(self):
+        """The read loop drains in_waiting (capped 64 KB) instead of a fixed
+        1024 B/tick — that fixed read + 20 ms sleep capped intake at ~50 KB/s
+        and throttled log downloads regardless of protocol. Without this
+        anchor the batching could silently regress to read(1024) and the
+        suite would stay green while downloads crawled again."""
+        for avail, expected in [(0, 1024), (500, 1024), (50000, 50000), (70000, 65536)]:
+            link = DroneLink()
+            link._running = True
+            sizes: list[int] = []
+            mock_ser = MagicMock(in_waiting=avail)
+
+            def mock_read(n, _sizes=sizes, _link=link):
+                _sizes.append(n)
+                _link._running = False
+                return b""
+
+            mock_ser.read = mock_read
+            link._ser = mock_ser
+            with (
+                patch("backend.drone_link.cmd_module.send_heartbeat"),
+                patch("backend.drone_link.cmd_module.request_streams"),
+                patch("backend.drone_link.time.sleep"),
+            ):
+                link._loop()
+            assert sizes == [expected], f"in_waiting={avail} → read({sizes}), expected [{expected}]"
+
+    def test_loop_read_size_survives_missing_in_waiting(self):
+        """A wrapper without in_waiting (getattr default 0) must fall back to
+        read(1024), never crash — UdpWrapper/ReplayWrapper lack the property."""
+        link = DroneLink()
+        link._running = True
+        sizes: list[int] = []
+
+        class NoInWaiting:
+            def read(self, n):
+                sizes.append(n)
+                link._running = False
+                return b""
+
+        link._ser = NoInWaiting()
+        with (
+            patch("backend.drone_link.cmd_module.send_heartbeat"),
+            patch("backend.drone_link.cmd_module.request_streams"),
+            patch("backend.drone_link.time.sleep"),
+        ):
+            link._loop()
+        assert sizes == [1024]
+
     def test_loop_reads_serial_data(self):
         """_loop reads data from serial port and appends to _buf."""
         link = DroneLink()

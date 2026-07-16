@@ -441,6 +441,27 @@ describe('serialLogList + serialLogDownload', () => {
     expect(res.ok).toBe(true); // repaired, not flagged
   });
 
+  it('ignores a late/duplicate frame arriving after completion (dlId reset)', async () => {
+    // On finish the machine resets dlId to -1 (mirrors backend
+    // _log_download_id=-1). A straggler same-id LOG_DATA must then hit the
+    // `logId !== dlId` guard and be dropped — not re-run coverage or re-arm
+    // the watchdog on a completed session.
+    (logStoreMock.logState as unknown as { list: Array<{ id: number; size: number; time_utc: number }> }).list = [
+      { id: 7, size: 180, time_utc: 0 },
+    ];
+    const promise = serialLogDownload(7);
+    inject(fcFrame(120, mkLogData(0, 7, 90, new Uint8Array(90).fill(1))));
+    inject(fcFrame(120, mkLogData(90, 7, 90, new Uint8Array(90).fill(2)))); // reaches size → finish
+    const res = await promise;
+    expect(res.ok).toBe(true);
+    const appendsAtFinish = vi.mocked(logStoreMock.appendLogChunkBinary).mock.calls.length;
+    const writesAtFinish = countWrites(119);
+    // Straggler for the just-finished log.
+    inject(fcFrame(120, mkLogData(90, 7, 90, new Uint8Array(90).fill(3))));
+    expect(vi.mocked(logStoreMock.appendLogChunkBinary).mock.calls.length).toBe(appendsAtFinish);
+    expect(countWrites(119)).toBe(writesAtFinish); // no re-request, no re-arm side effects
+  });
+
   it('reconstructs zero-tailed chunks that MAVLink2 trimmed on the wire', async () => {
     // A LOG_DATA whose data ends in zeros arrives trimmed; the machine must
     // pad back to the advertised count — the old code silently shortened

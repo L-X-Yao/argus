@@ -815,7 +815,7 @@ def _contiguous_prefix(lg) -> int:
 
 
 def _emit_log_chunks(lg, log_id: int) -> None:
-    """Emit any complete log_stream_chunk messages whose contents are now
+    """Emit any complete log_chunk messages whose contents are now
     fully present in lg._log_download_data (between lg._log_emit_ofs and the
     contiguous prefix). Each chunk goes out as a small base64 message
     rather than buffering the whole log for a single end-of-download blob."""
@@ -869,9 +869,17 @@ def _finalize_log_download(lg, log_id: int, truncated: bool, link: DroneLink) ->
     # dropping entries loses log_chunk payload the frontend can never
     # recover (a whole-log stream outruns the drain; the old [-200:] trim
     # ate 60% of a 28 MB SITL download). The queue is cleared at the START
-    # of the next download / cancel / disconnect instead; until then its
-    # memory is bounded by ~1.35× the log size (the frontend accumulates
-    # the same bytes anyway).
+    # of the next download / cancel / disconnect instead.
+    #
+    # Memory cost (honest accounting): during a download the peak is the
+    # pre-allocated _log_download_data (1× the log) PLUS the base64 chunk
+    # queue (~1.35×) = ~2.35×; after completion ~1.35× stays resident until
+    # the next download clears it. Fine for typical logs (<50 MB). A very
+    # large log on the backend-serial path (e.g. 260 MB → ~610 MB peak)
+    # would want real backpressure — trim entries below the slowest ws
+    # client's cursor — but that needs per-client cursor coordination in
+    # ws_manager and is deferred: the user's real download path is WebSerial
+    # (transport.ts, browser-side assembly), which never touches this queue.
 
 
 # ArduPilot: libraries/AP_Logger/AP_Logger_MAVLinkLogTransfer.cpp:296 — AP_Logger::handle_log_send_data
