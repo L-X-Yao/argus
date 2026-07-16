@@ -146,6 +146,10 @@ class LogState:
     # forever. check_log_dl_stall() re-requests from the high-water mark.
     _log_last_data_time: float = 0.0
     _log_stall_retries: int = 0
+    # Wall-clock throttle for log_progress messages. The old per-10-frames
+    # cadence was tuned for 4500 B windows; a whole-log stream would emit
+    # tens of thousands of progress messages and drown the ws drain.
+    _log_last_progress_time: float = 0.0
     # Coverage of accepted LOG_DATA byte ranges as sorted disjoint [start,end)
     # intervals. Mid-window frame loss leaves zero-filled holes the high-water
     # cadence never revisits; covered-bytes short of the final size is the

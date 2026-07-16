@@ -382,7 +382,7 @@ class TestDroneLinkDisconnect:
         assert len(disc_events) == 1
 
     def test_disconnect_closes_serial(self):
-        mock_ser = MagicMock()
+        mock_ser = MagicMock(in_waiting=0)
         link = DroneLink()
         link._ser = mock_ser
         link.disconnect()
@@ -391,7 +391,7 @@ class TestDroneLinkDisconnect:
 
     def test_disconnect_handles_close_error(self):
         """OSError from close is caught gracefully."""
-        mock_ser = MagicMock()
+        mock_ser = MagicMock(in_waiting=0)
         mock_ser.close.side_effect = OSError("close failed")
         link = DroneLink()
         link._ser = mock_ser
@@ -480,7 +480,7 @@ class TestDroneLinkReconnect:
 
     @patch.object(DroneLink, "_open_port")
     def test_reconnect_closes_existing_serial(self, mock_open):
-        old_ser = MagicMock()
+        old_ser = MagicMock(in_waiting=0)
         mock_open.return_value = MagicMock()
         link = DroneLink()
         link._ser = old_ser
@@ -503,7 +503,7 @@ class TestDroneLinkSend:
 
     @patch.object(DroneLink, "_open_port")
     def test_send_increments_sequence(self, mock_open):
-        mock_ser = MagicMock()
+        mock_ser = MagicMock(in_waiting=0)
         link = DroneLink()
         link._ser = mock_ser
         link._protocol = "standard"
@@ -513,7 +513,7 @@ class TestDroneLinkSend:
 
     def test_send_exception_handled(self):
         link = DroneLink()
-        mock_ser = MagicMock()
+        mock_ser = MagicMock(in_waiting=0)
         mock_ser.write.side_effect = OSError("write failed")
         link._ser = mock_ser
         link._protocol = "standard"
@@ -521,7 +521,7 @@ class TestDroneLinkSend:
 
     def test_send_standard_writes_raw(self):
         """Standard protocol writes the raw frame bytes."""
-        mock_ser = MagicMock()
+        mock_ser = MagicMock(in_waiting=0)
         link = DroneLink()
         link._ser = mock_ser
         link._protocol = "standard"
@@ -531,7 +531,7 @@ class TestDroneLinkSend:
 
     def test_send_pllink_wraps_frame(self):
         """PL-Link protocol wraps the frame with PL-Link envelope."""
-        mock_ser = MagicMock()
+        mock_ser = MagicMock(in_waiting=0)
         link = DroneLink()
         link._ser = mock_ser
         link._protocol = "pllink"
@@ -545,7 +545,7 @@ class TestDroneLinkSend:
 
     def test_send_auto_protocol_sends_standard(self):
         """Auto protocol sends standard MAVLink (not PL-Link wrapped)."""
-        mock_ser = MagicMock()
+        mock_ser = MagicMock(in_waiting=0)
         link = DroneLink()
         link._ser = mock_ser
         link._protocol = "auto"
@@ -1221,7 +1221,7 @@ class TestLoop:
         """_loop sends heartbeat via commands module."""
         link = DroneLink()
         link._running = True
-        mock_ser = MagicMock()
+        mock_ser = MagicMock(in_waiting=0)
         mock_ser.read.return_value = b""
         link._ser = mock_ser
 
@@ -1248,7 +1248,7 @@ class TestLoop:
         while a real stalled download hung forever."""
         link = DroneLink()
         link._running = True
-        mock_ser = MagicMock()
+        mock_ser = MagicMock(in_waiting=0)
         mock_ser.read.return_value = b""
         link._ser = mock_ser
 
@@ -1268,7 +1268,7 @@ class TestLoop:
         """_loop reads data from serial port and appends to _buf."""
         link = DroneLink()
         link._running = True
-        mock_ser = MagicMock()
+        mock_ser = MagicMock(in_waiting=0)
 
         call_count = 0
 
@@ -1295,7 +1295,7 @@ class TestLoop:
         """_loop catches OSError from serial read."""
         link = DroneLink()
         link._running = True
-        mock_ser = MagicMock()
+        mock_ser = MagicMock(in_waiting=0)
 
         call_count = 0
 
@@ -1322,7 +1322,7 @@ class TestLoop:
         link = DroneLink()
         link._running = True
         link._protocol = "standard"
-        mock_ser = MagicMock()
+        mock_ser = MagicMock(in_waiting=0)
 
         call_count = 0
 
@@ -1353,7 +1353,7 @@ class TestLoop:
         link.connected = True
         link.last_frame_time = time.time() - cfg.LINK_LOST_TIMEOUT - 1.0
         link._reconnect_enabled = False  # disable auto-reconnect for this test
-        mock_ser = MagicMock()
+        mock_ser = MagicMock(in_waiting=0)
         mock_ser.read.return_value = b""
         link._ser = mock_ser
 
@@ -1384,11 +1384,11 @@ class TestLoop:
         link._reconnect_enabled = True
         link._last_port = "tcp:localhost:5770"
         link._last_baud = 57600
-        mock_ser = MagicMock()
+        mock_ser = MagicMock(in_waiting=0)
         mock_ser.read.return_value = b""
         link._ser = mock_ser
 
-        new_ser = MagicMock()
+        new_ser = MagicMock(in_waiting=0)
         new_ser.read.return_value = b""
 
         call_count = 0
@@ -1419,7 +1419,7 @@ class TestLoop:
         link._reconnect_enabled = True
         link._last_port = "tcp:localhost:5770"
         link._last_baud = 57600
-        mock_ser = MagicMock()
+        mock_ser = MagicMock(in_waiting=0)
         mock_ser.read.return_value = b""
         link._ser = mock_ser
 
@@ -1454,7 +1454,7 @@ class TestLoop:
         link._reconnect_enabled = True
         link._last_port = "tcp:localhost:5770"
         link._last_baud = 57600
-        mock_ser = MagicMock()
+        mock_ser = MagicMock(in_waiting=0)
         mock_ser.read.side_effect = OSError("closed")
         link._ser = mock_ser
 
@@ -1489,10 +1489,10 @@ class TestLoop:
         link._reconnect_enabled = True
         link._last_port = "tcp:localhost:5770"
         link._last_baud = 57600
-        old_ser = MagicMock()
+        old_ser = MagicMock(in_waiting=0)
         old_ser.read.side_effect = OSError("closed")
         link._ser = old_ser
-        new_ser = MagicMock()
+        new_ser = MagicMock(in_waiting=0)
         new_ser.read.return_value = b""
 
         opens = {"n": 0}
@@ -1530,7 +1530,7 @@ class TestLoop:
         link._running = True
         link.connected = True
         link.last_frame_time = time.time()  # fresh — no link-lost
-        mock_ser = MagicMock()
+        mock_ser = MagicMock(in_waiting=0)
         mock_ser.read.return_value = b""
         link._ser = mock_ser
 
@@ -1556,7 +1556,7 @@ class TestLoop:
         link._running = True
         link.connected = False
         link.frame_count = 0
-        mock_ser = MagicMock()
+        mock_ser = MagicMock(in_waiting=0)
         mock_ser.read.return_value = b""
         link._ser = mock_ser
 
@@ -1583,7 +1583,7 @@ class TestLoop:
         link._protocol = "standard"
         hb_payload = _build_heartbeat_payload(mode=3, vtype=2)
         frame = _build_mavlink_frame(link, msg_id=0, payload=hb_payload)
-        mock_ser = MagicMock()
+        mock_ser = MagicMock(in_waiting=0)
 
         call_count = 0
 
@@ -1613,7 +1613,7 @@ class TestLoop:
         link._protocol = "standard"
         hb_payload = _build_heartbeat_payload()
         frame = _build_mavlink_frame(link, msg_id=0, payload=hb_payload)
-        mock_ser = MagicMock()
+        mock_ser = MagicMock(in_waiting=0)
 
         call_count = 0
 
@@ -1717,7 +1717,7 @@ class TestDroneLinkThreadSafety:
 
     def test_concurrent_send(self):
         """Multiple threads can call send() without error."""
-        mock_ser = MagicMock()
+        mock_ser = MagicMock(in_waiting=0)
         link = DroneLink()
         link._ser = mock_ser
         link._protocol = "standard"

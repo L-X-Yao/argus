@@ -769,6 +769,9 @@ class TestLogChunking:
         lg = LogState()
         lg._log_download_data = bytearray(65536 + 100)
         lg._log_download_ofs = 65536 + 100
+        # Chunks stream only from the contiguous prefix — a hole must never
+        # ship inside an already-emitted chunk (gap-fill can't amend it).
+        lg._log_recv_intervals = [(0, 65536 + 100)]
         lg._log_emit_ofs = 0
 
         _emit_log_chunks(lg, log_id=5)
@@ -787,12 +790,35 @@ class TestLogChunking:
         size = 65536 * 2 + 50
         lg._log_download_data = bytearray(size)
         lg._log_download_ofs = size
+        lg._log_recv_intervals = [(0, size)]
         lg._log_emit_ofs = 0
 
         _emit_log_chunks(lg, log_id=3)
 
         assert len(lg._log_messages) == 2
         assert lg._log_emit_ofs == 65536 * 2
+
+    def test_emit_log_chunks_freezes_at_hole(self):
+        """A coverage hole freezes chunk emission at the contiguous prefix:
+        an already-emitted chunk can never be amended, so zeros must not
+        ship while gap-fill can still repair them."""
+        from backend.mavlink_handlers import _mark_received
+        from backend.state import LogState
+
+        lg = LogState()
+        size = 65536 * 2
+        lg._log_download_data = bytearray(size)
+        lg._log_download_ofs = size  # high-water reached the end...
+        lg._log_recv_intervals = [(0, 1000), (1500, size)]  # ...but 1000..1500 missing
+        lg._log_emit_ofs = 0
+
+        _emit_log_chunks(lg, log_id=5)
+        assert lg._log_messages == []  # nothing may ship past the hole
+
+        _mark_received(lg._log_recv_intervals, 1000, 1500)  # gap-fill lands
+        _emit_log_chunks(lg, log_id=5)
+        assert len(lg._log_messages) == 2
+        assert lg._log_emit_ofs == size
 
     def test_finalize_emits_trailing_partial_chunk(self):
         """_finalize_log_download emits the last partial chunk + log_complete."""
@@ -817,11 +843,14 @@ class TestLogChunking:
         assert complete_msgs[0]["size"] == 1000
         assert lg._log_download_id == -1
 
-    def test_finalize_trims_overflow(self):
-        """_finalize_log_download trims _log_messages when > 500."""
+    def test_finalize_never_drops_payload_messages(self):
+        """The ws drain is an unacked cursor over _log_messages — finalize
+        must NOT trim it (the old [-200:] trim silently ate log_chunk
+        payload on any download longer than ~500 messages; the frontend
+        could never recover those bytes)."""
         link = make_link()
         lg = link.log_dl
-        lg._log_messages = [{"type": "dummy"}] * 500
+        lg._log_messages = [{"type": "log_chunk", "id": 1, "ofs": i, "data": ""} for i in range(600)]
         lg._log_download_data = bytearray(100)
         lg._log_download_ofs = 100
         lg._log_emit_ofs = 0
@@ -829,12 +858,15 @@ class TestLogChunking:
 
         _finalize_log_download(lg, log_id=1, truncated=True, link=link)
 
-        assert len(lg._log_messages) == 200
+        chunks = [m for m in lg._log_messages if m["type"] == "log_chunk"]
+        assert len(chunks) == 600 + 1  # every queued chunk + the trailing partial
+        assert lg._log_messages[-1]["type"] == "log_complete"
 
 
 class TestLogDataProgress:
     def test_progress_message_emitted(self):
-        """After 10 chunks, a log_progress message is emitted."""
+        """A frame past the throttle window emits a log_progress message
+        carrying the covered-byte count."""
         link = make_link()
         link.send = lambda frame: None
         lg = link.log_dl
@@ -842,20 +874,23 @@ class TestLogDataProgress:
         lg._log_download_size = 10000
         lg._log_download_data = bytearray(10000)
         lg._log_download_ofs = 0
+        lg._log_last_progress_time = 0.0  # throttle window long expired
 
-        # Send 10 small chunks to trigger progress
-        for i in range(10):
-            data = bytes([i & 0xFF] * 10)
-            p = struct.pack("<IHB", i * 10, 10, 10) + data + b"\x00" * 80
-            handle_log_data(p, len(p), link)
+        p = struct.pack("<IHB", 0, 10, 10) + bytes(10) + b"\x00" * 80
+        handle_log_data(p, len(p), link)
 
         progress_msgs = [m for m in lg._log_messages if m["type"] == "log_progress"]
-        assert len(progress_msgs) >= 1
-        assert "received" in progress_msgs[0]
-        assert "total" in progress_msgs[0]
+        assert len(progress_msgs) == 1
+        assert progress_msgs[0]["received"] == 10
+        assert progress_msgs[0]["total"] == 10000
 
-    def test_progress_messages_overflow_trimmed(self):
-        """_log_messages gets trimmed if it exceeds 500 during progress emission."""
+    def test_progress_messages_time_throttled(self):
+        """Progress is wall-clock throttled, not per-N-frames: a whole-log
+        stream delivers thousands of frames per second and a frame-count
+        cadence would flood the ws queue (tens of thousands of messages for
+        a 28 MB log)."""
+        import time as _time
+
         link = make_link()
         link.send = lambda frame: None
         lg = link.log_dl
@@ -863,22 +898,13 @@ class TestLogDataProgress:
         lg._log_download_size = 100000
         lg._log_download_data = bytearray(100000)
         lg._log_download_ofs = 0
-        lg._log_messages = [{"type": "dummy"}] * 499
-        link._log_progress_counter = 9  # next chunk triggers progress
+        lg._log_last_progress_time = _time.time()  # window just started
 
-        # This chunk won't complete the download but will add progress msg
-        data = bytes(10)
-        p = struct.pack("<IHB", 0, 10, 10) + data + b"\x00" * 80
-        handle_log_data(p, len(p), link)
+        for i in range(50):  # a burst well inside the throttle window
+            p = struct.pack("<IHB", i * 10, 10, 10) + bytes(10) + b"\x00" * 80
+            handle_log_data(p, len(p), link)
 
-        # 499 + 1 progress = 500. If > 500, trimmed
-        # Actually the threshold is > 500 not >=, so 500 stays
-        # Add another to push over
-        link._log_progress_counter = 9
-        p2 = struct.pack("<IHB", 10, 10, 10) + data + b"\x00" * 80
-        handle_log_data(p2, len(p2), link)
-
-        assert len(lg._log_messages) <= 500
+        assert [m for m in lg._log_messages if m["type"] == "log_progress"] == []
 
     def test_large_log_with_64kb_streaming(self):
         """Full download >64KB uses chunk streaming."""

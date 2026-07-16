@@ -902,13 +902,13 @@ class TestIncomingHandlers:
         handle_log_data(payload, pl, link)
         assert link.log_dl._log_download_data[:90] == chunk
 
-    def test_log_data_window_cadence(self):
-        """One LOG_REQUEST_DATA per window. ArduPilot answers a request with
-        one atomic burst of the whole window, then ends its transfer
-        (AP_Logger_MAVLinkLogTransfer.cpp:337-341) — and silently drops any
-        same-channel request that arrives mid-burst (:111-118). The previous
-        per-frame re-request buried a real FC in duplicate windows; the GCS
-        must stay silent until the window boundary."""
+    def test_log_data_whole_stream_stays_silent(self):
+        """The whole log rides ONE LOG_REQUEST_DATA (the MAVProxy pattern,
+        AP_Logger_MAVLinkLogTransfer.cpp:112-113): AP streams the full range
+        as one paced burst and silently drops any same-channel request that
+        arrives mid-burst (:111-120). The GCS must not send a single frame
+        until the stream ends — per-window round trips were the ~225 KB/s
+        RTT ceiling, per-frame re-requests were the 0 KB drown."""
         from backend.mavlink_handlers import handle_log_data
 
         link = FakeLink()
@@ -917,25 +917,20 @@ class TestIncomingHandlers:
         lg._log_download_size = 9000
         lg._log_download_data = bytearray(9000)
         lg._log_download_ofs = 0
-        lg._log_window_end = 4500
-        for ofs in range(0, 4410, 90):
+        lg._log_window_end = 9000  # cmd_log_download requested (0, size)
+        for ofs in range(0, 9000, 90):
             msg = mavlink.MAVLink_log_data_message(id=5, ofs=ofs, count=90, data=[7] * 90)
             payload, pl = _encode_payload(msg)
             handle_log_data(payload, pl, link)
-            assert link.captured == [], f"re-request sent mid-window at ofs {ofs}"
-        msg = mavlink.MAVLink_log_data_message(id=5, ofs=4410, count=90, data=[7] * 90)
-        payload, pl = _encode_payload(msg)
-        handle_log_data(payload, pl, link)
-        assert len(link.captured) == 1
-        req = _decode_one(link.captured[0])
-        assert req.get_msgId() == mavlink.MAVLINK_MSG_ID_LOG_REQUEST_DATA
-        assert (req.ofs, req.count, req.id) == (4500, 4500, 5)
-        assert lg._log_window_end == 9000
+        assert link.captured == [], "GCS spoke during the atomic stream"
+        complete = [m for m in lg._log_messages if m["type"] == "log_complete"]
+        assert len(complete) == 1 and complete[0]["truncated"] is False
 
-    def test_log_data_short_frame_rerequests(self):
-        """count<90 mid-window = AP short read — its transfer ended
+    def test_log_data_short_frame_resumes_via_gap(self):
+        """count<90 mid-stream = AP short read — its transfer ended
         (AP_Logger_MAVLinkLogTransfer.cpp:339-341), so the GCS must
-        immediately resume from the high-water mark."""
+        immediately re-request everything still uncovered (first gap =
+        resume point when there are no holes)."""
         from backend.mavlink_handlers import handle_log_data
 
         link = FakeLink()
@@ -944,7 +939,7 @@ class TestIncomingHandlers:
         lg._log_download_size = 9000
         lg._log_download_data = bytearray(9000)
         lg._log_download_ofs = 0
-        lg._log_window_end = 4500
+        lg._log_window_end = 9000
         msg = mavlink.MAVLink_log_data_message(id=4, ofs=0, count=90, data=[1] * 90)
         payload, pl = _encode_payload(msg)
         handle_log_data(payload, pl, link)
@@ -954,42 +949,81 @@ class TestIncomingHandlers:
         handle_log_data(payload, pl, link)
         assert len(link.captured) == 1
         req = _decode_one(link.captured[0])
-        assert (req.ofs, req.count) == (120, 4500)
+        assert (req.ofs, req.count) == (120, 9000 - 120)
+        assert lg._log_window_end == 9000
 
-    def test_log_download_full_chain_seeds_first_window(self):
-        """cmd_log_download itself must seed _log_window_end — the cadence
-        tests above preset it by hand, so without this test the seeding line
-        could be deleted and the suite would stay green while a real first
-        window re-requested on its very first frame."""
+    def test_log_data_hole_gap_filled_to_clean_completion(self):
+        """A frame lost mid-stream leaves a coverage gap; when the stream
+        ends the GCS re-requests exactly that gap and — once answered —
+        finalizes CLEAN (truncated=False). The old window machinery shipped
+        the file zero-filled and flagged; gap-fill actually repairs it."""
+        from backend.mavlink_handlers import handle_log_data
+
+        link = FakeLink()
+        lg = link.log_dl
+        lg._log_download_id = 5
+        lg._log_download_size = 200
+        lg._log_download_data = bytearray(200)
+        lg._log_window_end = 200
+        # Frame 90..110 lost; stream reaches its end with a hole.
+        msg = mavlink.MAVLink_log_data_message(id=5, ofs=0, count=90, data=[1] * 90)
+        payload, pl = _encode_payload(msg)
+        handle_log_data(payload, pl, link)
+        msg = mavlink.MAVLink_log_data_message(id=5, ofs=110, count=90, data=[2] * 90)
+        payload, pl = _encode_payload(msg)
+        handle_log_data(payload, pl, link)
+        assert len(link.captured) == 1  # stream ended → exactly one gap request
+        req = _decode_one(link.captured[0])
+        assert (req.ofs, req.count) == (90, 20)
+        # AP answers the gap; download completes clean.
+        msg = mavlink.MAVLink_log_data_message(id=5, ofs=90, count=20, data=[3] * 20 + [0] * 70)
+        payload, pl = _encode_payload(msg)
+        handle_log_data(payload, pl, link)
+        complete = [m for m in lg._log_messages if m["type"] == "log_complete"]
+        assert len(complete) == 1 and complete[0]["truncated"] is False
+        assert not any(e["event_type"] == "log_dl_holes" for e in link.events)
+        assert lg._log_download_id == -1
+
+    def test_log_download_full_chain_whole_log_request(self):
+        """cmd_log_download must request the ENTIRE log in one
+        LOG_REQUEST_DATA and seed _log_window_end to the size — the stream
+        tests above preset the state by hand, so without this anchor the
+        request sizing could regress (e.g. back to 4500 B windows) and the
+        suite would stay green while real downloads fell back to the
+        RTT-bound ceiling."""
         from backend.commands._setup import cmd_log_download
         from backend.mavlink_handlers import handle_log_data
 
         link = FakeLink()
         lg = link.log_dl
         lg._log_list = [{"id": 3, "size": 9000, "time_utc": 0}]
+        # Stale payload from a previous download must be dropped at start
+        # (the unacked ws drain keeps it queued until then); log_list stays.
+        lg._log_messages = [
+            {"type": "log_chunk", "id": 9, "ofs": 0, "data": ""},
+            {"type": "log_list", "logs": []},
+        ]
         cmd_log_download(link, None, {"id": 3})
+        assert [m["type"] for m in lg._log_messages] == ["log_list"]
         assert len(link.captured) == 1
         req = _decode_one(link.captured[0])
         assert req.get_msgId() == mavlink.MAVLINK_MSG_ID_LOG_REQUEST_DATA
-        assert (req.ofs, req.count, req.id) == (0, 4500, 3)
-        assert lg._log_window_end == 4500
+        assert (req.ofs, req.count, req.id) == (0, 9000, 3)
+        assert lg._log_window_end == 9000
         assert lg._log_last_data_time > 0  # stall watchdog armed at request time
-        # The first window streams in — no mid-window re-request may go out.
-        for ofs in range(0, 4410, 90):
+        # The whole log streams in — the GCS never speaks again.
+        for ofs in range(0, 9000, 90):
             msg = mavlink.MAVLink_log_data_message(id=3, ofs=ofs, count=90, data=[7] * 90)
             payload, pl = _encode_payload(msg)
             handle_log_data(payload, pl, link)
-        assert len(link.captured) == 1, "re-request went out mid-window"
-        msg = mavlink.MAVLink_log_data_message(id=3, ofs=4410, count=90, data=[7] * 90)
-        payload, pl = _encode_payload(msg)
-        handle_log_data(payload, pl, link)
-        assert len(link.captured) == 2  # exactly one request at the boundary
+        assert len(link.captured) == 1, "re-request went out mid-stream"
+        assert lg._log_download_id == -1  # finalized
 
-    def test_log_dl_stall_rerequests_from_high_water(self):
-        """A lost window-boundary frame leaves AP idle (it ended its burst at
-        remaining==0, AP_Logger_MAVLinkLogTransfer.cpp:337-341) and the GCS
-        with no trigger to re-request — check_log_dl_stall must resume from
-        the high-water mark instead of hanging forever."""
+    def test_log_dl_stall_rerequests_first_gap(self):
+        """Losing the tail of the stream leaves AP idle (it ended its burst
+        at remaining==0, AP_Logger_MAVLinkLogTransfer.cpp:337-341) and the
+        GCS with no trigger to re-request — check_log_dl_stall must ask for
+        the first uncovered gap instead of hanging forever."""
         import time as _time
 
         from backend.mavlink_handlers import LOG_DL_STALL_TIMEOUT, check_log_dl_stall
@@ -999,14 +1033,15 @@ class TestIncomingHandlers:
         lg._log_download_id = 5
         lg._log_download_size = 9000
         lg._log_download_data = bytearray(9000)
-        lg._log_download_ofs = 4410  # boundary frame at 4410..4500 was lost
-        lg._log_window_end = 4500
+        lg._log_download_ofs = 4410  # everything after 4410 was lost
+        lg._log_recv_intervals = [(0, 4410)]
+        lg._log_window_end = 9000
         lg._log_last_data_time = _time.time() - LOG_DL_STALL_TIMEOUT - 1
         check_log_dl_stall(link)
         assert len(link.captured) == 1
         req = _decode_one(link.captured[0])
-        assert (req.ofs, req.count, req.id) == (4410, 4500, 5)
-        assert lg._log_window_end == 4410 + 4500
+        assert (req.ofs, req.count, req.id) == (4410, 9000 - 4410, 5)
+        assert lg._log_window_end == 9000
         assert lg._log_stall_retries == 1
         # The retry re-armed the timer — an immediate second check is a no-op.
         check_log_dl_stall(link)
@@ -1040,26 +1075,6 @@ class TestIncomingHandlers:
         # No contradictory "download complete" right after the failure event.
         assert not any(e["event_type"] == "log_dl_done" for e in link.events)
         assert any(e["event_type"] == "log_dl_done_part" for e in link.events)
-
-    def test_log_dl_mid_window_hole_flags_truncated(self):
-        """A frame lost mid-window leaves a zero-filled hole the high-water
-        cadence never revisits — the received-byte count is the only tell, so
-        finalize must flag the file instead of shipping silent zeros."""
-        from backend.mavlink_handlers import handle_log_data
-
-        link = FakeLink()
-        lg = link.log_dl
-        lg._log_download_id = 5
-        lg._log_download_size = 200
-        lg._log_download_data = bytearray(200)
-        lg._log_window_end = 200
-        # The 0..110 frame was lost; only the tail arrives, reaching size.
-        msg = mavlink.MAVLink_log_data_message(id=5, ofs=110, count=90, data=[9] * 90)
-        payload, pl = _encode_payload(msg)
-        handle_log_data(payload, pl, link)
-        complete = [m for m in lg._log_messages if m["type"] == "log_complete"]
-        assert len(complete) == 1 and complete[0]["truncated"] is True
-        assert any(e["event_type"] == "log_dl_holes" for e in link.events)
 
     def test_log_data_count_above_90_clamped(self):
         """count is a free u8 but the data field is uint8_t[90] (MAVLink
@@ -1101,8 +1116,10 @@ class TestIncomingHandlers:
     def test_log_dl_duplicate_frames_do_not_mask_holes(self):
         """Coverage must be intervals, not a raw byte sum: after a stall
         re-request a late tail of the old burst can legitimately duplicate
-        frames — a raw sum (90+90+90=270 > 200 here) would report the file
-        complete while bytes 90..110 were never received."""
+        frames — a raw sum (90+90+90=270 > 200 here) would declare the file
+        complete while bytes 90..110 were never received. The tell: with
+        intervals the machine asks for exactly the missing 20 bytes instead
+        of finalizing."""
         from backend.mavlink_handlers import handle_log_data
 
         link = FakeLink()
@@ -1115,9 +1132,10 @@ class TestIncomingHandlers:
             msg = mavlink.MAVLink_log_data_message(id=5, ofs=ofs, count=90, data=[9] * 90)
             payload, pl = _encode_payload(msg)
             handle_log_data(payload, pl, link)
-        complete = [m for m in lg._log_messages if m["type"] == "log_complete"]
-        assert len(complete) == 1 and complete[0]["truncated"] is True
-        assert any(e["event_type"] == "log_dl_holes" for e in link.events)
+        assert lg._log_download_id == 5, "raw-sum coverage finalized over a hole"
+        assert len(link.captured) == 1
+        req = _decode_one(link.captured[0])
+        assert (req.ofs, req.count) == (90, 20)
 
     def test_mark_received_interval_merge_paths(self):
         """Direct anchor for the coverage-merge algorithm: in-order extend,

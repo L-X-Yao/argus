@@ -296,6 +296,8 @@ class DroneLink:
             self.log_dl._log_recv_intervals = []
             self.log_dl._log_stall_retries = 0
             self.log_dl._log_last_data_time = 0.0
+            self.log_dl._log_last_progress_time = 0.0
+            self.log_dl._log_messages = []
             self._prearm_messages = []
         # param_mgr's `fetching` flag could otherwise stay True forever if a
         # PARAM_REQUEST_LIST was in flight when the link dropped (auditor W2)
@@ -761,7 +763,14 @@ class DroneLink:
                 if ser is None:
                     time.sleep(0.1)
                     continue
-                data = ser.read(1024)
+                # Drain what's already buffered (capped at 64 KB) instead of
+                # 1024 B per tick: read(1024) + MAIN_LOOP_SLEEP capped intake
+                # at ~50 KB/s, throttling log downloads far below the
+                # ~700 KB/s a USB FC sustains. Idle behavior is unchanged —
+                # with nothing waiting this is the same blocking read(1024)
+                # under the port's read timeout.
+                avail = getattr(ser, "in_waiting", 0) or 0
+                data = ser.read(min(max(1024, avail), 65536))
             except OSError:
                 time.sleep(0.1)
                 continue
