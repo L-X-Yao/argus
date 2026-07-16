@@ -21,6 +21,7 @@ It does NOT catch (these need source-citation audits — see CLAUDE.md):
 
 from __future__ import annotations
 
+import struct
 import threading
 from types import SimpleNamespace
 
@@ -954,6 +955,150 @@ class TestIncomingHandlers:
         assert len(link.captured) == 1
         req = _decode_one(link.captured[0])
         assert (req.ofs, req.count) == (120, 4500)
+
+    def test_log_download_full_chain_seeds_first_window(self):
+        """cmd_log_download itself must seed _log_window_end — the cadence
+        tests above preset it by hand, so without this test the seeding line
+        could be deleted and the suite would stay green while a real first
+        window re-requested on its very first frame."""
+        from backend.commands._setup import cmd_log_download
+        from backend.mavlink_handlers import handle_log_data
+
+        link = FakeLink()
+        lg = link.log_dl
+        lg._log_list = [{"id": 3, "size": 9000, "time_utc": 0}]
+        cmd_log_download(link, None, {"id": 3})
+        assert len(link.captured) == 1
+        req = _decode_one(link.captured[0])
+        assert req.get_msgId() == mavlink.MAVLINK_MSG_ID_LOG_REQUEST_DATA
+        assert (req.ofs, req.count, req.id) == (0, 4500, 3)
+        assert lg._log_window_end == 4500
+        assert lg._log_last_data_time > 0  # stall watchdog armed at request time
+        # The first window streams in — no mid-window re-request may go out.
+        for ofs in range(0, 4410, 90):
+            msg = mavlink.MAVLink_log_data_message(id=3, ofs=ofs, count=90, data=[7] * 90)
+            payload, pl = _encode_payload(msg)
+            handle_log_data(payload, pl, link)
+        assert len(link.captured) == 1, "re-request went out mid-window"
+        msg = mavlink.MAVLink_log_data_message(id=3, ofs=4410, count=90, data=[7] * 90)
+        payload, pl = _encode_payload(msg)
+        handle_log_data(payload, pl, link)
+        assert len(link.captured) == 2  # exactly one request at the boundary
+
+    def test_log_dl_stall_rerequests_from_high_water(self):
+        """A lost window-boundary frame leaves AP idle (it ended its burst at
+        remaining==0, AP_Logger_MAVLinkLogTransfer.cpp:337-341) and the GCS
+        with no trigger to re-request — check_log_dl_stall must resume from
+        the high-water mark instead of hanging forever."""
+        import time as _time
+
+        from backend.mavlink_handlers import LOG_DL_STALL_TIMEOUT, check_log_dl_stall
+
+        link = FakeLink()
+        lg = link.log_dl
+        lg._log_download_id = 5
+        lg._log_download_size = 9000
+        lg._log_download_data = bytearray(9000)
+        lg._log_download_ofs = 4410  # boundary frame at 4410..4500 was lost
+        lg._log_window_end = 4500
+        lg._log_last_data_time = _time.time() - LOG_DL_STALL_TIMEOUT - 1
+        check_log_dl_stall(link)
+        assert len(link.captured) == 1
+        req = _decode_one(link.captured[0])
+        assert (req.ofs, req.count, req.id) == (4410, 4500, 5)
+        assert lg._log_window_end == 4410 + 4500
+        assert lg._log_stall_retries == 1
+        # The retry re-armed the timer — an immediate second check is a no-op.
+        check_log_dl_stall(link)
+        assert len(link.captured) == 1
+
+    def test_log_dl_stall_gives_up_and_finalizes_truncated(self):
+        """After LOG_DL_STALL_RETRIES unanswered re-requests the download must
+        end flagged truncated (partial data delivered), not retry forever."""
+        import time as _time
+
+        from backend.mavlink_handlers import (
+            LOG_DL_STALL_RETRIES,
+            LOG_DL_STALL_TIMEOUT,
+            check_log_dl_stall,
+        )
+
+        link = FakeLink()
+        lg = link.log_dl
+        lg._log_download_id = 5
+        lg._log_download_size = 9000
+        lg._log_download_data = bytearray(9000)
+        lg._log_download_ofs = 4410
+        lg._log_stall_retries = LOG_DL_STALL_RETRIES
+        lg._log_last_data_time = _time.time() - LOG_DL_STALL_TIMEOUT - 1
+        check_log_dl_stall(link)
+        assert link.captured == []  # gave up — no further request
+        assert lg._log_download_id == -1
+        complete = [m for m in lg._log_messages if m["type"] == "log_complete"]
+        assert len(complete) == 1 and complete[0]["truncated"] is True
+        assert any(e["event_type"] == "log_dl_stall_fail" for e in link.events)
+
+    def test_log_dl_mid_window_hole_flags_truncated(self):
+        """A frame lost mid-window leaves a zero-filled hole the high-water
+        cadence never revisits — the received-byte count is the only tell, so
+        finalize must flag the file instead of shipping silent zeros."""
+        from backend.mavlink_handlers import handle_log_data
+
+        link = FakeLink()
+        lg = link.log_dl
+        lg._log_download_id = 5
+        lg._log_download_size = 200
+        lg._log_download_data = bytearray(200)
+        lg._log_window_end = 200
+        # The 0..110 frame was lost; only the tail arrives, reaching size.
+        msg = mavlink.MAVLink_log_data_message(id=5, ofs=110, count=90, data=[9] * 90)
+        payload, pl = _encode_payload(msg)
+        handle_log_data(payload, pl, link)
+        complete = [m for m in lg._log_messages if m["type"] == "log_complete"]
+        assert len(complete) == 1 and complete[0]["truncated"] is True
+        assert any(e["event_type"] == "log_dl_holes" for e in link.events)
+
+    def test_log_data_count_above_90_clamped(self):
+        """count is a free u8 but the data field is uint8_t[90] (MAVLink
+        common.xml) — unclamped, the short slice would SHRINK the bytearray
+        via slice assignment and shift every later byte left."""
+        from backend.mavlink_handlers import handle_log_data
+
+        link = FakeLink()
+        lg = link.log_dl
+        lg._log_download_id = 5
+        lg._log_download_size = 1000
+        lg._log_download_data = bytearray(1000)
+        # Hand-built payload: pymavlink refuses to encode count>90.
+        payload = struct.pack("<IHB", 0, 5, 200) + b"\x07" * 90
+        handle_log_data(payload, len(payload), link)
+        assert len(lg._log_download_data) == 1000  # buffer NOT shrunk
+        assert lg._log_download_data[:90] == b"\x07" * 90
+        assert lg._log_download_ofs == 90  # advanced by the clamped count
+
+    def test_log_cancel_resets_stream_state(self):
+        """cmd_log_cancel must reset _log_emit_ofs — stale, the NEXT download
+        would silently skip emitting its first _log_emit_ofs bytes (finalize
+        base64s only from that mark). Same for the window/stall fields."""
+        from backend.commands._setup import cmd_log_cancel
+
+        link = FakeLink()
+        lg = link.log_dl
+        lg._log_download_id = 5
+        lg._log_download_size = 9000
+        lg._log_download_data = bytearray(9000)
+        lg._log_download_ofs = 5000
+        lg._log_emit_ofs = 4096
+        lg._log_window_end = 9000
+        lg._log_received = 5000
+        lg._log_stall_retries = 2
+        lg._log_last_data_time = 12345.0
+        cmd_log_cancel(link, None, {})
+        assert lg._log_emit_ofs == 0
+        assert lg._log_window_end == 0
+        assert lg._log_received == 0
+        assert lg._log_stall_retries == 0
+        assert lg._log_last_data_time == 0.0
 
     def test_param_value(self):
         # param_manager is the entry point; handle_param_value forwards.

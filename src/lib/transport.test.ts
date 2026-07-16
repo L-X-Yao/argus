@@ -446,6 +446,98 @@ describe('serialLogList + serialLogDownload', () => {
     expect(Array.from(data.slice(0, 3))).toEqual([0xbb, 0xbb, 0xbb]);
     expect(data.slice(3).every((b) => b === 0)).toBe(true);
   });
+
+  it('clamps a corrupt count>90 instead of crashing the read loop', async () => {
+    // count is a free u8 but the data field is uint8_t[90] (MAVLink
+    // common.xml) — unclamped, the payload view would throw RangeError past
+    // the buffer end and tear down the whole serial connection.
+    (logStoreMock.logState as unknown as { list: Array<{ id: number; size: number; time_utc: number }> }).list = [
+      { id: 6, size: 9000, time_utc: 0 },
+    ];
+    const promise = serialLogDownload(6);
+    inject(fcFrame(120, mkLogData(0, 6, 200, new Uint8Array(90).fill(3))));
+    const call = vi.mocked(logStoreMock.appendLogChunkBinary).mock.calls.at(-1)!;
+    expect((call[2] as Uint8Array).length).toBe(90);
+    serialLogCancel();
+    await promise;
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// Log download stall watchdog (fake-timers) — twin of backend
+// check_log_dl_stall. A lost window-boundary frame leaves AP idle (it ended
+// its burst, AP_Logger_MAVLinkLogTransfer.cpp:337-341) and the window
+// cadence with no trigger — the watchdog must re-request, not abort.
+// ─────────────────────────────────────────────────────────────────────────
+
+describe('log download stall watchdog', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.mocked(logStoreMock.completeDownload).mockClear();
+    vi.mocked(logStoreMock.cancelDownload).mockClear();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  const seedList = (id: number, size: number) => {
+    (logStoreMock.logState as unknown as { list: Array<{ id: number; size: number; time_utc: number }> }).list = [
+      { id, size, time_utc: 0 },
+    ];
+  };
+
+  it('a lost boundary frame triggers a re-request from the high-water mark and the download recovers', async () => {
+    seedList(3, 9000);
+    const promise = serialLogDownload(3);
+    expect(countWrites(119)).toBe(1);
+    // Window 1 minus its boundary frame (4410..4500 lost on the wire).
+    for (let ofs = 0; ofs < 4410; ofs += 90) {
+      inject(fcFrame(120, mkLogData(ofs, 3, 90, new Uint8Array(90).fill(1))));
+    }
+    expect(countWrites(119)).toBe(1); // nothing to trigger a request — stalled
+    await vi.advanceTimersByTimeAsync(5001);
+    expect(countWrites(119)).toBe(2);
+    const req = writes.filter((f) => f[7] === 119).at(-1)!;
+    const dv = new DataView(req.buffer, req.byteOffset + 10);
+    expect(dv.getUint32(0, true)).toBe(4410); // resumes at the high-water mark
+    expect(dv.getUint32(4, true)).toBe(4500);
+    // FC answers the remainder; the download completes clean (no holes).
+    for (let ofs = 4410; ofs < 9000; ofs += 90) {
+      inject(fcFrame(120, mkLogData(ofs, 3, 90, new Uint8Array(90).fill(2))));
+    }
+    const res = await promise;
+    expect(res.ok).toBe(true);
+    expect(logStoreMock.completeDownload).toHaveBeenCalled();
+  });
+
+  it('gives up after bounded retries and delivers the partial data flagged, not discarded', async () => {
+    seedList(4, 9000);
+    const promise = serialLogDownload(4);
+    inject(fcFrame(120, mkLogData(0, 4, 90, new Uint8Array(90).fill(1))));
+    for (let i = 0; i < 3; i++) {
+      await vi.advanceTimersByTimeAsync(5001);
+    }
+    expect(countWrites(119)).toBe(4); // initial + 3 stall re-requests
+    await vi.advanceTimersByTimeAsync(5001); // retries exhausted
+    const res = await promise;
+    expect(res.ok).toBe(false);
+    expect(res.error).toMatch(/re-requests unanswered/);
+    // The 90 bytes received still reach the user (twin of backend
+    // finalize(truncated=True)) — the old code discarded everything.
+    expect(logStoreMock.completeDownload).toHaveBeenCalled();
+    expect(logStoreMock.cancelDownload).not.toHaveBeenCalled();
+  });
+
+  it('a mid-window hole flags the download instead of shipping silent zeros', async () => {
+    seedList(5, 200);
+    const promise = serialLogDownload(5);
+    // The 0..110 frame was lost; only the tail arrives, reaching size.
+    inject(fcFrame(120, mkLogData(110, 5, 90, new Uint8Array(90).fill(9))));
+    const res = await promise;
+    expect(res.ok).toBe(false);
+    expect(res.error).toMatch(/missing/);
+    expect(logStoreMock.completeDownload).toHaveBeenCalled();
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────

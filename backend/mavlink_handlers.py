@@ -759,6 +759,14 @@ def _finalize_log_download(lg, log_id: int, truncated: bool, link: DroneLink) ->
     import base64
 
     final_size = lg._log_download_ofs
+    # Mid-window frame loss leaves zero-filled holes that the window cadence
+    # never revisits. Duplicates can only over-count _log_received, so a
+    # received total SHORT of the final size is a definite loss — flag the
+    # file rather than shipping silently corrupted zeros.
+    missing = final_size - lg._log_received
+    if not truncated and missing > 0:
+        truncated = True
+        link.add_event(lt("log_dl_holes", link.locale) % missing, "log_dl_holes")
     if lg._log_emit_ofs < final_size:
         b64 = base64.b64encode(bytes(lg._log_download_data[lg._log_emit_ofs : final_size])).decode("ascii")
         lg._log_messages.append({"type": "log_chunk", "id": log_id, "ofs": lg._log_emit_ofs, "data": b64})
@@ -775,6 +783,9 @@ def _finalize_log_download(lg, log_id: int, truncated: bool, link: DroneLink) ->
     lg._log_download_id = -1
     lg._log_download_data = bytearray()
     lg._log_emit_ofs = 0
+    lg._log_received = 0
+    lg._log_last_data_time = 0.0
+    lg._log_stall_retries = 0
     if len(lg._log_messages) > 500:
         lg._log_messages = lg._log_messages[-200:]
 
@@ -788,6 +799,10 @@ def handle_log_data(p: bytes, pl: int, link: DroneLink) -> None:
     ofs, log_id, count = struct.unpack_from("<IHB", p, 0)
     if log_id != lg._log_download_id:
         return
+    # Any accepted frame is progress — re-arm the stall watchdog
+    # (check_log_dl_stall) and forget past retries.
+    lg._log_last_data_time = time.time()
+    lg._log_stall_retries = 0
     # FC documents count=0 as EOF / error per MAVLink common.xml: previously
     # this fell through to `end = ofs + 0 = ofs`; with end < size we re-
     # requested forever in a tight loop (LOG_REQUEST_DATA never receives data
@@ -795,6 +810,12 @@ def handle_log_data(p: bytes, pl: int, link: DroneLink) -> None:
     if count == 0:
         _finalize_log_download(lg, log_id, truncated=True, link=link)
         return
+    # The LOG_DATA data field is uint8_t[90] (MAVLink common.xml) but count is
+    # a free u8 — a corrupt frame that passes CRC could advertise up to 255.
+    # Unclamped, the slice below would come up short and the bytearray slice
+    # assignment would SHRINK the buffer, shifting every later byte left.
+    count = min(count, 90)
+    lg._log_received += count
     data = p[7 : 7 + count]
     end = ofs + count
     if end <= lg._log_download_size:
@@ -840,6 +861,49 @@ def handle_log_data(p: bytes, pl: int, link: DroneLink) -> None:
         chunk = min(90 * 50, remaining)
         lg._log_window_end = end + chunk
         link.send(bm(119, struct.pack("<IIHBB", end, chunk, log_id, link.vehicle.sysid, 1), link.sq, CRC_EXTRA[119]))
+
+
+LOG_DL_STALL_TIMEOUT = 5.0  # seconds; matches the transport.ts 5s watchdog
+LOG_DL_STALL_RETRIES = 3  # matches transport.ts LOG_DL_STALL_RETRIES
+
+
+def check_log_dl_stall(link: DroneLink) -> None:
+    """Stall watchdog for the log download — twin of transport.ts _onDlStall.
+
+    Called from the link thread's main loop alongside the param/mission
+    checkers. The window cadence only sends the next LOG_REQUEST_DATA from
+    handle_log_data, so a lost window-boundary frame means no LOG_DATA ever
+    arrives again and nothing would re-request — a permanent silent hang.
+
+    Re-requesting the unreceived remainder from the high-water mark is safe:
+    AP already ended its burst when it sent the (lost) boundary frame
+    (AP_Logger_MAVLinkLogTransfer.cpp:337-341, end_log_transfer() at
+    remaining==0), and the :111-118 guard only drops requests that arrive
+    while a transfer is actively sending — so an idle AP honors the retry,
+    and a still-bursting AP harmlessly drops it.
+    """
+    lg = link.log_dl
+    if lg._log_download_id == -1 or lg._log_last_data_time <= 0:
+        return
+    if time.time() - lg._log_last_data_time <= LOG_DL_STALL_TIMEOUT:
+        return
+    log_id = lg._log_download_id
+    if lg._log_stall_retries >= LOG_DL_STALL_RETRIES:
+        # Deliver what we have (zero-filled, flagged truncated) instead of
+        # dropping a nearly-complete multi-MB download on the floor.
+        link.add_event(lt("log_dl_stall_fail", link.locale), "log_dl_stall_fail")
+        _finalize_log_download(lg, log_id, truncated=True, link=link)
+        return
+    lg._log_stall_retries += 1
+    lg._log_last_data_time = time.time()
+    from .pllink_proto import bm
+
+    end = lg._log_download_ofs
+    remaining = lg._log_download_size - end
+    chunk = min(90 * 50, remaining)
+    lg._log_window_end = end + chunk
+    link.send(bm(119, struct.pack("<IIHBB", end, chunk, log_id, link.vehicle.sysid, 1), link.sq, CRC_EXTRA[119]))
+    link.add_event(lt("log_dl_stall", link.locale) % (end // 1024), "log_dl_stall")
 
 
 def init_handlers() -> None:
