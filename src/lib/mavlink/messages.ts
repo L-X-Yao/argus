@@ -629,7 +629,10 @@ export function encodeParamRequestRead(targetSys: number, targetComp: number, in
   // target_system u8 @2, target_component u8 @3, param_id char[16] @4.
   // An all-zero name means "look up by index" — ArduPilot GCS_Param.cpp:396
   // takes the index branch whenever param_index != -1. Byte-identical twin
-  // of backend/param_manager.py:_request_one.
+  // of backend/param_manager.py:_request_one, with one accepted delta:
+  // the backend hardcodes target_component=1 while callers here pass the
+  // heartbeat-learned compid (identical whenever the FC heartbeats compid 1,
+  // i.e. every ArduPilot autopilot).
   const buf = new Uint8Array(20);
   const dv = new DataView(buf.buffer);
   dv.setInt16(0, index, true);
