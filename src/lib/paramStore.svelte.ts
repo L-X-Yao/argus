@@ -48,6 +48,25 @@ export function handleParamTimeout() {
   paramState.fetching = false;
 }
 
+/** Upsert one row WITHOUT touching total/received/fetching — for PARAM_SET
+ * echoes and unsolicited values outside a fetch. Routing an echo through
+ * handleParamBatch would replay stale fetch counters: after a timed-out
+ * partial fetch (say 300/1000) the recomputed `fetching = received < total`
+ * re-latches true with no ticker running, permanently disabling the
+ * Read-All button until reconnect. */
+export function updateParamRow(name: string, value: number, ptype: number, index: number) {
+  const arr = paramState.list.slice();
+  const param: Param = { name, value, type: ptype, index };
+  const idx = nameIndex.get(name);
+  if (idx !== undefined) {
+    arr[idx] = param;
+  } else {
+    nameIndex.set(name, arr.length);
+    arr.push(param);
+  }
+  paramState.list = arr;
+}
+
 /** Serial-path fetch kickoff: clear stale values and show progress
  * immediately, mirroring backend request_all() (params.clear() +
  * fetching=True before the first PARAM_VALUE arrives). The ws path never

@@ -14,7 +14,13 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 const H = vi.hoisted(() => ({
   writes: [] as Uint8Array[],
   fcInject: null as ((chunk: Uint8Array) => void) | null,
-  store: { batches: [] as Record<string, unknown>[], completes: 0, timeouts: 0, starts: 0 },
+  store: {
+    batches: [] as Record<string, unknown>[],
+    rows: [] as Record<string, unknown>[],
+    completes: 0,
+    timeouts: 0,
+    starts: 0,
+  },
 }));
 
 vi.mock('./serial', () => ({
@@ -65,6 +71,9 @@ vi.mock('./paramStore.svelte', () => ({
   startParamFetch: vi.fn(() => {
     H.store.starts++;
   }),
+  updateParamRow: vi.fn((name: string, value: number, ptype: number, index: number) => {
+    H.store.rows.push({ name, value, ptype, index });
+  }),
 }));
 vi.mock('./ws', () => ({ sendCommand: vi.fn() }));
 
@@ -101,6 +110,7 @@ describe('WebSerial param fetch state machine', () => {
     vi.useFakeTimers();
     H.writes.length = 0;
     H.store.batches.length = 0;
+    H.store.rows.length = 0;
     H.store.completes = 0;
     H.store.timeouts = 0;
     H.store.starts = 0;
@@ -187,17 +197,33 @@ describe('WebSerial param fetch state machine', () => {
     vi.advanceTimersByTime(61_000);
     expect(H.store.timeouts).toBe(1);
     expect(vi.mocked(addToast)).toHaveBeenCalledWith('param.timeout', 'error', 5000);
-    // Machine is dead — no more traffic.
-    const sent = H.writes.length;
+    // Machine is dead — param traffic frozen (heartbeats keep flowing).
+    const paramSent = writesOf(20).length + writesOf(21).length;
     vi.advanceTimersByTime(10_000);
-    expect(writesOf(20).length + writesOf(21).length).toBeLessThanOrEqual(sent);
+    expect(writesOf(20).length + writesOf(21).length).toBe(paramSent);
   });
 
-  it('updates the store from a PARAM_SET echo outside any fetch', () => {
+  it('routes a PARAM_SET echo outside any fetch through the counters-free row update', () => {
     inject('WPNAV_SPEED', 750, 42, 1034);
-    expect(H.store.batches.at(-1)).toMatchObject({ name: 'WPNAV_SPEED', value: 750 });
+    expect(H.store.rows.at(-1)).toMatchObject({ name: 'WPNAV_SPEED', value: 750 });
+    // handleParamBatch must NOT run — it would replay fetch counters.
+    expect(H.store.batches.length).toBe(0);
     expect(H.store.starts).toBe(0);
     expect(H.store.completes).toBe(0);
+  });
+
+  it('echo after a timed-out partial fetch cannot re-latch the fetching flag', () => {
+    dispatch('param_request_all');
+    inject('A', 1, 0, 1000); // 1/1000, then stall
+    vi.advanceTimersByTime(61_000);
+    expect(H.store.timeouts).toBe(1);
+    const batchesAfterTimeout = H.store.batches.length;
+    // A later PARAM_SET echo carries stale-looking counters; feeding it to
+    // handleParamBatch would recompute fetching=true with no ticker alive,
+    // permanently disabling the Read-All button.
+    inject('WPNAV_SPEED', 750, 42, 1000);
+    expect(H.store.batches.length).toBe(batchesAfterTimeout);
+    expect(H.store.rows.at(-1)).toMatchObject({ name: 'WPNAV_SPEED', value: 750 });
   });
 
   it('disconnect mid-fetch stops the ticker without a timeout toast', async () => {

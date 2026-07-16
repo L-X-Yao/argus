@@ -57,6 +57,7 @@ import {
   handleParamsComplete,
   handleParamTimeout,
   startParamFetch,
+  updateParamRow,
 } from './paramStore.svelte';
 
 export type TransportMode = 'websocket' | 'serial';
@@ -1323,11 +1324,11 @@ function _onParamValue(p: DataView): void {
   if (!name) return;
 
   if (!paramFetch.active) {
-    // PARAM_SET echo or unsolicited value: update the edited row, leave
-    // fetch bookkeeping (totals/progress) untouched.
-    handleParamBatch([
-      { name, value, ptype, index, total: paramFetch.total, received: paramFetch.names.size },
-    ]);
+    // PARAM_SET echo or unsolicited value: upsert the row only. Feeding
+    // handleParamBatch here would replay stale total/received counters and
+    // re-latch paramState.fetching after a timed-out partial fetch,
+    // bricking the Read-All button (fresh-eyes finding, 2026-07-16).
+    updateParamRow(name, value, ptype, index);
     return;
   }
 
@@ -1357,6 +1358,10 @@ function _paramFetchTick(): void {
     }
   } else if (paramFetch.total > 0 && silent) {
     let sent = 0;
+    // Intentional divergence from backend check_timeout: it slices
+    // missing[:10] BEFORE the retry filter, so retry-exhausted indices eat
+    // window slots (a fully-exhausted head wedges it at 0 sends/window).
+    // Here exhausted indices don't consume a slot and the scan goes deeper.
     for (let i = 0; i < paramFetch.total && sent < 10; i++) {
       if (paramFetch.indices.has(i)) continue;
       const attempts = paramFetch.gapAttempts.get(i) ?? 0;
