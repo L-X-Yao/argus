@@ -164,6 +164,9 @@ def cmd_log_download(link: DroneLink, param, data: dict):
     lg._log_download_ofs = 0
     link.add_event(lt("log_dl", link.locale) % (log_id, log_entry["size"] // 1024), "log_dl")
     chunk = min(90 * 50, log_entry["size"])
+    # One LOG_REQUEST_DATA = one atomic AP burst; the next request may only
+    # go out once this window is exhausted (handle_log_data tracks it).
+    lg._log_window_end = chunk
     link.send(bm(119, struct.pack("<IIHBB", 0, chunk, log_id, link.vehicle.sysid, 1), link.sq, CRC_EXTRA[119]))
 
 

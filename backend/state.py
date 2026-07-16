@@ -135,6 +135,11 @@ class LogState:
     _log_download_data: bytearray = field(default_factory=bytearray)
     _log_download_size: int = 0
     _log_download_ofs: int = 0
+    # End offset of the currently-requested LOG_REQUEST_DATA window. AP
+    # answers one request with one atomic burst and silently drops any new
+    # request that arrives mid-burst — so the GCS must not re-request until
+    # progress reaches this boundary (AP_Logger_MAVLinkLogTransfer.cpp:111).
+    _log_window_end: int = 0
     # Offset already streamed to the frontend as log_chunk messages. Lets
     # handle_log_data emit fresh chunks of CHUNK_SIZE bytes as the bytearray
     # high-water mark grows, instead of waiting for the whole log and
