@@ -48,6 +48,15 @@ export function handleParamTimeout() {
   paramState.fetching = false;
 }
 
+/** Serial-path fetch kickoff: clear stale values and show progress
+ * immediately, mirroring backend request_all() (params.clear() +
+ * fetching=True before the first PARAM_VALUE arrives). The ws path never
+ * calls this — the backend owns that lifecycle and pushes param_batch. */
+export function startParamFetch() {
+  clearParams();
+  paramState.fetching = true;
+}
+
 export function getParam(name: string, fallback: number): number {
   const idx = nameIndex.get(name);
   return idx !== undefined ? paramState.list[idx].value : fallback;

@@ -14,6 +14,7 @@ import {
   encodeCommandLong,
   encodeSetMode,
   encodeParamRequestList,
+  encodeParamRequestRead,
   encodeParamSet,
   encodeRequestDataStream,
   encodeMissionCount,
@@ -51,6 +52,12 @@ import {
   cancelDownload,
 } from './logStore.svelte';
 import type { LogEntry as LogEntryShape } from './logStore.svelte';
+import {
+  handleParamBatch,
+  handleParamsComplete,
+  handleParamTimeout,
+  startParamFetch,
+} from './paramStore.svelte';
 
 export type TransportMode = 'websocket' | 'serial';
 
@@ -173,6 +180,11 @@ export async function connectSerial(baudRate: number, handlers: Partial<MessageH
         // regex heuristic (compassParsed) keeps working unchanged.
         if (frame.msgId === 191) _onMagCalProgress(_padView(frame.payload, 17));
         else if (frame.msgId === 192) _onMagCalReport(_padView(frame.payload, 44));
+        // PARAM_VALUE (22) feeds the param store always — during a fetch it
+        // drives progress/gap-fill; outside one it's a PARAM_SET echo that
+        // must still update the edited row (backend handle_param_value has
+        // the same always-on behavior).
+        if (frame.msgId === 22) _onParamValue(_padView(frame.payload, 25));
         dispatchFrame(frame, serial.handlers);
       }
     })
@@ -200,6 +212,9 @@ export async function connectSerial(baudRate: number, handlers: Partial<MessageH
         // fire spuriously after disconnect.
         if (logSession.listPending) _resolveLogList({ ok: false, error: 'Serial link lost' });
         if (logSession.dlPending) _abortLogDownload('Serial link lost mid-download');
+        // Param fetch: stop the gap-fill ticker; link-lost toast already
+        // shown above, so no second toast.
+        _abortParamFetch(false);
       });
 
     return true;
@@ -222,6 +237,7 @@ export async function disconnectSerial(): Promise<void> {
   serial.buf = new Uint8Array(0);
   _clearMissionStartTimer();
   _wpToSeq.clear();
+  _abortParamFetch(false);
 }
 
 function sendSerialFrame(msgId: number, payload: Uint8Array): void {
@@ -409,7 +425,7 @@ const _serialDispatch: Record<string, CmdHandler> = {
     serialSendCommandLong(201, 3, 0, 0, 0, lat, lon, alt);
   },
   param_set: (_, d) => serialSendParamSet(d?.name as string, d?.value as number),
-  param_request_all: () => serialSendParamRequestAll(),
+  param_request_all: () => serialParamRequestAll(),
   // MAV_CMD_PREFLIGHT_STORAGE (245), p1=1: write running params to FC NVRAM. AP source: GCS_MAVLINK::handle_command_preflight_storage.
   // `param_save` is intentionally NOT in this table — it writes a host-side JSON backup over WS, which serial can't do
   // (would silently do the wrong thing). UIs that want FC flash use `param_save_to_flash` explicitly.
@@ -1222,4 +1238,151 @@ export function serialLogCancel(): void {
   sendSerialFrame(122, encodeLogRequestEnd(serial.targetSysId, serial.targetCompId));
   if (logSession.dlPending) _abortLogDownload('Cancelled');
   if (logSession.listPending) _resolveLogList({ ok: false, error: 'Cancelled' });
+}
+
+// ── Parameter fetch (serial twin of backend/param_manager.py) ──────────────
+/**
+ * Protocol (mirrors ParamManager exactly — divergence here means the two
+ * transports fetch different param sets):
+ * Fetch:   GCS → PARAM_REQUEST_LIST (21); the FC streams PARAM_VALUE (22),
+ *          each carrying param_count — the first reply pins the expected
+ *          total (param_manager.handle_param_value).
+ * Gaps:    after PARAM_GAP_FILL_MS of silence with slots still missing,
+ *          re-request individually via PARAM_REQUEST_READ (20) by index,
+ *          ≤10 per window and ≤3 tries per index; a dropped initial msg 21
+ *          (total still unknown) is re-sent up to 3 times instead
+ *          (param_manager.check_timeout — one dropped request must not
+ *          stall the whole fetch).
+ * 0xFFFF:  by-name replies carry param_index -1: ArduPilot GCS_Param.cpp:396
+ *          branches on `req.param_index != -1` and :420 echoes it back —
+ *          count the param, never mark an index slot.
+ * Timeout: PARAM_FETCH_TIMEOUT_MS overall → handleParamTimeout + toast.
+ * Until 2026-07-16 the serial path SENT msg 21 but dropped every PARAM_VALUE
+ * reply (no handler) — the panel sat empty while the FC streamed 1000+
+ * params. Found live against a real FC; the SIM path never exercises this.
+ */
+
+const PARAM_GAP_FILL_MS = 2000; // backend cfg.PARAM_GAP_FILL_DELAY
+const PARAM_FETCH_TIMEOUT_MS = 60_000; // backend cfg.PARAM_FETCH_TIMEOUT
+
+interface ParamFetchState {
+  active: boolean;
+  total: number;
+  names: Set<string>;
+  indices: Set<number>;
+  gapAttempts: Map<number, number>;
+  listAttempts: number;
+  startTime: number;
+  lastValueTime: number;
+  timer: ReturnType<typeof setInterval> | null;
+}
+
+const paramFetch: ParamFetchState = {
+  active: false,
+  total: -1,
+  names: new Set(),
+  indices: new Set(),
+  gapAttempts: new Map(),
+  listAttempts: 0,
+  startTime: 0,
+  lastValueTime: 0,
+  timer: null,
+};
+
+function serialParamRequestAll(): void {
+  // Restart-in-flight is allowed, like backend request_all(): reset all
+  // bookkeeping and start a fresh stream.
+  _stopParamTimer();
+  paramFetch.active = true;
+  paramFetch.total = -1;
+  paramFetch.names.clear();
+  paramFetch.indices.clear();
+  paramFetch.gapAttempts.clear();
+  paramFetch.listAttempts = 1;
+  paramFetch.startTime = Date.now();
+  paramFetch.lastValueTime = Date.now();
+  startParamFetch();
+  paramFetch.timer = setInterval(_paramFetchTick, 500);
+  serialSendParamRequestAll();
+}
+
+function _onParamValue(p: DataView): void {
+  // Wire layout mirrors backend param_manager.handle_param_value:
+  // param_value f32 @0, param_count u16 @4, param_index u16 @6,
+  // param_id char[16] @8, param_type u8 @24.
+  const value = p.getFloat32(0, true);
+  const count = p.getUint16(4, true);
+  const index = p.getUint16(6, true);
+  const bytes = new Uint8Array(p.buffer, p.byteOffset + 8, 16);
+  let end = bytes.indexOf(0);
+  if (end < 0) end = 16;
+  const name = new TextDecoder().decode(bytes.slice(0, end));
+  const ptype = p.getUint8(24);
+  // Empty name = all-zero/garbage frame — don't poison the store with a
+  // blank row (same guard as the backend).
+  if (!name) return;
+
+  if (!paramFetch.active) {
+    // PARAM_SET echo or unsolicited value: update the edited row, leave
+    // fetch bookkeeping (totals/progress) untouched.
+    handleParamBatch([
+      { name, value, ptype, index, total: paramFetch.total, received: paramFetch.names.size },
+    ]);
+    return;
+  }
+
+  paramFetch.lastValueTime = Date.now();
+  if (paramFetch.total < 0) paramFetch.total = count;
+  if (index !== 0xffff) paramFetch.indices.add(index);
+  paramFetch.names.add(name);
+  handleParamBatch([
+    { name, value, ptype, index, total: paramFetch.total, received: paramFetch.names.size },
+  ]);
+  if (paramFetch.total > 0 && paramFetch.names.size >= paramFetch.total) {
+    paramFetch.active = false;
+    _stopParamTimer();
+    handleParamsComplete();
+  }
+}
+
+function _paramFetchTick(): void {
+  if (!paramFetch.active) return;
+  const now = Date.now();
+  const silent = now - paramFetch.lastValueTime > PARAM_GAP_FILL_MS;
+  if (paramFetch.total <= 0 && silent) {
+    if (paramFetch.listAttempts <= 3) {
+      paramFetch.listAttempts++;
+      paramFetch.lastValueTime = now; // back off until the next window
+      serialSendParamRequestAll();
+    }
+  } else if (paramFetch.total > 0 && silent) {
+    let sent = 0;
+    for (let i = 0; i < paramFetch.total && sent < 10; i++) {
+      if (paramFetch.indices.has(i)) continue;
+      const attempts = paramFetch.gapAttempts.get(i) ?? 0;
+      if (attempts >= 3) continue;
+      paramFetch.gapAttempts.set(i, attempts + 1);
+      sendSerialFrame(20, encodeParamRequestRead(serial.targetSysId, serial.targetCompId, i));
+      sent++;
+    }
+    paramFetch.lastValueTime = now;
+  }
+  if (now - paramFetch.startTime > PARAM_FETCH_TIMEOUT_MS) {
+    _abortParamFetch(true);
+  }
+}
+
+function _stopParamTimer(): void {
+  if (paramFetch.timer) {
+    clearInterval(paramFetch.timer);
+    paramFetch.timer = null;
+  }
+}
+
+function _abortParamFetch(timedOut: boolean): void {
+  _stopParamTimer();
+  if (!paramFetch.active) return;
+  paramFetch.active = false;
+  handleParamTimeout();
+  if (timedOut) addToast(t('param.timeout'), 'error', 5000);
 }

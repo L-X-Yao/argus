@@ -87,6 +87,7 @@ const messages: Record<string, string> = {
   'param.metaLoaded': 'تم تحميل البيانات الوصفية',
   'param.search': 'بحث في المعلمات...',
   'param.invalidNum': 'رقم غير صالح',
+  'param.timeout': 'انتهت مهلة قراءة المعلمات',
   'param.outOfRange': 'خارج النطاق',
   'param.saved': 'تم حفظ المعلمات',
   'param.exported': 'تم تصدير {n} معلمة',
