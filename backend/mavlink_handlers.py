@@ -766,14 +766,62 @@ def _covered_bytes(intervals: list[tuple[int, int]]) -> int:
     return sum(e - s for s, e in intervals)
 
 
+def _next_log_gap(lg) -> tuple[int, int] | None:
+    """First uncovered byte range of the download, or None when coverage is
+    complete. With whole-log streaming this doubles as the resume point: no
+    holes means the first gap starts exactly at the high-water mark."""
+    prev_end = 0
+    for s, e in lg._log_recv_intervals:
+        if s > prev_end:
+            return (prev_end, s)
+        prev_end = max(prev_end, e)
+    if prev_end < lg._log_download_size:
+        return (prev_end, lg._log_download_size)
+    return None
+
+
+def _request_next_log_gap(lg, link) -> bool:
+    """Request the first uncovered byte range in one LOG_REQUEST_DATA.
+
+    This is the MAVProxy pattern ArduPilot explicitly tolerates
+    (AP_Logger_MAVLinkLogTransfer.cpp:112-113 names it): stream big ranges,
+    then fill the holes. AP anchors the transfer to our ofs and caps count to
+    the remaining log size (:144-152), so requesting an entire gap is always
+    in-spec. Returns False when coverage is complete (nothing left to ask)."""
+    gap = _next_log_gap(lg)
+    if gap is None:
+        return False
+    from .pllink_proto import bm
+
+    start, gap_end = gap
+    lg._log_window_end = gap_end
+    link.send(
+        bm(
+            119,
+            struct.pack("<IIHBB", start, gap_end - start, lg._log_download_id, link.vehicle.sysid, 1),
+            link.sq,
+            CRC_EXTRA[119],
+        )
+    )
+    return True
+
+
+def _contiguous_prefix(lg) -> int:
+    """Bytes received without a hole from offset 0 — the only data safe to
+    stream to the frontend as chunks (a hole may still be gap-filled later,
+    but an already-emitted chunk can never be amended)."""
+    iv = lg._log_recv_intervals
+    return iv[0][1] if iv and iv[0][0] == 0 else 0
+
+
 def _emit_log_chunks(lg, log_id: int) -> None:
     """Emit any complete log_stream_chunk messages whose contents are now
-    fully present in lg._log_download_data (between lg._log_emit_ofs and
-    lg._log_download_ofs). Each chunk goes out as a small base64 message
+    fully present in lg._log_download_data (between lg._log_emit_ofs and the
+    contiguous prefix). Each chunk goes out as a small base64 message
     rather than buffering the whole log for a single end-of-download blob."""
     import base64
 
-    while lg._log_download_ofs - lg._log_emit_ofs >= _LOG_STREAM_CHUNK_SIZE:
+    while _contiguous_prefix(lg) - lg._log_emit_ofs >= _LOG_STREAM_CHUNK_SIZE:
         start = lg._log_emit_ofs
         endc = start + _LOG_STREAM_CHUNK_SIZE
         b64 = base64.b64encode(bytes(lg._log_download_data[start:endc])).decode("ascii")
@@ -817,8 +865,13 @@ def _finalize_log_download(lg, log_id: int, truncated: bool, link: DroneLink) ->
     lg._log_recv_intervals = []
     lg._log_last_data_time = 0.0
     lg._log_stall_retries = 0
-    if len(lg._log_messages) > 500:
-        lg._log_messages = lg._log_messages[-200:]
+    # NO trim here: the ws drain is a cursor over this list with no ack —
+    # dropping entries loses log_chunk payload the frontend can never
+    # recover (a whole-log stream outruns the drain; the old [-200:] trim
+    # ate 60% of a 28 MB SITL download). The queue is cleared at the START
+    # of the next download / cancel / disconnect instead; until then its
+    # memory is bounded by ~1.35× the log size (the frontend accumulates
+    # the same bytes anyway).
 
 
 # ArduPilot: libraries/AP_Logger/AP_Logger_MAVLinkLogTransfer.cpp:296 — AP_Logger::handle_log_send_data
@@ -857,47 +910,38 @@ def handle_log_data(p: bytes, pl: int, link: DroneLink) -> None:
     _mark_received(lg._log_recv_intervals, ofs, end)
     data = p[7 : 7 + count]
     lg._log_download_data[ofs:end] = data
-    # Use max() so an out-of-order or duplicate chunk doesn't rewind progress
-    # and trigger re-requesting already-received bytes (auditor finding C2).
+    # High-water mark: only used as the delivered-file size when a truncated
+    # finalize ships a partial download. Progress/completion run on coverage.
     lg._log_download_ofs = max(lg._log_download_ofs, end)
-    end = lg._log_download_ofs
+    covered = _covered_bytes(lg._log_recv_intervals)
     # Stream out fully-received 64KB chunks. Avoids the 5× memory peak that
     # would happen if we kept the whole log in memory and base64-encoded it
     # in one shot at the end (auditor finding P1).
     _emit_log_chunks(lg, log_id)
-    if not hasattr(link, "_log_progress_counter"):
-        link._log_progress_counter = 0
-    link._log_progress_counter += 1
-    if link._log_progress_counter >= 10 and end < lg._log_download_size:
-        link._log_progress_counter = 0
+    # Time-throttled progress: a whole-log stream delivers thousands of
+    # frames per second — a per-N-frames cadence floods the ws queue.
+    now = time.time()
+    if now - lg._log_last_progress_time >= 0.25 and covered < lg._log_download_size:
+        lg._log_last_progress_time = now
         lg._log_messages.append(
             {
                 "type": "log_progress",
-                "received": end,
+                "received": covered,
                 "total": lg._log_download_size,
             }
         )
-        if len(lg._log_messages) > 500:
-            lg._log_messages = lg._log_messages[-200:]
-    if end >= lg._log_download_size:
+    if covered >= lg._log_download_size:
         _finalize_log_download(lg, log_id, truncated=False, link=link)
     elif end >= lg._log_window_end or count < 90:
-        # Request the NEXT window only when the current one is exhausted (or
-        # AP sent a short frame — a short read also ends its transfer).
-        # ArduPilot answers one LOG_REQUEST_DATA with one atomic burst of the
-        # whole window (AP_Logger_MAVLinkLogTransfer.cpp:337-341: offset/
-        # remaining advance per frame, end_log_transfer() at remaining==0 or
-        # nbytes<90) and SILENTLY DROPS any request that arrives mid-burst
-        # (:111-118, the MAVProxy-noise guard). The previous per-frame
-        # re-request therefore queued ~49 duplicate windows per window on a
-        # USB link (num_sends=250/tick) — the transfer drowned in its own
-        # requests and the UI sat at 0 KB.
-        from .pllink_proto import bm
-
-        remaining = lg._log_download_size - end
-        chunk = min(90 * 50, remaining)
-        lg._log_window_end = end + chunk
-        link.send(bm(119, struct.pack("<IIHBB", end, chunk, log_id, link.vehicle.sysid, 1), link.sq, CRC_EXTRA[119]))
+        # AP's burst for our current request just ended — either this frame
+        # reached the end of the requested range, or AP sent a short frame
+        # (a short read ends its transfer too, AP_Logger_MAVLinkLogTransfer
+        # .cpp:339-341). AP SILENTLY DROPS requests that arrive mid-burst
+        # (:111-120), so this boundary is the only safe moment to ask for
+        # more. Ask for the first uncovered gap: during the main whole-log
+        # stream that's simply the resume point; after it, it fills holes
+        # left by lost frames (end-of-transfer gap-fill, MAVProxy-style).
+        _request_next_log_gap(lg, link)
 
 
 LOG_DL_STALL_TIMEOUT = 5.0  # seconds; matches the transport.ts 5s watchdog
@@ -908,16 +952,18 @@ def check_log_dl_stall(link: DroneLink) -> None:
     """Stall watchdog for the log download — twin of transport.ts _onDlStall.
 
     Called from the link thread's main loop alongside the param/mission
-    checkers. The window cadence only sends the next LOG_REQUEST_DATA from
-    handle_log_data, so a lost window-boundary frame means no LOG_DATA ever
-    arrives again and nothing would re-request — a permanent silent hang.
+    checkers. The next LOG_REQUEST_DATA is only ever sent from
+    handle_log_data, so losing the last frame of a burst means no LOG_DATA
+    ever arrives again and nothing would re-request — a permanent silent
+    hang.
 
-    Re-requesting the unreceived remainder from the high-water mark is safe:
-    AP already ended its burst when it sent the (lost) boundary frame
-    (AP_Logger_MAVLinkLogTransfer.cpp:337-341, end_log_transfer() at
-    remaining==0), and the :111-118 guard only drops requests that arrive
-    while a transfer is actively sending — so an idle AP honors the retry,
-    and a still-bursting AP harmlessly drops it.
+    Re-requesting the first uncovered gap is safe: AP already ended its
+    burst when it sent the (lost) final frame (AP_Logger_MAVLinkLogTransfer
+    .cpp:337-341, end_log_transfer() at remaining==0), and the :111-120
+    guard only drops requests that arrive while a transfer is actively
+    sending — so an idle AP honors the retry, and a still-bursting AP (e.g.
+    paused on txspace :300-302 or GCS-heartbeat starvation :304-307)
+    harmlessly drops it.
     """
     lg = link.log_dl
     if lg._log_download_id == -1 or lg._log_last_data_time <= 0:
@@ -933,14 +979,12 @@ def check_log_dl_stall(link: DroneLink) -> None:
         return
     lg._log_stall_retries += 1
     lg._log_last_data_time = time.time()
-    from .pllink_proto import bm
-
-    end = lg._log_download_ofs
-    remaining = lg._log_download_size - end
-    chunk = min(90 * 50, remaining)
-    lg._log_window_end = end + chunk
-    link.send(bm(119, struct.pack("<IIHBB", end, chunk, log_id, link.vehicle.sysid, 1), link.sq, CRC_EXTRA[119]))
-    link.add_event(lt("log_dl_stall", link.locale) % (end // 1024), "log_dl_stall")
+    if not _request_next_log_gap(lg, link):
+        # Coverage complete but the finalize never ran — should be unreachable
+        # (handle_log_data finalizes on covered >= size); close out cleanly.
+        _finalize_log_download(lg, log_id, truncated=False, link=link)
+        return
+    link.add_event(lt("log_dl_stall", link.locale) % (lg._log_download_ofs // 1024), "log_dl_stall")
 
 
 def init_handlers() -> None:

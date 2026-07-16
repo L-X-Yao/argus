@@ -12,6 +12,21 @@ class TcpWrapper:
     def __init__(self, sock: socket.socket):
         self._sock = sock
 
+    @property
+    def in_waiting(self) -> int:
+        """Bytes buffered by the kernel, mirroring pyserial's property — the
+        link loop uses it to drain bursts (log downloads) in one read instead
+        of 1024 B per tick. Best-effort: 0 on platforms without FIONREAD."""
+        try:
+            import fcntl
+            import struct as _struct
+            import termios
+
+            buf = fcntl.ioctl(self._sock.fileno(), termios.FIONREAD, b"\x00\x00\x00\x00")
+            return _struct.unpack("=I", buf)[0]
+        except (ImportError, OSError):
+            return 0
+
     def read(self, n: int) -> bytes:
         try:
             return self._sock.recv(n)

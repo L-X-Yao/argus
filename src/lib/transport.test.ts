@@ -375,40 +375,32 @@ describe('serialLogList + serialLogDownload', () => {
     expect(logStoreMock.completeDownload).toHaveBeenCalled();
   });
 
-  it('requests the next window only at the boundary — AP drops mid-burst requests', async () => {
-    // ArduPilot answers one LOG_REQUEST_DATA with one atomic burst of the
-    // whole window and silently drops same-channel requests that arrive
-    // mid-burst (AP_Logger_MAVLinkLogTransfer.cpp:111-118). The old
-    // per-frame re-request buried a real FC in duplicate windows — the
-    // 16 MB bench log sat at 0 KB (real-FC finding, 2026-07-16).
+  it('streams the whole log from ONE request — no per-window round trips', async () => {
+    // The whole log rides one LOG_REQUEST_DATA (the MAVProxy pattern,
+    // AP_Logger_MAVLinkLogTransfer.cpp:112-113); AP streams the full range
+    // as one paced burst and silently drops same-channel requests that
+    // arrive mid-burst (:111-120). Per-window round trips were the
+    // ~225 KB/s RTT ceiling on a ~700 KB/s USB link.
     (logStoreMock.logState as unknown as { list: Array<{ id: number; size: number; time_utc: number }> }).list = [
       { id: 3, size: 5000, time_utc: 0 },
     ];
     const promise = serialLogDownload(3);
     expect(countWrites(119)).toBe(1);
-    // Window 1: 50 × 90 B. The GCS must stay silent until the last frame.
-    for (let ofs = 0; ofs < 4410; ofs += 90) {
-      inject(fcFrame(120, mkLogData(ofs, 3, 90, new Uint8Array(90).fill(1))));
-      expect(countWrites(119)).toBe(1);
-    }
-    inject(fcFrame(120, mkLogData(4410, 3, 90, new Uint8Array(90).fill(1)))); // boundary
-    expect(countWrites(119)).toBe(2);
     const req = writes.filter((f) => f[7] === 119).at(-1)!;
     const dv = new DataView(req.buffer, req.byteOffset + 10);
-    expect(dv.getUint32(0, true)).toBe(4500); // ofs resumes at the boundary
-    expect(dv.getUint32(4, true)).toBe(500); // remaining, capped by log size
+    expect(dv.getUint32(0, true)).toBe(0); // whole log: ofs 0
+    expect(dv.getUint32(4, true)).toBe(5000); // count = full size
     expect(dv.getUint16(8, true)).toBe(3);
-    // Window 2 completes the download without further requests.
-    for (let ofs = 4500; ofs < 5000; ofs += 90) {
+    for (let ofs = 0; ofs < 5000; ofs += 90) {
       const n = Math.min(90, 5000 - ofs);
-      inject(fcFrame(120, mkLogData(ofs, 3, n, new Uint8Array(n).fill(2))));
+      inject(fcFrame(120, mkLogData(ofs, 3, n, new Uint8Array(n).fill(1))));
     }
     const res = await promise;
     expect(res.ok).toBe(true);
-    expect(countWrites(119)).toBe(2); // exactly one request per window
+    expect(countWrites(119)).toBe(1); // the GCS never spoke again
   });
 
-  it('a short mid-window frame re-requests immediately (AP ended its transfer)', async () => {
+  it('a short mid-stream frame re-requests the uncovered remainder (AP ended its transfer)', async () => {
     (logStoreMock.logState as unknown as { list: Array<{ id: number; size: number; time_utc: number }> }).list = [
       { id: 4, size: 9000, time_utc: 0 },
     ];
@@ -416,16 +408,37 @@ describe('serialLogList + serialLogDownload', () => {
     expect(countWrites(119)).toBe(1);
     inject(fcFrame(120, mkLogData(0, 4, 90, new Uint8Array(90).fill(1))));
     expect(countWrites(119)).toBe(1);
-    // AP short read (nbytes < 90) ends its transfer mid-window — the GCS
-    // must resume from the high-water mark instead of waiting forever.
+    // AP short read (nbytes < 90) ends its transfer mid-stream — the GCS
+    // must resume from the first gap instead of waiting forever.
     inject(fcFrame(120, mkLogData(90, 4, 30, new Uint8Array(30).fill(2))));
     expect(countWrites(119)).toBe(2);
     const req = writes.filter((f) => f[7] === 119).at(-1)!;
     const dv = new DataView(req.buffer, req.byteOffset + 10);
     expect(dv.getUint32(0, true)).toBe(120);
-    expect(dv.getUint32(4, true)).toBe(4500);
+    expect(dv.getUint32(4, true)).toBe(9000 - 120);
     serialLogCancel(); // tear down the pending promise + watchdog
     await promise;
+  });
+
+  it('gap-fills a mid-stream hole and completes CLEAN', async () => {
+    // Lost frame 90..110; the stream reaches its end with a hole. The GCS
+    // re-requests exactly the gap and — once answered — resolves ok:true.
+    // The old window machinery shipped the file zero-filled and flagged;
+    // gap-fill actually repairs it.
+    (logStoreMock.logState as unknown as { list: Array<{ id: number; size: number; time_utc: number }> }).list = [
+      { id: 5, size: 200, time_utc: 0 },
+    ];
+    const promise = serialLogDownload(5);
+    inject(fcFrame(120, mkLogData(0, 5, 90, new Uint8Array(90).fill(1))));
+    inject(fcFrame(120, mkLogData(110, 5, 90, new Uint8Array(90).fill(2)))); // stream end, hole behind
+    expect(countWrites(119)).toBe(2);
+    const req = writes.filter((f) => f[7] === 119).at(-1)!;
+    const dv = new DataView(req.buffer, req.byteOffset + 10);
+    expect(dv.getUint32(0, true)).toBe(90); // exactly the hole
+    expect(dv.getUint32(4, true)).toBe(20);
+    inject(fcFrame(120, mkLogData(90, 5, 20, new Uint8Array(20).fill(3))));
+    const res = await promise;
+    expect(res.ok).toBe(true); // repaired, not flagged
   });
 
   it('reconstructs zero-tailed chunks that MAVLink2 trimmed on the wire', async () => {
@@ -465,17 +478,23 @@ describe('serialLogList + serialLogDownload', () => {
   it('duplicate frames do not mask a real hole (coverage is intervals, not a sum)', async () => {
     // After a stall re-request a late tail of the old burst can legitimately
     // duplicate frames — a raw byte sum (90+90+90=270 > 200 here) would
-    // report the file complete while bytes 90..110 were never received.
+    // declare the file complete while bytes 90..110 were never received.
+    // The tell: the machine asks for exactly the missing 20 bytes instead
+    // of resolving.
     (logStoreMock.logState as unknown as { list: Array<{ id: number; size: number; time_utc: number }> }).list = [
       { id: 2, size: 200, time_utc: 0 },
     ];
     const promise = serialLogDownload(2);
     inject(fcFrame(120, mkLogData(0, 2, 90, new Uint8Array(90).fill(9))));
     inject(fcFrame(120, mkLogData(0, 2, 90, new Uint8Array(90).fill(9)))); // duplicate
-    inject(fcFrame(120, mkLogData(110, 2, 90, new Uint8Array(90).fill(9)))); // reaches size
+    inject(fcFrame(120, mkLogData(110, 2, 90, new Uint8Array(90).fill(9)))); // stream end
+    const req = writes.filter((f) => f[7] === 119).at(-1)!;
+    const dv = new DataView(req.buffer, req.byteOffset + 10);
+    expect(dv.getUint32(0, true)).toBe(90);
+    expect(dv.getUint32(4, true)).toBe(20);
+    inject(fcFrame(120, mkLogData(90, 2, 20, new Uint8Array(20).fill(9))));
     const res = await promise;
-    expect(res.ok).toBe(false);
-    expect(res.error).toMatch(/missing/);
+    expect(res.ok).toBe(true);
   });
 
   it('out-of-order frames merge into full coverage — arrival order is not completeness', async () => {
@@ -529,11 +548,11 @@ describe('log download stall watchdog', () => {
     ];
   };
 
-  it('a lost boundary frame triggers a re-request from the high-water mark and the download recovers', async () => {
+  it('a lost stream tail triggers a re-request of the remaining gap and the download recovers', async () => {
     seedList(3, 9000);
     const promise = serialLogDownload(3);
     expect(countWrites(119)).toBe(1);
-    // Window 1 minus its boundary frame (4410..4500 lost on the wire).
+    // The stream dies at 4410 — everything after is lost on the wire.
     for (let ofs = 0; ofs < 4410; ofs += 90) {
       inject(fcFrame(120, mkLogData(ofs, 3, 90, new Uint8Array(90).fill(1))));
     }
@@ -542,14 +561,15 @@ describe('log download stall watchdog', () => {
     expect(countWrites(119)).toBe(2);
     const req = writes.filter((f) => f[7] === 119).at(-1)!;
     const dv = new DataView(req.buffer, req.byteOffset + 10);
-    expect(dv.getUint32(0, true)).toBe(4410); // resumes at the high-water mark
-    expect(dv.getUint32(4, true)).toBe(4500);
+    expect(dv.getUint32(0, true)).toBe(4410); // first gap = resume point
+    expect(dv.getUint32(4, true)).toBe(9000 - 4410);
     // FC answers the remainder; the download completes clean (no holes).
     for (let ofs = 4410; ofs < 9000; ofs += 90) {
       inject(fcFrame(120, mkLogData(ofs, 3, 90, new Uint8Array(90).fill(2))));
     }
     const res = await promise;
     expect(res.ok).toBe(true);
+    expect(countWrites(119)).toBe(2); // one initial + one resume, nothing else
     expect(logStoreMock.completeDownload).toHaveBeenCalled();
   });
 
@@ -571,14 +591,24 @@ describe('log download stall watchdog', () => {
     expect(logStoreMock.cancelDownload).not.toHaveBeenCalled();
   });
 
-  it('a mid-window hole flags the download instead of shipping silent zeros', async () => {
+  it('a hole whose gap-fill goes unanswered ends flagged, with partial data delivered', async () => {
     seedList(5, 200);
     const promise = serialLogDownload(5);
-    // The 0..110 frame was lost; only the tail arrives, reaching size.
+    // The 0..110 range was lost; only the tail arrives, ending the stream.
     inject(fcFrame(120, mkLogData(110, 5, 90, new Uint8Array(90).fill(9))));
+    // The gap request for 0..110 went out immediately at the stream end.
+    expect(countWrites(119)).toBe(2);
+    const req = writes.filter((f) => f[7] === 119).at(-1)!;
+    const dv = new DataView(req.buffer, req.byteOffset + 10);
+    expect(dv.getUint32(0, true)).toBe(0);
+    expect(dv.getUint32(4, true)).toBe(110);
+    // FC never answers: 3 stall retries re-ask, then give up flagged.
+    for (let i = 0; i < 4; i++) {
+      await vi.advanceTimersByTimeAsync(5001);
+    }
     const res = await promise;
     expect(res.ok).toBe(false);
-    expect(res.error).toMatch(/missing/);
+    expect(res.error).toMatch(/re-requests unanswered/);
     expect(logStoreMock.completeDownload).toHaveBeenCalled();
   });
 });

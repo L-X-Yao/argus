@@ -165,15 +165,24 @@ def cmd_log_download(link: DroneLink, param, data: dict):
     lg._log_download_ofs = 0
     lg._log_recv_intervals = []
     lg._log_stall_retries = 0
+    lg._log_last_progress_time = 0.0
+    # Drop the previous download's payload messages (kept until now because
+    # the cursor-based ws drain has no ack — see _finalize_log_download).
+    # log_list survives: observers that joined late still need it.
+    lg._log_messages = [m for m in lg._log_messages if m["type"] == "log_list"]
     # Arm the stall watchdog now so even a lost FIRST window gets retried
     # (check_log_dl_stall gates on last_data_time > 0).
     lg._log_last_data_time = time.time()
     link.add_event(lt("log_dl", link.locale) % (log_id, log_entry["size"] // 1024), "log_dl")
-    chunk = min(90 * 50, log_entry["size"])
-    # One LOG_REQUEST_DATA = one atomic AP burst; the next request may only
-    # go out once this window is exhausted (handle_log_data tracks it).
-    lg._log_window_end = chunk
-    link.send(bm(119, struct.pack("<IIHBB", 0, chunk, log_id, link.vehicle.sysid, 1), link.sq, CRC_EXTRA[119]))
+    # Request the WHOLE log in one LOG_REQUEST_DATA — the MAVProxy pattern
+    # ArduPilot explicitly tolerates (AP_Logger_MAVLinkLogTransfer.cpp:112-113
+    # names it) and caps in-spec (:144-152: transfer anchored to our ofs,
+    # count capped to the remaining size). Windowed 4500 B requests paid one
+    # ~20 ms round trip per window — an RTT-bound ~225 KB/s ceiling on a
+    # ~700 KB/s USB link. Lost frames are re-requested from the coverage
+    # intervals once the stream ends (handle_log_data gap-fill).
+    lg._log_window_end = log_entry["size"]
+    link.send(bm(119, struct.pack("<IIHBB", 0, log_entry["size"], log_id, link.vehicle.sysid, 1), link.sq, CRC_EXTRA[119]))
 
 
 def cmd_log_cancel(link: DroneLink, param, data: dict):
@@ -193,4 +202,6 @@ def cmd_log_cancel(link: DroneLink, param, data: dict):
     lg._log_recv_intervals = []
     lg._log_stall_retries = 0
     lg._log_last_data_time = 0.0
+    lg._log_last_progress_time = 0.0
+    lg._log_messages = [m for m in lg._log_messages if m["type"] == "log_list"]
     link.add_event(lt("log_dl_cancel", link.locale), "log_dl_cancel")

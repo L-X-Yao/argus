@@ -1055,19 +1055,21 @@ export function serialCalAccelNext(): void {
  * List: GCS → LOG_REQUEST_LIST (117). FC streams LOG_ENTRY (118) per log; the
  *       entry with id == last_log_num signals end-of-list and resolves the
  *       promise.
- * Download: GCS → LOG_REQUEST_DATA (119) with (ofs, count=4500). ArduPilot
- *           answers ONE request with ONE atomic burst of LOG_DATA (120)
- *           frames covering the whole window, then ends its transfer
- *           (AP_Logger_MAVLinkLogTransfer.cpp:337-341); while the burst is
- *           active it silently drops any new request on the same channel
- *           (:111-118). So the GCS requests the next window only at the
- *           window boundary — same cadence as backend handle_log_data.
+ * Download: GCS → LOG_REQUEST_DATA (119) for the WHOLE log (ofs=0,
+ *           count=size) — the MAVProxy pattern ArduPilot explicitly
+ *           tolerates (AP_Logger_MAVLinkLogTransfer.cpp:112-113). AP
+ *           streams LOG_DATA (120) as one paced burst and ends its transfer
+ *           at remaining==0 or a short read (:337-341); while the burst is
+ *           active it silently drops any new same-channel request
+ *           (:111-120), so follow-up requests (gap-fill, stall retry) go
+ *           out only at burst boundaries. Received ranges are tracked as
+ *           coverage intervals; when the stream ends with holes (lost
+ *           frames), each gap is re-requested until coverage is complete.
  *           count==0 in a LOG_DATA is AP_Logger's "EOF / log unreadable"
- *           signal — finalize as truncated.
+ *           signal — finalize as truncated. Same machine as backend
+ *           handle_log_data.
  * Cancel:  GCS → LOG_REQUEST_END (122). Aborts any in-flight download.
  */
-
-const LOG_CHUNK_BYTES = 90 * 50; // matches backend cmd_log_download
 
 interface LogSessionState {
   listPending: boolean;
@@ -1140,6 +1142,37 @@ function _coveredBytes(intervals: Array<[number, number]>): number {
   let sum = 0;
   for (const [s, e] of intervals) sum += e - s;
   return sum;
+}
+
+// First uncovered byte range of the download, or null when coverage is
+// complete. With whole-log streaming this doubles as the resume point: no
+// holes means the first gap starts exactly at the high-water mark (twin of
+// backend _next_log_gap).
+function _nextLogGap(): [number, number] | null {
+  let prevEnd = 0;
+  for (const [s, e] of logSession.dlRecvIntervals) {
+    if (s > prevEnd) return [prevEnd, s];
+    prevEnd = Math.max(prevEnd, e);
+  }
+  if (prevEnd < logSession.dlSize) return [prevEnd, logSession.dlSize];
+  return null;
+}
+
+// Request the first uncovered byte range in one LOG_REQUEST_DATA — the
+// MAVProxy pattern ArduPilot explicitly tolerates (AP_Logger_MAVLink-
+// LogTransfer.cpp:112-113 names it): stream big ranges, then fill holes.
+// AP anchors the transfer to our ofs and caps count to the remaining log
+// size (:144-152), so requesting an entire gap is always in-spec. Returns
+// false when coverage is complete (twin of backend _request_next_log_gap).
+function _requestNextLogGap(): boolean {
+  const gap = _nextLogGap();
+  if (!gap) return false;
+  logSession.dlWindowEnd = gap[1];
+  sendSerialFrame(
+    119,
+    encodeLogRequestData(serial.targetSysId, serial.targetCompId, logSession.dlId, gap[0], gap[1] - gap[0])
+  );
+  return true;
 }
 
 function _resolveLogList(result: { ok: boolean; error?: string }): void {
@@ -1245,13 +1278,12 @@ function _onDlStall(): void {
     return;
   }
   logSession.dlStallRetries += 1;
-  const remaining = logSession.dlSize - logSession.dlOfs;
-  const next = Math.min(LOG_CHUNK_BYTES, remaining);
-  logSession.dlWindowEnd = logSession.dlOfs + next;
-  sendSerialFrame(
-    119,
-    encodeLogRequestData(serial.targetSysId, serial.targetCompId, logSession.dlId, logSession.dlOfs, next)
-  );
+  if (!_requestNextLogGap()) {
+    // Coverage complete but the finish never ran — should be unreachable
+    // (_onLogData finishes on covered >= size); close out cleanly.
+    _finishLogDownload(false);
+    return;
+  }
   _armDlWatchdog();
 }
 
@@ -1285,30 +1317,31 @@ function _onLogData(p: DataView): void {
   const data = new Uint8Array(p.buffer, p.byteOffset + 7, count);
   appendLogChunkBinary(logId, ofs, data);
   _markReceived(logSession.dlRecvIntervals, ofs, end);
+  // High-water mark: only used as the delivered-file size when a truncated
+  // finish ships a partial download. Progress/completion run on coverage.
   if (end > logSession.dlOfs) logSession.dlOfs = end;
-  updateDownloadProgress(logSession.dlOfs, logSession.dlSize);
+  const covered = _coveredBytes(logSession.dlRecvIntervals);
+  updateDownloadProgress(covered, logSession.dlSize);
 
   // Any accepted frame is progress — re-arm the stall watchdog and forget
   // past retries.
   logSession.dlStallRetries = 0;
   _armDlWatchdog();
 
-  if (logSession.dlOfs >= logSession.dlSize) {
+  if (covered >= logSession.dlSize) {
     _finishLogDownload(false);
     return;
   }
-  if (logSession.dlOfs >= logSession.dlWindowEnd || count < 90) {
-    // Request the NEXT window only when this one is exhausted (or AP sent a
-    // short frame — a short read ends its transfer too). ArduPilot answers
-    // one LOG_REQUEST_DATA with one atomic burst of the whole window
-    // (AP_Logger_MAVLinkLogTransfer.cpp:337-341) and SILENTLY DROPS any
-    // request arriving mid-burst (:111-118). The previous per-frame
-    // re-request buried the FC in ~49 duplicate window requests per window
-    // — downloads never got past the noise (real-FC finding, 2026-07-16).
-    const remaining = logSession.dlSize - logSession.dlOfs;
-    const next = Math.min(LOG_CHUNK_BYTES, remaining);
-    logSession.dlWindowEnd = logSession.dlOfs + next;
-    sendSerialFrame(119, encodeLogRequestData(serial.targetSysId, serial.targetCompId, logId, logSession.dlOfs, next));
+  if (end >= logSession.dlWindowEnd || count < 90) {
+    // AP's burst for our current request just ended — either this frame
+    // reached the end of the requested range, or AP sent a short frame (a
+    // short read ends its transfer too, AP_Logger_MAVLinkLogTransfer.cpp
+    // :339-341). AP SILENTLY DROPS requests that arrive mid-burst
+    // (:111-120), so this boundary is the only safe moment to ask for more.
+    // Ask for the first uncovered gap: during the main whole-log stream
+    // that's simply the resume point; after it, it fills holes left by
+    // lost frames (end-of-transfer gap-fill, MAVProxy-style).
+    _requestNextLogGap();
   }
 }
 
@@ -1350,11 +1383,16 @@ export async function serialLogDownload(id: number): Promise<{ ok: boolean; erro
     logSession.dlOfs = 0;
     logSession.dlRecvIntervals = [];
     logSession.dlStallRetries = 0;
-    // Arm the stall watchdog now so even a lost FIRST window gets retried.
+    // Arm the stall watchdog now so even a lost FIRST request gets retried.
     _armDlWatchdog();
-    const chunk = Math.min(LOG_CHUNK_BYTES, entry.size);
-    logSession.dlWindowEnd = chunk;
-    sendSerialFrame(119, encodeLogRequestData(serial.targetSysId, serial.targetCompId, id, 0, chunk));
+    // Request the WHOLE log in one LOG_REQUEST_DATA — the MAVProxy pattern
+    // ArduPilot explicitly tolerates (AP_Logger_MAVLinkLogTransfer.cpp
+    // :112-113 names it) and caps in-spec (:144-152). Windowed 4500 B
+    // requests paid one ~20 ms round trip per window — an RTT-bound
+    // ~225 KB/s ceiling on a ~700 KB/s USB link. Lost frames are
+    // re-requested from the coverage intervals once the stream ends.
+    logSession.dlWindowEnd = entry.size;
+    sendSerialFrame(119, encodeLogRequestData(serial.targetSysId, serial.targetCompId, id, 0, entry.size));
   });
 }
 
