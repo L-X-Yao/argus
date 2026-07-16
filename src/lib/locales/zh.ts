@@ -95,6 +95,7 @@ const messages: Record<string, string> = {
   'param.metaLoaded': '说明已加载',
   'param.search': '搜索参数...',
   'param.invalidNum': '无效数值',
+  'param.timeout': '参数读取超时',
   'param.outOfRange': '超出范围',
   'param.saved': '参数文件已保存',
   'param.exported': '已导出 {n} 个参数',

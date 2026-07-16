@@ -87,6 +87,7 @@ const messages: Record<string, string> = {
   'param.metaLoaded': 'メタデータ読込完了',
   'param.search': 'パラメータ検索...',
   'param.invalidNum': '無効な数値',
+  'param.timeout': 'パラメータ読み込みタイムアウト',
   'param.outOfRange': '範囲外',
   'param.saved': 'パラメータを保存しました',
   'param.exported': '{n}個のパラメータをエクスポートしました',

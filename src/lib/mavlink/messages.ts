@@ -624,6 +624,20 @@ export function encodeParamRequestList(targetSys: number, targetComp: number): U
   return buf;
 }
 
+export function encodeParamRequestRead(targetSys: number, targetComp: number, index: number): Uint8Array {
+  // PARAM_REQUEST_READ (20), size-sorted wire layout: param_index i16 @0,
+  // target_system u8 @2, target_component u8 @3, param_id char[16] @4.
+  // An all-zero name means "look up by index" — ArduPilot GCS_Param.cpp:396
+  // takes the index branch whenever param_index != -1. Byte-identical twin
+  // of backend/param_manager.py:_request_one.
+  const buf = new Uint8Array(20);
+  const dv = new DataView(buf.buffer);
+  dv.setInt16(0, index, true);
+  dv.setUint8(2, targetSys);
+  dv.setUint8(3, targetComp);
+  return buf;
+}
+
 export function encodeParamSet(
   targetSys: number,
   targetComp: number,

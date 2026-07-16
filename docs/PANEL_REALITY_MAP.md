@@ -119,7 +119,7 @@ Format: `Panel | verdict | what it does / evidence`.
 | FailsafeConfigPanel | WIRED | FS_*/BATT_* read/write through real param store |
 | FlightModePanel | WIRED | FLTMODE1-6 read/write; active slot from live mode_id |
 | ParamDiffPanel | WIRED | diff .param file vs live store, apply via param_set |
-| ParamPanel | WIRED | full browser/editor + /api/param_meta |
+| ParamPanel | WIRED | full browser/editor + /api/param_meta; WebSerial param stream wired 2026-07-16 (before that, serial sent the request but dropped every PARAM_VALUE — empty panel). Param metadata still needs the backend (/api/param_meta) |
 | PidPanel | WIRED | ATC_RAT_* sliders + param_save_to_flash |
 | PowerCalPanel | WIRED | BATT_* calibration using live voltage |
 

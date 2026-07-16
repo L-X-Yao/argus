@@ -87,6 +87,7 @@ const messages: Record<string, string> = {
   'param.metaLoaded': '메타데이터 로드 완료',
   'param.search': '매개변수 검색...',
   'param.invalidNum': '잘못된 숫자',
+  'param.timeout': '파라미터 읽기 시간 초과',
   'param.outOfRange': '범위 초과',
   'param.saved': '매개변수를 저장했습니다',
   'param.exported': '{n}개의 매개변수를 내보냈습니다',

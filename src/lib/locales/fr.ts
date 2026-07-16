@@ -87,6 +87,7 @@ const messages: Record<string, string> = {
   'param.metaLoaded': 'Métadonnées chargées',
   'param.search': 'Rechercher paramètres...',
   'param.invalidNum': 'Nombre invalide',
+  'param.timeout': 'Délai de lecture des paramètres dépassé',
   'param.outOfRange': 'Hors limites',
   'param.saved': 'Paramètres enregistrés',
   'param.exported': '{n} paramètres exportés',

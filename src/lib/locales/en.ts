@@ -95,6 +95,7 @@ const messages: Record<string, string> = {
   'param.metaLoaded': 'Metadata loaded',
   'param.search': 'Search params...',
   'param.invalidNum': 'Invalid number',
+  'param.timeout': 'Parameter fetch timeout',
   'param.outOfRange': 'Out of range',
   'param.saved': 'Parameter backup file saved',
   'param.exported': 'Exported {n} parameters',

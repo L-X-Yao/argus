@@ -7,6 +7,7 @@ export {
   encodeCommandLong,
   encodeSetMode,
   encodeParamRequestList,
+  encodeParamRequestRead,
   encodeParamSet,
   encodeRequestDataStream,
   encodeMissionCount,
