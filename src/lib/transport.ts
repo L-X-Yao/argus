@@ -1228,6 +1228,7 @@ function _finishLogDownload(truncated: boolean, reason?: string): void {
   const id = logSession.dlId;
   const size = logSession.dlOfs;
   logSession.dlPending = false;
+  logSession.dlId = -1; // match backend _log_download_id=-1 (see below)
   if (logSession.dlTimer) {
     clearTimeout(logSession.dlTimer);
     logSession.dlTimer = null;
@@ -1242,6 +1243,13 @@ function _finishLogDownload(truncated: boolean, reason?: string): void {
     truncated = true;
     reason = `Frame loss — ${missing} bytes missing (zero-filled)`;
   }
+  // Clear coverage only AFTER the missing check reads it. Resetting dlId +
+  // intervals matches the backend (which sets _log_download_id=-1 on
+  // finalize): left set, a late/duplicate same-id LOG_DATA would pass the
+  // `logId !== dlId` guard, re-arm the watchdog and re-run coverage on a
+  // completed session — harmless today (every downstream effect is
+  // separately guarded) but a real cross-stack divergence.
+  logSession.dlRecvIntervals = [];
   // Pass empty b64 — the streaming chunks already populated logState._chunks;
   // completeDownload assembles + triggers the browser download.
   completeDownload(id, undefined, size);
