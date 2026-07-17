@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Argus GCS — Comprehensive SITL verification v2 (38 additional items)."""
 import asyncio
+import base64
 import json
 import sys
 import time
@@ -322,26 +323,14 @@ async def test_copter():
         # ── Logs ──
         print('\n[B13] Logs')
         await cmd(ws, 'log_list')
-        log_msgs = await collect_msgs(ws, 10, {'log_entry', 'event', 'state'})
-        log_entries = [m for m in log_msgs if m.get('type') == 'log_entry']
-        record('log_list', len(log_entries) > 0 or any(m.get('type') == 'event' for m in log_msgs),
-               f"{len(log_entries)} entries")
-
-        # NEW: log_download (if we got entries)
-        if log_entries:
-            log_id = log_entries[0].get('id', 1)
-            await cmd(ws, 'log_download', log_id)
-            dl = await collect_msgs(ws, 10, {'log_data', 'log_chunk', 'event', 'state'})
-            log_chunks = [m for m in dl if m.get('type') in ('log_data', 'log_chunk')]
-            record('log_download', len(log_chunks) > 0 or len(dl) > 0, f"{len(log_chunks)} chunks")
-
-            # NEW: log_cancel
-            await cmd(ws, 'log_cancel')
-            await drain(ws, 1)
-            record('log_cancel', True)
-        else:
-            record('log_download', True, skip=True)
-            record('log_cancel', True, skip=True)
+        # Backend emits ONE 'log_list' message (all entries in a 'logs' array),
+        # never per-entry 'log_entry'. Byte-complete download is verified after
+        # the flight (B14b): a disarmed boot records no log (LOG_DISARMED=0
+        # default), so a log with content only exists once the vehicle has armed.
+        log_msgs = await collect_msgs(ws, 15, {'log_list', 'event', 'state'})
+        log_lists = [m for m in log_msgs if m.get('type') == 'log_list']
+        logs0 = log_lists[-1].get('logs', []) if log_lists else []
+        record('log_list', len(log_lists) > 0, f"{len(logs0)} entries")
 
         # ── Mission ──
         print('\n[B14] Mission (upload + start + wp_seq + download + clear)')
@@ -404,10 +393,65 @@ async def test_copter():
             await drain(ws, 1)
             st3 = await accum_state(ws, 3)
             record('clear_summary', st3.get('flight_summary') is None or st3.get('flight_summary') == fs)
+
+            # ── NEW [B14b]: log_download byte-complete ──
+            # The CI-automatable half of whole-log streaming (2a496d4).
+            # SITL/loopback proves byte-complete reassembly; the speed win
+            # (RTT≈0 here) needs real USB. This is the standing regression
+            # guard for the [-200:] trim bug that silently dropped 60% of a
+            # 28 MB download. Runs disarmed — download refuses while armed —
+            # and only now (post-arm) does a log with content exist.
+            print('\n[B14b] Log download (byte-complete)')
+            await cmd(ws, 'log_list')
+            ll = await wait_for(ws, lambda m: m.get('type') == 'log_list', 15)
+            logs = ll.get('logs', []) if ll else []
+            dl_logs = [x for x in logs if x.get('size', 0) > 0]
+            if dl_logs:
+                # smallest non-empty log → fastest deterministic download
+                target = min(dl_logs, key=lambda x: x['size'])
+                await cmd(ws, 'log_download', id=target['id'])
+                chunks = {}
+                complete = None
+                deadline = time.monotonic() + 90
+                while time.monotonic() < deadline and complete is None:
+                    try:
+                        m = json.loads(await asyncio.wait_for(ws.recv(), 2))
+                    except asyncio.TimeoutError:
+                        continue
+                    ty = m.get('type')
+                    if ty == 'log_chunk':
+                        chunks[m['ofs']] = base64.b64decode(m['data'])
+                    elif ty == 'log_complete' and m.get('id') == target['id']:
+                        complete = m
+                record('log_download completes', complete is not None,
+                       f"decl={target['size']} got={complete.get('size') if complete else '?'}")
+                # Reassemble by offset; stop at the first hole so a gap fails
+                # the length check below rather than silently concatenating.
+                reasm = bytearray()
+                for ofs in sorted(chunks):
+                    if ofs != len(reasm):
+                        break
+                    reasm += chunks[ofs]
+                ok = bool(complete) and len(reasm) == complete['size'] == target['size'] \
+                    and not complete.get('truncated')
+                record('log_download byte-complete', ok,
+                       f"reasm={len(reasm)} decl={target['size']} "
+                       f"size={complete.get('size') if complete else '?'} "
+                       f"trunc={complete.get('truncated') if complete else '?'}")
+                await cmd(ws, 'log_cancel')  # no-op after finalize, must not error
+                await drain(ws, 1)
+                record('log_cancel', True)
+            else:
+                record('log_download completes', True, skip=True)
+                record('log_download byte-complete', True, skip=True)
+                record('log_cancel', True, skip=True)
         else:
             for t in ('takeoff for mission', 'mission_start', 'wp_seq', 'RTL after mission',
                        'landing + disarm', 'flight_summary', 'clear_summary'):
                 record(t, False, 'arm failed')
+            record('log_download completes', True, skip=True)
+            record('log_download byte-complete', True, skip=True)
+            record('log_cancel', True, skip=True)
 
         # mission_clear
         await cmd(ws, 'mission_clear')
