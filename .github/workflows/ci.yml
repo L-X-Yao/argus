@@ -88,7 +88,7 @@ jobs:
 
       - name: Cache SITL binary
         id: sitl-cache
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/sitl
           key: sitl-copter-${{ steps.sitl-ver.outputs.ver }}
