@@ -33,7 +33,7 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 | Messages, WebSerial | 35 | 16 | 13 | 0 | 5 | 0 | 1 |
 | REST routes | 28 | 6 | 5 | 8 | 9 | 0 | 0 |
 | Panels | 80 | 13 | 3 | 21 | 41 | 2 | 0 |
-| Platform | 40 | 8 | 4 | 7 | 15 | 3 | 3 |
+| Platform | 40 | 8 | 4 | 7 | 16 | 2 | 3 |
 
 ## Commands / 飞控命令
 
@@ -302,7 +302,7 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 | STATUSTEXT filter | STATUSTEXT 过滤 | Tests only | Unit tests |
 | Real flight | 真实飞行 | None | Never properly flown |
 | Right-to-left layout | 阿拉伯语从右到左布局 | Tests only | Browser test: page turns around and stays inside the window |
-| macOS | macOS | None | Never run |
+| macOS | macOS | Tests only | CI: unit and contract tests on macos-latest. The app itself has not been run there |
 | Desktop app (Tauri) | 桌面版（Tauri） | None | Not built |
 | Firmware flashing | 固件刷写 | n/a | Not implemented |
 | PX4 | PX4 | n/a | Refused on connect, not implemented |
