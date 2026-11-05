@@ -1,6 +1,6 @@
 import type { Page } from '@playwright/test';
 import net from 'node:net';
-import { parseFrames } from '../../src/lib/mavlink';
+import { encodeFrame, encodeMissionRequestInt, encodeMissionRequestList, parseFrames } from '../../src/lib/mavlink';
 
 /**
  * Stands in for navigator.serial and carries the bytes to ArduPilot SITL over
@@ -14,6 +14,12 @@ export interface Bridge {
   missionSeq: () => number;
   logIds: number[];
   logDataFrames: () => number;
+  /** How many items the FC holds in a store, asked over the bridge's own socket. */
+  storeCount: (missionType: number) => Promise<number>;
+  /** One stored item as the FC reads it back, asked the same way. */
+  storeItem: (missionType: number, seq: number) => Promise<{ lat: number; lon: number; alt: number } | null>;
+  /** Whether a message id has arrived from the FC. */
+  seen: (msgId: number) => boolean;
   close: () => void;
 }
 
@@ -26,6 +32,9 @@ export async function openBridge(page: Page, target: string): Promise<Bridge> {
   const texts: string[] = [];
   const logIds: number[] = [];
   let logDataFrames = 0;
+  const storeCounts = new Map<number, number>();
+  const storeItems = new Map<string, { lat: number; lon: number; alt: number }>();
+  const seenIds = new Set<number>();
   let missionSeq = -1;
   let pending = new Uint8Array(0);
   let outgoing: number[] = [];
@@ -54,10 +63,21 @@ export async function openBridge(page: Page, target: string): Promise<Bridge> {
     const { frames, remaining } = parseFrames(joined);
     pending = remaining;
     for (const f of frames) {
+      seenIds.add(f.msgId);
       if (f.msgId === 77) {
         acks.push({ command: f.payload.getUint16(0, true), result: f.payloadLen > 2 ? f.payload.getUint8(2) : 0 });
       } else if (f.msgId === 42) {
         missionSeq = f.payload.getUint16(0, true);
+      } else if (f.msgId === 44) {
+        storeCounts.set(f.payloadLen > 4 ? f.payload.getUint8(4) : 0, f.payload.getUint16(0, true));
+      } else if (f.msgId === 73) {
+        // MISSION_ITEM_INT: mission_type is the last byte, and seq sits before it.
+        const key = `${f.payloadLen > 37 ? f.payload.getUint8(37) : 0}:${f.payload.getUint16(28, true)}`;
+        storeItems.set(key, {
+          lat: f.payload.getInt32(16, true) / 1e7,
+          lon: f.payload.getInt32(20, true) / 1e7,
+          alt: f.payload.getFloat32(24, true),
+        });
       } else if (f.msgId === 118) {
         logIds.push(f.payload.getUint16(8, true));
       } else if (f.msgId === 120) {
@@ -105,6 +125,24 @@ export async function openBridge(page: Page, target: string): Promise<Bridge> {
     missionSeq: () => missionSeq,
     logIds,
     logDataFrames: () => logDataFrames,
+    storeCount: async (missionType) => {
+      storeCounts.delete(missionType);
+      socket.write(encodeFrame(43, encodeMissionRequestList(1, 1, missionType), 255, 190, 0));
+      for (let i = 0; i < 50 && !storeCounts.has(missionType); i++) {
+        await new Promise((r) => setTimeout(r, 100));
+      }
+      return storeCounts.get(missionType) ?? -1;
+    },
+    storeItem: async (missionType, seq) => {
+      const key = `${missionType}:${seq}`;
+      storeItems.delete(key);
+      socket.write(encodeFrame(51, encodeMissionRequestInt(1, 1, seq, missionType), 255, 190, 0));
+      for (let i = 0; i < 50 && !storeItems.has(key); i++) {
+        await new Promise((r) => setTimeout(r, 100));
+      }
+      return storeItems.get(key) ?? null;
+    },
+    seen: (msgId) => seenIds.has(msgId),
     close: () => socket.destroy(),
   };
 }

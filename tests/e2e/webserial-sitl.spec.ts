@@ -19,9 +19,14 @@ const drone = <T = number>(key: string) => droneField<T>(page, key);
 const send = (name: string, param?: number, data?: Record<string, unknown>) => dispatchCmd(page, name, param, data);
 
 /** Sends a command and waits for the firmware's final answer to it. */
-async function ackOf(command: number, name: string, data?: Record<string, unknown>): Promise<number | undefined> {
+async function ackOf(
+  command: number,
+  name: string,
+  data?: Record<string, unknown>,
+  param?: number,
+): Promise<number | undefined> {
   const mark = sitl.acks.length;
-  await send(name, undefined, data);
+  await send(name, param, data);
   await expect
     .poll(() => sitl.acks.slice(mark).find((a) => a.command === command && a.result !== 5)?.result, {
       message: `no COMMAND_ACK ${command} after ${name}`,
@@ -81,8 +86,25 @@ test('the position source panel shows a healthy GPS and EKF', async () => {
 
 test('the custom dashboard shows live values', async () => {
   await openFromPalette('自定义仪表盘');
-  await expect(page.getByText('自稳').first()).toBeVisible();
+  const dashboard = page.getByRole('dialog').filter({ hasText: '自定义仪表盘' });
+  // A live tile: the satellite count stays 0 unless telemetry reaches the panel.
+  const sats = dashboard.getByText('卫星数', { exact: true }).locator('xpath=following-sibling::div[1]');
+  await expect.poll(async () => Number(await sats.textContent())).toBeGreaterThan(0);
   await page.mouse.click(5, 5);
+});
+
+test('the FC sends what rides no stream once asked', async () => {
+  expect(sitl.acks.find((a) => a.command === 511)?.result).toBe(ACCEPTED);
+  expect(sitl.acks.filter((a) => a.command === 512).map((a) => a.result)).toEqual([ACCEPTED, ACCEPTED]);
+  await expect.poll(() => sitl.seen(245), { timeout: 10000 }).toBe(true);
+  await expect.poll(() => drone('vtol_state'), { timeout: 5000 }).toBe(3); // MC, on any Copter
+});
+
+test('a refused mode change shows an error', async () => {
+  // Copter has no mode 8 (ArduCopter/mode.h). Disarmed it takes every mode it has
+  // (ArduCopter/mode.cpp set_mode, ignore_checks), so an unknown one is the refusal to test.
+  expect(await ackOf(176, 'mode', undefined, 8)).toBe(FAILED);
+  await expect(page.getByText(/模式 — 失败|Mode — failed/).first()).toBeVisible();
 });
 
 test('a refused arm shows an error', async () => {
@@ -110,10 +132,50 @@ test('the flight fills in the derived fields', async () => {
   expect((await drone<number[]>('servo'))[0]).toBeGreaterThan(1000);
   expect(await drone<string>('fw_version')).toMatch(/^v\d+\.\d+\.\d+$/);
   expect((await drone<number[]>('cells'))[0]).toBeGreaterThan(0);
-  expect(await drone<string[]>('prearm')).toContain('LAND mode not armable');
+  // The wording varies by firmware version: LAND on 4.6, Land on 4.7.
+  expect((await drone<string[]>('prearm')).join(' ')).toMatch(/not armable/i);
   expect(Math.abs((await drone<number[]>('mag'))[2])).toBeGreaterThan(0);
-  expect(await drone<number[]>('vibe')).toHaveLength(3);
+  expect((await drone<number[]>('vibe')).some((v) => v > 0)).toBe(true);
   await expect.poll(() => drone('gimbal_pitch'), { timeout: 10000 }).not.toBe(0);
+});
+
+test('a right click on the map sends the vehicle there and marks the target', async () => {
+  const map = (await page.locator('.leaflet-container').first().boundingBox())!;
+  await page.mouse.click(map.x + map.width / 2 + 120, map.y + map.height / 2 + 80, { button: 'right' });
+  const dialog = page.getByRole('alertdialog');
+  await expect(dialog).toBeVisible();
+  await page.waitForTimeout(350); // resolveConfirm ignores a yes in the first 300 ms
+  await dialog.getByRole('button', { name: /确认|Confirm/ }).click();
+  await expect(page.locator('path.guided-pulse')).toBeAttached({ timeout: 5000 });
+  await expect.poll(() => drone('mode_id'), { timeout: 15000 }).toBe(MODE.guided);
+  // The takeoff already left it in GUIDED and the marker is local, so only the vehicle
+  // moving shows that the FC took the target.
+  await expect.poll(() => drone('gs'), { timeout: 20000 }).toBeGreaterThan(1);
+});
+
+test('survey and replay layers draw from their state', async () => {
+  const shapes = () => page.locator('.leaflet-overlay-pane path').count();
+  const arrows = () => page.locator('.drone-arrow').count();
+  const [shapesBefore, arrowsBefore] = [await shapes(), await arrows()];
+  await page.evaluate(async () => {
+    const url = '/src/lib/stores.svelte.ts';
+    const { app } = await import(/* @vite-ignore */ url);
+    app.surveyPolygon = [
+      { lat: 34.25, lon: 108.93 },
+      { lat: 34.26, lon: 108.93 },
+      { lat: 34.26, lon: 108.95 },
+    ];
+    app.replayPos = { lat: 34.25, lon: 108.93, yaw: 90 };
+  });
+  await expect.poll(shapes).toBeGreaterThan(shapesBefore);
+  await expect.poll(arrows).toBe(arrowsBefore + 1);
+  await page.evaluate(async () => {
+    const url = '/src/lib/stores.svelte.ts';
+    const { app } = await import(/* @vite-ignore */ url);
+    app.surveyPolygon = [];
+    app.replayPos = null;
+  });
+  await expect.poll(arrows).toBe(arrowsBefore);
 });
 
 test('flies an uploaded mission and jumps to a waypoint', async () => {
@@ -129,11 +191,14 @@ test('flies an uploaded mission and jumps to a waypoint', async () => {
     type: 'wp',
     loiter_param: 0,
   });
-  const result = await page.evaluate(async (wps) => {
-    const url = '/src/lib/transport.ts';
-    const { serialUploadMission } = await import(/* @vite-ignore */ url);
-    return serialUploadMission(wps, 20);
-  }, [wp(0.002, 0), wp(0.002, 0.002), wp(0, 0.002)]);
+  const result = await page.evaluate(
+    async (wps) => {
+      const url = '/src/lib/transport.ts';
+      const { serialUploadMission } = await import(/* @vite-ignore */ url);
+      return serialUploadMission(wps, 20);
+    },
+    [wp(0.002, 0), wp(0.002, 0.002), wp(0, 0.002)],
+  );
   expect(result).toEqual({ ok: true });
 
   await send('mission_start');
@@ -154,6 +219,40 @@ test('flies an uploaded mission and jumps to a waypoint', async () => {
       { message: 'no waypoint reached', timeout: 60000 },
     )
     .toBe(true);
+});
+
+test('rally points reach the FC and clear again', async () => {
+  const rally = 2; // MAV_MISSION_TYPE_RALLY
+  const lat = await drone('lat');
+  const lon = await drone('lon');
+  const result = await page.evaluate(
+    async (points) => {
+      const url = '/src/lib/transport.ts';
+      const { serialUploadRally } = await import(/* @vite-ignore */ url);
+      return serialUploadRally(points);
+    },
+    [
+      { lat: lat + 0.001, lon, alt: 50 },
+      { lat, lon: lon + 0.001, alt: 40 },
+    ],
+  );
+  expect(result).toEqual({ ok: true });
+  expect(await sitl.storeCount(rally)).toBe(2);
+  const first = await sitl.storeItem(rally, 0);
+  expect(first?.lat).toBeCloseTo(lat + 0.001, 5);
+  expect(first?.lon).toBeCloseTo(lon, 5);
+  expect(first?.alt).toBe(50);
+  const second = await sitl.storeItem(rally, 1);
+  expect(second?.lon).toBeCloseTo(lon + 0.001, 5);
+  expect(second?.alt).toBe(40);
+
+  const cleared = await page.evaluate(async () => {
+    const url = '/src/lib/transport.ts';
+    const { serialClearRally } = await import(/* @vite-ignore */ url);
+    return serialClearRally();
+  });
+  expect(cleared).toEqual({ ok: true });
+  expect(await sitl.storeCount(rally)).toBe(0);
 });
 
 test('returns and lands, and reports the flight', async () => {

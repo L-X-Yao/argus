@@ -69,11 +69,12 @@ test.describe('Connected flow — full lifecycle', () => {
 
   test('calibration panel opens via nav button', async ({ page }) => {
     await connectSimulator(page);
-    const calBtn = page.locator('button', { hasText: /Calibrate|校准/ }).first();
-    if (await calBtn.isVisible({ timeout: 3000 }).catch(() => false)) {
-      await calBtn.click();
-      await page.waitForTimeout(2000);
-    }
+    await page.getByRole('button', { name: /^(Calibrate|校准)$/ }).click();
+    const panel = page.getByRole('dialog').filter({ hasText: /传感器校准|Sensor Calibration/ });
+    await expect(panel).toBeVisible();
+    // A modal: left open, it would stop afterEach reaching the disconnect button.
+    await panel.getByRole('button', { name: /^(关闭|Close)$/ }).click();
+    await expect(panel).toHaveCount(0);
   });
 
   test('switching to Monitor view shows telemetry panels', async ({ page }) => {
