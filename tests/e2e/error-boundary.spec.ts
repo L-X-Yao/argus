@@ -57,9 +57,10 @@ test.describe('Error boundary and graceful degradation', () => {
     await page.goto('/');
     await page.waitForTimeout(2000);
 
-    // App shell should still render
+    // App shell should still render, past the authentication gate
     await expect(page.locator('[role="application"]')).toBeVisible();
-    await expect(page.locator('body')).toBeVisible();
+    await expect(page.getByRole('banner').getByText('Argus')).toBeVisible();
+    await expect(page.locator('.leaflet-container')).toBeVisible();
 
     // No crash indicators
     const errorOverlay = page.locator('vite-error-overlay');
@@ -110,12 +111,15 @@ test.describe('Error boundary and graceful degradation', () => {
 
     // Corrupt the app state by injecting bad values
     await page.evaluate(() => {
-      localStorage.setItem('argus_settings', JSON.stringify({
-        darkTheme: 'not_a_boolean',
-        locale: 12345,
-        mapMode: { invalid: true },
-        showSettings: undefined,
-      }));
+      localStorage.setItem(
+        'argus_settings',
+        JSON.stringify({
+          darkTheme: 'not_a_boolean',
+          locale: 12345,
+          mapMode: { invalid: true },
+          showSettings: undefined,
+        }),
+      );
     });
 
     // Navigate between tabs rapidly to trigger state reads
@@ -168,15 +172,21 @@ test.describe('Error boundary and graceful degradation', () => {
 
     // Add a failing event listener that simulates a component error
     await page.evaluate(() => {
-      document.addEventListener('click', () => {
-        try {
-          // @ts-ignore - intentional type error
-          (null as any).nonexistent.deeply.nested.property;
-        } catch (e) {
-          // Swallowed within handler, but re-throw asynchronously
-          setTimeout(() => { throw e; }, 0);
-        }
-      }, { once: true });
+      document.addEventListener(
+        'click',
+        () => {
+          try {
+            // @ts-ignore - intentional type error
+            (null as any).nonexistent.deeply.nested.property;
+          } catch (e) {
+            // Swallowed within handler, but re-throw asynchronously
+            setTimeout(() => {
+              throw e;
+            }, 0);
+          }
+        },
+        { once: true },
+      );
     });
 
     // Trigger the click
@@ -220,10 +230,12 @@ test.describe('Error boundary and graceful degradation', () => {
       }
 
       // Also dispatch error events on the window
-      window.dispatchEvent(new ErrorEvent('error', {
-        message: 'WebSocket connection failed',
-        error: new Error('Connection reset'),
-      }));
+      window.dispatchEvent(
+        new ErrorEvent('error', {
+          message: 'WebSocket connection failed',
+          error: new Error('Connection reset'),
+        }),
+      );
     });
 
     await page.waitForTimeout(2000);

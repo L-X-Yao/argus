@@ -201,6 +201,7 @@ jobs:
         run: >-
           npx playwright test --config=tests/playwright.config.ts --project=chromium
           tests/e2e/smoke.spec.ts
+          tests/e2e/auth.spec.ts
           tests/e2e/navigation.spec.ts
           tests/e2e/accessibility.spec.ts
           tests/e2e/command-palette.spec.ts

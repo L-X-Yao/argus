@@ -34,3 +34,19 @@ export function getWsUrl(): string {
 export function apiUrl(path: string): string {
   return `${API_BASE}${path}`;
 }
+
+/**
+ * Exchange the access token for the session cookie that REST, tile and video
+ * requests rely on. Resolves false for a rejected token, and rejects when the
+ * backend cannot be reached.
+ */
+export async function login(token: string): Promise<boolean> {
+  const res = await fetch(apiUrl('/api/auth/login'), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token }),
+    signal: AbortSignal.timeout(5000),
+  });
+  const data = await res.json();
+  return data.ok === true;
+}

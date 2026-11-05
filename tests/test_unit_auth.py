@@ -11,6 +11,9 @@ from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
+from starlette.datastructures import URL
+from starlette.requests import Request
+from starlette.websockets import WebSocketDisconnect
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -107,6 +110,21 @@ class TestTokenValidation:
         assert verify_token("wrong_value") is False
 
 
+class TestNonAsciiTokens:
+    def test_wrong_non_ascii_token_fails_without_raising(self):
+        generate_token()
+        assert verify_token("令牌") is False
+
+    def test_non_ascii_configured_token_passes(self):
+        os.environ["GCS_AUTH_TOKEN"] = "令牌123"
+        assert verify_token("令牌123") is True
+
+    def test_login_with_a_wrong_non_ascii_token_returns_401(self, client):
+        generate_token()
+        r = client.post("/api/auth/login", json={"token": "令牌"})
+        assert r.status_code == 401
+
+
 class TestAuthDisableMode:
     def test_no_token_means_auth_not_required(self):
         assert auth_required() is False
@@ -156,6 +174,131 @@ class TestProtectedEndpoints:
         generate_token()
         r = client.post("/api/auth/login", json={"token": "totally_wrong"})
         assert r.status_code == 401
+
+
+class TestSessionCookie:
+    TOKEN = "cookie_test_token_123456"
+
+    @pytest.fixture(autouse=True)
+    def _configured_token(self):
+        os.environ["GCS_AUTH_TOKEN"] = self.TOKEN
+
+    def login(self, client):
+        return client.post("/api/auth/login", json={"token": self.TOKEN})
+
+    def test_login_sets_a_protected_session_cookie(self, client):
+        cookie = self.login(client).headers["set-cookie"]
+        assert cookie.startswith(auth_module.COOKIE_NAME + "=")
+        assert "HttpOnly" in cookie
+        assert "SameSite=strict" in cookie
+        assert "Path=/" in cookie
+        assert "Secure" not in cookie
+        assert "Max-Age" not in cookie
+        assert self.TOKEN not in cookie
+
+    def test_cookie_is_secure_over_https(self):
+        https_client = TestClient(app, base_url="https://testserver", raise_server_exceptions=False)
+        assert "Secure" in self.login(https_client).headers["set-cookie"]
+
+    def test_failed_login_sets_no_cookie(self, client):
+        r = client.post("/api/auth/login", json={"token": "wrong"})
+        assert r.status_code == 401
+        assert "set-cookie" not in r.headers
+
+    def test_login_without_auth_sets_no_cookie(self, client):
+        del os.environ["GCS_AUTH_TOKEN"]
+        r = client.post("/api/auth/login", json={"token": "anything"})
+        assert r.json() == {"ok": True}
+        assert "set-cookie" not in r.headers
+
+    def test_non_ascii_token_gets_a_usable_cookie(self, client):
+        os.environ["GCS_AUTH_TOKEN"] = "令牌 ; 123"
+        r = client.post("/api/auth/login", json={"token": "令牌 ; 123"})
+        assert r.status_code == 200
+        assert client.get("/api/ports").status_code == 200
+
+    def test_cookie_authorizes_rest(self, client):
+        assert client.get("/api/ports").status_code == 401
+        self.login(client)
+        assert client.get("/api/ports").status_code == 200
+
+    @pytest.mark.parametrize("value", ["forged", TOKEN])
+    def test_other_cookie_values_are_rejected(self, client, value):
+        client.cookies.set(auth_module.COOKIE_NAME, value)
+        assert client.get("/api/ports").status_code == 401
+
+    def test_non_ascii_cookie_is_rejected_without_raising(self):
+        assert auth_module._verify_cookie("令牌") is False
+
+    def test_cookie_stops_working_when_the_token_changes(self, client):
+        self.login(client)
+        auth_module._token = "another_token_1234567890"
+        assert client.get("/api/ports").status_code == 401
+
+    def test_wrong_bearer_is_not_rescued_by_the_cookie(self, client):
+        self.login(client)
+        r = client.get("/api/ports", headers={"Authorization": "Bearer wrong"})
+        assert r.status_code == 401
+
+    def test_write_from_a_foreign_origin_is_rejected(self, client):
+        self.login(client)
+        r = client.post("/api/tile_cache_clear", headers={"origin": "http://evil.example"})
+        assert r.status_code == 403
+
+    def test_write_from_an_allowed_origin_passes(self, client):
+        self.login(client)
+        r = client.post("/api/firmware/download", json={}, headers={"origin": "http://localhost:8100"})
+        assert r.json() == {"ok": False, "error": "Invalid params"}
+
+    def test_write_without_an_origin_header_passes(self, client):
+        self.login(client)
+        r = client.post("/api/firmware/download", json={})
+        assert r.json() == {"ok": False, "error": "Invalid params"}
+
+    def test_read_from_a_foreign_origin_passes_the_cookie_check(self, client):
+        self.login(client)
+        assert client.get("/api/ports", headers={"origin": "http://evil.example"}).status_code == 200
+
+    def test_bearer_write_is_not_subject_to_the_origin_rule(self, client):
+        r = client.post(
+            "/api/firmware/download",
+            json={},
+            headers={"Authorization": "Bearer " + self.TOKEN, "origin": "http://evil.example"},
+        )
+        assert r.json() == {"ok": False, "error": "Invalid params"}
+
+    @pytest.mark.parametrize("site", ["same-site", "cross-site"])
+    def test_requests_from_other_pages_are_rejected(self, client, site):
+        self.login(client)
+        assert client.get("/api/video/stop", headers={"sec-fetch-site": site}).status_code == 403
+
+    @pytest.mark.parametrize("site", ["same-origin", "none"])
+    def test_requests_from_the_own_page_pass(self, client, site):
+        self.login(client)
+        assert client.get("/api/ports", headers={"sec-fetch-site": site}).status_code == 200
+
+    def test_bearer_is_not_subject_to_fetch_metadata(self, client):
+        headers = {"Authorization": "Bearer " + self.TOKEN, "sec-fetch-site": "cross-site"}
+        assert client.get("/api/ports", headers=headers).status_code == 200
+
+    def test_lone_surrogate_in_the_token_returns_401(self, client):
+        r = client.post("/api/auth/login", content='{"token": "\\ud800"}')
+        assert r.status_code == 401
+
+    def test_public_path_check_does_not_trust_request_url(self, client, monkeypatch):
+        monkeypatch.setattr(Request, "url", property(lambda self: URL("http://x/health")))
+        assert client.get("/api/ports").status_code == 401
+
+    def test_websocket_opens_with_its_token_parameter(self, client):
+        with client.websocket_connect("/ws?token=" + self.TOKEN) as ws:
+            ws.send_json({"type": "disconnect"})
+
+    @pytest.mark.parametrize("url", ["/ws", "/ws?token=wrong"])
+    def test_websocket_without_the_right_token_closes_4001(self, client, url):
+        self.login(client)
+        with pytest.raises(WebSocketDisconnect) as closed, client.websocket_connect(url):
+            pass
+        assert closed.value.code == 4001
 
 
 class TestConcurrentAuth:

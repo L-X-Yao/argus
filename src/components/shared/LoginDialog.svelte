@@ -1,6 +1,6 @@
 <script lang="ts">
   import { t } from '../../lib/i18n.svelte';
-  import { apiUrl } from '../../lib/backend';
+  import { login } from '../../lib/backend';
   import Button from '$lib/components/ui/button/button.svelte';
   import { Lock } from '@lucide/svelte';
 
@@ -23,13 +23,7 @@
     loading = true;
     error = '';
     try {
-      const res = await fetch(apiUrl('/api/auth/login'), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: token.trim() }),
-      });
-      const data = await res.json();
-      if (data.ok) {
+      if (await login(token.trim())) {
         localStorage.setItem('argus_auth_token', token.trim());
         onlogin();
       } else {

@@ -64,4 +64,34 @@ describe('backend URL resolver', () => {
     const { apiUrl } = await import('./backend');
     expect(apiUrl('/api/v2/mission/upload')).toBe('/api/v2/mission/upload');
   });
+
+  describe('login', () => {
+    const page = { location: { protocol: 'http:', host: 'localhost:8100' } };
+
+    it('posts the token and reports acceptance', async () => {
+      vi.stubGlobal('window', page);
+      const fetchMock = vi.fn().mockResolvedValue({ json: async () => ({ ok: true }) });
+      vi.stubGlobal('fetch', fetchMock);
+      const { login } = await import('./backend');
+      await expect(login('secret')).resolves.toBe(true);
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/auth/login',
+        expect.objectContaining({ method: 'POST', body: JSON.stringify({ token: 'secret' }) }),
+      );
+    });
+
+    it('resolves false for a rejected token', async () => {
+      vi.stubGlobal('window', page);
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ json: async () => ({ ok: false }) }));
+      const { login } = await import('./backend');
+      await expect(login('wrong')).resolves.toBe(false);
+    });
+
+    it('rejects when the backend cannot be reached', async () => {
+      vi.stubGlobal('window', page);
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
+      const { login } = await import('./backend');
+      await expect(login('secret')).rejects.toThrow('Failed to fetch');
+    });
+  });
 });

@@ -10,7 +10,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
-from .auth import auth_middleware, auth_required, generate_token, verify_token, verify_ws_token
+from .auth import auth_middleware, auth_required, generate_token, set_session_cookie, verify_token, verify_ws_token
 from .config import ROOT_DIR, VERSION, aio, cfg
 from .drone_link import DroneLink
 from .firmware import router as firmware_router
@@ -46,6 +46,7 @@ _cors_origins = [
     ).split(",")
     if s.strip()
 ]
+app.state.cors_origins = _cors_origins
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins,
@@ -121,11 +122,14 @@ async def api_version():
 
 @app.post("/api/auth/login", tags=["Auth"])
 async def api_auth_login(request: Request):
-    """Authenticate with token. Returns ok if valid."""
+    """Authenticate with token. A valid one also gets a session cookie."""
     body = await request.json()
     token = body.get("token", "")
     if verify_token(token):
-        return {"ok": True}
+        response = JSONResponse({"ok": True})
+        if auth_required():
+            set_session_cookie(response, secure=request.url.scheme == "https")
+        return response
     return JSONResponse(status_code=401, content={"ok": False, "error": "invalid token"})
 
 
