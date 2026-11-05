@@ -1,6 +1,15 @@
 import { test, expect } from '@playwright/test';
 
 test.describe('PWA offline capabilities', () => {
+  test('app shell responses require revalidation', async ({ request }) => {
+    // A cached index.html points at hashed chunks a new build has deleted, so
+    // every lazy panel fails to load until the browser's cache expires.
+    for (const path of ['/', '/sw.js', '/manifest.json']) {
+      const res = await request.get(path);
+      expect(res.headers()['cache-control'], path).toBe('no-cache');
+    }
+  });
+
   test('service worker registers successfully', async ({ page }) => {
     await page.goto('/');
     await page.waitForTimeout(2000);

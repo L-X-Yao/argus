@@ -21,6 +21,9 @@ from .video import router as video_router
 from .ws_manager import WSManager
 
 DIST_DIR = ROOT_DIR / "dist"
+# Without this the browser reuses its cached shell by heuristic, for days if the
+# build is old, and that shell points at hashed chunks an upgrade has deleted.
+_REVALIDATE = {"Cache-Control": "no-cache"}
 
 
 @asynccontextmanager
@@ -208,12 +211,12 @@ if DIST_DIR.exists():
 
     @app.get("/manifest.json")
     async def manifest():
-        return FileResponse(str(DIST_DIR / "manifest.json"))
+        return FileResponse(str(DIST_DIR / "manifest.json"), headers=_REVALIDATE)
 
     @app.get("/sw.js")
     async def service_worker():
-        return FileResponse(str(DIST_DIR / "sw.js"), media_type="application/javascript")
+        return FileResponse(str(DIST_DIR / "sw.js"), media_type="application/javascript", headers=_REVALIDATE)
 
     @app.get("/")
     async def index():
-        return FileResponse(str(DIST_DIR / "index.html"))
+        return FileResponse(str(DIST_DIR / "index.html"), headers=_REVALIDATE)
