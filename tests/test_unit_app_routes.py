@@ -44,7 +44,7 @@ class TestHealthAndSystem:
 
         assert data["version"] == VERSION
         assert "protocols" in data
-        assert "pllink" in data["protocols"]
+        assert "standard" in data["protocols"]
         assert "vehicles" in data
 
     def test_tile_sources(self):

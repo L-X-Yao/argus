@@ -18,7 +18,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from .drone_link import DroneLink
 
-# GCS-originated frames carry sysid 255 (pllink_proto.bm default). Replay
+# GCS-originated frames carry sysid 255 (mavlink_frame.bm default). Replay
 # must skip them by default: handle_heartbeat latches connected/mode/armed
 # from ANY sysid, so feeding our own recorded heartbeats back through the
 # parser would fabricate vehicle state.

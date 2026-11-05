@@ -38,7 +38,6 @@ class TestSendHeartbeat:
         link = make_link()
         send_heartbeat(link)
         raw = link._ser.write.call_args[0][0]
-        # PL-Link wrapper or raw MAVLink — find 0xFD magic
         idx = raw.index(0xFD)
         payload_len = raw[idx + 1]
         payload = raw[idx + 10 : idx + 10 + payload_len]

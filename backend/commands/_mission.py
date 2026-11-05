@@ -8,7 +8,7 @@ from typing import TYPE_CHECKING
 from ..config import cfg
 from ..crc_extras import CRC_EXTRA
 from ..locale_text import lt
-from ..pllink_proto import bm
+from ..mavlink_frame import bm
 from ._helpers import send_cmd, send_fence_count, send_mission_count, send_set_mode
 
 if TYPE_CHECKING:

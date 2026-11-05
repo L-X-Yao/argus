@@ -67,7 +67,7 @@ class ParamManager:
         # MAV PARAM_REQUEST_LIST msg id 21: target_system u8 @0, target_component
         # u8 @1. The FC replies with a PARAM_VALUE stream carrying param_count.
         from .crc_extras import CRC_EXTRA
-        from .pllink_proto import bm
+        from .mavlink_frame import bm
 
         self._list_attempts += 1
         payload = struct.pack("<BB", self._link.vehicle.sysid, 1)
@@ -81,7 +81,7 @@ class ParamManager:
         #   3      target_component (u8)
         #   4..19  param_id (char[16]) — empty when looking up by index
         from .crc_extras import CRC_EXTRA
-        from .pllink_proto import bm
+        from .mavlink_frame import bm
 
         payload = struct.pack("<hBB", index, self._link.vehicle.sysid, 1) + b"\x00" * 16
         self._link.send(bm(20, payload, self._link.sq, CRC_EXTRA[20]))
@@ -158,7 +158,7 @@ class ParamManager:
         param = self.params.get(name)
         ptype = param["type"] if param else 9
         from .crc_extras import CRC_EXTRA
-        from .pllink_proto import bm
+        from .mavlink_frame import bm
 
         name_bytes = name.encode("ascii")[:16].ljust(16, b"\x00")
         payload = (

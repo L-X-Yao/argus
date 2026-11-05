@@ -8,6 +8,9 @@ can see what was checked, what was found, and what was deliberately deferred.
 Each report is dated by the file's mtime in the original /tmp scratch
 location; they were copied here verbatim and not re-edited.
 
+The PL-Link transport these reports mention was removed in v3.7. References to
+it, and to `sim_pllink.py` (now `simulator.py`), are historical.
+
 ## Index
 
 | File | Scope | Result |
@@ -19,7 +22,7 @@ location; they were copied here verbatim and not re-edited.
 | `audit_drone_link.md` | DroneLink main loop / reconnect / locking | 6 critical + 9 warnings. **All critical fixed.** |
 | `audit_encoders.md` | Frontend `messages.ts` encoders vs pymavlink | **0 bugs.** Verified byte-perfect. |
 | `audit_webserial.md` | Frontend MAVLink codec (WebSerial direct mode) | 1 offset bug, 4 edge gaps, 13 missing decoders. **All fixed.** |
-| `audit_px4_pllink.md` | PX4 claim + PL-Link wrapper protocol | PX4 unwired (documented in CLAUDE.md), PL-Link bm-length added. |
+| `audit_px4.md` | PX4 claim vs implementation | PX4 unwired (documented in CLAUDE.md). |
 | `audit_modules.md` | connection/ws_manager/app/auth/video sweep | 5 critical (security), 23 medium. **Critical + most medium fixed.** |
 | `audit_edges.md` | Specific partial findings (equator, NAV_SPLINE, VTOL takeoff, etc.) | 5 real bugs, 3 fixed in-place, 2 documented. |
 | `audit_frontend.md` | Svelte 5 components/stores reactivity + lifecycle | 40+ findings, 10 fixed in-place. |

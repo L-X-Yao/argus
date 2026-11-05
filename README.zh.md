@@ -82,11 +82,11 @@ python run.py
 ### 方式三 —— 内置 MAVLink 模拟器（无需飞控、无需 SITL）
 
 ```bash
-python run.py --sim            # 同时启动后端 + sim_pllink.py
+python run.py --sim            # 同时启动后端 + simulator.py
 # 连接到 "tcp:localhost:5770"
 ```
 
-模拟器（`scripts/sim_pllink.py`）发送仿真遥测数据（GPS、姿态、电量消耗、心跳），响应解锁/锁定/模式切换命令。
+模拟器（`scripts/simulator.py`）发送仿真遥测数据（GPS、姿态、电量消耗、心跳），响应解锁/锁定/模式切换命令。
 
 ### WebSerial（完全无需后端）
 
@@ -110,7 +110,7 @@ python run.py --sim            # 同时启动后端 + sim_pllink.py
 |  51 条命令, 瓦片/视频/固件 API            |
 +------------------------------------------+
 |          MAVLink v2                       |
-|  TCP / UDP / Serial / PL-Link            |
+|  TCP / UDP / Serial                      |
 +------------------------------------------+
 |  飞控 (ArduPilot / PX4)                   |
 +------------------------------------------+

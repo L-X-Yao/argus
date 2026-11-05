@@ -33,7 +33,6 @@ from .locale_text import lt
 from .log import logger
 from .mavlink_handlers import init_handlers
 from .param_manager import ParamManager
-from .pllink_proto import pld, ple
 from .state import (
     AttitudeState,
     BatteryState,
@@ -115,8 +114,6 @@ class DroneLink:
         self._last_port = ""
         self._last_baud = cfg.SERIAL_BAUD
         self._reconnect_enabled = True
-
-        self._protocol = "auto"
         self.locale = "zh"
         self._vehicles: dict[int, dict] = {}
         self.connected = False
@@ -190,13 +187,8 @@ class DroneLink:
         with self._lock:
             if self._ser:
                 try:
-                    if self._protocol == "pllink":
-                        self._ser.write(ple(frame, self.sq & 0xFF))
-                    else:
-                        self._ser.write(frame)
+                    self._ser.write(frame)
                     self.sq += 1
-                    # Record the inner MAVLink frame (pre-pllink-wrap) so the
-                    # tlog stays pure MAVLink regardless of transport framing.
                     self._record_tlog(frame)
                 except OSError:
                     logger.debug("send failed", exc_info=True)
@@ -206,13 +198,9 @@ class DroneLink:
                     # crash the link thread.
                     logger.warning("refusing to send malformed frame", exc_info=True)
 
-    def connect(self, port: str, baudrate: int = 57600, protocol: str = "auto") -> bool:
+    def connect(self, port: str, baudrate: int = 57600) -> bool:
         if self._running:
             self.disconnect()
-        if port.startswith(("udp:", "replay:")) or (port.startswith("tcp:") and protocol == "auto"):
-            self._protocol = "standard"
-        else:
-            self._protocol = protocol
         try:
             self._ser = self._open_port(port, baudrate)
             if port.startswith("udp:"):
@@ -344,7 +332,6 @@ class DroneLink:
         self._reconnecting = False
         self._reconnect_attempts = 0
         self._buf = b""
-        self._protocol = "auto"
         try:
             self._ser = self._open_port(self._last_port, self._last_baud)
         except OSError as e:
@@ -636,43 +623,6 @@ class DroneLink:
                 return None, 1
         return bytes(buf[:frame_len]), frame_len
 
-    def _next_frame(self):
-        if self._protocol == "auto" and len(self._buf) >= 2:
-            # Search the buffer for the first occurrence of either magic
-            # sequence (rather than locking based on byte[0] alone). Auditor
-            # W7: if the very first bytes received are noise (a partial
-            # MAVLink frame caught mid-stream, USB enumeration garbage,
-            # etc.) the old one-shot detect locked to the wrong protocol
-            # permanently — only full disconnect/reconnect could recover.
-            scan_len = min(len(self._buf) - 1, 256)
-            pllink_idx = -1
-            for i in range(scan_len):
-                if self._buf[i] == 0x50 and self._buf[i + 1] == 0x4C:
-                    pllink_idx = i
-                    break
-            std_idx = self._buf.find(b"\xfd")
-            if std_idx > scan_len:
-                std_idx = -1
-            if pllink_idx >= 0 and (std_idx < 0 or pllink_idx <= std_idx):
-                self._buf = self._buf[pllink_idx:]
-                self._protocol = "pllink"
-                self.add_event(lt("proto_pllink", self.locale), "proto_pllink")
-            elif std_idx >= 0:
-                self._buf = self._buf[std_idx:]
-                self._protocol = "standard"
-                self.add_event(lt("proto_std", self.locale), "proto_std")
-            else:
-                # Neither magic found in the scan window — report the bytes
-                # as consumed and let feed()'s drain loop keep chewing.
-                # Returning 0 here (as this used to) breaks the drain loop,
-                # throttling noise-burst recovery to one window per read
-                # tick: a trimmed 32 KB burst took ~2.6 s to clear while
-                # real frames behind it sat unparsed.
-                return None, scan_len
-        if self._protocol == "pllink":
-            return pld(self._buf)
-        return self._parse_mavlink_frame()
-
     def feed(self, data: bytes) -> int:
         """Append raw link bytes and drain every complete frame through the
         real parse → dispatch → state path. This is the single ingest point
@@ -686,7 +636,7 @@ class DroneLink:
                 self._parse_errors += 1
         frames = 0
         while len(self._buf) >= 7:
-            payload, consumed = self._next_frame()
+            payload, consumed = self._parse_mavlink_frame()
             if payload:
                 self._buf = self._buf[consumed:]
                 self.frame_count += 1
@@ -745,7 +695,6 @@ class DroneLink:
                     except OSError:
                         pass
                 self._buf = b""
-                self._protocol = "auto"
                 try:
                     self._ser = self._open_port(self._last_port, self._last_baud)
                     self.sq = 0

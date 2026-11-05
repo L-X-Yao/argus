@@ -105,10 +105,6 @@ class TestDroneLinkInit:
         link = DroneLink()
         assert link.param_mgr is not None
 
-    def test_default_protocol_auto(self):
-        link = DroneLink()
-        assert link._protocol == "auto"
-
     def test_default_locks_created(self):
         link = DroneLink()
         assert isinstance(link._lock, type(threading.Lock()))
@@ -228,7 +224,6 @@ class TestDroneLinkConnect:
             result = link.connect("udp:14550")
         assert result is True
         assert link._running is True
-        assert link._protocol == "standard"
 
     @patch.object(DroneLink, "_open_port", side_effect=OSError("fail"))
     def test_connect_failure(self, mock_open):
@@ -248,15 +243,6 @@ class TestDroneLinkConnect:
             link.connect("udp:14550")
         assert link.connected is False
         assert link.frame_count == 0
-
-    @patch.object(DroneLink, "_open_port")
-    def test_udp_forces_standard_protocol(self, mock_open):
-        mock_open.return_value = MagicMock()
-        link = DroneLink()
-        link._loop = MagicMock()
-        with patch.object(threading.Thread, "start"):
-            link.connect("udp:14550", protocol="pllink")
-        assert link._protocol == "standard"
 
     @patch.object(DroneLink, "_open_port")
     def test_connect_stores_last_port_baud(self, mock_open):
@@ -318,27 +304,6 @@ class TestDroneLinkConnect:
         link.connect("tcp:bad:99")
         fail_events = [e for e in link.events if e["event_type"] == "connect_fail"]
         assert len(fail_events) >= 1
-
-    @patch.object(DroneLink, "_open_port")
-    def test_connect_tcp_keeps_protocol(self, mock_open):
-        """TCP connections respect the protocol parameter."""
-        mock_open.return_value = MagicMock()
-        link = DroneLink()
-        link._loop = MagicMock()
-        with patch.object(threading.Thread, "start"):
-            link.connect("tcp:localhost:5770", protocol="pllink")
-        assert link._protocol == "pllink"
-
-    @patch.object(DroneLink, "_open_port")
-    def test_connect_serial_keeps_protocol(self, mock_open):
-        """Serial connections respect the protocol parameter."""
-        mock_open.return_value = MagicMock()
-        link = DroneLink()
-        link._loop = MagicMock()
-        with patch.object(threading.Thread, "start"):
-            link.connect("/dev/ttyUSB0", protocol="auto")
-        assert link._protocol == "auto"
-
 
 # ---------------------------------------------------------------------------
 # TestDroneLinkDisconnect
@@ -506,7 +471,6 @@ class TestDroneLinkSend:
         mock_ser = MagicMock(in_waiting=0)
         link = DroneLink()
         link._ser = mock_ser
-        link._protocol = "standard"
         link.sq = 0
         link.send(b"\xfd\x00\x00")
         assert link.sq == 1
@@ -516,45 +480,16 @@ class TestDroneLinkSend:
         mock_ser = MagicMock(in_waiting=0)
         mock_ser.write.side_effect = OSError("write failed")
         link._ser = mock_ser
-        link._protocol = "standard"
         link.send(b"\xfd\x00\x00")
 
     def test_send_standard_writes_raw(self):
-        """Standard protocol writes the raw frame bytes."""
+        """send() writes the raw frame bytes."""
         mock_ser = MagicMock(in_waiting=0)
         link = DroneLink()
         link._ser = mock_ser
-        link._protocol = "standard"
         frame = b"\xfd\x09\x00\x00\x01\x01\x01\x00\x00\x00"
         link.send(frame)
         mock_ser.write.assert_called_once_with(frame)
-
-    def test_send_pllink_wraps_frame(self):
-        """PL-Link protocol wraps the frame with PL-Link envelope."""
-        mock_ser = MagicMock(in_waiting=0)
-        link = DroneLink()
-        link._ser = mock_ser
-        link._protocol = "pllink"
-        link.sq = 5
-        frame = b"\xfd\x09\x00\x00\x01\x01\x01\x00\x00\x00"
-        link.send(frame)
-        written = mock_ser.write.call_args[0][0]
-        # PL-Link frames start with 0x50 0x4C
-        assert written[0] == 0x50
-        assert written[1] == 0x4C
-
-    def test_send_auto_protocol_sends_standard(self):
-        """Auto protocol sends standard MAVLink (not PL-Link wrapped)."""
-        mock_ser = MagicMock(in_waiting=0)
-        link = DroneLink()
-        link._ser = mock_ser
-        link._protocol = "auto"
-        link.sq = 0
-        frame = b"\xfd\x09"
-        link.send(frame)
-        written = mock_ser.write.call_args[0][0]
-        assert written[0] == 0xFD
-
 
 # ---------------------------------------------------------------------------
 # TestDroneLinkGetState
@@ -1071,69 +1006,6 @@ class TestGetInspectorData:
 
 
 # ---------------------------------------------------------------------------
-# TestNextFrame
-# ---------------------------------------------------------------------------
-
-
-class TestNextFrame:
-    def test_auto_detects_standard(self):
-        link = DroneLink()
-        link._protocol = "auto"
-        link._buf = b"\xfd\x09\x00\x00\x01\x01\x01\x00\x00\x00" + b"\x00" * 11
-        link._next_frame()
-        assert link._protocol == "standard"
-
-    def test_auto_detects_pllink(self):
-        link = DroneLink()
-        link._protocol = "auto"
-        from backend.pllink_proto import ple
-
-        link._buf = ple(b"\xfd\x09\x00\x00\x01\x01\x01\x00\x00\x00", 0)
-        link._next_frame()
-        assert link._protocol == "pllink"
-
-    def test_auto_detection_adds_event_standard(self):
-        link = DroneLink()
-        link._protocol = "auto"
-        link._buf = b"\xfd\x09\x00\x00\x01\x01\x01\x00\x00\x00" + b"\x00" * 11
-        link._next_frame()
-        proto_events = [e for e in link.events if e["event_type"] == "proto_std"]
-        assert len(proto_events) == 1
-
-    def test_auto_detection_adds_event_pllink(self):
-        link = DroneLink()
-        link._protocol = "auto"
-        from backend.pllink_proto import ple
-
-        link._buf = ple(b"\xfd\x09\x00\x00\x01\x01\x01\x00\x00\x00", 0)
-        link._next_frame()
-        proto_events = [e for e in link.events if e["event_type"] == "proto_pllink"]
-        assert len(proto_events) == 1
-
-    def test_already_standard_skips_detection(self):
-        link = DroneLink()
-        link._protocol = "standard"
-        link._buf = b"\x50\x4c" + b"\x00" * 20  # looks like PL-Link
-        link._next_frame()
-        assert link._protocol == "standard"  # unchanged
-
-    def test_already_pllink_skips_detection(self):
-        link = DroneLink()
-        link._protocol = "pllink"
-        link._buf = b"\xfd\x09\x00\x00\x01\x01\x01\x00\x00\x00" + b"\x00" * 11
-        link._next_frame()
-        assert link._protocol == "pllink"  # unchanged
-
-    def test_auto_needs_at_least_2_bytes(self):
-        link = DroneLink()
-        link._protocol = "auto"
-        link._buf = b"\xfd"
-        link._next_frame()
-        # Not enough data for detection, stays auto
-        assert link._protocol == "auto"
-
-
-# ---------------------------------------------------------------------------
 # TestParseMavlinkFrame
 # ---------------------------------------------------------------------------
 
@@ -1331,7 +1203,6 @@ class TestLoop:
 
         mock_ser.read = mock_read
         link._ser = mock_ser
-        link._protocol = "standard"
 
         with (
             patch("backend.drone_link.cmd_module.send_heartbeat"),
@@ -1370,7 +1241,6 @@ class TestLoop:
         """Buffer is trimmed when it exceeds 65536 bytes."""
         link = DroneLink()
         link._running = True
-        link._protocol = "standard"
         mock_ser = MagicMock(in_waiting=0)
 
         call_count = 0
@@ -1629,7 +1499,6 @@ class TestLoop:
         """_loop processes a valid frame and increments frame_count."""
         link = DroneLink()
         link._running = True
-        link._protocol = "standard"
         hb_payload = _build_heartbeat_payload(mode=3, vtype=2)
         frame = _build_mavlink_frame(link, msg_id=0, payload=hb_payload)
         mock_ser = MagicMock(in_waiting=0)
@@ -1659,7 +1528,6 @@ class TestLoop:
         """_loop increments _parse_errors on struct/value/index errors in _process."""
         link = DroneLink()
         link._running = True
-        link._protocol = "standard"
         hb_payload = _build_heartbeat_payload()
         frame = _build_mavlink_frame(link, msg_id=0, payload=hb_payload)
         mock_ser = MagicMock(in_waiting=0)
@@ -1769,7 +1637,6 @@ class TestDroneLinkThreadSafety:
         mock_ser = MagicMock(in_waiting=0)
         link = DroneLink()
         link._ser = mock_ser
-        link._protocol = "standard"
         errors = []
 
         def sender(n):

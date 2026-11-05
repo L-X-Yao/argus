@@ -254,7 +254,7 @@ async def session(drive) -> Path:
     before = set((REPO / "logs").glob("argus_*.tlog"))
     async with websockets.connect(WS_URL, max_size=None) as ws:
         await ws.send(json.dumps(
-            {"type": "connect", "port": "tcp:localhost:5760", "baud": 57600, "protocol": "auto"}))
+            {"type": "connect", "port": "tcp:localhost:5760", "baud": 57600}))
         deadline = time.monotonic() + 15
         ok = False
         while time.monotonic() < deadline:

@@ -84,11 +84,11 @@ python run.py
 ### Option 3 — Built-in MAVLink simulator (no FC, no SITL)
 
 ```bash
-python run.py --sim            # Starts backend + sim_pllink.py together
+python run.py --sim            # Starts backend + simulator.py together
 # Connect to "tcp:localhost:5770"
 ```
 
-The simulator (`scripts/sim_pllink.py`) emits realistic telemetry (GPS, attitude, battery drain, heartbeat) and responds to arm/disarm/mode commands.
+The simulator (`scripts/simulator.py`) emits realistic telemetry (GPS, attitude, battery drain, heartbeat) and responds to arm/disarm/mode commands.
 
 ### WebSerial (no backend at all)
 
@@ -112,7 +112,7 @@ Open Argus in Chrome/Edge, click the **USB** button, pick your flight controller
 |  51 commands, tile/video/firmware API    |
 +------------------------------------------+
 |          MAVLink v2                      |
-|  TCP / UDP / Serial / PL-Link           |
+|  TCP / UDP / Serial                      |
 +------------------------------------------+
 |  Flight Controller (ArduPilot / PX4)     |
 +------------------------------------------+

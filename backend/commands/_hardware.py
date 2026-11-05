@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 
 from ..crc_extras import CRC_EXTRA
 from ..locale_text import lt
-from ..pllink_proto import bm
+from ..mavlink_frame import bm
 from ._helpers import send_cmd, send_cmd_int, send_serial_control
 
 if TYPE_CHECKING:

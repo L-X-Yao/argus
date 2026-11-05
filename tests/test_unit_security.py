@@ -190,21 +190,6 @@ class TestWsInputSanitization:
         assert validate_port(12345) is False
         assert validate_port("bad\x00port") is False
 
-    def test_protocol_valid(self):
-        from backend.ws_manager import sanitize_protocol
-
-        assert sanitize_protocol("auto") == "auto"
-        assert sanitize_protocol("standard") == "standard"
-        assert sanitize_protocol("pllink") == "pllink"
-
-    def test_protocol_invalid_falls_back(self):
-        from backend.ws_manager import sanitize_protocol
-
-        assert sanitize_protocol("invalid") == "auto"
-        assert sanitize_protocol("") == "auto"
-        assert sanitize_protocol(None) == "auto"
-
-
 # ─── Path Traversal Tests ─────────────────────────────────────────
 
 

@@ -22,8 +22,6 @@ _T = {
         "!!! 非 ArduPilot 飞控 (%s) — 模式/校准/指令均按 ArduPilot 实现, 指令已禁用 !!!",
         "!!! Non-ArduPilot FC (%s) — modes/calibration/commands are ArduPilot-only, commands disabled !!!",
     ),
-    "proto_pllink": ("协议: PL-Link", "Protocol: PL-Link"),
-    "proto_std": ("协议: 标准", "Protocol: Standard"),
     "wp_reached": ("航点 %d 已到达", "Waypoint %d reached"),
     "fw_info": ("固件: %s (%s)", "Firmware: %s (%s)"),
     "cmd_ack": ("指令应答: %s — %s", "Command: %s — %s"),

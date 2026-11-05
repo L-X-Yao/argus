@@ -16,7 +16,7 @@ from backend.config import cfg
 from backend.connection import ReplayWrapper, _parse_replay_port, open_port
 from backend.crc_extras import CRC_EXTRA
 from backend.drone_link import DroneLink
-from backend.pllink_proto import bm, ple
+from backend.mavlink_frame import bm
 from backend.replay import read_tlog, replay_into
 
 
@@ -69,20 +69,6 @@ class TestTlogRecording:
         link._stop_log()
         raw = next(iter(log_dir.glob("*.tlog"))).read_bytes()
         assert raw[8:] == frame
-
-    def test_tx_recorded_unwrapped_in_pllink_mode(self, log_dir):
-        """tlog must stay pure MAVLink: pllink transport framing (XOR wrap)
-        is stripped, matching what _process records on the RX side."""
-        link = DroneLink()
-        link._start_log()
-        link._ser = FakeSer()
-        link._protocol = "pllink"
-        frame = bm(0, b"\x00" * 9, 0, CRC_EXTRA[0])
-        link.send(frame)
-        link._stop_log()
-        assert link._ser.written == ple(frame, 0)  # wire got wrapped
-        raw = next(iter(log_dir.glob("*.tlog"))).read_bytes()
-        assert raw[8:] == frame  # log got the inner frame
 
     def test_record_without_start_is_noop(self, log_dir):
         link = DroneLink()

@@ -75,7 +75,7 @@ cargo build --release
 
 echo ""
 echo "=== Build complete ==="
-echo "Executable: src-tauri/target/release/pllink-gcs (or .exe on Windows)"
+echo "Executable: src-tauri/target/release/argus-gcs (or .exe on Windows)"
 echo ""
 echo "To build MSI/NSIS installers, run:"
 echo "  cargo tauri build"

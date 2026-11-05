@@ -1,6 +1,6 @@
 """Shared MAVLink v2 frame builders for offline link tests.
 
-Frames are built with the project's own TX encoder (pllink_proto.bm) and the
+Frames are built with the project's own TX encoder (mavlink_frame.bm) and the
 real CRC_EXTRA table, so the bytes are wire-exact — identical to what an FC
 or this GCS would put on the line.
 """
@@ -8,7 +8,7 @@ or this GCS would put on the line.
 import struct
 
 from backend.crc_extras import CRC_EXTRA
-from backend.pllink_proto import bm
+from backend.mavlink_frame import bm
 
 
 def fc_frame(mid: int, payload: bytes, seq: int = 0) -> bytes:

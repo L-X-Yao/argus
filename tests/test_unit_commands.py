@@ -819,8 +819,7 @@ class TestNtripLoop:
         t.join(timeout=3)
         assert not t.is_alive(), "ntrip loop should exit when recv returns EOF"
 
-        # Should have sent at least one MAVLink frame containing the 0xFD prefix
-        # (standard MAVLink 2 magic) or the PL-Link wrapper byte.
+        # Should have sent at least one MAVLink frame.
         assert link._ser.write.called
         # Connected + disconnected event traces.
         event_types = [e["event_type"] for e in link.events]

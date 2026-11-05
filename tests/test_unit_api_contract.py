@@ -234,12 +234,11 @@ class TestCommandMessageFormat:
         assert "param" in msg
 
     def test_connect_message_structure(self):
-        """A connect message has type='connect', port, baud, protocol."""
-        msg = {"type": "connect", "port": "tcp:localhost:5770", "baud": 57600, "protocol": "auto"}
+        """A connect message has type='connect', port, baud."""
+        msg = {"type": "connect", "port": "tcp:localhost:5770", "baud": 57600}
         assert msg["type"] == "connect"
         assert "port" in msg
         assert "baud" in msg
-        assert "protocol" in msg
 
     def test_disconnect_message_structure(self):
         """A disconnect message has type='disconnect'."""
@@ -352,7 +351,6 @@ class TestHTTPEndpointContracts:
         assert "protocols" in data
         assert isinstance(data["protocols"], list)
         assert "standard" in data["protocols"]
-        assert "pllink" in data["protocols"]
         assert "vehicles" in data
         assert isinstance(data["vehicles"], list)
 

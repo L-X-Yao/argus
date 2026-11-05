@@ -228,7 +228,7 @@ class TestDualStackParity:
 
     def test_gcs_identity_pinned(self, serial_dump: dict):
         """GCS source ids differ by design: backend frames carry (sysid 255,
-        compid 1) — bm() defaults in backend/pllink_proto.py:57 — while the
+        compid 1) — bm() defaults in backend/mavlink_frame.py — while the
         WebSerial path stamps (255, 190 = MAV_COMP_ID_MISSIONPLANNER) in
         transport.ts sendSerialFrame. Both are valid GCS identities and both
         are field-proven against ArduPilot; accel-cal sender matching (see

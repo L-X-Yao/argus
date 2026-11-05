@@ -185,7 +185,7 @@ function scheduleReconnect(): void {
 }
 
 type OutgoingMessage =
-  | { type: 'connect'; port: string; baud: number; protocol: string }
+  | { type: 'connect'; port: string; baud: number }
   | { type: 'disconnect' }
   | { type: 'set_locale'; locale: string }
   | { type: 'set_role'; role: string }
@@ -201,8 +201,8 @@ export function sendMessage(msg: OutgoingMessage): void {
   }
 }
 
-export function sendConnect(port: string, baud: number, protocol: string = 'auto'): void {
-  sendMessage({ type: 'connect', port, baud, protocol });
+export function sendConnect(port: string, baud: number): void {
+  sendMessage({ type: 'connect', port, baud });
 }
 
 export function sendDisconnect(): void {

@@ -113,7 +113,7 @@ async def api_version():
     return {
         "version": VERSION,
         "git": git_hash,
-        "protocols": ["standard", "pllink"],
+        "protocols": ["standard"],
         "vehicles": ["copter", "plane", "rover", "sub"],
         "features": ["i18n", "param_meta", "gamepad", "pwa", "global_tiles"],
     }

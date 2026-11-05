@@ -913,7 +913,6 @@ class TestSerialControl:
 class TestMavlinkFrameParser:
     def test_parse_valid_frame(self):
         link = make_link()
-        link._protocol = "standard"
         payload = struct.pack("<IBBBBB", 5, 2, 3, 0, 0, 3)
         header = bytes([len(payload), 0, 0, 1, 255, 1, 0, 0, 0])
         crc_data = header + payload + bytes([50])
@@ -946,21 +945,6 @@ class TestMavlinkFrameParser:
         assert result is None
         assert consumed == 4
 
-    def test_auto_detect_pllink(self):
-        link = make_link()
-        link._protocol = "auto"
-        link._buf = b"\x50\x4c\x05\x00"
-        link._next_frame()
-        assert link._protocol == "pllink"
-
-    def test_auto_detect_mavlink(self):
-        link = make_link()
-        link._protocol = "auto"
-        link._buf = b"\xfd\x09\x00\x00\x01\x01\x01\x00\x00\x00"
-        link._next_frame()
-        assert link._protocol == "standard"
-
-
 # ── Vehicle Types ────────────────────────────────────────────────────────────
 
 
@@ -990,10 +974,9 @@ class TestVehicleTypes:
         assert vn == "水下机器人"
 
     def test_multi_vehicle_tracking(self):
-        from backend.pllink_proto import bm as _bm
+        from backend.mavlink_frame import bm as _bm
 
         link = make_link()
-        link._protocol = "standard"
         hb = _bm(0, struct.pack("<IBBBBB", 5, 2, 3, 0, 0, 3), 0, 50, sysid=1)
         link._buf = hb
         payload, consumed = link._parse_mavlink_frame()

@@ -16,7 +16,6 @@
   import ConfirmDialog from './components/shared/ConfirmDialog.svelte';
   import SlideConfirm from './components/shared/SlideConfirm.svelte';
   import { showConfirm, showSlide, undo } from './lib/stores.svelte';
-  import { migrateLocalStorage } from './lib/migrate';
   import { startScheduler } from './lib/scheduler.svelte';
   import { panels } from './lib/panels.svelte';
   import { apiUrl } from './lib/backend';
@@ -193,7 +192,6 @@
   }
 
   onMount(() => {
-    migrateLocalStorage();
     loadLocale();
     loadSettings();
     checkAuth();

@@ -28,10 +28,6 @@ def sanitize_baud(baud) -> int:
     return baud if baud in cfg.VALID_BAUD_RATES else cfg.SERIAL_BAUD
 
 
-def sanitize_protocol(protocol) -> str:
-    return protocol if protocol in cfg.VALID_PROTOCOLS else "auto"
-
-
 class WSManager:
     def __init__(self, link: DroneLink):
         self.link = link
@@ -100,7 +96,6 @@ class WSManager:
                 if msg_type == "connect":
                     port = msg.get("port", "tcp:localhost:5770")
                     baud = msg.get("baud", cfg.SERIAL_BAUD)
-                    protocol = msg.get("protocol", "auto")
                     if not validate_port(port):
                         await ws.send_text(
                             json.dumps(
@@ -113,8 +108,7 @@ class WSManager:
                         )
                         continue
                     baud = sanitize_baud(baud)
-                    protocol = sanitize_protocol(protocol)
-                    ok = await asyncio.to_thread(self.link.connect, port, baud, protocol=protocol)
+                    ok = await asyncio.to_thread(self.link.connect, port, baud)
                     await ws.send_text(
                         json.dumps(
                             {

@@ -173,11 +173,11 @@ class TestReceiveLoop:
         link = DroneLink()
         mgr = WSManager(link)
         ws = make_ws()
-        msg = json.dumps({"type": "connect", "port": "tcp:localhost:5770", "baud": 57600, "protocol": "auto"})
+        msg = json.dumps({"type": "connect", "port": "tcp:localhost:5770", "baud": 57600})
         ws.receive_text.side_effect = [msg, WebSocketDisconnect()]
         with patch.object(link, "connect", return_value=True) as mock_conn:
             await mgr._receive_loop(ws)
-            mock_conn.assert_called_once_with("tcp:localhost:5770", 57600, protocol="auto")
+            mock_conn.assert_called_once_with("tcp:localhost:5770", 57600)
         sent = json.loads(ws.send_text.call_args[0][0])
         assert sent["type"] == "connect_result"
         assert sent["ok"] is True

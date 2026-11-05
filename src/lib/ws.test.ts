@@ -294,7 +294,7 @@ describe('helper functions', () => {
   it('sendConnect sends connect message', async () => {
     const mod = await freshConnect();
     mockWs.onopen?.(new Event('open'));
-    mod.sendConnect('udp:14550', 57600, 'standard');
+    mod.sendConnect('udp:14550', 57600);
     expect(mockWs.send).toHaveBeenCalledWith(expect.stringContaining('"type":"connect"'));
   });
 

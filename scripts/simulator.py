@@ -3,7 +3,7 @@
 Argus 飞控模拟器 — GCS 仿真测试
 
 用法:
-    python3 sim_pllink.py [端口]       (默认 5770)
+    python3 simulator.py [端口]       (默认 5770)
 
 GCS 连接:
     端口栏填 tcp:localhost:5770 → 点"连接"
@@ -26,8 +26,7 @@ import time
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-from backend.pllink_proto import bm as _bm
-from backend.pllink_proto import pld, ple
+from backend.mavlink_frame import bm as _bm
 
 
 def bm(mid, p, s, ce):
@@ -379,10 +378,7 @@ class Simulator:
         speed = 3.5 + random.uniform(-0.5, 0.5)
         speed_z = 0.1 + random.uniform(-0.05, 0.05)
         p = struct.pack("<fff", direction, speed, speed_z)
-        # WIND (id 168) crc_extra is 1 per MAVLink common.xml. Previous value
-        # 231 was wrong — frames were accepted only because PL-Link framing
-        # doesn't validate the inner MAVLink CRC. On a raw-MAVLink link the
-        # frame would be dropped silently.
+        # WIND (id 168) crc_extra is 1 per MAVLink common.xml.
         return bm(168, p, self.sq, 1)
 
     def msg_vfr_hud(self):
@@ -741,21 +737,10 @@ def serve(port):
         buf = b""
         sq = 0
         last_hb = last_att = last_gps = last_sys = last_wp = last_rc = last_ekf = 0
-        # Auto-detect peer protocol from the first parsed frame so we can speak
-        # the same dialect back. Previously the sim only emitted PL-Link
-        # XOR-framed messages, which broke any GCS that connected over TCP with
-        # protocol=auto (the backend forces TCP+auto → standard, so it never
-        # parsed our reply). Detecting on first inbound frame keeps both modes
-        # working from a single sim binary.
-        client_proto = None
-
         def tx(frame):
             nonlocal sq
             try:
-                if client_proto == "standard":
-                    conn.sendall(frame)
-                else:
-                    conn.sendall(ple(frame, sq & 0xFF))
+                conn.sendall(frame)
                 sq += 1
             except Exception:
                 raise ConnectionError
@@ -787,18 +772,8 @@ def serve(port):
                 except TimeoutError:
                     pass
 
-                # Detect protocol from the first 1-2 bytes of received traffic
-                if client_proto is None and len(buf) >= 2:
-                    if buf[0] == 0x50 and buf[1] == 0x4C:
-                        client_proto = "pllink"
-                    elif buf[0] == 0xFD:
-                        client_proto = "standard"
-
-                while len(buf) >= (7 if client_proto != "standard" else 12):
-                    if client_proto == "standard":
-                        payload, consumed = parse_standard_frame(buf)
-                    else:
-                        payload, consumed = pld(buf)
+                while len(buf) >= 12:
+                    payload, consumed = parse_standard_frame(buf)
                     if payload:
                         buf = buf[consumed:]
                         for resp in sim.handle_mavlink(payload):

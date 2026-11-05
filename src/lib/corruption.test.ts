@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { loadSettings, app } from './stores.svelte';
-import { migrateLocalStorage } from './migrate';
 
 function makeStorage(init?: Record<string, string>): Storage {
   const store = new Map<string, string>(init ? Object.entries(init) : []);
@@ -166,101 +165,5 @@ describe('loadSettings with corrupted argus_waypoints', () => {
     );
     expect(() => loadSettings()).not.toThrow();
     expect(app.waypoints).toEqual([]);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// migrateLocalStorage — corrupted values
-// ---------------------------------------------------------------------------
-
-describe('migrateLocalStorage with corrupted data', () => {
-  it('migrates corrupt settings value without crashing', () => {
-    vi.stubGlobal(
-      'localStorage',
-      makeStorage({
-        pllink_v3_settings: '<<< not json >>>',
-      }),
-    );
-    expect(() => migrateLocalStorage()).not.toThrow();
-    // Value should be migrated as-is (raw string copy)
-    expect(localStorage.getItem('argus_settings')).toBe('<<< not json >>>');
-  });
-
-  it('migrates corrupt waypoints value without crashing', () => {
-    vi.stubGlobal(
-      'localStorage',
-      makeStorage({
-        pllink_v3_waypoints: 'GARBAGE_DATA_HERE',
-      }),
-    );
-    expect(() => migrateLocalStorage()).not.toThrow();
-    expect(localStorage.getItem('argus_waypoints')).toBe('GARBAGE_DATA_HERE');
-  });
-
-  it('migrates corrupt port_history value without crashing', () => {
-    vi.stubGlobal(
-      'localStorage',
-      makeStorage({
-        pllink_port_history: '{"truncated',
-      }),
-    );
-    expect(() => migrateLocalStorage()).not.toThrow();
-    expect(localStorage.getItem('argus_port_history')).toBe('{"truncated');
-  });
-
-  it('handles extremely long value during migration', () => {
-    const longVal = 'x'.repeat(200_000);
-    vi.stubGlobal(
-      'localStorage',
-      makeStorage({
-        pllink_v3_settings: longVal,
-      }),
-    );
-    expect(() => migrateLocalStorage()).not.toThrow();
-    expect(localStorage.getItem('argus_settings')).toBe(longVal);
-  });
-
-  it('handles binary-like garbage during migration', () => {
-    const binary = String.fromCharCode(...Array.from({ length: 256 }, (_, i) => i));
-    vi.stubGlobal(
-      'localStorage',
-      makeStorage({
-        pllink_v3_settings: binary,
-      }),
-    );
-    expect(() => migrateLocalStorage()).not.toThrow();
-    expect(localStorage.getItem('argus_settings')).toBe(binary);
-  });
-});
-
-// ---------------------------------------------------------------------------
-// Combined: migrate then load with corruption
-// ---------------------------------------------------------------------------
-
-describe('migrate then loadSettings with corrupted data', () => {
-  it('survives migrate of garbage then load', () => {
-    vi.stubGlobal(
-      'localStorage',
-      makeStorage({
-        pllink_v3_settings: 'NOT_JSON',
-        pllink_v3_waypoints: 'ALSO_NOT_JSON',
-      }),
-    );
-    expect(() => migrateLocalStorage()).not.toThrow();
-    expect(() => loadSettings()).not.toThrow();
-    // Settings parsing fails silently, defaults preserved
-    expect(app.waypoints).toEqual([]);
-  });
-
-  it('survives migrate of empty values then load', () => {
-    vi.stubGlobal(
-      'localStorage',
-      makeStorage({
-        pllink_v3_settings: '',
-        pllink_v3_waypoints: '',
-      }),
-    );
-    expect(() => migrateLocalStorage()).not.toThrow();
-    expect(() => loadSettings()).not.toThrow();
   });
 });

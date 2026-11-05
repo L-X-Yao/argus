@@ -1,4 +1,4 @@
-"""Comprehensive unit tests for the MAVLink simulator (sim_pllink.py).
+"""Comprehensive unit tests for the MAVLink simulator (simulator.py).
 
 Tests that generated frames are valid MAVLink v2, contain correct message
 IDs, have valid CRC, and carry realistic telemetry values.
@@ -13,8 +13,8 @@ import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from backend.pllink_proto import mc
-from scripts.sim_pllink import Simulator
+from backend.mavlink_frame import mc
+from scripts.simulator import Simulator
 
 
 @pytest.fixture

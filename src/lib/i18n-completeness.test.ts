@@ -149,7 +149,6 @@ describe('i18n completeness', () => {
     const TECHNICAL_TERMS = new Set([
       'Argus',
       'MAVLink',
-      'PL-Link',
       'NTRIP',
       'RTSP',
       'RTK',

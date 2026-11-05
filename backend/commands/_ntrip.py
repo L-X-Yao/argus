@@ -23,7 +23,7 @@ from typing import TYPE_CHECKING
 from ..crc_extras import CRC_EXTRA
 from ..locale_text import lt
 from ..log import logger
-from ..pllink_proto import bm
+from ..mavlink_frame import bm
 
 if TYPE_CHECKING:
     from ..drone_link import DroneLink

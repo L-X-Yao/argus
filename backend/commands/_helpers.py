@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 
 from ..config import cfg
 from ..crc_extras import CRC_EXTRA
-from ..pllink_proto import bm
+from ..mavlink_frame import bm
 
 if TYPE_CHECKING:
     from ..drone_link import DroneLink

@@ -596,13 +596,13 @@ def handle_mission_item_int(p: bytes, pl: int, link: DroneLink) -> None:
         if len(m._dl_messages) > 500:
             m._dl_messages = m._dl_messages[-200:]
         link.add_event(lt("mission_dl_done", link.locale) % len(wps), "mission_dl_done")
-        from .pllink_proto import bm
+        from .mavlink_frame import bm
 
         link.send(bm(47, struct.pack("<BBB", link.vehicle.sysid, 1, 0), link.sq, CRC_EXTRA[47]))
 
 
 def _request_dl_item(link: DroneLink, seq: int) -> None:
-    from .pllink_proto import bm
+    from .mavlink_frame import bm
 
     link.send(bm(51, struct.pack("<HBBB", seq, link.vehicle.sysid, 1, 0), link.sq, CRC_EXTRA[51]))
 
@@ -791,7 +791,7 @@ def _request_next_log_gap(lg, link) -> bool:
     gap = _next_log_gap(lg)
     if gap is None:
         return False
-    from .pllink_proto import bm
+    from .mavlink_frame import bm
 
     start, gap_end = gap
     lg._log_window_end = gap_end

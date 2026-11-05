@@ -11,7 +11,6 @@
 
   let port = $state('tcp:localhost:5770');
   let baud = $state(57600);
-  let protocol = $state('auto');
   let portHistory: string[] = $state([]);
   let showHistory = $state(false);
   let connecting = $state(false);
@@ -20,7 +19,6 @@
     name: string;
     port: string;
     baud: number;
-    protocol: string;
   }
   let profiles: ConnProfile[] = $state([]);
   let showProfileSave = $state(false);
@@ -42,7 +40,7 @@
 
   function saveProfile() {
     const name = profileName.trim() || port;
-    profiles = [...profiles.filter((p) => p.name !== name), { name, port, baud, protocol }];
+    profiles = [...profiles.filter((p) => p.name !== name), { name, port, baud }];
     try {
       localStorage.setItem('argus_profiles', JSON.stringify(profiles));
     } catch {}
@@ -53,7 +51,6 @@
   function loadProfile(p: ConnProfile) {
     port = p.port;
     baud = p.baud;
-    protocol = p.protocol;
     showHistory = false;
   }
 
@@ -106,7 +103,7 @@
       connecting = true;
       connectTimeout = false;
       savePortHistory();
-      sendConnect(port, Number(baud), protocol);
+      sendConnect(port, Number(baud));
       if (connectTimer) clearTimeout(connectTimer);
       connectTimer = setTimeout(() => {
         if (connecting && !app.drone.connected) {
@@ -265,15 +262,6 @@
         <option value={921600}>921600</option>
       </select>
     {/if}
-    <select
-      bind:value={protocol}
-      class="h-7 px-1 text-xs bg-input border border-border rounded-md text-foreground cursor-pointer"
-      title={t('conn.protocol')}
-    >
-      <option value="auto">{t('conn.auto')}</option>
-      <option value="standard">{t('conn.standard')}</option>
-      <option value="pllink">{t('conn.pllink')}</option>
-    </select>
   {/if}
   <Button
     variant={app.drone.connected ? 'destructive' : 'default'}
@@ -291,7 +279,6 @@
       class="text-[10px] px-2 opacity-60 hover:opacity-100"
       onclick={() => {
         port = 'udp:14550';
-        protocol = 'standard';
         toggle();
       }}
       title={t('tip.sitl')}>SITL</Button

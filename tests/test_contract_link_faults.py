@@ -13,7 +13,7 @@ from frame_builders import SESSION, fc_frame, global_position, heartbeat, param_
 
 from backend.crc_extras import CRC_EXTRA
 from backend.drone_link import DroneLink
-from backend.pllink_proto import bm, ple
+from backend.mavlink_frame import bm
 
 
 class TestNoiseRecovery:
@@ -177,36 +177,10 @@ class TestDisconnectMidTransfer:
         assert link.connected is False
 
 
-class TestPllinkFaults:
-    def test_corrupt_pllink_frame_dropped_next_survives(self):
-        link = DroneLink()
-        link._protocol = "pllink"
-        good = ple(heartbeat(), 0)
-        bad = bytearray(ple(global_position(), 1))
-        bad[-1] ^= 0xFF  # kill the pllink CRC
-        assert link.feed(bytes(bad) + good) == 1
-        assert link.connected is True
-
-    def test_pllink_wrapping_garbage_inner_no_crash(self):
-        """A pllink frame that decodes to non-MAVLink bytes (XOR key drift,
-        firmware bug) must be discarded by _process without raising."""
-        link = DroneLink()
-        link._protocol = "pllink"
-        link.feed(ple(b"\x00" * 24, 0))
-        assert link.connected is False
-
-    def test_auto_detect_locks_pllink_despite_leading_noise(self):
-        """Auditor W7 regression: noise before the first magic must not
-        permanently lock the wrong protocol."""
-        link = DroneLink()
-        link.feed(b"\x99\x88\x77" + ple(heartbeat(), 0))
-        assert link._protocol == "pllink"
-        assert link.connected is True
-
-    def test_auto_detect_locks_standard_despite_leading_noise(self):
+class TestLeadingNoise:
+    def test_noise_before_the_first_frame_is_skipped(self):
         link = DroneLink()
         link.feed(b"\x99\x88\x77" + heartbeat())
-        assert link._protocol == "standard"
         assert link.connected is True
 
 

@@ -4,7 +4,6 @@ export interface BrandConfig {
   logo?: string;
   primaryColor?: string;
   defaultPort?: string;
-  defaultProtocol?: string;
   hideArduPilot?: boolean;
   customCss?: string;
 }
@@ -13,7 +12,6 @@ const DEFAULT_BRAND: BrandConfig = {
   appName: 'Argus',
   subtitle: 'Ground Control Station',
   defaultPort: 'tcp:localhost:5770',
-  defaultProtocol: 'auto',
   hideArduPilot: true,
 };
 

@@ -133,12 +133,12 @@ def build(arch: str = "amd64"):
     # and the backend crashed at import time inside the .bat launcher.
     shutil.copytree(SCRIPT_DIR / "backend", be_dst, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
 
-    # sim_pllink.py lives under scripts/, not at the repo root. Without the
+    # simulator.py lives under scripts/, not at the repo root. Without the
     # correct path the sim launcher .bat tried to run a file that wasn't in
     # the zip.
-    sim_src = SCRIPT_DIR / "scripts" / "sim_pllink.py"
+    sim_src = SCRIPT_DIR / "scripts" / "simulator.py"
     if sim_src.exists():
-        shutil.copy2(sim_src, build_dir / "sim_pllink.py")
+        shutil.copy2(sim_src, build_dir / "simulator.py")
 
     # Create launcher bat
     (build_dir / "Argus地面站.bat").write_text(
@@ -165,7 +165,7 @@ def build(arch: str = "amd64"):
         "chcp 65001 >nul\r\n"
         "echo 仿真器运行中 (端口 5770)\r\n"
         "echo 在地面站中连接: tcp:localhost:5770\r\n"
-        "python\\python.exe sim_pllink.py 5770\r\n"
+        "python\\python.exe simulator.py 5770\r\n"
         "pause\r\n",
         encoding="utf-8",
     )

@@ -127,24 +127,6 @@ class TestParseMavlinkFrame:
         assert _CRC_EXTRA.get(192) == 36
 
 
-class TestNextFrame:
-    def test_auto_detects_standard(self):
-        link = DroneLink()
-        link._protocol = "auto"
-        link._buf = b"\xfd\x09\x00\x00\x01\x01\x01\x00\x00\x00" + b"\x00" * 11
-        link._next_frame()
-        assert link._protocol == "standard"
-
-    def test_auto_detects_pllink(self):
-        link = DroneLink()
-        link._protocol = "auto"
-        from backend.pllink_proto import ple
-
-        link._buf = ple(b"\xfd\x09\x00\x00\x01\x01\x01\x00\x00\x00", 0)
-        link._next_frame()
-        assert link._protocol == "pllink"
-
-
 class TestGetInspectorData:
     def test_returns_list(self):
         link = DroneLink()
