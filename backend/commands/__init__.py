@@ -46,6 +46,7 @@ from ._mission import (
     cmd_mission_set_current,
     cmd_mission_start,
     cmd_mission_upload,
+    cmd_rally_clear,
     cmd_rally_upload,
 )
 from ._ntrip import cmd_ntrip_start, cmd_ntrip_stop
@@ -85,6 +86,7 @@ _DISPATCH = {
     "mission_upload": cmd_mission_upload,
     "fence_upload": cmd_fence_upload,
     "fence_clear": cmd_fence_clear,
+    "rally_clear": cmd_rally_clear,
     "mission_download": cmd_mission_download,
     "rally_upload": cmd_rally_upload,
     "mission_set_current": cmd_mission_set_current,

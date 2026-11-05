@@ -37,12 +37,14 @@ import { SPECIAL_MODES, vehicleType } from './modeStore';
 import {
   buildMissionItems,
   buildFenceItems,
+  buildRallyItems,
   missionItemsToWaypoints,
   validateMissionWaypoints,
   validateFencePolygon,
+  validateRallyPoints,
 } from './missionUpload';
 import type { MissionItem, RawMissionItem } from './missionUpload';
-import type { Waypoint } from './types';
+import type { RallyPoint, Waypoint } from './types';
 import {
   logState,
   setLogList,
@@ -162,16 +164,17 @@ export async function connectSerial(baudRate: number, handlers: Partial<MessageH
         // upload completes deterministically even if the user's handler set is
         // missing onMissionRequest / onMissionAck. frame.payload is a DataView.
         if (upload?.pending && (frame.msgId === 40 || frame.msgId === 51)) {
-          const p = _padView(frame.payload, 2);
-          _onMissionRequest(p.getUint16(0, true));
+          // seq at 0, mission_type at 4: a late request from another store is not ours.
+          const p = _padView(frame.payload, 5);
+          if (p.getUint8(4) === upload.missionType) _onMissionRequest(p.getUint16(0, true));
         } else if (frame.msgId === 47) {
           // MISSION_ACK: type at offset 2, mission_type at 3. An ack only counts
           // for the store it names, so a fence ack can't finish a mission upload.
           const p = _padView(frame.payload, 4);
           const type = p.getUint8(2);
           const missionType = p.getUint8(3);
-          if (fenceClear && missionType === 1) {
-            _resolveFenceClear(type === 0 ? { ok: true } : { ok: false, error: `FC refused (${type})` });
+          if (storeClear && missionType === storeClear.missionType) {
+            _resolveStoreClear(type === 0 ? { ok: true } : { ok: false, error: `FC refused (${type})` });
           } else if (upload?.pending && missionType === upload.missionType) {
             _onMissionAck(type);
           }
@@ -432,6 +435,9 @@ const _serialDispatch: Record<string, CmdHandler> = {
   mission_clear: () => serialClearMission(),
   fence_clear: () => {
     void serialClearFence();
+  },
+  rally_clear: () => {
+    void serialClearRally();
   },
   // Mission seq mapping: backend prepends HOME (seq 0) + TAKEOFF (seq 1), and inserts DO_CHANGE_SPEED (178)
   // before any waypoint with speed > 0. _seqToWp (populated on serialDownloadMission completion) gives the
@@ -772,7 +778,7 @@ export async function serialUploadMission(
   takeoffAlt: number,
 ): Promise<{ ok: boolean; error?: string }> {
   if (!isSerialConnected()) return { ok: false, error: 'Not connected via serial' };
-  if (upload?.pending) return { ok: false, error: 'Another upload is in progress' };
+  if (upload?.pending || storeClear) return { ok: false, error: 'Another upload is in progress' };
   if (download.pending) return { ok: false, error: 'A mission download is in progress' };
 
   const validation = validateMissionWaypoints(waypoints);
@@ -793,12 +799,23 @@ export async function serialUploadFence(
   polygon: { lat: number; lon: number }[],
 ): Promise<{ ok: boolean; error?: string }> {
   if (!isSerialConnected()) return { ok: false, error: 'Not connected via serial' };
-  if (upload?.pending) return { ok: false, error: 'Another upload is in progress' };
+  if (upload?.pending || storeClear) return { ok: false, error: 'Another upload is in progress' };
   if (download.pending) return { ok: false, error: 'A mission download is in progress' };
 
   const validation = validateFencePolygon(polygon);
   if (!validation.ok) return validation;
   return _startUpload(buildFenceItems(polygon), 1);
+}
+
+/** Rally points: the mission protocol with mission_type=2. Mirrors backend cmd_rally_upload. */
+export async function serialUploadRally(points: RallyPoint[]): Promise<{ ok: boolean; error?: string }> {
+  if (!isSerialConnected()) return { ok: false, error: 'Not connected via serial' };
+  if (upload?.pending || storeClear) return { ok: false, error: 'Another upload is in progress' };
+  if (download.pending) return { ok: false, error: 'A mission download is in progress' };
+
+  const validation = validateRallyPoints(points);
+  if (!validation.ok) return validation;
+  return _startUpload(buildRallyItems(points), 2);
 }
 
 export function serialClearMission(): void {
@@ -807,28 +824,34 @@ export function serialClearMission(): void {
   _wpToSeq.clear();
 }
 
-let fenceClear: { resolve: (r: { ok: boolean; error?: string }) => void; timer: ReturnType<typeof setTimeout> } | null =
-  null;
+let storeClear: {
+  missionType: number;
+  resolve: (r: { ok: boolean; error?: string }) => void;
+  timer: ReturnType<typeof setTimeout>;
+} | null = null;
 
-function _resolveFenceClear(result: { ok: boolean; error?: string }): void {
-  if (!fenceClear) return;
-  clearTimeout(fenceClear.timer);
-  const { resolve } = fenceClear;
-  fenceClear = null;
+function _resolveStoreClear(result: { ok: boolean; error?: string }): void {
+  if (!storeClear) return;
+  clearTimeout(storeClear.timer);
+  const { resolve } = storeClear;
+  storeClear = null;
   resolve(result);
 }
 
-// mission_type=1 wipes the fence store, and the FC's MISSION_ACK says whether it
-// did. Mirrors backend cmd_fence_clear.
-export function serialClearFence(): Promise<{ ok: boolean; error?: string }> {
+// MISSION_CLEAR_ALL wipes the store its mission_type names, and the FC's MISSION_ACK
+// says whether it did. Mirrors backend cmd_fence_clear and cmd_rally_clear.
+function _clearStore(missionType: number): Promise<{ ok: boolean; error?: string }> {
   if (!isSerialConnected()) return Promise.resolve({ ok: false, error: 'Not connected via serial' });
-  if (upload?.pending || fenceClear) return Promise.resolve({ ok: false, error: 'Another upload is in progress' });
+  if (upload?.pending || storeClear) return Promise.resolve({ ok: false, error: 'Another upload is in progress' });
   return new Promise((resolve) => {
-    const timer = setTimeout(() => _resolveFenceClear({ ok: false, error: 'No response from the FC' }), 3000);
-    fenceClear = { resolve, timer };
-    sendSerialFrame(45, encodeMissionClearAll(serial.targetSysId, serial.targetCompId, 1));
+    const timer = setTimeout(() => _resolveStoreClear({ ok: false, error: 'No response from the FC' }), 3000);
+    storeClear = { missionType, resolve, timer };
+    sendSerialFrame(45, encodeMissionClearAll(serial.targetSysId, serial.targetCompId, missionType));
   });
 }
+
+export const serialClearFence = () => _clearStore(1);
+export const serialClearRally = () => _clearStore(2);
 
 export function serialMissionSetCurrent(seq: number): void {
   if (!isSerialConnected()) return;

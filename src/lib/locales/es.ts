@@ -1107,6 +1107,9 @@ const messages: Record<string, string> = {
   'evt.wpReached': 'Punto de ruta {n} alcanzado',
   'evt.fwInfo': 'Versión de firmware: {v} ({git})',
   'err.noRtl': 'Este vehículo no tiene modo RTL',
+  'rally.clearFc': 'Borrar puntos de reunión de la controladora',
+  'rally.clearFcDone': 'Puntos de reunión borrados de la controladora',
+  'fltmode.noSwitch': 'Este firmware no tiene parámetros de selector de modo',
 };
 
 export default messages;

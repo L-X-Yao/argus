@@ -5,6 +5,8 @@ import {
   missionItemsToWaypoints,
   buildFenceItems,
   validateFencePolygon,
+  buildRallyItems,
+  validateRallyPoints,
 } from './missionUpload';
 import type { RawMissionItem } from './missionUpload';
 import type { Waypoint } from './types';
@@ -325,5 +327,35 @@ describe('validateFencePolygon', () => {
         { lat: 30.5, lon: 121.5 },
       ]).ok,
     ).toBe(true);
+  });
+});
+
+describe('rally points', () => {
+  const points = [
+    { lat: 34.258, lon: 108.942, alt: 50 },
+    { lat: -35.362, lon: 149.163, alt: 40.5 },
+  ];
+
+  it('builds MAV_CMD_NAV_RALLY_POINT items with altitude above home', () => {
+    const items = buildRallyItems(points);
+    expect(items.map((i) => [i.seq, i.command, i.frame])).toEqual([
+      [0, 5100, 3],
+      [1, 5100, 3],
+    ]);
+    expect(items[1]).toMatchObject({ x: -353620000, y: 1491630000, z: 40.5 });
+  });
+
+  it('accepts points the FC takes', () => {
+    expect(validateRallyPoints(points)).toEqual({ ok: true });
+  });
+
+  it.each([
+    ['no points', []],
+    ['latitude out of range', [{ lat: 91, lon: 0, alt: 50 }]],
+    ['longitude out of range', [{ lat: 0, lon: 181, alt: 50 }]],
+    ['altitude beyond int16', [{ lat: 0, lon: 0, alt: 40000 }]],
+    ['a missing value', [{ lat: NaN, lon: 0, alt: 50 }]],
+  ])('refuses %s', (_, bad) => {
+    expect(validateRallyPoints(bad).ok).toBe(false);
   });
 });

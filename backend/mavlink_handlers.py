@@ -663,6 +663,12 @@ def handle_mission_ack(p: bytes, pl: int, link: DroneLink) -> None:
             lt("fence_clear_ok", link.locale) if mtype == 0 else lt("fence_clear_fail", link.locale) % mtype,
             "fence_clear_ok" if mtype == 0 else "fence_clear_fail",
         )
+    elif mission_type == 2 and m._rally_clear_pending:
+        m._rally_clear_pending = False
+        link.add_event(
+            lt("rally_clear_ok", link.locale) if mtype == 0 else lt("rally_clear_fail", link.locale) % mtype,
+            "rally_clear_ok" if mtype == 0 else "rally_clear_fail",
+        )
     elif mtype == 13:
         # MAV_MISSION_INVALID_SEQUENCE is no verdict on an upload. The FC re-requests
         # an item after 1 s (MissionItemProtocol.cpp:407), and when that crosses our
@@ -678,10 +684,9 @@ def handle_mission_ack(p: bytes, pl: int, link: DroneLink) -> None:
     elif mission_type == 2 and m._rally_pending:
         m._rally_pending = False
         m._rally_ul_start_time = 0.0
-        # No fence_ack_ok/fail-equivalent for rally; reuse mission text.
         link.add_event(
-            (lt("mission_ack_ok", link.locale) if mtype == 0 else lt("mission_ack_fail", link.locale) % mtype),
-            "mission_ack_ok" if mtype == 0 else "mission_ack_fail",
+            lt("rally_ack_ok", link.locale) if mtype == 0 else lt("rally_ack_fail", link.locale) % mtype,
+            "rally_ack_ok" if mtype == 0 else "rally_ack_fail",
         )
     elif mission_type == 0 and m._mission_pending:
         m._mission_pending = False

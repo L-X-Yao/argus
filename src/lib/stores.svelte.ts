@@ -41,7 +41,9 @@ class AppState {
   mapMode: '2d' | '3d' = $state('2d');
   linkHistory: { t: number; rate: number; age: number }[] = $state([]);
   rallyPoints: RallyPoint[] = $state([]);
+  rallyUploaded: boolean = $state(false);
   showRally: boolean = $state(false);
+  drawingRally: boolean = $state(false);
   kmlOverlay: { type: string; coords: [number, number][]; name: string }[] = $state([]);
   unitSystem: 'metric' | 'imperial' = $state('metric');
 }

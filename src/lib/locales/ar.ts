@@ -1101,6 +1101,9 @@ const messages: Record<string, string> = {
   'evt.wpReached': 'تم الوصول إلى نقطة المسار {n}',
   'evt.fwInfo': 'البرنامج الثابت: {v} ({git})',
   'err.noRtl': 'لا يحتوي هذا الجهاز على وضع RTL',
+  'rally.clearFc': 'مسح نقاط التجمع من المتحكم',
+  'rally.clearFcDone': 'تم مسح نقاط التجمع من المتحكم',
+  'fltmode.noSwitch': 'لا يحتوي هذا البرنامج الثابت على معلمات مفتاح الأوضاع',
 };
 
 export default messages;

@@ -73,6 +73,7 @@ def cmd_fence_clear(link: DroneLink, param, data: dict):
     if link.mission._fence_pending:
         return {"ok": False, "error": lt("err_fence_busy", link.locale)}
     link.mission._fence_clear_pending = True
+    link.mission._fence_clear_start_time = time.time()
     link.send(bm(45, bytes([link.vehicle.sysid, 1, 1]), link.sq, CRC_EXTRA[45]))
 
 
@@ -106,6 +107,10 @@ def cmd_mission_upload(link: DroneLink, param, data: dict):
 
 
 def cmd_fence_upload(link: DroneLink, param, data: dict):
+    # An ack carries only the store's type, so the clear's would finish this upload.
+    # STORE_CLEAR_TIMEOUT ends a clear the FC never answers.
+    if link.mission._fence_clear_pending:
+        return {"ok": False, "error": lt("err_clear_busy", link.locale)}
     polygon = data.get("polygon", [])
     if len(polygon) < 3 or len(polygon) > 200:
         return {"ok": False, "error": lt("err_fence_min", link.locale)}
@@ -160,13 +165,42 @@ def check_mission_dl_timeout(link: DroneLink) -> None:
     if m._rally_pending and m._rally_ul_start_time > 0 and now - m._rally_ul_start_time > timeout:
         m._rally_pending = False
         m._rally_ul_start_time = 0.0
-        link.add_event(lt("mission_ack_fail", link.locale) % 99, "mission_ack_fail")
+        link.add_event(lt("rally_ack_fail", link.locale) % 99, "rally_ack_fail")
+    # A clear gets one MISSION_ACK or nothing: 99 is the same no-answer code as above.
+    if m._fence_clear_pending and now - m._fence_clear_start_time > cfg.STORE_CLEAR_TIMEOUT:
+        m._fence_clear_pending = False
+        link.add_event(lt("fence_clear_fail", link.locale) % 99, "fence_clear_fail")
+    if m._rally_clear_pending and now - m._rally_clear_start_time > cfg.STORE_CLEAR_TIMEOUT:
+        m._rally_clear_pending = False
+        link.add_event(lt("rally_clear_fail", link.locale) % 99, "rally_clear_fail")
 
 
 def cmd_rally_upload(link: DroneLink, param, data: dict):
+    if link.mission._rally_clear_pending:  # see cmd_fence_upload
+        return {"ok": False, "error": lt("err_clear_busy", link.locale)}
     points = data.get("points", [])
-    if points:
-        _upload_rally(link, points)
+    if not points:
+        return None
+    # The FC refuses these one item in (MissionItemProtocol_Rally.cpp:63-66 for the
+    # coordinates, :69 for an altitude outside int16), so catch them before starting.
+    for pt in points:
+        lat, lon, alt = float(pt.get("lat", 0)), float(pt.get("lon", 0)), float(pt.get("alt", 100))
+        if not (-90 <= lat <= 90) or not (-180 <= lon <= 180) or not (-32768 <= alt <= 32767):
+            return {"ok": False, "error": lt("err_bad_coord", link.locale)}
+    _upload_rally(link, points)
+    return None
+
+
+def cmd_rally_clear(link: DroneLink, param, data: dict):
+    # MISSION_CLEAR_ALL with mission_type=2 (MAV_MISSION_TYPE_RALLY): AP routes it by
+    # type (GCS_Common.cpp:805) and truncates the store (MissionItemProtocol_Rally.cpp:52).
+    # As with the fence, nothing is reported until the FC's MISSION_ACK says so
+    # (MissionItemProtocol.cpp:38), see handle_mission_ack.
+    if link.mission._rally_pending:
+        return {"ok": False, "error": lt("err_rally_busy", link.locale)}
+    link.mission._rally_clear_pending = True
+    link.mission._rally_clear_start_time = time.time()
+    link.send(bm(45, bytes([link.vehicle.sysid, 1, 2]), link.sq, CRC_EXTRA[45]))
 
 
 def _upload_mission(link: DroneLink, waypoints: list, takeoff_alt: float) -> None:

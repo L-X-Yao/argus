@@ -65,6 +65,7 @@ class Simulator:
         self.target_idx = -1
 
         self.fence = []
+        self.rally = []
 
         self.params = {
             "BATT_CAPACITY": 5000.0,
@@ -537,6 +538,10 @@ class Simulator:
                 print("  [SIM] 围栏接收: 预计 %d 项" % count)
                 if count > 0:
                     resp.append(self.msg_mission_request(0, mission_type=1))
+            elif mission_type == 2:
+                self.rally = [None] * count
+                if count > 0:
+                    resp.append(self.msg_mission_request(0, mission_type=2))
             else:
                 self.mission = [None] * count
                 self.target_idx = -1
@@ -548,14 +553,23 @@ class Simulator:
             mission_type = p[37] if len(p) >= 38 else 0
             if mission_type == 1:
                 resp = self._handle_fence_item(p)
+            elif mission_type == 2:
+                resp = self._handle_rally_item(p)
             else:
                 resp = self._handle_mission_item(p)
         elif mid == 45:
-            self.mission = []
-            self.target_idx = -1
-            self.mission_seq = 0
-            print("  [SIM] 任务已清除")
-            resp.append(self.msg_mission_ack(0))
+            # Each store clears on its own: a rally clear must leave the mission alone.
+            mission_type = p[2] if len(p) >= 3 else 0
+            if mission_type == 0:
+                self.mission = []
+                self.target_idx = -1
+                self.mission_seq = 0
+                print("  [SIM] 任务已清除")
+            elif mission_type == 1:
+                self.fence = []
+            elif mission_type == 2:
+                self.rally = []
+            resp.append(self.msg_mission_ack(0, mission_type))
         elif mid == 84:
             pass
         elif mid == 117 and len(p) >= 6:
@@ -692,6 +706,14 @@ class Simulator:
             self.fence = [f for f in self.fence if f is not None]
             print("  [SIM] 围栏接收完成: %d 顶点" % len(self.fence))
             return [self.msg_mission_ack(0, mission_type=1)]
+
+    def _handle_rally_item(self, p):
+        seq = struct.unpack_from("<H", p, 28)[0]
+        if seq < len(self.rally):
+            self.rally[seq] = (struct.unpack_from("<i", p, 16)[0] / 1e7, struct.unpack_from("<i", p, 20)[0] / 1e7)
+        if seq + 1 < len(self.rally):
+            return [self.msg_mission_request(seq + 1, mission_type=2)]
+        return [self.msg_mission_ack(0, mission_type=2)]
 
     def _handle_mission_item(self, p):
         p1 = struct.unpack_from("<f", p, 0)[0]

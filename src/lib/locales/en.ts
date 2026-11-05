@@ -1095,6 +1095,9 @@ const messages: Record<string, string> = {
   'evt.wpReached': 'Waypoint {n} reached',
   'evt.fwInfo': 'Firmware: {v} ({git})',
   'err.noRtl': 'This vehicle has no RTL mode',
+  'rally.clearFc': 'Clear rally points on FC',
+  'rally.clearFcDone': 'Rally points cleared on the FC',
+  'fltmode.noSwitch': 'This firmware has no mode switch parameters',
 };
 
 export default messages;

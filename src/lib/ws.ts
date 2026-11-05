@@ -100,6 +100,18 @@ export function connectWs(): void {
             case 'fence_clear_fail':
               addToast(msg.text, 'error');
               break;
+            case 'rally_ack_ok':
+              addToast(msg.text, 'success');
+              app.rallyUploaded = true;
+              break;
+            case 'rally_clear_ok':
+              addToast(msg.text, 'success');
+              app.rallyUploaded = false;
+              break;
+            case 'rally_ack_fail':
+            case 'rally_clear_fail':
+              addToast(msg.text, 'error');
+              break;
             case 'cmd_ack_fail':
               addToast(msg.text, 'error', 5000);
               break;

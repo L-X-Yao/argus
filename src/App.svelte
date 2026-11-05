@@ -76,7 +76,7 @@
   let Map3DViewModule: Component | null = $state(null);
   let MonitorMods: { Rc: Component; Servo: Component; Vibe: Component; Ekf: Component; Chart: Component } | null =
     $state(null);
-  let PlanMods: { Mission: Component; Survey: Component; Fence: Component } | null = $state(null);
+  let PlanMods: { Mission: Component; Survey: Component; Fence: Component; Rally: Component } | null = $state(null);
   let ParamMod: Component | null = $state(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import components have heterogeneous props
   type DynComp = Component<any>;
@@ -125,9 +125,10 @@
         import('./components/mission/MissionPanel.svelte'),
         import('./components/mission/SurveyPanel.svelte'),
         import('./components/mission/FencePanel.svelte'),
+        import('./components/mission/RallyPanel.svelte'),
       ])
-        .then(([mission, survey, fence]) => {
-          PlanMods = { Mission: mission.default, Survey: survey.default, Fence: fence.default };
+        .then(([mission, survey, fence, rally]) => {
+          PlanMods = { Mission: mission.default, Survey: survey.default, Fence: fence.default, Rally: rally.default };
         })
         .catch(() => addToast(t('error.loadFailed'), 'error'));
     }
@@ -254,6 +255,14 @@
     const d = app.drone;
     checkAlerts(d.connected, d.armed, d.remaining, d.link_age);
     if (d.flight_summary && !app.summaryShown) app.summaryShown = true;
+  });
+
+  // A drawing left open in Plan would take the map clicks meant for guided targets.
+  $effect(() => {
+    if (view === 'plan') return;
+    app.drawingPolygon = false;
+    app.drawingFence = false;
+    app.drawingRally = false;
   });
 
   $effect(() => {
@@ -585,6 +594,7 @@
             </div>
             {#if app.showSurvey}<PlanMods.Survey />{/if}
             {#if app.showFence}<PlanMods.Fence />{/if}
+            {#if app.showRally}<PlanMods.Rally />{/if}
           </div>
         {/if}
       {:else if view === 'monitor'}

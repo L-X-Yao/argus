@@ -149,7 +149,7 @@ async def test_copter():
             'home_lon': lambda v: v is not None,
             'dist_home': lambda v: v is not None,
             'vibe': lambda v: isinstance(v, list) and len(v) == 3,
-            'ekf_flags': lambda v: v is not None,
+            'ekf_flags': lambda v: bool(v),
             'ekf_vel': lambda v: v is not None,
             'ekf_pos_h': lambda v: v is not None,
             'ekf_pos_v': lambda v: v is not None,
@@ -474,8 +474,11 @@ async def test_copter():
             {'lat': -35.365, 'lon': 149.167, 'alt': 50},
             {'lat': -35.362, 'lon': 149.163, 'alt': 40},
         ])
-        evt = await wait_for(ws, lambda m: m.get('type') in ('event', 'cmd_result'), 10)
-        record('rally_upload (2 pts)', evt is not None, str(evt)[:60] if evt else '')
+        evt = await wait_for(ws, lambda m: m.get('event_type') in ('rally_ack_ok', 'rally_ack_fail'), 10)
+        record('rally_upload (2 pts)', evt is not None and evt.get('event_type') == 'rally_ack_ok', str(evt)[:60] if evt else '')
+        await cmd(ws, 'rally_clear')
+        evt = await wait_for(ws, lambda m: m.get('event_type') in ('rally_clear_ok', 'rally_clear_fail'), 10)
+        record('rally_clear', evt is not None and evt.get('event_type') == 'rally_clear_ok', str(evt)[:60] if evt else '')
 
         # ── Roles + Multi-client ──
         print('\n[B17] Roles & Locale')

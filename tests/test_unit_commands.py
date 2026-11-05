@@ -408,6 +408,83 @@ class TestRallyUpload:
         execute("rally_upload", None, link, data={"points": []})
         assert not any("备降" in e["text"] for e in link.events)
 
+    @pytest.mark.parametrize(
+        "point",
+        [{"lat": 91, "lon": 0}, {"lat": 0, "lon": 181}, {"lat": 30, "lon": 120, "alt": 40000}],
+    )
+    def test_rally_upload_refuses_a_bad_point(self, point):
+        link = make_link()
+        result = execute("rally_upload", None, link, data={"points": [point]})
+        assert result["ok"] is False
+        assert link.mission._rally_pending is False
+
+    def test_rally_upload_reports_the_fc_answer(self):
+        link = make_link()
+        execute("rally_upload", None, link, data={"points": [{"lat": 30, "lon": 120, "alt": 50}]})
+        handle_mission_ack(bytes([255, 190, 0, 2]), 4, link)
+        assert link.mission._rally_pending is False
+        assert any(e["event_type"] == "rally_ack_ok" for e in link.events)
+
+    def test_rally_clear_waits_for_the_fc(self):
+        link = make_link()
+        execute("rally_clear", None, link)
+        assert link.mission._rally_clear_pending is True
+        assert not any(e["event_type"].startswith("rally_clear") for e in link.events)
+        handle_mission_ack(bytes([255, 190, 0, 2]), 4, link)
+        assert link.mission._rally_clear_pending is False
+        assert any(e["event_type"] == "rally_clear_ok" for e in link.events)
+
+    def test_rally_clear_reports_rejection(self):
+        link = make_link()
+        execute("rally_clear", None, link)
+        handle_mission_ack(bytes([255, 190, 1, 2]), 4, link)
+        assert any(e["event_type"] == "rally_clear_fail" for e in link.events)
+
+    def test_rally_clear_ignores_acks_for_other_stores(self):
+        link = make_link()
+        execute("rally_clear", None, link)
+        handle_mission_ack(bytes([255, 190, 0, 1]), 4, link)
+        assert link.mission._rally_clear_pending is True
+
+    @pytest.mark.parametrize(("store", "code"), [("fence", 1), ("rally", 2)])
+    def test_a_clear_the_fc_never_answers_times_out(self, store, code):
+        link = make_link()
+        execute(f"{store}_clear", None, link)
+        setattr(link.mission, f"_{store}_clear_start_time", 1.0)
+        check_mission_dl_timeout(link)
+        assert getattr(link.mission, f"_{store}_clear_pending") is False
+        assert any(e["event_type"] == f"{store}_clear_fail" for e in link.events)
+
+    @pytest.mark.parametrize(
+        ("store", "data"),
+        [
+            ("fence", {"polygon": [{"lat": 30 + i, "lon": 120} for i in range(3)]}),
+            ("rally", {"points": [{"lat": 30, "lon": 120, "alt": 50}]}),
+        ],
+    )
+    def test_no_upload_while_a_clear_is_open(self, store, data):
+        """An ack carries only the store's type, so the clear's would finish the upload."""
+        link = make_link()
+        execute(f"{store}_clear", None, link)
+        assert execute(f"{store}_upload", None, link, data=data)["ok"] is False
+        assert getattr(link.mission, f"_{store}_pending") is False
+
+    def test_an_upload_after_a_lost_clear_keeps_its_own_ack(self):
+        link = make_link()
+        execute("rally_clear", None, link)
+        link.mission._rally_clear_start_time = 1.0
+        check_mission_dl_timeout(link)
+        execute("rally_upload", None, link, data={"points": [{"lat": 30, "lon": 120, "alt": 50}]})
+        handle_mission_ack(bytes([255, 190, 0, 2]), 4, link)
+        assert link.mission._rally_pending is False
+        assert any(e["event_type"] == "rally_ack_ok" for e in link.events)
+        assert not any(e["event_type"] == "rally_clear_ok" for e in link.events)
+
+    def test_rally_clear_refused_during_an_upload(self):
+        link = make_link()
+        link.mission._rally_pending = True
+        assert execute("rally_clear", None, link)["ok"] is False
+
 
 class TestSerialControl:
     def test_serial_control(self):

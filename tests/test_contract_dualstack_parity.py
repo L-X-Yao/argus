@@ -156,6 +156,9 @@ def _backend_frames(op: dict) -> list[bytes]:
     elif kind == "fence_upload":
         commands.execute("fence_upload", None, link, {"polygon": FIXTURE["fence_polygon"]})
         _drive_upload(link, mission_type=1)
+    elif kind == "rally_upload":
+        commands.execute("rally_upload", None, link, {"points": FIXTURE["rally_points"]})
+        _drive_upload(link, mission_type=2)
     else:
         pytest.fail(f"unknown op kind: {kind}")
     return link.captured

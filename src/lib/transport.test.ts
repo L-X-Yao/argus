@@ -80,6 +80,8 @@ import {
   connectSerial,
   disconnectSerial,
   serialUploadMission,
+  serialUploadRally,
+  serialClearRally,
   serialWpIndex,
   serialDownloadMission,
   serialUploadFence,
@@ -246,6 +248,77 @@ describe('serialUploadMission', () => {
     const promise = serialUploadMission(wps, 30);
     inject(fcFrame(47, encodeMissionAck(1, 1, 14))); // MAV_MISSION_INVALID_PARAM7
     await expect(promise).resolves.toEqual({ ok: false, error: 'MISSION_ACK type=14' });
+  });
+
+  it('uploads rally points as mission_type 2', async () => {
+    const promise = serialUploadRally([{ lat: 30, lon: 120, alt: 50 }]);
+    inject(fcFrame(47, encodeMissionAck(1, 1, 0, 2)));
+    await expect(promise).resolves.toEqual({ ok: true });
+  });
+
+  it('an ack for another store does not finish a rally upload', async () => {
+    const promise = serialUploadRally([{ lat: 30, lon: 120, alt: 50 }]);
+    let settled = false;
+    void promise.then(() => (settled = true));
+    inject(fcFrame(47, encodeMissionAck(1, 1, 0, 0)));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(settled).toBe(false);
+    inject(fcFrame(47, encodeMissionAck(1, 1, 0, 2)));
+    await expect(promise).resolves.toEqual({ ok: true });
+  });
+
+  it('refuses a rally point the FC would reject', async () => {
+    await expect(serialUploadRally([{ lat: 91, lon: 120, alt: 50 }])).resolves.toEqual({
+      ok: false,
+      error: 'Invalid rally point',
+    });
+  });
+
+  it('ignores a request meant for another store during an upload', async () => {
+    const promise = serialUploadRally([{ lat: 30, lon: 120, alt: 50 }]);
+    writes.length = 0;
+    inject(fcFrame(51, encodeMissionRequestInt(255, 190, 0, 1)));
+    expect(writes.filter((f) => f[7] === 73)).toHaveLength(0);
+    inject(fcFrame(51, encodeMissionRequestInt(255, 190, 0, 2)));
+    expect(writes.filter((f) => f[7] === 73)).toHaveLength(1);
+    inject(fcFrame(47, encodeMissionAck(1, 1, 0, 2)));
+    await expect(promise).resolves.toEqual({ ok: true });
+  });
+
+  it('refuses an upload while a clear waits for its answer, which would take the ack', async () => {
+    const clear = serialClearRally();
+    await expect(serialUploadRally([{ lat: 30, lon: 120, alt: 50 }])).resolves.toEqual({
+      ok: false,
+      error: 'Another upload is in progress',
+    });
+    inject(fcFrame(47, encodeMissionAck(1, 1, 0, 2)));
+    await expect(clear).resolves.toEqual({ ok: true });
+  });
+
+  it('a gimbal heartbeat does not become the command target', () => {
+    inject(encodeFrame(0, encodeHeartbeat(26, 8), 1, 154, 0));
+    writes.length = 0;
+    dispatch('arm');
+    expect(writes[0][10 + 31]).toBe(1); // COMMAND_LONG target_component
+  });
+
+  it('learns the vehicle again on a new connection', async () => {
+    inject(encodeFrame(0, encodeHeartbeat(2, 3), 2, 1, 0));
+    writes.length = 0;
+    dispatch('arm');
+    expect(writes[0][10 + 30]).toBe(2); // COMMAND_LONG target_system
+    await disconnectSerial();
+    await connectSerial(115200, {});
+    inject(encodeFrame(0, encodeHeartbeat(2, 3), 1, 1, 0));
+    writes.length = 0;
+    dispatch('arm');
+    expect(writes[0][10 + 30]).toBe(1);
+  });
+
+  it('clears rally points and waits for the FC to answer', async () => {
+    const promise = serialClearRally();
+    inject(fcFrame(47, encodeMissionAck(1, 1, 0, 2)));
+    await expect(promise).resolves.toEqual({ ok: true });
   });
 
   it('maps mission seq back to waypoints after an upload, past a speed item', async () => {

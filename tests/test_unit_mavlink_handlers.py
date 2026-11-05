@@ -730,7 +730,7 @@ class TestMissionAckFenceRally:
         handle_mission_ack(p, len(p), link)
         assert m._rally_pending is False
         assert m._rally_ul_start_time == 0.0
-        assert any(e["event_type"] == "mission_ack_ok" for e in link.events)
+        assert any(e["event_type"] == "rally_ack_ok" for e in link.events)
 
     def test_rally_ack_fail(self):
         link = make_link()
@@ -741,7 +741,7 @@ class TestMissionAckFenceRally:
         p = struct.pack("<BBBB", 1, 1, 5, 2)
         handle_mission_ack(p, len(p), link)
         assert m._rally_pending is False
-        assert any(e["event_type"] == "mission_ack_fail" for e in link.events)
+        assert any(e["event_type"] == "rally_ack_fail" for e in link.events)
 
     def test_mission_ack_fail(self):
         link = make_link()

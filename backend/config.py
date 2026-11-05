@@ -107,6 +107,7 @@ class Config:
     # Mission
     MISSION_START_DELAY: float = 0.3
     MISSION_DL_TIMEOUT: float = 30.0
+    STORE_CLEAR_TIMEOUT: float = 3.0
     STREAM_REQUEST_SPACING: float = 0.01
     PARAM_LOAD_SPACING: float = 0.02
 

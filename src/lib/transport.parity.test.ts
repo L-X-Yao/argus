@@ -81,6 +81,7 @@ import {
   serialDownloadMission,
   serialUploadMission,
   serialUploadFence,
+  serialUploadRally,
 } from './transport';
 import { app } from './stores.svelte';
 import { encodeFrame } from './mavlink';
@@ -103,6 +104,7 @@ interface ParityFixture {
   golden_waypoints: Record<string, unknown>[];
   golden_takeoff_alt: number;
   fence_polygon: { lat: number; lon: number }[];
+  rally_points: { lat: number; lon: number; alt: number }[];
   ops: ParityOp[];
 }
 
@@ -214,6 +216,11 @@ describe('dual-stack parity dump', () => {
           case 'fence_upload': {
             const result = await driveUpload(() => serialUploadFence(fixture.fence_polygon), 1);
             expect(result.ok, `fence upload failed: ${result.error}`).toBe(true);
+            break;
+          }
+          case 'rally_upload': {
+            const result = await driveUpload(() => serialUploadRally(fixture.rally_points), 2);
+            expect(result.ok, `rally upload failed: ${result.error}`).toBe(true);
             break;
           }
           default:

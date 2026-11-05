@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount } from 'svelte';
-  import { app, addWaypoint, addToast, showConfirm } from '../../lib/stores.svelte';
+  import { app, addWaypoint, addToast, saveRally, showConfirm } from '../../lib/stores.svelte';
   import { dispatch } from '../../lib/transport';
   import { fmtDist } from '../../lib/units';
   import { toGcj, toWgs } from '../../lib/gcj02';
@@ -13,6 +13,7 @@
   import GuidedLayer from '../layers/GuidedLayer.svelte';
   import FenceLayer from '../layers/FenceLayer.svelte';
   import OrthoLayer from '../layers/OrthoLayer.svelte';
+  import RallyLayer from '../layers/RallyLayer.svelte';
   import SurveyLayer from '../layers/SurveyLayer.svelte';
   import ReplayLayer from '../layers/ReplayLayer.svelte';
   import {
@@ -183,6 +184,13 @@
       app.fencePolygon = [...app.fencePolygon, { lat: wlat, lon: wlon }];
       return;
     }
+    if (app.drawingRally) {
+      const [wlat, wlon] = fromMap(ll.lat, ll.lng);
+      app.rallyPoints = [...app.rallyPoints, { lat: wlat, lon: wlon, alt: app.defaultAlt }];
+      app.rallyUploaded = false;
+      saveRally();
+      return;
+    }
     if (app.guidedMode && app.drone.connected && app.drone.armed) {
       const [wlat, wlon] = fromMap(ll.lat, ll.lng);
       dispatch('guided_goto', undefined, { lat: wlat, lon: wlon, alt: app.defaultAlt });
@@ -234,6 +242,7 @@
         app.drawingFence = false;
         app.fencePolygon = [];
       }
+      app.drawingRally = false;
       map?.closePopup();
     }
     if (e.key === 'g' && (e.target as HTMLElement).tagName !== 'INPUT') {
@@ -455,6 +464,7 @@
     <WaypointLayer {map} coord={toMap} coordInv={fromMap} />
     <GuidedLayer {map} bind:target={guidedTarget} coord={toMap} />
     <OrthoLayer {map} coord={toMap} />
+    <RallyLayer {map} coord={toMap} />
     <FenceLayer {map} coord={toMap} />
     <SurveyLayer {map} coord={toMap} />
     <ReplayLayer {map} {follow} coord={toMap} />
@@ -500,6 +510,13 @@
       title={t('map.fence')}
     >
       <ShieldAlert size={13} />{t('map.fence')}
+    </button>
+    <button
+      class="map-btn {app.showRally || app.drawingRally ? '!text-primary !border-primary' : ''}"
+      onclick={() => (app.showRally = !app.showRally)}
+      title={t('rally.title')}
+    >
+      <Flag size={13} />{t('rally.title')}
     </button>
     {#if droneTrail.length > 10}
       <button class="map-btn" onclick={exportTrack} title={t('map.track')}>

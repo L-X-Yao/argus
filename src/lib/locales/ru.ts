@@ -1106,6 +1106,9 @@ const messages: Record<string, string> = {
   'evt.wpReached': 'Точка маршрута {n} достигнута',
   'evt.fwInfo': 'Прошивка: {v} ({git})',
   'err.noRtl': 'У этого аппарата нет режима RTL',
+  'rally.clearFc': 'Очистить точки сбора на контроллере',
+  'rally.clearFcDone': 'Точки сбора на контроллере очищены',
+  'fltmode.noSwitch': 'В этой прошивке нет параметров переключателя режимов',
 };
 
 export default messages;

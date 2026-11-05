@@ -1109,6 +1109,9 @@ const messages: Record<string, string> = {
   'evt.wpReached': 'Point de passage {n} atteint',
   'evt.fwInfo': 'Micrologiciel : {v} ({git})',
   'err.noRtl': 'Ce véhicule n’a pas de mode RTL',
+  'rally.clearFc': 'Effacer les points de ralliement du contrôleur',
+  'rally.clearFcDone': 'Points de ralliement effacés du contrôleur',
+  'fltmode.noSwitch': 'Ce firmware n’a pas de paramètres de sélecteur de mode',
 };
 
 export default messages;

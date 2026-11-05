@@ -81,6 +81,9 @@ class MissionState:
     _fence_items: list[dict] = field(default_factory=list)
     _fence_pending: bool = False
     _fence_clear_pending: bool = False
+    _fence_clear_start_time: float = 0.0
+    _rally_clear_pending: bool = False
+    _rally_clear_start_time: float = 0.0
     _rally_items: list[dict] = field(default_factory=list)
     _rally_pending: bool = False
     # Upload-side watchdogs (one per pending kind). If the FC never requests

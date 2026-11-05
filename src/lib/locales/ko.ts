@@ -1101,6 +1101,9 @@ const messages: Record<string, string> = {
   'evt.wpReached': '웨이포인트 {n} 도달',
   'evt.fwInfo': '펌웨어: {v} ({git})',
   'err.noRtl': '이 기체에는 RTL 모드가 없습니다',
+  'rally.clearFc': 'FC의 집결 지점 지우기',
+  'rally.clearFcDone': 'FC의 집결 지점을 지웠습니다',
+  'fltmode.noSwitch': '이 펌웨어에는 모드 스위치 파라미터가 없습니다',
 };
 
 export default messages;

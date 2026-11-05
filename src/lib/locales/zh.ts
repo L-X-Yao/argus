@@ -1092,6 +1092,9 @@ const messages: Record<string, string> = {
   'evt.wpReached': '航点 {n} 已到达',
   'evt.fwInfo': '固件: {v} ({git})',
   'err.noRtl': '这种机型没有返航模式',
+  'rally.clearFc': '清除飞控上的备降点',
+  'rally.clearFcDone': '飞控上的备降点已清除',
+  'fltmode.noSwitch': '此固件没有飞行模式开关参数',
 };
 
 export default messages;

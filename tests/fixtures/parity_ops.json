@@ -29,6 +29,10 @@
     {"lat": 34.260, "lon": 108.946},
     {"lat": 34.262, "lon": 108.941}
   ],
+  "rally_points": [
+    {"lat": 34.258, "lon": 108.942, "alt": 50},
+    {"lat": -35.362, "lon": 149.163, "alt": 40.5}
+  ],
   "ops": [
     {"id": "heartbeat", "kind": "boot_heartbeat", "expect": "parity"},
 
@@ -52,6 +56,7 @@
     {"id": "mission_start", "kind": "dispatch", "op": "mission_start", "flush_timer_ms": 400, "expect": "parity"},
     {"id": "mission_start_plane", "kind": "dispatch", "op": "mission_start", "plane": true, "flush_timer_ms": 400, "expect": "parity"},
     {"id": "mission_clear", "kind": "dispatch", "op": "mission_clear", "expect": "parity"},
+    {"id": "rally_clear", "kind": "dispatch", "op": "rally_clear", "expect": "parity"},
     {"id": "fence_clear", "kind": "dispatch", "op": "fence_clear", "expect": "parity"},
     {"id": "mission_set_current", "kind": "dispatch", "op": "mission_set_current", "data": {"wp_index": 5}, "expect": "parity"},
     {"id": "drop", "kind": "dispatch", "op": "drop", "expect": "parity"},
@@ -91,6 +96,7 @@
     {"id": "mission_download", "kind": "mission_download", "expect": "parity"},
     {"id": "mission_upload_flow", "kind": "mission_upload", "expect": "parity"},
     {"id": "fence_upload_flow", "kind": "fence_upload", "expect": "parity"},
+    {"id": "rally_upload_flow", "kind": "rally_upload", "expect": "parity"},
 
     {"id": "motor_test_bad_motor", "kind": "dispatch", "op": "motor_test", "data": {"motor": 9, "throttle": 10, "duration": 2}, "expect": "both_drop"},
     {"id": "guided_goto_null_island", "kind": "dispatch", "op": "guided_goto", "data": {"lat": 0, "lon": 0, "alt": 30}, "expect": "both_drop"},

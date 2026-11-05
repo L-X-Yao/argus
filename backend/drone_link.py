@@ -284,6 +284,7 @@ class DroneLink:
             self.mission._mission_pending = False
             self.mission._fence_pending = False
             self.mission._fence_clear_pending = False
+            self.mission._rally_clear_pending = False
             self.mission._rally_pending = False
             self.mission._dl_pending = False
             self.mission._dl_start_time = 0.0

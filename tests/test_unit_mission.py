@@ -193,7 +193,7 @@ class TestMissionDlTimeout:
         check_mission_dl_timeout(link)
         assert link.mission._rally_pending is False
         assert link.mission._rally_ul_start_time == 0.0
-        assert any("mission_ack_fail" in e.get("event_type", "") for e in link.events)
+        assert any("rally_ack_fail" in e.get("event_type", "") for e in link.events)
 
     def test_multiple_timeouts_fire_simultaneously(self):
         """All four watchdogs can fire in a single check_mission_dl_timeout call."""

@@ -20,7 +20,7 @@
  *   last   RTL (cmd 20)
  */
 
-import type { Waypoint } from './types';
+import type { RallyPoint, Waypoint } from './types';
 
 export interface MissionItem {
   seq: number;
@@ -144,6 +144,41 @@ export function validateFencePolygon(
       lon = Number(p.lon);
     if (!Number.isFinite(lat) || !Number.isFinite(lon)) return { ok: false, error: 'Invalid fence coordinates' };
     if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return { ok: false, error: 'Invalid fence coordinates' };
+  }
+  return { ok: true };
+}
+
+/**
+ * Rally points: MAV_CMD_NAV_RALLY_POINT (5100) in mission_type 2, altitude above
+ * home. Mirrors backend/commands/_mission.py:_upload_rally and send_rally_item_int.
+ */
+export function buildRallyItems(points: RallyPoint[]): MissionItem[] {
+  return points.map((p, i) => ({
+    seq: i,
+    command: 5100,
+    frame: 3,
+    current: 0,
+    autocontinue: 1,
+    p1: 0,
+    p2: 0,
+    p3: 0,
+    p4: 0,
+    x: Math.trunc(p.lat * 1e7),
+    y: Math.trunc(p.lon * 1e7),
+    z: p.alt,
+  }));
+}
+
+// The FC refuses these one item in (MissionItemProtocol_Rally.cpp:63-69), so catch them first.
+export function validateRallyPoints(points: RallyPoint[]): { ok: true } | { ok: false; error: string } {
+  if (points.length === 0) return { ok: false, error: 'No rally points' };
+  for (const p of points) {
+    const lat = Number(p.lat),
+      lon = Number(p.lon),
+      alt = Number(p.alt);
+    if (!(lat >= -90 && lat <= 90) || !(lon >= -180 && lon <= 180) || !(alt >= -32768 && alt <= 32767)) {
+      return { ok: false, error: 'Invalid rally point' };
+    }
   }
   return { ok: true };
 }

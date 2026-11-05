@@ -51,11 +51,10 @@ def _frontend_sendcommand_literals() -> set[str]:
 KNOWN_FRONTEND_ORPHANS: set[str] = set()
 KNOWN_BACKEND_ORPHANS: set[str] = {
     # Dispatch entries with no frontend caller. Kept because either NTRIP-side
-    # infrastructure (inject_rtcm), planned UI work (param_load, rally_upload),
+    # infrastructure (inject_rtcm), planned UI work (param_load),
     # or sim/headless override (set_vtype) depends on them being available.
     "inject_rtcm",
     "param_load",
-    "rally_upload",
     "set_vtype",
 }
 
