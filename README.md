@@ -14,9 +14,9 @@
 
 ## What & Why
 
-Argus is a universal **web GCS** — one browser interface for MAVLink drones, on any platform (desktop, tablet, mobile), in 10 languages. No install, no native dependencies, just open a URL and fly.
+Argus is a universal **web GCS** — one browser interface for MAVLink drones, on any platform (desktop, tablet, mobile), in 10 languages. There is no hosted version yet: run the Python backend, or unzip the Windows package (Python included), then open it in a browser.
 
-> **Status**: ArduPilot is production-tested today. PX4 has frontend adapter scaffolding in `src/lib/fc/` and the backend reads `HEARTBEAT.autopilot`, but end-to-end wiring is incomplete — see `CLAUDE.md ## PX4 Status`.
+> **Status**: ArduPilot is verified on ArduCopter SITL in CI and on a real flight controller on the bench, but Argus has not been through proper flight testing. PX4 has frontend adapter scaffolding in `src/lib/fc/` and the backend reads `HEARTBEAT.autopilot`, but end-to-end wiring is incomplete — see `CLAUDE.md ## PX4 Status`.
 
 Why another GCS:
 
@@ -26,14 +26,14 @@ Why another GCS:
 | Mission Planner | Windows-only, legacy UI |
 | Cloud platforms (FlytBase, ADOS) | Vendor lock-in, closed source |
 
-Argus fills the gap: **open-source + web-native + white-label ready**.
+Argus fills the gap: **open-source + web-native**.
 
 ## Features
 
 | Category | Features |
 |---|---|
 | **Connections** | TCP / UDP / Serial / WebSerial (browser-direct USB, no backend needed for telemetry + basic control) |
-| **Protocols** | MAVLink v2 (ArduPilot production-tested; PX4 adapter scaffolded, unwired) |
+| **Protocols** | MAVLink v2 (ArduPilot verified on SITL and on the bench, not flight-tested; PX4 adapter scaffolded, unwired) |
 | **Vehicles** | Copter, Plane, VTOL, Rover, Sub |
 | **Map** | 8 tile sources (Amap, Google, OSM, Esri, CartoDB, Tianditu) + 3D terrain (MapLibre GL) + offline mbtiles |
 | **Mission** | WP / Spline / Loiter / Survey grid / Crosshatch / Spiral / Orbit + terrain profile with clearance check |

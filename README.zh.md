@@ -14,9 +14,9 @@
 
 ## 定位
 
-Argus 是一个通用 **Web 地面站** —— 一个浏览器界面控制 MAVLink 无人机，支持桌面 / 平板 / 手机，内置 10 种语言，无需安装，打开网址即可使用。
+Argus 是一个通用 **Web 地面站** —— 一个浏览器界面控制 MAVLink 无人机，支持桌面 / 平板 / 手机，内置 10 种语言。目前没有托管版本：运行 Python 后端，或解压 Windows 发布包（已内置 Python），再用浏览器打开。
 
-> **当前状态**：ArduPilot 已在生产环境验证。PX4 前端适配器已搭建，后端可读取 `HEARTBEAT.autopilot` 字节，但端到端链路尚未贯通 —— 详见 `CLAUDE.md ## PX4 Status`。
+> **当前状态**：ArduPilot 已通过 CI 中的 ArduCopter SITL 和真实飞控台架验证，尚未经过正式飞行测试。PX4 前端适配器已搭建，后端可读取 `HEARTBEAT.autopilot` 字节，但端到端链路尚未贯通 —— 详见 `CLAUDE.md ## PX4 Status`。
 
 为什么还需要一个 GCS：
 
@@ -26,14 +26,14 @@ Argus 是一个通用 **Web 地面站** —— 一个浏览器界面控制 MAVLi
 | Mission Planner | 仅 Windows，传统 UI |
 | 云平台 (FlytBase, ADOS) | 厂商锁定，闭源 |
 
-Argus 填补空缺：**开源 + Web 原生 + 支持白标定制**。
+Argus 填补空缺：**开源 + Web 原生**。
 
 ## 功能一览
 
 | 分类 | 功能 |
 |---|---|
 | **连接** | TCP / UDP / Serial / WebSerial（浏览器直连 USB，遥测和基础控制无需后端） |
-| **协议** | MAVLink v2（ArduPilot 生产验证；PX4 适配器已搭建，未接入） |
+| **协议** | MAVLink v2（ArduPilot 已做 SITL 和台架验证，未正式试飞；PX4 适配器已搭建，未接入） |
 | **机型** | 多旋翼、固定翼、VTOL、地面车、水下潜航器 |
 | **地图** | 8 种图源（高德、Google、OSM、Esri、CartoDB、天地图）+ 3D 地形（MapLibre GL）+ 离线 mbtiles |
 | **航线** | 航点 / 曲线 / 盘旋 / 测绘网格 / 交叉 / 螺旋 / 环绕 + 地形剖面与净空检查 |
