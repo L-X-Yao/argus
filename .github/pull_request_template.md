@@ -10,3 +10,5 @@
 - [ ] `ruff check backend/ scripts/ tests/` — lint clean
 - [ ] Commit messages follow `<type>: <description>` convention
 - [ ] FC-coupled code cites upstream ArduPilot/PX4 source `file:line`
+- [ ] Changes to what goes to or comes from the FC land on both links, or `docs/VERIFICATION.md` shows `n/a`
+- [ ] `docs/VERIFICATION.md` matches what was actually run

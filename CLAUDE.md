@@ -5,7 +5,7 @@ Web-based MAVLink ground control station. ArduPilot only (PX4 unwired — see be
 ## Build & Test
 
 ```bash
-npm install && pip install -e .        # deps
+npm install && pip install -e '.[dev]' # deps
 python run.py --sim                    # backend + simulator
 npm run dev                            # frontend dev server :5173
 
@@ -13,11 +13,14 @@ npx svelte-check --tsconfig ./tsconfig.json   # 0 errors 0 warnings
 npx vitest run                                # frontend tests
 python -m pytest tests/test_unit_*.py tests/test_contract_*.py  # backend tests
 ruff check backend/ scripts/ tests/           # Python lint
+make test-integration                         # backend + simulator, about 3 min
 ```
+
+`CONTRIBUTING.md` holds the full rules: CI limits, both links, tests, review, verification status, releases.
 
 ## Commit Convention
 
-`<type>: <imperative description>` — types: feat / fix / refactor / test / docs / ci / chore
+`<type>: <imperative description>` — types: feat / fix / perf / refactor / test / docs / ci / chore. `scripts/make-release.sh` writes the `release:` commit.
 
 ## Protocol Code Discipline
 

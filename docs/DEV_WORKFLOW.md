@@ -66,9 +66,11 @@ replay_into(link, "tests/fixtures/that_weird_calibration.tlog")
 assert link.get_state()["..."] == ...
 ```
 
-When a hardware session exposes a bug, copy its tlog into `tests/fixtures/`
-and pin the fixed behavior with a replay test. Frame builders for synthetic
-sessions live in `tests/frame_builders.py`.
+When a hardware session exposes a bug, scrub its tlog with
+`scripts/scrub_tlog.py`, copy it into `tests/fixtures/` and pin the fixed
+behavior with a replay test. Only do this with recordings from hardware you
+own and may publish. Frame builders for synthetic sessions live in
+`tests/frame_builders.py`.
 
 ### Calibration fixtures — recorded from real-firmware SITL
 

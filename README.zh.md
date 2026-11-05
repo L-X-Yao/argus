@@ -147,31 +147,36 @@ npx svelte-check --tsconfig ./tsconfig.json
 # Python 代码检查
 ruff check backend/ scripts/ tests/
 
-# E2E 测试（需要开发服务器）
-npx playwright test
+# 集成测试（自行启动后端和模拟器）
+make test-integration
 
 # 生产构建
 npm run build
+
+# E2E 测试（需要先生产构建，自行启动后端）
+npm run test:e2e -- --project=chromium
 ```
 
-**Git 钩子**（自动从 `.githooks/` 安装）：
-- **pre-commit**：ruff + svelte-check（约 3 秒）
-- **pre-push**：完整 vitest + pytest 测试门
+**Git 钩子**（每个克隆执行一次 `git config core.hooksPath .githooks` 启用）：
+- **pre-commit**：ruff + svelte-check
+- **pre-push**：vitest + pytest 单元和契约测试
 
 **深入文档**：
 
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) — 开发规范：CI 门槛、双链路、测试、评审、发布
 - [`CLAUDE.md`](CLAUDE.md) — 项目规范、PX4 状态、协议耦合纪律
-- [`docs/FEATURE_CHECKLIST.md`](docs/FEATURE_CHECKLIST.md) — 功能验证状态
+- [`docs/VERIFICATION.md`](docs/VERIFICATION.md) — 每项功能验证到什么程度
+- [`docs/FEATURE_CHECKLIST.md`](docs/FEATURE_CHECKLIST.md) — v3.4 功能快照，已冻结
 - [`docs/protocol_design.md`](docs/protocol_design.md) — 承重设计决策
 - [`docs/audits/`](docs/audits/) — 归档审计报告
 
 ## 发布
 
 ```bash
-bash scripts/make-release.sh 3.6.0
+bash scripts/make-release.sh X.Y.Z
 ```
 
-一条命令完成：同步 6 处版本号、提交、打 tag、推送。GitHub Actions 随后自动执行完整测试门、构建 Windows 安装包、生成 changelog、发布 GitHub Release 并上传产物。
+这条命令会同步所有版本号，运行前端、单元和契约测试，然后提交、打 tag、推送。GitHub Actions 随后重复 lint 和这些测试，构建 Windows 安装包，生成 changelog，发布 GitHub Release 并上传产物。Windows 安装包在发布前后还要人工检查，步骤见 [CONTRIBUTING.md](CONTRIBUTING.md#releases)。
 
 本地预览 changelog：
 
@@ -196,13 +201,14 @@ bash scripts/changelog.sh v3.5.0   # 查看 v3.5.0 以来的变更
 - 云台俯仰/偏航控制
 - Tag 触发的发布流程，自动生成 changelog
 
-**进行中 / 部分完成**
+**已列入计划**
 
-- PX4 端到端接入（后端已读取 `HEARTBEAT.autopilot`；前端适配器存在但尚未引入）
+- 集结点：界面和 WebSerial 上传（后端命令已有，尚无界面入口）
+- 固件刷写（APJ 解析 + Bootloader 协议）
+- PX4 端到端支持（后端已读取 `HEARTBEAT.autopilot`，目前拒绝 PX4；前端只有模式表）
 
 **未来计划**
 
-- 固件刷写（APJ 解析 + Bootloader 协议）
 - WebRTC 视频流（替代 RTSP 代理）
 - MQTT 云端中继，用于编队管理
 - MAVLink FTP，用于固件上传和 Lua 脚本管理

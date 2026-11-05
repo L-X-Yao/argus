@@ -149,31 +149,36 @@ npx svelte-check --tsconfig ./tsconfig.json
 # Python lint
 ruff check backend/ scripts/ tests/
 
-# E2E (requires dev server)
-npx playwright test
+# Integration tests (start their own backend and simulator)
+make test-integration
 
 # Production build
 npm run build
+
+# E2E (needs the production build; starts its own backend)
+npm run test:e2e -- --project=chromium
 ```
 
-**Git hooks** (auto-installed from `.githooks/`):
-- **pre-commit**: ruff + svelte-check (~3s)
-- **pre-push**: full vitest + pytest gate
+**Git hooks** (enable once per clone with `git config core.hooksPath .githooks`):
+- **pre-commit**: ruff + svelte-check
+- **pre-push**: vitest + pytest unit and contract tests
 
 **Deeper docs**:
 
+- [`CONTRIBUTING.md`](CONTRIBUTING.md) — development rules: CI limits, both links, tests, review, releases
 - [`CLAUDE.md`](CLAUDE.md) — project conventions, PX4 status, protocol-coupling discipline
-- [`docs/FEATURE_CHECKLIST.md`](docs/FEATURE_CHECKLIST.md) — feature verification status
+- [`docs/VERIFICATION.md`](docs/VERIFICATION.md) — how far every feature has been verified
+- [`docs/FEATURE_CHECKLIST.md`](docs/FEATURE_CHECKLIST.md) — feature snapshot from v3.4, frozen
 - [`docs/protocol_design.md`](docs/protocol_design.md) — load-bearing design decisions
 - [`docs/audits/`](docs/audits/) — archived audit reports
 
 ## Release
 
 ```bash
-bash scripts/make-release.sh 3.6.0
+bash scripts/make-release.sh X.Y.Z
 ```
 
-This single command bumps version across 6 files, commits, tags, and pushes. GitHub Actions then runs the full test gate, builds the Windows package, generates a changelog, and publishes a GitHub Release with artifacts.
+This command bumps the version everywhere it is stored, runs the frontend, unit and contract tests, commits, tags, and pushes. GitHub Actions then repeats lint and those tests, builds the Windows package, generates a changelog, and publishes a GitHub Release with artifacts. The Windows package is also checked by hand before and after: see [CONTRIBUTING.md](CONTRIBUTING.md#releases).
 
 Alternatively, to generate a changelog preview locally:
 
@@ -198,13 +203,14 @@ bash scripts/changelog.sh v3.5.0   # Changes since v3.5.0
 - Gimbal pitch/yaw control
 - Tag-triggered release workflow with auto-changelog
 
-**In progress / partial**
+**Planned**
 
-- PX4 end-to-end wiring (backend reads `HEARTBEAT.autopilot`; frontend adapter exists but no code path imports it yet)
+- Rally points: UI and WebSerial upload (the backend command exists, with no UI entry)
+- Firmware flashing (APJ parsing + bootloader protocol)
+- PX4 end-to-end support (backend reads `HEARTBEAT.autopilot` and refuses PX4 for now; frontend holds a mode table only)
 
 **Future**
 
-- Firmware flashing (APJ parsing + bootloader protocol)
 - WebRTC video streaming (replace RTSP proxy)
 - MQTT cloud relay for fleet management
 - MAVLink FTP for firmware upload and Lua script management
