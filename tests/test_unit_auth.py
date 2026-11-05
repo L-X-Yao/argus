@@ -301,6 +301,50 @@ class TestSessionCookie:
         assert closed.value.code == 4001
 
 
+class TestRequestsFromOtherPages:
+    """Without a token, a browser would otherwise let any website reach these routes."""
+
+    @pytest.mark.parametrize("origin", ["http://evil.example", "http://localhost:9999", "null"])
+    def test_write_from_a_foreign_origin_is_rejected(self, client, origin):
+        r = client.post("/api/tile_cache_clear", headers={"origin": origin})
+        assert r.status_code == 403
+
+    def test_foreign_page_cannot_lock_the_operator_out(self, client):
+        r = client.post("/api/auth/generate", headers={"origin": "http://evil.example"})
+        assert r.status_code == 403
+        assert not TOKEN_FILE.exists()
+
+    @pytest.mark.parametrize("site", ["same-site", "cross-site"])
+    def test_image_load_from_another_page_is_rejected(self, client, site):
+        r = client.get("/api/video/stop", headers={"sec-fetch-site": site, "sec-fetch-dest": "image"})
+        assert r.status_code == 403
+
+    @pytest.mark.parametrize("site", ["same-origin", "none"])
+    def test_own_page_passes(self, client, site):
+        assert client.get("/api/ports", headers={"sec-fetch-site": site}).status_code == 200
+
+    @pytest.mark.parametrize("origin", ["http://localhost:8100", "http://127.0.0.1:5173", "http://localhost:8100/"])
+    def test_write_from_an_allowed_origin_passes(self, client, origin):
+        r = client.post("/api/firmware/download", json={}, headers={"origin": origin})
+        assert r.json() == {"ok": False, "error": "Invalid params"}
+
+    def test_allowed_origin_on_another_port_passes(self, client):
+        headers = {"origin": "http://localhost:5173", "sec-fetch-site": "same-site"}
+        assert client.get("/api/ports", headers=headers).status_code == 200
+
+    def test_scripts_without_browser_headers_pass(self, client):
+        assert client.get("/api/ports").status_code == 200
+        assert client.post("/api/firmware/download", json={}).json() == {"ok": False, "error": "Invalid params"}
+
+    def test_request_with_authorization_skips_the_page_check(self, client):
+        headers = {"Authorization": "Bearer x", "origin": "http://evil.example"}
+        r = client.post("/api/firmware/download", json={}, headers=headers)
+        assert r.json() == {"ok": False, "error": "Invalid params"}
+
+    def test_routes_outside_the_api_are_not_checked(self, client):
+        assert client.get("/health", headers={"sec-fetch-site": "cross-site"}).status_code == 200
+
+
 class TestConcurrentAuth:
     def test_concurrent_verify_no_race(self):
         """Multiple threads verifying simultaneously should not corrupt state."""

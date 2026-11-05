@@ -84,13 +84,15 @@ def _verify_cookie(value: str) -> bool:
 
 
 def _from_own_page(request: Request) -> bool:
-    """Browsers attach the cookie on their own, and SameSite does not separate ports on one host."""
-    # Fetch metadata covers every request, image loads included, but browsers
-    # only send it on https and localhost. Origin covers writes everywhere.
-    if request.headers.get("sec-fetch-site", "same-origin") not in ("same-origin", "none"):
-        return False
+    """Tell our pages from other sites' pages, which a browser lets reach a local server."""
     origin = (request.headers.get("origin") or "").rstrip("/")
-    return request.method in SAFE_METHODS or not origin or origin in request.app.state.cors_origins
+    if origin in request.app.state.cors_origins:
+        return True
+    if origin and request.method not in SAFE_METHODS:
+        return False
+    # Fetch metadata also covers image loads, which carry no Origin, but browsers
+    # only send it on https and localhost.
+    return request.headers.get("sec-fetch-site", "same-origin") in ("same-origin", "none")
 
 
 def auth_required() -> bool:
@@ -98,10 +100,14 @@ def auth_required() -> bool:
 
 
 async def auth_middleware(request: Request, call_next):
-    if not auth_required():
-        return await call_next(request)
     # Not request.url.path: older Starlette builds it from the Host header.
     path = request.scope["path"]
+    # Holds with or without a token. Another site's page cannot set Authorization
+    # without a CORS preflight, so a request that carries it is not such a page.
+    if path.startswith("/api/") and "Authorization" not in request.headers and not _from_own_page(request):
+        return JSONResponse(status_code=403, content={"error": "origin not allowed"})
+    if not auth_required():
+        return await call_next(request)
     # `/sw.js` and `/manifest.json` MUST be reachable without an Authorization
     # header — browsers don't send auth on service-worker installs or manifest
     # fetches, and a 401 here breaks PWA install/refresh entirely.
@@ -121,8 +127,6 @@ async def auth_middleware(request: Request, call_next):
         return await call_next(request)
     if not _verify_cookie(request.cookies.get(COOKIE_NAME, "")):
         return JSONResponse(status_code=401, content={"error": "unauthorized"})
-    if not _from_own_page(request):
-        return JSONResponse(status_code=403, content={"error": "origin not allowed"})
     return await call_next(request)
 
 
