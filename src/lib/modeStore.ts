@@ -153,4 +153,3 @@ export function getModeEntries(vtype: VehicleType): [number, string][] {
     .map(([id, m]) => [Number(id), m.en] as [number, string])
     .sort((a, b) => a[0] - b[0]);
 }
-

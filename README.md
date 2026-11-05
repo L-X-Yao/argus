@@ -149,6 +149,9 @@ npx svelte-check --tsconfig ./tsconfig.json
 # Python lint
 ruff check backend/ scripts/ tests/
 
+# Formatting (npm run format fixes it)
+npm run format:check
+
 # Integration tests (start their own backend and simulator)
 make test-integration
 

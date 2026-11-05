@@ -147,6 +147,9 @@ npx svelte-check --tsconfig ./tsconfig.json
 # Python 代码检查
 ruff check backend/ scripts/ tests/
 
+# 格式检查（用 npm run format 修复）
+npm run format:check
+
 # 集成测试（自行启动后端和模拟器）
 make test-integration
 

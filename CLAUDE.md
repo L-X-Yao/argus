@@ -13,6 +13,7 @@ npx svelte-check --tsconfig ./tsconfig.json   # 0 errors 0 warnings
 npx vitest run                                # frontend tests
 python -m pytest tests/test_unit_*.py tests/test_contract_*.py  # backend tests
 ruff check backend/ scripts/ tests/           # Python lint
+npm run format:check                          # Prettier + ruff format
 make test-integration                         # backend + simulator, about 3 min
 ```
 

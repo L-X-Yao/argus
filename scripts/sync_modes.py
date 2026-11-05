@@ -131,7 +131,6 @@ def generate() -> str:
     lines.append("    .map(([id, m]) => [Number(id), m.en] as [number, string])")
     lines.append("    .sort((a, b) => a[0] - b[0]);")
     lines.append("}")
-    lines.append("")
 
     return "\n".join(lines) + "\n"
 

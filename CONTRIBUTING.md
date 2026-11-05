@@ -14,18 +14,19 @@ Enable the hooks once per clone with `git config core.hooksPath .githooks`. The 
 
 ## Before Submitting a PR
 
-All four must pass:
+All five must pass:
 
 ```bash
 npx svelte-check --tsconfig ./tsconfig.json   # 0 errors 0 warnings
 npx vitest run                                # frontend tests
 python -m pytest tests/test_unit_*.py tests/test_contract_*.py  # backend tests
 ruff check backend/ scripts/ tests/           # Python lint
+npm run format:check                          # Prettier + ruff format
 ```
 
 ## What CI Checks
 
-CI runs on every push to `main` and every PR. On top of the four checks above, it requires:
+CI runs on every push to `main` and every PR. On top of the five checks above, it requires:
 
 | Check | Requirement |
 | --- | --- |
@@ -97,7 +98,7 @@ All user-visible strings use `t('key')` from `src/lib/i18n.svelte.ts`. Add new k
 
 ## Formatting
 
-Prettier, `ruff format` and `.editorconfig` are configured, but no hook or CI job enforces them, and `npm run format:check` currently fails on existing files. Keep formatting changes out of unrelated commits.
+`npm run format` applies Prettier to `src/` and `ruff format` to the Python code, and CI fails on anything it would change. Run it after `scripts/sync_locales.py`, which writes long strings on one line.
 
 ## Releases
 

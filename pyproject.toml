@@ -31,7 +31,7 @@ dev = [
     "pytest-asyncio>=0.25.0",
     "httpx>=0.28.0",
     "pytest-cov>=6.0",
-    "ruff>=0.8.0",
+    "ruff>=0.17,<0.18",  # npm run format:check needs CI and local on one formatter
     "pymavlink>=2.4.49",
 ]
 

@@ -40,6 +40,9 @@ jobs:
       - name: Ruff lint
         run: ruff check backend/ scripts/ tests/
 
+      - name: Format check
+        run: npm run format:check
+
       - name: Python tests with coverage
         run: python -m pytest tests/test_unit_*.py tests/test_contract_*.py -v --cov=backend --cov-report=term-missing --cov-fail-under=95
 
