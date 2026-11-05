@@ -12,7 +12,6 @@ import type { MessageHandlers } from './mavlink';
 import {
   encodeHeartbeat,
   encodeCommandLong,
-  encodeSetMode,
   encodeParamRequestList,
   encodeParamRequestRead,
   encodeParamSet,
@@ -334,7 +333,7 @@ export function serialSendDisarm(): void {
 }
 
 export function serialSendMode(mode: number): void {
-  sendSerialFrame(11, encodeSetMode(serial.targetSysId, 0x01, mode));
+  serialSendCommandLong(176, 1, mode);
 }
 
 export function serialSendParamRequestAll(): void {

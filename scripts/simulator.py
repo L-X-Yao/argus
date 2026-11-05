@@ -609,7 +609,11 @@ class Simulator:
 
     def _handle_cmd(self, cmd, params):
         resp = []
-        if cmd == 400:
+        if cmd == 176:  # MAV_CMD_DO_SET_MODE
+            self.mode = int(params[1])
+            print("  [SIM] 模式 -> %s (%d)" % (COPTER_MODES.get(self.mode, "?"), self.mode))
+            resp.append(self.msg_command_ack(176, 0))
+        elif cmd == 400:
             if params[0] > 0.5:
                 if self.gps_fix >= 3:
                     self.armed = True

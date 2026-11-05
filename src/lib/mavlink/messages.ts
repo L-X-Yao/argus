@@ -640,15 +640,6 @@ export function encodeCommandLong(
   return buf;
 }
 
-export function encodeSetMode(targetSys: number, baseMode: number, customMode: number): Uint8Array {
-  const buf = new Uint8Array(6);
-  const dv = new DataView(buf.buffer);
-  dv.setUint32(0, customMode, true);
-  dv.setUint8(4, targetSys);
-  dv.setUint8(5, baseMode);
-  return buf;
-}
-
 export function encodeParamRequestList(targetSys: number, targetComp: number): Uint8Array {
   const buf = new Uint8Array(2);
   buf[0] = targetSys;

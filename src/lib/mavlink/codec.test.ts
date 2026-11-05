@@ -19,7 +19,6 @@ import {
   decodeVibration,
   encodeHeartbeat,
   encodeCommandLong,
-  encodeSetMode,
   encodeParamRequestList,
   encodeParamSet,
   encodeRequestDataStream,
@@ -563,15 +562,6 @@ describe('message encoders', () => {
     expect(dv.getUint8(32)).toBe(0); // confirmation
   });
 
-  it('encodeSetMode produces 6-byte payload', () => {
-    const sm = encodeSetMode(1, 209, 5);
-    expect(sm.length).toBe(6);
-    const dv = new DataView(sm.buffer);
-    expect(dv.getUint32(0, true)).toBe(5); // customMode
-    expect(dv.getUint8(4)).toBe(1); // targetSys
-    expect(dv.getUint8(5)).toBe(209); // baseMode
-  });
-
   it('encodeParamRequestList produces 2-byte payload', () => {
     const pl = encodeParamRequestList(1, 1);
     expect(pl.length).toBe(2);
@@ -856,17 +846,6 @@ describe('full round-trip (encode -> wire -> parse -> decode)', () => {
     const dv = frames[0].payload;
     expect(dv.getFloat32(0, true)).toBeCloseTo(1.0, 2);
     expect(dv.getUint16(28, true)).toBe(400);
-  });
-
-  it('SET_MODE round-trip preserves customMode', () => {
-    const payload = encodeSetMode(1, 209, 5);
-    const wire = encodeFrame(11, payload, 255, 0, 50);
-    const { frames } = parseFrames(wire);
-    expect(frames.length).toBe(1);
-    expect(frames[0].msgId).toBe(11);
-    const dv = frames[0].payload;
-    expect(dv.getUint32(0, true)).toBe(5);
-    expect(dv.getUint8(5)).toBe(209);
   });
 });
 

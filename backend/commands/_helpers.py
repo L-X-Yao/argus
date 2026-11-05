@@ -68,8 +68,10 @@ def send_cmd_int(
 
 
 def send_set_mode(link: DroneLink, mode: int) -> None:
-    payload = struct.pack("<IBB", mode, link.vehicle.sysid, 0x01)
-    link.send(bm(11, payload, link.sq, CRC_EXTRA[11]))
+    # MAV_CMD_DO_SET_MODE, not the SET_MODE message: the FC drops the result of that
+    # one (GCS_Common.cpp:2890 handle_set_mode), so a refused change went unreported.
+    # This one is acked (:5045 handle_command_do_set_mode). p1 = custom mode enabled.
+    send_cmd(link, 176, p1=1, p2=mode)
 
 
 def send_mission_count(link: DroneLink, count: int) -> None:

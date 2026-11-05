@@ -125,15 +125,10 @@ function decodeCommandLong(bytes: Uint8Array): CommandLong {
   };
 }
 
-function decodeSetMode(bytes: Uint8Array): { customMode: number; baseMode: number; targetSys: number } {
-  const { msgId, payload } = decodeFrame(bytes, 6);
-  expect(msgId).toBe(11); // SET_MODE
-  const dv = new DataView(payload.buffer, payload.byteOffset, payload.byteLength);
-  return {
-    customMode: dv.getUint32(0, true),
-    targetSys: dv.getUint8(4),
-    baseMode: dv.getUint8(5),
-  };
+function decodeSetMode(bytes: Uint8Array): { customMode: number; baseMode: number } {
+  const cmd = decodeCommandLong(bytes);
+  expect(cmd.command).toBe(176); // MAV_CMD_DO_SET_MODE
+  return { customMode: cmd.p2, baseMode: cmd.p1 };
 }
 
 function decodeMissionSetCurrent(bytes: Uint8Array): { seq: number } {
