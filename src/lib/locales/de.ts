@@ -1101,6 +1101,9 @@ const messages: Record<string, string> = {
   'ack.result.commandIntOnly': 'nur COMMAND_INT',
   'ack.result.unknown': 'unbekannt({n})',
   'pid.autoSaved': 'Jede Reglerbewegung geht sofort an den FC, der sie speichert',
+  'ortho.badCoords': 'Die NW-Ecke muss nördlich und westlich der SO-Ecke liegen',
+  'ortho.notKept':
+    'Überlagerung angewendet, aber das Bild ist zu groß zum Speichern und verschwindet beim Schließen der Seite',
 };
 
 export default messages;

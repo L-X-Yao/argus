@@ -1095,6 +1095,8 @@ const messages: Record<string, string> = {
   'ack.result.commandIntOnly': 'COMMAND_INT فقط',
   'ack.result.unknown': 'غير معروف({n})',
   'pid.autoSaved': 'يُرسَل كل تغيير في المنزلق فورًا إلى المتحكم الذي يحفظه',
+  'ortho.badCoords': 'يجب أن تقع الزاوية الشمالية الغربية شمال وغرب الزاوية الجنوبية الشرقية',
+  'ortho.notKept': 'طُبِّقت الطبقة، لكن الصورة أكبر من أن تُحفظ وستختفي عند إغلاق الصفحة',
 };
 
 export default messages;

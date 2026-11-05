@@ -1100,6 +1100,8 @@ const messages: Record<string, string> = {
   'ack.result.commandIntOnly': 'apenas COMMAND_INT',
   'ack.result.unknown': 'desconhecido({n})',
   'pid.autoSaved': 'Cada ajuste vai na hora para a controladora, que o guarda',
+  'ortho.badCoords': 'O canto NO deve ficar ao norte e a oeste do canto SE',
+  'ortho.notKept': 'Sobreposição aplicada, mas a imagem é grande demais para guardar: ela some ao fechar a página',
 };
 
 export default messages;

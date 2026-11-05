@@ -12,6 +12,7 @@
   import WaypointLayer from '../layers/WaypointLayer.svelte';
   import GuidedLayer from '../layers/GuidedLayer.svelte';
   import FenceLayer from '../layers/FenceLayer.svelte';
+  import OrthoLayer from '../layers/OrthoLayer.svelte';
   import SurveyLayer from '../layers/SurveyLayer.svelte';
   import ReplayLayer from '../layers/ReplayLayer.svelte';
   import {
@@ -453,6 +454,7 @@
     <DroneLayer {map} {follow} trail={droneTrail} coord={toMap} />
     <WaypointLayer {map} coord={toMap} coordInv={fromMap} />
     <GuidedLayer {map} bind:target={guidedTarget} coord={toMap} />
+    <OrthoLayer {map} coord={toMap} />
     <FenceLayer {map} coord={toMap} />
     <SurveyLayer {map} coord={toMap} />
     <ReplayLayer {map} {follow} coord={toMap} />

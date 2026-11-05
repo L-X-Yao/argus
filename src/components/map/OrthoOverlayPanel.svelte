@@ -3,22 +3,10 @@
   import { t } from '../../lib/i18n.svelte';
   import { X, Image, Upload } from '@lucide/svelte';
   import Button from '$lib/components/ui/button/button.svelte';
+  import { addOrthoOverlay, ortho, removeOrthoOverlay, validOrthoBounds } from '../../lib/orthoOverlays.svelte';
 
   let { onclose }: { onclose: () => void } = $props();
 
-  const STORAGE_KEY = 'argus_ortho_overlays';
-
-  interface OrthoOverlay {
-    id: number;
-    dataUrl: string;
-    nwLat: number;
-    nwLon: number;
-    seLat: number;
-    seLon: number;
-    opacity: number;
-  }
-
-  let overlays: OrthoOverlay[] = $state(loadOverlays());
   let nwLat = $state(0);
   let nwLon = $state(0);
   let seLat = $state(0);
@@ -26,23 +14,6 @@
   let opacity = $state(80);
   let pendingDataUrl = $state('');
   let pendingFileName = $state('');
-
-  function loadOverlays(): OrthoOverlay[] {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) return parsed;
-      }
-    } catch {}
-    return [];
-  }
-
-  function persist() {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(overlays));
-    } catch {}
-  }
 
   function handleUpload(e: Event) {
     const input = e.target as HTMLInputElement;
@@ -71,16 +42,11 @@
       addToast(t('ortho.noCoords'), 'warn');
       return;
     }
-    overlays.push({
-      id: Date.now(),
-      dataUrl: pendingDataUrl,
-      nwLat,
-      nwLon,
-      seLat,
-      seLon,
-      opacity: opacity / 100,
-    });
-    persist();
+    if (!validOrthoBounds({ nwLat, nwLon, seLat, seLon })) {
+      addToast(t('ortho.badCoords'), 'warn');
+      return;
+    }
+    const kept = addOrthoOverlay({ dataUrl: pendingDataUrl, nwLat, nwLon, seLat, seLon, opacity: opacity / 100 });
     pendingDataUrl = '';
     pendingFileName = '';
     nwLat = 0;
@@ -88,15 +54,7 @@
     seLat = 0;
     seLon = 0;
     opacity = 80;
-    addToast(t('ortho.applied'), 'success');
-  }
-
-  function removeOverlay(id: number) {
-    const idx = overlays.findIndex((o) => o.id === id);
-    if (idx >= 0) {
-      overlays.splice(idx, 1);
-      persist();
-    }
+    addToast(t(kept ? 'ortho.applied' : 'ortho.notKept'), kept ? 'success' : 'warn');
   }
 </script>
 
@@ -203,12 +161,12 @@
       </Button>
 
       <!-- Active overlays list -->
-      {#if overlays.length > 0}
+      {#if ortho.overlays.length > 0}
         <div class="space-y-1">
           <div class="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-            {t('ortho.active')} ({overlays.length})
+            {t('ortho.active')} ({ortho.overlays.length})
           </div>
-          {#each overlays as ov (ov.id)}
+          {#each ortho.overlays as ov (ov.id)}
             <div class="flex items-center gap-2 bg-muted/20 rounded-lg p-2 group">
               <Image size={14} class="text-primary shrink-0" />
               <div class="flex-1 min-w-0">
@@ -221,7 +179,7 @@
               </div>
               <button
                 class="opacity-0 group-hover:opacity-100 transition-opacity p-1 text-destructive hover:bg-destructive/10 rounded"
-                onclick={() => removeOverlay(ov.id)}
+                onclick={() => removeOrthoOverlay(ov.id)}
               >
                 <X size={13} />
               </button>

@@ -1095,6 +1095,8 @@ const messages: Record<string, string> = {
   'ack.result.commandIntOnly': 'COMMAND_INT 전용',
   'ack.result.unknown': '알 수 없음({n})',
   'pid.autoSaved': '슬라이더를 바꾸면 바로 FC로 전송되어 저장됩니다',
+  'ortho.badCoords': '북서쪽 모서리는 남동쪽 모서리의 북서쪽에 있어야 합니다',
+  'ortho.notKept': '오버레이를 적용했지만 이미지가 너무 커서 저장할 수 없습니다. 페이지를 닫으면 사라집니다',
 };
 
 export default messages;

@@ -1100,6 +1100,9 @@ const messages: Record<string, string> = {
   'ack.result.commandIntOnly': 'solo COMMAND_INT',
   'ack.result.unknown': 'desconocido({n})',
   'pid.autoSaved': 'Cada cambio del control se envía al instante a la controladora, que lo guarda',
+  'ortho.badCoords': 'La esquina NO debe quedar al norte y al oeste de la esquina SE',
+  'ortho.notKept':
+    'Superposición aplicada, pero la imagen es demasiado grande para guardarla: desaparecerá al cerrar la página',
 };
 
 export default messages;

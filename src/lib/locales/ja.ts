@@ -1097,6 +1097,8 @@ const messages: Record<string, string> = {
   'ack.result.commandIntOnly': 'COMMAND_INT のみ',
   'ack.result.unknown': '不明({n})',
   'pid.autoSaved': 'スライダーの変更はすぐにFCへ送られ、FCに保存されます',
+  'ortho.badCoords': '北西の角は南東の角より北西にしてください',
+  'ortho.notKept': 'オーバーレイを適用しましたが、画像が大きすぎて保存できません。ページを閉じると消えます',
 };
 
 export default messages;

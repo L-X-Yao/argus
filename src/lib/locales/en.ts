@@ -1089,6 +1089,8 @@ const messages: Record<string, string> = {
   'ack.result.commandLongOnly': 'COMMAND_LONG only',
   'ack.result.commandIntOnly': 'COMMAND_INT only',
   'ack.result.unknown': 'unknown({n})',
+  'ortho.badCoords': 'The NW corner must lie north and west of the SE corner',
+  'ortho.notKept': 'Overlay applied, but the image is too large to keep: it goes when the page closes',
 };
 
 export default messages;

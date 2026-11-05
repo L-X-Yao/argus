@@ -32,7 +32,7 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 | Messages, backend | 34 | 28 | 1 | 0 | 5 | 0 | 0 |
 | Messages, WebSerial | 34 | 16 | 4 | 0 | 3 | 0 | 11 |
 | REST routes | 28 | 6 | 5 | 8 | 9 | 0 | 0 |
-| Panels | 77 | 13 | 0 | 21 | 26 | 17 | 0 |
+| Panels | 78 | 13 | 2 | 21 | 28 | 14 | 0 |
 | Platform | 40 | 8 | 3 | 7 | 15 | 4 | 3 |
 
 ## Commands / 飞控命令
@@ -196,6 +196,7 @@ Seven panels have code but no way to open them, marked in the Evidence column. T
 | `ToastContainer` | core | 查看操作提示消息 | Real FC | 2026-11-05 on both links |
 | `DroneLayer` | layers | 地图上看飞机位置 | Real FC | 2026-11-05 on both links |
 | `FenceLayer` | layers | 地图上看围栏范围 | None | No test |
+| `OrthoLayer` | layers | 在地图上显示正射图 | Tests only | Browser test, 2D map only |
 | `GuidedLayer` | layers | 地图上看引导目标 | None | No test |
 | `ReplayLayer` | layers | 地图上看回放位置 | None | No test |
 | `SurveyLayer` | layers | 地图上看测绘区域 | None | No test |
@@ -205,7 +206,7 @@ Seven panels have code but no way to open them, marked in the Evidence column. T
 | `Map3DView` | map | 三维地图查看编辑 | Simulator | e2e: map3d |
 | `Mission3DPanel` | map | 三维预览航线 | None | No test |
 | `OfflineMapPanel` | map | 下载离线地图瓦片 | None | No test |
-| `OrthoOverlayPanel` | map | 叠加正射图 | None | No test. No way to open it |
+| `OrthoOverlayPanel` | map | 叠加正射图 | Tests only | Browser test: image reaches the map, survives a reload, wrong corners refused |
 | `CorridorPanel` | mission | 生成走廊扫描航线 | None | No test |
 | `FencePanel` | mission | 绘制上传地理围栏 | Real FC | 2026-11-05, Clear on FC through the panel on WebSerial |
 | `MissionPanel` | mission | 编辑上传任务航点 | Simulator | e2e: mission, connected-flow |
@@ -223,7 +224,7 @@ Seven panels have code but no way to open them, marked in the Evidence column. T
 | `AiAnnotationPanel` | planning | 标注图像缺陷 | None | No test. Auto-detect is a stub. No way to open it |
 | `AiPlannerPanel` | planning | 文字生成航线 | None | No test. Rule-based parser, not an LLM. No way to open it |
 | `AnnotationPanel` | planning | 记录地图标注点 | None | No test |
-| `CustomDashboard` | planning | 自定义仪表 | None | No test. No way to open it |
+| `CustomDashboard` | planning | 自定义仪表 | SITL | WebSerial CI, live values |
 | `OverlapCalcPanel` | planning | 计算相机重叠率 | None | No test |
 | `SchedulerPanel` | planning | 定时执行任务 | Tests only | Logic: scheduler. No way to open it |
 | `ScriptPanel` | planning | 运行用户脚本 | Tests only | Logic: ws. No way to open it |
@@ -233,7 +234,7 @@ Seven panels have code but no way to open them, marked in the Evidence column. T
 | `FrameSelectPanel` | setup | 选择机架类型 | Tests only | Logic: paramStore |
 | `MotorTestPanel` | setup | 逐个测试电机 | Tests only | Logic: transport.dispatch |
 | `NtripPanel` | setup | 接入RTK | Simulator | e2e: command-palette. Opens; no real base station |
-| `PositionSourcePanel` | setup | 查看定位源 | None | No test. No way to open it |
+| `PositionSourcePanel` | setup | 查看定位源 | SITL | WebSerial CI, GPS and EKF rows |
 | `RcCalibPanel` | setup | 校准遥控器行程 | Tests only | Logic: transport.parity |
 | `SetupWizard` | setup | 按向导完成初始设置 | Tests only | Logic: panels |
 | `CommandPalette` | shared | 搜索并执行命令 | Simulator | e2e: command-palette, keyboard |
@@ -315,7 +316,7 @@ Seven panels have code but no way to open them, marked in the Evidence column. T
 4. **RTK, gimbal, camera and ADS-B.** These need hardware that has not been available.
 5. **Vehicles other than Copter.** Only Copter runs in CI.
 6. **WebSerial in Chrome on Windows.** The 2026-11-05 run used Chromium on Linux with the port chooser automated.
-7. **Seven panels nobody can open.** Scripts, scheduler, custom dashboard, position source, ortho overlay, AI planner and AI annotation exist in code only.
+7. **Four panels nobody can open.** Scripts, scheduler, AI planner and AI annotation exist in code only.
 
 1. **真实飞行。** 没有飞过。下面都只是台架或仿真结果。
 2. **真机上的解锁、起飞、返航、开始任务。** 只在 SITL 跑过。这些需要接电池，要单独安排。
@@ -323,7 +324,7 @@ Seven panels have code but no way to open them, marked in the Evidence column. T
 4. **RTK、云台、相机、ADS-B。** 缺硬件。
 5. **多旋翼以外的机型。** CI 只跑多旋翼。
 6. **Windows 上 Chrome 的 WebSerial。** 2026-11-05 的测试用的是 Linux 上的 Chromium，端口选择由脚本代替。
-7. **7 个打不开的面板。** 脚本、定时任务、自定义仪表、定位源、正射叠加、AI 规划、AI 标注只存在于代码中。
+7. **4 个打不开的面板。** 脚本、定时任务、AI 规划、AI 标注只存在于代码中。
 
 ## Keeping this file honest / 维护规则
 

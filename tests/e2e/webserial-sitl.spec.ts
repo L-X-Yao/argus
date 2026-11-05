@@ -62,6 +62,29 @@ test.afterAll(async () => {
   await page?.close();
 });
 
+async function openFromPalette(title: string) {
+  await page.keyboard.press('Control+k');
+  await page.locator('input[placeholder]').last().fill(title);
+  await page.waitForTimeout(300);
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('heading', { name: title })).toBeVisible({ timeout: 5000 });
+}
+
+test('the position source panel shows a healthy GPS and EKF', async () => {
+  await expect.poll(() => drone('ekf_flags'), { timeout: 60000 }).toBeGreaterThan(0);
+  await openFromPalette('定位源');
+  await expect(page.getByText(/\| \d+ sats/)).toBeVisible();
+  await expect(page.getByText(/flags: 0x[0-9a-f]+/)).toBeVisible();
+  await page.keyboard.press('Escape');
+  await page.mouse.click(5, 5);
+});
+
+test('the custom dashboard shows live values', async () => {
+  await openFromPalette('自定义仪表盘');
+  await expect(page.getByText('自稳').first()).toBeVisible();
+  await page.mouse.click(5, 5);
+});
+
 test('a refused arm shows an error', async () => {
   // LAND cannot be armed in: ArduCopter/mode.h ModeLand::allows_arming.
   await setMode(MODE.land);

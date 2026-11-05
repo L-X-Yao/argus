@@ -56,7 +56,8 @@
       labelKey: 'dashboard.voltage',
       unit: 'V',
       getValue: () => app.drone.voltage?.toFixed(1) ?? '--',
-      getStatus: () => ((app.drone.voltage ?? 99) < 21 ? 'bad' : (app.drone.voltage ?? 99) < 22.5 ? 'warn' : 'good'),
+      // The cell count is unknown here, so a voltage alone cannot be judged.
+      getStatus: () => 'neutral',
     },
     {
       id: 'current',

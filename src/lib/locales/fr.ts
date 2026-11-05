@@ -1102,6 +1102,9 @@ const messages: Record<string, string> = {
   'ack.result.commandIntOnly': 'COMMAND_INT uniquement',
   'ack.result.unknown': 'inconnu({n})',
   'pid.autoSaved': 'Chaque réglage part aussitôt vers le contrôleur, qui le conserve',
+  'ortho.badCoords': 'Le coin NO doit être au nord et à l’ouest du coin SE',
+  'ortho.notKept':
+    'Superposition appliquée, mais l’image est trop grande pour être conservée : elle disparaîtra à la fermeture de la page',
 };
 
 export default messages;

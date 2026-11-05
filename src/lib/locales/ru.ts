@@ -1100,6 +1100,8 @@ const messages: Record<string, string> = {
   'ack.result.commandIntOnly': 'только COMMAND_INT',
   'ack.result.unknown': 'неизвестно({n})',
   'pid.autoSaved': 'Каждое изменение сразу уходит на контроллер и сохраняется на нём',
+  'ortho.badCoords': 'Северо-западный угол должен быть севернее и западнее юго-восточного',
+  'ortho.notKept': 'Слой применён, но изображение слишком велико для сохранения и исчезнет при закрытии страницы',
 };
 
 export default messages;
