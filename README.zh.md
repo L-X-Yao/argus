@@ -7,7 +7,7 @@
 [![CI](https://github.com/L-X-Yao/argus/actions/workflows/ci.yml/badge.svg)](https://github.com/L-X-Yao/argus/actions/workflows/ci.yml)
 ![Version](https://img.shields.io/github/v/tag/L-X-Yao/argus?label=version&color=blue)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-![Tests](https://img.shields.io/badge/tests-1800%2B%20passing-brightgreen.svg)
+![Tests](https://img.shields.io/badge/tests-2100%2B%20passing-brightgreen.svg)
 ![i18n](https://img.shields.io/badge/i18n-10%20languages-orange.svg)
 
 <p align="center"><img src="docs/screenshots/hero.png" alt="Argus GCS — 地图、HUD 与遥测面板" width="900"></p>
@@ -26,7 +26,7 @@ Argus 是一个通用 **Web 地面站** —— 一个浏览器界面控制 MAVLi
 | Mission Planner | 仅 Windows，传统 UI |
 | 云平台 (FlytBase, ADOS) | 厂商锁定，闭源 |
 
-Argus 填补空缺：**开源 + Web 原生 + 协议无关 + 支持白标定制**。
+Argus 填补空缺：**开源 + Web 原生 + 支持白标定制**。
 
 ## 功能一览
 
@@ -48,7 +48,7 @@ Argus 填补空缺：**开源 + Web 原生 + 协议无关 + 支持白标定制**
 | **语音** | 10 语言本地化语音播报（模式、电量、高度、航点） |
 | **多语言** | 10 种语言（中/英/日/韩/德/法/西/葡/俄/阿）+ RTL |
 | **离线** | PWA + Service Worker，mbtiles 支持，瓦片缓存（5000 条 LRU） |
-| **桌面** | Tauri v2 打包（Windows MSI/NSIS 安装包） |
+| **桌面** | 已包含 Tauri v2 配置；应用图标尚未提交，CI 也未构建 |
 | **安全** | Token 认证，SSRF + 路径穿越防护，statustext 过滤 |
 
 ## 快速开始
@@ -97,7 +97,7 @@ python run.py --sim            # 同时启动后端 + simulator.py
 ```
 +------------------------------------------+
 |  浏览器 (Svelte 5 + TypeScript 6)        |
-|  78 组件 + 159 库文件, 22K 行             |
+|  77 组件, 26K 行                          |
 |  MAVLink v2 编解码器 (纯 TS)              |
 |  WebSerial 直连 USB                       |
 |  43 个懒加载面板 + 视图分割               |
@@ -105,9 +105,9 @@ python run.py --sim            # 同时启动后端 + simulator.py
 |          WebSocket (JSON 增量推送)        |
 +------------------------------------------+
 |  Python 后端 (FastAPI + uvicorn)          |
-|  29 模块, 4.9K 行                        |
-|  MAVLink 分发 + 32 消息处理器             |
-|  51 条命令, 瓦片/视频/固件 API            |
+|  31 模块, 6.2K 行                        |
+|  MAVLink 分发 + 33 消息处理器             |
+|  52 条命令, 瓦片/视频/固件 API            |
 +------------------------------------------+
 |          MAVLink v2                       |
 |  TCP / UDP / Serial                      |
@@ -129,7 +129,7 @@ python run.py --sim            # 同时启动后端 + simulator.py
 | `src/lib/survey.ts` | 测绘图案生成（网格、交叉、螺旋、环绕） |
 | `src/lib/i18n.svelte.ts` | 10 语言国际化，支持 RTL |
 | `backend/drone_link.py` | MAVLink 连接、帧解析、状态管理 |
-| `backend/commands/` | 51 条命令处理器（解锁、模式、航线、校准、云台、NTRIP 等） |
+| `backend/commands/` | 52 条命令处理器（解锁、模式、航线、校准、云台、NTRIP 等） |
 | `backend/config.py` | 集中配置（所有超时/端口/速率常量） |
 
 ## 开发
@@ -192,7 +192,6 @@ bash scripts/changelog.sh v3.5.0   # 查看 v3.5.0 以来的变更
 - NTRIP RTK 客户端（HTTP/1.0 + ICY-200，RTCM 流式注入）
 - 罗盘/加速度计/陀螺仪校准，二进制进度上报
 - 多语言 UI（10 种语言 + RTL）
-- Tauri v2 桌面打包
 - 双传输互斥锁（WS 后端 / WebSerial）
 - 云台俯仰/偏航控制
 - Tag 触发的发布流程，自动生成 changelog

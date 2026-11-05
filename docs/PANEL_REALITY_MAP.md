@@ -51,10 +51,10 @@ implemented" comment removed (the command has been implemented for a while).
   Panels calling `ws.sendCommand` directly are ws-only (they fail loud with a
   toast in serial-only mode).
 - **PX4 nuance.** `src/lib/fc/px4.ts` implements a real PX4 mode table
-  (main/sub-mode bit scheme) for the WebSerial path — so CLAUDE.md's "PX4
-  unwired" is accurate for the backend path only. The backend-side
-  unsupported-FC guard (75c3182) does not apply to WebSerial sessions.
-- **Test coverage shape.** All 31 vitest files are lib-level; there are zero
+  (main/sub-mode bit scheme), but both transports refuse FC-bound commands
+  from a non-ArduPilot autopilot: the backend since 75c3182, WebSerial since
+  2158d86.
+- **Test coverage shape.** All vitest files are lib-level; there are zero
   component-level tests. e2e exercises panels only through main flows
   (connection, control, params, mission, palette, navigation).
 

@@ -7,7 +7,7 @@
 [![CI](https://github.com/L-X-Yao/argus/actions/workflows/ci.yml/badge.svg)](https://github.com/L-X-Yao/argus/actions/workflows/ci.yml)
 ![Version](https://img.shields.io/github/v/tag/L-X-Yao/argus?label=version&color=blue)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-![Tests](https://img.shields.io/badge/tests-1800%2B%20passing-brightgreen.svg)
+![Tests](https://img.shields.io/badge/tests-2100%2B%20passing-brightgreen.svg)
 ![i18n](https://img.shields.io/badge/i18n-10%20languages-orange.svg)
 
 <p align="center"><img src="docs/screenshots/hero.png" alt="Argus GCS — map, HUD, and telemetry" width="900"></p>
@@ -26,7 +26,7 @@ Why another GCS:
 | Mission Planner | Windows-only, legacy UI |
 | Cloud platforms (FlytBase, ADOS) | Vendor lock-in, closed source |
 
-Argus fills the gap: **open-source + web-native + protocol-agnostic + white-label ready**.
+Argus fills the gap: **open-source + web-native + white-label ready**.
 
 ## Features
 
@@ -48,7 +48,7 @@ Argus fills the gap: **open-source + web-native + protocol-agnostic + white-labe
 | **Audio** | Localized voice callouts (mode, battery, altitude, waypoints) in all 10 languages |
 | **i18n** | 10 languages (zh, en, ja, ko, de, fr, es, pt, ru, ar) + RTL |
 | **Offline** | PWA with service worker, mbtiles support, tile caching (5000-entry LRU) |
-| **Desktop** | Tauri v2 packaging (Windows MSI/NSIS installer) |
+| **Desktop** | Tauri v2 config included; app icons are not committed yet and no CI job builds it |
 | **Security** | Token auth, SSRF + path-traversal guards, statustext filtering |
 
 ## Quick Start
@@ -99,7 +99,7 @@ Open Argus in Chrome/Edge, click the **USB** button, pick your flight controller
 ```
 +------------------------------------------+
 |  Browser (Svelte 5 + TypeScript 6)       |
-|  78 components + 159 libs, 22K lines     |
+|  77 components, 26K lines                |
 |  MAVLink v2 codec (pure TS)              |
 |  WebSerial direct USB connection         |
 |  43 lazy-loaded panels + view splitting  |
@@ -107,9 +107,9 @@ Open Argus in Chrome/Edge, click the **USB** button, pick your flight controller
 |          WebSocket (JSON delta push)     |
 +------------------------------------------+
 |  Python Backend (FastAPI + uvicorn)      |
-|  29 modules, 4.9K lines                 |
-|  MAVLink dispatch + 32 message handlers  |
-|  51 commands, tile/video/firmware API    |
+|  31 modules, 6.2K lines                  |
+|  MAVLink dispatch + 33 message handlers  |
+|  52 commands, tile/video/firmware API    |
 +------------------------------------------+
 |          MAVLink v2                      |
 |  TCP / UDP / Serial                      |
@@ -131,7 +131,7 @@ Open Argus in Chrome/Edge, click the **USB** button, pick your flight controller
 | `src/lib/survey.ts` | Survey patterns (grid, crosshatch, spiral, orbit) |
 | `src/lib/i18n.svelte.ts` | 10-language i18n with RTL support |
 | `backend/drone_link.py` | MAVLink connection, frame parsing, state management |
-| `backend/commands/` | 51 command handlers (arm, mode, mission, calibration, gimbal, NTRIP, etc.) |
+| `backend/commands/` | 52 command handlers (arm, mode, mission, calibration, gimbal, NTRIP, etc.) |
 | `backend/config.py` | Centralized configuration (all timeouts/ports/rates) |
 
 ## Development
@@ -194,7 +194,6 @@ bash scripts/changelog.sh v3.5.0   # Changes since v3.5.0
 - NTRIP RTK client (HTTP/1.0 + ICY-200, RTCM streaming)
 - Compass/accel/gyro calibration with binary progress
 - Multi-language UI (10 locales + RTL)
-- Tauri v2 desktop packaging
 - Dual-transport mutex (WS backend / WebSerial)
 - Gimbal pitch/yaw control
 - Tag-triggered release workflow with auto-changelog

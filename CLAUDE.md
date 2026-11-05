@@ -32,4 +32,4 @@ Examples already in the codebase:
 
 ## PX4 Status
 
-Only ArduPilot is wired end-to-end. The backend reads the `autopilot` byte from HEARTBEAT and surfaces it as `drone.autopilot`, but nothing branches on it. A PX4 vehicle connecting today would show `MODE%d` for all modes, fail calibration handshakes, and misinterpret every command enum. PX4 support is greenfield work — weeks not days.
+Only ArduPilot is wired end-to-end. The backend and WebSerial both latch the `autopilot` byte from HEARTBEAT and refuse FC-bound commands from any other autopilot (`backend/commands/__init__.py:execute`), so a PX4 vehicle connecting today gets an error, not control. `src/lib/fc/px4.ts` holds a mode table and nothing else is wired. PX4 support is greenfield work — weeks not days.
