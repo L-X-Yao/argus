@@ -20,9 +20,7 @@ vi.mock('./i18n.svelte', () => ({
 vi.mock('./flightDb', () => ({ saveFlightRecord: (r: Record<string, unknown>) => H.flights.push(r) }));
 vi.mock('./transport', () => ({ serialWpIndex: (seq: number) => seq - 2 }));
 
-import { app } from './stores.svelte';
-import { handleParamBatch, paramState } from './paramStore.svelte';
-import { beginSerialSession, buildSerialHandlers, resetSerialSession } from './serialHandlers';
+import { buildSerialHandlers, resetSerialSession } from './serialHandlers';
 import type { MavFrame, MessageHandlers } from './mavlink';
 
 const frame = {} as MavFrame;
@@ -186,24 +184,6 @@ describe('serial session state', () => {
       const again = buildSerialHandlers();
       again.onHeartbeat!(heartbeat(false) as never, frame);
       expect(H.drone.flight_summary).toMatchObject({ duration: 10 });
-    });
-
-    it('stays the same flight when a connection follows a USB drop', () => {
-      h.onGlobalPositionInt!(position(34.2, 108.9) as never, frame);
-      handleParamBatch([{ name: 'A', value: 1, ptype: 9, index: 0, total: 1, received: 1 }]);
-      app.serialLinkLost = true;
-      beginSerialSession();
-      expect(H.drone.home_lat).toBe(34.2);
-      expect(paramState.list).toHaveLength(1);
-      app.serialLinkLost = false;
-    });
-
-    it('starts afresh on any other connection, parameters included', () => {
-      h.onGlobalPositionInt!(position(34.2, 108.9) as never, frame);
-      handleParamBatch([{ name: 'A', value: 1, ptype: 9, index: 0, total: 1, received: 1 }]);
-      beginSerialSession();
-      expect(H.drone.home_lat).toBe(0);
-      expect(paramState.list).toHaveLength(0);
     });
 
     it('forgets the vehicle when the user disconnects', () => {

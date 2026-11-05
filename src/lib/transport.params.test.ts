@@ -59,6 +59,7 @@ vi.mock('./logStore.svelte', () => ({
   cancelDownload: vi.fn(),
 }));
 vi.mock('./paramStore.svelte', () => ({
+  clearParams: vi.fn(),
   handleParamBatch: vi.fn((b: Record<string, unknown>[]) => {
     H.store.batches.push(...b);
   }),

@@ -57,6 +57,7 @@ import {
 } from './logStore.svelte';
 import type { LogEntry as LogEntryShape } from './logStore.svelte';
 import {
+  clearParams,
   handleParamBatch,
   handleParamsComplete,
   handleParamTimeout,
@@ -129,6 +130,9 @@ export async function connectSerial(baudRate: number, handlers: Partial<MessageH
     serial.handlers = handlers;
     serial.running = true;
     app.serialLinkLost = false;
+    // The board may have been swapped, even after a USB drop, and the backend link does
+    // the same on every connection: the 'connected' case in ws.ts.
+    clearParams();
     serial.seq = 0;
     serial.buf = new Uint8Array(0);
     serial.lastFrameAt = 0;

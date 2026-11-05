@@ -14,7 +14,6 @@ import { app, addEvent, addToast } from './stores.svelte';
 import { t, i18nState } from './i18n.svelte';
 import { getModeButtons, getModeName, vehicleType, type VehicleType } from './modeStore';
 import { saveFlightRecord } from './flightDb';
-import { clearParams } from './paramStore.svelte';
 import { serialWpIndex } from './transport';
 import { defaultState } from './types';
 
@@ -89,16 +88,6 @@ function newSession() {
 }
 
 let session = newSession();
-
-/**
- * A connection is starting. Back after a USB drop it is the same flight; anything else
- * may be a different vehicle, so its parameters go too, as in the 'connected' case of ws.ts.
- */
-export function beginSerialSession(): void {
-  if (app.serialLinkLost) return;
-  resetSerialSession();
-  clearParams();
-}
 
 /** The user ended the session: the next connection may be a different vehicle. */
 export function resetSerialSession(): void {

@@ -103,6 +103,7 @@ import {
 } from './mavlink/messages';
 import * as logStoreMock from './logStore.svelte';
 import { app } from './stores.svelte';
+import { handleParamBatch, paramState } from './paramStore.svelte';
 
 // ─────────────────────────────────────────────────────────────────────────
 // Frame helpers — wrap a payload in a real MAVLink 2 frame so transport's
