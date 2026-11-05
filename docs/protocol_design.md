@@ -130,20 +130,6 @@ exists without CRC_EXTRA" bug class is now caught statically by
 
 ---
 
-### 7. Auto-detect protocol scans first 256 bytes for magic, doesn't lock on byte 0
-
-**Looks wrong because:** "Just check the first two bytes" is the obvious
-implementation. The current code does a scan-and-resync.
-
-**Why it's correct:** A hot connect can catch a partial frame mid-stream
-(USB enumeration garbage, RS-485 echo, a previous half-sent MAVLink
-frame). Locking on byte 0 was wrong-protocol for the lifetime of the
-connection. The scan handles "leading garbage, then real magic".
-
-**Cited:** Commit `e2bc1d5`.
-
----
-
 ### 8. Frontend `src/components/params/*.svelte` panels seed local state from `getParam` ONCE via a `_loaded` flag
 
 **Looks wrong because:** Standard Svelte pattern is `let value = $derived(getParam(...))` — reactive over the param store.

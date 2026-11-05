@@ -6,10 +6,11 @@ agent output from a single audit pass — preserved here so future contributors
 can see what was checked, what was found, and what was deliberately deferred.
 
 Each report is dated by the file's mtime in the original /tmp scratch
-location; they were copied here verbatim and not re-edited.
+location; they were copied here verbatim and not re-edited, except that
+`audit_px4.md` lost its PL-Link sections when that transport was removed.
 
-The PL-Link transport these reports mention was removed in v3.7. References to
-it, and to `sim_pllink.py` (now `simulator.py`), are historical.
+PL-Link was removed in v3.7. Other references to it, and to `sim_pllink.py`
+(now `simulator.py`), are historical.
 
 ## Index
 

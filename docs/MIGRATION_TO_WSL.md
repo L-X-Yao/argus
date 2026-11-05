@@ -177,7 +177,7 @@ import sys; sys.path.insert(0, '.')
 import time
 from backend.drone_link import DroneLink
 link = DroneLink()
-ok = link.connect('/dev/ttyACM0', baudrate=115200, protocol='auto')
+ok = link.connect('/dev/ttyACM0', baudrate=115200)
 print(f"connect={ok}")
 time.sleep(3)
 st = link.get_state()

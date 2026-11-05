@@ -27,7 +27,7 @@ import {
   type Schedule,
 } from './scheduler.svelte';
 
-// Node test env has no localStorage — same stub pattern as migrate.test.ts.
+// Node test env has no localStorage.
 function makeStorage(): Storage {
   const store = new Map<string, string>();
   return {

@@ -114,7 +114,7 @@ async def test_copter():
     async with websockets.connect(WS_URL, max_size=2**20, open_timeout=30) as ws:
         # ── Connect ──
         print('\n[B1] Connect + GPS wait')
-        await ws.send(json.dumps({'type': 'connect', 'port': 'tcp:localhost:5760', 'baud': 57600, 'protocol': 'auto'}))
+        await ws.send(json.dumps({'type': 'connect', 'port': 'tcp:localhost:5760', 'baud': 57600}))
         cr = await wait_for(ws, lambda m: m.get('type') == 'connect_result', 10)
         record('connect', cr and cr.get('ok'))
         if not cr or not cr.get('ok'):

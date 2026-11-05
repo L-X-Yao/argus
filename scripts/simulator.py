@@ -735,13 +735,11 @@ def serve(port):
 
         sim.__init__()
         buf = b""
-        sq = 0
         last_hb = last_att = last_gps = last_sys = last_wp = last_rc = last_ekf = 0
         def tx(frame):
-            nonlocal sq
             try:
                 conn.sendall(frame)
-                sq += 1
+                sim.sq = (sim.sq + 1) & 0xFF
             except Exception:
                 raise ConnectionError
 

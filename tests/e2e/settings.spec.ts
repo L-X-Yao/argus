@@ -39,7 +39,7 @@ test.describe('Settings panel', () => {
     await page.keyboard.press('Control+s');
     await page.waitForTimeout(500);
 
-    const langSelect = page.locator('select').first();
+    const langSelect = page.locator('select', { has: page.locator('option[value="en"]') });
     await expect(langSelect).toBeVisible();
   });
 
