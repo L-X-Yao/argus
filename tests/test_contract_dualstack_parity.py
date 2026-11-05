@@ -74,7 +74,11 @@ def serial_dump(tmp_path_factory) -> dict[str, list[str]]:
     env = {**os.environ, "PARITY_DUMP_PATH": str(out)}
     result = subprocess.run(
         [node, str(vitest_mjs), "run", "src/lib/transport.parity.test.ts"],
-        capture_output=True, text=True, cwd=str(ROOT), timeout=180, env=env,
+        capture_output=True,
+        text=True,
+        cwd=str(ROOT),
+        timeout=180,
+        env=env,
     )
     if result.returncode != 0 or not out.exists():
         pytest.fail(f"vitest wire dump failed:\n{(result.stderr or result.stdout)[-1500:]}")
@@ -92,12 +96,18 @@ def _drive_upload(link: FakeLink, mission_type: int) -> None:
     assert count_msg.get_msgId() == 44, f"upload did not start with MISSION_COUNT: {count_msg}"
     for seq in range(count_msg.count):
         req = mavlink.MAVLink_mission_request_int_message(
-            target_system=255, target_component=1, seq=seq, mission_type=mission_type,
+            target_system=255,
+            target_component=1,
+            seq=seq,
+            mission_type=mission_type,
         )
         payload, pl = _encode_payload(req)
         handle_mission_request(payload, pl, link)
     ack = mavlink.MAVLink_mission_ack_message(
-        target_system=255, target_component=1, type=0, mission_type=mission_type,
+        target_system=255,
+        target_component=1,
+        type=0,
+        mission_type=mission_type,
     )
     payload, pl = _encode_payload(ack)
     handle_mission_ack(payload, pl, link)
@@ -135,7 +145,9 @@ def _backend_frames(op: dict) -> list[bytes]:
         commands.execute("mission_download", None, link, {})
     elif kind == "mission_upload":
         commands.execute(
-            "mission_upload", None, link,
+            "mission_upload",
+            None,
+            link,
             {"waypoints": FIXTURE["golden_waypoints"], "takeoff_alt": FIXTURE["golden_takeoff_alt"]},
         )
         _drive_upload(link, mission_type=0)
@@ -166,9 +178,7 @@ def _decode_fields(frame: bytes) -> dict:
 
 
 def _assert_frame_equal(op_id: str, idx: int, be: dict, fe: dict) -> None:
-    assert be["_type"] == fe["_type"], (
-        f"{op_id}[{idx}]: backend sent {be['_type']}, serial sent {fe['_type']}"
-    )
+    assert be["_type"] == fe["_type"], f"{op_id}[{idx}]: backend sent {be['_type']}, serial sent {fe['_type']}"
     for key, bv in be.items():
         fv = fe[key]
         if isinstance(bv, float) or isinstance(fv, float):
@@ -219,12 +229,8 @@ class TestDualStackParity:
         op = OPS[op_id]
         be_n = len(_backend_frames(op))
         fe_n = len(serial_dump[op_id])
-        assert be_n == op["backend_frames"], (
-            f"{op_id}: backend now sends {be_n} frames (pinned {op['backend_frames']})"
-        )
-        assert fe_n == op["serial_frames"], (
-            f"{op_id}: serial now sends {fe_n} frames (pinned {op['serial_frames']})"
-        )
+        assert be_n == op["backend_frames"], f"{op_id}: backend now sends {be_n} frames (pinned {op['backend_frames']})"
+        assert fe_n == op["serial_frames"], f"{op_id}: serial now sends {fe_n} frames (pinned {op['serial_frames']})"
 
     def test_gcs_identity_pinned(self, serial_dump: dict):
         """GCS source ids differ by design: backend frames carry (sysid 255,

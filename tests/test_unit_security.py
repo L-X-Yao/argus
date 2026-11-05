@@ -190,6 +190,7 @@ class TestWsInputSanitization:
         assert validate_port(12345) is False
         assert validate_port("bad\x00port") is False
 
+
 # ─── Path Traversal Tests ─────────────────────────────────────────
 
 

@@ -305,6 +305,7 @@ class TestDroneLinkConnect:
         fail_events = [e for e in link.events if e["event_type"] == "connect_fail"]
         assert len(fail_events) >= 1
 
+
 # ---------------------------------------------------------------------------
 # TestDroneLinkDisconnect
 # ---------------------------------------------------------------------------
@@ -490,6 +491,7 @@ class TestDroneLinkSend:
         frame = b"\xfd\x09\x00\x00\x01\x01\x01\x00\x00\x00"
         link.send(frame)
         mock_ser.write.assert_called_once_with(frame)
+
 
 # ---------------------------------------------------------------------------
 # TestDroneLinkGetState

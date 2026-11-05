@@ -45,8 +45,7 @@ interface ParityFrame {
 const fixturePath = fileURLToPath(new URL('../../tests/fixtures/parity_frames.json', import.meta.url));
 const fixture: { frames: ParityFrame[] } = JSON.parse(readFileSync(fixturePath, 'utf-8'));
 
-const fromHex = (hex: string): Uint8Array =>
-  new Uint8Array(hex.match(/.{2}/g)!.map((b) => parseInt(b, 16)));
+const fromHex = (hex: string): Uint8Array => new Uint8Array(hex.match(/.{2}/g)!.map((b) => parseInt(b, 16)));
 
 describe('dual-stack state-parity dump (FC → app.drone)', () => {
   it('decodes every fixture frame through the real serial inbound path', () => {

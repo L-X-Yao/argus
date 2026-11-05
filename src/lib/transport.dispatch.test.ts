@@ -76,7 +76,7 @@ import { connectSerial, disconnectSerial, dispatch } from './transport';
 
 interface DecodedFrame {
   msgId: number;
-  payload: Uint8Array;  // re-padded if zero-trimmed
+  payload: Uint8Array; // re-padded if zero-trimmed
 }
 
 function decodeFrame(bytes: Uint8Array, expectedPayloadLen?: number): DecodedFrame {
@@ -109,7 +109,7 @@ interface CommandLong {
 
 function decodeCommandLong(bytes: Uint8Array): CommandLong {
   const { msgId, payload } = decodeFrame(bytes, 33);
-  expect(msgId).toBe(76);  // COMMAND_LONG
+  expect(msgId).toBe(76); // COMMAND_LONG
   const dv = new DataView(payload.buffer, payload.byteOffset, payload.byteLength);
   return {
     p1: dv.getFloat32(0, true),
@@ -127,7 +127,7 @@ function decodeCommandLong(bytes: Uint8Array): CommandLong {
 
 function decodeSetMode(bytes: Uint8Array): { customMode: number; baseMode: number; targetSys: number } {
   const { msgId, payload } = decodeFrame(bytes, 6);
-  expect(msgId).toBe(11);  // SET_MODE
+  expect(msgId).toBe(11); // SET_MODE
   const dv = new DataView(payload.buffer, payload.byteOffset, payload.byteLength);
   return {
     customMode: dv.getUint32(0, true),
@@ -217,7 +217,7 @@ beforeEach(async () => {
   readLoopResolve = null;
   _isPlaneFlag = false;
   await connectSerial(115200, {});
-  writes.length = 0;  // discard boot frames
+  writes.length = 0; // discard boot frames
 });
 
 afterEach(async () => {
@@ -271,7 +271,7 @@ describe('_serialDispatch wire-byte semantics', () => {
     _isPlaneFlag = true;
     dispatch('takeoff', undefined, { alt: 50 });
     expect(writes.length).toBe(2);
-    expect(decodeSetMode(writes[0]).customMode).toBe(15);  // GUIDED
+    expect(decodeSetMode(writes[0]).customMode).toBe(15); // GUIDED
     const cmd = decodeCommandLong(writes[1]);
     expect(cmd.command).toBe(22);
     expect(cmd.p7).toBe(50);
@@ -292,7 +292,7 @@ describe('_serialDispatch wire-byte semantics', () => {
     _isPlaneFlag = false;
     dispatch('mission_start');
     expect(writes.length).toBe(1);
-    expect(decodeSetMode(writes[0]).customMode).toBe(3);  // Copter AUTO
+    expect(decodeSetMode(writes[0]).customMode).toBe(3); // Copter AUTO
     // Delay = cfg.MISSION_START_DELAY = 0.3s in backend/config.py.
     await vi.advanceTimersByTimeAsync(300);
     expect(writes.length).toBe(2);
@@ -304,16 +304,19 @@ describe('_serialDispatch wire-byte semantics', () => {
     vi.useFakeTimers();
     _isPlaneFlag = false;
     dispatch('mission_start');
-    expect(writes.length).toBe(1);  // SET_MODE
+    expect(writes.length).toBe(1); // SET_MODE
     // Tap again before the 300ms delay elapses — the first timer should be cancelled.
     await vi.advanceTimersByTimeAsync(100);
     dispatch('mission_start');
-    expect(writes.length).toBe(2);  // SET_MODE #2 fires immediately; cmd 300 NOT yet
+    expect(writes.length).toBe(2); // SET_MODE #2 fires immediately; cmd 300 NOT yet
     await vi.advanceTimersByTimeAsync(300);
     // After the full delay from the SECOND call, exactly one cmd 300 should land — not two.
     const cmd300Writes = writes.filter((w) => {
-      try { return decodeCommandLong(w).command === 300; }
-      catch { return false; }
+      try {
+        return decodeCommandLong(w).command === 300;
+      } catch {
+        return false;
+      }
     });
     expect(cmd300Writes.length).toBe(1);
     vi.useRealTimers();
@@ -340,8 +343,8 @@ describe('_serialDispatch wire-byte semantics', () => {
     expect(tgt.lat).toBeCloseTo(40.7128, 6);
     expect(tgt.lon).toBeCloseTo(-74.006, 6);
     expect(tgt.alt).toBe(100);
-    expect(tgt.typeMask).toBe(0x0FF8);
-    expect(tgt.frame).toBe(6);  // MAV_FRAME_GLOBAL_RELATIVE_ALT_INT
+    expect(tgt.typeMask).toBe(0x0ff8);
+    expect(tgt.frame).toBe(6); // MAV_FRAME_GLOBAL_RELATIVE_ALT_INT
   });
 
   it('guided_goto on Copter: GUIDED (4) then msg 86', () => {
@@ -371,7 +374,7 @@ describe('_serialDispatch wire-byte semantics', () => {
     dispatch('do_set_roi', undefined, { lat: 40.7, lon: -74, alt: 50 });
     const cmd = decodeCommandLong(writes[0]);
     expect(cmd.command).toBe(201);
-    expect(cmd.command).not.toBe(197);  // explicit anti-regression
+    expect(cmd.command).not.toBe(197); // explicit anti-regression
     expect(cmd.p1).toBe(3);
     expect(cmd.p5).toBeCloseTo(40.7, 3);
     expect(cmd.p6).toBeCloseTo(-74, 3);
@@ -383,7 +386,7 @@ describe('_serialDispatch wire-byte semantics', () => {
     dispatch('camera_trigger');
     const cmd = decodeCommandLong(writes[0]);
     expect(cmd.command).toBe(203);
-    expect(cmd.p5).toBe(1);  // shoot command — all zeros is a no-op
+    expect(cmd.p5).toBe(1); // shoot command — all zeros is a no-op
   });
 
   it('camera_video_start sends VIDEO_START_CAPTURE (2500) with p3=1 to match backend', () => {
@@ -459,10 +462,10 @@ describe('_serialDispatch wire-byte semantics', () => {
     dispatch('motor_test', undefined, { motor: 0, throttle: 10, duration: 2 });
     const cmd = decodeCommandLong(writes[0]);
     expect(cmd.command).toBe(209);
-    expect(cmd.p1).toBe(1);  // motor 0 (UI) → 1 (AP wire)
-    expect(cmd.p3).toBe(10);  // throttle %
-    expect(cmd.p4).toBe(2);   // duration s
-    expect(cmd.p5).toBe(1);   // motor count
+    expect(cmd.p1).toBe(1); // motor 0 (UI) → 1 (AP wire)
+    expect(cmd.p3).toBe(10); // throttle %
+    expect(cmd.p4).toBe(2); // duration s
+    expect(cmd.p5).toBe(1); // motor count
   });
 });
 

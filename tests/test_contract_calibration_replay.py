@@ -74,11 +74,7 @@ def _command_longs(frames: list[bytes]) -> list[bytes]:
 
 def _statustexts(frames: list[bytes]) -> list[str]:
     # STATUSTEXT (253): severity u8 @0, text char[50] @1
-    return [
-        _payload(f, 51)[1:51].split(b"\x00", 1)[0].decode(errors="replace")
-        for f in frames
-        if _mid(f) == 253
-    ]
+    return [_payload(f, 51)[1:51].split(b"\x00", 1)[0].decode(errors="replace") for f in frames if _mid(f) == 253]
 
 
 class TestMagcalFixtureWire:
@@ -143,11 +139,7 @@ class TestAccelcalFixtureWire:
         """cal_accel_next sends COMMAND_ACK(command=0, result=1) — the QGC
         dialect of AP_AccelCal::handle_command_ack (backend/commands/_setup.py
         cites the surprising semantics). Six positions -> at least six ACKs."""
-        acks = [
-            _payload(f, 3)
-            for f in _gcs_frames(ACCELCAL)
-            if _mid(f) == 77
-        ]
+        acks = [_payload(f, 3) for f in _gcs_frames(ACCELCAL) if _mid(f) == 77]
         matching = [p for p in acks if struct.unpack_from("<HB", p, 0) == (0, 1)]
         assert len(matching) >= 6
 

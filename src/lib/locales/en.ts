@@ -805,7 +805,8 @@ const messages: Record<string, string> = {
   'remote.status': 'Remote Status',
   'remote.clients': 'Connected Clients',
   'remote.latency': 'Latency',
-  'remote.hint': 'Copies this page URL only; remote access needs the backend reachable (same LAN / VPN / port-forward) — no built-in tunnel',
+  'remote.hint':
+    'Copies this page URL only; remote access needs the backend reachable (same LAN / VPN / port-forward) — no built-in tunnel',
   'role.pilot': 'Pilot',
   'role.observer': 'Observer',
   'role.commander': 'Commander',
@@ -958,7 +959,8 @@ const messages: Record<string, string> = {
   'sched.withAutoArm': ' (includes auto-arm)',
   'sched.skippedDeclined': 'Skipped this occurrence',
   'sched.skippedOffline': 'schedule due but no vehicle connected — skipped',
-  'airspace.demoData': 'Demo data: built-in sample airport list — not authoritative airspace data, do not use for compliance',
+  'airspace.demoData':
+    'Demo data: built-in sample airport list — not authoritative airspace data, do not use for compliance',
   'role.notEnforced': 'Roles are display-only for now — no command is restricted yet',
   'posSource.title': 'Position Sources',
   'posSource.sources': 'Position Sources',
@@ -1007,7 +1009,8 @@ const messages: Record<string, string> = {
   'panel.aiPlanner': 'AI Mission Planner',
   'panel.aiPlanner.desc': 'Describe a mission in natural language:',
   'panel.aiPlanner.placeholder': 'Describe your mission...',
-  'panel.aiPlanner.localNote': 'Local rule parser (works offline) — not a cloud LLM; recognizes a fixed set of command words',
+  'panel.aiPlanner.localNote':
+    'Local rule parser (works offline) — not a cloud LLM; recognizes a fixed set of command words',
   'panel.script': 'Script Engine',
   'panel.script.run': 'Run',
   'panel.script.running': 'Running...',

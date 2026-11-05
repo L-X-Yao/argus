@@ -210,10 +210,7 @@ class TestWsProtocolContract:
                 continue  # key-existence is covered by test_backend_keys_match
             value = state[key]
             if not _py_type_ok(ts_type, value):
-                mismatches.append(
-                    f"  {key}: expected TS '{ts_type}' "
-                    f"but got Python {type(value).__name__} = {value!r}"
-                )
+                mismatches.append(f"  {key}: expected TS '{ts_type}' but got Python {type(value).__name__} = {value!r}")
 
         assert not mismatches, (
             "\nBackend _build_state() values have wrong types for DroneState:\n"

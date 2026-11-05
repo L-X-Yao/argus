@@ -763,7 +763,8 @@ const messages: Record<string, string> = {
   'remote.status': '원격 상태',
   'remote.clients': '연결된 클라이언트',
   'remote.latency': '지연 시간',
-  'remote.hint': '이 페이지 URL만 복사합니다. 원격 접속은 백엔드 도달 가능성(동일 LAN / VPN / 포트 포워딩)이 필요하며 내장 터널은 없습니다',
+  'remote.hint':
+    '이 페이지 URL만 복사합니다. 원격 접속은 백엔드 도달 가능성(동일 LAN / VPN / 포트 포워딩)이 필요하며 내장 터널은 없습니다',
   'role.pilot': '조종사',
   'role.observer': '관찰자',
   'role.commander': '지휘관',
@@ -1072,7 +1073,8 @@ const messages: Record<string, string> = {
   'sched.withAutoArm': ' (자동 시동 포함)',
   'sched.skippedDeclined': '이번 실행을 건너뛰었습니다',
   'sched.skippedOffline': '예약 시간이 되었지만 기체가 연결되지 않아 건너뜀',
-  'airspace.demoData': '데모 데이터: 내장 공항 샘플 목록 — 공식 공역 데이터가 아니므로 규정 준수 판단에 사용하지 마세요',
+  'airspace.demoData':
+    '데모 데이터: 내장 공항 샘플 목록 — 공식 공역 데이터가 아니므로 규정 준수 판단에 사용하지 마세요',
   'role.notEnforced': '역할은 현재 표시용일 뿐 — 아직 어떤 명령도 제한되지 않습니다',
   'panel.aiPlanner.localNote': '로컬 규칙 파서(오프라인 작동) — 클라우드 LLM이 아니며 고정된 명령어 집합을 인식합니다',
 };

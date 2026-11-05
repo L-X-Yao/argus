@@ -73,7 +73,10 @@ _T = {
     "log_dl_done_part": ("日志: #%d 传输结束, 收到 %d KB (不完整)", "Log: #%d ended — %d KB received (incomplete)"),
     "log_dl_cancel": ("日志: 下载取消", "Log: download cancelled"),
     "log_dl_stall": ("日志: 传输停滞, 从 %d KB 处补发请求", "Log: transfer stalled — re-requesting from %d KB"),
-    "log_dl_stall_fail": ("日志: 补发无响应, 已中止(保留已收数据)", "Log: stalled after retries — aborted (partial data kept)"),
+    "log_dl_stall_fail": (
+        "日志: 补发无响应, 已中止(保留已收数据)",
+        "Log: stalled after retries — aborted (partial data kept)",
+    ),
     "log_dl_holes": ("日志: 检测到丢帧, 缺失 %d 字节(已零填充)", "Log: frame loss — %d bytes missing (zero-filled)"),
     "err_no_wp": ("无航点", "No waypoints"),
     "err_bad_coord": ("坐标无效", "Invalid coordinates"),

@@ -46,14 +46,26 @@ FRAMES = {f["id"]: f for f in FIXTURE["frames"]}
 
 # Absolute tolerances sized to get_state()'s rounding quantum (half step + slack).
 _TOL = {
-    "roll": 0.06, "pitch": 0.06, "yaw": 0.06,
-    "lat": 6e-8, "lon": 6e-8, "home_lat": 6e-8, "home_lon": 6e-8,
-    "alt_msl": 0.06, "alt_rel": 0.06, "vz": 0.06,
+    "roll": 0.06,
+    "pitch": 0.06,
+    "yaw": 0.06,
+    "lat": 6e-8,
+    "lon": 6e-8,
+    "home_lat": 6e-8,
+    "home_lon": 6e-8,
+    "alt_msl": 0.06,
+    "alt_rel": 0.06,
+    "vz": 0.06,
     "hdg": 0.51,
-    "voltage": 0.006, "current": 0.006,
-    "airspeed": 0.06, "climb": 0.06,
+    "voltage": 0.006,
+    "current": 0.006,
+    "airspeed": 0.06,
+    "climb": 0.06,
     "vibe": 0.06,
-    "ekf_vel": 6e-5, "ekf_pos_h": 6e-5, "ekf_pos_v": 6e-5, "ekf_compass": 6e-5,
+    "ekf_vel": 6e-5,
+    "ekf_pos_h": 6e-5,
+    "ekf_pos_v": 6e-5,
+    "ekf_compass": 6e-5,
 }
 
 
@@ -69,7 +81,11 @@ def state_dump(tmp_path_factory) -> dict[str, dict]:
     env = {**os.environ, "PARITY_STATE_DUMP_PATH": str(out)}
     result = subprocess.run(
         [node, str(vitest_mjs), "run", "src/lib/serialHandlers.parity.test.ts"],
-        capture_output=True, text=True, cwd=str(ROOT), timeout=180, env=env,
+        capture_output=True,
+        text=True,
+        cwd=str(ROOT),
+        timeout=180,
+        env=env,
     )
     if result.returncode != 0 or not out.exists():
         pytest.fail(f"vitest state dump failed:\n{(result.stderr or result.stdout)[-1500:]}")
@@ -107,9 +123,7 @@ def _assert_value(op_id: str, key: str, bv, tv, tol=None) -> None:
             _assert_value(op_id, f"{key}[{i}]", b, s, tol)
     elif tol is not None:
         assert not (isinstance(bv, float) and math.isnan(bv)), f"{op_id}.{key}: backend NaN"
-        assert bv == pytest.approx(tv, abs=tol), (
-            f"{op_id}.{key}: backend(ws)={bv} serial={tv} (tol {tol})"
-        )
+        assert bv == pytest.approx(tv, abs=tol), f"{op_id}.{key}: backend(ws)={bv} serial={tv} (tol {tol})"
     else:
         assert bv == tv, f"{op_id}.{key}: backend(ws)={bv!r} serial={tv!r}"
 
@@ -123,9 +137,7 @@ class TestDualStackStateParity:
         parser = mavlink.MAVLink(None)
         parser.robust_parsing = True
         msgs = parser.parse_buffer(bytes.fromhex(spec["hex"]))
-        assert msgs and msgs[0].get_type() == spec["msg"], (
-            f"{frame_id}: fixture hex no longer decodes as {spec['msg']}"
-        )
+        assert msgs and msgs[0].get_type() == spec["msg"], f"{frame_id}: fixture hex no longer decodes as {spec['msg']}"
 
     @pytest.mark.parametrize("frame_id", list(FRAMES))
     def test_state_parity(self, frame_id: str, state_dump: dict):

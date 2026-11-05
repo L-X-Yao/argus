@@ -138,13 +138,13 @@ describe('message handling', () => {
     mockWs.onopen?.(new Event('open'));
     const flightSummary = { duration: 120, max_alt: 50, max_speed: 10, total_dist: 300, bat_used: 20 };
     // Delta: has flight_summary but NOT vtype/fw_version
-    mockWs.onmessage?.(new MessageEvent('message', {
-      data: JSON.stringify({ type: 'state', flight_summary: flightSummary }),
-    }));
-    const { saveFlightRecord } = await import('./flightDb');
-    expect(saveFlightRecord).toHaveBeenCalledWith(
-      expect.objectContaining({ vtype: 'Quadrotor', fw: 'v4.3.0' }),
+    mockWs.onmessage?.(
+      new MessageEvent('message', {
+        data: JSON.stringify({ type: 'state', flight_summary: flightSummary }),
+      }),
     );
+    const { saveFlightRecord } = await import('./flightDb');
+    expect(saveFlightRecord).toHaveBeenCalledWith(expect.objectContaining({ vtype: 'Quadrotor', fw: 'v4.3.0' }));
   });
 
   it('flight_summary prefers msg.vtype/fw_version over app.drone fallback', async () => {
@@ -154,18 +154,18 @@ describe('message handling', () => {
     await freshConnect();
     mockWs.onopen?.(new Event('open'));
     const flightSummary = { duration: 120, max_alt: 50, max_speed: 10, total_dist: 300, bat_used: 20 };
-    mockWs.onmessage?.(new MessageEvent('message', {
-      data: JSON.stringify({
-        type: 'state',
-        flight_summary: flightSummary,
-        vtype: 'Plane',
-        fw_version: 'v4.5.0',
+    mockWs.onmessage?.(
+      new MessageEvent('message', {
+        data: JSON.stringify({
+          type: 'state',
+          flight_summary: flightSummary,
+          vtype: 'Plane',
+          fw_version: 'v4.5.0',
+        }),
       }),
-    }));
-    const { saveFlightRecord } = await import('./flightDb');
-    expect(saveFlightRecord).toHaveBeenCalledWith(
-      expect.objectContaining({ vtype: 'Plane', fw: 'v4.5.0' }),
     );
+    const { saveFlightRecord } = await import('./flightDb');
+    expect(saveFlightRecord).toHaveBeenCalledWith(expect.objectContaining({ vtype: 'Plane', fw: 'v4.5.0' }));
   });
 
   it('dispatches event messages', async () => {
@@ -191,8 +191,7 @@ describe('message handling', () => {
     // unsupported-autopilot gate) must not fail invisibly.
     await fire({ type: 'cmd_result', ok: false, error: 'unsupported autopilot (12): ArduPilot only' });
     const { addToast } = await import('./stores.svelte');
-    expect(addToast).toHaveBeenCalledWith(
-      'unsupported autopilot (12): ArduPilot only', 'error', 6000);
+    expect(addToast).toHaveBeenCalledWith('unsupported autopilot (12): ArduPilot only', 'error', 6000);
   });
 
   it('cmd_result success stays silent', async () => {

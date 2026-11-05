@@ -105,7 +105,9 @@ def generate() -> str:
     lines.append("  return _VTYPE_MAP[mavTypeRaw] ?? 'copter';")
     lines.append("}")
     lines.append("")
-    lines.append("export function getModeName(vtype: VehicleType, modeId: number, locale: 'en' | 'zh' = 'en'): string {")
+    lines.append(
+        "export function getModeName(vtype: VehicleType, modeId: number, locale: 'en' | 'zh' = 'en'): string {"
+    )
     lines.append("  return MODE_TABLES[vtype]?.[modeId]?.[locale] ?? `MODE${modeId}`;")
     lines.append("}")
     lines.append("")
@@ -118,7 +120,9 @@ def generate() -> str:
     lines.append("  return ids.map((id) => [id, getModeName(vtype, id, locale)]);")
     lines.append("}")
     lines.append("")
-    lines.append("export function getAllModes(vtype: VehicleType): { id: number; name: string; category: ModeCategory }[] {")
+    lines.append(
+        "export function getAllModes(vtype: VehicleType): { id: number; name: string; category: ModeCategory }[] {"
+    )
     lines.append("  const table = MODE_TABLES[vtype] ?? {};")
     lines.append("  return Object.entries(table)")
     lines.append("    .map(([id, m]) => ({ id: Number(id), name: m.en, category: m.category }))")

@@ -182,7 +182,9 @@ def cmd_log_download(link: DroneLink, param, data: dict):
     # ~700 KB/s USB link. Lost frames are re-requested from the coverage
     # intervals once the stream ends (handle_log_data gap-fill).
     lg._log_window_end = log_entry["size"]
-    link.send(bm(119, struct.pack("<IIHBB", 0, log_entry["size"], log_id, link.vehicle.sysid, 1), link.sq, CRC_EXTRA[119]))
+    link.send(
+        bm(119, struct.pack("<IIHBB", 0, log_entry["size"], log_id, link.vehicle.sysid, 1), link.sq, CRC_EXTRA[119])
+    )
 
 
 def cmd_log_cancel(link: DroneLink, param, data: dict):

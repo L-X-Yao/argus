@@ -48,7 +48,9 @@ from pymavlink import mavutil  # noqa: E402
 REPO = Path(__file__).resolve().parent.parent
 SITL_DIR = Path.home() / "sitl"
 BIN_URL = "https://firmware.ardupilot.org/Copter/stable/SITL_x86_64_linux_gnu/arducopter"
-PARM_URL = "https://raw.githubusercontent.com/ArduPilot/ardupilot/ArduCopter-stable/Tools/autotest/default_params/copter.parm"
+PARM_URL = (
+    "https://raw.githubusercontent.com/ArduPilot/ardupilot/ArduCopter-stable/Tools/autotest/default_params/copter.parm"
+)
 HOME = "-35.363261,149.165230,584,353"
 BACKEND_PORT = 8199
 WS_URL = f"ws://127.0.0.1:{BACKEND_PORT}/ws"
@@ -105,12 +107,17 @@ def boot_sitl() -> subprocess.Popen:
     # (AP_HAL_SITL/UARTDriver.cpp:117), our backend connects later.
     cmd = [
         str(SITL_DIR / "arducopter"),
-        "--model", "calibration",
-        "--speedup", "8",
+        "--model",
+        "calibration",
+        "--speedup",
+        "8",
         "-w",
-        "--serial0", "tcp:0",
-        "--defaults", str(SITL_DIR / "copter.parm"),
-        "--home", HOME,
+        "--serial0",
+        "tcp:0",
+        "--defaults",
+        str(SITL_DIR / "copter.parm"),
+        "--home",
+        HOME,
     ]
     proc = subprocess.Popen(
         cmd,
@@ -136,8 +143,18 @@ def boot_sitl() -> subprocess.Popen:
 def boot_backend() -> subprocess.Popen:
     be_log = RUN_DIR / "backend.log"
     proc = subprocess.Popen(
-        [sys.executable, "-m", "uvicorn", "backend.app:app",
-         "--host", "127.0.0.1", "--port", str(BACKEND_PORT), "--log-level", "info"],
+        [
+            sys.executable,
+            "-m",
+            "uvicorn",
+            "backend.app:app",
+            "--host",
+            "127.0.0.1",
+            "--port",
+            str(BACKEND_PORT),
+            "--log-level",
+            "info",
+        ],
         cwd=REPO,
         stdin=subprocess.DEVNULL,
         stdout=open(be_log, "w"),
@@ -145,6 +162,7 @@ def boot_backend() -> subprocess.Popen:
         start_new_session=True,
     )
     import urllib.error
+
     deadline = time.monotonic() + 30
     while time.monotonic() < deadline:
         if proc.poll() is not None:
@@ -170,15 +188,33 @@ class SimDriver:
         # SIMSTATE (164) is ground truth for convergence checks; stream it at
         # 10 Hz regardless of SR1_* stream-group defaults.
         self.conn.mav.command_long_send(
-            self.conn.target_system, self.conn.target_component,
-            mavutil.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL, 0,
-            164, 100000, 0, 0, 0, 0, 0)
+            self.conn.target_system,
+            self.conn.target_component,
+            mavutil.mavlink.MAV_CMD_SET_MESSAGE_INTERVAL,
+            0,
+            164,
+            100000,
+            0,
+            0,
+            0,
+            0,
+            0,
+        )
 
     def servo(self, n: int, pwm: int) -> None:
         self.conn.mav.command_long_send(
-            self.conn.target_system, self.conn.target_component,
-            mavutil.mavlink.MAV_CMD_DO_SET_SERVO, 0,
-            n, pwm, 0, 0, 0, 0, 0)
+            self.conn.target_system,
+            self.conn.target_component,
+            mavutil.mavlink.MAV_CMD_DO_SET_SERVO,
+            0,
+            n,
+            pwm,
+            0,
+            0,
+            0,
+            0,
+            0,
+        )
 
     @staticmethod
     def _norm(a: float) -> float:
@@ -253,8 +289,7 @@ async def session(drive) -> Path:
 
     before = set((REPO / "logs").glob("argus_*.tlog"))
     async with websockets.connect(WS_URL, max_size=None) as ws:
-        await ws.send(json.dumps(
-            {"type": "connect", "port": "tcp:localhost:5760", "baud": 57600}))
+        await ws.send(json.dumps({"type": "connect", "port": "tcp:localhost:5760", "baud": 57600}))
         deadline = time.monotonic() + 15
         ok = False
         while time.monotonic() < deadline:
@@ -312,12 +347,12 @@ async def drive_accelcal(ws, sim: SimDriver):
         # AP_AccelCal prompts "Place vehicle <pos> and press any key." via
         # STATUSTEXT (matched exactly by vehicle_test_suite.py:AccelCal).
         ev = await wait_event(
-            ws, lambda m: m.get("event_type") == "statustext" and "Place vehicle" in m.get("text", ""), 30)
+            ws, lambda m: m.get("event_type") == "statustext" and "Place vehicle" in m.get("text", ""), 30
+        )
         if ev is None:
             die(f"accelcal: no position prompt after {seen}")
         text = ev["text"]
-        side, (r, p, y) = next(
-            ((k, att) for k, att in ACCEL_POSES if k in text), (None, (None,) * 3))
+        side, (r, p, y) = next(((k, att) for k, att in ACCEL_POSES if k in text), (None, (None,) * 3))
         if side is None:
             die(f"accelcal: unrecognized prompt {text!r}")
         log(f"accelcal: prompt {i + 1} -> {side}")
@@ -330,7 +365,8 @@ async def drive_accelcal(ws, sim: SimDriver):
         if len(set(seen)) == 6:
             break
     final = await wait_event(
-        ws, lambda m: m.get("event_type") == "statustext" and "alibration" in m.get("text", ""), 30)
+        ws, lambda m: m.get("event_type") == "statustext" and "alibration" in m.get("text", ""), 30
+    )
     if not final or "successful" not in final.get("text", ""):
         die(f"accelcal did not succeed: {final and final.get('text')!r}, prompts={seen}")
     log(f"accelcal: successful after positions {seen}")

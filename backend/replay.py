@@ -46,7 +46,9 @@ def read_tlog(path: str, include_gcs: bool = False) -> list[tuple[int, bytes]]:
         (ts,) = struct.unpack_from(">Q", data, ofs)
         magic = data[ofs + 8]
         if magic != 0xFD:
-            raise ValueError("bad frame magic 0x%02X at byte %d in %s (not a MAVLink v2 tlog?)" % (magic, ofs + 8, path))
+            raise ValueError(
+                "bad frame magic 0x%02X at byte %d in %s (not a MAVLink v2 tlog?)" % (magic, ofs + 8, path)
+            )
         payload_len = data[ofs + 9]
         # MAVLink v2 framing: 10-byte header + payload + 2-byte CRC
         # (+13-byte signature when incompat flag 0x01 is set) — same layout

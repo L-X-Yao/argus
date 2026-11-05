@@ -43,30 +43,38 @@ class TestSyncLocalesEscaping:
     def test_apostrophe_escaped(self):
         import sys
         from pathlib import Path
+
         sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
         from sync_locales import _escape_ts
+
         assert _escape_ts("it's here") == r"it\'s here"
 
     def test_backslash_escaped(self):
         import sys
         from pathlib import Path
+
         sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
         from sync_locales import _escape_ts
+
         assert _escape_ts("path\\to\\file") == r"path\\to\\file"
 
     def test_plain_string_unchanged(self):
         import sys
         from pathlib import Path
+
         sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
         from sync_locales import _escape_ts
+
         assert _escape_ts("Hello World") == "Hello World"
 
     def test_escape_unescape_round_trip(self):
         """Running --write twice must not double-escape — _unescape_ts inverts _escape_ts."""
         import sys
         from pathlib import Path
+
         sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "scripts"))
         from sync_locales import _escape_ts, _unescape_ts
+
         for raw in ("it's here", "path\\to\\file", "Hello", "\\'", "'\\", "a\\b'c"):
             assert _unescape_ts(_escape_ts(raw)) == raw, f"round-trip failed for {raw!r}"
 
@@ -74,15 +82,16 @@ class TestSyncLocalesEscaping:
 class TestLocaleFormatStrings:
     # Matches Python %-format conversions: optional %(name), flags, width, .precision, length, then conversion letter.
     # Doesn't match %% — that's a literal percent, not a real specifier.
-    _CONVERSION = r'(?:\([^)]+\))?[-+#0 ]*\d*\.?\d*[hlL]?[diouxXeEfFgGcrsab]'
+    _CONVERSION = r"(?:\([^)]+\))?[-+#0 ]*\d*\.?\d*[hlL]?[diouxXeEfFgGcrsab]"
 
     def test_no_bare_double_percent_in_non_format_strings(self):
         """Strings with %% but no format specifier produce literal %% in the UI."""
         import re
-        has_format = re.compile(r'%' + self._CONVERSION)
+
+        has_format = re.compile(r"%" + self._CONVERSION)
         for key, (zh, en) in _T.items():
             for locale_str in (zh, en):
-                if '%%' in locale_str:
+                if "%%" in locale_str:
                     assert has_format.search(locale_str), (
                         f"Key '{key}' has '%%' but no format specifier — "
                         "use a single '%' instead, or add the matching specifier"
@@ -91,9 +100,12 @@ class TestLocaleFormatStrings:
     def test_format_arg_counts_match_between_locales(self):
         """zh and en strings for the same key should require the same number of format args."""
         import re
-        spec_re = re.compile(r'%(?:%|' + self._CONVERSION + ')')
+
+        spec_re = re.compile(r"%(?:%|" + self._CONVERSION + ")")
+
         def count_args(s):
-            return sum(1 for m in spec_re.finditer(s) if m.group() != '%%')
+            return sum(1 for m in spec_re.finditer(s) if m.group() != "%%")
+
         for key, (zh, en) in _T.items():
             assert count_args(zh) == count_args(en), (
                 f"Key '{key}': zh needs {count_args(zh)} args, en needs {count_args(en)}"

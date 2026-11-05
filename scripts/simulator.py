@@ -736,6 +736,7 @@ def serve(port):
         sim.__init__()
         buf = b""
         last_hb = last_att = last_gps = last_sys = last_wp = last_rc = last_ekf = 0
+
         def tx(frame):
             try:
                 conn.sendall(frame)

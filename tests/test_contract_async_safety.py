@@ -146,9 +146,7 @@ def _collect_violations(path: Path) -> list[str]:
                     prev_content_line = stripped
                     continue
                 rel = path.relative_to(ROOT)
-                violations.append(
-                    f"{rel}:{lineno}: async function contains blocking call ({pattern})"
-                )
+                violations.append(f"{rel}:{lineno}: async function contains blocking call ({pattern})")
 
         prev_content_line = stripped
 

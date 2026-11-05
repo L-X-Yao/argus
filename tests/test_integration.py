@@ -118,6 +118,7 @@ class TestConnection:
 
         asyncio.get_event_loop().run_until_complete(run())
 
+
 class TestTelemetry:
     def test_receives_position(self, ws_url, sim_port):
         async def run():

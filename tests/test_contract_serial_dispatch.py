@@ -85,7 +85,6 @@ class TestSerialDispatchParity:
         serial_keys = _get_serial_dispatch_keys()
 
         phantom = serial_keys - backend_keys
-        assert not phantom, (
-            "Keys in _serialDispatch not found in backend _DISPATCH (possible typo):\n"
-            + "\n".join(f"  {k}" for k in sorted(phantom))
+        assert not phantom, "Keys in _serialDispatch not found in backend _DISPATCH (possible typo):\n" + "\n".join(
+            f"  {k}" for k in sorted(phantom)
         )

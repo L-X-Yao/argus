@@ -945,6 +945,7 @@ class TestMavlinkFrameParser:
         assert result is None
         assert consumed == 4
 
+
 # ── Vehicle Types ────────────────────────────────────────────────────────────
 
 

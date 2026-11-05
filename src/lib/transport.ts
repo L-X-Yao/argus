@@ -301,9 +301,9 @@ function requestStreams(): void {
   // ATTITUDE (stream 10) and POSITION (stream 6) run at 10Hz so the
   // heading needle and position arrow animate as smoothly as the WS path.
   const streams = [
-    [1, 4],  // RAW_SENSORS — GPS_RAW_INT at 4Hz to match WS _helpers.py:186
-    [2, 2],  // EXTENDED_STATUS (SYS_STATUS, battery)
-    [3, 2],  // RC_CHANNELS, SERVO_OUTPUT_RAW
+    [1, 4], // RAW_SENSORS — GPS_RAW_INT at 4Hz to match WS _helpers.py:186
+    [2, 2], // EXTENDED_STATUS (SYS_STATUS, battery)
+    [3, 2], // RC_CHANNELS, SERVO_OUTPUT_RAW
     [6, 10], // POSITION — GLOBAL_POSITION_INT at 10Hz (was 5Hz)
     [10, 10], // EXTRA1 — ATTITUDE at 10Hz (was 2Hz)
     [11, 2], // EXTRA2 — VFR_HUD
@@ -353,15 +353,15 @@ export function serialSendCommandLong(command: number, p1 = 0, p2 = 0, p3 = 0, p
 export function serialSendPositionTargetGlobal(lat: number, lon: number, alt: number): void {
   const buf = new ArrayBuffer(53);
   const dv = new DataView(buf);
-  dv.setUint32(0, 0, true);                          // time_boot_ms
-  dv.setInt32(4, Math.trunc(lat * 1e7), true);       // lat_int
-  dv.setInt32(8, Math.trunc(lon * 1e7), true);       // lon_int
-  dv.setFloat32(12, alt, true);                       // alt (relative)
+  dv.setUint32(0, 0, true); // time_boot_ms
+  dv.setInt32(4, Math.trunc(lat * 1e7), true); // lat_int
+  dv.setInt32(8, Math.trunc(lon * 1e7), true); // lon_int
+  dv.setFloat32(12, alt, true); // alt (relative)
   // vx/vy/vz/afx/afy/afz/yaw/yaw_rate at offsets 16..48 stay 0 (default ArrayBuffer fill)
-  dv.setUint16(48, 0x0FF8, true);                     // type_mask
-  dv.setUint8(50, serial.targetSysId);                // target_system
-  dv.setUint8(51, serial.targetCompId);               // target_component
-  dv.setUint8(52, 6);                                 // coordinate_frame = MAV_FRAME_GLOBAL_RELATIVE_ALT_INT
+  dv.setUint16(48, 0x0ff8, true); // type_mask
+  dv.setUint8(50, serial.targetSysId); // target_system
+  dv.setUint8(51, serial.targetCompId); // target_component
+  dv.setUint8(52, 6); // coordinate_frame = MAV_FRAME_GLOBAL_RELATIVE_ALT_INT
   sendSerialFrame(86, new Uint8Array(buf));
 }
 
@@ -386,7 +386,10 @@ const _serialDispatch: Record<string, CmdHandler> = {
   force_disarm: () => serialSendCommandLong(400, 0, 21196),
   // Backend cmd_mode returns without sending when param is None — mirror that
   // instead of coercing undefined to custom_mode 0 (= Copter STABILIZE).
-  mode: (p) => { if (p == null) return; serialSendMode(p); },
+  mode: (p) => {
+    if (p == null) return;
+    serialSendMode(p);
+  },
   // Plane RTL=11 (NOT 21=QRTL), Copter RTL=6. AP source: ArduPlane/mode.h, ArduCopter/mode.h `enum class Number`.
   rtl: () => serialSendMode(_isPlane() ? 11 : 6),
   // MAV_CMD_NAV_TAKEOFF (22): p7=alt. AP source ArduPlane/quadplane.cpp:3948 (QuadPlane::do_user_takeoff)
@@ -570,7 +573,10 @@ export function dispatch(name: string, param?: number, data?: Record<string, unk
       return;
     }
     const handler = _serialDispatch[name];
-    if (handler) { handler(param, data); return; }
+    if (handler) {
+      handler(param, data);
+      return;
+    }
   }
   import('./ws').then((ws) => ws.sendCommand(name, param, data));
 }
@@ -616,8 +622,13 @@ export function serialGimbalPitchYaw(data: {
   // and instance are NOT skippable — NaN there must drop, hence the
   // positive-form bounds.
   const inRange = (v: number, lo: number, hi: number): boolean => Number.isNaN(v) || (v >= lo && v <= hi);
-  if (!inRange(pitch, -90, 90) || !inRange(yaw, -180, 180) ||
-      !inRange(pitchRate, -180, 180) || !inRange(yawRate, -180, 180)) return;
+  if (
+    !inRange(pitch, -90, 90) ||
+    !inRange(yaw, -180, 180) ||
+    !inRange(pitchRate, -180, 180) ||
+    !inRange(yawRate, -180, 180)
+  )
+    return;
   if (!(flags >= -0x80000000 && flags <= 0x7fffffff)) return;
   if (!(instance >= 0 && instance <= 6)) return;
 
@@ -936,7 +947,7 @@ function _buildWpToSeqMap(items: RawMissionItem[]): void {
   const sorted = [...items].sort((a, b) => a.seq - b.seq);
   let wpIndex = 0;
   for (const item of sorted) {
-    if (item.cmd === 178) continue;  // DO_CHANGE_SPEED — carries forward, doesn't consume a wp
+    if (item.cmd === 178) continue; // DO_CHANGE_SPEED — carries forward, doesn't consume a wp
     if ((item.cmd === 16 || item.cmd === 18 || item.cmd === 19 || item.cmd === 82) && item.seq > 0) {
       _wpToSeq.set(wpIndex, item.seq);
       wpIndex++;
@@ -954,7 +965,7 @@ export async function serialDownloadMission(): Promise<{ ok: boolean; error?: st
     download.resolve = resolve;
     download.items = [];
     download.total = 0;
-    _wpToSeq.clear();  // stale map from previous download would otherwise mislead mission_set_current
+    _wpToSeq.clear(); // stale map from previous download would otherwise mislead mission_set_current
     _resetDownloadTimer();
     sendSerialFrame(43, encodeMissionRequestList(serial.targetSysId, serial.targetCompId, 0));
   });
@@ -1229,7 +1240,7 @@ function _requestNextLogGap(): boolean {
   logSession.dlWindowEnd = gap[1];
   sendSerialFrame(
     119,
-    encodeLogRequestData(serial.targetSysId, serial.targetCompId, logSession.dlId, gap[0], gap[1] - gap[0])
+    encodeLogRequestData(serial.targetSysId, serial.targetCompId, logSession.dlId, gap[0], gap[1] - gap[0]),
   );
   return true;
 }
@@ -1565,9 +1576,7 @@ function _onParamValue(p: DataView): void {
   if (paramFetch.total < 0) paramFetch.total = count;
   if (index !== 0xffff) paramFetch.indices.add(index);
   paramFetch.names.add(name);
-  handleParamBatch([
-    { name, value, ptype, index, total: paramFetch.total, received: paramFetch.names.size },
-  ]);
+  handleParamBatch([{ name, value, ptype, index, total: paramFetch.total, received: paramFetch.names.size }]);
   if (paramFetch.total > 0 && paramFetch.names.size >= paramFetch.total) {
     paramFetch.active = false;
     _stopParamTimer();

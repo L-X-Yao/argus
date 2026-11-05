@@ -232,7 +232,9 @@
               <div class="text-[10px] text-muted-foreground">m</div>
             </div>
             <div>
-              <div class="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">{t('overlap.trigger')}</div>
+              <div class="text-[10px] text-muted-foreground uppercase tracking-wider mb-0.5">
+                {t('overlap.trigger')}
+              </div>
               <div class="text-sm font-bold text-primary">{triggerDist.toFixed(1)}</div>
               <div class="text-[10px] text-muted-foreground">m</div>
             </div>

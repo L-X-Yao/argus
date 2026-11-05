@@ -59,8 +59,7 @@ class TestThreadSafety:
         state = link.get_state()
         expected = _frontend_state_fields()
         assert state.keys() == expected, (
-            f"\nBackend-only: {state.keys() - expected}"
-            f"\nFrontend-only: {expected - state.keys()}"
+            f"\nBackend-only: {state.keys() - expected}\nFrontend-only: {expected - state.keys()}"
         )
 
 

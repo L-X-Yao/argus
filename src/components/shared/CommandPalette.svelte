@@ -1,11 +1,7 @@
 <script lang="ts">
   import { app, loadDownloadedMission, addToast } from '../../lib/stores.svelte';
   import { sendCommand, sendDisconnect } from '../../lib/ws';
-  import {
-    isSerialConnected,
-    serialDownloadMission,
-    dispatch,
-  } from '../../lib/transport';
+  import { isSerialConnected, serialDownloadMission, dispatch } from '../../lib/transport';
   import { t, i18nState, setLocale } from '../../lib/i18n.svelte';
   import { isPlane, saveSettings, showSlide, showConfirm } from '../../lib/stores.svelte';
   import { paramState } from '../../lib/paramStore.svelte';
@@ -219,10 +215,7 @@
         label: t('ctrl.clearMission'),
         category: t('ctrl.mission'),
         icon: Trash2,
-        handler: () =>
-          showConfirm(t('ctrl.clearMission') + '?', true).then(
-            (ok) => ok && (dispatch('mission_clear')),
-          ),
+        handler: () => showConfirm(t('ctrl.clearMission') + '?', true).then((ok) => ok && dispatch('mission_clear')),
         available: connected,
       },
 

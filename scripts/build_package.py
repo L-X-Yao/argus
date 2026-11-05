@@ -59,7 +59,9 @@ def copy_app_files(build_dir: Path) -> None:
     # are included. The previous `glob('*.py')` only matched top-level .py
     # files, which meant the packaged zip was missing the commands package
     # and the backend crashed at import time inside the .bat launcher.
-    shutil.copytree(SCRIPT_DIR / "backend", build_dir / "backend", ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+    shutil.copytree(
+        SCRIPT_DIR / "backend", build_dir / "backend", ignore=shutil.ignore_patterns("__pycache__", "*.pyc")
+    )
 
     # backend/config.py reads the version from here at import time.
     shutil.copy2(SCRIPT_DIR / "pyproject.toml", build_dir / "pyproject.toml")

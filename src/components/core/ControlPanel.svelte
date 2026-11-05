@@ -9,11 +9,7 @@
     loadDownloadedMission,
   } from '../../lib/stores.svelte';
   import { sendCommand } from '../../lib/ws';
-  import {
-    isSerialConnected,
-    serialDownloadMission,
-    dispatch,
-  } from '../../lib/transport';
+  import { isSerialConnected, serialDownloadMission, dispatch } from '../../lib/transport';
   import { t } from '../../lib/i18n.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
   import {
@@ -155,8 +151,7 @@
       size="sm"
       class="w-full"
       onclick={async () => {
-        if (await showConfirm(t('ctrl.clearMission') + '?'))
-          dispatch('mission_clear');
+        if (await showConfirm(t('ctrl.clearMission') + '?')) dispatch('mission_clear');
       }}>{t('ctrl.clearMission')}</Button
     >
   {:else if phase === 'ground'}

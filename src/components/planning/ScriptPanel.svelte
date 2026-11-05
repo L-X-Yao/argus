@@ -154,8 +154,7 @@ log("Alt: " + drone.alt_rel + "m");
         <textarea
           bind:value={code}
           class="flex-1 min-h-[200px] p-3 bg-black/80 text-green-300 font-mono text-xs resize-none border-none outline-none"
-          spellcheck="false"
-        ></textarea>
+          spellcheck="false"></textarea>
         <div class="h-32 overflow-y-auto bg-black/90 border-t border-border p-2 font-mono text-[11px]">
           {#each output as line}
             <div

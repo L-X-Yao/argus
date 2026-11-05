@@ -765,7 +765,8 @@ const messages: Record<string, string> = {
   'remote.status': 'Estado remoto',
   'remote.clients': 'Clientes conectados',
   'remote.latency': 'Latencia',
-  'remote.hint': 'Solo copia la URL de esta página; el acceso remoto requiere que el backend sea accesible (misma LAN / VPN / reenvío de puertos) — sin túnel integrado',
+  'remote.hint':
+    'Solo copia la URL de esta página; el acceso remoto requiere que el backend sea accesible (misma LAN / VPN / reenvío de puertos) — sin túnel integrado',
   'role.pilot': 'Piloto',
   'role.observer': 'Observador',
   'role.commander': 'Comandante',
@@ -1076,9 +1077,11 @@ const messages: Record<string, string> = {
   'sched.withAutoArm': ' (incluye armado automático)',
   'sched.skippedDeclined': 'Ejecución omitida',
   'sched.skippedOffline': 'Programación vencida pero sin vehículo conectado — omitida',
-  'airspace.demoData': 'Datos de demostración: lista de aeropuertos de ejemplo integrada — no son datos oficiales de espacio aéreo, no usar para cumplimiento',
+  'airspace.demoData':
+    'Datos de demostración: lista de aeropuertos de ejemplo integrada — no son datos oficiales de espacio aéreo, no usar para cumplimiento',
   'role.notEnforced': 'Los roles son solo visuales por ahora — ningún comando está restringido',
-  'panel.aiPlanner.localNote': 'Analizador de reglas local (sin conexión) — no es un LLM en la nube; reconoce un conjunto fijo de comandos',
+  'panel.aiPlanner.localNote':
+    'Analizador de reglas local (sin conexión) — no es un LLM en la nube; reconoce un conjunto fijo de comandos',
 };
 
 export default messages;

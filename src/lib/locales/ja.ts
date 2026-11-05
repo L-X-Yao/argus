@@ -764,7 +764,8 @@ const messages: Record<string, string> = {
   'remote.status': 'リモート状態',
   'remote.clients': '接続クライアント',
   'remote.latency': 'レイテンシ',
-  'remote.hint': 'このページのURLをコピーするだけです。リモートアクセスにはバックエンドへの到達性（同一LAN／VPN／ポート転送）が必要で、内蔵トンネルはありません',
+  'remote.hint':
+    'このページのURLをコピーするだけです。リモートアクセスにはバックエンドへの到達性（同一LAN／VPN／ポート転送）が必要で、内蔵トンネルはありません',
   'role.pilot': 'パイロット',
   'role.observer': 'オブザーバー',
   'role.commander': 'コマンダー',
@@ -1073,9 +1074,11 @@ const messages: Record<string, string> = {
   'sched.withAutoArm': '（自動アーム含む）',
   'sched.skippedDeclined': '今回の実行をスキップしました',
   'sched.skippedOffline': 'スケジュール時刻になりましたが機体未接続のためスキップ',
-  'airspace.demoData': 'デモデータ：内蔵の空港サンプルリストです。公式な空域データではないため、コンプライアンス判断には使用しないでください',
+  'airspace.demoData':
+    'デモデータ：内蔵の空港サンプルリストです。公式な空域データではないため、コンプライアンス判断には使用しないでください',
   'role.notEnforced': 'ロールは現在表示のみで、コマンド制限はまだ行われません',
-  'panel.aiPlanner.localNote': 'ローカルのルール解析（オフライン対応）— クラウドLLMではなく、固定のコマンド語を認識します',
+  'panel.aiPlanner.localNote':
+    'ローカルのルール解析（オフライン対応）— クラウドLLMではなく、固定のコマンド語を認識します',
 };
 
 export default messages;

@@ -133,10 +133,7 @@ def scrub(in_path: str, out_path: str) -> dict[str, int]:
     decoder.robust_parsing = True
 
     home = next(
-        (
-            (m.latitude, m.longitude)
-            for m in (decoder.decode(bytearray(f)) for _, f in records if _mid(f) == 242)
-        ),
+        ((m.latitude, m.longitude) for m in (decoder.decode(bytearray(f)) for _, f in records if _mid(f) == 242)),
         None,
     )
     if home is None:
@@ -150,16 +147,12 @@ def scrub(in_path: str, out_path: str) -> dict[str, int]:
         mid = _mid(frame)
         if mid in UNHANDLED_POSITION_IDS:
             raise SystemExit(
-                f"msg id {mid} carries position but has no scrub rule — "
-                "extend POSITION_FIELDS before shipping this log"
+                f"msg id {mid} carries position but has no scrub rule — extend POSITION_FIELDS before shipping this log"
             )
         if mid == COMMAND_LONG_ID:
             msg = decoder.decode(bytearray(frame))
             if msg.command in POSITION_COMMANDS:
-                raise SystemExit(
-                    f"COMMAND_LONG {msg.command} carries lat/lon in param5/6 — "
-                    "no scrub rule, refusing"
-                )
+                raise SystemExit(f"COMMAND_LONG {msg.command} carries lat/lon in param5/6 — no scrub rule, refusing")
             out_records.append((ts, frame))
             continue
         if mid in POSITION_FIELDS:
@@ -227,9 +220,7 @@ def verify(in_path: str, out_path: str) -> None:
     # If the input was already anchored on CMAC (a re-run on scrubbed output,
     # or a SITL log), the "original" coordinate bytes ARE the target bytes —
     # scanning for them would false-positive on a correct output.
-    already_anchored = (
-        abs(TARGET_LAT_E7 - home.latitude) < 20_000 and abs(TARGET_LON_E7 - home.longitude) < 20_000
-    )
+    already_anchored = abs(TARGET_LAT_E7 - home.latitude) < 20_000 and abs(TARGET_LON_E7 - home.longitude) < 20_000
     if not already_anchored:
         forbidden += [
             struct.pack("<i", home.latitude),

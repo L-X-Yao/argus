@@ -765,7 +765,8 @@ const messages: Record<string, string> = {
   'remote.status': 'Fernstatus',
   'remote.clients': 'Verbundene Clients',
   'remote.latency': 'Latenz',
-  'remote.hint': 'Kopiert nur die Seiten-URL; Fernzugriff erfordert erreichbares Backend (gleiches LAN / VPN / Portweiterleitung) — kein integrierter Tunnel',
+  'remote.hint':
+    'Kopiert nur die Seiten-URL; Fernzugriff erfordert erreichbares Backend (gleiches LAN / VPN / Portweiterleitung) — kein integrierter Tunnel',
   'role.pilot': 'Pilot/in',
   'role.observer': 'Beobachter',
   'role.commander': 'Kommandant',
@@ -1077,9 +1078,11 @@ const messages: Record<string, string> = {
   'sched.withAutoArm': ' (inkl. Auto-Arm)',
   'sched.skippedDeclined': 'Diese Ausführung übersprungen',
   'sched.skippedOffline': 'Zeitplan fällig, aber kein Fahrzeug verbunden — übersprungen',
-  'airspace.demoData': 'Demodaten: eingebaute Beispiel-Flughafenliste — keine autoritativen Luftraumdaten, nicht für Compliance verwenden',
+  'airspace.demoData':
+    'Demodaten: eingebaute Beispiel-Flughafenliste — keine autoritativen Luftraumdaten, nicht für Compliance verwenden',
   'role.notEnforced': 'Rollen sind derzeit nur Anzeige — noch keine Befehle eingeschränkt',
-  'panel.aiPlanner.localNote': 'Lokaler Regelparser (offline) — kein Cloud-LLM; erkennt eine feste Menge an Befehlswörtern',
+  'panel.aiPlanner.localNote':
+    'Lokaler Regelparser (offline) — kein Cloud-LLM; erkennt eine feste Menge an Befehlswörtern',
 };
 
 export default messages;

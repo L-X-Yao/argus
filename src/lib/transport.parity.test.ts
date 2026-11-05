@@ -44,12 +44,10 @@ vi.mock('./serial', () => ({
   }),
   // Capture onChunk so the harness can play the FC side of the mission /
   // fence upload handshakes (MISSION_REQUEST_INT → ... → MISSION_ACK).
-  serialReadLoop: vi.fn(
-    (_conn: unknown, onChunk: (c: Uint8Array) => void) => {
-      H.fcInject = onChunk;
-      return new Promise<void>(() => {});
-    },
-  ),
+  serialReadLoop: vi.fn((_conn: unknown, onChunk: (c: Uint8Array) => void) => {
+    H.fcInject = onChunk;
+    return new Promise<void>(() => {});
+  }),
 }));
 
 vi.mock('./stores.svelte', () => ({
@@ -111,7 +109,11 @@ const fixture: ParityFixture = JSON.parse(readFileSync(fixturePath, 'utf-8'));
 
 const msgIdOf = (frame: Uint8Array): number => frame[7] | (frame[8] << 8) | (frame[9] << 16);
 const toHex = (frames: Uint8Array[]): string[] =>
-  frames.map((f) => Array.from(f).map((b) => b.toString(16).padStart(2, '0')).join(''));
+  frames.map((f) =>
+    Array.from(f)
+      .map((b) => b.toString(16).padStart(2, '0'))
+      .join(''),
+  );
 
 // FC-side frames for driving the upload state machines. The FC is sysid 1 /
 // compid 1 (matches the backend FakeLink and a real ArduPilot autopilot).
@@ -143,79 +145,79 @@ describe('dual-stack parity dump', () => {
     vi.useFakeTimers();
     const dump: Record<string, string[]> = {};
     try {
-    H.writes.length = 0;
-    const ok = await connectSerial(115200, {});
-    expect(ok).toBe(true);
-    // One heartbeat-interval tick so the boot heartbeat lands in `writes`.
-    await vi.advanceTimersByTimeAsync(1000);
-    const bootHeartbeat = H.writes.find((w) => msgIdOf(w) === 0);
-    expect(bootHeartbeat, 'no boot heartbeat captured').toBeDefined();
-    // Kill the 1 Hz heartbeat interval: from here on, every captured frame
-    // must come from the op under test — no msgId-based filtering that could
-    // hide a command handler spuriously emitting heartbeat/stream frames.
-    vi.clearAllTimers();
-
-    for (const op of fixture.ops) {
-      H.isPlane = op.plane === true;
       H.writes.length = 0;
-      if (op.kind === 'dispatch') {
-        // A typo'd op name would fall through to the (mocked) WS backend and
-        // "pass" every zero-frame expectation — reject it up front.
-        expect(hasSerialHandler(op.op!), `op '${op.op}' not in _serialDispatch`).toBe(true);
-      }
+      const ok = await connectSerial(115200, {});
+      expect(ok).toBe(true);
+      // One heartbeat-interval tick so the boot heartbeat lands in `writes`.
+      await vi.advanceTimersByTimeAsync(1000);
+      const bootHeartbeat = H.writes.find((w) => msgIdOf(w) === 0);
+      expect(bootHeartbeat, 'no boot heartbeat captured').toBeDefined();
+      // Kill the 1 Hz heartbeat interval: from here on, every captured frame
+      // must come from the op under test — no msgId-based filtering that could
+      // hide a command handler spuriously emitting heartbeat/stream frames.
+      vi.clearAllTimers();
 
-      switch (op.kind) {
-        case 'boot_heartbeat':
-          dump[op.id] = toHex([bootHeartbeat!]);
-          continue;
-        case 'dispatch':
-          dispatch(op.op!, op.param, op.data);
-          if (op.flush_timer_ms) await vi.advanceTimersByTimeAsync(op.flush_timer_ms);
-          break;
-        case 'log_list': {
-          const p = serialLogList();
-          dump[op.id] = toHex(H.writes);
-          await vi.advanceTimersByTimeAsync(6000); // let the watchdog resolve
-          await p;
-          continue;
+      for (const op of fixture.ops) {
+        H.isPlane = op.plane === true;
+        H.writes.length = 0;
+        if (op.kind === 'dispatch') {
+          // A typo'd op name would fall through to the (mocked) WS backend and
+          // "pass" every zero-frame expectation — reject it up front.
+          expect(hasSerialHandler(op.op!), `op '${op.op}' not in _serialDispatch`).toBe(true);
         }
-        case 'log_download': {
-          H.logList.list.length = 0;
-          H.logList.list.push({ ...op.log_entry!, time_utc: 0 });
-          const p = serialLogDownload(op.log_entry!.id);
-          dump[op.id] = toHex(H.writes);
-          // The stall watchdog re-requests 3× (5s apart) before giving up —
-          // walk the full ladder so the promise settles (dump already
-          // captured; the retry frames land after it and writes reset per op).
-          await vi.advanceTimersByTimeAsync(21000);
-          await p;
-          continue;
+
+        switch (op.kind) {
+          case 'boot_heartbeat':
+            dump[op.id] = toHex([bootHeartbeat!]);
+            continue;
+          case 'dispatch':
+            dispatch(op.op!, op.param, op.data);
+            if (op.flush_timer_ms) await vi.advanceTimersByTimeAsync(op.flush_timer_ms);
+            break;
+          case 'log_list': {
+            const p = serialLogList();
+            dump[op.id] = toHex(H.writes);
+            await vi.advanceTimersByTimeAsync(6000); // let the watchdog resolve
+            await p;
+            continue;
+          }
+          case 'log_download': {
+            H.logList.list.length = 0;
+            H.logList.list.push({ ...op.log_entry!, time_utc: 0 });
+            const p = serialLogDownload(op.log_entry!.id);
+            dump[op.id] = toHex(H.writes);
+            // The stall watchdog re-requests 3× (5s apart) before giving up —
+            // walk the full ladder so the promise settles (dump already
+            // captured; the retry frames land after it and writes reset per op).
+            await vi.advanceTimersByTimeAsync(21000);
+            await p;
+            continue;
+          }
+          case 'mission_download': {
+            const p = serialDownloadMission();
+            dump[op.id] = toHex(H.writes);
+            await vi.advanceTimersByTimeAsync(6000);
+            await p;
+            continue;
+          }
+          case 'mission_upload': {
+            const result = await driveUpload(
+              () => serialUploadMission(fixture.golden_waypoints as unknown as Waypoint[], fixture.golden_takeoff_alt),
+              0,
+            );
+            expect(result.ok, `mission upload failed: ${result.error}`).toBe(true);
+            break;
+          }
+          case 'fence_upload': {
+            const result = await driveUpload(() => serialUploadFence(fixture.fence_polygon), 1);
+            expect(result.ok, `fence upload failed: ${result.error}`).toBe(true);
+            break;
+          }
+          default:
+            throw new Error(`unknown op kind: ${op.kind}`);
         }
-        case 'mission_download': {
-          const p = serialDownloadMission();
-          dump[op.id] = toHex(H.writes);
-          await vi.advanceTimersByTimeAsync(6000);
-          await p;
-          continue;
-        }
-        case 'mission_upload': {
-          const result = await driveUpload(
-            () => serialUploadMission(fixture.golden_waypoints as unknown as Waypoint[], fixture.golden_takeoff_alt),
-            0,
-          );
-          expect(result.ok, `mission upload failed: ${result.error}`).toBe(true);
-          break;
-        }
-        case 'fence_upload': {
-          const result = await driveUpload(() => serialUploadFence(fixture.fence_polygon), 1);
-          expect(result.ok, `fence upload failed: ${result.error}`).toBe(true);
-          break;
-        }
-        default:
-          throw new Error(`unknown op kind: ${op.kind}`);
+        dump[op.id] = toHex(H.writes);
       }
-      dump[op.id] = toHex(H.writes);
-    }
     } finally {
       vi.useRealTimers();
     }

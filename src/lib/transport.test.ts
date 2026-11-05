@@ -966,12 +966,12 @@ describe('mission_set_current seq map (post-download)', () => {
     // wp_index 1 → seq 4 (NOT seq 3 = SPEED, NOT seq 1+2=3 from fallback)
     const promise = serialDownloadMission();
     inject(fcFrame(44, encodeMissionCount(1, 1, 6)));
-    inject(fcFrame(73, mkMissionItemInt(0, 16, 0, 0, 0)));            // HOME
-    inject(fcFrame(73, mkMissionItemInt(1, 22, 0, 0, 30)));           // TAKEOFF
+    inject(fcFrame(73, mkMissionItemInt(0, 16, 0, 0, 0))); // HOME
+    inject(fcFrame(73, mkMissionItemInt(1, 22, 0, 0, 30))); // TAKEOFF
     inject(fcFrame(73, mkMissionItemInt(2, 16, 34.258, 108.942, 50))); // WP A
-    inject(fcFrame(73, mkMissionItemInt(3, 178, 0, 0, 0)));           // DO_CHANGE_SPEED
+    inject(fcFrame(73, mkMissionItemInt(3, 178, 0, 0, 0))); // DO_CHANGE_SPEED
     inject(fcFrame(73, mkMissionItemInt(4, 16, 34.259, 108.943, 50))); // WP B
-    inject(fcFrame(73, mkMissionItemInt(5, 20, 0, 0, 0)));            // RTL
+    inject(fcFrame(73, mkMissionItemInt(5, 20, 0, 0, 0))); // RTL
     await promise;
     writes.length = 0;
 

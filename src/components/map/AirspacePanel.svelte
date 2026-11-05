@@ -91,7 +91,6 @@
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   }
 
-
   /* ── Airport list with distance, sorted by distance ── */
   let airportList = $derived.by(() => {
     const droneLat = app.drone.lat;
@@ -213,7 +212,8 @@
       {#if !enabled}
         <div class="p-3 rounded-lg bg-primary/5 border border-primary/20">
           <p class="text-xs text-muted-foreground leading-relaxed">
-            {t('airspace.restricted')} — Enable the airspace check to see airport no-fly proximity warnings in this panel (demo airport data; not a map overlay).
+            {t('airspace.restricted')} — Enable the airspace check to see airport no-fly proximity warnings in this panel
+            (demo airport data; not a map overlay).
           </p>
         </div>
       {/if}
