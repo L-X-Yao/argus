@@ -12,7 +12,15 @@
 import type { MessageHandlers } from './mavlink';
 import { app, addEvent, addToast } from './stores.svelte';
 import { t, i18nState } from './i18n.svelte';
-import { getModeName, vehicleType } from './modeStore';
+import { getModeButtons, getModeName, vehicleType } from './modeStore';
+
+// Mirrors backend/constants.py FIX_NAMES and FIX_NAMES_EN.
+const FIX_NAMES: Record<'en' | 'zh', Record<number, string>> = {
+  en: { 0: 'No Fix', 1: 'No Fix', 2: '2D', 3: '3D', 4: 'DGPS', 5: 'RTK Float', 6: 'RTK Fixed' },
+  zh: { 0: '无定位', 1: '无定位', 2: '2D', 3: '3D', 4: '差分', 5: 'RTK浮动', 6: 'RTK固定' },
+};
+
+const uiLocale = (): 'en' | 'zh' => (i18nState.locale === 'zh' ? 'zh' : 'en');
 
 export function buildSerialHandlers(): Partial<MessageHandlers> {
   // One-shot per connection, like the backend's _unsupported_fc_warned
@@ -30,7 +38,10 @@ export function buildSerialHandlers(): Partial<MessageHandlers> {
       // Localized mode NAME — the WS path pushes get_state()'s "mode"
       // (backend _get_vehicle_info: vtype → table → locale) and StatusBar
       // reads it; until 2026-07-14 serial mode left it blank forever.
-      app.drone.mode = getModeName(vehicleType(msg.type), msg.customMode, i18nState.locale === 'zh' ? 'zh' : 'en');
+      app.drone.mode = getModeName(vehicleType(msg.type), msg.customMode, uiLocale());
+      // The mode buttons render from this list; the WS path gets it from
+      // get_state(), so serial mode had none and modes could not be changed.
+      app.drone.mode_btns = getModeButtons(vehicleType(msg.type), uiLocale());
       // Autopilot latch mirrors backend handle_heartbeat
       // (mavlink_handlers.py:49-51): ignore 0 (GENERIC/uninit) and 8
       // (INVALID — GCS/relay heartbeats), latch anything else. transport.ts
@@ -70,7 +81,17 @@ export function buildSerialHandlers(): Partial<MessageHandlers> {
     },
     onGpsRawInt: (msg) => {
       app.drone.gps_fix_raw = msg.fixType;
+      app.drone.gps_fix = FIX_NAMES[uiLocale()][msg.fixType] ?? '?';
       app.drone.gps_sats = msg.sats;
+    },
+    onEkfStatus: (msg) => {
+      // Unmapped until 2026-11-05: flags stayed 0 in serial mode, so the
+      // preflight EKF row reported OK however unhealthy the EKF was.
+      app.drone.ekf_flags = msg.flags;
+      app.drone.ekf_vel = msg.velVar;
+      app.drone.ekf_pos_h = msg.posHVar;
+      app.drone.ekf_pos_v = msg.posVVar;
+      app.drone.ekf_compass = msg.compassVar;
     },
     onVfrHud: (msg) => {
       // gs source differs by design: the backend derives it from

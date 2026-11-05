@@ -18,9 +18,10 @@
     "armed",
     "vtype_raw",
     "autopilot",
-    "mode"
+    "mode",
+    "mode_btns"
    ],
-   "note": "mode is the localized NAME (both sides at locale en here); autopilot latch added to serial 2026-07-14 \u2014 before that a PX4 on WebSerial was silent"
+   "note": "mode is the localized NAME (both sides at locale en here); autopilot latch added to serial 2026-07-14 — before that a PX4 on WebSerial was silent"
   },
   {
    "id": "heartbeat_disarmed",
@@ -31,9 +32,10 @@
     "armed",
     "vtype_raw",
     "autopilot",
-    "mode"
+    "mode",
+    "mode_btns"
    ],
-   "note": "mode is the localized NAME (both sides at locale en here); autopilot latch added to serial 2026-07-14 \u2014 before that a PX4 on WebSerial was silent"
+   "note": "mode is the localized NAME (both sides at locale en here); autopilot latch added to serial 2026-07-14 — before that a PX4 on WebSerial was silent"
   },
   {
    "id": "attitude_basic",
@@ -113,7 +115,8 @@
    "hex": "fd1e000007010118000000000000000000000000000000000000000000000000000000000000030cd7c2",
    "compare": [
     "gps_fix_raw",
-    "gps_sats"
+    "gps_sats",
+    "gps_fix"
    ],
    "note": ""
   },
@@ -126,7 +129,7 @@
     "climb",
     "throttle"
    ],
-   "note": "gs intentionally excluded: backend derives it from GPI vx/vy (state.py), serial uses VFR_HUD.groundspeed \u2014 same quantity, different source"
+   "note": "gs intentionally excluded: backend derives it from GPI vx/vy (state.py), serial uses VFR_HUD.groundspeed — same quantity, different source"
   },
   {
    "id": "rc_channels",
@@ -166,6 +169,19 @@
     "home_lon"
    ],
    "note": ""
+  },
+  {
+   "id": "ekf_status",
+   "msg": "EKF_STATUS_REPORT",
+   "hex": "fd160000000101c100000000803e0000003f0000403f0000a03f0000003e8704cc0e",
+   "compare": [
+    "ekf_flags",
+    "ekf_vel",
+    "ekf_pos_h",
+    "ekf_pos_v",
+    "ekf_compass"
+   ],
+   "note": "serial mode never mapped this until 2026-11-05: flags stayed 0, so the preflight EKF row passed on an unhealthy EKF"
   }
  ]
 }

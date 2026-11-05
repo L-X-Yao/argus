@@ -53,6 +53,7 @@ _TOL = {
     "voltage": 0.006, "current": 0.006,
     "airspeed": 0.06, "climb": 0.06,
     "vibe": 0.06,
+    "ekf_vel": 6e-5, "ekf_pos_h": 6e-5, "ekf_pos_v": 6e-5, "ekf_compass": 6e-5,
 }
 
 
