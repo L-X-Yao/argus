@@ -55,7 +55,7 @@ echo "[release] Tests passed. Committing..."
 
 # Commit + tag
 if [ -n "$(git status --porcelain)" ]; then
-    git add pyproject.toml package.json public/sw.js \
+    git add pyproject.toml package.json package-lock.json public/sw.js \
            src-tauri/Cargo.toml src-tauri/tauri.conf.json
     git commit -m "release: v$NEW_VER"
 fi

@@ -57,9 +57,25 @@ sed -i "s/^version = \"$OLD_VER\"/version = \"$NEW_VER\"/" src-tauri/Cargo.toml
 # 5. src-tauri/tauri.conf.json
 sed -i "s/\"version\": \"$OLD_VER\"/\"version\": \"$NEW_VER\"/" src-tauri/tauri.conf.json
 
+# 6. package-lock.json. Only the root package: a dependency can share the old
+# version, so a text replace would corrupt it. npm rewrites these two fields on
+# install, which would leave a dirty tree that make-release.sh refuses.
+python3 - "$NEW_VER" <<'PY'
+import json
+import sys
+
+with open("package-lock.json", encoding="utf-8") as f:
+    lock = json.load(f)
+lock["version"] = lock["packages"][""]["version"] = sys.argv[1]
+with open("package-lock.json", "w", encoding="utf-8") as f:
+    json.dump(lock, f, indent=2, ensure_ascii=False)
+    f.write("\n")
+PY
+
 echo "Done. Files updated:"
 echo "  pyproject.toml (source of truth)"
 echo "  package.json"
+echo "  package-lock.json"
 echo "  src-tauri/Cargo.toml"
 echo "  src-tauri/tauri.conf.json"
 grep -n "$NEW_VER" pyproject.toml package.json src-tauri/Cargo.toml | sed 's/^/  /'

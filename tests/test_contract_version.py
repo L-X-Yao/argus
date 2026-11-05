@@ -33,6 +33,10 @@ def _extract_versions() -> dict[str, str]:
 
     versions["package.json"] = json.loads(_read("package.json"))["version"]
 
+    lock = json.loads(_read("package-lock.json"))
+    versions["package-lock.json"] = lock["version"]
+    versions["package-lock.json root package"] = lock["packages"][""]["version"]
+
     versions["src-tauri/Cargo.toml"] = re.search(
         r'^version = "([^"]+)"',
         _read("src-tauri/Cargo.toml"),
