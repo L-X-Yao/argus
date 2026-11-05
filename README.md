@@ -41,7 +41,7 @@ Argus fills the gap: **open-source + web-native + white-label ready**.
 | **Parameters** | Metadata-driven UI (desc/range/units/enum/bitmask), tree view, diff export, default reset |
 | **Calibration** | Compass, accel, gyro, level, baro wizards with real-time progress |
 | **RTK** | NTRIP client with HTTP/1.0 + ICY-200 negotiation, streaming RTCM injection |
-| **Firmware** | Upload `.apj`, online firmware browser, reboot to bootloader |
+| **Firmware** | Store `.apj` files on the backend, online firmware browser, reboot to bootloader (no built-in flashing) |
 | **Fleet** | Multi-vehicle dashboard with live telemetry per vehicle |
 | **Video** | RTSP proxy, AR waypoint overlay, screenshot capture |
 | **HUD** | PFD (attitude/speed/altitude/compass/wind), real-time charts, EKF status |
@@ -90,9 +90,9 @@ python run.py --sim            # Starts backend + simulator.py together
 
 The simulator (`scripts/simulator.py`) emits realistic telemetry (GPS, attitude, battery drain, heartbeat) and responds to arm/disarm/mode commands.
 
-### WebSerial (no backend at all)
+### WebSerial (direct USB)
 
-Open Argus in Chrome/Edge, click the **USB** button, pick your flight controller. Telemetry, arm/disarm/mode/RTL, param read+write, mission upload/download/clear, fence upload, log list/download, and all 5 calibration types flow directly via WebSerial and the built-in TypeScript MAVLink v2 codec. Firmware upload requires the Python backend.
+Open Argus in Chrome/Edge, click the **USB** button, pick your flight controller. Telemetry, arm/disarm/mode/RTL, param read+write, mission upload/download/clear, fence upload, log list/download, and all 5 calibration types flow directly via WebSerial and the built-in TypeScript MAVLink v2 codec. Map tiles, terrain profiles, parameter descriptions, video, and firmware file storage still use the Python backend; without it, new map tiles cannot load. RTK (NTRIP) and the MAVLink console need the FC connected through the backend, so they are unavailable over WebSerial.
 
 ## Architecture
 
@@ -200,11 +200,11 @@ bash scripts/changelog.sh v3.5.0   # Changes since v3.5.0
 
 **In progress / partial**
 
-- WebSerial firmware upload (APJ parsing + bootloader protocol)
 - PX4 end-to-end wiring (backend reads `HEARTBEAT.autopilot`; frontend adapter exists but no code path imports it yet)
 
 **Future**
 
+- Firmware flashing (APJ parsing + bootloader protocol)
 - WebRTC video streaming (replace RTSP proxy)
 - MQTT cloud relay for fleet management
 - MAVLink FTP for firmware upload and Lua script management

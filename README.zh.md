@@ -41,7 +41,7 @@ Argus 填补空缺：**开源 + Web 原生 + 支持白标定制**。
 | **参数** | 元数据驱动 UI（描述/范围/单位/枚举/位掩码），树形视图，差异导出，恢复默认 |
 | **校准** | 罗盘、加速度计、陀螺仪、水平、气压计向导，实时进度 |
 | **RTK** | NTRIP 客户端，HTTP/1.0 + ICY-200 协商，RTCM 流式注入 |
-| **固件** | 上传 `.apj`，在线固件浏览器，重启至 Bootloader |
+| **固件** | 在后端保存 `.apj` 文件，在线固件浏览器，重启至 Bootloader（不含刷写功能） |
 | **编队** | 多机仪表盘，每架飞机实时遥测 |
 | **视频** | RTSP 代理，AR 航点叠加，截图 |
 | **HUD** | PFD（姿态/速度/高度/罗盘/风向），实时图表，EKF 状态 |
@@ -88,9 +88,9 @@ python run.py --sim            # 同时启动后端 + simulator.py
 
 模拟器（`scripts/simulator.py`）发送仿真遥测数据（GPS、姿态、电量消耗、心跳），响应解锁/锁定/模式切换命令。
 
-### WebSerial（完全无需后端）
+### WebSerial（USB 直连）
 
-用 Chrome/Edge 打开 Argus，点击 **USB** 按钮，选择飞控。遥测、解锁/锁定/模式/RTL、参数读写、航线上传/下载/清除、围栏上传、日志列表/下载、全部 5 种校准类型均通过 WebSerial 和内置 TypeScript MAVLink v2 编解码器直连。固件上传需要 Python 后端。
+用 Chrome/Edge 打开 Argus，点击 **USB** 按钮，选择飞控。遥测、解锁/锁定/模式/RTL、参数读写、航线上传/下载/清除、围栏上传、日志列表/下载、全部 5 种校准类型均通过 WebSerial 和内置 TypeScript MAVLink v2 编解码器直连。地图瓦片、地形剖面、参数说明、视频和固件文件存储仍依赖 Python 后端，没有后端时新的地图瓦片无法加载。RTK（NTRIP）和 MAVLink 控制台需要飞控通过后端连接，WebSerial 直连时不可用。
 
 ## 架构
 
@@ -198,11 +198,11 @@ bash scripts/changelog.sh v3.5.0   # 查看 v3.5.0 以来的变更
 
 **进行中 / 部分完成**
 
-- WebSerial 固件上传（APJ 解析 + Bootloader 协议）
 - PX4 端到端接入（后端已读取 `HEARTBEAT.autopilot`；前端适配器存在但尚未引入）
 
 **未来计划**
 
+- 固件刷写（APJ 解析 + Bootloader 协议）
 - WebRTC 视频流（替代 RTSP 代理）
 - MQTT 云端中继，用于编队管理
 - MAVLink FTP，用于固件上传和 Lua 脚本管理

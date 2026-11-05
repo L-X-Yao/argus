@@ -1,6 +1,7 @@
 # Argus GCS v3.4 — 功能清单与验证状态
 
 > **本文档记录 v3.4 功能验证状态快照。** 499 项功能的逐条维护成本已超过参考价值，自 2026-05-24 起冻结逐行更新。后续功能变更在 git commit message 和 CHANGELOG 中追踪，不再同步到本文件的每一行。已知问题和 SITL 验证结果仍在底部更新。  
+> **快照之后的变更：** 正文保留快照原文，不代表当前代码。例如 v3.7.0 移除了 PL-Link 协议、协议选择和 `migrate.ts`，`sim_pllink.py` 改名为 `scripts/simulator.py`。其余变更见 git 历史。  
 > 快照日期: 2026-05-24（冻结）  
 > 飞控: ArduPilot V4.6.3, 固定翼  
 > 测试方式: USB 串口 (/dev/ttyACM0) + Playwright 浏览器自动化 + pytest/vitest  
