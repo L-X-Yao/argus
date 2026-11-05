@@ -1237,8 +1237,8 @@ class TestLoop:
         ):
             link._loop()  # should not raise
 
-    def test_loop_buffer_overflow_trimmed(self):
-        """Buffer is trimmed when it exceeds 65536 bytes."""
+    def test_loop_oversized_noise_read_drains(self):
+        """A read of pure noise leaves nothing buffered."""
         link = DroneLink()
         link._running = True
         mock_ser = MagicMock(in_waiting=0)
@@ -1262,8 +1262,7 @@ class TestLoop:
             patch("backend.drone_link.time.sleep"),
         ):
             link._loop()
-        assert len(link._buf) <= 65536
-        assert link._parse_errors >= 1
+        assert link._buf == b""
 
     def test_loop_heartbeat_timeout_detection(self):
         """_loop detects heartbeat timeout and sets connected=False."""

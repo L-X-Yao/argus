@@ -629,11 +629,11 @@ class DroneLink:
         shared by the live link thread, offline replay (backend/replay.py),
         and fault-injection tests — so what tests exercise IS the flight path.
         Returns the number of frames processed."""
+        # No size cap needed: the drain below leaves at most one partial frame.
+        # Trimming here used to discard half of a full 64 KB read whenever a
+        # partial frame was already buffered.
         if data:
             self._buf += data
-            if len(self._buf) > 65536:
-                self._buf = self._buf[-32768:]
-                self._parse_errors += 1
         frames = 0
         while len(self._buf) >= 7:
             payload, consumed = self._parse_mavlink_frame()

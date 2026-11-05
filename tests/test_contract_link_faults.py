@@ -104,10 +104,10 @@ class TestCorruption:
         assert len(link._unknown_msg_ids) <= 256
         assert link._parse_errors >= 300
 
-    def test_buffer_flood_trimmed_then_recovers(self):
+    def test_buffer_flood_drains_then_recovers(self):
         link = DroneLink()
         link.feed(b"\x11" * 100_000)
-        assert len(link._buf) <= 65536
+        assert link._buf == b""
         link.feed(heartbeat())
         assert link.connected is True
 
@@ -182,6 +182,24 @@ class TestLeadingNoise:
         link = DroneLink()
         link.feed(b"\x99\x88\x77" + heartbeat())
         assert link.connected is True
+
+    def test_any_noise_bytes_cannot_lock_the_link_to_other_framing(self):
+        """The removed framing auto-detect keyed on 0x50 0x4C, so these bytes
+        ahead of the first frame used to stop MAVLink parsing altogether."""
+        link = DroneLink()
+        link.feed(b"\x50\x4c\x05\x00" + heartbeat())
+        assert link.connected is True
+
+
+class TestBacklog:
+    def test_full_read_behind_a_partial_frame_loses_nothing(self):
+        """A 64 KB read arriving behind a partial frame used to exceed the old
+        buffer cap, and the trim threw away about half of the frames in it."""
+        link = DroneLink()
+        frame = heartbeat()
+        count = 65536 // len(frame)
+        link.feed(frame[:5])
+        assert link.feed(frame[5:] + frame * count) == count + 1
 
 
 class TestMultiVehicleInterleave:
