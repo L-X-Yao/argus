@@ -299,9 +299,32 @@ class TestCommandAck:
 
     def test_in_progress_ignored(self):
         link = make_link()
-        p = struct.pack("<HB", 400, 4)
+        p = struct.pack("<HB", 241, 5)
         handle_command_ack(p, len(p), link)
         assert len(link.events) == 0
+
+    def test_failed_is_reported(self):
+        """A refused arm answers MAV_RESULT_FAILED (GCS_Common.cpp:5204)."""
+        link = make_link()
+        link.locale = "en"
+        p = struct.pack("<HB", 400, 4)
+        handle_command_ack(p, len(p), link)
+        assert link.events[0]["event_type"] == "cmd_ack_fail"
+        assert link.events[0]["text"] == "Command: Arm/Disarm — failed"
+
+    def test_results_match_mav_result(self):
+        """The tables are hand-written, so hold them to the real enum."""
+        from pymavlink.dialects.v20 import ardupilotmega as mavlink
+
+        from backend.mavlink_handlers import _ACK_RESULTS_EN
+
+        for value, name in _ACK_RESULTS_EN.items():
+            enum_name = mavlink.enums["MAV_RESULT"][value].name.removeprefix("MAV_RESULT_")
+            assert enum_name.replace("_", " ").lower() == {
+                "success": "accepted",
+                "COMMAND_LONG only": "command long only",
+                "COMMAND_INT only": "command int only",
+            }.get(name, name)
 
     def test_en_locale_arm_disarm(self):
         link = make_link()
@@ -624,6 +647,15 @@ class TestMissionAck:
         p = struct.pack("<BBBB", link.vehicle.sysid, 1, 3, 0)
         handle_mission_ack(p, len(p), link)
         assert link.mission._mission_pending is False
+
+    def test_late_duplicate_does_not_end_the_upload(self):
+        """MAV_MISSION_INVALID_SEQUENCE: the FC is still asking for items."""
+        link = make_link()
+        link.mission._mission_pending = True
+        p = struct.pack("<BBBB", link.vehicle.sysid, 1, 13, 0)
+        handle_mission_ack(p, len(p), link)
+        assert link.mission._mission_pending is True
+        assert len(link.events) == 0
 
     def test_fence_ack(self):
         link = make_link()

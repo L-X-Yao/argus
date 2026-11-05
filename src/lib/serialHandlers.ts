@@ -22,6 +22,30 @@ const FIX_NAMES: Record<'en' | 'zh', Record<number, string>> = {
 
 const uiLocale = (): 'en' | 'zh' => (i18nState.locale === 'zh' ? 'zh' : 'en');
 
+// Mirrors backend/mavlink_handlers.py _CMD_NAMES_* and _ACK_RESULTS_*.
+const ACK_COMMANDS: Record<number, string> = {
+  22: 'ack.cmd.takeoff',
+  176: 'ack.cmd.mode',
+  181: 'ack.cmd.relay',
+  241: 'ack.cmd.calibration',
+  300: 'ack.cmd.missionStart',
+  400: 'ack.cmd.armDisarm',
+  410: 'ack.cmd.guided',
+  42424: 'ack.cmd.compassCal',
+  42425: 'ack.cmd.compassAccept',
+  42426: 'ack.cmd.compassCancel',
+};
+const ACK_RESULTS: Record<number, string> = {
+  0: 'ack.result.accepted',
+  1: 'ack.result.temporarilyRejected',
+  2: 'ack.result.denied',
+  3: 'ack.result.unsupported',
+  4: 'ack.result.failed',
+  7: 'ack.result.commandLongOnly',
+  8: 'ack.result.commandIntOnly',
+};
+const ACK_QUIET_ON_SUCCESS = new Set([241, 42424, 42425, 42426]);
+
 export function buildSerialHandlers(): Partial<MessageHandlers> {
   // One-shot per connection, like the backend's _unsupported_fc_warned
   // (reset on connect) — a mixed AP+GCS link must not toast every second.
@@ -125,6 +149,30 @@ export function buildSerialHandlers(): Partial<MessageHandlers> {
     onHomePosition: (msg) => {
       app.drone.home_lat = msg.lat;
       app.drone.home_lon = msg.lon;
+    },
+    onCommandAck: (msg, frame) => {
+      // Twin of backend handle_command_ack. ArduPilot answers every COMMAND_LONG
+      // (libraries/GCS_MAVLink/GCS_Common.cpp:5397) and a refused arm answers
+      // MAV_RESULT_FAILED (:5204). Unhandled until now, so on this link a refused
+      // command gave no sign at all.
+      if (frame.payloadLen < 2) return;
+      // MAV_RESULT_IN_PROGRESS reports progress and the final result follows
+      // (GCS_Common.cpp:1463 send_in_progress, :1468 conclude).
+      if (msg.result === 5) return;
+      if (msg.result === 0 && ACK_QUIET_ON_SUCCESS.has(msg.command)) return;
+      const cmdKey = ACK_COMMANDS[msg.command];
+      const resultKey = ACK_RESULTS[msg.result];
+      const text = t('ack.text')
+        .replace('{cmd}', cmdKey ? t(cmdKey) : String(msg.command))
+        .replace('{result}', resultKey ? t(resultKey) : t('ack.result.unknown').replace('{n}', String(msg.result)));
+      const ok = msg.result === 0;
+      addEvent({
+        type: 'event',
+        time: new Date().toLocaleTimeString(),
+        text,
+        event_type: ok ? 'cmd_ack_ok' : 'cmd_ack_fail',
+      });
+      if (!ok) addToast(text, 'error', 5000);
     },
     onStatusText: (msg) => {
       // Use addEvent so the 200-entry cap in stores.svelte applies; a direct

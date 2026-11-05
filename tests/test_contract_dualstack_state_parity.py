@@ -92,7 +92,7 @@ def state_dump(tmp_path_factory) -> dict[str, dict]:
     return json.loads(out.read_text(encoding="utf-8"))
 
 
-def _backend_state(spec: dict) -> dict:
+def _backend_link(spec: dict, locale: str = "en") -> DroneLink:
     frame = bytes.fromhex(spec["hex"])
     mid = frame[7] | (frame[8] << 8) | (frame[9] << 16)
     pl = frame[1]
@@ -101,14 +101,18 @@ def _backend_state(spec: dict) -> dict:
     # handler that forgot its _pad() call.
     payload = frame[10 : 10 + pl]
     link = DroneLink()  # constructing it registers the production dispatch table
-    link.locale = "en"  # get_state "mode" is localized; TS dump runs en
+    link.locale = locale  # get_state "mode" is localized; the TS state dump runs en
     link._raw_sysid = 1  # heartbeat handler copies the frame's sysid from here
     # Resolve through the REAL registry, not a hand-copied handler map that
     # could go stale against init_handlers().
     handler = mavlink_dispatch._handlers.get(mid)
     assert handler is not None, f"{spec['id']}: msg id {mid} not in production dispatch registry"
     handler(payload, pl, link)
-    return link.get_state()
+    return link
+
+
+def _backend_state(spec: dict) -> dict:
+    return _backend_link(spec).get_state()
 
 
 def _assert_value(op_id: str, key: str, bv, tv, tol=None) -> None:
@@ -150,6 +154,17 @@ class TestDualStackStateParity:
             assert key in be, f"{frame_id}: get_state() has no key {key!r}"
             assert key in ts, f"{frame_id}: serial dump has no key {key!r}"
             _assert_value(frame_id, key, be[key], ts[key])
+
+    @pytest.mark.parametrize("locale", ["en", "zh"])
+    @pytest.mark.parametrize("frame_id", [k for k, f in FRAMES.items() if f["msg"] == "COMMAND_ACK"])
+    def test_command_result_parity(self, frame_id: str, locale: str, state_dump: dict):
+        """A command result must read the same on both links, and a failure must
+        raise the toast that ws.ts raises for cmd_ack_fail."""
+        link = _backend_link(FRAMES[frame_id], locale)
+        be = [[e["event_type"], e["text"]] for e in link.events]
+        ts = state_dump[frame_id]["__ack"][locale]
+        assert ts["events"] == be
+        assert ts["toasts"] == [text for etype, text in be if etype == "cmd_ack_fail"]
 
     def test_dump_covers_fixture(self, state_dump: dict):
         missing = [f["id"] for f in FIXTURE["frames"] if f["id"] not in state_dump]

@@ -247,6 +247,18 @@ describe('serialUploadMission', () => {
     await expect(promise).resolves.toEqual({ ok: false, error: 'MISSION_ACK type=14' });
   });
 
+  it('keeps uploading after MAV_MISSION_INVALID_SEQUENCE (a late duplicate)', async () => {
+    const wps = [{ lat: 30, lon: 120, alt: 50, drop: false, delay: 0, speed: 0, type: 'wp' as const, loiter_param: 0 }];
+    const promise = serialUploadMission(wps, 30);
+    let settled = false;
+    void promise.then(() => (settled = true));
+    inject(fcFrame(47, encodeMissionAck(1, 1, 13)));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(settled).toBe(false);
+    inject(fcFrame(47, encodeMissionAck(1, 1, 0)));
+    await expect(promise).resolves.toEqual({ ok: true });
+  });
+
   it('REGRESSION: rejects upload while a download is pending', async () => {
     // Start a download (no MISSION_COUNT injected yet → stays pending).
     void serialDownloadMission();

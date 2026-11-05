@@ -2,6 +2,8 @@ import { test, expect, type Page } from '@playwright/test';
 
 // A real MAVLink 2 HEARTBEAT: quadrotor, ArduPilot, disarmed, sysid 1.
 const HEARTBEAT = [253, 9, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 2, 3, 81, 3, 3, 226, 146];
+// COMMAND_ACK for MAV_CMD_COMPONENT_ARM_DISARM, result MAV_RESULT_FAILED.
+const ARM_REFUSED = [253, 3, 0, 0, 0, 1, 1, 77, 0, 0, 144, 1, 4, 100, 180];
 
 // The WebSerial path never touches the backend, and the simulator can't reach
 // it, so nothing exercised it until it met a real FC: there the Disconnect
@@ -9,12 +11,18 @@ const HEARTBEAT = [253, 9, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 2, 3, 81, 3, 3, 2
 // the hardware so those failures show up in CI.
 async function fakeSerialPort(page: Page) {
   await page.addInitScript((frame) => {
-    const fake = { closed: false, silent: false, opens: 0 };
+    const fake = {
+      closed: false,
+      silent: false,
+      opens: 0,
+      inject: (_bytes: number[]) => {},
+    };
     (window as unknown as { __serial: typeof fake }).__serial = fake;
     let timer: ReturnType<typeof setInterval>;
     const newReadable = () =>
       new ReadableStream<Uint8Array>({
         start(controller) {
+          fake.inject = (bytes) => controller.enqueue(new Uint8Array(bytes));
           timer = setInterval(() => {
             if (!fake.silent) controller.enqueue(new Uint8Array(frame));
           }, 100);
@@ -88,5 +96,12 @@ test.describe('WebSerial session', () => {
       (window as unknown as { __serial: { silent: boolean } }).__serial.silent = true;
     });
     await expect(linkIndicator(page)).toHaveAttribute('title', /^Link ([3-9]|\d\d)\.\ds/, { timeout: 8000 });
+  });
+
+  test('a command the FC refuses shows an error', async ({ page }) => {
+    await page.evaluate((frame) => {
+      (window as unknown as { __serial: { inject: (b: number[]) => void } }).__serial.inject(frame);
+    }, ARM_REFUSED);
+    await expect(page.getByText(/解锁\/锁定 — 失败|Arm\/Disarm — failed/).first()).toBeVisible({ timeout: 5000 });
   });
 });

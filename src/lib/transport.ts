@@ -721,6 +721,10 @@ function _onMissionRequest(seq: number): void {
 
 function _onMissionAck(type: number): void {
   if (!upload?.pending) return;
+  // MAV_MISSION_INVALID_SEQUENCE is no verdict on the upload. The FC re-requests an
+  // item after 1 s (MissionItemProtocol.cpp:407), and when that crosses our answer
+  // the late duplicate gets this ack while the upload carries on (:272).
+  if (type === 13) return;
   // MAV_MISSION_ACCEPTED = 0. Anything else is a rejection from AP_Mission.
   if (type === 0) {
     _resolveUpload({ ok: true });

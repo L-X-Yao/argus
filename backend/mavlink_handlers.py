@@ -238,14 +238,28 @@ _CMD_NAMES_EN = {
     42425: "Accept Compass Cal",
     42426: "Cancel Compass Cal",
 }
-_ACK_RESULTS_ZH = {0: "成功", 1: "暂时拒绝", 2: "拒绝", 3: "不支持", 4: "进行中", 5: "已取消"}
+# MAV_RESULT as ArduPilot's mavlink fork defines it (message_definitions/v1.0/
+# common.xml, which has no 6). 4 is FAILED: a refused arm answers it
+# (libraries/GCS_MAVLink/GCS_Common.cpp:5204).
+_ACK_RESULTS_ZH = {
+    0: "成功",
+    1: "暂时拒绝",
+    2: "拒绝",
+    3: "不支持",
+    4: "失败",
+    5: "进行中",
+    7: "只接受 COMMAND_LONG",
+    8: "只接受 COMMAND_INT",
+}
 _ACK_RESULTS_EN = {
     0: "success",
     1: "temporarily rejected",
     2: "denied",
     3: "unsupported",
-    4: "in progress",
-    5: "cancelled",
+    4: "failed",
+    5: "in progress",
+    7: "COMMAND_LONG only",
+    8: "COMMAND_INT only",
 }
 
 
@@ -263,7 +277,9 @@ def handle_command_ack(p: bytes, pl: int, link: DroneLink) -> None:
     result_text = (_ACK_RESULTS_EN if en else _ACK_RESULTS_ZH).get(
         result, "unknown(%d)" % result if en else "未知(%d)" % result
     )
-    if result == 4:
+    # MAV_RESULT_IN_PROGRESS reports progress and the final result follows
+    # (GCS_Common.cpp:1463 send_in_progress, :1468 conclude).
+    if result == 5:
         return
     if result == 0 and cmd_id in (241, 42424, 42425, 42426):
         return
@@ -647,6 +663,11 @@ def handle_mission_ack(p: bytes, pl: int, link: DroneLink) -> None:
             lt("fence_clear_ok", link.locale) if mtype == 0 else lt("fence_clear_fail", link.locale) % mtype,
             "fence_clear_ok" if mtype == 0 else "fence_clear_fail",
         )
+    elif mtype == 13:
+        # MAV_MISSION_INVALID_SEQUENCE is no verdict on an upload. The FC re-requests
+        # an item after 1 s (MissionItemProtocol.cpp:407), and when that crosses our
+        # answer the late duplicate gets this ack while the upload carries on (:272).
+        return
     elif mission_type == 1 and m._fence_pending:
         m._fence_pending = False
         m._fence_ul_start_time = 0.0

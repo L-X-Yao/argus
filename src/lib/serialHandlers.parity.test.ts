@@ -17,18 +17,24 @@ import { fileURLToPath } from 'node:url';
 // vi.mock factories are hoisted; shared mutable state must be vi.hoisted.
 const H = vi.hoisted(() => ({
   drone: {} as Record<string, unknown>,
+  events: [] as { event_type: string; text: string }[],
+  toasts: [] as string[],
+  locale: 'en' as 'en' | 'zh',
 }));
 
 vi.mock('./stores.svelte', () => ({
   app: { drone: H.drone, activeTransport: 'serial' },
-  addToast: vi.fn(),
-  addEvent: vi.fn(),
+  addToast: (text: string) => H.toasts.push(text),
+  addEvent: (ev: { event_type: string; text: string }) => H.events.push(ev),
   isPlane: () => false,
 }));
-vi.mock('./i18n.svelte', () => ({
-  t: (key: string) => key,
-  i18nState: { locale: 'en' },
-}));
+vi.mock('./i18n.svelte', async () => {
+  const dicts = {
+    en: (await import('./locales/en')).default,
+    zh: (await import('./locales/zh')).default,
+  };
+  return { t: (key: string) => dicts[H.locale][key] ?? key, i18nState: H };
+});
 
 // Import AFTER mocks.
 import { parseFrames, dispatchFrame } from './mavlink';
@@ -67,6 +73,20 @@ describe('dual-stack state-parity dump (FC → app.drone)', () => {
       const snapshot: Record<string, unknown> = {};
       for (const key of spec.compare) snapshot[key] = H.drone[key];
       dump[spec.id] = snapshot;
+
+      // What a command result shows the operator, in each language the backend has.
+      if (spec.msg === 'COMMAND_ACK') {
+        const ack: Record<string, unknown> = {};
+        for (const locale of ['en', 'zh'] as const) {
+          H.locale = locale;
+          H.events.length = 0;
+          H.toasts.length = 0;
+          dispatchFrame(frames[0], handlers);
+          ack[locale] = { events: H.events.map((e) => [e.event_type, e.text]), toasts: [...H.toasts] };
+        }
+        H.locale = 'en';
+        snapshot.__ack = ack;
+      }
     }
 
     for (const spec of fixture.frames) {

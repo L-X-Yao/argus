@@ -182,6 +182,79 @@
     "ekf_compass"
    ],
    "note": "serial mode never mapped this until 2026-11-05: flags stayed 0, so the preflight EKF row passed on an unhealthy EKF"
+  },
+  {
+   "id": "ack_accepted",
+   "msg": "COMMAND_ACK",
+   "hex": "fd0200000001014d00009001a058",
+   "compare": [],
+   "note": "MAVLink2-trimmed to 2 bytes: result reads 0"
+  },
+  {
+   "id": "ack_failed",
+   "msg": "COMMAND_ACK",
+   "hex": "fd0300000001014d000090010464b4",
+   "compare": [],
+   "note": "a refused arm (GCS_Common.cpp:5204); the backend dropped this as in progress until 2026-11-05"
+  },
+  {
+   "id": "ack_denied",
+   "msg": "COMMAND_ACK",
+   "hex": "fd0300000001014d0000b000023b35",
+   "compare": []
+  },
+  {
+   "id": "ack_unsupported",
+   "msg": "COMMAND_ACK",
+   "hex": "fd0300000001014d000016000344c5",
+   "compare": []
+  },
+  {
+   "id": "ack_temporarily_rejected",
+   "msg": "COMMAND_ACK",
+   "hex": "fd0300000001014d00002c0101743c",
+   "compare": []
+  },
+  {
+   "id": "ack_in_progress",
+   "msg": "COMMAND_ACK",
+   "hex": "fd0300000001014d0000f100053f72",
+   "compare": [],
+   "note": "no event: the final result follows"
+  },
+  {
+   "id": "ack_calibration_ok",
+   "msg": "COMMAND_ACK",
+   "hex": "fd0100000001014d0000f13d9a",
+   "compare": [],
+   "note": "no event: calibration reports through other messages"
+  },
+  {
+   "id": "ack_compass_ok",
+   "msg": "COMMAND_ACK",
+   "hex": "fd0200000001014d0000b8a5c655",
+   "compare": [],
+   "note": "no event, as above"
+  },
+  {
+   "id": "ack_unnamed_command",
+   "msg": "COMMAND_ACK",
+   "hex": "fd0300000001014d0000f60004c63c",
+   "compare": [],
+   "note": "no name in the table: the number is shown"
+  },
+  {
+   "id": "ack_command_int_only",
+   "msg": "COMMAND_ACK",
+   "hex": "fd0300000001014d0000900108c41d",
+   "compare": []
+  },
+  {
+   "id": "ack_unknown_result",
+   "msg": "COMMAND_ACK",
+   "hex": "fd0300000001014d0000900163399c",
+   "compare": [],
+   "note": "not in MAV_RESULT: fallback text"
   }
  ]
 }
