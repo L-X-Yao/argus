@@ -29,6 +29,72 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+describe('serialReadLoop', () => {
+  // A port whose first stream fails with `name` on its first read. Chrome then
+  // hands out a new stream, unless the error is fatal.
+  function portFailingWith(name: string, fatal: boolean) {
+    let stream: ReadableStream<Uint8Array> | null = null;
+    let failed = false;
+    const port = {
+      get readable() {
+        if (stream === null) {
+          stream = new ReadableStream<Uint8Array>({
+            pull(controller) {
+              failed = true;
+              controller.error(new DOMException('read failed', name));
+            },
+          });
+        } else if (failed) {
+          if (fatal) return null;
+          failed = false;
+          stream = new ReadableStream<Uint8Array>({
+            start(controller) {
+              controller.enqueue(new Uint8Array([7]));
+            },
+          });
+        }
+        return stream;
+      },
+      writable: new WritableStream<Uint8Array>(),
+      getInfo: () => ({}),
+      async open() {},
+      async close() {},
+    };
+    vi.stubGlobal('navigator', { serial: { requestPort: async () => port } });
+  }
+
+  it.each(['BreakError', 'FramingError', 'ParityError', 'BufferOverrunError'])(
+    'keeps reading after a %s',
+    async (name) => {
+      portFailingWith(name, false);
+      const conn = await openSerial(115200);
+      const chunks: Uint8Array[] = [];
+      const loop = serialReadLoop(conn, (c) => chunks.push(c));
+      await vi.waitFor(() => expect(chunks.length).toBeGreaterThan(0));
+      await conn.close();
+      await expect(loop).resolves.toBeUndefined();
+    },
+  );
+
+  it('stops instead of taking a new stream once closing', async () => {
+    // close() racing a read error: nothing would cancel a replacement reader,
+    // so close() would wait on the loop for good.
+    portFailingWith('BreakError', false);
+    const conn = await openSerial(115200);
+    const chunks: Uint8Array[] = [];
+    const loop = serialReadLoop(conn, (c) => chunks.push(c));
+    conn._closing = true;
+    await expect(loop).resolves.toBeUndefined();
+    expect(chunks.length).toBe(0);
+  });
+
+  it('fails when the device is really gone', async () => {
+    portFailingWith('NetworkError', true);
+    const conn = await openSerial(115200);
+    await expect(serialReadLoop(conn, () => {})).rejects.toThrow('read failed');
+  });
+});
+
 describe('SerialConnection.close', () => {
   it('ends a running read loop and really closes the port', async () => {
     const port = fakePort();
