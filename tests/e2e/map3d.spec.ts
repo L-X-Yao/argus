@@ -11,6 +11,20 @@ async function open3d(page: Page) {
   await page.goto('/');
 }
 
+function seed(page: Page, key: string, value: unknown) {
+  return page.addInitScript(([k, v]) => localStorage.setItem(k, v), [key, JSON.stringify(value)]);
+}
+
+async function clickMap(page: Page, fx: number, fy: number) {
+  const box = await page.locator('canvas.maplibregl-canvas').boundingBox();
+  await page.mouse.click(box!.x + box!.width * fx, box!.y + box!.height * fy);
+}
+
+// Overlay edits made before the map's 'load' event have nowhere to render yet.
+function overlaysReady(page: Page) {
+  return expect(page.locator('[data-overlays-ready="true"]')).toBeVisible({ timeout: 30000 });
+}
+
 test.describe('3D map', () => {
   test('boots with a running worker and its controls', async ({ page }) => {
     const pageErrors: string[] = [];
@@ -28,6 +42,67 @@ test.describe('3D map', () => {
       .poll(async () => (await worker).evaluate(() => typeof (self as { worker?: unknown }).worker))
       .toBe('object');
     expect(pageErrors).toEqual([]);
+  });
+
+  test('shows saved waypoints and adds new ones', async ({ page }) => {
+    const wp = (lat: number, lon: number) => ({
+      lat,
+      lon,
+      alt: 50,
+      drop: false,
+      delay: 0,
+      speed: 0,
+      type: 'wp',
+      loiter_param: 0,
+    });
+    await seed(page, 'argus_waypoints', [wp(34.258, 108.942), wp(34.262, 108.95), wp(34.254, 108.955)]);
+    await open3d(page);
+
+    const numbered = page.locator('.maplibregl-marker', { hasText: /^\d+$/ });
+    await overlaysReady(page);
+    await expect(numbered).toHaveCount(3);
+
+    await clickMap(page, 0.5, 0.3);
+    await expect(numbered).toHaveCount(4);
+  });
+
+  test('shows a saved fence', async ({ page }) => {
+    await seed(page, 'argus_fence', [
+      { lat: 34.258, lon: 108.942 },
+      { lat: 34.262, lon: 108.95 },
+      { lat: 34.254, lon: 108.955 },
+    ]);
+    await open3d(page);
+
+    await overlaysReady(page);
+    await expect(page.locator('.maplibregl-marker')).toHaveCount(3);
+  });
+
+  test('draws a survey polygon', async ({ page }) => {
+    await open3d(page);
+    await overlaysReady(page);
+
+    await page.getByTitle(/^(测绘|Survey)$/).click();
+    await clickMap(page, 0.4, 0.3);
+    await clickMap(page, 0.6, 0.3);
+    await clickMap(page, 0.5, 0.5);
+
+    await expect(page.locator('.maplibregl-marker')).toHaveCount(3);
+  });
+
+  test('shows the replay position', async ({ page }) => {
+    await open3d(page);
+    await overlaysReady(page);
+
+    const row = (t: number, lat: number) => `${t},0,0,90,${lat},108.942,50,450,5,0,25,5,90,5,Loiter,1,3,14,0,90,0,-1`;
+    const csv = ['header', row(0, 34.258), row(1, 34.2585), row(2, 34.259)].join('\n');
+    const chooser = page.waitForEvent('filechooser');
+    await page.getByText(/加载飞行日志|Load Flight Log/).click();
+    await (await chooser).setFiles({ name: 'flight.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) });
+
+    await page.locator('input[type="range"]').first().fill('1');
+
+    await expect(page.locator('.maplibregl-marker')).toHaveCount(1);
   });
 
   test('falls back to the 2D map without WebGL2', async ({ page }) => {

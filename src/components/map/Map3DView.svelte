@@ -17,6 +17,11 @@
 
   let mapEl: HTMLDivElement;
   let map: maplibregl.Map | null = $state(null);
+  // Set once the overlay sources exist. The overlay effects must gate on this,
+  // not on map.isStyleLoaded(): that is false until tiles settle and is not
+  // reactive, so an early return there left the effect with no dependency on
+  // app state and it never ran again.
+  let overlaysReady = $state(false);
   let droneMarker: maplibregl.Marker | null = null;
   let homeMarker: maplibregl.Marker | null = null;
   let trailCoords: [number, number][] = [];
@@ -274,6 +279,7 @@
         source: 'survey',
         paint: { 'line-color': '#ab47bc', 'line-width': 2, 'line-dasharray': [3, 2] },
       });
+      overlaysReady = true;
     });
 
     // Map click: same priority order as MapView.svelte:118-140 —
@@ -516,7 +522,7 @@
   });
 
   $effect(() => {
-    if (!map || !map.isStyleLoaded()) return;
+    if (!map || !overlaysReady) return;
     const wps = app.waypoints;
     const src = map.getSource('waypoints') as maplibregl.GeoJSONSource;
     if (!src) return;
@@ -635,7 +641,7 @@
    * vertex white-filled to mark the start). Re-runs on fencePolygon edits.
    */
   $effect(() => {
-    if (!map || !map.isStyleLoaded()) return;
+    if (!map || !overlaysReady) return;
     const src = map.getSource('fence') as maplibregl.GeoJSONSource | undefined;
     if (!src) return;
 
@@ -690,7 +696,7 @@
    * vertex inverted (white-filled) marks the polygon start direction.
    */
   $effect(() => {
-    if (!map || !map.isStyleLoaded()) return;
+    if (!map || !overlaysReady) return;
     const src = map.getSource('survey') as maplibregl.GeoJSONSource | undefined;
     if (!src) return;
 
@@ -733,7 +739,7 @@
    * everything down. Trail caps at 3000 points (same as 2D).
    */
   $effect(() => {
-    if (!map || !map.isStyleLoaded()) return;
+    if (!map || !overlaysReady) return;
     const rp = app.replayPos;
     const trailSrc = map.getSource('replay-trail') as maplibregl.GeoJSONSource | undefined;
 
@@ -842,7 +848,7 @@
   let prevTileSource = '';
   $effect(() => {
     const ts = app.tileSource;
-    if (!map || !map.isStyleLoaded() || ts === prevTileSource) return;
+    if (!map || !overlaysReady || ts === prevTileSource) return;
     prevTileSource = ts;
     const src = curSource();
     const url = `${API_BASE}/api/tile/${src.sat}/{z}/{x}/{y}`;
@@ -861,7 +867,7 @@
 </script>
 
 <div class="relative flex-1 min-w-0">
-  <div bind:this={mapEl} class="h-full rounded-lg border border-border"></div>
+  <div bind:this={mapEl} data-overlays-ready={overlaysReady} class="h-full rounded-lg border border-border"></div>
 
   <div class="absolute top-2.5 left-2.5 z-10 flex gap-1">
     <div class="map-btn">
