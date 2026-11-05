@@ -324,6 +324,22 @@
         available: true,
       },
       {
+        id: 'tool-ntrip',
+        label: t('ntrip.title'),
+        category: t('cmd.catTools'),
+        icon: Radio,
+        handler: () => openPanel('ntrip'),
+        available: true,
+      },
+      {
+        id: 'tool-gimbal',
+        label: t('gimbal.title'),
+        category: t('cmd.catTools'),
+        icon: Compass,
+        handler: () => openPanel('gimbal'),
+        available: true,
+      },
+      {
         id: 'tool-motor',
         label: t('cmd.motorTest'),
         category: t('cmd.catTools'),
