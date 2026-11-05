@@ -129,6 +129,9 @@ class ParamManager:
                 "index": index,
                 "total": self.total_count,
                 "received": self.received_count,
+                # The counters can't tell the frontend whether a fetch is
+                # running: a real FC also sends PARAM_VALUE on its own.
+                "fetching": self.fetching,
             }
         )
         # Cap message buffer on every append (not just on completion) so a

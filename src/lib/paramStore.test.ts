@@ -128,6 +128,19 @@ describe('handleParamBatch edge cases', () => {
     expect(paramState.fetching).toBe(false);
   });
 
+  it('stays idle when a value arrives outside a fetch', () => {
+    // A real FC sends PARAM_VALUE on its own: 1 of 1028 with no fetch running.
+    // Inferring a fetch from received < total locked the Read button for good.
+    handleParamBatch([{ name: 'A', value: 1, ptype: 9, index: 0, total: 1028, received: 1, fetching: false }]);
+    expect(paramState.fetching).toBe(false);
+    expect(paramState.list.length).toBe(1);
+  });
+
+  it('follows the fetching flag while a fetch runs', () => {
+    handleParamBatch([{ name: 'A', value: 1, ptype: 9, index: 0, total: 2, received: 2, fetching: true }]);
+    expect(paramState.fetching).toBe(true);
+  });
+
   it('handles multiple batches accumulating params', () => {
     handleParamBatch([{ name: 'A', value: 1, ptype: 9, index: 0, total: 3, received: 1 }]);
     handleParamBatch([

@@ -98,6 +98,25 @@ class TestHandleParamValue:
         assert len(mgr._messages) <= 2000
 
 
+class TestFetchingFlagInMessages:
+    """The frontend trusts this flag: a real FC sends PARAM_VALUE on its own,
+    and treating that as a fetch left the Read button locked."""
+
+    def test_value_outside_a_fetch_is_not_marked_fetching(self):
+        mgr = ParamManager(_make_link())
+        p = _param_payload("STAT_RUNTIME", 1.0, 5, 1028)
+        mgr.handle_param_value(p, len(p))
+        assert mgr._messages[-1]["fetching"] is False
+        assert mgr._messages[-1]["received"] == 1 and mgr._messages[-1]["total"] == 1028
+
+    def test_value_during_a_fetch_is_marked_fetching(self):
+        mgr = ParamManager(_make_link())
+        mgr.request_all()
+        p = _param_payload("A", 1.0, 0, 2)
+        mgr.handle_param_value(p, len(p))
+        assert mgr._messages[-1]["fetching"] is True
+
+
 class TestSetParam:
     def test_sends_param_set(self):
         link = _make_link()

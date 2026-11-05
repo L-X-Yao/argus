@@ -12,7 +12,15 @@ export const paramState = new ParamState();
 const nameIndex = new Map<string, number>();
 
 export function handleParamBatch(
-  params: { name: string; value: number; ptype: number; index: number; total: number; received: number }[],
+  params: {
+    name: string;
+    value: number;
+    ptype: number;
+    index: number;
+    total: number;
+    received: number;
+    fetching?: boolean;
+  }[],
 ) {
   const arr = paramState.list.slice();
   for (const p of params) {
@@ -30,7 +38,10 @@ export function handleParamBatch(
     const last = params[params.length - 1];
     paramState.total = last.total;
     paramState.received = last.received;
-    paramState.fetching = last.received < last.total;
+    // The backend says whether a fetch is running. A value the FC sent on its
+    // own is 1 of 1028 with nothing to finish it, so the counters would latch
+    // this true for good. The serial path only calls this inside a fetch.
+    paramState.fetching = last.fetching ?? last.received < last.total;
   }
 }
 
