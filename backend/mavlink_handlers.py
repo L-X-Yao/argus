@@ -6,6 +6,7 @@ import time
 from typing import TYPE_CHECKING
 
 from . import mavlink_dispatch
+from .constants import NON_VEHICLE_MAV_TYPES
 from .crc_extras import CRC_EXTRA
 from .locale_text import lt
 from .statustext_filter import filter_statustext
@@ -33,6 +34,12 @@ def handle_heartbeat(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 1:
         return
     p = _pad(p, 9)
+    # The FC forwards the heartbeats of what hangs off it, a gimbal or a companion
+    # computer (libraries/GCS_MAVLink/MAVLink_routing.cpp:418). Those carry
+    # MAV_AUTOPILOT_INVALID (8), and without this they would read as the vehicle
+    # disarming, or changing type, once a second.
+    if p[5] == 8 or p[4] in NON_VEHICLE_MAV_TYPES:
+        return
     v = link.vehicle
     v.mode = p[0] | (p[1] << 8) | (p[2] << 16) | (p[3] << 24)
     old_vtype = v.vtype_raw

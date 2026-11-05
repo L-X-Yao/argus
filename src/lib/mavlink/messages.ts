@@ -597,6 +597,16 @@ export function decodeGimbalDeviceAttitudeStatus(p: DataView): GimbalDeviceAttit
   return { pitch: (pitch * 180) / Math.PI, yaw: (yaw * 180) / Math.PI };
 }
 
+/**
+ * The FC forwards the heartbeats of what hangs off it, a gimbal or a companion
+ * computer (libraries/GCS_MAVLink/MAVLink_routing.cpp:418). Those carry
+ * MAV_AUTOPILOT_INVALID (8), and a few only say so by MAV_TYPE: GCS, ONBOARD_CONTROLLER,
+ * GIMBAL, ADSB. Mirrors backend handle_heartbeat.
+ */
+export function isVehicleHeartbeat(hb: Pick<Heartbeat, 'type' | 'autopilot'>): boolean {
+  return hb.autopilot !== 8 && ![6, 18, 26, 27].includes(hb.type);
+}
+
 /* ── Encoders ── */
 
 export function encodeHeartbeat(sysType: number = 6, autopilot: number = 8): Uint8Array {

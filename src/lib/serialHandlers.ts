@@ -9,7 +9,7 @@
  * from drifting apart — update BOTH sides (and the parity fixture) when
  * adding a field.
  */
-import type { MessageHandlers } from './mavlink';
+import { isVehicleHeartbeat, type MessageHandlers } from './mavlink';
 import { app, addEvent, addToast } from './stores.svelte';
 import { t, i18nState } from './i18n.svelte';
 import { getModeButtons, getModeName, vehicleType } from './modeStore';
@@ -201,6 +201,7 @@ export function buildSerialHandlers(): Partial<MessageHandlers> {
 
   return {
     onHeartbeat: (msg) => {
+      if (!isVehicleHeartbeat(msg)) return;
       if (!app.drone.connected) {
         app.drone.connected = true;
         app.drone.prearm = [];

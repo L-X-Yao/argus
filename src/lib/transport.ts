@@ -10,6 +10,8 @@
 import { parseFrames, encodeFrame, dispatchFrame } from './mavlink';
 import type { MessageHandlers } from './mavlink';
 import {
+  decodeHeartbeat,
+  isVehicleHeartbeat,
   encodeHeartbeat,
   encodeCommandLong,
   encodeParamRequestList,
@@ -129,6 +131,9 @@ export async function connectSerial(baudRate: number, handlers: Partial<MessageH
     serial.seq = 0;
     serial.buf = new Uint8Array(0);
     serial.lastFrameAt = 0;
+    // The last session may have been a different vehicle.
+    serial.targetSysId = 1;
+    serial.targetCompId = 1;
 
     // Start heartbeat at 1Hz
     serial.hbInterval = setInterval(() => {
@@ -155,7 +160,12 @@ export async function connectSerial(baudRate: number, handlers: Partial<MessageH
       serial.buf = remaining;
 
       for (const frame of frames) {
-        if (serial.targetSysId === 1 && frame.sysId > 0 && frame.msgId === 0) {
+        if (
+          serial.targetSysId === 1 &&
+          frame.sysId > 0 &&
+          frame.msgId === 0 &&
+          isVehicleHeartbeat(decodeHeartbeat(_padView(frame.payload, 9)))
+        ) {
           serial.targetSysId = frame.sysId;
           serial.targetCompId = frame.compId;
         }
