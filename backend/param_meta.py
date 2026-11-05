@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import base64
+import http.client
 import json
 import time
 import urllib.request
@@ -54,7 +55,8 @@ def get_metadata(vehicle: str) -> dict:
             json.dump(data, f, ensure_ascii=False)
         _cache[vehicle] = data
         return data
-    except (OSError, json.JSONDecodeError, ValueError, ET.ParseError):
+    # HTTPException: a connection cut mid-body raises IncompleteRead, not OSError.
+    except (OSError, http.client.HTTPException, json.JSONDecodeError, ValueError, ET.ParseError):
         if cache_path.exists():
             try:
                 with open(cache_path, encoding="utf-8") as f:

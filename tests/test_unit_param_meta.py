@@ -227,6 +227,22 @@ class TestGetMetadata:
             result = get_metadata("copter")
         assert result == {}
 
+    def test_truncated_download_returns_empty(self, tmp_path):
+        """A connection cut mid-body raises IncompleteRead, which is not an OSError."""
+        import http.client
+
+        import backend.param_meta as pm
+
+        resp = MagicMock()
+        resp.read.side_effect = http.client.IncompleteRead(b"<paramfile>", 1000)
+        with (
+            patch.object(pm, "CACHE_DIR", tmp_path),
+            patch.object(pm, "CACHE_TTL", 1),
+            patch("urllib.request.urlopen", return_value=resp),
+        ):
+            result = get_metadata("copter")
+        assert result == {}
+
     def test_fresh_cache_corrupted_falls_through_to_network(self, tmp_path):
         """Corrupted fresh cache must not raise — falls through to network fetch."""
         import backend.param_meta as pm
