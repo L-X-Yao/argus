@@ -10,7 +10,7 @@ import urllib.request as urlreq
 
 from fastapi import APIRouter, Request
 
-from .config import ROOT_DIR, aio, cfg
+from .config import ROOT_DIR, aio, aio_download, cfg
 
 router = APIRouter()
 
@@ -53,7 +53,9 @@ async def _get_srtm_elevation(lat: float, lon: float) -> float:
         url = "https://elevation-tiles-prod.s3.amazonaws.com/skadi/%s%02d/%s" % (ns, abs(ilat), fname)
         try:
             req = urlreq.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-            data = await aio(lambda: urlreq.urlopen(req, timeout=cfg.SRTM_DOWNLOAD_TIMEOUT).read(cfg.SRTM_FILE_MAX))
+            data = await aio_download(
+                lambda: urlreq.urlopen(req, timeout=cfg.SRTM_DOWNLOAD_TIMEOUT).read(cfg.SRTM_FILE_MAX)
+            )
             if len(data) >= cfg.SRTM_FILE_MAX:
                 return 0
             await aio(cache_file.write_bytes, data)

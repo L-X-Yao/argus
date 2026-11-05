@@ -11,7 +11,7 @@ from pathlib import Path
 from fastapi import APIRouter, Request
 from fastapi.responses import Response
 
-from .config import ROOT_DIR, aio, cfg
+from .config import ROOT_DIR, aio, aio_download, cfg
 
 router = APIRouter()
 
@@ -127,7 +127,9 @@ async def api_tile(style: str, z: int, x: int, y: int):
     url = TILE_URLS.get(style, TILE_URLS["6"]).format(x=x, y=y, z=z)
     try:
         req = urlreq.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        data = await aio(lambda: urlreq.urlopen(req, timeout=cfg.TILE_DOWNLOAD_TIMEOUT).read(_TILE_MAX_BYTES + 1))
+        data = await aio_download(
+            lambda: urlreq.urlopen(req, timeout=cfg.TILE_DOWNLOAD_TIMEOUT).read(_TILE_MAX_BYTES + 1)
+        )
         if len(data) > _TILE_MAX_BYTES:
             return Response(status_code=502, content="Tile too large")
         if _tile_count < 0:
@@ -195,7 +197,7 @@ async def api_tile_bulk_download(request: Request):
                 url = TILE_URLS.get(style, TILE_URLS["6"]).format(x=x, y=y, z=z)
                 try:
                     req = urlreq.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-                    data = await aio(
+                    data = await aio_download(
                         lambda: urlreq.urlopen(req, timeout=cfg.TILE_DOWNLOAD_TIMEOUT).read(_TILE_MAX_BYTES + 1)
                     )
                     if len(data) > _TILE_MAX_BYTES:

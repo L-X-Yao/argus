@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import os
 import re
+from concurrent.futures import ThreadPoolExecutor
 from functools import partial
 from pathlib import Path
 
@@ -16,6 +17,18 @@ async def aio(fn, *args):
     """Run a blocking function in the default executor."""
     loop = asyncio.get_event_loop()
     return await loop.run_in_executor(None, partial(fn, *args) if args else fn)
+
+
+# Downloads get their own threads. A dead uplink holds each one for a full
+# timeout, and link connect and disconnect run on the default executor, which
+# has only cpu_count + 4 threads.
+_download_pool = ThreadPoolExecutor(max_workers=8, thread_name_prefix="argus-download")
+
+
+async def aio_download(fn, *args):
+    """Run a blocking network download off the default executor."""
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(_download_pool, partial(fn, *args) if args else fn)
 
 
 def _env(key: str, default, cast=None):

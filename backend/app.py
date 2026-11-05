@@ -11,7 +11,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 from .auth import auth_middleware, auth_required, generate_token, set_session_cookie, verify_token, verify_ws_token
-from .config import ROOT_DIR, VERSION, aio, cfg
+from .config import ROOT_DIR, VERSION, aio, aio_download, cfg
 from .drone_link import DroneLink
 from .firmware import router as firmware_router
 from .param_meta import get_metadata
@@ -165,7 +165,7 @@ async def websocket_endpoint(ws: WebSocket):
 
 @app.get("/api/param_meta")
 async def api_param_meta(vehicle: str = "copter"):
-    return await aio(get_metadata, vehicle)
+    return await aio_download(get_metadata, vehicle)
 
 
 @app.get("/api/ports")

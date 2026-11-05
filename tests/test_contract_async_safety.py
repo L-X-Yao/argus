@@ -1,8 +1,8 @@
 """Contract test: no bare blocking calls inside async functions.
 
 Scans all *.py files under backend/ (excluding __pycache__) for async def
-functions that contain blocking calls not wrapped in await aio(...) or
-asyncio.to_thread(...).
+functions that contain blocking calls not wrapped in await aio(...),
+await aio_download(...) or asyncio.to_thread(...).
 
 Blocking patterns checked:
   - urlreq.urlopen( / urllib.request.urlopen(
@@ -36,7 +36,7 @@ _BLOCKING_PATTERNS = [
 
 # Exemption patterns: if ANY of these appear on the same line, the line is safe
 _EXEMPT_SAME_LINE = [
-    re.compile(r"await\s+aio\("),
+    re.compile(r"await\s+aio(_download)?\("),
     re.compile(r"asyncio\.to_thread\("),
     re.compile(r"await\s+asyncio\.sleep\("),
 ]
@@ -44,7 +44,7 @@ _EXEMPT_SAME_LINE = [
 # Exemption patterns for the PREVIOUS non-blank line (multi-line continuations
 # like `data = await aio(\n    lambda: urlreq.urlopen(...)`).
 _EXEMPT_PREV_LINE = [
-    re.compile(r"await\s+aio\("),
+    re.compile(r"await\s+aio(_download)?\("),
     re.compile(r"asyncio\.to_thread\("),
 ]
 
@@ -168,5 +168,5 @@ class TestAsyncSafety:
         assert not all_violations, (
             "Blocking calls detected inside async functions:\n"
             + "\n".join(all_violations)
-            + "\nWrap them with `await aio(lambda: ...)` or `await asyncio.to_thread(...)`."
+            + "\nWrap them with `await aio(lambda: ...)`, `await aio_download(...)` or `await asyncio.to_thread(...)`."
         )

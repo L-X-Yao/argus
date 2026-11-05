@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import asyncio
 import base64
 import ipaddress
 import logging
@@ -15,7 +14,7 @@ from urllib.parse import urlparse
 
 from fastapi import APIRouter, Request, UploadFile
 
-from .config import ROOT_DIR, cfg
+from .config import ROOT_DIR, aio_download, cfg
 
 router = APIRouter()
 
@@ -104,7 +103,7 @@ def _fetch_online_versions(board_id: int) -> dict:
 
 @router.get("/api/firmware/online")
 async def api_firmware_online(board_id: int = 0):
-    return await asyncio.to_thread(_fetch_online_versions, board_id)
+    return await aio_download(_fetch_online_versions, board_id)
 
 
 def _download_firmware(fw_url: str, filename: str) -> dict:
@@ -167,4 +166,4 @@ async def api_firmware_download(request: Request):
     filename = Path(raw_filename).name
     if not filename.endswith(".apj") or filename in ("", ".", ".."):
         return {"ok": False, "error": "Invalid params"}
-    return await asyncio.to_thread(_download_firmware, fw_url, filename)
+    return await aio_download(_download_firmware, fw_url, filename)
