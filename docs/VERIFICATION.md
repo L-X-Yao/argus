@@ -27,13 +27,13 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 
 | Area | Items | Real FC | SITL | Simulator | Tests only | None | n/a |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Commands, backend | 52 | 20 | 20 | 0 | 12 | 0 | 0 |
-| Commands, WebSerial | 52 | 10 | 28 | 0 | 3 | 0 | 11 |
-| Messages, backend | 34 | 28 | 1 | 0 | 5 | 0 | 0 |
-| Messages, WebSerial | 34 | 16 | 12 | 0 | 5 | 0 | 1 |
+| Commands, backend | 53 | 19 | 22 | 0 | 12 | 0 | 0 |
+| Commands, WebSerial | 53 | 9 | 31 | 0 | 3 | 0 | 10 |
+| Messages, backend | 35 | 28 | 2 | 0 | 5 | 0 | 0 |
+| Messages, WebSerial | 35 | 16 | 13 | 0 | 5 | 0 | 1 |
 | REST routes | 28 | 6 | 5 | 8 | 9 | 0 | 0 |
-| Panels | 78 | 13 | 2 | 21 | 28 | 14 | 0 |
-| Platform | 40 | 8 | 3 | 7 | 15 | 4 | 3 |
+| Panels | 80 | 13 | 3 | 21 | 41 | 2 | 0 |
+| Platform | 40 | 8 | 4 | 7 | 15 | 3 | 3 |
 
 ## Commands / 飞控命令
 
@@ -42,7 +42,7 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 | `arm` | Arm | 解锁 | SITL | SITL | CI on both links |
 | `disarm` | Disarm | 上锁 | Real FC | SITL | Backend 2026-07-16, WebSerial CI |
 | `force_disarm` | Force disarm | 强制上锁 | SITL | SITL | CI on both links |
-| `mode` | Change mode | 切换模式 | Real FC | Real FC | WebSerial 2026-11-05, backend 2026-07-16 |
+| `mode` | Change mode | 切换模式 | SITL | SITL | CI on both links. Real FC 2026-11-05 used the SET_MODE message, since replaced by a command the FC answers |
 | `rtl` | Return to launch | 返航 | SITL | SITL | CI on both links |
 | `takeoff` | Take off | 起飞 | SITL | SITL | CI on both links |
 | `guided_goto` | Fly to a point | 引导飞行 | SITL | SITL | WebSerial CI, backend manual SITL 2026-05 |
@@ -59,7 +59,8 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 | `mission_clear` | Clear mission | 清除航线 | Real FC | Real FC | WebSerial 2026-11-05, backend 2026-05, CI |
 | `fence_upload` | Upload fence | 上传围栏 | Real FC | Real FC | Both 2026-11-05, read back with pymavlink |
 | `fence_clear` | Clear fence on the FC | 清除飞控上的围栏 | Real FC | Real FC | Both 2026-11-05, read back with pymavlink |
-| `rally_upload` | Upload rally points | 上传集结点 | SITL | n/a | CI; on hold, no UI entry |
+| `rally_upload` | Upload rally points | 上传备降点 | SITL | SITL | CI on both links. WebSerial reads the coordinates back from the FC |
+| `rally_clear` | Clear rally points on the FC | 清除飞控上的备降点 | SITL | SITL | CI on both links. WebSerial reads the count back from the FC |
 | `param_request_all` | Read all parameters | 读全部参数 | Real FC | Real FC | Both 2026-11-05, 1028 parameters |
 | `param_set` | Write a parameter | 写参数 | Real FC | Real FC | WebSerial 2026-11-05 with 4 types, backend 2026-05, CI |
 | `param_save` | Back up to a file | 备份参数到文件 | Real FC | n/a | Backend 2026-05, CI |
@@ -124,16 +125,17 @@ CI 在两条链路上都驱动 SITL。WebSerial 用模拟串口接真实固件�
 | `TERRAIN_REPORT` | Terrain height | 地形高度 | Real FC | Tests only | Backend 2026-05, both links compared on the same frame |
 | `BATTERY_STATUS` | Cell voltages | 电芯电压 | Real FC | SITL | Backend 2026-05, WebSerial CI |
 | `AUTOPILOT_VERSION` | Firmware version | 固件版本 | Real FC | SITL | Backend 2026-11-05, WebSerial CI |
-| `MOUNT_STATUS` | Gimbal angles | 云台角度 | Tests only | SITL | WebSerial CI with a servo gimbal in SITL |
+| `MOUNT_STATUS` | Gimbal angles | 云台角度 | Tests only | Tests only | No current firmware sends it: both links compared on the same frame |
 | `WIND` | Wind | 风速风向 | Tests only | Tests only | Both links compared on the same frame, the FC sent none |
 | `MAG_CAL_PROGRESS` | Compass calibration | 罗盘校准进度 | Real FC | SITL | Backend 2026-05, WebSerial CI |
 | `MAG_CAL_REPORT` | Compass calibration | 罗盘校准结果 | Real FC | SITL | Backend 2026-05, WebSerial CI |
 | `EKF_STATUS_REPORT` | EKF health | EKF 状态 | Real FC | Real FC | Both 2026-11-05 |
 | `VIBRATION` | Vibration | 振动 | Real FC | SITL | Backend 2026-11-05, WebSerial CI |
 | `HOME_POSITION` | Home | Home 点 | Real FC | Real FC | Both 2026-11-05 |
+| `EXTENDED_SYS_STATE` | Tells a QuadPlane from a plane | 区分 QuadPlane 和固定翼 | SITL | SITL | Backend CI on a QuadPlane. WebSerial CI on Copter, which reports the same field |
 | `ADSB_VEHICLE` | Nearby aircraft | 周边飞机 | Tests only | Tests only | No ADS-B receiver |
 | `STATUSTEXT` | FC messages | 飞控文字消息 | Real FC | Real FC | Both 2026-11-05 |
-| `GIMBAL_DEVICE_ATTITUDE_STATUS` | Gimbal attitude | 云台姿态 | Tests only | Tests only | Both links compared on the same frame, no gimbal |
+| `GIMBAL_DEVICE_ATTITUDE_STATUS` | Gimbal attitude | 云台姿态 | Tests only | SITL | WebSerial CI with a servo gimbal in SITL |
 
 ## REST routes / REST 接口
 
@@ -174,9 +176,9 @@ Real FC here means the route was in use during a session with a real flight cont
 
 ## Panels / 界面面板
 
-Seven panels have code but no way to open them, marked in the Evidence column. They were never reachable from the UI.
+Four panels have code but no way to open them, marked in the Evidence column. They were never reachable from the UI.
 
-有 7 个面板有代码，但界面上没有入口，在证据列注明。它们从未对用户开放。
+有 4 个面板有代码，但界面上没有入口，在证据列注明。它们从未对用户开放。
 
 | Panel | Area | 作用 | Level | Evidence |
 | --- | --- | --- | --- | --- |
@@ -191,19 +193,21 @@ Seven panels have code but no way to open them, marked in the Evidence column. T
 | `StatusBar` | core | 看链路电池定位状态 | Real FC | 2026-11-05 on both links |
 | `ToastContainer` | core | 查看操作提示消息 | Real FC | 2026-11-05 on both links |
 | `DroneLayer` | layers | 地图上看飞机位置 | Real FC | 2026-11-05 on both links |
-| `FenceLayer` | layers | 地图上看围栏范围 | None | No test |
+| `FenceLayer` | layers | 地图上看围栏范围 | Tests only | Browser test: a saved fence is drawn |
 | `OrthoLayer` | layers | 在地图上显示正射图 | Tests only | Browser test, 2D map only |
-| `GuidedLayer` | layers | 地图上看引导目标 | None | No test |
-| `ReplayLayer` | layers | 地图上看回放位置 | None | No test |
-| `SurveyLayer` | layers | 地图上看测绘区域 | None | No test |
+| `RallyLayer` | layers | 在地图上显示备降点 | Tests only | Browser test |
+| `GuidedLayer` | layers | 地图上看引导目标 | SITL | WebSerial CI: right click, target marked, the vehicle moves off |
+| `ReplayLayer` | layers | 地图上看回放位置 | Tests only | Browser test: draws from its state |
+| `SurveyLayer` | layers | 地图上看测绘区域 | Tests only | Browser test: draws from its state |
 | `WaypointLayer` | layers | 地图上拖改航点 | Simulator | e2e: mission |
 | `AirspacePanel` | map | 查看机场限飞区 | Tests only | Logic: units. Demo data |
 | `Compass3DPanel` | map | 校准罗盘看磁场球 | Tests only | Logic: transport |
 | `Map3DView` | map | 三维地图查看编辑 | Simulator | e2e: map3d |
-| `Mission3DPanel` | map | 三维预览航线 | None | No test |
-| `OfflineMapPanel` | map | 下载离线地图瓦片 | None | No test |
+| `Mission3DPanel` | map | 三维预览航线 | Tests only | Browser test: opens without an error |
+| `OfflineMapPanel` | map | 下载离线地图瓦片 | Tests only | Browser test: opens without an error |
 | `OrthoOverlayPanel` | map | 叠加正射图 | Tests only | Browser test: image reaches the map, survives a reload, wrong corners refused |
-| `CorridorPanel` | mission | 生成走廊扫描航线 | None | No test |
+| `CorridorPanel` | mission | 生成走廊扫描航线 | Tests only | Browser test: opens without an error |
+| `RallyPanel` | mission | 添加并上传备降点 | Tests only | Browser test. Upload and clear run on SITL through their commands |
 | `FencePanel` | mission | 绘制上传地理围栏 | Real FC | 2026-11-05, Clear on FC through the panel on WebSerial |
 | `MissionPanel` | mission | 编辑上传任务航点 | Simulator | e2e: mission, connected-flow |
 | `MissionProgress` | mission | 看任务执行进度 | Tests only | Logic: units |
@@ -219,9 +223,9 @@ Seven panels have code but no way to open them, marked in the Evidence column. T
 | `PowerCalPanel` | params | 校准电压电流 | Tests only | Logic: paramStore |
 | `AiAnnotationPanel` | planning | 标注图像缺陷 | None | No test. Auto-detect is a stub. No way to open it |
 | `AiPlannerPanel` | planning | 文字生成航线 | None | No test. Rule-based parser, not an LLM. No way to open it |
-| `AnnotationPanel` | planning | 记录地图标注点 | None | No test |
+| `AnnotationPanel` | planning | 记录地图标注点 | Tests only | Browser test: opens without an error |
 | `CustomDashboard` | planning | 自定义仪表 | SITL | WebSerial CI, live values |
-| `OverlapCalcPanel` | planning | 计算相机重叠率 | None | No test |
+| `OverlapCalcPanel` | planning | 计算相机重叠率 | Tests only | Browser test: opens without an error |
 | `SchedulerPanel` | planning | 定时执行任务 | Tests only | Logic: scheduler. No way to open it |
 | `ScriptPanel` | planning | 运行用户脚本 | Tests only | Logic: ws. No way to open it |
 | `CalibrationPanel` | setup | 校准传感器 | Simulator | e2e: connected-flow |
@@ -238,7 +242,7 @@ Seven panels have code but no way to open them, marked in the Evidence column. T
 | `FlightSummary` | shared | 查看飞行总结 | Tests only | Logic: units |
 | `LoginDialog` | shared | 输入令牌登录 | Simulator | e2e: auth |
 | `PreflightPanel` | shared | 查看起飞前检查 | Real FC | 2026-11-05 on both links |
-| `RolePanel` | shared | 切换操作角色 | None | No test. Demo, not wired to roles |
+| `RolePanel` | shared | 切换操作角色 | Tests only | Browser test: opens without an error. Demo, not wired to roles |
 | `SettingsPanel` | shared | 修改应用设置 | Simulator | e2e: settings, mobile |
 | `SlideConfirm` | shared | 滑动确认关键指令 | Tests only | Logic: stores |
 | `EkfPanel` | telemetry | 查看导航滤波状态 | Simulator | e2e: connected-flow, navigation |
@@ -249,11 +253,11 @@ Seven panels have code but no way to open them, marked in the Evidence column. T
 | `AdvancedCmdPanel` | tools | 给航点加高级指令 | Tests only | Logic: missionUpload |
 | `ConsolePanel` | tools | 发送飞控控制台命令 | Simulator | e2e: memory |
 | `FFTPanel` | tools | 分析日志频谱 | Tests only | Logic: dflog |
-| `FlightReportPanel` | tools | 填写导出飞行报告 | None | No test |
+| `FlightReportPanel` | tools | 填写导出飞行报告 | Tests only | Browser test: opens without an error |
 | `InspectorPanel` | tools | 检视实时消息流 | Simulator | e2e: memory |
 | `LogPanel` | tools | 下载机载日志 | Real FC | 2026-11-05 on both links |
 | `LogViewerPanel` | tools | 绘图查看日志 | Tests only | Logic: dflog |
-| `RemotePanel` | tools | 查看会话复制链接 | None | No test. Partly wired |
+| `RemotePanel` | tools | 查看会话复制链接 | Tests only | Browser test: opens without an error. Partly wired |
 | `ReplayPanel` | tools | 加载并回放飞行日志 | Simulator | e2e: map3d |
 | `FleetDashboard` | vehicle | 查看并切换多机 | Tests only | Logic: ws |
 | `GimbalPanel` | vehicle | 控制云台相机 | Simulator | e2e: command-palette. Opens; no gimbal |
@@ -266,14 +270,14 @@ Seven panels have code but no way to open them, marked in the Evidence column. T
 | Serial through the backend | 后端串口 | Real FC | 2026-11-05 |
 | WebSerial | 浏览器直连 USB | Real FC | 2026-11-05, Chromium on Linux through usbipd |
 | Log download speed | 日志下载速度 | Real FC | 2026-11-05, about 700 KB/s on both links |
-| Reconnect after a lost link | 断链重连 | Real FC | 2026-11-05, USB pulled on both links |
+| Reconnect after a lost link | 断链重连 | Real FC | 2026-11-05, USB pulled on both links. WebSerial keeping the last state through a drop came later: unit tests only |
 | PFD and HUD | PFD 和 HUD | Real FC | 2026-11-05 on both links; west heading and RC not checked |
 | Preflight checks | 起飞前检查 | Real FC | 2026-11-05 on both links |
 | Copter | 多旋翼 | Real FC | Bench 2026-11-05, flight modes in SITL |
 | Linux from source | Linux 源码运行 | Real FC | Daily development |
 | TCP | TCP 连接 | SITL | CI |
-| Plane and VTOL | 固定翼和 VTOL | SITL | Manual SITL 2026-05, real telemetry 2026-05, not in CI |
-| Rover | 地面车 | SITL | Manual SITL 2026-05, not in CI |
+| Plane and VTOL | 固定翼和 VTOL | SITL | CI, a plain plane and a QuadPlane: recognition, mode numbers for Hold and Land. Real telemetry 2026-05. No flight in CI |
+| Rover | 地面车 | SITL | CI. No drive in CI |
 | 2D map | 2D 地图 | Simulator | e2e; only the default of 8 sources exercised |
 | 3D map | 3D 地图 | Simulator | e2e, headless Chromium; Windows browser not checked |
 | PWA and offline use | PWA 和离线 | Simulator | e2e, Chromium |
@@ -282,7 +286,7 @@ Seven panels have code but no way to open them, marked in the Evidence column. T
 | Token login | Token 登录 | Simulator | e2e, real Windows each release |
 | Windows package | Windows 发布包 | Simulator | Smoke test on real Windows each release |
 | UDP | UDP 连接 | Tests only | Unit tests |
-| Submarine | 水下潜航器 | Tests only | Unit tests |
+| Submarine | 水下潜航器 | SITL | CI. No dive in CI |
 | Several vehicles at once | 多机同屏 | Tests only | Unit tests |
 | Offline mbtiles maps | 离线 mbtiles 地图 | Tests only | Unit tests |
 | Survey and pattern planning | 测绘和图案规划 | Tests only | Unit tests |
@@ -297,7 +301,7 @@ Seven panels have code but no way to open them, marked in the Evidence column. T
 | SSRF and path traversal protection | SSRF 和路径穿越防护 | Tests only | Unit tests |
 | STATUSTEXT filter | STATUSTEXT 过滤 | Tests only | Unit tests |
 | Real flight | 真实飞行 | None | Never properly flown |
-| Right-to-left layout | 阿拉伯语从右到左布局 | None | No test |
+| Right-to-left layout | 阿拉伯语从右到左布局 | Tests only | Browser test: page turns around and stays inside the window |
 | macOS | macOS | None | Never run |
 | Desktop app (Tauri) | 桌面版（Tauri） | None | Not built |
 | Firmware flashing | 固件刷写 | n/a | Not implemented |
@@ -310,7 +314,7 @@ Seven panels have code but no way to open them, marked in the Evidence column. T
 2. **Arm, take off, RTL and mission start on a real FC.** These have only run in SITL. They need a battery, so they need a separate, deliberate session.
 3. **Calibration and reboot on a real FC over WebSerial.** SITL only so far, and compass and accelerometer need the board turned by hand.
 4. **RTK, gimbal, camera and ADS-B.** These need hardware that has not been available.
-5. **Flight on vehicles other than Copter.** Plane, Rover and Sub run in SITL in CI through the backend: recognition, mode numbers, parameters, missions and arming, not a flight.
+5. **Flight on vehicles other than Copter.** Plane, QuadPlane, Rover and Sub run in SITL in CI through the backend: recognition, mode numbers, parameters, missions and arming, not a flight.
 6. **WebSerial in Chrome on Windows.** The 2026-11-05 run used Chromium on Linux with the port chooser automated.
 7. **Four panels nobody can open.** Scripts, scheduler, AI planner and AI annotation exist in code only.
 
@@ -318,7 +322,7 @@ Seven panels have code but no way to open them, marked in the Evidence column. T
 2. **真机上的解锁、起飞、返航、开始任务。** 只在 SITL 跑过。这些需要接电池，要单独安排。
 3. **真机上经 WebSerial 的校准和重启。** 目前只在 SITL 跑过，罗盘和加速度计需要手动翻转板子。
 4. **RTK、云台、相机、ADS-B。** 缺硬件。
-5. **多旋翼以外机型的飞行。** 固定翼、地面车、水下机器人在 CI 里经后端跑 SITL，覆盖机型识别、模式号、参数、航线和解锁，没有跑飞行。
+5. **多旋翼以外机型的飞行。** 固定翼、QuadPlane、地面车、水下机器人在 CI 里经后端跑 SITL，覆盖机型识别、模式号、参数、航线和解锁，没有跑飞行。
 6. **Windows 上 Chrome 的 WebSerial。** 2026-11-05 的测试用的是 Linux 上的 Chromium，端口选择由脚本代替。
 7. **4 个打不开的面板。** 脚本、定时任务、AI 规划、AI 标注只存在于代码中。
 

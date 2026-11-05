@@ -107,7 +107,7 @@ python run.py --sim            # 同时启动后端 + simulator.py
 |  Python 后端 (FastAPI + uvicorn)          |
 |  31 模块, 6.2K 行                        |
 |  MAVLink 分发 + 33 消息处理器             |
-|  52 条命令, 瓦片/视频/固件 API            |
+|  53 条命令, 瓦片/视频/固件 API            |
 +------------------------------------------+
 |          MAVLink v2                       |
 |  TCP / UDP / Serial                      |
@@ -129,7 +129,7 @@ python run.py --sim            # 同时启动后端 + simulator.py
 | `src/lib/survey.ts` | 测绘图案生成（网格、交叉、螺旋、环绕） |
 | `src/lib/i18n.svelte.ts` | 10 语言国际化，支持 RTL |
 | `backend/drone_link.py` | MAVLink 连接、帧解析、状态管理 |
-| `backend/commands/` | 52 条命令处理器（解锁、模式、航线、校准、云台、NTRIP 等） |
+| `backend/commands/` | 53 条命令处理器（解锁、模式、航线、校准、云台、NTRIP 等） |
 | `backend/config.py` | 集中配置（所有超时/端口/速率常量） |
 
 ## 开发
@@ -191,6 +191,7 @@ bash scripts/changelog.sh v3.5.0   # 查看 v3.5.0 以来的变更
 
 **近期已发布**
 
+- 备降点：地图编辑，两条链路都能上传和清除
 - 地形剖面面板，净空可视化
 - 飞行中航点跳转（MISSION_SET_CURRENT）
 - WebSerial 航线上传/下载/清除 + 围栏上传
@@ -206,7 +207,6 @@ bash scripts/changelog.sh v3.5.0   # 查看 v3.5.0 以来的变更
 
 **已列入计划**
 
-- 集结点：界面和 WebSerial 上传（后端命令已有，尚无界面入口）
 - 固件刷写（APJ 解析 + Bootloader 协议）
 - PX4 端到端支持（后端已读取 `HEARTBEAT.autopilot`，目前拒绝 PX4；前端只有模式表）
 

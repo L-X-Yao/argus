@@ -109,7 +109,7 @@ Open Argus in Chrome/Edge, click the **USB** button, pick your flight controller
 |  Python Backend (FastAPI + uvicorn)      |
 |  31 modules, 6.2K lines                  |
 |  MAVLink dispatch + 33 message handlers  |
-|  52 commands, tile/video/firmware API    |
+|  53 commands, tile/video/firmware API    |
 +------------------------------------------+
 |          MAVLink v2                      |
 |  TCP / UDP / Serial                      |
@@ -131,7 +131,7 @@ Open Argus in Chrome/Edge, click the **USB** button, pick your flight controller
 | `src/lib/survey.ts` | Survey patterns (grid, crosshatch, spiral, orbit) |
 | `src/lib/i18n.svelte.ts` | 10-language i18n with RTL support |
 | `backend/drone_link.py` | MAVLink connection, frame parsing, state management |
-| `backend/commands/` | 52 command handlers (arm, mode, mission, calibration, gimbal, NTRIP, etc.) |
+| `backend/commands/` | 53 command handlers (arm, mode, mission, calibration, gimbal, NTRIP, etc.) |
 | `backend/config.py` | Centralized configuration (all timeouts/ports/rates) |
 
 ## Development
@@ -193,6 +193,7 @@ bash scripts/changelog.sh v3.5.0   # Changes since v3.5.0
 
 **Recently shipped**
 
+- Rally points: map editing, upload and clear on both links
 - Terrain profile panel with clearance visualization
 - In-flight waypoint jump (MISSION_SET_CURRENT)
 - WebSerial mission upload/download/clear + fence upload
@@ -208,7 +209,6 @@ bash scripts/changelog.sh v3.5.0   # Changes since v3.5.0
 
 **Planned**
 
-- Rally points: UI and WebSerial upload (the backend command exists, with no UI entry)
 - Firmware flashing (APJ parsing + bootloader protocol)
 - PX4 end-to-end support (backend reads `HEARTBEAT.autopilot` and refuses PX4 for now; frontend holds a mode table only)
 
