@@ -17,6 +17,16 @@ SIM_PORT = 15770
 BACKEND_PORT = 18100
 
 
+def _stop(proc):
+    proc.terminate()
+    try:
+        proc.wait(timeout=5)
+    except subprocess.TimeoutExpired:
+        # A metadata download still in flight holds the backend open.
+        proc.kill()
+        proc.wait(timeout=5)
+
+
 def _wait_tcp(port, timeout=10):
     import socket
 
@@ -41,8 +51,7 @@ def sim_process():
     )
     _wait_tcp(SIM_PORT, timeout=10)
     yield proc
-    proc.terminate()
-    proc.wait(timeout=5)
+    _stop(proc)
 
 
 @pytest.fixture(scope="session")
@@ -73,8 +82,7 @@ def backend_process(sim_process):
         except Exception:
             time.sleep(0.3)
     yield proc
-    proc.terminate()
-    proc.wait(timeout=5)
+    _stop(proc)
 
 
 @pytest.fixture(scope="session")

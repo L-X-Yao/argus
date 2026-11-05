@@ -12,13 +12,9 @@ test-cov:
 	python -m pytest tests/test_unit_*.py tests/test_contract_*.py -q --cov=backend --cov-report=term-missing --cov-fail-under=95
 	npx vitest run --coverage
 
+# tests/conftest.py starts its own simulator and backend.
 test-integration:
-	python scripts/simulator.py 5770 &
-	sleep 2
-	python run.py --port 8199 &
-	sleep 3
-	python -m pytest tests/test_integration.py -v --tb=short -k 'not test_param_set' || true
-	pkill -f 'simulator.py|run.py --port 8199' 2>/dev/null || true
+	python -m pytest tests/test_integration.py -q --tb=short
 
 build:
 	npm run build

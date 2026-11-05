@@ -1452,8 +1452,11 @@ class TestVersionApi:
     def test_param_meta_endpoint(self, backend_url):
         import httpx
 
-        r = httpx.get(f"{backend_url}/api/param_meta?vehicle=copter")
+        # With no param_cache/ the backend downloads the metadata first, which can
+        # outlast httpx's 5 s default. A failed download still answers 200 with {}.
+        r = httpx.get(f"{backend_url}/api/param_meta?vehicle=copter", timeout=120)
         assert r.status_code == 200
+        assert isinstance(r.json(), dict)
 
     def test_set_locale_via_ws(self, ws_url, event_loop):
         import websockets
