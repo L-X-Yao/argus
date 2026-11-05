@@ -512,7 +512,11 @@
       }
     }
 
-    if (d.home_lat !== 0 && !homeMarker) {
+    // Home can move: the first fix stands in until HOME_POSITION arrives.
+    if (d.home_lat !== 0 && homeMarker) {
+      const [hlat, hlon] = toMap(d.home_lat, d.home_lon);
+      homeMarker.setLngLat([hlon, hlat]);
+    } else if (d.home_lat !== 0) {
       const [hlat, hlon] = toMap(d.home_lat, d.home_lon);
       const hel = document.createElement('div');
       const hsvg = createSvgElement(

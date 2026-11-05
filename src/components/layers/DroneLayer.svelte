@@ -99,7 +99,10 @@
       ).addTo(map);
     }
 
-    if (app.drone.home_lat !== 0 && !homeMarker) {
+    // Home can move: the first fix stands in until HOME_POSITION arrives.
+    if (app.drone.home_lat !== 0 && homeMarker) {
+      homeMarker.setLatLng(coord(app.drone.home_lat, app.drone.home_lon));
+    } else if (app.drone.home_lat !== 0) {
       const [hlat, hlon] = coord(app.drone.home_lat, app.drone.home_lon);
       const homeIcon = L.divIcon({
         className: '',
