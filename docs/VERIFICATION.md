@@ -27,10 +27,10 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 
 | Area | Items | Real FC | SITL | Simulator | Tests only | None | n/a |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Commands, backend | 53 | 20 | 20 | 0 | 13 | 0 | 0 |
-| Commands, WebSerial | 53 | 10 | 0 | 0 | 32 | 0 | 11 |
+| Commands, backend | 52 | 20 | 20 | 0 | 12 | 0 | 0 |
+| Commands, WebSerial | 52 | 10 | 28 | 0 | 3 | 0 | 11 |
 | Messages, backend | 34 | 28 | 1 | 0 | 5 | 0 | 0 |
-| Messages, WebSerial | 34 | 16 | 0 | 0 | 6 | 0 | 12 |
+| Messages, WebSerial | 34 | 16 | 4 | 0 | 3 | 0 | 11 |
 | REST routes | 28 | 6 | 5 | 8 | 9 | 0 | 0 |
 | Panels | 77 | 13 | 0 | 21 | 26 | 17 | 0 |
 | Platform | 40 | 8 | 3 | 7 | 15 | 4 | 3 |
@@ -39,21 +39,21 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 
 | Command | Purpose | 作用 | Backend | WebSerial | Evidence |
 | --- | --- | --- | --- | --- | --- |
-| `arm` | Arm | 解锁 | SITL | Tests only | CI |
-| `disarm` | Disarm | 上锁 | Real FC | Tests only | Backend 2026-07-16 |
-| `force_disarm` | Force disarm | 强制上锁 | SITL | Tests only | CI |
+| `arm` | Arm | 解锁 | SITL | SITL | CI on both links |
+| `disarm` | Disarm | 上锁 | Real FC | SITL | Backend 2026-07-16, WebSerial CI |
+| `force_disarm` | Force disarm | 强制上锁 | SITL | SITL | CI on both links |
 | `mode` | Change mode | 切换模式 | Real FC | Real FC | WebSerial 2026-11-05, backend 2026-07-16 |
-| `rtl` | Return to launch | 返航 | SITL | Tests only | CI |
-| `takeoff` | Take off | 起飞 | SITL | Tests only | CI |
-| `guided_goto` | Fly to a point | 引导飞行 | SITL | Tests only | Manual SITL 2026-05, not in CI |
-| `mission_start` | Start the mission | 开始任务 | SITL | Tests only | CI |
-| `mission_set_current` | Jump to a waypoint | 跳到指定航点 | Tests only | Tests only | Bytes checked only |
-| `drop` | Release payload | 投放 | SITL | Tests only | CI |
-| `drop_stop` | Stop release | 停止投放 | SITL | Tests only | CI |
-| `do_set_roi` | Set region of interest | 设置兴趣点 | SITL | Tests only | CI |
-| `rc_override` | RC override | 遥控覆盖 | SITL | Tests only | CI |
-| `motor_test` | Motor test | 电机测试 | Real FC | Tests only | Backend 2026-05 |
-| `motor_test_stop` | Stop motor test | 停止电机测试 | SITL | Tests only | CI |
+| `rtl` | Return to launch | 返航 | SITL | SITL | CI on both links |
+| `takeoff` | Take off | 起飞 | SITL | SITL | CI on both links |
+| `guided_goto` | Fly to a point | 引导飞行 | SITL | SITL | WebSerial CI, backend manual SITL 2026-05 |
+| `mission_start` | Start the mission | 开始任务 | SITL | SITL | CI on both links |
+| `mission_set_current` | Jump to a waypoint | 跳到指定航点 | Tests only | SITL | WebSerial CI |
+| `drop` | Release payload | 投放 | SITL | SITL | CI on both links |
+| `drop_stop` | Stop release | 停止投放 | SITL | SITL | CI on both links |
+| `do_set_roi` | Set region of interest | 设置兴趣点 | SITL | SITL | CI on both links |
+| `rc_override` | RC override | 遥控覆盖 | SITL | SITL | CI on both links |
+| `motor_test` | Motor test | 电机测试 | Real FC | SITL | Backend 2026-05, WebSerial CI |
+| `motor_test_stop` | Stop motor test | 停止电机测试 | SITL | SITL | CI on both links |
 | `mission_upload` | Upload mission | 上传航线 | Real FC | Real FC | WebSerial 2026-11-05, backend 2026-05, CI |
 | `mission_download` | Download mission | 下载航线 | Real FC | Real FC | Both 2026-11-05 |
 | `mission_clear` | Clear mission | 清除航线 | Real FC | Real FC | WebSerial 2026-11-05, backend 2026-05, CI |
@@ -64,20 +64,19 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 | `param_set` | Write a parameter | 写参数 | Real FC | Real FC | WebSerial 2026-11-05 with 4 types, backend 2026-05, CI |
 | `param_save` | Back up to a file | 备份参数到文件 | Real FC | n/a | Backend 2026-05, CI |
 | `param_load` | Restore from a file | 从文件恢复参数 | SITL | n/a | CI |
-| `param_save_to_flash` | Save to FC storage | 写入飞控存储 | Tests only | Tests only | Bytes checked only |
-| `cal_gyro` | Gyro calibration | 陀螺仪校准 | Real FC | Tests only | Backend 2026-05, CI |
-| `cal_level` | Level calibration | 水平校准 | SITL | Tests only | CI |
-| `cal_baro` | Barometer calibration | 气压计校准 | SITL | Tests only | CI |
-| `cal_compass` | Compass calibration | 罗盘校准 | Real FC | Tests only | Backend 2026-05, SITL recording replayed in CI |
-| `cal_compass_accept` | Accept compass result | 确认罗盘结果 | Real FC | Tests only | Backend 2026-05, SITL recording replayed in CI |
-| `cal_accel` | Accelerometer calibration | 加速度计校准 | Real FC | Tests only | Backend 2026-05, SITL recording replayed in CI |
-| `cal_accel_next` | Next calibration pose | 校准下一姿态 | Real FC | Tests only | Backend 2026-05, SITL recording replayed in CI |
-| `cal_cancel` | Cancel calibration | 取消校准 | Real FC | Tests only | Backend 2026-05, CI |
+| `cal_gyro` | Gyro calibration | 陀螺仪校准 | Real FC | SITL | Backend 2026-05, CI on both links |
+| `cal_level` | Level calibration | 水平校准 | SITL | SITL | CI on both links |
+| `cal_baro` | Barometer calibration | 气压计校准 | SITL | SITL | CI on both links |
+| `cal_compass` | Compass calibration | 罗盘校准 | Real FC | SITL | Backend 2026-05, WebSerial CI, SITL recording replayed in CI |
+| `cal_compass_accept` | Accept compass result | 确认罗盘结果 | Real FC | SITL | Backend 2026-05, WebSerial CI, SITL recording replayed in CI |
+| `cal_accel` | Accelerometer calibration | 加速度计校准 | Real FC | SITL | Backend 2026-05, WebSerial CI, SITL recording replayed in CI |
+| `cal_accel_next` | Next calibration pose | 校准下一姿态 | Real FC | SITL | Backend 2026-05, WebSerial CI, SITL recording replayed in CI |
+| `cal_cancel` | Cancel calibration | 取消校准 | Real FC | SITL | Backend 2026-05, CI on both links |
 | `log_list` | List logs | 日志列表 | Real FC | Real FC | Both 2026-11-05 |
 | `log_download` | Download a log | 下载日志 | Real FC | Real FC | Both 2026-11-05, same sha256 on both links |
-| `log_cancel` | Cancel a download | 取消下载 | SITL | Tests only | CI |
-| `reboot` | Reboot the FC | 重启飞控 | Tests only | Tests only | Bytes checked only |
-| `reboot_bootloader` | Reboot to bootloader | 重启到 Bootloader | Tests only | Tests only | Bytes checked only |
+| `log_cancel` | Cancel a download | 取消下载 | SITL | SITL | CI on both links |
+| `reboot` | Reboot the FC | 重启飞控 | Tests only | SITL | WebSerial CI |
+| `reboot_bootloader` | Reboot to bootloader | 重启到 Bootloader | Tests only | SITL | WebSerial CI |
 | `serial_control` | MAVLink console | MAVLink 控制台 | Real FC | n/a | Backend 2026-05, CI |
 | `inspector_toggle` | Message inspector | 消息检查器开关 | SITL | n/a | CI, local state only |
 | `set_vtype` | Set vehicle type | 手动设置机型 | SITL | n/a | CI, local state only |
@@ -86,16 +85,16 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 | `ntrip_start` | Start NTRIP | 启动 NTRIP | Tests only | n/a | No real base station |
 | `ntrip_stop` | Stop NTRIP | 停止 NTRIP | Tests only | n/a | No real base station |
 | `inject_rtcm` | Inject RTCM | 注入 RTCM | Tests only | n/a | No real base station |
-| `gimbal_angle` | Gimbal angle | 云台角度 | Tests only | Tests only | Bytes checked only, no gimbal |
-| `gimbal_pitchyaw` | Gimbal pitch and yaw | 云台俯仰偏航 | Tests only | Tests only | Bytes checked only, no gimbal |
-| `camera_trigger` | Take a photo | 拍照 | Tests only | Tests only | Bytes checked only, no camera |
-| `camera_video_start` | Start recording | 开始录像 | Tests only | Tests only | Bytes checked only, no camera |
-| `camera_video_stop` | Stop recording | 停止录像 | Tests only | Tests only | Bytes checked only, no camera |
-| `camera_zoom` | Zoom | 相机变焦 | Tests only | Tests only | Bytes checked only, no camera |
+| `gimbal_angle` | Gimbal angle | 云台角度 | Tests only | SITL | WebSerial CI with a servo gimbal in SITL |
+| `gimbal_pitchyaw` | Gimbal pitch and yaw | 云台俯仰偏航 | Tests only | SITL | WebSerial CI with a servo gimbal in SITL |
+| `camera_trigger` | Take a photo | 拍照 | Tests only | SITL | WebSerial CI, no real camera |
+| `camera_video_start` | Start recording | 开始录像 | Tests only | Tests only | Bytes checked. SITL answers but refuses: no camera |
+| `camera_video_stop` | Stop recording | 停止录像 | Tests only | Tests only | Bytes checked. SITL answers but refuses: no camera |
+| `camera_zoom` | Zoom | 相机变焦 | Tests only | Tests only | Bytes checked. SITL answers but refuses: no camera |
 
-CI drives the SITL rows through the backend only. Nothing exercises the WebSerial path against firmware automatically, so a WebSerial row at Tests only has never met an autopilot.
+CI drives the SITL rows on both links. WebSerial runs through a stand-in for the serial port (`tests/e2e/run-webserial-sitl.sh`), so everything above the port meets real firmware, and the USB layer itself is only covered by the Real FC rows.
 
-CI 只经后端驱动 SITL。WebSerial 没有接真实固件的自动测试，所以 WebSerial 列标 Tests only 的命令从未在飞控上跑过。
+CI 在两条链路上都驱动 SITL。WebSerial 用模拟串口接真实固件（`tests/e2e/run-webserial-sitl.sh`），串口以上的代码都跑过真实固件，USB 这一层只有 Real FC 那些行覆盖。
 
 ## Messages from the FC / 飞控消息
 
@@ -115,10 +114,10 @@ CI 只经后端驱动 SITL。WebSerial 没有接真实固件的自动测试，�
 | `MISSION_ITEM_REACHED` | Waypoint reached | 到达航点 | SITL | n/a | CI |
 | `MISSION_ACK` | Upload result | 上传结果 | Real FC | Real FC | Both 2026-11-05 |
 | `MISSION_REQUEST_INT` | Mission upload | 航线上传 | Real FC | Real FC | Both 2026-11-05 |
-| `RC_CHANNELS` | RC input | 遥控输入 | Real FC | Tests only | Backend 2026-11-05, no receiver fitted |
+| `RC_CHANNELS` | RC input | 遥控输入 | Real FC | SITL | Backend 2026-11-05, WebSerial CI, no receiver fitted |
 | `MISSION_ITEM_INT` | Mission download | 航线下载 | Real FC | Real FC | Both 2026-11-05 |
 | `VFR_HUD` | Airspeed, climb, throttle | 空速、爬升、油门 | Real FC | Real FC | Both 2026-11-05 |
-| `COMMAND_ACK` | Command result | 命令结果 | Real FC | n/a | Backend 2026-07-16; WebSerial shows no result |
+| `COMMAND_ACK` | Command result | 命令结果 | Real FC | SITL | Backend 2026-07-16, both links CI |
 | `LOG_ENTRY` | Log list | 日志列表 | Real FC | Real FC | Both 2026-11-05 |
 | `LOG_DATA` | Log download | 日志下载 | Real FC | Real FC | Both 2026-11-05 |
 | `SERIAL_CONTROL` | MAVLink console | MAVLink 控制台 | Real FC | n/a | Backend 2026-05 |
@@ -127,8 +126,8 @@ CI 只经后端驱动 SITL。WebSerial 没有接真实固件的自动测试，�
 | `AUTOPILOT_VERSION` | Firmware version | 固件版本 | Real FC | n/a | Backend 2026-11-05 |
 | `MOUNT_STATUS` | Gimbal angles | 云台角度 | Tests only | n/a | No gimbal |
 | `WIND` | Wind | 风速风向 | Tests only | n/a | The FC sent none |
-| `MAG_CAL_PROGRESS` | Compass calibration | 罗盘校准进度 | Real FC | Tests only | Backend 2026-05 |
-| `MAG_CAL_REPORT` | Compass calibration | 罗盘校准结果 | Real FC | Tests only | Backend 2026-05 |
+| `MAG_CAL_PROGRESS` | Compass calibration | 罗盘校准进度 | Real FC | SITL | Backend 2026-05, WebSerial CI |
+| `MAG_CAL_REPORT` | Compass calibration | 罗盘校准结果 | Real FC | SITL | Backend 2026-05, WebSerial CI |
 | `EKF_STATUS_REPORT` | EKF health | EKF 状态 | Real FC | Real FC | Both 2026-11-05 |
 | `VIBRATION` | Vibration | 振动 | Real FC | Tests only | Backend 2026-11-05 |
 | `HOME_POSITION` | Home | Home 点 | Real FC | Real FC | Both 2026-11-05 |
@@ -311,24 +310,20 @@ Seven panels have code but no way to open them, marked in the Evidence column. T
 ## Not verified yet, by risk / 未验证项（按风险排序）
 
 1. **Real flight.** Nothing has flown. Everything below is a bench or simulation result at best.
-2. **Arm, take off, RTL and mission start on a real FC.** These have only run in SITL through the backend, and only as bytes over WebSerial. They need a battery, so they need a separate, deliberate session.
-3. **WebSerial calibration.** All 8 calibration commands are at Tests only on this link. Compass and accelerometer need the board turned by hand.
-4. **WebSerial shows no command result.** `COMMAND_ACK` is not handled there, so a refused command fails silently.
-5. **Reboot and reboot to bootloader.** Bytes checked only on both links.
-6. **RTK, gimbal, camera and ADS-B.** These need hardware that has not been available.
-7. **Vehicles other than Copter.** Only Copter runs in CI.
-8. **WebSerial in Chrome on Windows.** The 2026-11-05 run used Chromium on Linux with the port chooser automated.
-9. **Seven panels nobody can open.** Scripts, scheduler, custom dashboard, position source, ortho overlay, AI planner and AI annotation exist in code only.
+2. **Arm, take off, RTL and mission start on a real FC.** These have only run in SITL. They need a battery, so they need a separate, deliberate session.
+3. **Calibration and reboot on a real FC over WebSerial.** SITL only so far, and compass and accelerometer need the board turned by hand.
+4. **RTK, gimbal, camera and ADS-B.** These need hardware that has not been available.
+5. **Vehicles other than Copter.** Only Copter runs in CI.
+6. **WebSerial in Chrome on Windows.** The 2026-11-05 run used Chromium on Linux with the port chooser automated.
+7. **Seven panels nobody can open.** Scripts, scheduler, custom dashboard, position source, ortho overlay, AI planner and AI annotation exist in code only.
 
 1. **真实飞行。** 没有飞过。下面都只是台架或仿真结果。
-2. **真机上的解锁、起飞、返航、开始任务。** 只在 SITL 经后端跑过，WebSerial 只验证了报文。这些需要接电池，要单独安排。
-3. **WebSerial 校准。** 这条链路上 8 条校准命令都只有 Tests only。罗盘和加速度计需要手动翻转板子。
-4. **WebSerial 不显示命令结果。** 这条链路没有处理 `COMMAND_ACK`，命令被拒绝时没有提示。
-5. **重启和重启到 Bootloader。** 两条链路都只验证了报文。
-6. **RTK、云台、相机、ADS-B。** 缺硬件。
-7. **多旋翼以外的机型。** CI 只跑多旋翼。
-8. **Windows 上 Chrome 的 WebSerial。** 2026-11-05 的测试用的是 Linux 上的 Chromium，端口选择由脚本代替。
-9. **7 个打不开的面板。** 脚本、定时任务、自定义仪表、定位源、正射叠加、AI 规划、AI 标注只存在于代码中。
+2. **真机上的解锁、起飞、返航、开始任务。** 只在 SITL 跑过。这些需要接电池，要单独安排。
+3. **真机上经 WebSerial 的校准和重启。** 目前只在 SITL 跑过，罗盘和加速度计需要手动翻转板子。
+4. **RTK、云台、相机、ADS-B。** 缺硬件。
+5. **多旋翼以外的机型。** CI 只跑多旋翼。
+6. **Windows 上 Chrome 的 WebSerial。** 2026-11-05 的测试用的是 Linux 上的 Chromium，端口选择由脚本代替。
+7. **7 个打不开的面板。** 脚本、定时任务、自定义仪表、定位源、正射叠加、AI 规划、AI 标注只存在于代码中。
 
 ## Keeping this file honest / 维护规则
 

@@ -37,7 +37,8 @@ CI runs on every push to `main` and every PR. On top of the five checks above, i
 | Bundle size | `dist/assets/` is at most 3 MiB |
 | npm audit | No critical issues |
 | Integration tests | `tests/test_integration.py`: real backend and simulator over WebSocket |
-| SITL smoke test | `tests/sitl_verify.py`: a full flight on real ArduCopter firmware in simulation |
+| SITL smoke test | `tests/sitl_verify.py`: a full flight on real ArduCopter firmware in simulation, through the backend |
+| WebSerial on SITL | `tests/e2e/run-webserial-sitl.sh`: a full flight and both interactive calibrations, through the browser stack |
 | End-to-end tests | Playwright specs in `tests/e2e/` |
 
 `make test-integration` runs the integration tests locally, in about 3 minutes.
