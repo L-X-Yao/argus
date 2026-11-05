@@ -83,6 +83,8 @@ class TestWSTypeContract:
             "mission_ack_fail",
             "fence_ack_ok",
             "fence_ack_fail",
+            "fence_clear_ok",
+            "fence_clear_fail",
             "cmd_ack_fail",
             "rtl",
             "unsupported_fc",

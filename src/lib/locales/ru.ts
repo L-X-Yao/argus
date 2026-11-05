@@ -360,6 +360,8 @@ const messages: Record<string, string> = {
   'fence.redraw': 'Перерисовать',
   'fence.save': 'Сохранить',
   'fence.clear': 'Очистить',
+  'fence.clearFc': 'Очистить геозабор на FC',
+  'fence.clearFcDone': 'Геозабор на FC очищен',
   'fence.exported': 'Забор экспортирован',
   'fence.loaded': 'Забор загружен ({n} вершин)',
   'fence.loadFail': 'Загрузка не удалась',

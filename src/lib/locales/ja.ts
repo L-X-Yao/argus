@@ -360,6 +360,8 @@ const messages: Record<string, string> = {
   'fence.redraw': '再描画',
   'fence.save': '保存',
   'fence.clear': 'クリア',
+  'fence.clearFc': 'FCのジオフェンスをクリア',
+  'fence.clearFcDone': 'FCのジオフェンスをクリアしました',
   'fence.exported': 'フェンスをエクスポートしました',
   'fence.loaded': 'フェンスを読み込みました（{n}個の頂点）',
   'fence.loadFail': '読込失敗',

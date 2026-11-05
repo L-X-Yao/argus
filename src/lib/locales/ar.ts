@@ -359,6 +359,8 @@ const messages: Record<string, string> = {
   'fence.redraw': 'إعادة الرسم',
   'fence.save': 'حفظ',
   'fence.clear': 'مسح',
+  'fence.clearFc': 'مسح السياج الجغرافي من وحدة التحكم',
+  'fence.clearFcDone': 'تم مسح السياج الجغرافي من وحدة التحكم',
   'fence.exported': 'تم تصدير السياج',
   'fence.loaded': 'تم تحميل السياج ({n} رؤوس)',
   'fence.loadFail': 'فشل التحميل',

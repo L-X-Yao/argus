@@ -10,6 +10,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from backend.commands import execute
 from backend.drone_link import DroneLink
+from backend.mavlink_handlers import handle_mission_ack
 
 
 def make_link():
@@ -109,10 +110,37 @@ class TestCommandExecute:
         execute("mission_clear", None, link)
         assert any("任务已清除" in e["text"] for e in link.events)
 
-    def test_fence_clear(self):
+    def test_fence_clear_waits_for_the_fc(self):
         link = make_link()
         execute("fence_clear", None, link)
-        assert any("围栏已清除" in e["text"] for e in link.events)
+        assert link.mission._fence_clear_pending is True
+        assert not any("围栏" in e["text"] for e in link.events)
+
+    def test_fence_clear_reports_acceptance(self):
+        link = make_link()
+        execute("fence_clear", None, link)
+        handle_mission_ack(bytes([255, 190, 0, 1]), 4, link)
+        assert link.mission._fence_clear_pending is False
+        assert any(e["event_type"] == "fence_clear_ok" for e in link.events)
+
+    def test_fence_clear_reports_rejection(self):
+        link = make_link()
+        execute("fence_clear", None, link)
+        handle_mission_ack(bytes([255, 190, 13, 1]), 4, link)
+        assert any(e["event_type"] == "fence_clear_fail" and "13" in e["text"] for e in link.events)
+
+    def test_fence_clear_ignores_acks_for_other_stores(self):
+        link = make_link()
+        execute("fence_clear", None, link)
+        handle_mission_ack(bytes([255, 190, 0, 0]), 4, link)
+        assert link.mission._fence_clear_pending is True
+
+    def test_fence_clear_refused_during_a_fence_upload(self):
+        link = make_link()
+        link.mission._fence_pending = True
+        result = execute("fence_clear", None, link)
+        assert result["ok"] is False
+        assert link.mission._fence_clear_pending is False
 
     def test_fence_upload_sets_pending(self):
         link = make_link()

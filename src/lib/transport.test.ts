@@ -88,6 +88,7 @@ import {
   serialCalCompass,
   dispatch,
   serialClearMission,
+  serialClearFence,
 } from './transport';
 import { encodeFrame } from './mavlink/codec';
 import {
@@ -758,6 +759,68 @@ describe('log cancel', () => {
     const res = await promise;
     expect(res.ok).toBe(false);
     expect(res.error).toMatch(/cancel/i);
+  });
+});
+
+describe('serialClearFence', () => {
+  // MISSION_ACK: target_system, target_component, type, mission_type.
+  const ack = (type: number, missionType: number) => fcFrame(47, new Uint8Array([255, 190, type, missionType]));
+
+  it('sends MISSION_CLEAR_ALL for the fence store and resolves on acceptance', async () => {
+    const result = serialClearFence();
+    expect(Array.from(findWrite(45)!.slice(10, 13))).toEqual([1, 1, 1]);
+    inject(ack(0, 1));
+    await expect(result).resolves.toEqual({ ok: true });
+  });
+
+  it('reports a rejection from the FC', async () => {
+    const result = serialClearFence();
+    inject(ack(13, 1));
+    const res = await result;
+    expect(res.ok).toBe(false);
+    expect(res.error).toContain('13');
+  });
+
+  it('waits past an ack for another store', async () => {
+    const result = serialClearFence();
+    inject(ack(1, 0));
+    inject(ack(0, 1));
+    await expect(result).resolves.toEqual({ ok: true });
+  });
+
+  it('gives up when the FC never answers', async () => {
+    await disconnectSerial();
+    vi.useFakeTimers();
+    try {
+      await connectSerial(115200, {});
+      const result = serialClearFence();
+      vi.advanceTimersByTime(3100);
+      const res = await result;
+      expect(res.ok).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('resolves when the link goes down', async () => {
+    const result = serialClearFence();
+    await disconnectSerial();
+    readLoopResolve?.();
+    expect((await result).ok).toBe(false);
+  });
+
+  it('does not let a fence ack finish a mission upload', async () => {
+    const wps = [{ lat: 30, lon: 120, alt: 50, drop: false, delay: 0, speed: 0, type: 'wp' as const, loiter_param: 0 }];
+    const promise = serialUploadMission(wps, 30);
+    let settled = false;
+    void promise.then(() => {
+      settled = true;
+    });
+    inject(ack(0, 1));
+    await new Promise<void>((res) => setTimeout(res, 0));
+    expect(settled).toBe(false);
+    inject(ack(0, 0));
+    await expect(promise).resolves.toMatchObject({ ok: true });
   });
 });
 

@@ -361,6 +361,8 @@ const messages: Record<string, string> = {
   'fence.redraw': 'Redessiner',
   'fence.save': 'Enregistrer',
   'fence.clear': 'Effacer',
+  'fence.clearFc': 'Effacer la géoclôture du FC',
+  'fence.clearFcDone': 'Géoclôture effacée du FC',
   'fence.exported': 'Clôture exportée',
   'fence.loaded': 'Clôture chargée ({n} sommets)',
   'fence.loadFail': 'Échec du chargement',

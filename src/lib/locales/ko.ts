@@ -359,6 +359,8 @@ const messages: Record<string, string> = {
   'fence.redraw': '다시 그리기',
   'fence.save': '저장',
   'fence.clear': '지우기',
+  'fence.clearFc': 'FC의 지오펜스 지우기',
+  'fence.clearFcDone': 'FC의 지오펜스를 지웠습니다',
   'fence.exported': '펜스를 내보냈습니다',
   'fence.loaded': '펜스를 불러왔습니다 ({n}개의 꼭짓점)',
   'fence.loadFail': '불러오기 실패',

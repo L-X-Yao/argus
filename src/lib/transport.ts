@@ -160,14 +160,19 @@ export async function connectSerial(baudRate: number, handlers: Partial<MessageH
         // Mission upload state machine runs BEFORE the external dispatch so the
         // upload completes deterministically even if the user's handler set is
         // missing onMissionRequest / onMissionAck. frame.payload is a DataView.
-        if (upload?.pending) {
-          if (frame.msgId === 40 || frame.msgId === 51) {
-            const p = _padView(frame.payload, 2);
-            _onMissionRequest(p.getUint16(0, true));
-          } else if (frame.msgId === 47) {
-            // MISSION_ACK type is at offset 2 (after target_system, target_component).
-            const p = _padView(frame.payload, 3);
-            _onMissionAck(p.getUint8(2));
+        if (upload?.pending && (frame.msgId === 40 || frame.msgId === 51)) {
+          const p = _padView(frame.payload, 2);
+          _onMissionRequest(p.getUint16(0, true));
+        } else if (frame.msgId === 47) {
+          // MISSION_ACK: type at offset 2, mission_type at 3. An ack only counts
+          // for the store it names, so a fence ack can't finish a mission upload.
+          const p = _padView(frame.payload, 4);
+          const type = p.getUint8(2);
+          const missionType = p.getUint8(3);
+          if (fenceClear && missionType === 1) {
+            _resolveFenceClear(type === 0 ? { ok: true } : { ok: false, error: `FC refused (${type})` });
+          } else if (upload?.pending && missionType === upload.missionType) {
+            _onMissionAck(type);
           }
         }
         // Mission download state machine listens on MISSION_COUNT (44) and
@@ -226,6 +231,7 @@ export async function connectSerial(baudRate: number, handlers: Partial<MessageH
         if (download.pending) {
           _resolveDownload({ ok: false, error: 'Serial link lost mid-download' });
         }
+        _resolveFenceClear({ ok: false, error: 'Serial link lost' });
         // Tear down any in-flight log operation so its watchdog doesn't
         // fire spuriously after disconnect.
         if (logSession.listPending) _resolveLogList({ ok: false, error: 'Serial link lost' });
@@ -408,7 +414,9 @@ const _serialDispatch: Record<string, CmdHandler> = {
     }, 300);
   },
   mission_clear: () => serialClearMission(),
-  fence_clear: () => serialClearFence(),
+  fence_clear: () => {
+    void serialClearFence();
+  },
   // Mission seq mapping: backend prepends HOME (seq 0) + TAKEOFF (seq 1), and inserts DO_CHANGE_SPEED (178)
   // before any waypoint with speed > 0. _seqToWp (populated on serialDownloadMission completion) gives the
   // accurate mapping. Falls back to `wp_index + 2` when no map exists, matching backend cmd_mission_set_current
@@ -769,9 +777,27 @@ export function serialClearMission(): void {
   _wpToSeq.clear();
 }
 
-// mission_type=1 wipes the fence store. Mirrors backend cmd_fence_clear.
-export function serialClearFence(): void {
-  sendSerialFrame(45, encodeMissionClearAll(serial.targetSysId, serial.targetCompId, 1));
+let fenceClear: { resolve: (r: { ok: boolean; error?: string }) => void; timer: ReturnType<typeof setTimeout> } | null =
+  null;
+
+function _resolveFenceClear(result: { ok: boolean; error?: string }): void {
+  if (!fenceClear) return;
+  clearTimeout(fenceClear.timer);
+  const { resolve } = fenceClear;
+  fenceClear = null;
+  resolve(result);
+}
+
+// mission_type=1 wipes the fence store, and the FC's MISSION_ACK says whether it
+// did. Mirrors backend cmd_fence_clear.
+export function serialClearFence(): Promise<{ ok: boolean; error?: string }> {
+  if (!isSerialConnected()) return Promise.resolve({ ok: false, error: 'Not connected via serial' });
+  if (upload?.pending || fenceClear) return Promise.resolve({ ok: false, error: 'Another upload is in progress' });
+  return new Promise((resolve) => {
+    const timer = setTimeout(() => _resolveFenceClear({ ok: false, error: 'No response from the FC' }), 3000);
+    fenceClear = { resolve, timer };
+    sendSerialFrame(45, encodeMissionClearAll(serial.targetSysId, serial.targetCompId, 1));
+  });
 }
 
 export function serialMissionSetCurrent(seq: number): void {

@@ -641,7 +641,13 @@ def handle_mission_ack(p: bytes, pl: int, link: DroneLink) -> None:
     mtype = p[2]
     mission_type = p[3]
     m = link.mission
-    if mission_type == 1 and m._fence_pending:
+    if mission_type == 1 and m._fence_clear_pending:
+        m._fence_clear_pending = False
+        link.add_event(
+            lt("fence_clear_ok", link.locale) if mtype == 0 else lt("fence_clear_fail", link.locale) % mtype,
+            "fence_clear_ok" if mtype == 0 else "fence_clear_fail",
+        )
+    elif mission_type == 1 and m._fence_pending:
         m._fence_pending = False
         m._fence_ul_start_time = 0.0
         link.add_event(

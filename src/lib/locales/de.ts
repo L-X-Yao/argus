@@ -361,6 +361,8 @@ const messages: Record<string, string> = {
   'fence.redraw': 'Neu zeichnen',
   'fence.save': 'Speichern',
   'fence.clear': 'Löschen',
+  'fence.clearFc': 'Geofence auf dem FC löschen',
+  'fence.clearFcDone': 'Geofence auf dem FC gelöscht',
   'fence.exported': 'Zaun exportiert',
   'fence.loaded': 'Zaun geladen ({n} Eckpunkte)',
   'fence.loadFail': 'Laden fehlgeschlagen',

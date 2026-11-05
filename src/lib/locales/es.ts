@@ -361,6 +361,8 @@ const messages: Record<string, string> = {
   'fence.redraw': 'Redibujar',
   'fence.save': 'Guardar',
   'fence.clear': 'Borrar',
+  'fence.clearFc': 'Borrar geocerca del FC',
+  'fence.clearFcDone': 'Geocerca borrada del FC',
   'fence.exported': 'Cerca exportada',
   'fence.loaded': 'Cerca cargada ({n} vértices)',
   'fence.loadFail': 'Error al cargar',

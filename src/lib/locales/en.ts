@@ -381,6 +381,8 @@ const messages: Record<string, string> = {
   'fence.redraw': 'Redraw',
   'fence.save': 'Save',
   'fence.clear': 'Clear',
+  'fence.clearFc': 'Clear fence on FC',
+  'fence.clearFcDone': 'Fence cleared on the FC',
   'fence.exported': 'Fence exported',
   'fence.loaded': 'Fence loaded ({n} vertices)',
   'fence.loadFail': 'Load failed',

@@ -1,7 +1,7 @@
 <script lang="ts">
   import { app, addToast, showConfirm } from '../../lib/stores.svelte';
   import { dispatch } from '../../lib/transport';
-  import { isSerialConnected, serialUploadFence } from '../../lib/transport';
+  import { isSerialConnected, serialClearFence, serialUploadFence } from '../../lib/transport';
   import { t } from '../../lib/i18n.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
   import Badge from '$lib/components/ui/badge/badge.svelte';
@@ -18,17 +18,29 @@
     drawingFence = false;
     app.drawingFence = false;
   }
-  async function clearFence() {
-    // The drawing is only local. An uploaded fence stays on the FC, still
-    // enforced, until it is cleared there too.
-    if (app.fenceUploaded && app.drone.connected) {
-      if (!(await showConfirm(t('fence.clear') + '?'))) return;
-      dispatch('fence_clear');
-    }
+  function clearFence() {
     app.fencePolygon = [];
     app.fenceUploaded = false;
     app.drawingFence = false;
     drawingFence = false;
+  }
+
+  // Separate from clearFence, which only drops the local drawing: a fence on the
+  // FC outlives a page reload, and the connected vehicle may not be the one the
+  // drawing went to. So this acts on whatever is connected, and says so.
+  async function clearFenceOnFc() {
+    if (!(await showConfirm(t('fence.clearFc') + '?', true))) return;
+    if (!isSerialConnected()) {
+      dispatch('fence_clear'); // answered by a fence_clear_ok or fence_clear_fail event
+      return;
+    }
+    const res = await serialClearFence();
+    if (res.ok) {
+      app.fenceUploaded = false;
+      addToast(t('fence.clearFcDone'), 'success');
+    } else {
+      addToast(`${t('fence.clearFc')}: ${res.error}`, 'error', 5000);
+    }
   }
 
   function fmtArea(): string {
@@ -172,5 +184,8 @@
       <Button variant="outline" size="xs" onclick={exportKml}>KML</Button>
       <Button variant="ghost" size="xs" onclick={clearFence}>{t('fence.clear')}</Button>
     </div>
+  {/if}
+  {#if app.drone.connected && !drawingFence}
+    <Button variant="destructive" size="xs" class="mt-2" onclick={clearFenceOnFc}>{t('fence.clearFc')}</Button>
   {/if}
 </div>

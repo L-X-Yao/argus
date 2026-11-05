@@ -68,8 +68,12 @@ def cmd_fence_clear(link: DroneLink, param, data: dict):
     # it by type (GCS_Common.cpp:805 handle_mission_clear_all) and wipes the
     # stored polygon with write_fence(nullptr, 0) (MissionItemProtocol_Fence.cpp:226).
     # Non-mission types need MAVLink 2 (MissionItemProtocol.cpp:41), which bm sends.
+    # The outcome comes from the MISSION_ACK (MissionItemProtocol.cpp:38), see
+    # handle_mission_ack: the FC can refuse, so nothing is reported until it answers.
+    if link.mission._fence_pending:
+        return {"ok": False, "error": lt("err_fence_busy", link.locale)}
+    link.mission._fence_clear_pending = True
     link.send(bm(45, bytes([link.vehicle.sysid, 1, 1]), link.sq, CRC_EXTRA[45]))
-    link.add_event(lt("fence_clear", link.locale), "fence_clear")
 
 
 def cmd_mission_upload(link: DroneLink, param, data: dict):

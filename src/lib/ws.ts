@@ -93,6 +93,13 @@ export function connectWs(): void {
             case 'fence_ack_fail':
               addToast(msg.text, 'error');
               break;
+            case 'fence_clear_ok':
+              addToast(msg.text, 'success');
+              app.fenceUploaded = false;
+              break;
+            case 'fence_clear_fail':
+              addToast(msg.text, 'error');
+              break;
             case 'cmd_ack_fail':
               addToast(msg.text, 'error', 5000);
               break;

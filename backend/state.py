@@ -80,6 +80,7 @@ class MissionState:
     _seq_to_wp: dict[int, int] = field(default_factory=dict)
     _fence_items: list[dict] = field(default_factory=list)
     _fence_pending: bool = False
+    _fence_clear_pending: bool = False
     _rally_items: list[dict] = field(default_factory=list)
     _rally_pending: bool = False
     # Upload-side watchdogs (one per pending kind). If the FC never requests

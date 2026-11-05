@@ -381,6 +381,8 @@ const messages: Record<string, string> = {
   'fence.redraw': '重新绘制',
   'fence.save': '保存',
   'fence.clear': '清除',
+  'fence.clearFc': '清除飞控上的围栏',
+  'fence.clearFcDone': '飞控围栏已清除',
   'fence.exported': '围栏已导出',
   'fence.loaded': '已加载围栏 ({n} 顶点)',
   'fence.loadFail': '加载失败',
