@@ -42,7 +42,7 @@ _cors_origins = [
     s.strip()
     for s in os.environ.get(
         "ARGUS_CORS_ORIGINS",
-        "http://localhost:5173,http://localhost:8100,http://127.0.0.1:5173,http://127.0.0.1:8100",
+        "http://localhost:5173,http://localhost:%d,http://127.0.0.1:5173,http://127.0.0.1:%d" % (cfg.PORT, cfg.PORT),
     ).split(",")
     if s.strip()
 ]

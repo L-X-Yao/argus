@@ -20,6 +20,8 @@ sys.path.insert(0, str(_root))
 
 import uvicorn
 
+from backend.config import cfg
+
 
 def _open_browser(port: int):
     """Wait for server to be ready, then open browser."""
@@ -41,6 +43,8 @@ def main():
     parser.add_argument("--host", default="127.0.0.1")
     parser.add_argument("--no-browser", action="store_true")
     args = parser.parse_args()
+    # backend.app is imported later by uvicorn and allows this port's own origin.
+    cfg.HOST, cfg.PORT = args.host, args.port
 
     if not args.no_browser:
         threading.Thread(target=_open_browser, args=(args.port,), daemon=True).start()

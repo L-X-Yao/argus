@@ -20,7 +20,8 @@ async def aio(fn, *args):
 
 def _env(key: str, default, cast=None):
     val = os.environ.get(key)
-    if val is None:
+    # A blank `ARGUS_HOST=` line counts as unset: host "" binds every interface.
+    if not val:
         return default
     cast_fn = cast or type(default)
     try:

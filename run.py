@@ -14,16 +14,35 @@ import time
 import webbrowser
 from pathlib import Path
 
+from dotenv import load_dotenv
+
 ROOT_DIR = Path(__file__).resolve().parent
 SIM_SCRIPT = ROOT_DIR / 'scripts' / 'simulator.py'
 
 
-def main():
+def parse_args(argv=None):
+    # Before the first backend import: backend modules read the environment at
+    # import time. Variables already set in the shell win over .env.
+    load_dotenv(ROOT_DIR / '.env')
+    from backend.config import cfg
+
     parser = argparse.ArgumentParser(description='Argus GCS')
     parser.add_argument('--sim', action='store_true', help='Start simulator on port 5770')
-    parser.add_argument('--host', default='127.0.0.1', help='Bind address (default: 127.0.0.1; use 0.0.0.0 to expose on LAN)')
-    parser.add_argument('--port', type=int, default=8100, help='HTTP port (default: 8100)')
-    args = parser.parse_args()
+    parser.add_argument(
+        '--host',
+        default=cfg.HOST,
+        help='Bind address (default: ARGUS_HOST or 127.0.0.1). 0.0.0.0 exposes it on the LAN; '
+        'pages opened from another machine also need their origin in ARGUS_CORS_ORIGINS.',
+    )
+    parser.add_argument('--port', type=int, default=cfg.PORT, help='HTTP port (default: ARGUS_PORT or 8100)')
+    args = parser.parse_args(argv)
+    # backend.app is imported later by uvicorn and allows this port's own origin.
+    cfg.HOST, cfg.PORT = args.host, args.port
+    return args
+
+
+def main():
+    args = parse_args()
 
     sim_proc = None
     if args.sim:

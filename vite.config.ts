@@ -1,7 +1,12 @@
 import path from 'path';
-import { defineConfig } from 'vite';
+import { defineConfig, loadEnv } from 'vite';
 import { svelte, vitePreprocess } from '@sveltejs/vite-plugin-svelte';
 import tailwindcss from '@tailwindcss/vite';
+
+// Same source and fallback as backend/config.py, so the dev proxy still reaches
+// a backend moved with ARGUS_PORT (shell or .env).
+const envPort = Number(loadEnv('', process.cwd(), 'ARGUS_').ARGUS_PORT);
+const backendPort = Number.isInteger(envPort) && envPort >= 1 && envPort <= 65535 ? envPort : 8100;
 
 export default defineConfig({
   define: {
@@ -53,14 +58,14 @@ export default defineConfig({
     port: 5173,
     proxy: {
       '/ws': {
-        target: 'ws://127.0.0.1:8100',
+        target: `ws://127.0.0.1:${backendPort}`,
         ws: true,
       },
       '/api': {
-        target: 'http://127.0.0.1:8100',
+        target: `http://127.0.0.1:${backendPort}`,
       },
       '/health': {
-        target: 'http://127.0.0.1:8100',
+        target: `http://127.0.0.1:${backendPort}`,
       },
     },
   },

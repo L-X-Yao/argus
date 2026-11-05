@@ -17,6 +17,7 @@ dependencies = [
     "websockets>=14.0,<17.0",
     "python-multipart>=0.0.9",
     "pyserial>=3.5",
+    "python-dotenv>=1.0",
 ]
 
 [project.urls]

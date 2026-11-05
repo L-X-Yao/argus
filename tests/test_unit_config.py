@@ -10,6 +10,10 @@ class TestEnvHelper:
     def test_returns_default_when_unset(self):
         assert _env("ARGUS_NONEXISTENT_KEY_12345", 42) == 42
 
+    def test_blank_value_counts_as_unset(self):
+        with patch.dict(os.environ, {"ARGUS_TEST_BLANK": ""}):
+            assert _env("ARGUS_TEST_BLANK", "127.0.0.1") == "127.0.0.1"
+
     def test_returns_env_value_with_type_cast(self):
         with patch.dict(os.environ, {"ARGUS_TEST_INT": "9999"}):
             assert _env("ARGUS_TEST_INT", 0) == 9999
