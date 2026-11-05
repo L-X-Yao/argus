@@ -66,6 +66,11 @@ _TOL = {
     "ekf_pos_h": 6e-5,
     "ekf_pos_v": 6e-5,
     "ekf_compass": 6e-5,
+    "wind_dir": 0.06,
+    "wind_speed": 0.06,
+    "terrain_alt": 0.06,
+    "gimbal_pitch": 0.06,
+    "gimbal_yaw": 0.06,
 }
 
 

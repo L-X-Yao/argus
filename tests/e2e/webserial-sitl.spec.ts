@@ -104,6 +104,18 @@ test('arms, takes off and flies to a point', async () => {
   await expect.poll(() => drone('lat'), { timeout: 60000 }).toBeGreaterThan(lat + 0.0004);
 });
 
+test('the flight fills in the derived fields', async () => {
+  await expect.poll(() => drone('dist_home'), { timeout: 15000 }).toBeGreaterThan(30);
+  await expect.poll(() => drone('flight_time'), { timeout: 15000 }).toBeGreaterThan(0);
+  expect((await drone<number[]>('servo'))[0]).toBeGreaterThan(1000);
+  expect(await drone<string>('fw_version')).toMatch(/^v\d+\.\d+\.\d+$/);
+  expect((await drone<number[]>('cells'))[0]).toBeGreaterThan(0);
+  expect(await drone<string[]>('prearm')).toContain('LAND mode not armable');
+  expect(Math.abs((await drone<number[]>('mag'))[2])).toBeGreaterThan(0);
+  expect(await drone<number[]>('vibe')).toHaveLength(3);
+  await expect.poll(() => drone('gimbal_pitch'), { timeout: 10000 }).not.toBe(0);
+});
+
 test('flies an uploaded mission and jumps to a waypoint', async () => {
   const lat = await drone('lat');
   const lon = await drone('lon');
@@ -129,12 +141,28 @@ test('flies an uploaded mission and jumps to a waypoint', async () => {
 
   await send('mission_set_current', undefined, { wp_index: 2 });
   await expect.poll(() => sitl.missionSeq(), { timeout: 15000 }).toBe(4);
+  await expect.poll(() => drone('wp'), { timeout: 15000 }).toBe(4);
+  expect(await drone('wp_idx')).toBe(2);
+  await expect
+    .poll(
+      () =>
+        page.evaluate(async () => {
+          const url = '/src/lib/stores.svelte.ts';
+          const { app } = await import(/* @vite-ignore */ url);
+          return app.events.some((e: { event_type: string }) => e.event_type === 'wp_reached');
+        }),
+      { message: 'no waypoint reached', timeout: 60000 },
+    )
+    .toBe(true);
 });
 
-test('returns and lands', async () => {
+test('returns and lands, and reports the flight', async () => {
   await send('rtl');
   await expect.poll(() => drone('mode_id'), { timeout: 15000 }).toBe(MODE.rtl);
   await expect.poll(() => drone<boolean>('armed'), { timeout: 150000 }).toBe(false);
+  const summary = await drone<{ max_alt: number; total_dist: number }>('flight_summary');
+  expect(summary.max_alt).toBeGreaterThan(15);
+  expect(summary.total_dist).toBeGreaterThan(50);
 });
 
 test('disarms, and force disarms', async () => {

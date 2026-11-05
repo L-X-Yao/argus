@@ -1103,6 +1103,9 @@ const messages: Record<string, string> = {
   'ortho.badCoords': 'La esquina NO debe quedar al norte y al oeste de la esquina SE',
   'ortho.notKept':
     'Superposición aplicada, pero la imagen es demasiado grande para guardarla: desaparecerá al cerrar la página',
+  'evt.homeSet': 'Punto de inicio: {lat}, {lon}',
+  'evt.wpReached': 'Punto de ruta {n} alcanzado',
+  'evt.fwInfo': 'Versión de firmware: {v} ({git})',
 };
 
 export default messages;

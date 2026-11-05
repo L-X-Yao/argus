@@ -1102,6 +1102,9 @@ const messages: Record<string, string> = {
   'pid.autoSaved': 'Cada ajuste vai na hora para a controladora, que o guarda',
   'ortho.badCoords': 'O canto NO deve ficar ao norte e a oeste do canto SE',
   'ortho.notKept': 'Sobreposição aplicada, mas a imagem é grande demais para guardar: ela some ao fechar a página',
+  'evt.homeSet': 'Ponto inicial: {lat}, {lon}',
+  'evt.wpReached': 'Ponto de rota {n} alcançado',
+  'evt.fwInfo': 'Versão do firmware: {v} ({git})',
 };
 
 export default messages;

@@ -255,6 +255,92 @@
    "hex": "fd0300000001014d0000900163399c",
    "compare": [],
    "note": "not in MAV_RESULT: fallback text"
+  },
+  {
+   "id": "servo_output",
+   "msg": "SERVO_OUTPUT_RAW",
+   "hex": "fd250000000101240000e80300004c04b00414057805dc054006a4060807006c07d007e803e803e803e803e803e803d768",
+   "compare": [
+    "servo"
+   ],
+   "note": "all 16 outputs, across the port byte at offset 20"
+  },
+  {
+   "id": "mission_current",
+   "msg": "MISSION_CURRENT",
+   "hex": "fd0100000001012a0000079885",
+   "compare": [
+    "wp",
+    "wp_idx"
+   ],
+   "note": "no upload yet, so wp_idx falls back to seq - 2"
+  },
+  {
+   "id": "wind",
+   "msg": "WIND",
+   "hex": "fd080000000101a80000000007430000d04062cf",
+   "compare": [
+    "wind_dir",
+    "wind_speed"
+   ]
+  },
+  {
+   "id": "wind_negative_direction",
+   "msg": "WIND",
+   "hex": "fd080000000101a800000000b4c200004040abbf",
+   "compare": [
+    "wind_dir",
+    "wind_speed"
+   ],
+   "note": "ArduPilot sends -180..180: the UI shows 0..360"
+  },
+  {
+   "id": "terrain_report",
+   "msg": "TERRAIN_REPORT",
+   "hex": "fd1000000001018800009efeebeacccee858002012440000484176fe",
+   "compare": [
+    "terrain_alt"
+   ]
+  },
+  {
+   "id": "battery_status",
+   "msg": "BATTERY_STATUS",
+   "hex": "fd240000000101930000e8030000d0070000c4093c0f6e0fa00fd20fffffffffffffffffffffffffffff0001014b7ded",
+   "compare": [
+    "cells"
+   ],
+   "note": "four cells, then 0xFFFF for not present"
+  },
+  {
+   "id": "autopilot_version",
+   "msg": "AUTOPILOT_VERSION",
+   "hex": "fd2800000001019400000000000000000000d204000000000000ff03060400000000000000008c00000000000000abcd1234d40d",
+   "compare": [
+    "fw_version",
+    "fw_git",
+    "board_id"
+   ],
+   "note": "the git hash sits in flight_custom_version"
+  },
+  {
+   "id": "mount_status",
+   "msg": "MOUNT_STATUS",
+   "hex": "fd0e00000001019e000048f4ffff000000009411000001016b84",
+   "compare": [
+    "gimbal_pitch",
+    "gimbal_yaw"
+   ],
+   "note": "angles in centidegrees"
+  },
+  {
+   "id": "gimbal_device_attitude",
+   "msg": "GIMBAL_DEVICE_ATTITUDE_STATUS",
+   "hex": "fd2800000001011d0100e80300003485733fa116383dbec12bbe8d80823e0000000000000000000000000000000000000101ffbb",
+   "compare": [
+    "gimbal_pitch",
+    "gimbal_yaw"
+   ],
+   "note": "pitch -20, yaw 30 as a quaternion"
   }
  ]
 }

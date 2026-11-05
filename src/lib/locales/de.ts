@@ -1104,6 +1104,9 @@ const messages: Record<string, string> = {
   'ortho.badCoords': 'Die NW-Ecke muss nördlich und westlich der SO-Ecke liegen',
   'ortho.notKept':
     'Überlagerung angewendet, aber das Bild ist zu groß zum Speichern und verschwindet beim Schließen der Seite',
+  'evt.homeSet': 'Startpunkt: {lat}, {lon}',
+  'evt.wpReached': 'Wegpunkt {n} erreicht',
+  'evt.fwInfo': 'Firmware-Version: {v} ({git})',
 };
 
 export default messages;

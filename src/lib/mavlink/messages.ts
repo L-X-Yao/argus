@@ -146,6 +146,12 @@ export interface AutopilotVersion {
   flightSwVersion: number;
   boardVersion: number;
   uid: bigint;
+  gitHash: string;
+}
+
+export interface GimbalDeviceAttitudeStatus {
+  pitch: number;
+  yaw: number;
 }
 
 export interface MissionItemReached {
@@ -558,11 +564,28 @@ export function decodeAutopilotVersion(p: DataView): AutopilotVersion {
   //   8..11 uid (u64 low) — we expose flightSwVersion + board_version instead
   //   16..19 flight_sw_version (u32)
   //   28..31 board_version (u32)
+  //   36..43 flight_custom_version: the git hash, as backend handle_autopilot_version reads it
+  let gitHash = '';
+  for (let i = 36; i < 44; i++) {
+    const b = p.getUint8(i);
+    if (b !== 0) gitHash += b.toString(16).padStart(2, '0');
+  }
   return {
     flightSwVersion: p.getUint32(16, true),
     boardVersion: p.getUint32(28, true),
     uid: p.getBigUint64(8, true),
+    gitHash: gitHash.slice(0, 8),
   };
+}
+
+export function decodeGimbalDeviceAttitudeStatus(p: DataView): GimbalDeviceAttitudeStatus {
+  // GIMBAL_DEVICE_ATTITUDE_STATUS (285): 0..3 time_boot_ms, 4..19 q[4] (w, x, y, z).
+  // Same quaternion to Euler conversion as backend handle_gimbal_device_attitude_status.
+  const [w, x, y, z] = [4, 8, 12, 16].map((o) => p.getFloat32(o, true));
+  const sinp = 2 * (w * y - z * x);
+  const pitch = Math.abs(sinp) >= 1 ? Math.sign(sinp) * (Math.PI / 2) : Math.asin(sinp);
+  const yaw = Math.atan2(2 * (w * z + x * y), 1 - 2 * (y * y + z * z));
+  return { pitch: (pitch * 180) / Math.PI, yaw: (yaw * 180) / Math.PI };
 }
 
 /* ── Encoders ── */
@@ -1023,6 +1046,9 @@ export function dispatchFrame(frame: MavFrame, handlers: Partial<MessageHandlers
     case 246:
       handlers.onAdsbVehicle?.(decodeAdsbVehicle(padPayload(pl, 38)), frame);
       break;
+    case 285:
+      handlers.onGimbalDeviceAttitudeStatus?.(decodeGimbalDeviceAttitudeStatus(padPayload(pl, 36)), frame);
+      break;
     default:
       handlers.onUnknown?.(frame);
       break;
@@ -1062,5 +1088,6 @@ export interface MessageHandlers {
   onMagCalReport: (msg: MagCalReport, frame: MavFrame) => void;
   onEkfStatus: (msg: EkfStatus, frame: MavFrame) => void;
   onAdsbVehicle: (msg: AdsbVehicle, frame: MavFrame) => void;
+  onGimbalDeviceAttitudeStatus: (msg: GimbalDeviceAttitudeStatus, frame: MavFrame) => void;
   onUnknown: (frame: MavFrame) => void;
 }

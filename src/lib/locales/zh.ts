@@ -1088,6 +1088,9 @@ const messages: Record<string, string> = {
   'ack.result.unknown': '未知({n})',
   'ortho.badCoords': '西北角必须在东南角的西北方向',
   'ortho.notKept': '叠加层已应用，但图片太大无法保存，关闭页面后会消失',
+  'evt.homeSet': '起飞点: {lat}, {lon}',
+  'evt.wpReached': '航点 {n} 已到达',
+  'evt.fwInfo': '固件: {v} ({git})',
 };
 
 export default messages;

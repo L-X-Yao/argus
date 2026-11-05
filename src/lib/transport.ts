@@ -315,6 +315,8 @@ function requestStreams(): void {
   for (const [id, rate] of streams) {
     sendSerialFrame(66, encodeRequestDataStream(serial.targetSysId, serial.targetCompId, id, rate, 1));
   }
+  // AUTOPILOT_VERSION rides no stream: MAV_CMD_REQUEST_MESSAGE, as backend request_streams does.
+  serialSendCommandLong(512, 148);
 }
 
 /* ── Serial command API (mirrors ws.ts sendCommand) ── */
@@ -764,7 +766,10 @@ export async function serialUploadMission(
 
   const validation = validateMissionWaypoints(waypoints);
   if (!validation.ok) return validation;
-  return _startUpload(buildMissionItems(waypoints, takeoffAlt), 0);
+  const items = buildMissionItems(waypoints, takeoffAlt);
+  const result = await _startUpload(items, 0);
+  if (result.ok) _buildWpToSeqMap(items.map((item) => ({ seq: item.seq, cmd: item.command })));
+  return result;
 }
 
 /**
@@ -945,7 +950,7 @@ function _onMissionItemIntDl(p: DataView): void {
 // skip seq 0 (HOME, cmd 16) and the various non-nav DO_* / TAKEOFF / RTL items, and only count
 // the nav-WP family (cmd 16/18/19/82 with seq > 0). Result is parallel-indexed with the waypoints
 // the UI sees, so mission_set_current's wp_index lookup hits the right seq.
-function _buildWpToSeqMap(items: RawMissionItem[]): void {
+function _buildWpToSeqMap(items: Pick<RawMissionItem, 'seq' | 'cmd'>[]): void {
   _wpToSeq.clear();
   const sorted = [...items].sort((a, b) => a.seq - b.seq);
   let wpIndex = 0;
@@ -956,6 +961,19 @@ function _buildWpToSeqMap(items: RawMissionItem[]): void {
       wpIndex++;
     }
   }
+}
+
+/** Mission seq to the waypoint the UI numbers it: twin of backend DroneLink._wp_idx. */
+export function serialWpIndex(seq: number): number {
+  let bestSeq = -1;
+  let index = -1;
+  for (const [wp, s] of _wpToSeq) {
+    if (s <= seq && s > bestSeq) {
+      bestSeq = s;
+      index = wp;
+    }
+  }
+  return bestSeq >= 0 ? index : Math.max(0, seq - 2);
 }
 
 export async function serialDownloadMission(): Promise<{ ok: boolean; error?: string; waypoints?: Waypoint[] }> {

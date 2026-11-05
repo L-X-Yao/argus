@@ -80,6 +80,7 @@ import {
   connectSerial,
   disconnectSerial,
   serialUploadMission,
+  serialWpIndex,
   serialDownloadMission,
   serialUploadFence,
   serialLogList,
@@ -245,6 +246,15 @@ describe('serialUploadMission', () => {
     const promise = serialUploadMission(wps, 30);
     inject(fcFrame(47, encodeMissionAck(1, 1, 14))); // MAV_MISSION_INVALID_PARAM7
     await expect(promise).resolves.toEqual({ ok: false, error: 'MISSION_ACK type=14' });
+  });
+
+  it('maps mission seq back to waypoints after an upload, past a speed item', async () => {
+    const wp = { lat: 30, lon: 120, alt: 50, drop: false, delay: 0, speed: 0, type: 'wp' as const, loiter_param: 0 };
+    const promise = serialUploadMission([wp, { ...wp, speed: 5 }, wp], 30);
+    inject(fcFrame(47, encodeMissionAck(1, 1, 0)));
+    await expect(promise).resolves.toEqual({ ok: true });
+    // HOME 0, TAKEOFF 1, wp0 at 2, speed at 3, wp1 at 4, wp2 at 5.
+    expect([2, 3, 4, 5].map(serialWpIndex)).toEqual([0, 0, 1, 2]);
   });
 
   it('keeps uploading after MAV_MISSION_INVALID_SEQUENCE (a late duplicate)', async () => {

@@ -1097,6 +1097,9 @@ const messages: Record<string, string> = {
   'pid.autoSaved': '슬라이더를 바꾸면 바로 FC로 전송되어 저장됩니다',
   'ortho.badCoords': '북서쪽 모서리는 남동쪽 모서리의 북서쪽에 있어야 합니다',
   'ortho.notKept': '오버레이를 적용했지만 이미지가 너무 커서 저장할 수 없습니다. 페이지를 닫으면 사라집니다',
+  'evt.homeSet': '홈: {lat}, {lon}',
+  'evt.wpReached': '웨이포인트 {n} 도달',
+  'evt.fwInfo': '펌웨어: {v} ({git})',
 };
 
 export default messages;

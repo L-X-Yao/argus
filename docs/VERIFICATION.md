@@ -30,7 +30,7 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 | Commands, backend | 52 | 20 | 20 | 0 | 12 | 0 | 0 |
 | Commands, WebSerial | 52 | 10 | 28 | 0 | 3 | 0 | 11 |
 | Messages, backend | 34 | 28 | 1 | 0 | 5 | 0 | 0 |
-| Messages, WebSerial | 34 | 16 | 4 | 0 | 3 | 0 | 11 |
+| Messages, WebSerial | 34 | 16 | 12 | 0 | 5 | 0 | 1 |
 | REST routes | 28 | 6 | 5 | 8 | 9 | 0 | 0 |
 | Panels | 78 | 13 | 2 | 21 | 28 | 14 | 0 |
 | Platform | 40 | 8 | 3 | 7 | 15 | 4 | 3 |
@@ -104,14 +104,14 @@ CI 在两条链路上都驱动 SITL。WebSerial 用模拟串口接真实固件�
 | `SYS_STATUS` | Battery | 电池 | Real FC | Real FC | Both 2026-11-05, no battery fitted |
 | `PARAM_VALUE` | Parameters | 参数 | Real FC | Real FC | Both 2026-11-05 |
 | `GPS_RAW_INT` | GPS fix, satellites | GPS 定位和卫星数 | Real FC | Real FC | Both 2026-11-05 |
-| `RAW_IMU` | Compass field | 罗盘磁场 | Real FC | Tests only | Backend 2026-11-05 |
+| `RAW_IMU` | Compass field | 罗盘磁场 | Real FC | SITL | Backend 2026-11-05, WebSerial CI |
 | `ATTITUDE` | Attitude | 姿态 | Real FC | Real FC | Both 2026-11-05 |
 | `GLOBAL_POSITION_INT` | Position, heading | 位置和航向 | Real FC | Real FC | Both 2026-11-05 |
-| `SERVO_OUTPUT_RAW` | Motor outputs | 电机输出 | Real FC | n/a | Backend 2026-11-05 |
+| `SERVO_OUTPUT_RAW` | Motor outputs | 电机输出 | Real FC | SITL | Backend 2026-11-05, WebSerial CI |
 | `MISSION_REQUEST` | Mission upload | 航线上传 | Tests only | Tests only | The FC used the INT form |
-| `MISSION_CURRENT` | Mission progress | 任务进度 | Real FC | n/a | Backend 2026-05 |
+| `MISSION_CURRENT` | Mission progress | 任务进度 | Real FC | SITL | Backend 2026-05, WebSerial CI |
 | `MISSION_COUNT` | Mission download | 航线下载 | Real FC | Real FC | Both 2026-11-05 |
-| `MISSION_ITEM_REACHED` | Waypoint reached | 到达航点 | SITL | n/a | CI |
+| `MISSION_ITEM_REACHED` | Waypoint reached | 到达航点 | SITL | SITL | CI on both links |
 | `MISSION_ACK` | Upload result | 上传结果 | Real FC | Real FC | Both 2026-11-05 |
 | `MISSION_REQUEST_INT` | Mission upload | 航线上传 | Real FC | Real FC | Both 2026-11-05 |
 | `RC_CHANNELS` | RC input | 遥控输入 | Real FC | SITL | Backend 2026-11-05, WebSerial CI, no receiver fitted |
@@ -121,23 +121,19 @@ CI 在两条链路上都驱动 SITL。WebSerial 用模拟串口接真实固件�
 | `LOG_ENTRY` | Log list | 日志列表 | Real FC | Real FC | Both 2026-11-05 |
 | `LOG_DATA` | Log download | 日志下载 | Real FC | Real FC | Both 2026-11-05 |
 | `SERIAL_CONTROL` | MAVLink console | MAVLink 控制台 | Real FC | n/a | Backend 2026-05 |
-| `TERRAIN_REPORT` | Terrain height | 地形高度 | Real FC | n/a | Backend 2026-05 |
-| `BATTERY_STATUS` | Cell voltages | 电芯电压 | Real FC | n/a | Backend 2026-05 |
-| `AUTOPILOT_VERSION` | Firmware version | 固件版本 | Real FC | n/a | Backend 2026-11-05 |
-| `MOUNT_STATUS` | Gimbal angles | 云台角度 | Tests only | n/a | No gimbal |
-| `WIND` | Wind | 风速风向 | Tests only | n/a | The FC sent none |
+| `TERRAIN_REPORT` | Terrain height | 地形高度 | Real FC | Tests only | Backend 2026-05, both links compared on the same frame |
+| `BATTERY_STATUS` | Cell voltages | 电芯电压 | Real FC | SITL | Backend 2026-05, WebSerial CI |
+| `AUTOPILOT_VERSION` | Firmware version | 固件版本 | Real FC | SITL | Backend 2026-11-05, WebSerial CI |
+| `MOUNT_STATUS` | Gimbal angles | 云台角度 | Tests only | SITL | WebSerial CI with a servo gimbal in SITL |
+| `WIND` | Wind | 风速风向 | Tests only | Tests only | Both links compared on the same frame, the FC sent none |
 | `MAG_CAL_PROGRESS` | Compass calibration | 罗盘校准进度 | Real FC | SITL | Backend 2026-05, WebSerial CI |
 | `MAG_CAL_REPORT` | Compass calibration | 罗盘校准结果 | Real FC | SITL | Backend 2026-05, WebSerial CI |
 | `EKF_STATUS_REPORT` | EKF health | EKF 状态 | Real FC | Real FC | Both 2026-11-05 |
-| `VIBRATION` | Vibration | 振动 | Real FC | Tests only | Backend 2026-11-05 |
+| `VIBRATION` | Vibration | 振动 | Real FC | SITL | Backend 2026-11-05, WebSerial CI |
 | `HOME_POSITION` | Home | Home 点 | Real FC | Real FC | Both 2026-11-05 |
-| `ADSB_VEHICLE` | Nearby aircraft | 周边飞机 | Tests only | n/a | No ADS-B receiver |
+| `ADSB_VEHICLE` | Nearby aircraft | 周边飞机 | Tests only | Tests only | No ADS-B receiver |
 | `STATUSTEXT` | FC messages | 飞控文字消息 | Real FC | Real FC | Both 2026-11-05 |
-| `GIMBAL_DEVICE_ATTITUDE_STATUS` | Gimbal attitude | 云台姿态 | Tests only | n/a | No gimbal |
-
-Over WebSerial these state fields are never set, so they show blank or zero: distance to home, waypoint progress, flight time, motor outputs, wind, terrain height, gimbal angles, battery time, cell voltages, firmware version, board ID and PreArm text.
-
-WebSerial 下这些状态字段不会赋值，显示为空或 0：离家距离、航点进度、飞行时间、电机输出、风、地形高度、云台角度、电池剩余时间、电芯电压、固件版本、板卡 ID、PreArm 文字。
+| `GIMBAL_DEVICE_ATTITUDE_STATUS` | Gimbal attitude | 云台姿态 | Tests only | Tests only | Both links compared on the same frame, no gimbal |
 
 ## REST routes / REST 接口
 

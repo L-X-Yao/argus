@@ -1091,6 +1091,9 @@ const messages: Record<string, string> = {
   'ack.result.unknown': 'unknown({n})',
   'ortho.badCoords': 'The NW corner must lie north and west of the SE corner',
   'ortho.notKept': 'Overlay applied, but the image is too large to keep: it goes when the page closes',
+  'evt.homeSet': 'Home: {lat}, {lon}',
+  'evt.wpReached': 'Waypoint {n} reached',
+  'evt.fwInfo': 'Firmware: {v} ({git})',
 };
 
 export default messages;

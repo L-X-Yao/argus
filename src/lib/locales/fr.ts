@@ -1105,6 +1105,9 @@ const messages: Record<string, string> = {
   'ortho.badCoords': 'Le coin NO doit être au nord et à l’ouest du coin SE',
   'ortho.notKept':
     'Superposition appliquée, mais l’image est trop grande pour être conservée : elle disparaîtra à la fermeture de la page',
+  'evt.homeSet': 'Point de départ : {lat}, {lon}',
+  'evt.wpReached': 'Point de passage {n} atteint',
+  'evt.fwInfo': 'Micrologiciel : {v} ({git})',
 };
 
 export default messages;
