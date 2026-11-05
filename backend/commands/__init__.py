@@ -39,6 +39,7 @@ from ._helpers import send_heartbeat as send_heartbeat
 from ._helpers import send_mission_item_int as send_mission_item_int
 from ._helpers import send_rally_item_int as send_rally_item_int
 from ._mission import (
+    cmd_fence_clear,
     cmd_fence_upload,
     cmd_mission_clear,
     cmd_mission_download,
@@ -84,6 +85,7 @@ _DISPATCH = {
     "mission_clear": cmd_mission_clear,
     "mission_upload": cmd_mission_upload,
     "fence_upload": cmd_fence_upload,
+    "fence_clear": cmd_fence_clear,
     "mission_download": cmd_mission_download,
     "rally_upload": cmd_rally_upload,
     "mission_set_current": cmd_mission_set_current,

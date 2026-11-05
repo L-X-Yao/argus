@@ -1251,6 +1251,13 @@ class TestOutgoingMoreCommands:
         msg = _decode_one(link.captured[0])
         assert msg.get_msgId() == mavlink.MAVLINK_MSG_ID_MISSION_CLEAR_ALL  # 45
 
+    def test_fence_clear_targets_the_fence_store(self):
+        link = FakeLink()
+        commands.execute("fence_clear", None, link)
+        msg = _decode_one(link.captured[0])
+        assert msg.get_msgId() == mavlink.MAVLINK_MSG_ID_MISSION_CLEAR_ALL  # 45
+        assert msg.mission_type == mavlink.MAV_MISSION_TYPE_FENCE  # 1, not the mission
+
     def test_log_list(self):
         link = FakeLink()
         commands.execute("log_list", None, link)

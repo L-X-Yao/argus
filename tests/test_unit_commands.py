@@ -109,6 +109,11 @@ class TestCommandExecute:
         execute("mission_clear", None, link)
         assert any("任务已清除" in e["text"] for e in link.events)
 
+    def test_fence_clear(self):
+        link = make_link()
+        execute("fence_clear", None, link)
+        assert any("围栏已清除" in e["text"] for e in link.events)
+
     def test_fence_upload_sets_pending(self):
         link = make_link()
         polygon = [

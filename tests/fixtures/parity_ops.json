@@ -45,6 +45,7 @@
     {"id": "mission_start", "kind": "dispatch", "op": "mission_start", "flush_timer_ms": 400, "expect": "parity"},
     {"id": "mission_start_plane", "kind": "dispatch", "op": "mission_start", "plane": true, "flush_timer_ms": 400, "expect": "parity"},
     {"id": "mission_clear", "kind": "dispatch", "op": "mission_clear", "expect": "parity"},
+    {"id": "fence_clear", "kind": "dispatch", "op": "fence_clear", "expect": "parity"},
     {"id": "mission_set_current", "kind": "dispatch", "op": "mission_set_current", "data": {"wp_index": 5}, "expect": "parity"},
     {"id": "drop", "kind": "dispatch", "op": "drop", "expect": "parity"},
     {"id": "drop_stop", "kind": "dispatch", "op": "drop_stop", "expect": "parity"},

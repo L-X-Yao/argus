@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { app, addToast } from '../../lib/stores.svelte';
+  import { app, addToast, showConfirm } from '../../lib/stores.svelte';
   import { dispatch } from '../../lib/transport';
   import { isSerialConnected, serialUploadFence } from '../../lib/transport';
   import { t } from '../../lib/i18n.svelte';
@@ -18,7 +18,13 @@
     drawingFence = false;
     app.drawingFence = false;
   }
-  function clearFence() {
+  async function clearFence() {
+    // The drawing is only local. An uploaded fence stays on the FC, still
+    // enforced, until it is cleared there too.
+    if (app.fenceUploaded && app.drone.connected) {
+      if (!(await showConfirm(t('fence.clear') + '?'))) return;
+      dispatch('fence_clear');
+    }
     app.fencePolygon = [];
     app.fenceUploaded = false;
     app.drawingFence = false;

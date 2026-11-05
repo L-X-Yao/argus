@@ -38,6 +38,7 @@ _T = {
     "mission_set_current": ("跳转到航点 #%d", "Jump to WP #%d"),
     "mission_upload": ("任务: %d 航点, %d 投放, 高度 %.0fm", "Mission: %d WP, %d drops, alt %.0fm"),
     "fence_upload": ("围栏: %d 顶点上传中", "Fence: uploading %d vertices"),
+    "fence_clear": ("围栏已清除", "Fence cleared"),
     "vtype_set": ("机型: %s", "Vehicle: %s"),
     "guided": ("引导飞往 %.5f, %.5f @ %.0fm", "Guided to %.5f, %.5f @ %.0fm"),
     "cal_compass": ("校准: 开始罗盘校准...", "Cal: compass start..."),

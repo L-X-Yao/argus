@@ -408,6 +408,7 @@ const _serialDispatch: Record<string, CmdHandler> = {
     }, 300);
   },
   mission_clear: () => serialClearMission(),
+  fence_clear: () => serialClearFence(),
   // Mission seq mapping: backend prepends HOME (seq 0) + TAKEOFF (seq 1), and inserts DO_CHANGE_SPEED (178)
   // before any waypoint with speed > 0. _seqToWp (populated on serialDownloadMission completion) gives the
   // accurate mapping. Falls back to `wp_index + 2` when no map exists, matching backend cmd_mission_set_current
@@ -766,6 +767,11 @@ export function serialClearMission(): void {
   if (!isSerialConnected()) return;
   sendSerialFrame(45, encodeMissionClearAll(serial.targetSysId, serial.targetCompId, 0));
   _wpToSeq.clear();
+}
+
+// mission_type=1 wipes the fence store. Mirrors backend cmd_fence_clear.
+export function serialClearFence(): void {
+  sendSerialFrame(45, encodeMissionClearAll(serial.targetSysId, serial.targetCompId, 1));
 }
 
 export function serialMissionSetCurrent(seq: number): void {
