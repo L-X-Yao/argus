@@ -712,12 +712,9 @@ class DroneLink:
                 if ser is None:
                     time.sleep(0.1)
                     continue
-                # Drain what's already buffered (capped at 64 KB) instead of
-                # 1024 B per tick: read(1024) + MAIN_LOOP_SLEEP capped intake
-                # at ~50 KB/s, throttling log downloads far below the
-                # ~700 KB/s a USB FC sustains. Idle behavior is unchanged —
-                # with nothing waiting this is the same blocking read(1024)
-                # under the port's read timeout.
+                # Take what's already buffered (capped at 64 KB) rather than
+                # 1024 B at a time. With nothing waiting this is a blocking
+                # read(1024) under the port's read timeout.
                 avail = getattr(ser, "in_waiting", 0) or 0
                 data = ser.read(min(max(1024, avail), 65536))
             except OSError:
@@ -728,7 +725,13 @@ class DroneLink:
             self.param_mgr.check_timeout()
             self._check_mission_dl_timeout()
             self._check_log_dl_stall()
-            time.sleep(cfg.MAIN_LOOP_SLEEP)
+            # Every read above already blocks up to its port timeout, so a pause
+            # only matters when nothing arrived. A Linux tty hands over about
+            # 4 KB per read and a UDP read one datagram: pausing after each read
+            # capped a real USB log download at 200 KB/s on a link that carries
+            # 720 KB/s, and UDP at 50 datagrams per second.
+            if not data:
+                time.sleep(cfg.MAIN_LOOP_SLEEP)
 
     def _check_mission_dl_timeout(self) -> None:
         from .commands._mission import check_mission_dl_timeout

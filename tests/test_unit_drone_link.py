@@ -1185,6 +1185,42 @@ class TestLoop:
             link._loop()
         assert sizes == [1024]
 
+    def _pauses_during(self, reads):
+        """Run _loop over scripted read results and return the pauses it took."""
+        link = DroneLink()
+        link._running = True
+        pending = list(reads)
+
+        class ScriptedPort:
+            in_waiting = 0
+
+            def read(self, n):
+                if pending:
+                    return pending.pop(0)
+                link._running = False
+                return b""
+
+        link._ser = ScriptedPort()
+        pauses: list[float] = []
+        with (
+            patch("backend.drone_link.cmd_module.send_heartbeat"),
+            patch("backend.drone_link.cmd_module.request_streams"),
+            patch("backend.drone_link.time.sleep", side_effect=pauses.append),
+        ):
+            link._loop()
+        return pauses
+
+    def test_loop_does_not_pause_between_reads_that_return_data(self):
+        """A Linux tty hands over about 4 KB per read and a UDP read returns one
+        datagram, so a pause after every read capped a real USB log download at
+        200 KB/s on a link that carries 720 KB/s. Only the closing empty read
+        may pause."""
+        assert self._pauses_during([b"\x00" * 4095] * 50) == [cfg.MAIN_LOOP_SLEEP]
+
+    def test_loop_pauses_after_an_empty_read(self):
+        """No data means the port timed out, and the loop must not spin."""
+        assert self._pauses_during([b"", b"", b""]) == [cfg.MAIN_LOOP_SLEEP] * 4
+
     def test_loop_reads_serial_data(self):
         """_loop reads data from serial port and appends to _buf."""
         link = DroneLink()
