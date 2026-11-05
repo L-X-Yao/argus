@@ -171,8 +171,12 @@ export async function connectSerial(baudRate: number, handlers: Partial<MessageH
           frame.msgId === 0 &&
           isVehicleHeartbeat(decodeHeartbeat(_padView(frame.payload, 9)))
         ) {
+          const wrongTarget = frame.sysId !== 1;
           serial.targetSysId = frame.sysId;
           serial.targetCompId = frame.compId;
+          // The first request went to sysid 1, and an FC ignores what is addressed to
+          // another system (MAVLink_routing.cpp:184).
+          if (wrongTarget) requestStreams();
         }
         // Mission upload state machine runs BEFORE the external dispatch so the
         // upload completes deterministically even if the user's handler set is

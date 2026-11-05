@@ -990,6 +990,23 @@ describe('serial link health', () => {
     expect(app.drone.armed).toBe(true); // reconnecting is no reason to show it disarmed
   });
 
+  it('asks again when the vehicle turns out not to be sysid 1', async () => {
+    await disconnectSerial();
+    await connectSerial(115200, {});
+    writes.length = 0;
+    inject(encodeFrame(0, encodeHeartbeat(2, 3), 42, 1, 0));
+    const sent = writes.filter((w) => writeMsgId(w) === 66);
+    expect(sent.length).toBeGreaterThan(0);
+    expect(sent.every((w) => w[10 + 2] === 42)).toBe(true); // target_system
+  });
+
+  it("drops the last vehicle's parameters on connecting, as the backend link does", async () => {
+    await disconnectSerial();
+    handleParamBatch([{ name: 'A', value: 1, ptype: 9, index: 0, total: 1, received: 1 }]);
+    await connectSerial(115200, {});
+    expect(paramState.list).toHaveLength(0);
+  });
+
   it('asks for what no stream carries', async () => {
     await disconnectSerial();
     writes.length = 0;
