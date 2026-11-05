@@ -7,12 +7,19 @@ set -e
 # Git runs hooks in a non-login shell, which may not have nvm loaded.
 command -v npx >/dev/null || { [ -s "$HOME/.nvm/nvm.sh" ] && . "$HOME/.nvm/nvm.sh"; }
 
-echo "[pre-commit] sensitive-word check..."
-_W1="pl""kj"; _W2="peng""likeji"; _W3="fpv""-rocket"
-if git diff --cached --name-only | xargs grep -qri "$_W1\|$_W2\|$_W3" -- 2>/dev/null; then
-  echo "ERROR: proprietary reference found in staged files"
-  git diff --cached --name-only | xargs grep -rni "$_W1\|$_W2\|$_W3" -- 2>/dev/null
-  exit 1
+# A clone can list words that must never be committed, one per line, in
+# .git/info/sensitive-words. The list stays out of the repo because writing a
+# word here would publish it. No list, no check. Searches the staged content.
+_WORDS=$(git rev-parse --git-path info/sensitive-words)
+if [ -s "$_WORDS" ]; then
+  echo "[pre-commit] sensitive-word check..."
+  _HITS=$(git diff --cached --name-only --diff-filter=d -z |
+    xargs -0 -r git --literal-pathspecs grep --cached -n -i -F -f "$_WORDS" -- 2>&1 || true)
+  if [ -n "$_HITS" ]; then
+    echo "ERROR: sensitive-word check failed on staged files"
+    echo "$_HITS"
+    exit 1
+  fi
 fi
 
 echo "[pre-commit] i18n error-string check..."
