@@ -184,7 +184,9 @@
     map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
     map.addControl(new maplibregl.ScaleControl({ maxWidth: 150 }), 'bottom-right');
 
-    map.on('load', () => {
+    // Not 'load': that waits for every tile, including terrain from a third-party
+    // host, so a slow tile server would hold back all overlays.
+    map.once('style.load', () => {
       map!.addSource('waypoints', {
         type: 'geojson',
         data: { type: 'FeatureCollection', features: [] },

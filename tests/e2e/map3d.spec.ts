@@ -20,7 +20,7 @@ async function clickMap(page: Page, fx: number, fy: number) {
   await page.mouse.click(box!.x + box!.width * fx, box!.y + box!.height * fy);
 }
 
-// Overlay edits made before the map's 'load' event have nowhere to render yet.
+// Overlay edits made before the style loads have nowhere to render yet.
 function overlaysReady(page: Page) {
   return expect(page.locator('[data-overlays-ready="true"]')).toBeVisible({ timeout: 30000 });
 }
@@ -118,5 +118,30 @@ test.describe('3D map', () => {
     await expect(page.locator('body')).toContainText('WebGL2', { timeout: 15000 });
     await expect(page.locator('.leaflet-container')).toBeVisible();
     await expect(page.locator('canvas.maplibregl-canvas')).toHaveCount(0);
+  });
+});
+
+test.describe('3D map with stalled tiles', () => {
+  // A service worker would answer tile requests before page.route() sees them.
+  test.use({ serviceWorkers: 'block' });
+
+  test('shows overlays while tiles are still loading', async ({ page }) => {
+    // The map's 'load' event waits for every tile, including terrain from a
+    // third-party host, so overlays must not depend on it.
+    let stalled = 0;
+    const stall = () => {
+      stalled++;
+    };
+    await page.route('**/api/tile/**', stall);
+    await page.route('**/elevation-tiles-prod/**', stall);
+    await seed(page, 'argus_fence', [
+      { lat: 34.258, lon: 108.942 },
+      { lat: 34.262, lon: 108.95 },
+      { lat: 34.254, lon: 108.955 },
+    ]);
+    await open3d(page);
+
+    await expect(page.locator('.maplibregl-marker')).toHaveCount(3, { timeout: 15000 });
+    expect(stalled).toBeGreaterThan(0);
   });
 });
