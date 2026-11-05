@@ -16,7 +16,7 @@
 
 Argus is a universal **web GCS** — one browser interface for MAVLink drones, on any platform (desktop, tablet, mobile), in 10 languages. There is no hosted version yet: run the Python backend, or unzip the Windows package (Python included), then open it in a browser.
 
-> **Status**: ArduPilot is verified on ArduCopter SITL in CI and on a real flight controller on the bench, but Argus has not been through proper flight testing. PX4 has frontend adapter scaffolding in `src/lib/fc/` and the backend reads `HEARTBEAT.autopilot`, but end-to-end wiring is incomplete — see `CLAUDE.md ## PX4 Status`.
+> **Status**: ArduPilot is verified on ArduCopter SITL in CI and on a real flight controller on the bench, but Argus has not been through proper flight testing. [docs/VERIFICATION.md](docs/VERIFICATION.md) lists what has been tested and how, feature by feature. PX4 has frontend adapter scaffolding in `src/lib/fc/` and the backend reads `HEARTBEAT.autopilot`, but end-to-end wiring is incomplete — see `CLAUDE.md ## PX4 Status`.
 
 Why another GCS:
 

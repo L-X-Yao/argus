@@ -16,7 +16,7 @@
 
 Argus 是一个通用 **Web 地面站** —— 一个浏览器界面控制 MAVLink 无人机，支持桌面 / 平板 / 手机，内置 10 种语言。目前没有托管版本：运行 Python 后端，或解压 Windows 发布包（已内置 Python），再用浏览器打开。
 
-> **当前状态**：ArduPilot 已通过 CI 中的 ArduCopter SITL 和真实飞控台架验证，尚未经过正式飞行测试。PX4 前端适配器已搭建，后端可读取 `HEARTBEAT.autopilot` 字节，但端到端链路尚未贯通 —— 详见 `CLAUDE.md ## PX4 Status`。
+> **当前状态**：ArduPilot 已通过 CI 中的 ArduCopter SITL 和真实飞控台架验证，尚未经过正式飞行测试。每项功能验证到什么程度，见 [docs/VERIFICATION.md](docs/VERIFICATION.md)。PX4 前端适配器已搭建，后端可读取 `HEARTBEAT.autopilot` 字节，但端到端链路尚未贯通 —— 详见 `CLAUDE.md ## PX4 Status`。
 
 为什么还需要一个 GCS：
 
