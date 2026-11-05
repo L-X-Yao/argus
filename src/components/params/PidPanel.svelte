@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { app, addToast } from '../../lib/stores.svelte';
+  import { app } from '../../lib/stores.svelte';
   import { dispatch } from '../../lib/transport';
   import { t } from '../../lib/i18n.svelte';
   import { paramState, getParam } from '../../lib/paramStore.svelte';
@@ -146,13 +146,6 @@
     ctx.fillStyle = '#666';
     ctx.fillText(`${vals[vals.length - 1]?.toFixed(1)}°`, w - 40, 12);
   });
-
-  /* ── Save to flash ── */
-
-  function saveToFlash() {
-    dispatch('param_save_to_flash');
-    addToast(t('pid.saved'), 'success');
-  }
 </script>
 
 <div role="dialog" aria-modal="true" tabindex="-1" class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
@@ -248,13 +241,8 @@
           {/if}
         </div>
 
-        <!-- Save to Flash button -->
-        <div class="flex justify-end pt-4">
-          <Button variant="default" size="sm" class="h-8 text-xs px-6" onclick={saveToFlash}
-                  disabled={!app.drone.connected}>
-            {t('pid.save')}
-          </Button>
-        </div>
+        <!-- ArduPilot stores each PARAM_SET at once, so there is nothing further to save. -->
+        <p class="pt-4 text-[11px] text-muted-foreground">{t('pid.autoSaved')}</p>
 
       {/if}
     </div>

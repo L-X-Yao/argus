@@ -579,8 +579,6 @@ const messages: Record<string, string> = {
   'pid.rateP': 'Taux P',
   'pid.rateI': 'Taux I',
   'pid.rateD': 'Taux D',
-  'pid.save': 'Écrire au FC',
-  'pid.saved': 'Paramètres PID enregistrés',
   'pid.reset': 'Valeurs par défaut',
   'pid.hint': 'Déplacer les curseurs pour ajuster les PID — les changements prennent effet immédiatement',
   'autotune.title': 'Réglage automatique',
@@ -1084,6 +1082,7 @@ const messages: Record<string, string> = {
   'role.notEnforced': "Les rôles sont pour l'instant décoratifs — aucune commande n'est restreinte",
   'panel.aiPlanner.localNote':
     'Analyseur de règles local (hors ligne) — pas un LLM cloud ; reconnaît un ensemble fixe de commandes',
+  'pid.autoSaved': 'Chaque réglage part aussitôt vers le contrôleur, qui le conserve',
 };
 
 export default messages;

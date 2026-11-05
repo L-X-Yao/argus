@@ -614,8 +614,6 @@ const messages: Record<string, string> = {
   'pid.rateI': 'Rate I',
   'pid.rateD': 'Rate D',
   'pid.rateFF': 'Rate FF',
-  'pid.save': '写入飞控',
-  'pid.saved': 'PID 参数已写入',
   'pid.reset': '恢复默认',
   'pid.hint': '拖动滑块调整 PID 参数，实时生效',
   'pid.responseCurve': '响应曲线',
@@ -1068,6 +1066,7 @@ const messages: Record<string, string> = {
   'ui.skipForward': '前进',
   'ui.linkQuality': '链路质量 {rate} Hz',
   'ui.battery': '电池 {v}V {pct}%',
+  'pid.autoSaved': '滑块每次改动都会立即写入飞控，飞控会同时保存',
 };
 
 export default messages;

@@ -34,7 +34,6 @@ _WS_ONLY = {
     "log_download",
     "param_load",
     # param_save writes a host-side JSON backup — the serial path can't replicate that.
-    # UIs that want FC NVRAM write use param_save_to_flash instead (in _serialDispatch).
     "param_save",
 }
 

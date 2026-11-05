@@ -396,14 +396,7 @@ describe('_serialDispatch wire-byte semantics', () => {
     expect(cmd.p3).toBe(1);
   });
 
-  // ── param_save split: save_to_flash hits FC NVRAM, save falls through to WS
-  it('param_save_to_flash sends PREFLIGHT_STORAGE (245) p1=1', () => {
-    dispatch('param_save_to_flash');
-    const cmd = decodeCommandLong(writes[0]);
-    expect(cmd.command).toBe(245);
-    expect(cmd.p1).toBe(1);
-  });
-
+  // ── param_save writes a host-side backup, so it falls through to WS
   it('param_save falls through to WS (no serial write) — writes JSON backup, not FC NVRAM', async () => {
     dispatch('param_save');
     // Give the dynamic import time to resolve.

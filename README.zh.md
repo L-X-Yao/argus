@@ -107,7 +107,7 @@ python run.py --sim            # 同时启动后端 + simulator.py
 |  Python 后端 (FastAPI + uvicorn)          |
 |  31 模块, 6.2K 行                        |
 |  MAVLink 分发 + 33 消息处理器             |
-|  53 条命令, 瓦片/视频/固件 API            |
+|  52 条命令, 瓦片/视频/固件 API            |
 +------------------------------------------+
 |          MAVLink v2                       |
 |  TCP / UDP / Serial                      |
@@ -129,7 +129,7 @@ python run.py --sim            # 同时启动后端 + simulator.py
 | `src/lib/survey.ts` | 测绘图案生成（网格、交叉、螺旋、环绕） |
 | `src/lib/i18n.svelte.ts` | 10 语言国际化，支持 RTL |
 | `backend/drone_link.py` | MAVLink 连接、帧解析、状态管理 |
-| `backend/commands/` | 53 条命令处理器（解锁、模式、航线、校准、云台、NTRIP 等） |
+| `backend/commands/` | 52 条命令处理器（解锁、模式、航线、校准、云台、NTRIP 等） |
 | `backend/config.py` | 集中配置（所有超时/端口/速率常量） |
 
 ## 开发

@@ -614,8 +614,6 @@ const messages: Record<string, string> = {
   'pid.rateI': 'Rate I',
   'pid.rateD': 'Rate D',
   'pid.rateFF': 'Rate FF',
-  'pid.save': 'Write to FC',
-  'pid.saved': 'PID parameters saved',
   'pid.reset': 'Reset Defaults',
   'pid.hint': 'Drag sliders to adjust PID — changes take effect immediately',
   'pid.responseCurve': 'Response Curve',
@@ -1071,6 +1069,7 @@ const messages: Record<string, string> = {
   'ui.skipForward': 'Skip forward',
   'ui.linkQuality': 'Link quality {rate} Hz',
   'ui.battery': 'Battery {v}V {pct}%',
+  'pid.autoSaved': 'Each slider change goes to the FC at once, and the FC stores it',
 };
 
 export default messages;

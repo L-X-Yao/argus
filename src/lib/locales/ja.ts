@@ -578,8 +578,6 @@ const messages: Record<string, string> = {
   'pid.rateP': 'レートP',
   'pid.rateI': 'レートI',
   'pid.rateD': 'レートD',
-  'pid.save': 'FCに書込',
-  'pid.saved': 'PIDパラメータを保存しました',
   'pid.reset': 'デフォルトにリセット',
   'pid.hint': 'スライダーをドラッグしてPIDを調整 — 変更は即時反映',
   'autotune.title': 'オートチューン',
@@ -1079,6 +1077,7 @@ const messages: Record<string, string> = {
   'role.notEnforced': 'ロールは現在表示のみで、コマンド制限はまだ行われません',
   'panel.aiPlanner.localNote':
     'ローカルのルール解析（オフライン対応）— クラウドLLMではなく、固定のコマンド語を認識します',
+  'pid.autoSaved': 'スライダーの変更はすぐにFCへ送られ、FCに保存されます',
 };
 
 export default messages;

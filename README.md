@@ -109,7 +109,7 @@ Open Argus in Chrome/Edge, click the **USB** button, pick your flight controller
 |  Python Backend (FastAPI + uvicorn)      |
 |  31 modules, 6.2K lines                  |
 |  MAVLink dispatch + 33 message handlers  |
-|  53 commands, tile/video/firmware API    |
+|  52 commands, tile/video/firmware API    |
 +------------------------------------------+
 |          MAVLink v2                      |
 |  TCP / UDP / Serial                      |
@@ -131,7 +131,7 @@ Open Argus in Chrome/Edge, click the **USB** button, pick your flight controller
 | `src/lib/survey.ts` | Survey patterns (grid, crosshatch, spiral, orbit) |
 | `src/lib/i18n.svelte.ts` | 10-language i18n with RTL support |
 | `backend/drone_link.py` | MAVLink connection, frame parsing, state management |
-| `backend/commands/` | 53 command handlers (arm, mode, mission, calibration, gimbal, NTRIP, etc.) |
+| `backend/commands/` | 52 command handlers (arm, mode, mission, calibration, gimbal, NTRIP, etc.) |
 | `backend/config.py` | Centralized configuration (all timeouts/ports/rates) |
 
 ## Development

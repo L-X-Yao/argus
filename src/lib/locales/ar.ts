@@ -577,8 +577,6 @@ const messages: Record<string, string> = {
   'pid.rateP': 'معدل P',
   'pid.rateI': 'معدل I',
   'pid.rateD': 'معدل D',
-  'pid.save': 'كتابة إلى FC',
-  'pid.saved': 'تم حفظ معلمات PID',
   'pid.reset': 'إعادة الافتراضي',
   'pid.hint': 'اسحب المنزلقات لضبط PID — التغييرات تسري فوراً',
   'autotune.title': 'ضبط تلقائي',
@@ -1077,6 +1075,7 @@ const messages: Record<string, string> = {
   'role.notEnforced': 'الأدوار للعرض فقط حالياً — لا يتم تقييد أي أوامر بعد',
   'panel.aiPlanner.localNote':
     'محلل قواعد محلي (يعمل دون اتصال) — ليس نموذجاً لغوياً سحابياً؛ يتعرف على مجموعة ثابتة من كلمات الأوامر',
+  'pid.autoSaved': 'يُرسَل كل تغيير في المنزلق فورًا إلى المتحكم الذي يحفظه',
 };
 
 export default messages;

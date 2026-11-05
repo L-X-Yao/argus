@@ -54,7 +54,6 @@
     {"id": "do_set_roi", "kind": "dispatch", "op": "do_set_roi", "data": {"lat": 34.05, "lon": -118.25, "alt": 50}, "expect": "parity"},
     {"id": "param_set", "kind": "dispatch", "op": "param_set", "data": {"name": "BATT_CAPACITY", "value": 5300}, "expect": "parity"},
     {"id": "param_request_all", "kind": "dispatch", "op": "param_request_all", "expect": "parity"},
-    {"id": "param_save_to_flash", "kind": "dispatch", "op": "param_save_to_flash", "expect": "parity"},
     {"id": "reboot", "kind": "dispatch", "op": "reboot", "expect": "parity"},
     {"id": "reboot_bootloader", "kind": "dispatch", "op": "reboot_bootloader", "expect": "parity"},
     {"id": "rc_override", "kind": "dispatch", "op": "rc_override", "data": {"channels": [1500, 1600, 1700, 1800, 1000, 2000, 1234, 1899]}, "expect": "parity"},

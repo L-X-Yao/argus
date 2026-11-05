@@ -579,8 +579,6 @@ const messages: Record<string, string> = {
   'pid.rateP': 'Rate-P',
   'pid.rateI': 'Rate-I',
   'pid.rateD': 'Rate-D',
-  'pid.save': 'An FC schreiben',
-  'pid.saved': 'PID-Parameter gespeichert',
   'pid.reset': 'Standardwerte',
   'pid.hint': 'Regler ziehen, um PID anzupassen — Änderungen wirken sofort',
   'autotune.title': 'Automatische Abstimmung',
@@ -1083,6 +1081,7 @@ const messages: Record<string, string> = {
   'role.notEnforced': 'Rollen sind derzeit nur Anzeige — noch keine Befehle eingeschränkt',
   'panel.aiPlanner.localNote':
     'Lokaler Regelparser (offline) — kein Cloud-LLM; erkennt eine feste Menge an Befehlswörtern',
+  'pid.autoSaved': 'Jede Reglerbewegung geht sofort an den FC, der sie speichert',
 };
 
 export default messages;

@@ -579,8 +579,6 @@ const messages: Record<string, string> = {
   'pid.rateP': 'Taxa P',
   'pid.rateI': 'Taxa I',
   'pid.rateD': 'Taxa D',
-  'pid.save': 'Gravar no FC',
-  'pid.saved': 'Parâmetros PID salvos',
   'pid.reset': 'Redefinir padrões',
   'pid.hint': 'Arraste os controles para ajustar PID — as alterações têm efeito imediato',
   'autotune.title': 'Ajuste automático',
@@ -1082,6 +1080,7 @@ const messages: Record<string, string> = {
   'role.notEnforced': 'Funções são apenas visuais por enquanto — nenhum comando está restrito',
   'panel.aiPlanner.localNote':
     'Analisador de regras local (funciona offline) — não é um LLM na nuvem; reconhece um conjunto fixo de comandos',
+  'pid.autoSaved': 'Cada ajuste vai na hora para a controladora, que o guarda',
 };
 
 export default messages;

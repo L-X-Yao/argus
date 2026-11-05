@@ -577,8 +577,6 @@ const messages: Record<string, string> = {
   'pid.rateP': '레이트 P',
   'pid.rateI': '레이트 I',
   'pid.rateD': '레이트 D',
-  'pid.save': 'FC에 쓰기',
-  'pid.saved': 'PID 매개변수를 저장했습니다',
   'pid.reset': '기본값 초기화',
   'pid.hint': '슬라이더를 드래그하여 PID 조정 — 변경 즉시 적용',
   'autotune.title': '오토튠',
@@ -1077,6 +1075,7 @@ const messages: Record<string, string> = {
     '데모 데이터: 내장 공항 샘플 목록 — 공식 공역 데이터가 아니므로 규정 준수 판단에 사용하지 마세요',
   'role.notEnforced': '역할은 현재 표시용일 뿐 — 아직 어떤 명령도 제한되지 않습니다',
   'panel.aiPlanner.localNote': '로컬 규칙 파서(오프라인 작동) — 클라우드 LLM이 아니며 고정된 명령어 집합을 인식합니다',
+  'pid.autoSaved': '슬라이더를 바꾸면 바로 FC로 전송되어 저장됩니다',
 };
 
 export default messages;

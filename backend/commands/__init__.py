@@ -64,7 +64,6 @@ from ._setup import (
     cmd_param_load,
     cmd_param_request_all,
     cmd_param_save,
-    cmd_param_save_to_flash,
     cmd_param_set,
 )
 
@@ -104,7 +103,6 @@ _DISPATCH = {
     "param_request_all": cmd_param_request_all,
     "param_set": cmd_param_set,
     "param_save": cmd_param_save,
-    "param_save_to_flash": cmd_param_save_to_flash,
     "param_load": cmd_param_load,
     "log_list": cmd_log_list,
     "log_download": cmd_log_download,

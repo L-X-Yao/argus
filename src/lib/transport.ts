@@ -468,10 +468,9 @@ const _serialDispatch: Record<string, CmdHandler> = {
   },
   param_set: (_, d) => serialSendParamSet(d?.name as string, d?.value as number),
   param_request_all: () => serialParamRequestAll(),
-  // MAV_CMD_PREFLIGHT_STORAGE (245), p1=1: write running params to FC NVRAM. AP source: GCS_MAVLINK::handle_command_preflight_storage.
   // `param_save` is intentionally NOT in this table — it writes a host-side JSON backup over WS, which serial can't do
-  // (would silently do the wrong thing). UIs that want FC flash use `param_save_to_flash` explicitly.
-  param_save_to_flash: () => serialSendCommandLong(245, 1),
+  // (would silently do the wrong thing). The FC needs no save command: it stores every PARAM_SET at once
+  // (libraries/GCS_MAVLink/GCS_Param.cpp:318), and answers MAV_CMD_PREFLIGHT_STORAGE 1 with DENIED (GCS_Common.cpp:5829).
   // MAV_CMD_PREFLIGHT_REBOOT_SHUTDOWN (246). p1: 1=reboot autopilot, 3=reboot to bootloader. AP source: GCS_MAVLINK::handle_preflight_reboot.
   reboot: () => serialSendCommandLong(246, 1),
   reboot_bootloader: () => serialSendCommandLong(246, 3),

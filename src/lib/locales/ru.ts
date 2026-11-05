@@ -578,8 +578,6 @@ const messages: Record<string, string> = {
   'pid.rateP': 'Коэфф. P',
   'pid.rateI': 'Коэфф. I',
   'pid.rateD': 'Коэфф. D',
-  'pid.save': 'Записать в FC',
-  'pid.saved': 'PID параметры сохранены',
   'pid.reset': 'Сбросить по умолчанию',
   'pid.hint': 'Двигайте ползунки для настройки PID — изменения применяются немедленно',
   'autotune.title': 'Автонастройка',
@@ -1082,6 +1080,7 @@ const messages: Record<string, string> = {
   'role.notEnforced': 'Роли пока только отображаются — команды не ограничиваются',
   'panel.aiPlanner.localNote':
     'Локальный разбор по правилам (работает офлайн) — не облачная LLM; распознаёт фиксированный набор команд',
+  'pid.autoSaved': 'Каждое изменение сразу уходит на контроллер и сохраняется на нём',
 };
 
 export default messages;
