@@ -23,7 +23,7 @@ from pathlib import Path
 SCRIPT_DIR = Path(__file__).resolve().parent.parent
 OUTPUT_DIR = SCRIPT_DIR / "release"
 
-_VERSION = re.search(r"VERSION = '([^']+)'", (SCRIPT_DIR / "backend" / "config.py").read_text()).group(1)
+_VERSION = re.search(r'^version = "([^"]+)"', (SCRIPT_DIR / "pyproject.toml").read_text(), re.MULTILINE).group(1)
 
 PY_VER = "3.10.11"
 PY_BASE_URL = "https://www.python.org/ftp/python/{ver}/python-{ver}-embed-{arch}.zip"
@@ -35,6 +35,12 @@ PIP_DEPS = [
     "httpx",
     "websockets",
     "python-multipart",
+    # pip evaluates environment markers against the interpreter running this
+    # script, not the Windows Python 3.10 target, so conditional dependencies
+    # of the packages above have to be listed by hand.
+    "exceptiongroup",
+    "typing_extensions",
+    "colorama",
 ]
 
 
@@ -45,6 +51,23 @@ def download(url, desc):
     data = resp.read()
     print("    Done (%.1f KB)" % (len(data) / 1024))
     return data
+
+
+def copy_app_files(build_dir: Path) -> None:
+    """Copy everything the packaged app reads at runtime, apart from Python and dist/."""
+    # Copy the entire backend tree so subpackages (e.g. backend/commands/)
+    # are included. The previous `glob('*.py')` only matched top-level .py
+    # files, which meant the packaged zip was missing the commands package
+    # and the backend crashed at import time inside the .bat launcher.
+    shutil.copytree(SCRIPT_DIR / "backend", build_dir / "backend", ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
+
+    # backend/config.py reads the version from here at import time.
+    shutil.copy2(SCRIPT_DIR / "pyproject.toml", build_dir / "pyproject.toml")
+
+    # simulator.py lives under scripts/, not at the repo root. Without the
+    # correct path the sim launcher .bat tried to run a file that wasn't in
+    # the zip.
+    shutil.copy2(SCRIPT_DIR / "scripts" / "simulator.py", build_dir / "simulator.py")
 
 
 def build(arch: str = "amd64"):
@@ -126,34 +149,22 @@ def build(arch: str = "amd64"):
 
     # ── 4. Copy backend + protocol ──
     print("[4/5] Copying application files")
-    be_dst = build_dir / "backend"
-    # Copy the entire backend tree so subpackages (e.g. backend/commands/)
-    # are included. The previous `glob('*.py')` only matched top-level .py
-    # files, which meant the packaged zip was missing the commands package
-    # and the backend crashed at import time inside the .bat launcher.
-    shutil.copytree(SCRIPT_DIR / "backend", be_dst, ignore=shutil.ignore_patterns("__pycache__", "*.pyc"))
-
-    # simulator.py lives under scripts/, not at the repo root. Without the
-    # correct path the sim launcher .bat tried to run a file that wasn't in
-    # the zip.
-    sim_src = SCRIPT_DIR / "scripts" / "simulator.py"
-    if sim_src.exists():
-        shutil.copy2(sim_src, build_dir / "simulator.py")
+    copy_app_files(build_dir)
 
     # Create launcher bat
     (build_dir / "Argus地面站.bat").write_text(
         "@echo off\r\n"
         'cd /d "%~dp0"\r\n'
         "chcp 65001 >nul\r\n"
-        "title Argus 地面站 v3.0\r\n"
+        f"title Argus 地面站 v{_VERSION}\r\n"
         "echo ============================================\r\n"
-        "echo   Argus 地面站 v3.0\r\n"
+        f"echo   Argus 地面站 v{_VERSION}\r\n"
         "echo ============================================\r\n"
         "echo.\r\n"
         "echo 正在启动，浏览器将自动打开...\r\n"
         "echo 按 Ctrl+C 停止\r\n"
         "echo.\r\n"
-        "python\\python.exe backend\\server.py --port 8100 --host 0.0.0.0\r\n"
+        "python\\python.exe backend\\server.py --port 8100\r\n"
         "if errorlevel 1 pause\r\n",
         encoding="utf-8",
     )

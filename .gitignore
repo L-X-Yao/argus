@@ -31,6 +31,8 @@ coverage/
 .env.*
 !.env.example
 release/
+_build/
+python-*-embed-*.zip
 RELEASE_NOTES.md
 .DS_Store
 Thumbs.db
