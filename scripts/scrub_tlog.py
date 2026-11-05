@@ -13,6 +13,9 @@ What gets rewritten (everything else is copied byte-exact):
     those groups are zeroed, length-preserving, and AUTOPILOT_VERSION
     uid/uid2 (the same bytes) are cleared. Never write a real UID into
     code, comments, or tests — assert on the shape, not the value.
+  - board and firmware names: the name in front of the UID groups becomes
+    "board" and the name in the version banner becomes "firmware", since a
+    vendor build can carry a product name.
   - location side-channels: the "Field Elevation Set: NNNNm" figure
     (libraries/AP_Baro/AP_Baro.cpp:1043) is zeroed in the text, and the
     COMPASS_DEC parameter (auto-learned world-magnetic-model declination)
@@ -24,7 +27,9 @@ Deliberately KEPT (accepted policy, not oversight):
     consistent; a bare MSL height is a weak signal on its own),
   - wall-clock timestamps (tlog records, SYSTEM_TIME) — recording date is
     disclosed anyway wherever the fixture is described,
-  - board/firmware names and git hashes (public by design).
+  - git hashes in the version banners,
+  - parameter values other than COMPASS_DEC. A full parameter fetch is the
+    board's tune, so only publish recordings from hardware you own.
 
 Frames are re-encoded with pymavlink using the original seq/sysid/compid,
 so CRCs stay valid and MAVLink2 zero-trim framing stays canonical. If the
@@ -95,10 +100,15 @@ AUTOPILOT_VERSION_ID = 148
 _SERIAL_RE = re.compile(r"\b[0-9A-F]{8} [0-9A-F]{8} [0-9A-F]{8}\b")
 # "Field Elevation Set: %.0fm" — libraries/AP_Baro/AP_Baro.cpp:1043.
 _ELEVATION_RE = re.compile(r"(Field Elevation Set: )(\d+)(m)")
+# "<board> XXXXXXXX XXXXXXXX XXXXXXXX" and "<firmware> V1.2.3 (abcdef01)".
+_BOARD_NAME_RE = re.compile(r"^\S+(?= [0-9A-F]{8} [0-9A-F]{8} [0-9A-F]{8}\b)")
+_FIRMWARE_NAME_RE = re.compile(r"^.+?(?= V\d+\.\d+\S* \([0-9a-f]{8}\)$)")
 
 
 def _scrub_text(text: str) -> str:
-    text = _SERIAL_RE.sub(lambda m: re.sub(r"\d", "0", m.group(0)), text)
+    text = _BOARD_NAME_RE.sub("board", text)
+    text = _FIRMWARE_NAME_RE.sub("firmware", text)
+    text = _SERIAL_RE.sub(lambda m: re.sub(r"[0-9A-F]", "0", m.group(0)), text)
     return _ELEVATION_RE.sub(lambda m: m.group(1) + "0" * len(m.group(2)) + m.group(3), text)
 
 
@@ -237,6 +247,10 @@ def verify(in_path: str, out_path: str) -> None:
                 em = _ELEVATION_RE.search(m.text)
                 if em:
                     forbidden.append(em.group(0).encode())
+                for name_re in (_BOARD_NAME_RE, _FIRMWARE_NAME_RE):
+                    nm = name_re.search(m.text)
+                    if nm:
+                        forbidden.append(nm.group(0).encode())
         elif mid == AUTOPILOT_VERSION_ID:
             m = decoder.decode(bytearray(frame))
             uid2 = bytes(b & 0xFF for b in m.uid2).rstrip(b"\x00")
