@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { app, addToast, isPlane } from '../../lib/stores.svelte';
+  import { app, addToast } from '../../lib/stores.svelte';
+  import { specialModes } from '../../lib/vehicleModes';
   import { dispatch } from '../../lib/transport';
   import { paramState, getParam } from '../../lib/paramStore.svelte';
   import { t } from '../../lib/i18n.svelte';
@@ -10,8 +11,6 @@
 
   const connected = $derived(app.drone.connected);
   const armed = $derived(app.drone.armed);
-  const AUTOTUNE_MODE_COPTER = 15;
-  const AUTOTUNE_MODE_PLANE = 8;
   let axes = $state(0);
 
   const AXES_OPTIONS = $derived([
@@ -22,20 +21,21 @@
   ]);
 
   let isAutotuning = $derived(
-    app.drone.mode_id === (isPlane() ? AUTOTUNE_MODE_PLANE : AUTOTUNE_MODE_COPTER)
+    app.drone.mode_id === specialModes().autotune
   );
 
   function start() {
     if (axes !== 0) {
       dispatch('param_set', undefined, { name: 'AUTOTUNE_AXES', value: axes });
     }
-    dispatch('mode', isPlane() ? AUTOTUNE_MODE_PLANE : AUTOTUNE_MODE_COPTER);
+    const mode = specialModes().autotune;
+    if (mode === null) return; // Rover and Sub have no AutoTune mode
+    dispatch('mode', mode);
     addToast(t('autotune.start'), 'info');
   }
 
   function stop() {
-    // Plane: 19=QLoiter, Copter: 5=Loiter — safe hover modes to exit AutoTune
-    dispatch('mode', isPlane() ? 19 : 5);
+    dispatch('mode', specialModes().hold);
     addToast(t('autotune.stop'), 'info');
   }
 

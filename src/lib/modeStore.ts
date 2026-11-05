@@ -105,12 +105,23 @@ export const BTN_IDS: Record<VehicleType, number[]> = {
   sub: [0, 2, 16, 3, 4],
 };
 
-export const SPECIAL_MODES: Record<VehicleType, { auto: number; guided: number; rtl: number | null }> = {
-  copter: { auto: 3, guided: 4, rtl: 6 },
-  plane: { auto: 10, guided: 15, rtl: 11 },
-  rover: { auto: 10, guided: 15, rtl: 11 },
-  sub: { auto: 3, guided: 4, rtl: null },
+export interface SpecialModes {
+  auto: number;
+  guided: number;
+  hold: number;
+  rtl: number | null;
+  land: number | null;
+  autotune: number | null;
+}
+
+export const SPECIAL_MODES: Record<VehicleType, SpecialModes> = {
+  copter: { auto: 3, guided: 4, rtl: 6, hold: 5, land: 9, autotune: 15 },
+  plane: { auto: 10, guided: 15, rtl: 11, hold: 12, land: null, autotune: 8 },
+  rover: { auto: 10, guided: 15, rtl: 11, hold: 4, land: null, autotune: null },
+  sub: { auto: 3, guided: 4, rtl: null, hold: 16, land: 9, autotune: null },
 };
+
+export const VTOL_MODES = { hold: 19, land: 20 };
 
 const _VTYPE_MAP: Record<number, VehicleType> = {
   2: 'copter',

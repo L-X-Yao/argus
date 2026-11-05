@@ -202,6 +202,17 @@ def request_streams(link: DroneLink) -> None:
         # RAW_IMU at 5Hz feeds the compass-cal sample sphere (mag milligauss,
         # GCS_Common.cpp:2237 send_raw_imu); ~220B/s — cheap even on radios.
         (27, 200000),
+        # Copter leaves SRn_EXTRA3 at 0 (GCS_MAVLink_Parameters.cpp:68), and these ride
+        # that group, so a stock FC sends none of them unless asked. Without 193 the
+        # preflight EKF row reads OK whatever the EKF's health.
+        (193, 500000),
+        (147, 1000000),
+        (168, 1000000),
+        (136, 1000000),
+        (285, 500000),
+        # In no stream group on any vehicle, so only an interval brings it
+        # (GCS_Common.cpp:1170). See handle_extended_sys_state.
+        (245, 1000000),
     ]
     for mid, interval in streams:
         payload = struct.pack("<fffffffHBBB", float(mid), float(interval), 0, 0, 0, 0, 0, 511, link.vehicle.sysid, 1, 0)

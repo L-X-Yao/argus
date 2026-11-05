@@ -36,6 +36,7 @@ export type {
   CommandAck,
   StatusText,
   HomePosition,
+  ExtendedSysState,
   Vibration,
   Wind,
   MissionRequest,

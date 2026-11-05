@@ -341,6 +341,40 @@
     "gimbal_yaw"
    ],
    "note": "pitch -20, yaw 30 as a quaternion"
+  },
+  {
+   "id": "extended_sys_state_quadplane",
+   "msg": "EXTENDED_SYS_STATE",
+   "hex": "fd020000000101f5000003017206",
+   "compare": [
+    "vtol_state"
+   ],
+   "note": "MAV_VTOL_STATE_MC on the ground: a QuadPlane"
+  },
+  {
+   "id": "extended_sys_state_not_vtol",
+   "msg": "EXTENDED_SYS_STATE",
+   "hex": "fd020000000101f50000000116e9",
+   "compare": [
+    "vtol_state"
+   ],
+   "note": "MAV_VTOL_STATE_UNDEFINED, as a plain plane sends"
+  },
+  {
+   "id": "extended_sys_state_trimmed",
+   "msg": "EXTENDED_SYS_STATE",
+   "hex": "fd010000000101f5000000ac20",
+   "compare": [
+    "vtol_state"
+   ],
+   "note": "both fields 0, so MAVLink 2 trims the frame to one byte"
+  },
+  {
+   "id": "ack_stream_request_denied",
+   "msg": "COMMAND_ACK",
+   "hex": "fd0300000001014d0000ff0102a9cb",
+   "compare": [],
+   "note": "a build without terrain or a mount refuses an interval at connect: no toast"
   }
  ]
 }

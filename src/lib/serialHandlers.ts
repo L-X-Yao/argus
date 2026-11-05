@@ -22,6 +22,12 @@ const FIX_NAMES: Record<'en' | 'zh', Record<number, string>> = {
   zh: { 0: '无定位', 1: '无定位', 2: '2D', 3: '3D', 4: '差分', 5: 'RTK浮动', 6: 'RTK固定' },
 };
 
+// Mirrors the labels in backend DroneLink._get_vehicle_info.
+const VEHICLE_LABELS: Record<'en' | 'zh', Record<VehicleType, string>> = {
+  en: { copter: 'Multirotor', plane: 'Fixed Wing', rover: 'Rover', sub: 'Sub' },
+  zh: { copter: '多旋翼', plane: '固定翼', rover: '地面车', sub: '水下机器人' },
+};
+
 const uiLocale = (): 'en' | 'zh' => (i18nState.locale === 'zh' ? 'zh' : 'en');
 
 // Mirrors backend/mavlink_handlers.py _CMD_NAMES_* and _ACK_RESULTS_*.
@@ -59,6 +65,88 @@ function metersBetween(lat1: number, lon1: number, lat2: number, lon2: number): 
 
 const event = (text: string, event_type: string) =>
   addEvent({ type: 'event', time: new Date().toLocaleTimeString(), text, event_type });
+
+// Flight bookkeeping, twin of what the backend keeps on DroneLink. It outlives
+// buildSerialHandlers on purpose: a USB link that drops mid-flight and comes back is the
+// same flight, and arming events must not fire again for it.
+function newSession() {
+  return {
+    homeSet: false,
+    armed: false,
+    armedAt: 0,
+    maxAlt: 0,
+    maxSpeed: 0,
+    totalDist: 0,
+    prevPos: null as [number, number] | null,
+    batHistory: [] as [number, number][],
+    batStart: -1,
+    adsb: new Map<number, Record<string, number | string>>(),
+  };
+}
+
+let session = newSession();
+
+/**
+ * A connection is starting. Back after a USB drop it is the same flight; anything else
+ * may be a different vehicle, so its parameters go too, as in the 'connected' case of ws.ts.
+ */
+export function beginSerialSession(): void {
+  if (app.serialLinkLost) return;
+  resetSerialSession();
+  clearParams();
+}
+
+/** The user ended the session: the next connection may be a different vehicle. */
+export function resetSerialSession(): void {
+  session = newSession();
+  app.serialLinkLost = false;
+  const {
+    vtol_state,
+    flight_summary,
+    home_lat,
+    home_lon,
+    dist_home,
+    wp,
+    wp_idx,
+    flight_time,
+    bat_time,
+    servo,
+    cells,
+    adsb,
+    prearm,
+    fw_version,
+    fw_git,
+    board_id,
+    wind_dir,
+    wind_speed,
+    terrain_alt,
+    gimbal_pitch,
+    gimbal_yaw,
+  } = defaultState;
+  Object.assign(app.drone, {
+    vtol_state,
+    flight_summary,
+    home_lat,
+    home_lon,
+    dist_home,
+    wp,
+    wp_idx,
+    flight_time,
+    bat_time,
+    servo,
+    cells,
+    adsb,
+    prearm,
+    fw_version,
+    fw_git,
+    board_id,
+    wind_dir,
+    wind_speed,
+    terrain_alt,
+    gimbal_pitch,
+    gimbal_yaw,
+  });
+}
 
 export function buildSerialHandlers(): Partial<MessageHandlers> {
   // One-shot per connection, like the backend's _unsupported_fc_warned
@@ -119,6 +207,7 @@ export function buildSerialHandlers(): Partial<MessageHandlers> {
         addToast(t('conn.serialConnected'), 'success');
       }
       app.drone.vtype_raw = msg.type;
+      app.drone.vtype = VEHICLE_LABELS[uiLocale()][vehicleType(msg.type)];
       const armed = (msg.baseMode & 128) !== 0;
       if (armed !== wasArmed) onArmedChange(armed);
       wasArmed = armed;
@@ -173,6 +262,10 @@ export function buildSerialHandlers(): Partial<MessageHandlers> {
         if (prevPos) totalDist += metersBetween(msg.lat, msg.lon, prevPos[0], prevPos[1]);
         prevPos = [msg.lat, msg.lon];
       }
+    },
+    onExtendedSysState: (msg) => {
+      // Twin of backend handle_extended_sys_state, which says what this is for.
+      app.drone.vtol_state = msg.vtolState;
     },
     onAttitude: (msg) => {
       app.drone.roll = msg.roll;

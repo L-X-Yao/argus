@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { app, showSlide, isPlane } from '../../lib/stores.svelte';
+  import { app, showSlide } from '../../lib/stores.svelte';
+  import { specialModes } from '../../lib/vehicleModes';
   import { dispatch } from '../../lib/transport';
   import { t } from '../../lib/i18n.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
@@ -9,7 +10,7 @@
     showSlide(t('slide.rtl'), 'red', () => dispatch('rtl'));
   }
   function pause() {
-    dispatch('mode', isPlane() ? 19 : 5);
+    dispatch('mode', specialModes().hold);
   }
   function forceDisarm() {
     showSlide(t('slide.forceDisarm'), 'red', () => dispatch('force_disarm'));

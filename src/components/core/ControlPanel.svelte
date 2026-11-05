@@ -1,16 +1,10 @@
 <script lang="ts">
-  import {
-    app,
-    showConfirm,
-    showSlide,
-    addToast,
-    saveSettings,
-    isPlane,
-    loadDownloadedMission,
-  } from '../../lib/stores.svelte';
+  import { app, showConfirm, showSlide, addToast, saveSettings, loadDownloadedMission } from '../../lib/stores.svelte';
   import { sendCommand } from '../../lib/ws';
   import { isSerialConnected, serialDownloadMission, dispatch } from '../../lib/transport';
   import { t } from '../../lib/i18n.svelte';
+  import { specialModes, vehicleKind } from '../../lib/vehicleModes';
+  import type { VehicleType } from '../../lib/modeStore';
   import Button from '$lib/components/ui/button/button.svelte';
   import {
     Plane,
@@ -27,20 +21,20 @@
 
   type Phase = 'disarmed' | 'ground' | 'flying' | 'mission' | 'returning';
 
-  const COPTER_RTL = new Set([6, 21]);
-  const COPTER_LAND = new Set([9]);
-  const COPTER_AUTO = new Set([3]);
-  const PLANE_RTL = new Set([11, 21]);
-  const PLANE_LAND = new Set([20]);
-  const PLANE_AUTO = new Set([10]);
+  // Modes that bring the vehicle back or down, Smart RTL and QRTL included.
+  const RETURNING: Record<VehicleType, Set<number>> = {
+    copter: new Set([6, 21, 9]),
+    plane: new Set([11, 21, 20]),
+    rover: new Set([11, 12]),
+    sub: new Set([9]),
+  };
 
   let phase = $derived.by((): Phase => {
     const d = app.drone;
     if (!d.armed) return 'disarmed';
     const m = d.mode_id;
-    const plane = isPlane();
-    if ((plane ? PLANE_RTL : COPTER_RTL).has(m) || (plane ? PLANE_LAND : COPTER_LAND).has(m)) return 'returning';
-    if ((plane ? PLANE_AUTO : COPTER_AUTO).has(m)) return 'mission';
+    if (RETURNING[vehicleKind()].has(m)) return 'returning';
+    if (m === specialModes().auto) return 'mission';
     if (d.alt_rel >= 0 && d.alt_rel < 2 && d.gs < 1) return 'ground';
     return 'flying';
   });
@@ -82,7 +76,7 @@
     showSlide(t('slide.forceDisarm'), 'red', () => dispatch('force_disarm'));
   }
   function pauseMode() {
-    dispatch('mode', isPlane() ? 19 : 5);
+    dispatch('mode', specialModes().hold);
   }
   function takeoff() {
     showSlide(`${t('slide.takeoff')} ${app.defaultAlt}m`, 'teal', () =>
@@ -271,13 +265,15 @@
     <Button size="sm" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold gap-1.5" onclick={pauseMode}>
       <CircleStop size={14} />{t('ctrl.cancelRtl')}
     </Button>
-    <Button
-      size="sm"
-      class="w-full bg-teal-700 hover:bg-teal-800 text-white gap-1.5"
-      onclick={() => dispatch('mode', isPlane() ? 20 : 9)}
-    >
-      <ArrowDown size={14} />{t('ctrl.land')}
-    </Button>
+    {#if specialModes().land !== null}
+      <Button
+        size="sm"
+        class="w-full bg-teal-700 hover:bg-teal-800 text-white gap-1.5"
+        onclick={() => dispatch('mode', specialModes().land!)}
+      >
+        <ArrowDown size={14} />{t('ctrl.land')}
+      </Button>
+    {/if}
     <Button variant="ghost" size="xs" class="w-full text-destructive mt-2" onclick={forceDisarm}
       >{t('ctrl.forceDisarm')}</Button
     >

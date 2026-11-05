@@ -119,6 +119,11 @@ export interface HomePosition {
   alt: number;
 }
 
+// EXTENDED_SYS_STATE (245) — vtol_state only; 0 is MAV_VTOL_STATE_UNDEFINED.
+export interface ExtendedSysState {
+  vtolState: number;
+}
+
 // RAW_IMU (27) — mag fields only (milligauss); feeds the compass-cal sphere.
 // Layout per ArduPilot GCS_Common.cpp:2237 send_raw_imu: time_usec u64 @0,
 // acc/gyro i16 pairs, xmag/ymag/zmag i16 @20/22/24.
@@ -384,6 +389,10 @@ export function decodeHomePosition(p: DataView): HomePosition {
     lon: p.getInt32(4, true) / 1e7,
     alt: p.getInt32(8, true) / 1000,
   };
+}
+
+export function decodeExtendedSysState(p: DataView): ExtendedSysState {
+  return { vtolState: p.getUint8(0) };
 }
 
 export function decodeRawImu(p: DataView): RawImu {
@@ -992,6 +1001,9 @@ export function dispatchFrame(frame: MavFrame, handlers: Partial<MessageHandlers
     case 242:
       handlers.onHomePosition?.(decodeHomePosition(padPayload(pl, 60)), frame);
       break;
+    case 245:
+      handlers.onExtendedSysState?.(decodeExtendedSysState(padPayload(pl, 2)), frame);
+      break;
     case 241:
       handlers.onVibration?.(decodeVibration(padPayload(pl, 32)), frame);
       break;
@@ -1071,6 +1083,7 @@ export interface MessageHandlers {
   onMissionCount: (msg: MissionCount, frame: MavFrame) => void;
   onMissionItemInt: (msg: MissionItemInt, frame: MavFrame) => void;
   onHomePosition: (msg: HomePosition, frame: MavFrame) => void;
+  onExtendedSysState: (msg: ExtendedSysState, frame: MavFrame) => void;
   onVibration: (msg: Vibration, frame: MavFrame) => void;
   onRawImu: (msg: RawImu, frame: MavFrame) => void;
   onWind: (msg: Wind, frame: MavFrame) => void;

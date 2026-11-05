@@ -2,7 +2,8 @@
   import { onMount } from 'svelte';
   import { connectWs, sendCommand } from './lib/ws';
   import { dispatch, isSerialConnected } from './lib/transport';
-  import { app, loadSettings, saveSettings, isPlane, addToast } from './lib/stores.svelte';
+  import { app, loadSettings, saveSettings, addToast } from './lib/stores.svelte';
+  import { specialModes } from './lib/vehicleModes';
   import { checkAlerts, beep, speak } from './lib/audio';
   import { t, loadLocale, i18nState } from './lib/i18n.svelte';
   import LazyPanelHost from './components/core/LazyPanelHost.svelte';
@@ -301,7 +302,7 @@
     const k = e.key.toLowerCase();
     if (k === ' ') {
       e.preventDefault();
-      dispatch('mode', isPlane() ? 19 : 5);
+      dispatch('mode', specialModes().hold);
     } else if (k === 'r') {
       showConfirm(t('slide.rtl') + '?', true).then((ok) => ok && dispatch('rtl'));
     } else if (k === 'a') {
@@ -420,7 +421,7 @@
         <Button
           size="sm"
           class="bg-amber-600 hover:bg-amber-700 text-white font-bold gap-1"
-          onclick={() => dispatch('mode', isPlane() ? 19 : 5)}
+          onclick={() => dispatch('mode', specialModes().hold)}
           title="{t('ctrl.pause')} (Space)"
         >
           <Pause size={13} />{t('nav.pause')}

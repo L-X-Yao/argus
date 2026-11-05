@@ -58,6 +58,12 @@ class TestResetSessionState:
         link._reset_session_state()
         assert link.vehicle.force_plane is None
 
+    def test_vtol_state_cleared_after_reset(self, link):
+        """Left set, a plain plane after a QuadPlane would be sent QLOITER by Pause."""
+        link.vehicle.vtol_state = 3
+        link._reset_session_state()
+        assert link.vehicle.vtol_state == 0
+
     def test_home_set_false_after_reset(self, link):
         link.attitude._home_set = True
         link._reset_session_state()

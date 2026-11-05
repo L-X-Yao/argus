@@ -105,14 +105,20 @@ PLANE_BTNS = [
     [20, "旋翼降落"],
 ]
 ROVER_BTNS = [[0, "手动"], [4, "固定"], [10, "自动"], [15, "引导"], [11, "返航"]]
-# The modes commands switch to, which differ per vehicle: ArduCopter/mode.h:81-84,
-# ArduPlane/mode.h:48-53, Rover/mode.h:26-29, ArduSub/mode.h:37-38. Sub has no RTL.
+# The modes commands switch to, which differ per vehicle: ArduCopter/mode.h:81-90,
+# ArduPlane/mode.h:47-53, Rover/mode.h:18-29, ArduSub/mode.h:37-41. None means the
+# vehicle has no such mode. "hold" is where a pause goes, and a Sub surfaces to land.
 SPECIAL_MODES: dict[str, dict[str, int | None]] = {
     "copter": {"auto": 3, "guided": 4, "rtl": 6},
     "plane": {"auto": 10, "guided": 15, "rtl": 11},
     "rover": {"auto": 10, "guided": 15, "rtl": 11},
     "sub": {"auto": 3, "guided": 4, "rtl": None},
 }
+# A QuadPlane hovers and lands on its lift motors: ArduPlane/mode.h:58-59.
+VTOL_MODES: dict[str, int] = {"hold": 19, "land": 20}
+# MAV_TYPE of components that send heartbeats but are not the vehicle: GCS,
+# ONBOARD_CONTROLLER, GIMBAL, ADSB.
+NON_VEHICLE_MAV_TYPES = (6, 18, 26, 27)
 SUB_BTNS = [[0, "自稳"], [2, "定深"], [16, "定点"], [3, "自动"], [4, "引导"]]
 FIX_NAMES = {0: "无定位", 1: "无定位", 2: "2D", 3: "3D", 4: "差分", 5: "RTK浮动", 6: "RTK固定"}
 

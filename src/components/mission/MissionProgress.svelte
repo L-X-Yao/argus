@@ -1,11 +1,12 @@
 <script lang="ts">
-  import { app, isPlane } from '../../lib/stores.svelte';
+  import { app } from '../../lib/stores.svelte';
+  import { specialModes } from '../../lib/vehicleModes';
   import { t } from '../../lib/i18n.svelte';
   import { fmtDist } from '../../lib/units';
 
   const d = app.drone;
 
-  let isAutoMode = $derived(isPlane() ? d.mode_id === 10 : d.mode_id === 3);
+  let isAutoMode = $derived(d.mode_id === specialModes().auto);
 
   let wpCount = $derived(app.waypoints.length);
   let currentWpIdx = $derived(d.wp_idx);

@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { app, addToast, isPlane } from '../../lib/stores.svelte';
+  import { app, addToast } from '../../lib/stores.svelte';
+  import { vehicleKind } from '../../lib/vehicleModes';
   import { dispatch } from '../../lib/transport';
   import { paramState, getParam } from '../../lib/paramStore.svelte';
   import { getModeName, getModeEntries } from '../../lib/modeStore';
@@ -16,10 +17,22 @@
 
   /* ── Helpers ── */
 
-  let vtype = $derived(isPlane() ? 'plane' as const : 'copter' as const);
+  let vtype = $derived(vehicleKind());
   let modeEntries = $derived(getModeEntries(vtype));
+  // Rover names these MODE1-6 (Rover/Parameters.cpp:159); Sub has FLTMODE1-6 like the
+  // rest (ArduSub/Parameters.cpp:121), so ask the parameter list, not the vehicle type.
+  let prefix = $derived(vtype === 'rover' ? 'MODE' : 'FLTMODE');
 
-  let paramsAvailable = $derived(paramState.list.length > 0);
+  // Only a finished read can say a name is missing.
+  let paramsRead = $derived(
+    app.drone.connected && !paramState.fetching && paramState.total > 0 && paramState.received >= paramState.total,
+  );
+  // All six, or Save would write 0 over a slot that has not arrived. The length is read
+  // here because getParam only touches the list for a name it has, and this has to wake
+  // up when that name arrives.
+  let hasSlots = $derived(
+    paramState.list.length > 0 && [1, 2, 3, 4, 5, 6].every((i) => getParam(`${prefix}${i}`, -1) >= 0),
+  );
 
   /* ── Slot state ── */
   let slot1 = $state(0);
@@ -35,15 +48,15 @@
   // Audit F-17: load once, don't clobber operator edits mid-stream.
   let _loaded = $state(false);
   $effect(() => {
-    if (!paramsAvailable) { _loaded = false; return; }
+    if (!hasSlots) { _loaded = false; return; }
     if (_loaded) return;
     _loaded = true;
-    slot1 = getParam('FLTMODE1', 0);
-    slot2 = getParam('FLTMODE2', 0);
-    slot3 = getParam('FLTMODE3', 0);
-    slot4 = getParam('FLTMODE4', 0);
-    slot5 = getParam('FLTMODE5', 0);
-    slot6 = getParam('FLTMODE6', 0);
+    slot1 = getParam(`${prefix}1`, 0);
+    slot2 = getParam(`${prefix}2`, 0);
+    slot3 = getParam(`${prefix}3`, 0);
+    slot4 = getParam(`${prefix}4`, 0);
+    slot5 = getParam(`${prefix}5`, 0);
+    slot6 = getParam(`${prefix}6`, 0);
   });
 
   /* ── Determine active slot from mode_id ── */
@@ -70,8 +83,8 @@
   /* ── Save ── */
   function saveAll() {
     const pairs: [string, number][] = [
-      ['FLTMODE1', slot1], ['FLTMODE2', slot2], ['FLTMODE3', slot3],
-      ['FLTMODE4', slot4], ['FLTMODE5', slot5], ['FLTMODE6', slot6],
+      [`${prefix}1`, slot1], [`${prefix}2`, slot2], [`${prefix}3`, slot3],
+      [`${prefix}4`, slot4], [`${prefix}5`, slot5], [`${prefix}6`, slot6],
     ];
     for (const [name, value] of pairs) {
       dispatch('param_set', undefined, { name, value });
@@ -95,9 +108,13 @@
 
     <div class="flex-1 min-h-0 overflow-y-auto p-4 space-y-3">
 
-      {#if !paramsAvailable}
+      {#if !hasSlots && !paramsRead}
         <div class="p-4 rounded-lg bg-muted/50 border border-border/50 text-center">
-          <p class="text-xs text-muted-foreground">{t('cal.connectFirst')}</p>
+          <p class="text-xs text-muted-foreground">{t('param.connectHint')}</p>
+        </div>
+      {:else if !hasSlots}
+        <div class="p-4 rounded-lg bg-muted/50 border border-border/50 text-center">
+          <p class="text-xs text-muted-foreground">{t('fltmode.noSwitch')}</p>
         </div>
       {:else}
 

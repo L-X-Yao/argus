@@ -3,7 +3,7 @@
   import { sendCommand, sendDisconnect } from '../../lib/ws';
   import { isSerialConnected, serialDownloadMission, dispatch } from '../../lib/transport';
   import { t, i18nState, setLocale } from '../../lib/i18n.svelte';
-  import { isPlane, saveSettings, showSlide, showConfirm } from '../../lib/stores.svelte';
+  import { saveSettings, showSlide, showConfirm } from '../../lib/stores.svelte';
   import { paramState } from '../../lib/paramStore.svelte';
   import type { Component } from 'svelte';
   import {
@@ -41,6 +41,7 @@
   } from '@lucide/svelte';
 
   import { panels, type PanelId } from '../../lib/panels.svelte';
+  import { specialModes } from '../../lib/vehicleModes';
 
   let { onclose, onnavigate }: { onclose: () => void; onnavigate: (v: 'fly' | 'plan' | 'monitor' | 'params') => void } =
     $props();
@@ -161,7 +162,7 @@
         category: t('cmd.catFlight'),
         shortcut: 'Space',
         icon: Pause,
-        handler: () => dispatch('mode', isPlane() ? 19 : 5),
+        handler: () => dispatch('mode', specialModes().hold),
         available: connected,
       },
       {
@@ -177,8 +178,8 @@
         label: t('ctrl.land'),
         category: t('cmd.catFlight'),
         icon: Download,
-        handler: () => dispatch('mode', isPlane() ? 20 : 9),
-        available: connected && d.armed,
+        handler: () => dispatch('mode', specialModes().land!),
+        available: connected && d.armed && specialModes().land !== null,
       },
 
       {

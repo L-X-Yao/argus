@@ -35,6 +35,7 @@ from backend.constants import (  # noqa: E402
     SUB_CATEGORIES,
     SUB_MODES,
     SUB_MODES_EN,
+    VTOL_MODES,
 )
 
 VEHICLE_DEFS = [
@@ -89,13 +90,23 @@ def generate() -> str:
     lines.append("")
 
     # The modes commands switch to
-    lines.append(
-        "export const SPECIAL_MODES: Record<VehicleType, { auto: number; guided: number; rtl: number | null }> = {"
-    )
+    lines.append("export interface SpecialModes {")
+    lines.append("  auto: number;")
+    lines.append("  guided: number;")
+    lines.append("  hold: number;")
+    lines.append("  rtl: number | null;")
+    lines.append("  land: number | null;")
+    lines.append("  autotune: number | null;")
+    lines.append("}")
+    lines.append("")
+    lines.append("export const SPECIAL_MODES: Record<VehicleType, SpecialModes> = {")
     for vtype, modes in SPECIAL_MODES.items():
-        rtl = "null" if modes["rtl"] is None else modes["rtl"]
-        lines.append(f"  {vtype}: {{ auto: {modes['auto']}, guided: {modes['guided']}, rtl: {rtl} }},")
+        cells = ", ".join(f"{k}: {'null' if v is None else v}" for k, v in modes.items())
+        lines.append(f"  {vtype}: {{ {cells} }},")
     lines.append("};")
+    lines.append("")
+    cells = ", ".join(f"{k}: {v}" for k, v in VTOL_MODES.items())
+    lines.append(f"export const VTOL_MODES = {{ {cells} }};")
     lines.append("")
 
     # MAV_TYPE → VehicleType mapping

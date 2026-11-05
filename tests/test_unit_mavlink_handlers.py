@@ -29,6 +29,7 @@ from backend.mavlink_handlers import (
     handle_battery_status,
     handle_command_ack,
     handle_ekf_status,
+    handle_extended_sys_state,
     handle_gimbal_device_attitude_status,
     handle_global_position_int,
     handle_gps_raw_int,
@@ -100,6 +101,11 @@ class TestShortPayloadReturns:
         link = make_link()
         handle_home_position(b"", 0, link)
         assert link.attitude.home_lat == 0.0
+
+    def test_extended_sys_state_empty(self):
+        link = make_link()
+        handle_extended_sys_state(b"", 0, link)
+        assert link.vehicle.vtol_state == 0
 
     def test_mission_item_reached_empty(self):
         link = make_link()
@@ -705,6 +711,19 @@ class TestMissionRequestFenceRally:
 # ---------------------------------------------------------------------------
 # Mission ack: fence fail, rally ack ok/fail
 # ---------------------------------------------------------------------------
+
+
+class TestExtendedSysState:
+    def test_reaches_the_state(self):
+        link = make_link()
+        handle_extended_sys_state(bytes([3, 1]), 2, link)  # MAV_VTOL_STATE_MC, on the ground
+        assert link.get_state()["vtol_state"] == 3
+
+    def test_a_trimmed_frame_is_undefined(self):
+        link = make_link()
+        link.vehicle.vtol_state = 3
+        handle_extended_sys_state(bytes([0]), 1, link)
+        assert link.get_state()["vtol_state"] == 0
 
 
 class TestMissionAckFenceRally:

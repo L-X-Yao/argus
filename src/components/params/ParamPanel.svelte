@@ -31,6 +31,7 @@
     2: 'copter', 3: 'copter', 4: 'copter', 13: 'copter', 14: 'copter',
     1: 'plane', 19: 'plane', 20: 'plane', 21: 'plane', 22: 'plane', 23: 'plane', 24: 'plane', 25: 'plane',
     10: 'rover',
+    11: 'rover',
     12: 'sub',
   };
 

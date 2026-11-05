@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""Drive the backend against real Plane, Rover and Sub firmware in SITL.
+"""Drive the backend against real Plane, QuadPlane, Rover and Sub firmware in SITL.
 
 tests/sitl_verify.py covers Copter in depth. This covers what differs per vehicle:
 how it is recognised, its mode numbers, and that parameters and missions work.
 Mode numbers are the trap here. RTL is 6 on Copter, 11 on Plane and Rover, and does
-not exist on Sub; 6 on a Rover is FOLLOW.
+not exist on Sub; 6 on a Rover is FOLLOW. Hold is 12 on a plain plane, but 19 on a
+QuadPlane, which heartbeats the same.
 
-Usage: python tests/sitl_vehicles.py plane|rover|sub
+Usage: python tests/sitl_vehicles.py plane|quadplane|rover|sub
 Needs the binary and default parameters in ~/sitl (see the sitl-vehicles CI job).
 Boots SITL and a backend of its own, and exits with the number of failures.
 """
@@ -40,6 +41,21 @@ VEHICLES = {
         "auto": 10,
         "guided": 15,
         "rtl": 11,
+        "hold": 12,
+        "land": None,
+    },
+    "quadplane": {
+        "binary": "arduplane",
+        "model": "quadplane",
+        "parm": "quadplane.parm",
+        "vtype_raw": 1,
+        "vtol": True,
+        "armable": 0,  # MANUAL
+        "auto": 10,
+        "guided": 15,
+        "rtl": 11,
+        "hold": 19,
+        "land": 20,
     },
     "rover": {
         "binary": "ardurover",
@@ -50,6 +66,8 @@ VEHICLES = {
         "auto": 10,
         "guided": 15,
         "rtl": 11,
+        "hold": 4,
+        "land": None,
     },
     "sub": {
         "binary": "ardusub",
@@ -60,6 +78,8 @@ VEHICLES = {
         "auto": 3,
         "guided": 4,
         "rtl": None,
+        "hold": 16,
+        "land": 9,
     },
 }
 
@@ -173,6 +193,8 @@ async def run(spec: dict) -> None:
         record("connects", ok)
         ok = await s.until(lambda: s.state.get("vtype_raw") == spec["vtype_raw"], 15)
         record("recognised", ok, f"vtype_raw={s.state.get('vtype_raw')} vtype={s.state.get('vtype')}")
+        ok = await s.until(lambda: bool(s.state.get("vtol_state")) is spec.get("vtol", False), 15)
+        record("tells a QuadPlane from a plane", ok, f"vtol_state={s.state.get('vtol_state')}")
         record("offers modes", bool(s.state.get("mode_btns")), str(s.state.get("mode_btns"))[:70])
         ok = await s.until(lambda: bool(s.state.get("fw_version")), 15)
         record("reports firmware", ok, str(s.state.get("fw_version")))
@@ -181,6 +203,9 @@ async def run(spec: dict) -> None:
         ok = await s.until(lambda: s.seen(lambda m: m.get("type") == "params_complete"), 90)
         count = sum(len(m.get("params", [])) for m in s.messages if m.get("type") == "param_batch")
         record("reads parameters", ok and count > 100, f"{count} params")
+        names = {p.get("name") for m in s.messages if m.get("type") == "param_batch" for p in m.get("params", [])}
+        slot = "MODE1" if spec["binary"] == "ardurover" else "FLTMODE1"
+        record("has the mode slots the panel edits", slot in names, slot)
 
         ok = await s.until(lambda: s.state.get("gps_fix_raw", 0) >= 3, 120)
         record("gets a GPS fix", ok)
@@ -206,6 +231,11 @@ async def run(spec: dict) -> None:
             ok and len(got.get("waypoints", [])) == len(wps),
             str(len(got.get("waypoints", []))),
         )
+
+        # What the Pause and Land buttons send: see src/lib/vehicleModes.ts.
+        record("takes the hold mode", await set_mode(s, spec["hold"]), f"mode_id={s.state.get('mode_id')}")
+        if spec["land"] is not None:
+            record("takes the land mode", await set_mode(s, spec["land"]), f"mode_id={s.state.get('mode_id')}")
 
         record("switches to a manual mode", await set_mode(s, spec["armable"]))
         record("arms", await arm(s))

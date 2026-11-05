@@ -205,6 +205,17 @@ def handle_home_position(p: bytes, pl: int, link: DroneLink) -> None:
     link.attitude._home_set = True
 
 
+# ArduPilot: libraries/GCS_MAVLink/GCS_Common.cpp:6079 — send_extended_sys_state
+def handle_extended_sys_state(p: bytes, pl: int, link: DroneLink) -> None:
+    if pl < 1:
+        return
+    # What tells a QuadPlane from a plane. It heartbeats as a plain fixed wing unless
+    # it is a tiltrotor or a tailsitter or sets Q_MAV_TYPE (ArduPlane/quadplane.cpp:4116),
+    # and vtol_state stays UNDEFINED on a plain plane (ArduPlane/GCS_MAVLink_Plane.cpp:1252).
+    # Only for planes: Copter always reports MC (ArduCopter/GCS_MAVLink_Copter.h:50).
+    link.vehicle.vtol_state = p[0]
+
+
 # ArduPilot: libraries/GCS_MAVLink/GCS_Common.cpp:5956 — try_send_message(MSG_MISSION_ITEM_REACHED)
 def handle_mission_item_reached(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 1:
@@ -1035,6 +1046,7 @@ def init_handlers() -> None:
     mavlink_dispatch.register(24, handle_gps_raw_int)
     mavlink_dispatch.register(42, handle_mission_current)
     mavlink_dispatch.register(242, handle_home_position)
+    mavlink_dispatch.register(245, handle_extended_sys_state)
     mavlink_dispatch.register(46, handle_mission_item_reached)
     mavlink_dispatch.register(77, handle_command_ack)
     mavlink_dispatch.register(253, handle_statustext)

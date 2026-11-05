@@ -134,7 +134,7 @@
             ? t(
                 [1, 19, 20, 21, 22, 23, 24, 25].includes(d.vtype_raw)
                   ? 'vtype.plane'
-                  : d.vtype_raw === 10
+                  : [10, 11].includes(d.vtype_raw)
                     ? 'vtype.rover'
                     : d.vtype_raw === 12
                       ? 'vtype.sub'

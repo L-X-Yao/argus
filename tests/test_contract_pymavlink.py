@@ -156,8 +156,9 @@ class TestOutgoingCommands:
         link = FakeLink()
         commands.execute("rtl", None, link)
         msg = _decode_one(link.captured[0])
-        # cmd_rtl sends a SET_MODE (msg 11), not COMMAND_LONG
-        assert msg.get_msgId() == mavlink.MAVLINK_MSG_ID_SET_MODE
+        assert msg.command == mavlink.MAV_CMD_DO_SET_MODE
+        assert msg.param1 == 1  # custom mode enabled
+        assert msg.param2 == 6  # Copter RTL
 
     def test_cal_compass(self):
         link = FakeLink()
@@ -1237,18 +1238,18 @@ class TestOutgoingMoreCommands:
         # cmd_mode takes the mode as `param`, not data
         commands.execute("mode", 5, link)
         msg = _decode_one(link.captured[0])
-        assert msg.get_msgId() == mavlink.MAVLINK_MSG_ID_SET_MODE
-        assert msg.custom_mode == 5
+        assert msg.command == mavlink.MAV_CMD_DO_SET_MODE
+        assert msg.param2 == 5
 
     def test_mission_start(self):
         link = FakeLink()
         commands.execute("mission_start", None, link)
-        # cmd_mission_start first sends SET_MODE(AUTO) then a delayed MISSION_START.
-        # Synchronously we only see the SET_MODE.
+        # cmd_mission_start first changes mode to AUTO, then a delayed MISSION_START.
+        # Synchronously we only see the mode change.
         msg = _decode_one(link.captured[0])
-        assert msg.get_msgId() == mavlink.MAVLINK_MSG_ID_SET_MODE
+        assert msg.command == mavlink.MAV_CMD_DO_SET_MODE
         # Copter AUTO is mode 3, Plane AUTO is mode 10. FakeLink.is_plane() returns False.
-        assert msg.custom_mode == 3
+        assert msg.param2 == 3
 
     def test_mission_clear(self):
         link = FakeLink()

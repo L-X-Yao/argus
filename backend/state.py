@@ -62,6 +62,8 @@ class VehicleState:
     # assumes ArduPilot. See CLAUDE.md ## PX4 Status.
     autopilot: int = 0
     force_plane: bool | None = None
+    # MAV_VTOL_STATE, see handle_extended_sys_state for what it is good for.
+    vtol_state: int = 0
     sysid: int = 1
     fw_version: str = ""
     fw_git: str = ""
