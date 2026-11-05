@@ -1028,6 +1028,7 @@ const messages: Record<string, string> = {
   'ui.skipToContent': 'コンテンツへスキップ',
   'ui.map2d': '2D マップ',
   'ui.globe3d': '3D 地球儀',
+  'ui.webgl2Required': '3D ビューには WebGL2 が必要です。2D マップに戻しました',
   'ui.rtspVideo': 'RTSP ビデオ',
   'ui.renderError': '描画エラー',
   'ui.retry': '再試行',

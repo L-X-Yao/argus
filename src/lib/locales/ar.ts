@@ -1027,6 +1027,7 @@ const messages: Record<string, string> = {
   'ui.skipToContent': 'انتقل إلى المحتوى',
   'ui.map2d': 'خريطة ثنائية الأبعاد',
   'ui.globe3d': 'كرة أرضية ثلاثية الأبعاد',
+  'ui.webgl2Required': 'يتطلب العرض ثلاثي الأبعاد WebGL2. تمت العودة إلى الخريطة ثنائية الأبعاد',
   'ui.rtspVideo': 'فيديو RTSP',
   'ui.renderError': 'خطأ في العرض',
   'ui.retry': 'إعادة المحاولة',

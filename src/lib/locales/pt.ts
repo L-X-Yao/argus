@@ -1031,6 +1031,7 @@ const messages: Record<string, string> = {
   'ui.skipToContent': 'Ir para o conteúdo',
   'ui.map2d': 'Mapa 2D',
   'ui.globe3d': 'Globo 3D',
+  'ui.webgl2Required': 'A vista 3D requer WebGL2. Voltou ao mapa 2D',
   'ui.rtspVideo': 'Vídeo RTSP',
   'ui.renderError': 'Erro de renderização',
   'ui.retry': 'Tentar novamente',

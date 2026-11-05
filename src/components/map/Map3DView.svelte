@@ -9,8 +9,11 @@
   import { segDist } from '../../lib/missionIO';
   import { polygonArea } from '../../lib/survey';
   import { fmtDist } from '../../lib/units';
-  import maplibregl from 'maplibre-gl';
+  import * as maplibregl from 'maplibre-gl';
   import 'maplibre-gl/dist/maplibre-gl.css';
+  // v6 is ESM-only and cannot find its worker from inside a bundle, so Vite has
+  // to build it and hand over the URL (maplibre docs/index.md, Installation: Vite).
+  import maplibreWorkerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 
   let mapEl: HTMLDivElement;
   let map: maplibregl.Map | null = $state(null);
@@ -125,42 +128,53 @@
     // fire a redundant swap on first render. Mirrors MapView.svelte:97.
     prevTileSource = app.tileSource;
 
-    map = new maplibregl.Map({
-      container: mapEl,
-      style: {
-        version: 8,
-        sources: {
-          'raster-tiles': {
-            type: 'raster',
-            tiles: [tileUrl],
-            tileSize: 256,
-            maxzoom: 18,
+    maplibregl.setWorkerUrl(maplibreWorkerUrl);
+    try {
+      map = new maplibregl.Map({
+        container: mapEl,
+        style: {
+          version: 8,
+          sources: {
+            'raster-tiles': {
+              type: 'raster',
+              tiles: [tileUrl],
+              tileSize: 256,
+              maxzoom: 18,
+            },
+            'terrain-dem': {
+              type: 'raster-dem',
+              tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
+              tileSize: 256,
+              maxzoom: 15,
+              encoding: 'terrarium',
+            },
           },
-          'terrain-dem': {
-            type: 'raster-dem',
-            tiles: ['https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'],
-            tileSize: 256,
-            maxzoom: 15,
-            encoding: 'terrarium',
+          layers: [{ id: 'raster', type: 'raster', source: 'raster-tiles' }],
+          terrain: { source: 'terrain-dem', exaggeration: 1.3 },
+          sky: {
+            'sky-color': '#199EF3',
+            'sky-horizon-blend': 0.5,
+            'horizon-color': '#ffffff',
+            'horizon-fog-blend': 0.5,
+            'fog-color': '#0000ff',
+            'fog-ground-blend': 0.5,
           },
         },
-        layers: [{ id: 'raster', type: 'raster', source: 'raster-tiles' }],
-        terrain: { source: 'terrain-dem', exaggeration: 1.3 },
-        sky: {
-          'sky-color': '#199EF3',
-          'sky-horizon-blend': 0.5,
-          'horizon-color': '#ffffff',
-          'horizon-fog-blend': 0.5,
-          'fog-color': '#0000ff',
-          'fog-ground-blend': 0.5,
-        },
-      },
-      center: [108.942, 34.258],
-      zoom: 14,
-      pitch: 50,
-      bearing: 0,
-      maxPitch: 85,
-    });
+        center: [108.942, 34.258],
+        zoom: 14,
+        pitch: 50,
+        bearing: 0,
+        maxPitch: 85,
+      });
+    } catch (e) {
+      // v6 dropped WebGL1 and throws from the constructor without WebGL2.
+      // Uncaught, that blanks the view through the App-level svelte:boundary,
+      // and the saved mapMode would repeat it on every load.
+      if (!(e instanceof maplibregl.GPUInitializationError)) throw e;
+      addToast(t('ui.webgl2Required'), 'error');
+      app.mapMode = '2d';
+      return;
+    }
 
     map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
     map.addControl(new maplibregl.ScaleControl({ maxWidth: 150 }), 'bottom-right');

@@ -1055,6 +1055,7 @@ const messages: Record<string, string> = {
   'ui.skipToContent': '跳转到内容',
   'ui.map2d': '2D 地图',
   'ui.globe3d': '3D 地球',
+  'ui.webgl2Required': '3D 视图需要 WebGL2，已切回 2D 地图',
   'ui.rtspVideo': 'RTSP 视频',
   'ui.renderError': '渲染错误',
   'ui.retry': '重试',

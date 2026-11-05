@@ -56,8 +56,10 @@ jobs:
         run: |
           TOTAL=$(du -sb dist/assets/ | cut -f1)
           echo "Bundle size: $(( TOTAL / 1024 )) KB"
-          if [ "$TOTAL" -gt 2621440 ]; then
-            echo "ERROR: Bundle exceeds 2.5MB limit ($TOTAL bytes)"
+          # Counts lazy chunks too: maplibre (1.1 MB plus the separate 0.5 MB v6
+          # worker) only loads when the user opens the 3D view.
+          if [ "$TOTAL" -gt 3145728 ]; then
+            echo "ERROR: Bundle exceeds 3MB limit ($TOTAL bytes)"
             exit 1
           fi
 
@@ -205,6 +207,7 @@ jobs:
           tests/e2e/error-boundary.spec.ts
           tests/e2e/keyboard.spec.ts
           tests/e2e/map.spec.ts
+          tests/e2e/map3d.spec.ts
           tests/e2e/mission.spec.ts
           tests/e2e/mobile.spec.ts
           tests/e2e/pwa.spec.ts

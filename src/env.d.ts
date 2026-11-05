@@ -1,3 +1,4 @@
+/// <reference types="vite/client" />
 /// <reference types="leaflet" />
 /// <reference types="node" />
 import type * as LeafletTypes from 'leaflet';

@@ -1027,6 +1027,7 @@ const messages: Record<string, string> = {
   'ui.skipToContent': '콘텐츠로 건너뛰기',
   'ui.map2d': '2D 지도',
   'ui.globe3d': '3D 지구본',
+  'ui.webgl2Required': '3D 보기에는 WebGL2가 필요합니다. 2D 지도로 전환했습니다',
   'ui.rtspVideo': 'RTSP 영상',
   'ui.renderError': '렌더링 오류',
   'ui.retry': '재시도',

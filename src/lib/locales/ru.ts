@@ -1030,6 +1030,7 @@ const messages: Record<string, string> = {
   'ui.skipToContent': 'Перейти к содержимому',
   'ui.map2d': '2D-карта',
   'ui.globe3d': '3D-глобус',
+  'ui.webgl2Required': 'Для 3D-вида нужен WebGL2. Выполнен возврат к 2D-карте',
   'ui.rtspVideo': 'RTSP-видео',
   'ui.renderError': 'Ошибка отрисовки',
   'ui.retry': 'Повторить',
