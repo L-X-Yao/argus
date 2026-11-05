@@ -95,6 +95,7 @@ import {
 } from './transport';
 import { encodeFrame } from './mavlink/codec';
 import {
+  encodeHeartbeat,
   encodeMissionCount,
   encodeMissionItemInt,
   encodeMissionAck,
@@ -213,6 +214,10 @@ afterEach(async () => {
 // msgid_lo, msgid_mid, msgid_hi, [payload...], crc16. msg id starts at byte 7.
 function writeMsgId(w: Uint8Array): number {
   return w[7] | (w[8] << 8) | (w[9] << 16);
+}
+function commandLongFields(w: Uint8Array) {
+  const view = new DataView(w.buffer, w.byteOffset + 10);
+  return { command: view.getUint16(28, true), p1: view.getFloat32(0, true), p2: view.getFloat32(4, true) };
 }
 function findWrite(msgId: number): Uint8Array | undefined {
   return writes.find((w) => writeMsgId(w) === msgId);

@@ -249,13 +249,13 @@ describe('_serialDispatch wire-byte semantics', () => {
   });
 
   // ── rtl: Plane=11, Copter=6 ──────────────────────────────────────────
-  it('rtl on Plane sends SET_MODE custom_mode=11 (RTL, NOT 21=QRTL)', () => {
+  it('rtl on Plane sends custom_mode=11 (RTL, NOT 21=QRTL)', () => {
     _isPlaneFlag = true;
     dispatch('rtl');
     expect(decodeSetMode(writes[0]).customMode).toBe(11);
   });
 
-  it('rtl on Copter sends SET_MODE custom_mode=6', () => {
+  it('rtl on Copter sends custom_mode=6', () => {
     _isPlaneFlag = false;
     dispatch('rtl');
     expect(decodeSetMode(writes[0]).customMode).toBe(6);
@@ -563,7 +563,7 @@ describe('_serialDispatch calibration + gimbal + RC wire bytes', () => {
   });
 
   // ── remaining simple passthroughs (bundled for completeness) ─────────
-  it('mode sends SET_MODE (11) with the requested custom mode', () => {
+  it('mode sends MAV_CMD_DO_SET_MODE with the requested custom mode', () => {
     dispatch('mode', 5);
     expect(decodeSetMode(writes[0]).customMode).toBe(5);
   });

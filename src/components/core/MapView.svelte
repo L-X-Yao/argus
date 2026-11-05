@@ -22,6 +22,7 @@
     Navigation,
     Grid3x3,
     ShieldAlert,
+    Flag,
     Download,
     Crosshair,
     Home,

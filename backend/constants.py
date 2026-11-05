@@ -109,10 +109,10 @@ ROVER_BTNS = [[0, "手动"], [4, "固定"], [10, "自动"], [15, "引导"], [11,
 # ArduPlane/mode.h:47-53, Rover/mode.h:18-29, ArduSub/mode.h:37-41. None means the
 # vehicle has no such mode. "hold" is where a pause goes, and a Sub surfaces to land.
 SPECIAL_MODES: dict[str, dict[str, int | None]] = {
-    "copter": {"auto": 3, "guided": 4, "rtl": 6},
-    "plane": {"auto": 10, "guided": 15, "rtl": 11},
-    "rover": {"auto": 10, "guided": 15, "rtl": 11},
-    "sub": {"auto": 3, "guided": 4, "rtl": None},
+    "copter": {"auto": 3, "guided": 4, "rtl": 6, "hold": 5, "land": 9, "autotune": 15},
+    "plane": {"auto": 10, "guided": 15, "rtl": 11, "hold": 12, "land": None, "autotune": 8},
+    "rover": {"auto": 10, "guided": 15, "rtl": 11, "hold": 4, "land": None, "autotune": None},
+    "sub": {"auto": 3, "guided": 4, "rtl": None, "hold": 16, "land": 9, "autotune": None},
 }
 # A QuadPlane hovers and lands on its lift motors: ArduPlane/mode.h:58-59.
 VTOL_MODES: dict[str, int] = {"hold": 19, "land": 20}

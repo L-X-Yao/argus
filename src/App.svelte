@@ -632,7 +632,11 @@
       summary={app.drone.flight_summary}
       onclose={() => {
         app.summaryShown = false;
-        sendCommand('clear_summary');
+        // A serial summary has no backend copy to clear, and the effect above would
+        // reopen the window at once. A backend one stays until the backend clears it:
+        // dropped here, the next push would count as a new flight and save it again.
+        if (isSerialConnected() || app.serialLinkLost) app.drone.flight_summary = null;
+        else sendCommand('clear_summary');
       }}
     />
   {/if}

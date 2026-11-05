@@ -77,6 +77,23 @@ describe('updateState', () => {
     expect(app.drone.voltage).toBe(11.1);
   });
 
+  it('keeps what the FC last reported after a USB drop', () => {
+    // The backend has no vehicle in this state, so its pushes hold zeros.
+    app.drone = { ...app.drone, lat: 34.2, home_lat: 34.1 } as any;
+    app.serialLinkLost = true;
+    updateState({ connected: false, lat: 0, home_lat: 0 } as any);
+    app.serialLinkLost = false;
+    expect(app.drone.lat).toBe(34.2);
+    expect(app.drone.home_lat).toBe(34.1);
+  });
+
+  it('hands over once the backend has a vehicle', () => {
+    app.serialLinkLost = true;
+    updateState({ connected: true, lat: 12 } as any);
+    expect(app.serialLinkLost).toBe(false);
+    expect(app.drone.lat).toBe(12);
+  });
+
   it('allows updates when ws transport is active', () => {
     app.activeTransport = 'ws';
     updateState({ roll: 42 } as any);

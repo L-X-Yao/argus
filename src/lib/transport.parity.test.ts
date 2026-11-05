@@ -178,6 +178,8 @@ describe('dual-stack parity dump', () => {
           case 'dispatch':
             dispatch(op.op!, op.param, op.data);
             if (op.flush_timer_ms) await vi.advanceTimersByTimeAsync(op.flush_timer_ms);
+            // Only one store can be cleared at a time: let this one time out for the next.
+            if (op.op?.endsWith('_clear')) await vi.advanceTimersByTimeAsync(3100);
             break;
           case 'log_list': {
             const p = serialLogList();

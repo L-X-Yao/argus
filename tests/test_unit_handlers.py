@@ -11,6 +11,8 @@ from unittest.mock import MagicMock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+import pytest
+
 from backend.drone_link import DroneLink
 from backend.mavlink_handlers import (
     handle_adsb_vehicle,
@@ -281,6 +283,25 @@ class TestStatustext:
 
 
 # ── Command Ack ──────────────────────────────────────────────────────────────
+
+
+class TestOtherComponentsHeartbeats:
+    """The FC forwards them (MAVLink_routing.cpp:418): they are not the vehicle."""
+
+    @pytest.mark.parametrize(
+        ("mav_type", "autopilot"),
+        [(26, 8), (18, 8), (6, 8), (26, 0)],
+        ids=["gimbal", "companion", "gcs", "gimbal without autopilot invalid"],
+    )
+    def test_ignored(self, mav_type, autopilot):
+        link = make_link()
+        armed = struct.pack("<IBBBBB", 4, 2, 3, 0x80, 4, 3)
+        other = struct.pack("<IBBBBB", 0, mav_type, autopilot, 0, 4, 3)
+        handle_heartbeat(armed, len(armed), link)
+        handle_heartbeat(other, len(other), link)
+        assert link.vehicle.armed is True
+        assert link.vehicle.vtype_raw == 2
+        assert link.vehicle.mode == 4
 
 
 class TestCommandAck:

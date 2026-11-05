@@ -11,6 +11,8 @@ class AppState {
   // level gate in ConnectionForm refuses to start the inactive transport
   // until the active one disconnects. See known issue #16 in FEATURE_CHECKLIST.
   activeTransport: 'none' | 'ws' | 'serial' = $state('none');
+  // The USB link dropped and the session has not ended: see updateState.
+  serialLinkLost: boolean = $state(false);
   waypoints: Waypoint[] = $state([]);
   undoStack: Waypoint[][] = $state([]);
   defaultAlt: number = $state(30);
@@ -58,6 +60,13 @@ export function updateState(s: Partial<DroneState>) {
   // overwrite them. Button-level gate prevents this normally; this catches
   // it if the gate is bypassed.
   if (app.activeTransport === 'serial') return;
+  // Nor after a USB drop, while the backend has no vehicle: its zeros would replace the
+  // last known position. The backend link keeps its last values through a loss too.
+  // A push with a vehicle ends the lost session, whoever connected it.
+  if (app.serialLinkLost) {
+    if (!s.connected) return;
+    app.serialLinkLost = false;
+  }
   Object.assign(app.drone, s);
   // FC link gone — release the lock so the user can switch transports.
   if (app.activeTransport === 'ws' && s.connected === false) {

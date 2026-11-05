@@ -18,8 +18,11 @@ vi.mock('./i18n.svelte', () => ({
   i18nState: { locale: 'en' },
 }));
 vi.mock('./flightDb', () => ({ saveFlightRecord: (r: Record<string, unknown>) => H.flights.push(r) }));
+vi.mock('./transport', () => ({ serialWpIndex: (seq: number) => seq - 2 }));
 
-import { buildSerialHandlers } from './serialHandlers';
+import { app } from './stores.svelte';
+import { handleParamBatch, paramState } from './paramStore.svelte';
+import { beginSerialSession, buildSerialHandlers, resetSerialSession } from './serialHandlers';
 import type { MavFrame, MessageHandlers } from './mavlink';
 
 const frame = {} as MavFrame;
@@ -65,6 +68,9 @@ describe('serial session state', () => {
     H.flights.length = 0;
     vi.useFakeTimers();
     vi.setSystemTime(1_000_000);
+    resetSerialSession();
+    H.drone.remaining = 80;
+    H.drone.gs = 0;
     h = buildSerialHandlers();
   });
 
@@ -80,7 +86,7 @@ describe('serial session state', () => {
 
     it('ignores the (0,0) an FC reports before it has a position', () => {
       h.onGlobalPositionInt!(position(0, 0) as never, frame);
-      expect(H.drone.home_lat).toBeUndefined();
+      expect(H.drone.home_lat).toBe(0);
       expect(H.events).toHaveLength(0);
     });
 
@@ -92,6 +98,8 @@ describe('serial session state', () => {
   });
 
   describe('arming', () => {
+    beforeEach(() => h.onHeartbeat!(heartbeat(false) as never, frame));
+
     it('counts flight time while armed and stops at disarm', () => {
       h.onHeartbeat!(heartbeat(true) as never, frame);
       vi.advanceTimersByTime(5000);
@@ -134,12 +142,87 @@ describe('serial session state', () => {
     });
   });
 
+  describe('heartbeats that are not the vehicle', () => {
+    const gimbal = { ...heartbeat(false), type: 26, autopilot: 8 };
+    const companion = { ...heartbeat(false), type: 18, autopilot: 8 };
+    const sloppy = { ...heartbeat(false), type: 26, autopilot: 0 };
+
+    it.each([
+      ['a gimbal', gimbal],
+      ['a companion computer', companion],
+      ['a gimbal that does not say autopilot invalid', sloppy],
+    ])('%s does not read as a disarm', (_, other) => {
+      h.onHeartbeat!(heartbeat(true) as never, frame);
+      h.onHeartbeat!(other as never, frame);
+      expect(H.drone.armed).toBe(true);
+      expect(H.drone.vtype_raw).toBe(2);
+    });
+  });
+
+  describe('a session across reconnects', () => {
+    it('announces an FC that was armed before we connected, as the backend does', () => {
+      h.onHeartbeat!(heartbeat(true) as never, frame);
+      expect(H.events.map((e) => e.event_type)).toEqual(['armed']);
+      vi.advanceTimersByTime(3000);
+      h.onHeartbeat!(heartbeat(true) as never, frame);
+      expect(H.drone.flight_time).toBe(3);
+    });
+
+    it('keeps a flight going when the link comes back', () => {
+      h.onHeartbeat!(heartbeat(false) as never, frame);
+      h.onHeartbeat!(heartbeat(true) as never, frame);
+      vi.advanceTimersByTime(10000);
+      H.events.length = 0;
+      const again = buildSerialHandlers();
+      again.onHeartbeat!(heartbeat(true) as never, frame);
+      expect(H.events).toHaveLength(0);
+      expect(H.drone.flight_time).toBe(10);
+    });
+
+    it('reports a flight that ended while the link was down', () => {
+      h.onHeartbeat!(heartbeat(false) as never, frame);
+      h.onHeartbeat!(heartbeat(true) as never, frame);
+      vi.advanceTimersByTime(10000);
+      const again = buildSerialHandlers();
+      again.onHeartbeat!(heartbeat(false) as never, frame);
+      expect(H.drone.flight_summary).toMatchObject({ duration: 10 });
+    });
+
+    it('stays the same flight when a connection follows a USB drop', () => {
+      h.onGlobalPositionInt!(position(34.2, 108.9) as never, frame);
+      handleParamBatch([{ name: 'A', value: 1, ptype: 9, index: 0, total: 1, received: 1 }]);
+      app.serialLinkLost = true;
+      beginSerialSession();
+      expect(H.drone.home_lat).toBe(34.2);
+      expect(paramState.list).toHaveLength(1);
+      app.serialLinkLost = false;
+    });
+
+    it('starts afresh on any other connection, parameters included', () => {
+      h.onGlobalPositionInt!(position(34.2, 108.9) as never, frame);
+      handleParamBatch([{ name: 'A', value: 1, ptype: 9, index: 0, total: 1, received: 1 }]);
+      beginSerialSession();
+      expect(H.drone.home_lat).toBe(0);
+      expect(paramState.list).toHaveLength(0);
+    });
+
+    it('forgets the vehicle when the user disconnects', () => {
+      h.onGlobalPositionInt!(position(34.2, 108.9) as never, frame);
+      resetSerialSession();
+      expect(H.drone.home_lat).toBe(0);
+      expect(H.drone.dist_home).toBe(0);
+      const next = buildSerialHandlers();
+      next.onGlobalPositionInt!(position(35.2, 109.9) as never, frame);
+      expect(H.drone.home_lat).toBe(35.2);
+    });
+  });
+
   describe('battery time left', () => {
     const status = (remaining: number) => ({ voltage: 12, current: 1, remaining });
 
     it('estimates from the drain rate once there is enough history', () => {
+      h.onHeartbeat!(heartbeat(false) as never, frame);
       h.onHeartbeat!(heartbeat(true) as never, frame);
-      H.drone.armed = true;
       h.onSysStatus!(status(80) as never, frame);
       vi.advanceTimersByTime(20000);
       h.onSysStatus!(status(78) as never, frame);
@@ -150,7 +233,7 @@ describe('serial session state', () => {
       h.onSysStatus!(status(80) as never, frame);
       vi.advanceTimersByTime(20000);
       h.onSysStatus!(status(78) as never, frame);
-      expect(H.drone.bat_time).toBeUndefined();
+      expect(H.drone.bat_time).toBe(-1);
     });
   });
 
@@ -167,7 +250,7 @@ describe('serial session state', () => {
 
     it('leaves other messages alone', () => {
       h.onStatusText!(text('EKF3 IMU0 is using GPS') as never, frame);
-      expect(H.drone.prearm).toBeUndefined();
+      expect(H.drone.prearm).toEqual([]);
       expect(H.events).toHaveLength(1);
     });
 
@@ -193,5 +276,17 @@ describe('serial session state', () => {
     vi.advanceTimersByTime(61000);
     h.onAdsbVehicle!(aircraft(2) as never, frame);
     expect((H.drone.adsb as { icao: number }[]).map((a) => a.icao)).toEqual([2]);
+  });
+
+  it('drops the last aircraft too, with nothing else arriving', () => {
+    h.onAdsbVehicle!({ icao: 1, lat: 0, lon: 0, alt: 0, hdg: 0, speed: 0, vs: 0, callsign: '' } as never, frame);
+    vi.advanceTimersByTime(61000);
+    h.onHeartbeat!(heartbeat(false) as never, frame);
+    expect(H.drone.adsb).toEqual([]);
+  });
+
+  it('names the vehicle, which flight records store', () => {
+    h.onHeartbeat!({ ...heartbeat(false), type: 10 } as never, frame);
+    expect(H.drone.vtype).toBe('Rover');
   });
 });

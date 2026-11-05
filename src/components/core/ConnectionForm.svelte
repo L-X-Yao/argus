@@ -5,7 +5,7 @@
   import { t } from '../../lib/i18n.svelte';
   import { apiUrl } from '../../lib/backend';
   import { webSerialAvailable, connectSerial, disconnectSerial, isSerialConnected } from '../../lib/transport';
-  import { buildSerialHandlers } from '../../lib/serialHandlers';
+  import { beginSerialSession, buildSerialHandlers, resetSerialSession } from '../../lib/serialHandlers';
   import Button from '$lib/components/ui/button/button.svelte';
   import { Usb } from '@lucide/svelte';
 
@@ -139,6 +139,7 @@
       // that owns this flag.
       app.activeTransport = 'none';
       await disconnectSerial();
+      resetSerialSession();
       addToast(t('conn.serialDisconnected'), 'info');
       return;
     }
@@ -150,6 +151,7 @@
     }
     app.activeTransport = 'serial';
     serialConnecting = true;
+    beginSerialSession();
     try {
       // Telemetry→store mapping lives in serialHandlers.ts so the dual-stack
       // state-parity contract can drive the real code.

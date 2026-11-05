@@ -2,13 +2,17 @@
 
 import base64
 import json
+import struct
 import sys
 from pathlib import Path
 from unittest.mock import MagicMock
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+import pytest
+
 from backend.commands import execute
+from backend.commands._mission import check_mission_dl_timeout
 from backend.drone_link import DroneLink
 from backend.mavlink_handlers import handle_mission_ack
 
@@ -42,10 +46,9 @@ class TestCommandExecute:
         link.vehicle.vtype_raw = 2
         execute("rtl", None, link)
         assert any("返航" in e["text"] for e in link.events)
-        # MAVLink v2 frame: 10-byte header + payload; SET_MODE payload starts at byte 10.
-        # Payload layout: mode(uint32 LE) + sysid(u8) + base_mode(u8)
+        # MAV_CMD_DO_SET_MODE: 10-byte header, then param1 and param2 as floats.
         raw = link._ser.write.call_args[0][0]
-        assert raw[10:14] == b"\x06\x00\x00\x00"  # mode=6 for copter RTL
+        assert struct.unpack_from("<f", raw, 14)[0] == 6  # mode=6 for copter RTL
 
     def test_rtl_plane(self):
         link = make_link()
@@ -54,7 +57,7 @@ class TestCommandExecute:
         assert any("返航" in e["text"] for e in link.events)
         # Plane RTL must use mode 11 (standard RTL), NOT mode 21 (Q-RTL/QuadPlane)
         raw = link._ser.write.call_args[0][0]
-        assert raw[10:14] == b"\x0b\x00\x00\x00"  # mode=11 for plane RTL
+        assert struct.unpack_from("<f", raw, 14)[0] == 11  # mode=11 for plane RTL
 
     def test_mode_change(self):
         link = make_link()

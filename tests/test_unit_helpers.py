@@ -62,6 +62,9 @@ class TestRequestStreams:
                 h.time.sleep = orig_sleep
         # 12 SET_MESSAGE_INTERVAL + 1 send_cmd(512) = at least 13 writes
         assert link._ser.write.call_count >= 13
+        # param1 of a COMMAND_LONG, in a MAVLink 2 frame with a 10-byte header.
+        asked = {struct.unpack_from("<f", c.args[0], 10)[0] for c in link._ser.write.call_args_list}
+        assert {245.0, 242.0} <= asked  # EXTENDED_SYS_STATE and HOME_POSITION: no stream carries them
 
 
 class TestSendFenceItemInt:

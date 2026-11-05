@@ -12,9 +12,11 @@
 import { isVehicleHeartbeat, type MessageHandlers } from './mavlink';
 import { app, addEvent, addToast } from './stores.svelte';
 import { t, i18nState } from './i18n.svelte';
-import { getModeButtons, getModeName, vehicleType } from './modeStore';
+import { getModeButtons, getModeName, vehicleType, type VehicleType } from './modeStore';
 import { saveFlightRecord } from './flightDb';
+import { clearParams } from './paramStore.svelte';
 import { serialWpIndex } from './transport';
+import { defaultState } from './types';
 
 // Mirrors backend/constants.py FIX_NAMES and FIX_NAMES_EN.
 const FIX_NAMES: Record<'en' | 'zh', Record<number, string>> = {
@@ -154,37 +156,33 @@ export function buildSerialHandlers(): Partial<MessageHandlers> {
   // One-shot per connection, like the backend's _unsupported_fc_warned
   // (reset on connect) — a mixed AP+GCS link must not toast every second.
   let warnedUnsupported = false;
-  // Per-session flight bookkeeping, twin of what the backend keeps on DroneLink.
-  let homeSet = false;
-  let wasArmed = false;
-  let armedAt = 0;
-  let maxAlt = 0;
-  let maxSpeed = 0;
-  let totalDist = 0;
-  let prevPos: [number, number] | null = null;
-  let batHistory: [number, number][] = [];
-  let batStart = -1;
-  const adsb = new Map<number, Record<string, number | string>>();
+  const publishAdsb = () => {
+    const now = Date.now() / 1000;
+    for (const [icao, a] of session.adsb) {
+      if (now - (a.t as number) >= ADSB_MAX_AGE_S) session.adsb.delete(icao);
+    }
+    app.drone.adsb = [...session.adsb.values()] as typeof app.drone.adsb;
+  };
 
   const onArmedChange = (armed: boolean) => {
     event(t(armed ? 'toast.armed' : 'toast.disarmed'), armed ? 'armed' : 'disarmed');
     addToast(t(armed ? 'toast.armed' : 'toast.disarmed'), armed ? 'warn' : 'success', armed ? 5000 : 4000);
     if (armed) {
       app.drone.flight_summary = null;
-      armedAt = Date.now();
-      maxAlt = maxSpeed = totalDist = 0;
-      prevPos = null;
-      batHistory = [];
-      batStart = app.drone.remaining;
+      session.armedAt = Date.now();
+      session.maxAlt = session.maxSpeed = session.totalDist = 0;
+      session.prevPos = null;
+      session.batHistory = [];
+      session.batStart = app.drone.remaining;
       return;
     }
     const remaining = app.drone.remaining;
     const summary = {
-      duration: armedAt ? Math.trunc((Date.now() - armedAt) / 1000) : 0,
-      max_alt: Math.round(maxAlt * 10) / 10,
-      max_speed: Math.round(maxSpeed * 10) / 10,
-      total_dist: Math.round(totalDist),
-      bat_used: batStart >= 0 && remaining >= 0 ? batStart - remaining : -1,
+      duration: session.armedAt ? Math.trunc((Date.now() - session.armedAt) / 1000) : 0,
+      max_alt: Math.round(session.maxAlt * 10) / 10,
+      max_speed: Math.round(session.maxSpeed * 10) / 10,
+      total_dist: Math.round(session.totalDist),
+      bat_used: session.batStart >= 0 && remaining >= 0 ? session.batStart - remaining : -1,
     };
     app.drone.flight_summary = summary;
     app.drone.bat_time = -1;
@@ -212,10 +210,15 @@ export function buildSerialHandlers(): Partial<MessageHandlers> {
       app.drone.vtype_raw = msg.type;
       app.drone.vtype = VEHICLE_LABELS[uiLocale()][vehicleType(msg.type)];
       const armed = (msg.baseMode & 128) !== 0;
-      if (armed !== wasArmed) onArmedChange(armed);
-      wasArmed = armed;
+      // A session starts disarmed, so connecting to an armed vehicle announces it and
+      // times the flight from here, as in backend handle_heartbeat.
+      if (armed !== session.armed) onArmedChange(armed);
+      session.armed = armed;
       app.drone.armed = armed;
-      app.drone.flight_time = armed && armedAt ? Math.trunc((Date.now() - armedAt) / 1000) : 0;
+      app.drone.flight_time = armed && session.armedAt ? Math.trunc((Date.now() - session.armedAt) / 1000) : 0;
+      // On every heartbeat, not only when a report arrives: the last aircraft to go
+      // out of range sends nothing further that would drop it.
+      if (session.adsb.size > 0) publishAdsb();
       app.drone.mode_id = msg.customMode;
       // Localized mode NAME — the WS path pushes get_state()'s "mode"
       // (backend _get_vehicle_info: vtype → table → locale) and StatusBar
@@ -250,20 +253,22 @@ export function buildSerialHandlers(): Partial<MessageHandlers> {
       // Home comes from the first real fix until HOME_POSITION says otherwise,
       // as in backend handle_global_position_int. The threshold skips the (0,0)
       // the FC reports before it has a position.
-      if (!homeSet && (Math.abs(msg.lat) > 0.001 || Math.abs(msg.lon) > 0.001)) {
-        homeSet = true;
+      if (!session.homeSet && (Math.abs(msg.lat) > 0.001 || Math.abs(msg.lon) > 0.001)) {
+        session.homeSet = true;
         app.drone.home_lat = msg.lat;
         app.drone.home_lon = msg.lon;
         event(t('evt.homeSet').replace('{lat}', msg.lat.toFixed(5)).replace('{lon}', msg.lon.toFixed(5)), 'home_set');
       }
-      if (homeSet) {
+      if (session.homeSet) {
         app.drone.dist_home = metersBetween(msg.lat, msg.lon, app.drone.home_lat, app.drone.home_lon);
       }
       if (app.drone.armed) {
-        maxAlt = Math.max(maxAlt, msg.altRel);
-        maxSpeed = Math.max(maxSpeed, app.drone.gs ?? 0);
-        if (prevPos) totalDist += metersBetween(msg.lat, msg.lon, prevPos[0], prevPos[1]);
-        prevPos = [msg.lat, msg.lon];
+        session.maxAlt = Math.max(session.maxAlt, msg.altRel);
+        session.maxSpeed = Math.max(session.maxSpeed, app.drone.gs ?? 0);
+        if (session.prevPos) {
+          session.totalDist += metersBetween(msg.lat, msg.lon, session.prevPos[0], session.prevPos[1]);
+        }
+        session.prevPos = [msg.lat, msg.lon];
       }
     },
     onExtendedSysState: (msg) => {
@@ -285,10 +290,10 @@ export function buildSerialHandlers(): Partial<MessageHandlers> {
       // Time left from the last two minutes of drain, as in backend handle_sys_status.
       if (msg.remaining >= 0 && app.drone.armed) {
         const now = Date.now() / 1000;
-        batHistory.push([now, msg.remaining]);
-        batHistory = batHistory.filter(([at]) => now - at < 120);
-        const elapsed = now - batHistory[0][0];
-        const used = batHistory[0][1] - msg.remaining;
+        session.batHistory.push([now, msg.remaining]);
+        session.batHistory = session.batHistory.filter(([at]) => now - at < 120);
+        const elapsed = now - session.batHistory[0][0];
+        const used = session.batHistory[0][1] - msg.remaining;
         if (elapsed > 10 && used > 0) app.drone.bat_time = Math.trunc(msg.remaining / (used / elapsed));
       }
     },
@@ -336,7 +341,7 @@ export function buildSerialHandlers(): Partial<MessageHandlers> {
       app.drone.mag = [msg.xmag, msg.ymag, msg.zmag];
     },
     onHomePosition: (msg) => {
-      homeSet = true;
+      session.homeSet = true;
       app.drone.home_lat = msg.lat;
       app.drone.home_lon = msg.lon;
     },
@@ -377,8 +382,7 @@ export function buildSerialHandlers(): Partial<MessageHandlers> {
       app.drone.gimbal_yaw = msg.yaw;
     },
     onAdsbVehicle: (msg) => {
-      const now = Date.now() / 1000;
-      adsb.set(msg.icao, {
+      session.adsb.set(msg.icao, {
         icao: msg.icao,
         lat: msg.lat,
         lon: msg.lon,
@@ -387,15 +391,13 @@ export function buildSerialHandlers(): Partial<MessageHandlers> {
         speed: Math.round(msg.speed * 10) / 10,
         vs: Math.round(msg.vs * 10) / 10,
         callsign: msg.callsign.trim(),
-        t: now,
+        t: Date.now() / 1000,
       });
-      if (adsb.size > 200) {
-        const oldest = [...adsb.values()].reduce((a, b) => ((a.t as number) < (b.t as number) ? a : b));
-        adsb.delete(oldest.icao as number);
+      if (session.adsb.size > 200) {
+        const oldest = [...session.adsb.values()].reduce((a, b) => ((a.t as number) < (b.t as number) ? a : b));
+        session.adsb.delete(oldest.icao as number);
       }
-      app.drone.adsb = [...adsb.values()].filter(
-        (a) => now - (a.t as number) < ADSB_MAX_AGE_S,
-      ) as typeof app.drone.adsb;
+      publishAdsb();
     },
     onCommandAck: (msg, frame) => {
       // Twin of backend handle_command_ack. ArduPilot answers every COMMAND_LONG
@@ -414,12 +416,7 @@ export function buildSerialHandlers(): Partial<MessageHandlers> {
         .replace('{cmd}', cmdKey ? t(cmdKey) : String(msg.command))
         .replace('{result}', resultKey ? t(resultKey) : t('ack.result.unknown').replace('{n}', String(msg.result)));
       const ok = msg.result === 0;
-      addEvent({
-        type: 'event',
-        time: new Date().toLocaleTimeString(),
-        text,
-        event_type: ok ? 'cmd_ack_ok' : 'cmd_ack_fail',
-      });
+      event(text, ok ? 'cmd_ack_ok' : 'cmd_ack_fail');
       if (!ok) addToast(text, 'error', 5000);
     },
     onStatusText: (msg) => {

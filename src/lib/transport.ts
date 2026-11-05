@@ -128,6 +128,7 @@ export async function connectSerial(baudRate: number, handlers: Partial<MessageH
     serial.conn = await openSerial(baudRate);
     serial.handlers = handlers;
     serial.running = true;
+    app.serialLinkLost = false;
     serial.seq = 0;
     serial.buf = new Uint8Array(0);
     serial.lastFrameAt = 0;
@@ -231,6 +232,11 @@ export async function connectSerial(baudRate: number, handlers: Partial<MessageH
         serial.running = false;
         if (wasRunning) {
           _clearSerialLink();
+          app.serialLinkLost = true;
+          // Left set, the next connect would treat it as a live session and disconnect
+          // it, clearing armed on a vehicle that may still be flying.
+          void serial.conn?.close().catch(() => {});
+          serial.conn = null;
           addToast(t('conn.serialLost'), 'error', 8000);
           // Release the transport mutex so the user can switch to WS without
           // having to click the (now-stale) USB button first.
@@ -244,7 +250,7 @@ export async function connectSerial(baudRate: number, handlers: Partial<MessageH
         if (download.pending) {
           _resolveDownload({ ok: false, error: 'Serial link lost mid-download' });
         }
-        _resolveFenceClear({ ok: false, error: 'Serial link lost' });
+        _resolveStoreClear({ ok: false, error: 'Serial link lost' });
         // Tear down any in-flight log operation so its watchdog doesn't
         // fire spuriously after disconnect.
         if (logSession.listPending) _resolveLogList({ ok: false, error: 'Serial link lost' });
@@ -271,6 +277,7 @@ function _clearSerialLink(): void {
   serial.lastFrameAt = 0;
   app.drone.connected = false;
   app.drone.link_age = -1;
+  app.drone.adsb = [];
 }
 
 export async function disconnectSerial(): Promise<void> {
@@ -345,6 +352,9 @@ export function serialSendDisarm(): void {
   sendSerialFrame(76, encodeCommandLong(serial.targetSysId, serial.targetCompId, 400, 0, 0, 0, 0, 0, 0, 0, 0));
 }
 
+// MAV_CMD_DO_SET_MODE, not the SET_MODE message: the FC drops the result of that one
+// (GCS_Common.cpp:2890 handle_set_mode), so a refused change went unreported. This one
+// is acked (:5045 handle_command_do_set_mode). p1 = custom mode enabled.
 export function serialSendMode(mode: number): void {
   serialSendCommandLong(176, 1, mode);
 }
