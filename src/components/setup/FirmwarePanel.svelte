@@ -116,6 +116,7 @@
     <HardDriveDownload size={14} class="text-primary" />
     <span class="text-[11px] font-semibold text-primary uppercase tracking-wider">{t('fw.title')}</span>
   </div>
+  <p class="text-[11px] text-muted-foreground/60">{t('fw.storeOnly')}</p>
 
   <div class="flex gap-2">
     <Button variant="outline" size="sm" class="gap-1 h-7 text-xs flex-1" onclick={uploadFile} disabled={uploading}>
