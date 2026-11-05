@@ -221,3 +221,6 @@ def request_streams(link: DroneLink) -> None:
         link.send(bm(76, payload, link.sq, CRC_EXTRA[76]))
         time.sleep(cfg.STREAM_REQUEST_SPACING)
     send_cmd(link, 512, p1=148.0)
+    # HOME_POSITION rides no stream either (GCS_Common.cpp:1050 maps it). Without it, a
+    # connection during a flight would take home from wherever the vehicle is now.
+    send_cmd(link, 512, p1=242.0)

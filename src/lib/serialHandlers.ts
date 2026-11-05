@@ -53,6 +53,8 @@ const ACK_RESULTS: Record<number, string> = {
   8: 'ack.result.commandIntOnly',
 };
 const ACK_QUIET_ON_SUCCESS = new Set([241, 42424, 42425, 42426]);
+// The connect-time requests of requestStreams, as in backend handle_command_ack.
+const ACK_QUIET = new Set([511, 512]);
 
 const METERS_PER_DEG = 111320;
 const ADSB_MAX_AGE_S = 60;
@@ -404,6 +406,7 @@ export function buildSerialHandlers(): Partial<MessageHandlers> {
       // MAV_RESULT_IN_PROGRESS reports progress and the final result follows
       // (GCS_Common.cpp:1463 send_in_progress, :1468 conclude).
       if (msg.result === 5) return;
+      if (ACK_QUIET.has(msg.command)) return;
       if (msg.result === 0 && ACK_QUIET_ON_SUCCESS.has(msg.command)) return;
       const cmdKey = ACK_COMMANDS[msg.command];
       const resultKey = ACK_RESULTS[msg.result];

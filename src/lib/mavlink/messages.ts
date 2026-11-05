@@ -574,16 +574,15 @@ export function decodeAutopilotVersion(p: DataView): AutopilotVersion {
   //   16..19 flight_sw_version (u32)
   //   28..31 board_version (u32)
   //   36..43 flight_custom_version: the git hash, as backend handle_autopilot_version reads it
-  let gitHash = '';
-  for (let i = 36; i < 44; i++) {
-    const b = p.getUint8(i);
-    if (b !== 0) gitHash += b.toString(16).padStart(2, '0');
-  }
+  // as text (GCS_Common.cpp:3018 strncpy_noterm).
+  const hashBytes = new Uint8Array(p.buffer, p.byteOffset + 36, 8);
+  const hashEnd = hashBytes.indexOf(0);
+  const gitHash = new TextDecoder().decode(hashEnd < 0 ? hashBytes : hashBytes.slice(0, hashEnd));
   return {
     flightSwVersion: p.getUint32(16, true),
     boardVersion: p.getUint32(28, true),
     uid: p.getBigUint64(8, true),
-    gitHash: gitHash.slice(0, 8),
+    gitHash,
   };
 }
 

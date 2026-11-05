@@ -978,6 +978,19 @@ describe('serial link health', () => {
     end?.();
     await new Promise<void>((res) => setTimeout(res, 0));
     expect(app.drone).toMatchObject({ connected: false, armed: true, link_age: -1 });
+    expect(app.serialLinkLost).toBe(true);
+    await connectSerial(115200, {});
+    expect(app.serialLinkLost).toBe(false);
+    expect(app.drone.armed).toBe(true); // reconnecting is no reason to show it disarmed
+  });
+
+  it('asks for what no stream carries', async () => {
+    await disconnectSerial();
+    writes.length = 0;
+    await connectSerial(115200, {});
+    const asked = writes.filter((w) => writeMsgId(w) === 76).map(commandLongFields);
+    expect(asked).toContainEqual({ command: 511, p1: 245, p2: 1000000 });
+    expect(asked).toContainEqual({ command: 512, p1: 242, p2: 0 }); // HOME_POSITION, once
   });
 
   it('ignores frames that arrive after a disconnect', async () => {

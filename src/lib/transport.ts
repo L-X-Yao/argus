@@ -328,8 +328,11 @@ function requestStreams(): void {
   for (const [id, rate] of streams) {
     sendSerialFrame(66, encodeRequestDataStream(serial.targetSysId, serial.targetCompId, id, rate, 1));
   }
-  // AUTOPILOT_VERSION rides no stream: MAV_CMD_REQUEST_MESSAGE, as backend request_streams does.
+  // These ride no stream, so ask as backend request_streams does: EXTENDED_SYS_STATE by
+  // interval (GCS_Common.cpp:1170), AUTOPILOT_VERSION and HOME_POSITION once.
+  serialSendCommandLong(511, 245, 1000000);
   serialSendCommandLong(512, 148);
+  serialSendCommandLong(512, 242);
 }
 
 /* ── Serial command API (mirrors ws.ts sendCommand) ── */

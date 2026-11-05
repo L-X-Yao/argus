@@ -301,6 +301,11 @@ def handle_command_ack(p: bytes, pl: int, link: DroneLink) -> None:
         return
     if result == 0 and cmd_id in (241, 42424, 42425, 42426):
         return
+    # The connect-time requests of request_streams, which nobody clicked. A build
+    # without terrain or a mount answers DENIED for those messages
+    # (GCS_Common.cpp:3216-3220), and nothing is wrong with that vehicle.
+    if cmd_id in (511, 512):
+        return
     etype = "cmd_ack_ok" if result == 0 else "cmd_ack_fail"
     link.add_event(lt("cmd_ack", link.locale) % (cmd_name, result_text), etype)
 
@@ -509,8 +514,8 @@ def handle_autopilot_version(p: bytes, pl: int, link: DroneLink) -> None:
     minor = (fw_ver >> 16) & 0xFF
     patch = (fw_ver >> 8) & 0xFF
     board = struct.unpack_from("<I", p, 28)[0]
-    git_bytes = bytes(p[36:44])
-    git = "".join("%02x" % b for b in git_bytes if b != 0)[:8]
+    # flight_custom_version holds the hash as text (GCS_Common.cpp:3018 strncpy_noterm).
+    git = bytes(p[36:44]).split(b"\x00")[0].decode("ascii", "replace")
     v = link.vehicle
     v.fw_version = "v%d.%d.%d" % (major, minor, patch)
     v.fw_git = git

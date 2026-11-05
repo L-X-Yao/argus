@@ -42,6 +42,17 @@ const position = (lat: number, lon: number, altRel = 0) => ({
   hdg: 0,
 });
 
+describe('connect-time command answers', () => {
+  it.each([511, 512])("a refused %i is nobody's business", (command) => {
+    H.events.length = 0;
+    H.toasts.length = 0;
+    const h = buildSerialHandlers();
+    h.onCommandAck!({ command, result: 2 } as never, { payloadLen: 3 } as MavFrame);
+    expect(H.events).toHaveLength(0);
+    expect(H.toasts).toHaveLength(0);
+  });
+});
+
 describe('serial session state', () => {
   let h: Partial<MessageHandlers>;
 

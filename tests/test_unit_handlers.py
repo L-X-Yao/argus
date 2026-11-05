@@ -303,6 +303,14 @@ class TestCommandAck:
         handle_command_ack(p, len(p), link)
         assert len(link.events) == 0
 
+    @pytest.mark.parametrize("cmd", [511, 512])
+    def test_connect_time_requests_stay_quiet(self, cmd):
+        """A build without terrain or a mount refuses those intervals (GCS_Common.cpp:3216-3220)."""
+        link = make_link()
+        p = struct.pack("<HB", cmd, 2)
+        handle_command_ack(p, len(p), link)
+        assert link.events == []
+
     def test_failed_is_reported(self):
         """A refused arm answers MAV_RESULT_FAILED (GCS_Common.cpp:5204)."""
         link = make_link()
@@ -514,7 +522,7 @@ class TestAutopilotVersion:
         major, minor, patch = 4, 5, 3
         fw_ver = (major << 24) | (minor << 16) | (patch << 8) | 0
         board = 56
-        git_hash = b"\xab\xcd\xef\x12\x34\x56\x78\x00"
+        git_hash = b"abcdef12"
         # Wire order: capabilities(u64) + uid(u64) + flight_sw_version(u32) +
         # middleware_sw_version(u32) + os_sw_version(u32) + board_version(u32) +
         # flight_custom_version(u8[8]) + ...
