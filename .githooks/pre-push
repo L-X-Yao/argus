@@ -3,6 +3,9 @@
 # Runs before pushing to remote — catches anything pre-commit skipped.
 set -eo pipefail
 
+# Git runs hooks in a non-login shell, which may not have nvm loaded.
+command -v npx >/dev/null || { [ -s "$HOME/.nvm/nvm.sh" ] && . "$HOME/.nvm/nvm.sh"; }
+
 echo "[pre-push] vitest..."
 npx vitest run --bail 1 --reporter=dot
 

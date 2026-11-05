@@ -21,7 +21,7 @@ python -m pytest tests/test_unit_*.py tests/test_contract_*.py  # backend tests
 ruff check backend/ scripts/ tests/           # Python lint
 ```
 
-The pre-commit hook runs lint + type-check; pre-push runs the full test suite.
+Enable the hooks once per clone with `git config core.hooksPath .githooks`. The pre-commit hook runs lint + type-check; pre-push runs the full test suite.
 
 ## Commit Messages
 

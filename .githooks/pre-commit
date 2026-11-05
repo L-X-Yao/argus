@@ -4,11 +4,14 @@
 # Install: git config core.hooksPath .githooks
 set -e
 
+# Git runs hooks in a non-login shell, which may not have nvm loaded.
+command -v npx >/dev/null || { [ -s "$HOME/.nvm/nvm.sh" ] && . "$HOME/.nvm/nvm.sh"; }
+
 echo "[pre-commit] sensitive-word check..."
-_W1="pl""kj"; _W2="peng""likeji"
-if git diff --cached --name-only | xargs grep -qri "$_W1\|$_W2" -- 2>/dev/null; then
+_W1="pl""kj"; _W2="peng""likeji"; _W3="fpv""-rocket"
+if git diff --cached --name-only | xargs grep -qri "$_W1\|$_W2\|$_W3" -- 2>/dev/null; then
   echo "ERROR: proprietary reference found in staged files"
-  git diff --cached --name-only | xargs grep -rni "$_W1\|$_W2" -- 2>/dev/null
+  git diff --cached --name-only | xargs grep -rni "$_W1\|$_W2\|$_W3" -- 2>/dev/null
   exit 1
 fi
 

@@ -1,9 +1,14 @@
+[build-system]
+# SPDX license strings need setuptools >= 77 (PEP 639).
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "argus-gcs"
 version = "3.6.0"
 description = "Universal web-based ground control station for MAVLink drones"
 readme = "README.md"
-license = {text = "MIT"}
+license = "MIT"
 authors = [{name = "L-X-Yao", email = "lsc1476907630@gmail.com"}]
 requires-python = ">=3.10"
 dependencies = [
