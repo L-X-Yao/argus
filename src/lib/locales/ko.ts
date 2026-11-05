@@ -1100,6 +1100,7 @@ const messages: Record<string, string> = {
   'evt.homeSet': '홈: {lat}, {lon}',
   'evt.wpReached': '웨이포인트 {n} 도달',
   'evt.fwInfo': '펌웨어: {v} ({git})',
+  'err.noRtl': '이 기체에는 RTL 모드가 없습니다',
 };
 
 export default messages;

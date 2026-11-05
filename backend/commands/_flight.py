@@ -28,7 +28,9 @@ def cmd_rtl(link: DroneLink, param, data: dict):
     # Plane RTL = mode 11 (standard NAV_RTL); mode 21 is Q-RTL (QuadPlane only).
     # ArduPilot ArduPlane/mode.h `enum class Number`: RTL=11, QRTL=21.
     # On QuadPlane with Q_RTL_MODE=1 the FC promotes RTL→QRTL within RTL_RADIUS of home automatically.
-    rm = 11 if link.is_plane() else 6
+    rm = link.special_mode("rtl")
+    if rm is None:
+        return {"ok": False, "error": lt("err_no_rtl", link.locale)}
     link.add_event(lt("rtl", link.locale) % rm, "rtl")
     send_set_mode(link, rm)
 
@@ -36,9 +38,7 @@ def cmd_rtl(link: DroneLink, param, data: dict):
 def cmd_mode(link: DroneLink, param, data: dict):
     if param is None:
         return None
-    from ..constants import COPTER_MODES, PLANE_MODES
-
-    md = PLANE_MODES if link.is_plane() else COPTER_MODES
+    md = link._get_vehicle_info()[0]
     link.add_event(lt("mode_to", link.locale) % md.get(int(param), str(param)), "mode_to")
     send_set_mode(link, int(param))
 

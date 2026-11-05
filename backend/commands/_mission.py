@@ -20,7 +20,7 @@ _timer_lock = threading.Lock()
 
 def cmd_mission_start(link: DroneLink, param, data: dict):
     global _mission_timer
-    am = 10 if link.is_plane() else 3
+    am = link.special_mode("auto")
     link.add_event(lt("mission_start", link.locale), "mission_start")
     send_set_mode(link, am)
 

@@ -89,6 +89,52 @@ jobs:
       - name: Run integration tests
         run: python -m pytest tests/test_integration.py -q --tb=short
 
+  # Plane, Rover and Sub on real firmware: what differs per vehicle, mainly mode
+  # numbers. tests/sitl_vehicles.py boots SITL and a backend of its own.
+  sitl-vehicles:
+    runs-on: ubuntu-latest
+    needs: check
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { vehicle: plane, path: Plane, binary: arduplane, parm: Tools/autotest/models/plane.parm }
+          - { vehicle: rover, path: Rover, binary: ardurover, parm: Tools/autotest/default_params/rover.parm }
+          - { vehicle: sub, path: Sub, binary: ardusub, parm: Tools/autotest/default_params/sub.parm }
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.10'
+
+      - name: Install Python deps
+        run: pip install -e '.[dev]'
+
+      - name: Probe current stable version
+        id: sitl-ver
+        run: echo "ver=$(curl -sf https://firmware.ardupilot.org/${{ matrix.path }}/stable/SITL_x86_64_linux_gnu/firmware-version.txt)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache SITL binary
+        id: sitl-cache
+        uses: actions/cache@v6
+        with:
+          path: ~/sitl
+          key: sitl-${{ matrix.vehicle }}-${{ steps.sitl-ver.outputs.ver }}
+
+      - name: Download SITL binary + default params
+        if: steps.sitl-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/sitl
+          curl -sfL -o ~/sitl/${{ matrix.binary }} https://firmware.ardupilot.org/${{ matrix.path }}/stable/SITL_x86_64_linux_gnu/${{ matrix.binary }}
+          chmod +x ~/sitl/${{ matrix.binary }}
+          curl -sfL -o ~/sitl/${{ matrix.vehicle }}.parm https://raw.githubusercontent.com/ArduPilot/ardupilot/master/${{ matrix.parm }}
+
+      - name: Run the vehicle checks
+        run: python tests/sitl_vehicles.py ${{ matrix.vehicle }}
+
   # The WebSerial stack against real firmware: a full flight, then both interactive
   # calibrations. A stand-in for navigator.serial carries the bytes to SITL, so
   # everything above the port runs as it does on USB.

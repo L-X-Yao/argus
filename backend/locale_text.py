@@ -79,6 +79,7 @@ _T = {
     "log_dl_holes": ("日志: 检测到丢帧, 缺失 %d 字节(已零填充)", "Log: frame loss — %d bytes missing (zero-filled)"),
     "err_no_wp": ("无航点", "No waypoints"),
     "err_bad_coord": ("坐标无效", "Invalid coordinates"),
+    "err_no_rtl": ("这种机型没有返航模式", "This vehicle has no RTL mode"),
     "err_fence_min": ("围栏至少需要 3 个顶点", "Fence needs at least 3 vertices"),
     "err_fence_busy": ("围栏上传进行中", "A fence upload is in progress"),
     "err_log_not_found": ("日志不存在", "Log not found"),

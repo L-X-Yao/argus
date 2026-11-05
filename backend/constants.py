@@ -105,6 +105,14 @@ PLANE_BTNS = [
     [20, "旋翼降落"],
 ]
 ROVER_BTNS = [[0, "手动"], [4, "固定"], [10, "自动"], [15, "引导"], [11, "返航"]]
+# The modes commands switch to, which differ per vehicle: ArduCopter/mode.h:81-84,
+# ArduPlane/mode.h:48-53, Rover/mode.h:26-29, ArduSub/mode.h:37-38. Sub has no RTL.
+SPECIAL_MODES: dict[str, dict[str, int | None]] = {
+    "copter": {"auto": 3, "guided": 4, "rtl": 6},
+    "plane": {"auto": 10, "guided": 15, "rtl": 11},
+    "rover": {"auto": 10, "guided": 15, "rtl": 11},
+    "sub": {"auto": 3, "guided": 4, "rtl": None},
+}
 SUB_BTNS = [[0, "自稳"], [2, "定深"], [16, "定点"], [3, "自动"], [4, "引导"]]
 FIX_NAMES = {0: "无定位", 1: "无定位", 2: "2D", 3: "3D", 4: "差分", 5: "RTK浮动", 6: "RTK固定"}
 

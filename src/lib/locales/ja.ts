@@ -1102,6 +1102,7 @@ const messages: Record<string, string> = {
   'evt.homeSet': 'ホーム: {lat}, {lon}',
   'evt.wpReached': 'ウェイポイント {n} に到達',
   'evt.fwInfo': 'ファームウェア: {v} ({git})',
+  'err.noRtl': 'この機体には RTL モードがありません',
 };
 
 export default messages;

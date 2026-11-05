@@ -33,6 +33,7 @@ import { openSerial, serialWrite, serialReadLoop, isWebSerialSupported } from '.
 import type { SerialConnection } from './serial';
 import { addToast, addEvent, app, isPlane as _isPlane } from './stores.svelte';
 import { t } from './i18n.svelte';
+import { SPECIAL_MODES, vehicleType } from './modeStore';
 import {
   buildMissionItems,
   buildFenceItems,
@@ -380,6 +381,9 @@ type CmdHandler = (param?: number, data?: Record<string, unknown>) => void;
 // mapped to NaN because Python float(None)/int(None) raises and the backend
 // error-drops the whole command (a `?? default` here would silently
 // substitute a value instead). NaN then fails every range check below.
+// Mode numbers differ per vehicle, and 6 on a Rover is FOLLOW, not RTL. See SPECIAL_MODES.
+const _specialModes = () => SPECIAL_MODES[_isPlane() ? 'plane' : vehicleType(app.drone.vtype_raw)];
+
 const num = (v: unknown, dflt: number): number => (v === undefined ? dflt : v === null ? NaN : Number(v));
 const _serialDispatch: Record<string, CmdHandler> = {
   arm: () => serialSendArm(),
@@ -393,7 +397,14 @@ const _serialDispatch: Record<string, CmdHandler> = {
     serialSendMode(p);
   },
   // Plane RTL=11 (NOT 21=QRTL), Copter RTL=6. AP source: ArduPlane/mode.h, ArduCopter/mode.h `enum class Number`.
-  rtl: () => serialSendMode(_isPlane() ? 11 : 6),
+  rtl: () => {
+    const mode = _specialModes().rtl;
+    if (mode === null) {
+      addToast(t('err.noRtl'), 'error', 6000);
+      return;
+    }
+    serialSendMode(mode);
+  },
   // MAV_CMD_NAV_TAKEOFF (22): p7=alt. AP source ArduPlane/quadplane.cpp:3948 (QuadPlane::do_user_takeoff)
   // rejects unless control_mode == mode_guided — switch Plane to GUIDED (15) first to match backend cmd_takeoff.
   takeoff: (_, d) => {
@@ -411,7 +422,7 @@ const _serialDispatch: Record<string, CmdHandler> = {
   // Delay mirrors cfg.MISSION_START_DELAY = 0.3 in backend/config.py. Timer is cancelled on re-entry so
   // double-tap doesn't queue two MISSION_START sends (matches backend's _timer_lock + .cancel() pattern).
   mission_start: () => {
-    serialSendMode(_isPlane() ? 10 : 3);
+    serialSendMode(_specialModes().auto);
     if (_missionStartTimer !== null) clearTimeout(_missionStartTimer);
     _missionStartTimer = setTimeout(() => {
       _missionStartTimer = null;
@@ -453,7 +464,7 @@ const _serialDispatch: Record<string, CmdHandler> = {
     if (!Number.isFinite(lat) || !Number.isFinite(lon) || !Number.isFinite(alt)) return;
     if (Math.abs(lat) < 0.001 && Math.abs(lon) < 0.001) return;
     if (lat < -90 || lat > 90 || lon < -180 || lon > 180 || alt < -500 || alt > 100000) return;
-    serialSendMode(_isPlane() ? 15 : 4);
+    serialSendMode(_specialModes().guided);
     serialSendPositionTargetGlobal(lat, lon, alt);
   },
   // MAV_CMD_DO_SET_ROI (201) with p1=3 = ROI_LOCATION mode. cmd 197 is DO_SET_ROI_NONE per common.xml —

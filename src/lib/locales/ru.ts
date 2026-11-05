@@ -1105,6 +1105,7 @@ const messages: Record<string, string> = {
   'evt.homeSet': 'Точка старта: {lat}, {lon}',
   'evt.wpReached': 'Точка маршрута {n} достигнута',
   'evt.fwInfo': 'Прошивка: {v} ({git})',
+  'err.noRtl': 'У этого аппарата нет режима RTL',
 };
 
 export default messages;

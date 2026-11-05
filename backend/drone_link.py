@@ -23,6 +23,7 @@ from .constants import (
     ROVER_BTNS_EN,
     ROVER_MODES,
     ROVER_MODES_EN,
+    SPECIAL_MODES,
     SUB_BTNS,
     SUB_BTNS_EN,
     SUB_MODES,
@@ -161,6 +162,19 @@ class DroneLink:
         if v.force_plane is not None:
             return v.force_plane
         return v.vtype_raw in (1, 19, 20, 21, 22, 23, 24, 25)
+
+    def vehicle_kind(self) -> str:
+        if self.is_plane():
+            return "plane"
+        vt = self.vehicle.vtype_raw
+        if self.vehicle.force_plane is None and vt in (10, 11):  # a boat is Rover firmware
+            return "rover"
+        if self.vehicle.force_plane is None and vt == 12:
+            return "sub"
+        return "copter"
+
+    def special_mode(self, name: str) -> int | None:
+        return SPECIAL_MODES[self.vehicle_kind()][name]
 
     def queue_ws(self, msg: dict) -> None:
         self._ws_queue.append(msg)
@@ -366,7 +380,7 @@ class DroneLink:
                 PLANE_BTNS_EN if en else PLANE_BTNS,
                 "Fixed Wing" if en else "固定翼",
             )
-        if vt == 10:
+        if vt in (10, 11):  # GCS_Rover::frame_type (Rover/GCS_MAVLink_Rover.cpp:10) reports a boat as 11
             return (
                 ROVER_MODES_EN if en else ROVER_MODES,
                 ROVER_BTNS_EN if en else ROVER_BTNS,
@@ -536,7 +550,7 @@ class DroneLink:
         if not self._logfile or now - self._last_log_time < cfg.LOG_WRITE_INTERVAL:
             return
         self._last_log_time = now
-        md = PLANE_MODES if self.is_plane() else COPTER_MODES
+        md = self._get_vehicle_info()[0]
         t = now - self.start_time
         a, v, bat, g = self.attitude, self.vehicle, self.battery, self.gps
         try:

@@ -30,6 +30,7 @@ from backend.constants import (  # noqa: E402
     ROVER_CATEGORIES,
     ROVER_MODES,
     ROVER_MODES_EN,
+    SPECIAL_MODES,
     SUB_BTNS_EN,
     SUB_CATEGORIES,
     SUB_MODES,
@@ -87,6 +88,16 @@ def generate() -> str:
     lines.append("};")
     lines.append("")
 
+    # The modes commands switch to
+    lines.append(
+        "export const SPECIAL_MODES: Record<VehicleType, { auto: number; guided: number; rtl: number | null }> = {"
+    )
+    for vtype, modes in SPECIAL_MODES.items():
+        rtl = "null" if modes["rtl"] is None else modes["rtl"]
+        lines.append(f"  {vtype}: {{ auto: {modes['auto']}, guided: {modes['guided']}, rtl: {rtl} }},")
+    lines.append("};")
+    lines.append("")
+
     # MAV_TYPE → VehicleType mapping
     lines.append("const _VTYPE_MAP: Record<number, VehicleType> = {")
     copter_types = [2, 3, 4, 13, 14]
@@ -96,6 +107,7 @@ def generate() -> str:
     for t in plane_types:
         lines.append(f"  {t}: 'plane',")
     lines.append("  10: 'rover',")
+    lines.append("  11: 'rover',")
     lines.append("  12: 'sub',")
     lines.append("};")
     lines.append("")

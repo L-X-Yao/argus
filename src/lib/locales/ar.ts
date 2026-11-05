@@ -1100,6 +1100,7 @@ const messages: Record<string, string> = {
   'evt.homeSet': 'نقطة الانطلاق: {lat}, {lon}',
   'evt.wpReached': 'تم الوصول إلى نقطة المسار {n}',
   'evt.fwInfo': 'البرنامج الثابت: {v} ({git})',
+  'err.noRtl': 'لا يحتوي هذا الجهاز على وضع RTL',
 };
 
 export default messages;

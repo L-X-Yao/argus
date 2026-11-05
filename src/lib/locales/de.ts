@@ -1107,6 +1107,7 @@ const messages: Record<string, string> = {
   'evt.homeSet': 'Startpunkt: {lat}, {lon}',
   'evt.wpReached': 'Wegpunkt {n} erreicht',
   'evt.fwInfo': 'Firmware-Version: {v} ({git})',
+  'err.noRtl': 'Dieses Fahrzeug hat keinen RTL-Modus',
 };
 
 export default messages;

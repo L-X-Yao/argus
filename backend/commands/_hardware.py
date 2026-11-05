@@ -34,7 +34,7 @@ def cmd_guided_goto(link: DroneLink, param, data: dict):
         return {"ok": False, "error": lt("err_bad_coord", link.locale)}
     lat7 = int(lat * 1e7)
     lon7 = int(lon * 1e7)
-    gm = 15 if link.is_plane() else 4
+    gm = link.special_mode("guided")
     from ._helpers import send_set_mode
 
     send_set_mode(link, gm)

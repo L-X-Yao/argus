@@ -1094,6 +1094,7 @@ const messages: Record<string, string> = {
   'evt.homeSet': 'Home: {lat}, {lon}',
   'evt.wpReached': 'Waypoint {n} reached',
   'evt.fwInfo': 'Firmware: {v} ({git})',
+  'err.noRtl': 'This vehicle has no RTL mode',
 };
 
 export default messages;

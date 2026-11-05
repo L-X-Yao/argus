@@ -29,6 +29,7 @@ import pytest
 from pymavlink.dialects.v20 import ardupilotmega as mavlink
 
 from backend import commands
+from backend.drone_link import DroneLink
 from backend.mavlink_handlers import (
     handle_attitude,
     handle_battery_status,
@@ -53,9 +54,13 @@ from backend.mavlink_handlers import (
 class FakeLink:
     """Minimal DroneLink shim that captures send() bytes for inspection."""
 
+    vehicle_kind = DroneLink.vehicle_kind
+    special_mode = DroneLink.special_mode
+    _get_vehicle_info = DroneLink._get_vehicle_info
+
     def __init__(self):
         self.sq = 0
-        self.vehicle = SimpleNamespace(sysid=1, armed=False)
+        self.vehicle = SimpleNamespace(sysid=1, armed=False, vtype_raw=0, force_plane=None)
         self.locale = "zh"
         self.captured: list[bytes] = []
         self._lock = threading.Lock()

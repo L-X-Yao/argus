@@ -105,6 +105,13 @@ export const BTN_IDS: Record<VehicleType, number[]> = {
   sub: [0, 2, 16, 3, 4],
 };
 
+export const SPECIAL_MODES: Record<VehicleType, { auto: number; guided: number; rtl: number | null }> = {
+  copter: { auto: 3, guided: 4, rtl: 6 },
+  plane: { auto: 10, guided: 15, rtl: 11 },
+  rover: { auto: 10, guided: 15, rtl: 11 },
+  sub: { auto: 3, guided: 4, rtl: null },
+};
+
 const _VTYPE_MAP: Record<number, VehicleType> = {
   2: 'copter',
   3: 'copter',
@@ -120,6 +127,7 @@ const _VTYPE_MAP: Record<number, VehicleType> = {
   24: 'plane',
   25: 'plane',
   10: 'rover',
+  11: 'rover',
   12: 'sub',
 };
 

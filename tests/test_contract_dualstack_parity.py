@@ -118,6 +118,8 @@ def _backend_frames(op: dict) -> list[bytes]:
     link.param_mgr = ParamManager(link)
     if op.get("plane"):
         link.is_plane = lambda: True
+    if "vtype_raw" in op:
+        link.vehicle.vtype_raw = op["vtype_raw"]
     kind = op["kind"]
 
     if kind == "boot_heartbeat":

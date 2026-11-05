@@ -310,7 +310,7 @@ Seven panels have code but no way to open them, marked in the Evidence column. T
 2. **Arm, take off, RTL and mission start on a real FC.** These have only run in SITL. They need a battery, so they need a separate, deliberate session.
 3. **Calibration and reboot on a real FC over WebSerial.** SITL only so far, and compass and accelerometer need the board turned by hand.
 4. **RTK, gimbal, camera and ADS-B.** These need hardware that has not been available.
-5. **Vehicles other than Copter.** Only Copter runs in CI.
+5. **Flight on vehicles other than Copter.** Plane, Rover and Sub run in SITL in CI through the backend: recognition, mode numbers, parameters, missions and arming, not a flight.
 6. **WebSerial in Chrome on Windows.** The 2026-11-05 run used Chromium on Linux with the port chooser automated.
 7. **Four panels nobody can open.** Scripts, scheduler, AI planner and AI annotation exist in code only.
 
@@ -318,7 +318,7 @@ Seven panels have code but no way to open them, marked in the Evidence column. T
 2. **真机上的解锁、起飞、返航、开始任务。** 只在 SITL 跑过。这些需要接电池，要单独安排。
 3. **真机上经 WebSerial 的校准和重启。** 目前只在 SITL 跑过，罗盘和加速度计需要手动翻转板子。
 4. **RTK、云台、相机、ADS-B。** 缺硬件。
-5. **多旋翼以外的机型。** CI 只跑多旋翼。
+5. **多旋翼以外机型的飞行。** 固定翼、地面车、水下机器人在 CI 里经后端跑 SITL，覆盖机型识别、模式号、参数、航线和解锁，没有跑飞行。
 6. **Windows 上 Chrome 的 WebSerial。** 2026-11-05 的测试用的是 Linux 上的 Chromium，端口选择由脚本代替。
 7. **4 个打不开的面板。** 脚本、定时任务、AI 规划、AI 标注只存在于代码中。
 

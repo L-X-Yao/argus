@@ -1091,6 +1091,7 @@ const messages: Record<string, string> = {
   'evt.homeSet': '起飞点: {lat}, {lon}',
   'evt.wpReached': '航点 {n} 已到达',
   'evt.fwInfo': '固件: {v} ({git})',
+  'err.noRtl': '这种机型没有返航模式',
 };
 
 export default messages;
