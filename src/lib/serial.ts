@@ -9,6 +9,8 @@ export interface SerialConnection {
   readable: ReadableStream<Uint8Array>;
   writable: WritableStream<Uint8Array>;
   _writer: WritableStreamDefaultWriter<Uint8Array>;
+  _reader: ReadableStreamDefaultReader<Uint8Array> | null;
+  _readLoop: Promise<void> | null;
   close(): Promise<void>;
   info: { usbVendorId?: number; usbProductId?: number };
 }
@@ -47,28 +49,30 @@ export async function openSerial(baudRate: number = 115200): Promise<SerialConne
   const info = port.getInfo();
   const writer = writable.getWriter();
 
-  return {
+  const conn: SerialConnection = {
     readable,
     writable,
     _writer: writer,
+    _reader: null,
+    _readLoop: null,
     info: { usbVendorId: info.usbVendorId, usbProductId: info.usbProductId },
     async close() {
+      // serialReadLoop holds the stream's only reader, and port.close() rejects
+      // while the stream is locked. Cancel that reader and wait for the loop to
+      // release the lock, or the port stays open and frames keep arriving.
       try {
-        if (readable.locked) {
-          const reader = readable.getReader();
-          await reader.cancel();
-          reader.releaseLock();
-        }
+        await conn._reader?.cancel();
       } catch {}
-      try {
-        await writer.close();
-        writer.releaseLock();
-      } catch {}
+      await conn._readLoop;
+      // Not writer.close(): that waits for the writes to drain, which a hung FC
+      // never does. port.close() aborts them, but needs the lock released.
+      writer.releaseLock();
       try {
         await port.close();
       } catch {}
     },
   };
+  return conn;
 }
 
 /**
@@ -85,17 +89,23 @@ export async function serialWrite(conn: SerialConnection, data: Uint8Array): Pro
  * Read loop — reads from serial port and calls onData for each chunk.
  * Returns when the port is closed or an error occurs.
  */
-export async function serialReadLoop(conn: SerialConnection, onData: (chunk: Uint8Array) => void): Promise<void> {
+export function serialReadLoop(conn: SerialConnection, onData: (chunk: Uint8Array) => void): Promise<void> {
   const reader = conn.readable.getReader();
-  try {
-    while (true) {
-      const { value, done } = await reader.read();
-      if (done) break;
-      if (value) onData(value);
+  conn._reader = reader;
+  const loop = (async () => {
+    try {
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        if (value) onData(value);
+      }
+    } catch (e: unknown) {
+      if (!(e instanceof Error) || e.name !== 'AbortError') throw e;
+    } finally {
+      conn._reader = null;
+      reader.releaseLock();
     }
-  } catch (e: unknown) {
-    if (!(e instanceof Error) || e.name !== 'AbortError') throw e;
-  } finally {
-    reader.releaseLock();
-  }
+  })();
+  conn._readLoop = loop.catch(() => {});
+  return loop;
 }

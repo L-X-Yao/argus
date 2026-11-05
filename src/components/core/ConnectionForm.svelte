@@ -91,7 +91,10 @@
 
   function toggle() {
     if (app.drone.connected) {
-      sendDisconnect();
+      // The USB button hides once connected, so this button has to end a serial
+      // session too: sendDisconnect() only reaches the backend.
+      if (isSerialConnected()) toggleSerial();
+      else sendDisconnect();
     } else {
       // Mutex: USB-direct mode owns drone state; reject WS connect while it's
       // active (see updateState in stores.svelte for the matching defense).
@@ -132,8 +135,10 @@
   let serialConnecting = $state(false);
   async function toggleSerial() {
     if (isSerialConnected()) {
-      await disconnectSerial();
+      // Before the await: a USB click while the port closes starts a new session
+      // that owns this flag.
       app.activeTransport = 'none';
+      await disconnectSerial();
       addToast(t('conn.serialDisconnected'), 'info');
       return;
     }

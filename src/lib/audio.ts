@@ -81,7 +81,8 @@ export function checkAlerts(connected: boolean, armed: boolean, remaining: numbe
     beep(880, 200, 2);
     speak(t('audio.armed'));
   }
-  if (!armed && prevArmed) {
+  // With the link down armed was only reset: the vehicle may still be armed.
+  if (!armed && prevArmed && connected) {
     beep(440, 300, 1);
     speak(t('audio.disarmed'));
   }

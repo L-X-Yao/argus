@@ -71,6 +71,7 @@ interface SerialState {
   targetSysId: number;
   targetCompId: number;
   handlers: Partial<MessageHandlers>;
+  lastFrameAt: number;
 }
 
 const serial: SerialState = {
@@ -82,6 +83,7 @@ const serial: SerialState = {
   targetSysId: 1,
   targetCompId: 1,
   handlers: {},
+  lastFrameAt: 0,
 };
 
 // Coalesce repeated dispatch('mission_start') calls — match backend _timer_lock semantics.
@@ -124,10 +126,16 @@ export async function connectSerial(baudRate: number, handlers: Partial<MessageH
     serial.running = true;
     serial.seq = 0;
     serial.buf = new Uint8Array(0);
+    serial.lastFrameAt = 0;
 
     // Start heartbeat at 1Hz
     serial.hbInterval = setInterval(() => {
       sendSerialFrame(0, encodeHeartbeat());
+      // The WS path gets link_age pushed by the backend. Nothing else computes
+      // it here, and the link-lost alarm and preflight check both read it.
+      if (serial.lastFrameAt > 0) {
+        app.drone.link_age = Math.round((Date.now() - serial.lastFrameAt) / 100) / 10;
+      }
     }, 1000);
 
     // Request data streams
@@ -135,6 +143,8 @@ export async function connectSerial(baudRate: number, handlers: Partial<MessageH
 
     // Start read loop (runs until disconnected)
     serialReadLoop(serial.conn, (chunk) => {
+      // A frame still in flight after a disconnect would mark the link up again.
+      if (!serial.running) return;
       const combined = new Uint8Array(serial.buf.length + chunk.length);
       combined.set(serial.buf);
       combined.set(chunk, serial.buf.length);
@@ -190,6 +200,10 @@ export async function connectSerial(baudRate: number, handlers: Partial<MessageH
         if (frame.msgId === 22) _onParamValue(_padView(frame.payload, 25));
         dispatchFrame(frame, serial.handlers);
       }
+      if (frames.length > 0) {
+        serial.lastFrameAt = Date.now();
+        app.drone.frames += frames.length;
+      }
     })
       .catch((e) => {
         console.error('[Serial] read loop error', e);
@@ -198,6 +212,7 @@ export async function connectSerial(baudRate: number, handlers: Partial<MessageH
         const wasRunning = serial.running;
         serial.running = false;
         if (wasRunning) {
+          _clearSerialLink();
           addToast(t('conn.serialLost'), 'error', 8000);
           // Release the transport mutex so the user can switch to WS without
           // having to click the (now-stale) USB button first.
@@ -227,12 +242,24 @@ export async function connectSerial(baudRate: number, handlers: Partial<MessageH
   }
 }
 
-export async function disconnectSerial(): Promise<void> {
-  serial.running = false;
+// The WS path learns this from a backend push. Without this the UI kept showing
+// a live link after the session ended, for good when no backend was running.
+function _clearSerialLink(): void {
   if (serial.hbInterval) {
     clearInterval(serial.hbInterval);
     serial.hbInterval = null;
   }
+  serial.lastFrameAt = 0;
+  app.drone.connected = false;
+  app.drone.link_age = -1;
+}
+
+export async function disconnectSerial(): Promise<void> {
+  serial.running = false;
+  _clearSerialLink();
+  // Only here: on a lost link the vehicle may well still be armed, and the
+  // backend keeps armed in that case too.
+  app.drone.armed = false;
   if (serial.conn) {
     await serial.conn.close();
     serial.conn = null;

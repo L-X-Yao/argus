@@ -43,7 +43,10 @@ vi.mock('./serial', () => ({
 }));
 
 vi.mock('./stores.svelte', () => ({
-  app: { activeTransport: 'none' as 'none' | 'ws' | 'serial' },
+  app: {
+    activeTransport: 'none' as 'none' | 'ws' | 'serial',
+    drone: { connected: false, armed: false, link_age: -1, frames: 0 },
+  },
   addToast: vi.fn((text: string, level: string) => {
     toasts.push({ text, level });
   }),
@@ -94,6 +97,7 @@ import {
   encodeMissionRequestInt,
 } from './mavlink/messages';
 import * as logStoreMock from './logStore.svelte';
+import { app } from './stores.svelte';
 
 // ─────────────────────────────────────────────────────────────────────────
 // Frame helpers — wrap a payload in a real MAVLink 2 frame so transport's
@@ -754,6 +758,78 @@ describe('log cancel', () => {
     const res = await promise;
     expect(res.ok).toBe(false);
     expect(res.error).toMatch(/cancel/i);
+  });
+});
+
+describe('serial link health', () => {
+  const heartbeat = () => encodeFrame(0, new Uint8Array(9), 1, 1, 0);
+
+  async function withFakeClock(body: () => Promise<void> | void) {
+    await disconnectSerial();
+    vi.useFakeTimers();
+    try {
+      await connectSerial(115200, {});
+      await body();
+    } finally {
+      vi.useRealTimers();
+    }
+  }
+
+  it('reports how long ago the last frame arrived', async () => {
+    await withFakeClock(() => {
+      inject(heartbeat());
+      vi.advanceTimersByTime(1000);
+      expect(app.drone.link_age).toBe(1);
+      inject(heartbeat());
+      vi.advanceTimersByTime(1000);
+      expect(app.drone.link_age).toBe(1);
+    });
+  });
+
+  it('crosses the link-lost alarm threshold when frames stop', async () => {
+    await withFakeClock(() => {
+      inject(heartbeat());
+      vi.advanceTimersByTime(4000);
+      expect(app.drone.link_age).toBeGreaterThan(3);
+    });
+  });
+
+  it('counts frames for the message rate display', () => {
+    const before = app.drone.frames;
+    inject(heartbeat());
+    inject(heartbeat());
+    expect(app.drone.frames).toBe(before + 2);
+  });
+
+  it('clears the connected state on a user disconnect', async () => {
+    app.drone.connected = true;
+    app.drone.armed = true;
+    app.drone.link_age = 0.1;
+    await disconnectSerial();
+    expect(app.drone).toMatchObject({ connected: false, armed: false, link_age: -1 });
+  });
+
+  it('clears the link but keeps armed when the link is lost', async () => {
+    // A vehicle in the air is still armed: clearing this would announce
+    // "disarmed" the moment the USB link dropped.
+    app.drone.connected = true;
+    app.drone.armed = true;
+    app.drone.link_age = 0.1;
+    const end = readLoopResolve;
+    readLoopResolve = null;
+    end?.();
+    await new Promise<void>((res) => setTimeout(res, 0));
+    expect(app.drone).toMatchObject({ connected: false, armed: true, link_age: -1 });
+  });
+
+  it('ignores frames that arrive after a disconnect', async () => {
+    const onHeartbeat = vi.fn();
+    await disconnectSerial();
+    await connectSerial(115200, { onHeartbeat });
+    const late = readLoopOnChunk;
+    await disconnectSerial();
+    late?.(heartbeat());
+    expect(onHeartbeat).not.toHaveBeenCalled();
   });
 });
 

@@ -214,6 +214,7 @@ jobs:
           tests/e2e/pwa.spec.ts
           tests/e2e/settings.spec.ts
           tests/e2e/resilience.spec.ts
+          tests/e2e/webserial.spec.ts
         env:
           ARGUS_NO_BROWSER: '1'
 

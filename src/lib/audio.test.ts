@@ -148,6 +148,18 @@ describe('checkAlerts — arming', () => {
   });
 });
 
+describe('checkAlerts — disarm announcement', () => {
+  it('stays silent when armed clears because the link went down', () => {
+    // Offline the vehicle may well still be armed, so "disarmed" would be false.
+    (app as { voiceEnabled: boolean }).voiceEnabled = true;
+    checkAlerts(true, true, -1, 0);
+    utterances.length = 0;
+    checkAlerts(false, false, -1, 0);
+    (app as { voiceEnabled: boolean }).voiceEnabled = false;
+    expect(utterances.map((u) => u.text)).not.toContain('audio.disarmed');
+  });
+});
+
 describe('checkAlerts — connection loss', () => {
   it('beeps when connection lost', () => {
     checkAlerts(true, false, -1, 0);
