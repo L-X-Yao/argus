@@ -33,7 +33,7 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 | Messages, WebSerial | 35 | 16 | 13 | 0 | 5 | 0 | 1 |
 | REST routes | 28 | 6 | 5 | 17 | 0 | 0 | 0 |
 | Panels | 80 | 13 | 3 | 21 | 41 | 2 | 0 |
-| Platform | 43 | 8 | 9 | 7 | 14 | 2 | 3 |
+| Platform | 43 | 8 | 11 | 9 | 10 | 2 | 3 |
 
 ## Commands / 飞控命令
 
@@ -291,12 +291,12 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 | Linux tty | Linux tty | SITL | CI: a whole session through a pty on real firmware, which reads differently from a socket |
 | Submarine | 水下潜航器 | SITL | CI. No dive in CI |
 | Several vehicles at once | 多机同屏 | SITL | CI: two vehicles on one link, each flown from the other through the switch |
-| Offline mbtiles maps | 离线 mbtiles 地图 | Tests only | Unit tests |
+| Offline mbtiles maps | 离线 mbtiles 地图 | Simulator | e2e: a real file picked in Settings shows on the map |
 | Survey and pattern planning | 测绘和图案规划 | Tests only | Unit tests |
-| Mission file formats | 航线文件格式 | Tests only | Unit tests |
+| Mission file formats | 航线文件格式 | Simulator | e2e: .waypoints, .plan and .kml as other ground stations write them |
 | Terrain profile | 地形剖面 | Tests only | Unit tests |
-| Voice and audio alerts | 语音和声音告警 | Tests only | Unit tests |
-| Gamepad | 手柄 | Tests only | Unit tests |
+| Voice and audio alerts | 语音和声音告警 | SITL | CI: the armed message on real firmware, with speech stubbed. Sound itself not checked |
+| Gamepad | 手柄 | SITL | CI: a stubbed pad moves channel 1 on real firmware. No real pad |
 | 10 languages | 10 种语言 | Tests only | Key completeness only, not reviewed by native speakers |
 | Plugins and scripts | 插件和脚本 | Tests only | Unit tests |
 | RTK through NTRIP | NTRIP RTK | Tests only | No real base station |
