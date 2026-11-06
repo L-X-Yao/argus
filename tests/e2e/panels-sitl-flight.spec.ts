@@ -145,12 +145,31 @@ test('MapControls fly the same as the sidebar', async () => {
   await expect(overlay).toBeVisible();
   await expect(overlay.getByRole('button', { name: label('ctrl.rtl'), exact: true })).toBeVisible();
 
-  await overlay.getByRole('button', { name: label('ctrl.pause'), exact: true }).first().click();
+  await overlay
+    .getByRole('button', { name: label('ctrl.pause'), exact: true })
+    .first()
+    .click();
   await expect.poll(() => probe.mode).toBe(LOITER);
   await expect(overlay.locator('span.text-primary')).toContainText('悬停');
 
   await page.keyboard.press('m');
   await expect(overlay).toHaveCount(0);
+});
+
+test('in Plan the map stays where it is put while the vehicle reports a position', async () => {
+  // Not nav(): with a mission loaded the tab carries the number of its waypoints.
+  await page.locator('nav button', { hasText: label('tab.plan') }).click();
+  const start = await vehicleOnMap(page);
+  await page.mouse.move(start.x + 200, start.y + 100);
+  await page.mouse.down();
+  await page.mouse.move(start.x + 80, start.y + 40, { steps: 8 });
+  await page.mouse.up();
+  // Hovering, unlike on the ground: each report differs a little, and would move a map that follows.
+  await page.waitForTimeout(1500);
+  const moved = await vehicleOnMap(page);
+  expect(moved.x).toBeLessThan(start.x - 100);
+  await nav('tab.fly').click();
+  await expect(controls).toBeVisible();
 });
 
 test('Start mission flies it, and MissionProgress keeps up with the FC', async () => {
@@ -208,7 +227,10 @@ test('the flight summary shows what the FC flew', async () => {
   await expect(summary).toBeVisible();
 
   const value = async (key: string) => {
-    const text = await summary.getByText(label(key), { exact: true }).locator('xpath=following-sibling::div').textContent();
+    const text = await summary
+      .getByText(label(key), { exact: true })
+      .locator('xpath=following-sibling::div')
+      .textContent();
     return text!;
   };
   expect(Math.abs(parseFloat(await value('summary.maxAlt')) - probe.maxAltitude)).toBeLessThan(1);
@@ -268,4 +290,3 @@ test('an arm and disarm with no flight reports none', async () => {
   await page.waitForTimeout(1000);
   await expect(page.getByRole('dialog').filter({ hasText: label('summary.title') })).toHaveCount(0);
 });
-

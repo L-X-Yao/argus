@@ -14,6 +14,7 @@ export default defineConfig({
     viewport: { width: 1600, height: 1000 },
     baseURL: process.env.ARGUS_URL,
     headless: true,
+    actionTimeout: 15000, // a control that never turns up should not take the whole test timeout
     screenshot: 'only-on-failure',
     trace: 'retain-on-failure',
   },

@@ -193,20 +193,6 @@ test.describe('Waypoints', () => {
   });
 });
 
-test.describe('The map', () => {
-  test('stays where it is put while planning', async () => {
-    await page.locator('button.map-btn', { hasText: label('map.home') }).click();
-    const start = await vehicleOnMap(page);
-    await page.mouse.move(start.x + 200, start.y + 100);
-    await page.mouse.down();
-    await page.mouse.move(start.x + 80, start.y + 40, { steps: 8 });
-    await page.mouse.up();
-    await page.waitForTimeout(1500); // the FC sends a position ten times a second
-    const moved = await vehicleOnMap(page);
-    expect(moved.x).toBeLessThan(start.x - 100);
-  });
-});
-
 test.describe('Survey', () => {
   test('a grid covers the area at the spacing and heading asked for', async () => {
     await page.locator('button.map-btn', { hasText: label('map.survey') }).click();

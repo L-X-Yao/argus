@@ -19,6 +19,20 @@ test.afterAll(async () => {
   await page?.close();
 });
 
+/**
+ * At the speed these runs go a test of 5 s is over in a second, and a Stop that did nothing
+ * would look like one that worked. The simulator takes a new speed at once (SIM_Aircraft.cpp:475).
+ */
+async function inRealTime(run: () => Promise<void>) {
+  const speedup = await probe.param('SIM_SPEEDUP');
+  await probe.setParam('SIM_SPEEDUP', 1);
+  try {
+    await run();
+  } finally {
+    await probe.setParam('SIM_SPEEDUP', speedup);
+  }
+}
+
 // By its place in the grid: a spinning button shows a countdown instead of its name.
 const motor = (dialog: Locator, index: number) =>
   dialog.locator('div.grid-cols-4 > div').nth(index).getByRole('button');
@@ -73,10 +87,12 @@ test.describe('Motor test', () => {
     await dialog.locator('#motor-throttle').fill('30');
     await dialog.locator('#motor-duration').fill('5');
     const started = probe.texts.length;
-    await motor(dialog, 0).click();
-    await expect.poll(() => Math.max(...probe.servo.slice(0, 4))).toBeGreaterThanOrEqual(1250);
-    await dialog.getByRole('button', { name: label('motor.stop') }).click();
-    await expect.poll(() => Math.max(...probe.servo.slice(0, 4)), { timeout: 1500 }).toBeLessThanOrEqual(1100);
+    await inRealTime(async () => {
+      await motor(dialog, 0).click();
+      await expect.poll(() => Math.max(...probe.servo.slice(0, 4))).toBeGreaterThanOrEqual(1250);
+      await dialog.getByRole('button', { name: label('motor.stop') }).click();
+      await expect.poll(() => Math.max(...probe.servo.slice(0, 4)), { timeout: 1500 }).toBeLessThanOrEqual(1100);
+    });
     await page.waitForTimeout(1000);
     expect(probe.texts.slice(started).filter((t) => t === 'starting motor test')).toHaveLength(1);
     await close(page, dialog);
@@ -89,10 +105,12 @@ test.describe('Motor test panel', () => {
     const dialog = await tool(page, 'tool-motor', label('motor.title'));
     await dialog.locator('#motor-throttle').fill('30');
     await dialog.locator('#motor-duration').fill('5');
-    await motor(dialog, 0).click();
-    await expect.poll(() => Math.max(...probe.servo.slice(0, 4))).toBeGreaterThanOrEqual(1250);
-    await close(page, dialog);
-    await expect.poll(() => Math.max(...probe.servo.slice(0, 4)), { timeout: 1500 }).toBeLessThanOrEqual(1100);
+    await inRealTime(async () => {
+      await motor(dialog, 0).click();
+      await expect.poll(() => Math.max(...probe.servo.slice(0, 4))).toBeGreaterThanOrEqual(1250);
+      await close(page, dialog);
+      await expect.poll(() => Math.max(...probe.servo.slice(0, 4)), { timeout: 1500 }).toBeLessThanOrEqual(1100);
+    });
   });
 });
 
@@ -249,4 +267,3 @@ test.describe('ESC calibration', () => {
     await close(page, dialog);
   });
 });
-
