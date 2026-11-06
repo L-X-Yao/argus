@@ -20,6 +20,9 @@ import urllib.request
 import zipfile
 from pathlib import Path
 
+# The launchers have Chinese names, and a Windows console may not take them.
+sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+
 SCRIPT_DIR = Path(__file__).resolve().parent.parent
 OUTPUT_DIR = SCRIPT_DIR / "release"
 
