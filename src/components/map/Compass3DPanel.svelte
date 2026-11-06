@@ -2,7 +2,6 @@
   import { untrack } from 'svelte';
   import { app } from '../../lib/stores.svelte';
   import { dispatch } from '../../lib/transport';
-  import { isSerialConnected, serialCalCompass } from '../../lib/transport';
   import { t } from '../../lib/i18n.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
   import { X, Compass } from '@lucide/svelte';
@@ -87,10 +86,6 @@
       ctx.fillStyle = dist > 0.7 ? '#4fc3f7' : '#ff9800';
       ctx.fillRect(px - 1, py - 1, 2, 2);
     }
-
-    ctx.fillStyle = '#fff';
-    ctx.font = '10px monospace';
-    ctx.fillText(`${t('compass3d.samples')}: ${samples.length}`, 8, 14);
   });
 
   function onMouseDown(e: MouseEvent) {
@@ -107,9 +102,22 @@
     dragging = false;
   }
 
+  // Started with autosave 0, so the FC keeps a result only when told to: see
+  // cmd_cal_compass, and CalibrationPanel, which does the same for its own runs.
+  let calFrom = $state(-1); // where the event log stood when this panel started a calibration
+  $effect(() => {
+    if (calFrom < 0) return;
+    const result = app.events
+      .slice(calFrom > app.events.length ? 0 : calFrom)
+      .find((ev) => ev.event_type === 'cal_compass' && /complete|完成|failed|失败/i.test(ev.text));
+    if (!result) return;
+    calFrom = -1;
+    if (!/failed|失败/i.test(result.text)) dispatch('cal_compass_accept');
+  });
+
   function startCal() {
-    if (isSerialConnected()) serialCalCompass();
-    else dispatch('cal_compass');
+    calFrom = app.events.length;
+    dispatch('cal_compass');
   }
   function clearSamples() {
     samples = [];
@@ -152,9 +160,10 @@
           onmouseleave={onMouseUp}
         ></canvas>
       </div>
-      <div class="flex gap-2 mt-3">
+      <div class="flex items-center gap-2 mt-3">
         <Button variant="default" size="sm" onclick={startCal} disabled={!app.drone.connected}>{t('cal.start')}</Button>
         <Button variant="outline" size="sm" onclick={clearSamples}>{t('inspector.clear')}</Button>
+        <span class="ml-auto text-xs font-mono text-muted-foreground">{t('compass3d.samples')}: {samples.length}</span>
       </div>
     </div>
   </div>
