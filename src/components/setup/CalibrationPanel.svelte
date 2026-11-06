@@ -129,10 +129,14 @@
       const m = ev.text.match(/(\d+)%/);
       if (m) {
         pct = Math.max(pct, parseInt(m[1]));
-      } else if (/complete|完成|calibrated/i.test(ev.text)) {
-        done = true;
+      } else if (
+        /complete|完成|calibrated/i.test(ev.text) ||
+        ev.text === t('cal.s.compassDone') ||
+        ev.text === t('cal.s.compassReboot')
+      ) {
+        done = true; // on WebSerial the text is in the UI language
       }
-      if (/failed|失败/i.test(ev.text)) failed = true;
+      if (/failed|失败/i.test(ev.text) || ev.text === t('cal.s.compassFailed')) failed = true;
     }
     return { pct, done, failed };
   });

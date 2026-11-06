@@ -144,7 +144,7 @@
   let uploadTimer: ReturnType<typeof setTimeout> | null = null;
   let uploading = $state(false);
   // High-water-mark on app.events for the in-flight upload — see $effect below.
-  let _uploadEventSeq = $state(0);
+  let _uploadMark: (typeof app.events)[number] | undefined;
 
   // Ack-driven completion: backend emits mission_ack_ok / mission_ack_fail
   // via ws.ts when MISSION_ACK arrives from the FC. The hard 3s timer the
@@ -156,7 +156,7 @@
     if (!uploading) return;
     for (let i = app.events.length - 1; i >= 0; i--) {
       const ev = app.events[i];
-      if (ev.seq !== undefined && ev.seq <= _uploadEventSeq) break;
+      if (ev === _uploadMark) break;
       if (ev.event_type === 'mission_ack_ok' || ev.event_type === 'mission_ack_fail') {
         uploading = false;
         if (uploadTimer) {
@@ -170,7 +170,8 @@
 
   function uploadMission() {
     if (!app.waypoints.length || uploading) return;
-    _uploadEventSeq = app.events.length > 0 ? (app.events[app.events.length - 1].seq ?? 0) : 0;
+    // The last event so far: the ack that counts comes after it, not from an earlier upload.
+    _uploadMark = app.events[app.events.length - 1];
     uploading = true;
     addToast(t('toast.uploading'), 'info', 3000);
     // WebSerial direct mode runs its own state machine in transport.ts and

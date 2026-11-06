@@ -139,7 +139,8 @@
   function applyAllDiff() {
     let count = 0;
     for (const row of allRows) {
-      if (row.status === 'diff' && row.file !== undefined && !applied.has(row.name)) {
+      // STAT_* are the FC's own running counters, which an old file would only set back.
+      if (row.status === 'diff' && row.file !== undefined && !applied.has(row.name) && !row.name.startsWith('STAT_')) {
         dispatch('param_set', undefined, { name: row.name, value: row.file });
         applied.add(row.name);
         count++;
