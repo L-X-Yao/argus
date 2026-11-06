@@ -35,9 +35,35 @@ const linkLost = () =>
     return app.serialLinkLost as boolean;
   });
 
+const store = <T>(body: string) =>
+  page.evaluate(async (code) => {
+    const url = '/src/lib/stores.svelte.ts';
+    const { app } = await import(/* @vite-ignore */ url);
+    return new Function('app', code)(app) as T;
+  }, body);
+
 test.beforeAll(async ({ browser }) => {
   page = await browser.newPage();
   sitl = await openBridge(page, SITL!, SYSID);
+  // Voice and a gamepad, as far as a headless browser has them: what the app says, and
+  // a stick it can read. What they do with them is the app's own code.
+  await page.addInitScript(() => {
+    const w = window as unknown as { __spoken: string[]; __axes: number[] };
+    w.__spoken = [];
+    w.__axes = [0, 0, 0, 0];
+    Object.defineProperty(window, 'speechSynthesis', {
+      configurable: true,
+      value: { pending: false, cancel() {}, speak: (u: { text: string }) => w.__spoken.push(u.text) },
+    });
+    (window as unknown as { SpeechSynthesisUtterance: unknown }).SpeechSynthesisUtterance = class {
+      lang = '';
+      rate = 1;
+      volume = 1;
+      constructor(public text: string) {}
+    };
+    navigator.getGamepads = () =>
+      [{ id: 'test pad', index: 0, connected: true, axes: w.__axes, buttons: [] }] as unknown as Gamepad[];
+  });
   await connectUsb(page);
   await expect.poll(() => drone<boolean>('connected'), { timeout: 30000 }).toBe(true);
   await expect.poll(() => drone('gps_fix_raw'), { timeout: 120000 }).toBeGreaterThanOrEqual(3);
@@ -46,6 +72,10 @@ test.beforeAll(async ({ browser }) => {
 test.afterAll(async () => {
   sitl?.close();
   await page?.close();
+});
+
+test('voice alerts are on', async () => {
+  await store<void>('app.voiceEnabled = true');
 });
 
 test('a vehicle that is not system 1 answers what connecting asks of it', async () => {
@@ -96,6 +126,32 @@ test('it arms and takes off', async () => {
     .toBe(true);
   await send('takeoff', undefined, { alt: 20 });
   await expect.poll(() => drone('alt_rel'), { timeout: 60000 }).toBeGreaterThan(15);
+});
+
+test('the voice says the vehicle armed', async () => {
+  const spoken = () => page.evaluate(() => (window as unknown as { __spoken: string[] }).__spoken);
+  expect(await spoken()).toContain('已解锁');
+});
+
+test('a gamepad moves the channels on the FC', async () => {
+  const startGamepad = () =>
+    page.evaluate(async () => {
+      const url = '/src/lib/gamepad.svelte.ts';
+      const { startGamepad: start } = await import(/* @vite-ignore */ url);
+      (window as unknown as { __axes: number[] }).__axes = [0.5, 0, 0, 0];
+      start();
+    });
+  const stopGamepad = () =>
+    page.evaluate(async () => {
+      const url = '/src/lib/gamepad.svelte.ts';
+      const { stopGamepad: stop } = await import(/* @vite-ignore */ url);
+      stop();
+    });
+  await startGamepad();
+  // Half a stick to the right, less the deadzone, as the firmware reads channel 1 back.
+  await expect.poll(async () => (await drone<number[]>('rc'))[0], { timeout: 15000 }).toBeGreaterThan(1700);
+  await stopGamepad();
+  await send('rc_override', undefined, { channels: [0, 0, 0, 0, 0, 0, 0, 0] });
 });
 
 test('a USB drop in the air keeps the flight on screen and in the books', async () => {

@@ -181,6 +181,18 @@ describe('startGamepad / stopGamepad', () => {
   });
 });
 
+describe('a pad the browser announced before start', () => {
+  it('is read all the same', () => {
+    vi.stubGlobal('navigator', {
+      getGamepads: vi.fn(() => [null, { id: 'pad', index: 1, connected: true, axes: [], buttons: [] }]),
+    });
+    startGamepad();
+    expect(gamepad.connected).toBe(true);
+    expect(gamepad.name).toBe('pad');
+    stopGamepad();
+  });
+});
+
 describe('onConnect / onDisconnect handlers', () => {
   it('onConnect sets connected state and name', () => {
     startGamepad();

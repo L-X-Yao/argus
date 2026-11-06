@@ -55,6 +55,10 @@ export function startGamepad() {
   gamepad.enabled = true;
   window.addEventListener('gamepadconnected', onConnect);
   window.addEventListener('gamepaddisconnected', onDisconnect);
+  // The browser announces a pad once, on its first input: one touched before this
+  // listener existed would otherwise never be read.
+  const known = Array.from(navigator.getGamepads()).find((gp) => gp?.connected);
+  if (known) attach(known);
   poll();
 }
 
@@ -67,10 +71,14 @@ export function stopGamepad() {
   gamepad.connected = false;
 }
 
-function onConnect(e: GamepadEvent) {
-  gpIndex = e.gamepad.index;
+function attach(gp: Gamepad) {
+  gpIndex = gp.index;
   gamepad.connected = true;
-  gamepad.name = e.gamepad.id.slice(0, 40);
+  gamepad.name = gp.id.slice(0, 40);
+}
+
+function onConnect(e: GamepadEvent) {
+  attach(e.gamepad);
 }
 
 function onDisconnect() {
