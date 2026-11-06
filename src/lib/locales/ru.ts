@@ -1118,6 +1118,7 @@ const messages: Record<string, string> = {
   'fltmode.noSwitch': 'В этой прошивке нет параметров переключателя режимов',
   'mission.splinePlane': 'ArduPlane не поддерживает сплайновые точки маршрута',
   'mission.subDepth': 'Для Sub высота точек маршрута должна быть отрицательной (глубина)',
+  'setup.copterOnly': 'Эта панель только для Copter. На этом аппарате используйте список параметров.',
   'serial.err.notConnected': 'Нет подключения по последовательному порту',
   'serial.err.uploadBusy': 'Уже идёт другая загрузка',
   'serial.err.downloadBusy': 'Идёт скачивание миссии',

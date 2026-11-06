@@ -1121,6 +1121,7 @@ const messages: Record<string, string> = {
   'fltmode.noSwitch': 'Ce firmware n’a pas de paramètres de sélecteur de mode',
   'mission.splinePlane': 'ArduPlane ne prend pas en charge les points de passage spline',
   'mission.subDepth': 'Les points de passage Sub exigent une altitude négative (profondeur)',
+  'setup.copterOnly': 'Ce panneau est réservé à Copter. Sur ce véhicule, utilisez la liste des paramètres.',
   'serial.err.notConnected': 'Non connecté en série',
   'serial.err.uploadBusy': 'Un autre envoi est en cours',
   'serial.err.downloadBusy': 'Un téléchargement de mission est en cours',

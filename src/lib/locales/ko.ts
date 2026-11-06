@@ -1113,6 +1113,7 @@ const messages: Record<string, string> = {
   'fltmode.noSwitch': '이 펌웨어에는 모드 스위치 파라미터가 없습니다',
   'mission.splinePlane': 'ArduPlane은 스플라인 웨이포인트를 지원하지 않습니다',
   'mission.subDepth': 'Sub 웨이포인트의 고도는 음수(수심)여야 합니다',
+  'setup.copterOnly': '이 패널은 Copter 전용입니다. 이 기체에서는 매개변수 목록을 사용하세요.',
   'serial.err.notConnected': '시리얼로 연결되어 있지 않습니다',
   'serial.err.uploadBusy': '다른 업로드가 진행 중입니다',
   'serial.err.downloadBusy': '미션 다운로드가 진행 중입니다',

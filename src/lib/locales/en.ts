@@ -201,6 +201,7 @@ const messages: Record<string, string> = {
   'wp.spline': 'Spline',
   'mission.splinePlane': 'Spline waypoints are not supported on ArduPlane',
   'mission.subDepth': 'Sub waypoints need a negative altitude (depth)',
+  'setup.copterOnly': 'This panel is for Copter. On this vehicle, use the parameter list.',
   'serial.err.notConnected': 'Not connected via serial',
   'serial.err.uploadBusy': 'Another upload is in progress',
   'serial.err.downloadBusy': 'A mission download is in progress',

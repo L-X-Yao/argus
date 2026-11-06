@@ -10,6 +10,10 @@
 
   let { onclose }: { onclose: () => void } = $props();
 
+  // These values and parameter names are Copter's. On a Plane 3 is Terminate, not Smart RTL
+  // (ArduPlane/defines.h), and THR_FAILSAFE stands in for FS_THR_ENABLE.
+  let copter = $derived(vehicleKind() === 'copter');
+
   /* ── Helpers ── */
 
   function saveParams(pairs: [string, number][]) {
@@ -155,6 +159,9 @@
 
     <div class="flex-1 min-h-0 overflow-y-auto p-4 space-y-3">
 
+      {#if !copter}
+        <p class="text-xs text-warning" data-testid="copter-only">{t('setup.copterOnly')}</p>
+      {/if}
       {#if !paramsAvailable}
         <!-- Hint: params not loaded -->
         <div class="p-4 rounded-lg bg-muted/50 border border-border/50 text-center">
@@ -215,7 +222,7 @@
               </div>
             </div>
             <div class="flex justify-end pt-1">
-              <Button variant="default" size="sm" class="h-7 text-xs px-4" onclick={saveBattery}>
+              <Button variant="default" size="sm" class="h-7 text-xs px-4" onclick={saveBattery} disabled={!copter}>
                 {t('failsafe.save')}
               </Button>
             </div>
@@ -265,7 +272,7 @@
               </div>
             </div>
             <div class="flex justify-end pt-1">
-              <Button variant="default" size="sm" class="h-7 text-xs px-4" onclick={saveRc}>
+              <Button variant="default" size="sm" class="h-7 text-xs px-4" onclick={saveRc} disabled={!copter}>
                 {t('failsafe.save')}
               </Button>
             </div>
@@ -305,7 +312,7 @@
               </select>
             </div>
             <div class="flex justify-end pt-1">
-              <Button variant="default" size="sm" class="h-7 text-xs px-4" onclick={saveGcs}>
+              <Button variant="default" size="sm" class="h-7 text-xs px-4" onclick={saveGcs} disabled={!copter}>
                 {t('failsafe.save')}
               </Button>
             </div>
@@ -354,7 +361,7 @@
               </div>
             </div>
             <div class="flex justify-end pt-1">
-              <Button variant="default" size="sm" class="h-7 text-xs px-4" onclick={saveEkf}>
+              <Button variant="default" size="sm" class="h-7 text-xs px-4" onclick={saveEkf} disabled={!copter}>
                 {t('failsafe.save')}
               </Button>
             </div>

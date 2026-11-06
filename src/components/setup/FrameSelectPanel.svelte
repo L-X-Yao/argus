@@ -1,5 +1,6 @@
 <script lang="ts">
   import { app, addToast } from '../../lib/stores.svelte';
+  import { vehicleKind } from '../../lib/vehicleModes';
   import { dispatch } from '../../lib/transport';
   import { t } from '../../lib/i18n.svelte';
   import { paramState } from '../../lib/paramStore.svelte';
@@ -7,6 +8,9 @@
   import Button from '$lib/components/ui/button/button.svelte';
 
   let { onclose }: { onclose: () => void } = $props();
+
+  // FRAME_CLASS means something else on a Rover, where 2 is a boat, and nothing elsewhere.
+  let copter = $derived(vehicleKind() === 'copter');
 
   /* ── Helpers ── */
 
@@ -129,6 +133,9 @@
     </div>
 
     <div class="flex-1 min-h-0 overflow-y-auto p-4">
+      {#if !copter}
+        <p class="text-xs text-warning" data-testid="copter-only">{t('setup.copterOnly')}</p>
+      {/if}
       {#if !paramsAvailable}
         <div class="p-4 rounded-lg bg-muted/50 border border-border/50 text-center">
           <p class="text-xs text-muted-foreground">{t('param.connectHint')}</p>
@@ -207,7 +214,7 @@
             size="sm"
             class="h-8 text-xs px-6"
             onclick={writeFrame}
-            disabled={!app.drone.connected}
+            disabled={!app.drone.connected || !copter}
           >
             {t('frame.write')}
           </Button>

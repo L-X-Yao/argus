@@ -1,5 +1,6 @@
 <script lang="ts">
   import { app } from '../../lib/stores.svelte';
+  import { vehicleKind } from '../../lib/vehicleModes';
   import { dispatch } from '../../lib/transport';
   import { getParam } from '../../lib/paramStore.svelte';
   import { t } from '../../lib/i18n.svelte';
@@ -7,6 +8,9 @@
   import { X, AlertTriangle } from '@lucide/svelte';
 
   let { onclose }: { onclose: () => void } = $props();
+
+  // ESC_CALIBRATION is a Copter parameter: written elsewhere, nothing happens.
+  let copter = $derived(vehicleKind() === 'copter');
 
   // ArduPilot calibrates ESCs by itself, during boot: with ESC_CALIBRATION at 3 it drives
   // every motor output to full for 5 s and then to minimum, and stays there until the next
@@ -52,7 +56,9 @@
         <span class="text-xs font-bold text-destructive">{t('esccal.warn')}</span>
       </div>
 
-      {#if !connected}
+      {#if !copter}
+        <p class="text-xs text-warning" data-testid="copter-only">{t('setup.copterOnly')}</p>
+      {:else if !connected}
         <div class="text-center py-8 text-sm text-muted-foreground">{t('console.notConnected')}</div>
       {:else}
         <ol class="space-y-2">

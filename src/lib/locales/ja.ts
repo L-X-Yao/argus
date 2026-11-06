@@ -1115,6 +1115,7 @@ const messages: Record<string, string> = {
   'fltmode.noSwitch': 'このファームウェアにはモードスイッチのパラメータがありません',
   'mission.splinePlane': 'ArduPlane はスプライン経由点に対応していません',
   'mission.subDepth': 'Sub の経由点の高度は負の値（深度）にしてください',
+  'setup.copterOnly': 'このパネルは Copter 専用です。この機体ではパラメータ一覧を使ってください。',
   'serial.err.notConnected': 'シリアル接続されていません',
   'serial.err.uploadBusy': '別のアップロードを実行中です',
   'serial.err.downloadBusy': 'ミッションのダウンロードを実行中です',
