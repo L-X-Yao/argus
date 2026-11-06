@@ -17,12 +17,10 @@
   let measuredVoltage = $state('');
   let calculatedMult = $state<number | null>(null);
   let manualAmpPerVlt = $state('');
-  let selectedCells = $state(0);
 
   /* ── Derived values ── */
   let voltMult = $derived(getParam('BATT_VOLT_MULT', 0));
   let ampPerVlt = $derived(getParam('BATT_AMP_PERVLT', 0));
-  let nCells = $derived(getParam('BATT_N_CELLS', 0));
   let connected = $derived(app.drone.connected);
 
   /* ── Actions ── */
@@ -45,12 +43,6 @@
     if (!val || val <= 0) return;
     writeParam('BATT_AMP_PERVLT', val);
     manualAmpPerVlt = '';
-  }
-
-  function writeCells() {
-    if (selectedCells >= 1 && selectedCells <= 14) {
-      writeParam('BATT_N_CELLS', selectedCells);
-    }
   }
 </script>
 
@@ -162,36 +154,6 @@
           />
           <Button variant="secondary" size="xs" onclick={writeAmpPerVlt}
                   disabled={!manualAmpPerVlt}>
-            {t('power.write')}
-          </Button>
-        </div>
-      </div>
-
-      <!-- ════════════════════════════════════════════ -->
-      <!-- Cell Count                                   -->
-      <!-- ════════════════════════════════════════════ -->
-      <div class="rounded-lg border border-border/50 bg-muted/20 p-3">
-        <p class="text-xs font-semibold text-foreground mb-2">{t('power.cells')}</p>
-
-        <!-- Current value -->
-        <div class="flex items-center justify-between mb-2">
-          <span class="text-[11px] text-muted-foreground">BATT_N_CELLS</span>
-          <span class="text-xs font-mono font-bold text-foreground">{nCells}</span>
-        </div>
-
-        <!-- Dropdown -->
-        <div class="flex items-center gap-2">
-          <select
-            bind:value={selectedCells}
-            class="flex-1 h-7 px-2 text-xs font-mono rounded-md border border-border bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
-          >
-            <option value={0} disabled>--</option>
-            {#each Array(14) as _, i}
-              <option value={i + 1}>{i + 1}S</option>
-            {/each}
-          </select>
-          <Button variant="secondary" size="xs" onclick={writeCells}
-                  disabled={selectedCells < 1}>
             {t('power.write')}
           </Button>
         </div>

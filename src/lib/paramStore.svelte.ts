@@ -88,8 +88,11 @@ export function startParamFetch() {
 }
 
 export function getParam(name: string, fallback: number): number {
+  // The list is read first and always: nameIndex is no state, so a $derived that only
+  // looked it up would never hear of a name arriving after the panel opened.
+  const list = paramState.list;
   const idx = nameIndex.get(name);
-  return idx !== undefined ? paramState.list[idx].value : fallback;
+  return idx !== undefined ? list[idx].value : fallback;
 }
 
 export function clearParams() {

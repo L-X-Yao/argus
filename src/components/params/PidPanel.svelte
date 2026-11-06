@@ -36,13 +36,21 @@
     step: number;
   }
 
-  // AC_AttitudeControl rate PID terms — P/I/D/FF per axis
-  const pidSliders: PidSliderDef[] = [
+  // @Range of each rate gain, AC_AttitudeControl_Multi.cpp:15-43 for roll and pitch and
+  // :201-222 for yaw. A tighter limit here would cut down a value the FC is flying with.
+  const rollPitchSliders: PidSliderDef[] = [
     { suffix: '_P',  labelKey: 'pid.rateP',  min: 0, max: 0.5,  step: 0.001 },
-    { suffix: '_I',  labelKey: 'pid.rateI',  min: 0, max: 0.5,  step: 0.001 },
+    { suffix: '_I',  labelKey: 'pid.rateI',  min: 0, max: 2,    step: 0.001 },
     { suffix: '_D',  labelKey: 'pid.rateD',  min: 0, max: 0.05, step: 0.0001 },
     { suffix: '_FF', labelKey: 'pid.rateFF', min: 0, max: 0.5,  step: 0.001 },
   ];
+  const yawSliders: PidSliderDef[] = [
+    { suffix: '_P',  labelKey: 'pid.rateP',  min: 0, max: 2.5,  step: 0.001 },
+    { suffix: '_I',  labelKey: 'pid.rateI',  min: 0, max: 1,    step: 0.001 },
+    { suffix: '_D',  labelKey: 'pid.rateD',  min: 0, max: 0.02, step: 0.0001 },
+    { suffix: '_FF', labelKey: 'pid.rateFF', min: 0, max: 0.5,  step: 0.001 },
+  ];
+  const slidersFor = (axis: Axis) => (axis === 'yaw' ? yawSliders : rollPitchSliders);
 
   /* ── State ── */
 
@@ -61,7 +69,7 @@
     _loaded = true;
     const v: Record<string, number> = {};
     for (const axis of axes) {
-      for (const s of pidSliders) {
+      for (const s of slidersFor(axis.id)) {
         const name = paramPrefix[axis.id] + s.suffix;
         v[name] = getParam(name, 0);
       }
@@ -189,9 +197,10 @@
         <!-- PID Sliders for active axis                   -->
         <!-- ════════════════════════════════════════════ -->
         <div class="space-y-4">
-          {#each pidSliders as slider (slider.suffix)}
+          {#each slidersFor(activeTab) as slider (slider.suffix)}
             {@const paramName = paramPrefix[activeTab] + slider.suffix}
-            {@const val = values[paramName] ?? 0}
+            <!-- The FC stores a float32, which reads back as 0.14200000464916229. -->
+            {@const val = Number((values[paramName] ?? 0).toPrecision(6))}
             <div class="rounded-lg border border-border bg-muted/20 p-3">
               <!-- Label row -->
               <div class="flex items-center justify-between mb-2">

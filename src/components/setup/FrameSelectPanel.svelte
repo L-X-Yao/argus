@@ -23,35 +23,50 @@
     value: number;
     labelKey: string;
     ascii: string;
-    hasType: boolean;
+    types: number[];
   }
 
+  // FRAME_CLASS @Values, ArduCopter/Parameters.cpp:689. Helicopters need firmware of their
+  // own, and the scripted classes a script on the FC. types: what each matrix takes,
+  // AP_MotorsMatrix.cpp:576 setup_quad_matrix and the setup_* after it. Any other
+  // combination leaves the FC refusing to arm, so only these are on offer.
   const frameClasses: FrameClassDef[] = [
-    { value: 1, labelKey: 'frame.quadX', ascii: '  X\n / \\\n|   |\n \\ /\n  X', hasType: true },
-    { value: 2, labelKey: 'frame.hexX', ascii: ' X   X\n  \\ /\n   O\n  / \\\n X   X\n  |  |\n  X  X', hasType: true },
-    { value: 3, labelKey: 'frame.octaX', ascii: 'X   X\n X X\n  O\n X X\nX   X', hasType: true },
-    { value: 4, labelKey: 'frame.octaQuad', ascii: 'XX XX\n  O\nXX XX', hasType: false },
-    { value: 5, labelKey: 'frame.triY', ascii: ' X   X\n  \\ /\n   O\n   |\n   X', hasType: false },
-    { value: 7, labelKey: 'frame.triY', ascii: ' X\n |\n O\n/ \\\nX   X', hasType: false },
-    { value: 13, labelKey: 'frame.single', ascii: '  X\n  |\n  O', hasType: false },
-    { value: 15, labelKey: 'frame.plane', ascii: ' __|__\n/  |  \\\n   |\n  / \\', hasType: false },
+    {
+      value: 1,
+      labelKey: 'frame.quad',
+      ascii: '  X\n / \\\n|   |\n \\ /\n  X',
+      types: [0, 1, 2, 3, 4, 5, 12, 13, 14, 19],
+    },
+    {
+      value: 2,
+      labelKey: 'frame.hexa',
+      ascii: ' X   X\n  \\ /\n   O\n  / \\\n X   X\n  |  |\n  X  X',
+      types: [0, 1, 3, 13, 14],
+    },
+    { value: 3, labelKey: 'frame.octa', ascii: 'X   X\n X X\n  O\n X X\nX   X', types: [0, 1, 2, 3, 13, 14, 15] },
+    { value: 4, labelKey: 'frame.octaQuad', ascii: 'XX XX\n  O\nXX XX', types: [0, 1, 2, 3, 12, 14] },
+    { value: 5, labelKey: 'frame.y6', ascii: ' X   X\n  \\ /\n   O\n   |\n   X', types: [10, 11] },
+    { value: 7, labelKey: 'frame.tri', ascii: ' X\n |\n O\n/ \\\nX   X', types: [] },
+    { value: 8, labelKey: 'frame.single', ascii: '  X\n  |\n  O', types: [] },
+    { value: 9, labelKey: 'frame.coax', ascii: '  X\n  X\n  |\n  O', types: [] },
   ];
 
-  /* ── Frame type definitions (for multi-rotor class with type variants) ── */
-
-  interface FrameTypeDef {
-    value: number;
-    labelKey: string;
-    desc: string;
-  }
-
-  const frameTypes: FrameTypeDef[] = [
-    { value: 0, labelKey: 'frame.quadPlus', desc: '+' },
-    { value: 1, labelKey: 'frame.quadX', desc: 'X' },
-    { value: 2, labelKey: 'frame.quadX', desc: 'V' },
-    { value: 3, labelKey: 'frame.quadX', desc: 'H' },
-    { value: 12, labelKey: 'frame.quadX', desc: 'Y6F' },
-  ];
+  // FRAME_TYPE @Values, ArduCopter/Parameters.cpp:233.
+  const frameTypeNames: Record<number, string> = {
+    0: '+',
+    1: 'X',
+    2: 'V',
+    3: 'H',
+    4: 'V-Tail',
+    5: 'A-Tail',
+    10: 'Y6B',
+    11: 'Y6F',
+    12: 'BetaFlight X',
+    13: 'DJI X',
+    14: 'CW X',
+    15: 'I',
+    19: 'Y4',
+  };
 
   /* ── State ── */
 
@@ -71,8 +86,13 @@
     selectedType = getParam('FRAME_TYPE', 1);
   });
 
-  let currentClassDef = $derived(frameClasses.find((c) => c.value === selectedClass));
-  let showTypeGrid = $derived(currentClassDef?.hasType ?? false);
+  let frameTypes = $derived(frameClasses.find((c) => c.value === selectedClass)?.types ?? []);
+  let showTypeGrid = $derived(frameTypes.length > 0);
+
+  function pickClass(fc: FrameClassDef) {
+    selectedClass = fc.value;
+    if (fc.types.length > 0 && !fc.types.includes(selectedType)) selectedType = fc.types[0];
+  }
 
   let currentClassParam = $derived(getParam('FRAME_CLASS', -1));
   let currentTypeParam = $derived(getParam('FRAME_TYPE', -1));
@@ -132,9 +152,7 @@
                   {selectedClass === fc.value
                   ? 'border-primary bg-primary/10 shadow-sm'
                   : 'border-border/50 bg-muted/20 hover:border-muted-foreground/30 hover:bg-muted/40'}"
-                onclick={() => {
-                  selectedClass = fc.value;
-                }}
+                onclick={() => pickClass(fc)}
               >
                 <pre
                   class="text-[9px] leading-tight font-mono text-center mb-1.5
@@ -158,29 +176,23 @@
           <div class="mb-4">
             <p class="text-xs font-semibold text-foreground uppercase tracking-wider mb-2">{t('frame.type')}</p>
             <div class="grid grid-cols-5 gap-2">
-              {#each frameTypes as ft (ft.value)}
+              {#each frameTypes as value (value)}
                 <button
                   class="flex flex-col items-center p-2.5 rounded-lg border-2 transition-all cursor-pointer
-                    {selectedType === ft.value
+                    {selectedType === value
                     ? 'border-primary bg-primary/10 shadow-sm'
                     : 'border-border/50 bg-muted/20 hover:border-muted-foreground/30 hover:bg-muted/40'}"
                   onclick={() => {
-                    selectedType = ft.value;
+                    selectedType = value;
                   }}
                 >
                   <span
-                    class="text-sm font-bold font-mono mb-1
-                    {selectedType === ft.value ? 'text-primary' : 'text-muted-foreground'}"
+                    class="text-xs font-bold font-mono mb-1
+                    {selectedType === value ? 'text-primary' : 'text-muted-foreground'}"
                   >
-                    {ft.desc}
+                    {frameTypeNames[value]}
                   </span>
-                  <span
-                    class="text-[10px]
-                    {selectedType === ft.value ? 'text-primary' : 'text-foreground'}"
-                  >
-                    {ft.desc}
-                  </span>
-                  <span class="text-[9px] text-muted-foreground mt-0.5">={ft.value}</span>
+                  <span class="text-[9px] text-muted-foreground mt-0.5">={value}</span>
                 </button>
               {/each}
             </div>

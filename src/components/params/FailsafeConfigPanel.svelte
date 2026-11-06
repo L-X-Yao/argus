@@ -55,24 +55,20 @@
     battMah     = getParam('BATT_LOW_MAH', 0);
 
     rcEnable    = getParam('FS_THR_ENABLE', 0);
-    // FS_THR_ENABLE is itself the action enum (0=disabled, 1=Always RTL,
-    // 2=Continue with Mission, 3=Always Land, 4=SmartRTL or RTL, ...).
-    // Use the same value for the action selector; the UI then maps it to
-    // a label via rcActions.
-    rcAction    = getParam('FS_THR_ENABLE', 0);
+    // FS_THR_ENABLE and FS_GCS_ENABLE are the action enums themselves, so the same value
+    // feeds the selector. 2 survives only in old parameter files: see rcActions below.
+    rcAction    = removedAction(getParam('FS_THR_ENABLE', 0));
     rcPwm       = getParam('FS_THR_VALUE', 975);
 
     gcsEnable   = getParam('FS_GCS_ENABLE', 0);
-    // FS_GCS_ENABLE is the action enum same as FS_THR_ENABLE.
-    gcsAction   = getParam('FS_GCS_ENABLE', 0);
+    gcsAction   = removedAction(getParam('FS_GCS_ENABLE', 0));
 
     ekfAction   = getParam('FS_EKF_ACTION', 0);
     ekfThresh   = getParam('FS_EKF_THRESH', 0.8);
   });
 
   /* ── Action option maps ── */
-  // AP_BattMonitor_Params.cpp: BATT_FS_LOW_ACT values for Copter:
-  // 0=Warn only, 1=Land, 2=RTL, 3=SmartRTL or RTL, 4=SmartRTL or Land, 5=Terminate
+  // AP_BattMonitor_Params.cpp:146 BATT_FS_LOW_ACT @Values{Copter}.
   const battActions: [number, string][] = [
     [0, 'failsafe.actionNone'],
     [1, 'failsafe.actionLand'],
@@ -80,37 +76,45 @@
     [3, 'failsafe.actionSmartRtl'],
     [4, 'failsafe.actionSmartRtlLand'],
     [5, 'failsafe.actionTerminate'],
+    [6, 'failsafe.actionAutoLand'],
+    [7, 'failsafe.actionBrakeLand'],
   ];
 
-  // ArduCopter/Parameters.cpp: FS_THR_ENABLE values:
-  // 0=Disabled, 1=Always RTL, 2=Continue Mission in Auto, 3=Always Land,
-  // 4=SmartRTL or RTL, 5=SmartRTL or Land
+  // ArduCopter/Parameters.cpp:127 FS_THR_ENABLE @Values. 2 is "removed in 4.0+": what it
+  // promised lives in FS_OPTIONS now, and the FC flies an RTL for it (events.cpp:24).
   const rcActions: [number, string][] = [
     [0, 'failsafe.actionNone'],
     [1, 'failsafe.actionRtl'],
-    [2, 'failsafe.actionContinue'],
     [3, 'failsafe.actionLand'],
     [4, 'failsafe.actionSmartRtl'],
     [5, 'failsafe.actionSmartRtlLand'],
+    [6, 'failsafe.actionAutoLand'],
+    [7, 'failsafe.actionBrakeLand'],
   ];
 
-  // ArduCopter/Parameters.cpp: FS_GCS_ENABLE values:
-  // 0=Disabled, 1=Always RTL, 2=Continue Mission in Auto,
-  // 3=SmartRTL or RTL, 4=SmartRTL or Land, 5=Always Land
+  // ArduCopter/Parameters.cpp:99 FS_GCS_ENABLE @Values. 2 is removed here too, and the FC
+  // refuses to arm on it (AP_Arming_Copter.cpp:216).
   const gcsActions: [number, string][] = [
     [0, 'failsafe.actionNone'],
     [1, 'failsafe.actionRtl'],
-    [2, 'failsafe.actionContinue'],
     [3, 'failsafe.actionSmartRtl'],
     [4, 'failsafe.actionSmartRtlLand'],
     [5, 'failsafe.actionLand'],
+    [6, 'failsafe.actionAutoLand'],
+    [7, 'failsafe.actionBrakeLand'],
   ];
 
+  /** The action the FC takes for a removed 2, which is also what Save puts in its place. */
+  function removedAction(value: number): number {
+    return value === 2 ? 1 : value;
+  }
+
+  // ArduCopter/Parameters.cpp:270 FS_EKF_ACTION @Values.
   const ekfActions: [number, string][] = [
     [0, 'failsafe.actionNone'],
     [1, 'failsafe.actionLand'],
-    // ArduPilot FS_EKF_ACTION value 2 = AltHold mode
     [2, 'failsafe.actionAltHold'],
+    [3, 'failsafe.actionLandAlways'],
   ];
 
   /* ── Section save handlers ── */
