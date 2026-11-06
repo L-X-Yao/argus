@@ -800,7 +800,7 @@ const messages: Record<string, string> = {
   'terrain.adjusted': '{n} waypoints ajustés pour le suivi de terrain ({alt}m AGL)',
   'terrain.noData': 'Données de terrain indisponibles',
   'terrain.routeChanged':
-    'La route a changé pendant l’attente des données de terrain, rien n’a été appliqué. Réessayez.',
+    'La route ou le point de départ a changé pendant l’attente des données de terrain, rien n’a été appliqué. Réessayez.',
   'terrain.clearance': 'Marge de dégagement',
   'terrain.profile': 'Profil de terrain',
   'terrain.profileTitle': 'Profil de terrain de la route',

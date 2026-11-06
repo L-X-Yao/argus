@@ -797,7 +797,7 @@ const messages: Record<string, string> = {
   'terrain.loading': '지형 데이터 로딩 중...',
   'terrain.adjusted': '{n}개의 웨이포인트를 지형 추종으로 조정했습니다 ({alt}m AGL)',
   'terrain.noData': '지형 데이터를 사용할 수 없음',
-  'terrain.routeChanged': '지형 데이터를 기다리는 동안 경로가 바뀌어 적용하지 않았습니다. 다시 시도하세요',
+  'terrain.routeChanged': '지형 데이터를 기다리는 동안 경로나 홈이 바뀌어 적용하지 않았습니다. 다시 시도하세요',
   'terrain.clearance': '이격 거리',
   'terrain.profile': '지형 프로필',
   'terrain.profileTitle': '경로 지형 프로필',

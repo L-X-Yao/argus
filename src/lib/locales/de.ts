@@ -800,7 +800,7 @@ const messages: Record<string, string> = {
   'terrain.adjusted': '{n} Wegpunkte für Geländefolge angepasst ({alt}m AGL)',
   'terrain.noData': 'Geländedaten nicht verfügbar',
   'terrain.routeChanged':
-    'Die Route hat sich beim Warten auf Geländedaten geändert, nichts wurde übernommen. Bitte erneut versuchen.',
+    'Route oder Startpunkt haben sich beim Warten auf Geländedaten geändert, nichts wurde übernommen. Bitte erneut versuchen.',
   'terrain.clearance': 'Bodenfreiheit',
   'terrain.profile': 'Geländeprofil',
   'terrain.profileTitle': 'Routen-Geländeprofil',

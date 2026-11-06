@@ -799,7 +799,8 @@ const messages: Record<string, string> = {
   'terrain.loading': 'Carregando terreno...',
   'terrain.adjusted': '{n} waypoints ajustados para seguimento de terreno ({alt}m AGL)',
   'terrain.noData': 'Dados de terreno indisponíveis',
-  'terrain.routeChanged': 'A rota mudou enquanto aguardava os dados do terreno, nada foi aplicado. Tente novamente.',
+  'terrain.routeChanged':
+    'A rota ou o ponto inicial mudou enquanto aguardava os dados do terreno, nada foi aplicado. Tente novamente.',
   'terrain.clearance': 'Separação',
   'terrain.profile': 'Perfil de terreno',
   'terrain.profileTitle': 'Perfil de terreno da rota',
