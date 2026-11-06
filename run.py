@@ -31,8 +31,8 @@ def parse_args(argv=None):
     parser.add_argument(
         '--host',
         default=cfg.HOST,
-        help='Bind address (default: ARGUS_HOST or 127.0.0.1). 0.0.0.0 exposes it on the LAN; '
-        'pages opened from another machine also need their origin in ARGUS_CORS_ORIGINS.',
+        help='Bind address (default: ARGUS_HOST or 127.0.0.1). Anything but this machine needs '
+        'GCS_AUTH_TOKEN, and pages opened from another machine their origin in ARGUS_CORS_ORIGINS.',
     )
     parser.add_argument('--port', type=int, default=cfg.PORT, help='HTTP port (default: ARGUS_PORT or 8100)')
     args = parser.parse_args(argv)
@@ -43,6 +43,9 @@ def parse_args(argv=None):
 
 def main():
     args = parse_args()
+    from backend.auth import refuse_if_exposed
+
+    refuse_if_exposed(args.host)
 
     sim_proc = None
     if args.sim:

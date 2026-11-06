@@ -31,6 +31,12 @@ Argus GCS is a ground control station that runs on a local network. Security con
 - **Network** — SSRF, CORS misconfiguration
 - **Dependencies** — known CVEs in third-party packages
 
+## Running It Safely
+
+- Argus listens on 127.0.0.1. Any other address needs `GCS_AUTH_TOKEN`, and it will not start without one: whoever reaches it can arm the vehicle.
+- It speaks plain HTTP. On a network you do not trust, put it behind a TLS proxy, or the token and the commands can be read on the way.
+- It does not sign MAVLink. Use a radio link with encryption of its own, or anyone on the frequency can send the vehicle commands.
+
 ## Supported Versions
 
 | Version | Supported |

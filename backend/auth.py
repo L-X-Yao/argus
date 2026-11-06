@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import hmac
+import ipaddress
 import os
 from pathlib import Path
 
@@ -128,6 +129,22 @@ async def auth_middleware(request: Request, call_next):
     if not _verify_cookie(request.cookies.get(COOKIE_NAME, "")):
         return JSONResponse(status_code=401, content={"error": "unauthorized"})
     return await call_next(request)
+
+
+def refuse_if_exposed(host: str) -> None:
+    """Without a token, whoever reaches the websocket can arm the vehicle. That is fine on this
+    machine and nowhere else. A blank host binds every interface."""
+    if auth_required():
+        return
+    try:
+        local = ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        local = host.lower() == "localhost"
+    if not local:
+        raise SystemExit(
+            f"Refusing to listen on {host or 'every interface'} without a token: anyone who can "
+            "reach it could arm the vehicle. Set GCS_AUTH_TOKEN, or listen on 127.0.0.1."
+        )
 
 
 def verify_ws_token(ws: WebSocket) -> bool:

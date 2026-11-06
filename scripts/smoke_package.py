@@ -25,6 +25,7 @@ from pathlib import Path
 
 PORT = 8123
 TOKEN_PORT = 8124
+EXPOSED_PORT = 8125
 SIM_PORT = 5771
 TOKEN = "smoke-token-123456"
 
@@ -127,6 +128,13 @@ def main() -> int:
             record("login", login[0] == 200)
             cookie = login[1].get("set-cookie", login[1].get("Set-Cookie", "")).split(";")[0]
             record("logged in, data", request(f"{token}/api/ports", None, {"Cookie": cookie})[0] == 200)
+
+            exposed = [python, r"backend\server.py", "--host", "0.0.0.0", "--no-browser", "--port", str(EXPOSED_PORT)]
+            try:
+                refused = subprocess.run(exposed, cwd=root, env=env, capture_output=True, text=True, timeout=30)
+                record("no token, no network", refused.returncode != 0 and "GCS_AUTH_TOKEN" in refused.stderr)
+            except subprocess.TimeoutExpired:
+                record("no token, no network", False, "it started")
         finally:
             for proc in procs:
                 proc.kill()

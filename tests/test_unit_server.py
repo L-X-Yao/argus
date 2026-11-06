@@ -4,7 +4,10 @@ import sys
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+from backend.auth import refuse_if_exposed
 from backend.server import _open_browser, main
 
 
@@ -50,3 +53,50 @@ class TestMain:
         with patch("sys.argv", ["server.py", "--no-browser"]), patch("backend.server.threading.Thread") as mock_thread:
             main()
             mock_thread.assert_not_called()
+
+
+class TestExposure:
+    """Whoever reaches the websocket can arm the vehicle, so a token comes before the network."""
+
+    @pytest.mark.parametrize("host", ["0.0.0.0", "::", "", "192.168.1.5", "argus.lan"])
+    def test_anything_beyond_this_machine_needs_a_token(self, host):
+        with patch("backend.auth.auth_required", return_value=False), pytest.raises(SystemExit) as refused:
+            refuse_if_exposed(host)
+        assert "GCS_AUTH_TOKEN" in str(refused.value)
+
+    @pytest.mark.parametrize("host", ["127.0.0.1", "127.0.0.2", "::1", "localhost", "LOCALHOST"])
+    def test_this_machine_needs_none(self, host):
+        with patch("backend.auth.auth_required", return_value=False):
+            refuse_if_exposed(host)
+
+    def test_a_token_opens_the_network(self):
+        with patch("backend.auth.auth_required", return_value=True):
+            refuse_if_exposed("0.0.0.0")
+
+    @patch("backend.server.uvicorn.run")
+    def test_the_package_does_not_start(self, serve):
+        argv = ["server.py", "--host", "0.0.0.0", "--no-browser"]
+        with (
+            patch("sys.argv", argv),
+            patch("backend.auth.auth_required", return_value=False),
+            pytest.raises(SystemExit),
+        ):
+            main()
+        serve.assert_not_called()
+
+    def test_the_launcher_does_not_start_either(self, monkeypatch):
+        import run
+        from backend.config import cfg
+
+        monkeypatch.setattr(cfg, "HOST", cfg.HOST)  # parse_args writes these, and this puts them back
+        monkeypatch.setattr(cfg, "PORT", cfg.PORT)
+        with (
+            patch("sys.argv", ["run.py", "--host", "0.0.0.0", "--sim"]),
+            patch("backend.auth.auth_required", return_value=False),
+            patch("uvicorn.run") as serve,
+            patch("run.subprocess.Popen") as simulator,
+            pytest.raises(SystemExit),
+        ):
+            run.main()
+        serve.assert_not_called()
+        simulator.assert_not_called()
