@@ -39,7 +39,9 @@ test.describe('3D map', () => {
     // `self.worker` is set by maplibre's worker entry, so this proves the
     // script executed rather than just that a Worker object was constructed.
     await expect
-      .poll(async () => (await worker).evaluate(() => typeof (self as { worker?: unknown }).worker))
+      .poll(async () => (await worker).evaluate(() => typeof (self as { worker?: unknown }).worker), {
+        timeout: 45000, // software GL on a hosted macOS runner takes this long to get there
+      })
       .toBe('object');
     expect(pageErrors).toEqual([]);
   });
