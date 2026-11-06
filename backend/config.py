@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import ipaddress
 import os
 import re
 from concurrent.futures import ThreadPoolExecutor
@@ -10,6 +11,11 @@ from functools import partial
 from pathlib import Path
 
 ROOT_DIR = Path(__file__).resolve().parent.parent
+
+# The benchmarking range, where proxy tools in fake-IP mode put every host they resolve.
+# Nothing internal lives there, and the internal-address guards would refuse every public
+# server behind such a tool.
+FAKE_IP_RANGE = ipaddress.ip_network("198.18.0.0/15")
 VERSION = re.search(r'^version = "([^"]+)"', (ROOT_DIR / "pyproject.toml").read_text(), re.MULTILINE).group(1)
 
 
@@ -107,6 +113,13 @@ class Config:
     # Mission
     MISSION_START_DELAY: float = 0.3
     MISSION_DL_TIMEOUT: float = 30.0
+    # A lost frame stalls a transfer, as each side waits for the other. Asked again after:
+    MISSION_RETRY_INTERVAL: float = 1.5
+    # An upload: the FC asks again for an item by itself every second
+    # (MissionItemProtocol::update), so this much silence means its count or ack went missing.
+    MISSION_UPLOAD_RETRY: float = 3.0
+    CMD_RETRY_INTERVAL: float = 1.0
+    CMD_TRIES: int = 3
     STORE_CLEAR_TIMEOUT: float = 3.0
     STREAM_REQUEST_SPACING: float = 0.01
     PARAM_LOAD_SPACING: float = 0.02

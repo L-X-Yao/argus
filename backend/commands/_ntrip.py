@@ -20,6 +20,7 @@ import struct
 import threading
 from typing import TYPE_CHECKING
 
+from ..config import FAKE_IP_RANGE
 from ..crc_extras import CRC_EXTRA
 from ..locale_text import lt
 from ..log import logger
@@ -194,6 +195,8 @@ def cmd_ntrip_start(link: DroneLink, param, data: dict):
         try:
             ip = ipaddress.ip_address(sockaddr[0])
         except ValueError:
+            continue
+        if ip in FAKE_IP_RANGE:
             continue
         if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast:
             return {"ok": False, "error": lt("err_ntrip_private", link.locale)}

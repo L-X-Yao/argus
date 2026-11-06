@@ -1,5 +1,6 @@
 """Tests for backend/terrain.py — SRTM elevation lookup paths."""
 
+import gzip
 import struct
 from unittest.mock import MagicMock, patch
 
@@ -85,16 +86,49 @@ class TestSrtmElevation:
 
         hgt = _make_hgt_data(55)
         mock_resp = MagicMock()
-        mock_resp.read.return_value = hgt
+        mock_resp.read.return_value = gzip.compress(hgt)
         with (
             patch.object(t_mod, "SRTM_CACHE", tmp_path),
-            patch("backend.terrain.urlreq.urlopen", return_value=mock_resp),
+            patch("backend.terrain.urlreq.urlopen", return_value=mock_resp) as urlopen,
         ):
             import asyncio
 
             elev = asyncio.run(_get_srtm_elevation(30.5, 120.5))
         assert elev == 55.0
         assert (tmp_path / "N30E120.hgt").exists()
+        assert urlopen.call_args[0][0].full_url.endswith("/skadi/N30/N30E120.hgt.gz")
+
+    def test_points_in_one_tile_share_a_download(self, tmp_path):
+        import asyncio
+
+        import backend.terrain as t_mod
+
+        mock_resp = MagicMock()
+        mock_resp.read.return_value = gzip.compress(_make_hgt_data(55))
+
+        async def route():
+            return await asyncio.gather(*(_get_srtm_elevation(30.1 + i / 100, 120.5) for i in range(5)))
+
+        with (
+            patch.object(t_mod, "SRTM_CACHE", tmp_path),
+            patch("backend.terrain.urlreq.urlopen", return_value=mock_resp) as urlopen,
+        ):
+            assert asyncio.run(route()) == [55.0] * 5
+        assert urlopen.call_count == 1
+
+    def test_a_truncated_download_returns_zero(self, tmp_path):
+        import asyncio
+
+        import backend.terrain as t_mod
+
+        mock_resp = MagicMock()
+        mock_resp.read.return_value = gzip.compress(_make_hgt_data(55))[:500]
+        with (
+            patch.object(t_mod, "SRTM_CACHE", tmp_path),
+            patch("backend.terrain.urlreq.urlopen", return_value=mock_resp),
+        ):
+            assert asyncio.run(_get_srtm_elevation(30.5, 120.5)) == 0
+        assert not (tmp_path / "N30E120.hgt").exists()
 
     def test_download_too_large_returns_zero(self, tmp_path):
         import backend.terrain as t_mod

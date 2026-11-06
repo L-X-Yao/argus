@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import asyncio
+import gzip
+import io
 import math
 import struct
 import urllib.error
@@ -15,6 +17,7 @@ from .config import ROOT_DIR, aio, aio_download, cfg
 router = APIRouter()
 
 SRTM_CACHE = ROOT_DIR / "srtm_cache"
+_tile_locks: dict[str, asyncio.Lock] = {}
 
 
 @router.get("/api/terrain/elevation", tags=["Map"])
@@ -38,6 +41,24 @@ async def api_terrain_elevation(request: Request):
     return {"elevations": list(elevations)}
 
 
+async def _fetch_tile(ns: str, ilat: int, fname: str, cache_file) -> bool:
+    # The server only holds them gzipped: a plain .hgt is a 404.
+    url = "https://elevation-tiles-prod.s3.amazonaws.com/skadi/%s%02d/%s.gz" % (ns, abs(ilat), fname)
+    try:
+        req = urlreq.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        data = await aio_download(
+            lambda: urlreq.urlopen(req, timeout=cfg.SRTM_DOWNLOAD_TIMEOUT).read(cfg.SRTM_FILE_MAX)
+        )
+        if len(data) >= cfg.SRTM_FILE_MAX:
+            return False
+        with gzip.GzipFile(fileobj=io.BytesIO(data)) as tile:
+            raw = await aio(tile.read, cfg.SRTM_FILE_MAX)
+        await aio(cache_file.write_bytes, raw)
+        return True
+    except (OSError, EOFError, urllib.error.URLError):
+        return False
+
+
 async def _get_srtm_elevation(lat: float, lon: float) -> float:
     ilat = int(math.floor(lat))
     ilon = int(math.floor(lon))
@@ -47,20 +68,16 @@ async def _get_srtm_elevation(lat: float, lon: float) -> float:
     cache_file = SRTM_CACHE / fname
     if not cache_file.exists():
         SRTM_CACHE.mkdir(parents=True, exist_ok=True)
-        srtm_count = await aio(lambda: sum(1 for _ in SRTM_CACHE.glob("*.hgt")) if SRTM_CACHE.exists() else 0)
-        if srtm_count >= cfg.SRTM_CACHE_MAX:
-            return 0
-        url = "https://elevation-tiles-prod.s3.amazonaws.com/skadi/%s%02d/%s" % (ns, abs(ilat), fname)
+        # The points of a route mostly share a tile, and each would download it otherwise.
+        lock = _tile_locks.setdefault(fname, asyncio.Lock())
         try:
-            req = urlreq.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-            data = await aio_download(
-                lambda: urlreq.urlopen(req, timeout=cfg.SRTM_DOWNLOAD_TIMEOUT).read(cfg.SRTM_FILE_MAX)
-            )
-            if len(data) >= cfg.SRTM_FILE_MAX:
-                return 0
-            await aio(cache_file.write_bytes, data)
-        except (OSError, urllib.error.URLError):
-            return 0
+            async with lock:
+                if not cache_file.exists():
+                    srtm_count = await aio(lambda: sum(1 for _ in SRTM_CACHE.glob("*.hgt")))
+                    if srtm_count >= cfg.SRTM_CACHE_MAX or not await _fetch_tile(ns, ilat, fname, cache_file):
+                        return 0
+        finally:
+            _tile_locks.pop(fname, None)
     try:
         data = await aio(cache_file.read_bytes)
         samples = 1201

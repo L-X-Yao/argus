@@ -14,7 +14,7 @@ test-cov:
 
 # tests/conftest.py starts its own simulator and backend.
 test-integration:
-	python -m pytest tests/test_integration.py -q --tb=short
+	python -m pytest tests/test_integration.py tests/test_integration_rest.py -q --tb=short
 
 build:
 	npm run build

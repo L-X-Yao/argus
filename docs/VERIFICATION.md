@@ -31,7 +31,7 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 | Commands, WebSerial | 53 | 9 | 31 | 0 | 3 | 0 | 10 |
 | Messages, backend | 35 | 28 | 3 | 0 | 4 | 0 | 0 |
 | Messages, WebSerial | 35 | 16 | 13 | 0 | 5 | 0 | 1 |
-| REST routes | 28 | 6 | 5 | 8 | 9 | 0 | 0 |
+| REST routes | 28 | 6 | 5 | 17 | 0 | 0 | 0 |
 | Panels | 80 | 13 | 3 | 21 | 41 | 2 | 0 |
 | Platform | 43 | 8 | 9 | 7 | 14 | 2 | 3 |
 
@@ -164,15 +164,15 @@ Real FC here means the route was in use during a session with a real flight cont
 | `GET /api/tile_sources` | Map sources | 地图源列表 | Simulator | Integration tests |
 | `GET /api/video` | Video stream | 视频流 | Simulator | Integration tests, no real camera |
 | `GET /api/video/stop` | Stop video | 停止视频 | Simulator | Integration tests, no real camera |
-| `POST /api/auth/generate` | Generate a token | 生成 Token | Tests only | Unit tests |
-| `POST /api/tile_bulk_download` | Download tiles for offline use | 批量下载瓦片 | Tests only | Unit tests |
-| `GET /api/mbtiles/list` | Offline map list | 离线地图列表 | Tests only | Unit tests |
-| `GET /api/mbtiles/{name}/{z}/{x}/{y}` | Offline map tiles | 离线地图瓦片 | Tests only | Unit tests |
-| `GET /api/terrain/elevation` | Terrain height | 地形高度 | Tests only | Unit tests |
-| `GET /api/firmware/list` | Stored firmware | 已保存固件 | Tests only | Unit tests |
-| `GET /api/firmware/online` | Firmware browser | 在线固件 | Tests only | Unit tests |
-| `POST /api/firmware/download` | Download firmware | 下载固件 | Tests only | Unit tests |
-| `GET /api/video/capabilities` | Video support check | 视频能力检测 | Tests only | Unit tests |
+| `POST /api/auth/generate` | Generate a token | 生成 Token | Simulator | Integration tests |
+| `POST /api/tile_bulk_download` | Download tiles for offline use | 批量下载瓦片 | Simulator | Integration tests: counts tiles. Whether a map server answers is up to it |
+| `GET /api/mbtiles/list` | Offline map list | 离线地图列表 | Simulator | Integration tests with a real file |
+| `GET /api/mbtiles/{name}/{z}/{x}/{y}` | Offline map tiles | 离线地图瓦片 | Simulator | Integration tests with a real file |
+| `GET /api/terrain/elevation` | Terrain height | 地形高度 | Simulator | Integration tests against the real terrain server |
+| `GET /api/firmware/list` | Stored firmware | 已保存固件 | Simulator | Integration tests |
+| `GET /api/firmware/online` | Firmware browser | 在线固件 | Simulator | Integration tests against firmware.ardupilot.org |
+| `POST /api/firmware/download` | Download firmware | 下载固件 | Simulator | Integration tests against firmware.ardupilot.org |
+| `GET /api/video/capabilities` | Video support check | 视频能力检测 | Simulator | Integration tests |
 
 ## Panels / 界面面板
 

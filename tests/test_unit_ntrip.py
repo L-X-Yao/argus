@@ -183,6 +183,15 @@ class TestCmdNtripStartFullPath:
         assert r and r["ok"] is False
         assert r["error"]  # non-empty error message (locale-dependent)
 
+    def test_a_fake_ip_from_a_proxy_tool_is_not_private(self):
+        link = make_link()
+        with (
+            patch("backend.commands._ntrip.socket.getaddrinfo", return_value=[(2, 1, 6, "", ("198.18.0.52", 2101))]),
+            patch("backend.commands._ntrip.threading.Thread"),
+        ):
+            r = cmd_ntrip_start(link, None, {"host": "rtk.example.com", "port": 2101, "mountpoint": "M"})
+        assert not r or r.get("ok") is not False
+
     def test_already_running_rejected(self):
         link = make_link()
         fake_thread = MagicMock()

@@ -127,6 +127,23 @@ class TestFirmwareDownloadSuccess:
         assert data["ok"] is False
         assert "resolve" in data["error"].lower()
 
+    def test_a_fake_ip_from_a_proxy_tool_is_not_internal(self):
+        result = self._download_from("198.18.0.52")
+        assert "internal" not in result.get("error", "").lower()
+
+    def test_the_rest_of_the_private_range_still_is(self):
+        assert "internal" in self._download_from("192.168.1.1")["error"].lower()
+
+    @staticmethod
+    def _download_from(ip):
+        import backend.firmware as fw
+
+        with (
+            patch("backend.firmware._socket.getaddrinfo", return_value=[(2, 1, 6, "", (ip, 443))]),
+            patch("backend.firmware.urlreq.urlopen", side_effect=OSError("stop here")),
+        ):
+            return fw._download_firmware("https://firmware.ardupilot.org/fw.apj", "fw.apj")
+
     def test_download_private_ip_rejected(self):
         with patch(
             "backend.firmware._socket.getaddrinfo",

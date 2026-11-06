@@ -31,6 +31,7 @@
       const r = await fetch(apiUrl(`/api/firmware/online?board_id=${boardId}`));
       const data = await r.json();
       onlineVersions = data.versions || [];
+      if (data.error) addToast(t('fw.fetchFailed'), 'error');
     } catch {
       addToast(t('fw.fetchFailed'), 'error');
     } finally {

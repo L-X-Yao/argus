@@ -14,7 +14,7 @@ from urllib.parse import urlparse
 
 from fastapi import APIRouter, Request, UploadFile
 
-from .config import ROOT_DIR, aio_download, cfg
+from .config import FAKE_IP_RANGE, ROOT_DIR, aio_download, cfg
 
 router = APIRouter()
 
@@ -72,33 +72,28 @@ async def api_firmware_list():
     return {"files": files}
 
 
+def _read_url(url: str, limit: int) -> str:
+    req = urlreq.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    resp = urlreq.urlopen(req, timeout=cfg.FIRMWARE_LIST_TIMEOUT)
+    return resp.read(limit).decode("utf-8", errors="replace")
+
+
 def _fetch_online_versions(board_id: int) -> dict:
     board_info = _BOARD_MAP.get(board_id)
     if not board_info:
         return {"versions": [], "error": "Unknown board_id"}
     vehicle, board_name = board_info
-    versions = []
+    # One build per board and channel, named after the vehicle (arducopter.apj). Only
+    # firmware-version.txt says which: "4.7.2-FIRMWARE_VERSION_TYPE_OFFICIAL".
+    url = "%s%s/stable/%s/" % (_FW_BASE, vehicle, board_name)
     try:
-        url = "%s%s/stable-%s/" % (_FW_BASE, vehicle, board_name)
-        req = urlreq.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        resp = urlreq.urlopen(req, timeout=cfg.FIRMWARE_LIST_TIMEOUT)
-        html = resp.read(cfg.FIRMWARE_HTML_MAX).decode("utf-8", errors="replace")
-        for m in re.finditer(r'href="([^"]*\.apj)"', html):
-            fname = m.group(1)
-            ver_m = re.search(r"(\d+\.\d+\.\d+)", fname)
-            ver = ver_m.group(1) if ver_m else fname
-            versions.append(
-                {
-                    "version": ver,
-                    "date": "",
-                    "url": url + fname,
-                    "size": 0,
-                }
-            )
+        html = _read_url(url, cfg.FIRMWARE_HTML_MAX)
+        version = _read_url(url + "firmware-version.txt", 128).split("-")[0].strip()
     except (OSError, urllib.error.URLError) as e:
         logging.getLogger("gcs").warning("firmware online fetch failed: %s", e)
         return {"versions": [], "error": "Cannot reach firmware server"}
-    return {"versions": versions[-10:]}
+    names = sorted({href.rsplit("/", 1)[-1] for href in re.findall(r'href="([^"]*\.apj)"', html)})
+    return {"versions": [{"version": version, "date": "", "url": url + name, "size": 0} for name in names]}
 
 
 @router.get("/api/firmware/online")
@@ -119,6 +114,8 @@ def _download_firmware(fw_url: str, filename: str) -> dict:
         try:
             ip = ipaddress.ip_address(ip_str)
         except ValueError:
+            continue
+        if ip in FAKE_IP_RANGE:
             continue
         if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast:
             return {"ok": False, "error": "Refusing to fetch from internal address"}

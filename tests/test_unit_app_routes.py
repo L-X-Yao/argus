@@ -137,12 +137,14 @@ class TestTerrain:
         assert r.json()["elevations"] == []
 
     def test_valid_point_returns_one(self):
-        r = client.get("/api/terrain/elevation?points=30.5,120.3")
+        with patch("backend.terrain._fetch_tile", return_value=False):
+            r = client.get("/api/terrain/elevation?points=30.5,120.3")
         assert r.status_code == 200
         assert len(r.json()["elevations"]) == 1
 
     def test_multiple_valid_points(self):
-        r = client.get("/api/terrain/elevation?points=30.5,120.3;31.0,121.0")
+        with patch("backend.terrain._fetch_tile", return_value=False):
+            r = client.get("/api/terrain/elevation?points=30.5,120.3;31.0,121.0")
         assert r.status_code == 200
         assert len(r.json()["elevations"]) == 2
 
@@ -261,37 +263,37 @@ class TestFirmwareOnline:
         assert data["versions"] == []
         assert "error" in data
 
+    @staticmethod
+    def _server(html: str, version: str = "4.7.2-FIRMWARE_VERSION_TYPE_OFFICIAL\n"):
+        """Answers as firmware.ardupilot.org does: absolute hrefs, version in its own file."""
+
+        def urlopen(req, timeout=None):
+            body = version if req.full_url.endswith("firmware-version.txt") else html
+            return type("R", (), {"read": lambda self, n: body.encode()})()
+
+        return patch("backend.firmware.urlreq.urlopen", side_effect=urlopen)
+
     def test_valid_board_parses_html(self):
         html = (
             "<html><body>"
-            '<a href="firmware-v4.6.3.apj">firmware-v4.6.3.apj</a>'
-            '<a href="firmware-v4.5.7.apj">firmware-v4.5.7.apj</a>'
-            '<a href="README.md">README.md</a>'
+            '<a href="/Copter/stable">stable</a>'
+            '<a href="/Copter/stable/Pixhawk1/arducopter.apj">arducopter.apj</a>'
+            '<a href="/Copter/stable/Pixhawk1/arducopter.elf">arducopter.elf</a>'
+            '<a href="/Copter/stable/Pixhawk1/firmware-version.txt">firmware-version.txt</a>'
             "</body></html>"
         )
-        mock_resp = type("R", (), {"read": lambda self, n: html.encode()})()
-        with patch("backend.firmware.urlreq.urlopen", return_value=mock_resp):
+        with self._server(html):
             r = client.get("/api/firmware/online?board_id=9")
         data = r.json()
-        assert len(data["versions"]) == 2
-        assert data["versions"][0]["version"] == "4.6.3"
-        assert data["versions"][1]["version"] == "4.5.7"
-        assert data["versions"][0]["url"].endswith("firmware-v4.6.3.apj")
+        assert len(data["versions"]) == 1
+        assert data["versions"][0]["version"] == "4.7.2"
+        assert data["versions"][0]["url"].endswith("/Copter/stable/Pixhawk1/arducopter.apj")
 
     def test_network_error_returns_empty(self):
         with patch("backend.firmware.urlreq.urlopen", side_effect=OSError("timeout")):
             r = client.get("/api/firmware/online?board_id=9")
         data = r.json()
         assert data["versions"] == []
-
-    def test_max_10_versions(self):
-        links = "".join(f'<a href="fw-v1.0.{i}.apj">fw</a>' for i in range(20))
-        html = f"<html>{links}</html>"
-        mock_resp = type("R", (), {"read": lambda self, n: html.encode()})()
-        with patch("backend.firmware.urlreq.urlopen", return_value=mock_resp):
-            r = client.get("/api/firmware/online?board_id=9")
-        data = r.json()
-        assert len(data["versions"]) == 10
 
 
 class TestSecurityHeaders:

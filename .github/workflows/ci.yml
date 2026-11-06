@@ -87,7 +87,7 @@ jobs:
         run: pip install -e '.[dev]'
 
       - name: Run integration tests
-        run: python -m pytest tests/test_integration.py -q --tb=short
+        run: python -m pytest tests/test_integration.py tests/test_integration_rest.py -q --tb=short
 
   # The backend on macOS. Unit and contract tests only: SITL ships as a Linux binary.
   macos:
