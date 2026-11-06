@@ -27,12 +27,8 @@
   let paramsRead = $derived(
     app.drone.connected && !paramState.fetching && paramState.total > 0 && paramState.received >= paramState.total,
   );
-  // All six, or Save would write 0 over a slot that has not arrived. The length is read
-  // here because getParam only touches the list for a name it has, and this has to wake
-  // up when that name arrives.
-  let hasSlots = $derived(
-    paramState.list.length > 0 && [1, 2, 3, 4, 5, 6].every((i) => getParam(`${prefix}${i}`, -1) >= 0),
-  );
+  // All six, or Save would write 0 over a slot that has not arrived.
+  let hasSlots = $derived([1, 2, 3, 4, 5, 6].every((i) => getParam(`${prefix}${i}`, -1) >= 0));
 
   /* ── Slot state ── */
   let slot1 = $state(0);

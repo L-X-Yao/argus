@@ -1,4 +1,4 @@
-import type { DroneState, DroneEvent, Waypoint, Toast, RallyPoint } from './types';
+import type { DroneState, DroneEvent, FlightSummary, Waypoint, Toast, RallyPoint } from './types';
 import { defaultState } from './types';
 
 class AppState {
@@ -24,6 +24,8 @@ class AppState {
   chartsOpen: boolean = $state(false);
   mapExpanded: boolean = $state(false);
   summaryShown: boolean = $state(false);
+  // The summary window clears drone.flight_summary when it closes, and the report comes after.
+  lastFlight: FlightSummary | null = $state(null);
   toasts: Toast[] = $state([]);
   guidedMode: boolean = $state(false);
   focusWp: number = $state(-1);
@@ -234,7 +236,8 @@ class ConfirmState {
   danger: boolean = $state(false);
   // Timestamp of the last open — ConfirmDialog ignores confirm inputs for a
   // short arming window so a dialog appearing under an in-flight Enter/click
-  // (e.g. a scheduler-due confirm) can't be accepted by accident.
+  // (e.g. a scheduler-due confirm) can't be accepted by accident. On the monotonic
+  // clock: a wall clock stepped back would swallow every yes until it caught up.
   shownAt: number = 0;
   _resolve: ((v: boolean) => void) | null = null;
 }
@@ -252,7 +255,7 @@ export function showConfirm(message: string, danger = false): Promise<boolean> {
     confirmState.message = message;
     confirmState.danger = danger;
     confirmState.visible = true;
-    confirmState.shownAt = Date.now();
+    confirmState.shownAt = performance.now();
     confirmState._resolve = resolve;
   });
 }
@@ -289,7 +292,7 @@ export function resolveConfirm(result: boolean) {
   // Arming window: ignore an affirmative that lands right after the dialog
   // opened — it was almost certainly aimed at something else (typing Enter,
   // a click in flight when a scheduler confirm popped up). Declines pass.
-  if (result && Date.now() - confirmState.shownAt < 300) return;
+  if (result && performance.now() - confirmState.shownAt < 300) return;
   confirmState.visible = false;
   confirmState._resolve?.(result);
   confirmState._resolve = null;

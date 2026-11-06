@@ -131,6 +131,7 @@ describe('buildMissionItems', () => {
     expect(items[3].p2).toBe(1800);
     expect(items[4].command).toBe(201); // DO_SET_ROI
     expect(items[4].x).toBe(320000000);
+    expect(items[4].frame).toBe(3); // the altitude is above home, as everywhere here
     expect(items[5].command).toBe(206); // DO_SET_CAM_TRIGG_DIST
     expect(items[6].command).toBe(115); // CONDITION_YAW
     expect(items[6].p1).toBe(90);

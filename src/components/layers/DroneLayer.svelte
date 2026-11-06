@@ -26,6 +26,7 @@
       lon = app.drone.lon;
     if (Math.abs(lat) < 0.001) return;
     const [glat, glon] = coord(lat, lon);
+    const firstFix = !droneMarker;
 
     if (!droneMarker) {
       const icon = L.divIcon({
@@ -121,7 +122,7 @@
       prevLat = lat;
       prevLon = lon;
     }
-    if (follow) map.setView([glat, glon], map.getZoom());
+    if (follow || firstFix) map.setView([glat, glon], map.getZoom());
   });
 
   $effect(() => {

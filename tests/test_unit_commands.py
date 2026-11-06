@@ -11,7 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import pytest
 
-from backend.commands import execute
+from backend.commands import execute, send_mission_item_int
 from backend.commands._mission import check_mission_dl_timeout
 from backend.drone_link import DroneLink
 from backend.mavlink_handlers import handle_mission_ack
@@ -68,6 +68,36 @@ class TestCommandExecute:
         link = make_link()
         execute("takeoff", None, link, data={"alt": 50})
         assert any("起飞" in e["text"] for e in link.events)
+
+    def test_takeoff_on_copter_goes_through_guided(self):
+        # ArduCopter/takeoff.cpp:27: STABILIZE, where it boots, refuses a takeoff.
+        link = make_link()
+        link.vehicle.vtype_raw = 2
+        link.vehicle.landed = True
+        execute("takeoff", None, link, data={"alt": 50})
+        mode, takeoff = (c[0][0] for c in link._ser.write.call_args_list)
+        assert struct.unpack_from("<H", mode, 38)[0] == 176
+        assert struct.unpack_from("<f", mode, 14)[0] == 4
+        assert struct.unpack_from("<H", takeoff, 38)[0] == 22
+        assert struct.unpack_from("<f", takeoff, 34)[0] == 50
+
+    def test_takeoff_in_the_air_leaves_a_plane_in_its_mode_too(self):
+        # ArduPlane/GCS_MAVLink_Plane.cpp vehicle_system_status: not STANDBY while it flies.
+        link = make_link()
+        link.vehicle.vtype_raw = 1
+        link.vehicle.landed = False
+        execute("takeoff", None, link, data={"alt": 50})
+        (takeoff,) = (c[0][0] for c in link._ser.write.call_args_list)
+        assert struct.unpack_from("<H", takeoff, 38)[0] == 22
+
+    def test_takeoff_in_the_air_leaves_the_mode_alone(self):
+        # ArduCopter/takeoff.cpp:23 refuses it up there, and GUIDED would end an AUTO or an RTL.
+        link = make_link()
+        link.vehicle.vtype_raw = 2
+        link.vehicle.landed = False
+        execute("takeoff", None, link, data={"alt": 50})
+        (takeoff,) = (c[0][0] for c in link._ser.write.call_args_list)
+        assert struct.unpack_from("<H", takeoff, 38)[0] == 22
 
     def test_drop(self):
         link = make_link()
@@ -331,10 +361,15 @@ class TestMotorTest:
         assert any("电机测试" in e["text"] for e in link.events)
         assert link._ser.write.called
 
-    def test_motor_test_stop(self):
+    def test_motor_test_stop_is_one_frame(self):
+        # The FC runs one test at a time: more would each start a new one.
         link = make_link()
         execute("motor_test_stop", None, link)
-        assert link._ser.write.call_count >= 8
+        assert link._ser.write.call_count == 1
+        raw = link._ser.write.call_args[0][0]
+        assert struct.unpack_from("<H", raw, 38)[0] == 209
+        assert struct.unpack_from("<f", raw, 18)[0] == 0  # throttle
+        assert struct.unpack_from("<f", raw, 22)[0] == 0  # timeout: ends it at the next output
 
 
 class TestGimbal:
@@ -577,6 +612,12 @@ class TestMissionUpload:
         assert [i["cmd"] for i in items] == [16, 22, 16]
         assert items[1]["alt"] == 0
         assert items[2]["alt"] == -5
+
+    def test_a_roi_altitude_is_above_home_like_every_other(self):
+        link = make_link()
+        send_mission_item_int(link, {"seq": 3, "cmd": 201, "lat": -35.3, "lon": 149.1, "alt": 12})
+        raw = link._ser.write.call_args[0][0]
+        assert raw[10 + 34] == 3  # MAV_FRAME_GLOBAL_RELATIVE_ALT, not the mission frame
 
     def test_other_vehicles_keep_the_takeoff_altitude_and_the_closing_rtl(self):
         link = make_link()

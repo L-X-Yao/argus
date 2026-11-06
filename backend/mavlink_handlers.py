@@ -6,7 +6,7 @@ import time
 from typing import TYPE_CHECKING
 
 from . import mavlink_dispatch
-from .constants import NON_VEHICLE_MAV_TYPES
+from .constants import FLOWN_MIN_ALT, FLOWN_MIN_DIST, MAV_STATE_STANDBY, NON_VEHICLE_MAV_TYPES
 from .crc_extras import CRC_EXTRA
 from .locale_text import lt
 from .statustext_filter import filter_statustext
@@ -44,6 +44,10 @@ def handle_heartbeat(p: bytes, pl: int, link: DroneLink) -> None:
     v.mode = p[0] | (p[1] << 8) | (p[2] << 16) | (p[3] << 24)
     old_vtype = v.vtype_raw
     v.vtype_raw = p[4]
+    # ap.land_complete, the flag Copter refuses a takeoff on (ArduCopter/takeoff.cpp:23), and
+    # on Plane not flying (ArduPlane/GCS_MAVLink_Plane.cpp vehicle_system_status). An active
+    # failsafe reports CRITICAL on both, and so reads as not landed.
+    v.landed = p[7] == MAV_STATE_STANDBY
     # HEARTBEAT.autopilot byte (offset 5). The FC advertises its autopilot
     # stack once at boot and the value is stable afterwards. We filter out:
     #   - 0 (GENERIC, uninitialized — keep our default of 0)
@@ -76,7 +80,7 @@ def handle_heartbeat(p: bytes, pl: int, link: DroneLink) -> None:
         if new_armed:
             v.flight_summary = None  # clear previous record so ws.ts guard fires on next disarm
             v.armed_time = time.time()
-            v.max_alt = v.max_speed = v.total_dist = 0
+            v.max_alt = v.max_depth = v.max_speed = v.total_dist = 0
             link.attitude._prev_pos = None
             link.battery._bat_history = []
             link.battery._bat_start_pct = link.battery.remaining
@@ -84,13 +88,16 @@ def handle_heartbeat(p: bytes, pl: int, link: DroneLink) -> None:
             dur = int(time.time() - v.armed_time) if v.armed_time else 0
             bat = link.battery
             bat_used = (bat._bat_start_pct - bat.remaining) if bat._bat_start_pct >= 0 and bat.remaining >= 0 else -1
-            v.flight_summary = {
-                "duration": dur,
-                "max_alt": round(v.max_alt, 1),
-                "max_speed": round(v.max_speed, 1),
-                "total_dist": round(v.total_dist),
-                "bat_used": bat_used,
-            }
+            # Armed is not flown: a motor test arms the FC too (ArduCopter/motor_test.cpp
+            # mavlink_motor_test_start), and each one would end in a summary and a flight record.
+            if max(v.max_alt, v.max_depth) >= FLOWN_MIN_ALT or v.total_dist >= FLOWN_MIN_DIST:
+                v.flight_summary = {
+                    "duration": dur,
+                    "max_alt": round(v.max_alt, 1),
+                    "max_speed": round(v.max_speed, 1),
+                    "total_dist": round(v.total_dist),
+                    "bat_used": bat_used,
+                }
             bat.bat_time_remaining = -1
     v.armed = new_armed
     v.sysid = link._raw_sysid
@@ -152,6 +159,9 @@ def handle_global_position_int(p: bytes, pl: int, link: DroneLink) -> None:
     if v.armed:
         if a.alt_rel > v.max_alt:
             v.max_alt = a.alt_rel
+        # A Sub dives instead, often with no position to measure a distance from.
+        if link.vehicle_kind() == "sub" and -a.alt_rel > v.max_depth:
+            v.max_depth = -a.alt_rel
         if a.gs > v.max_speed:
             v.max_speed = a.gs
         if a._prev_pos:
@@ -346,14 +356,34 @@ def handle_mag_cal_report(p: bytes, pl: int, link: DroneLink) -> None:
     p = _pad(p, 44)
     if getattr(link, "_mag_cal_done", False):
         return
-    cal_status = p[42]
+    # A failed run goes on reporting until the FC starts the next, so a run of ours counts
+    # reports only once its first progress shows that the FC has.
+    if link._mag_cal_ours and link._mag_cal_pct < 0:
+        return
+    # Each compass reports when it finishes, and cal_mask @41 names all those calibrating
+    # (AP_Compass_Calibration.cpp:283 send_mag_cal_report, :359 _get_cal_mask). The run is
+    # over at the last one.
+    compass, cal_mask = p[40], p[41]
+    reports = link._mag_cal_reports
+    reports[compass] = p[42]
+    if any(cal_mask >> i & 1 and i not in reports for i in range(8)):
+        return
     link._mag_cal_done = True
     link._mag_cal_pct = -1
-    if cal_status == 4:
+    if all(status == 4 for status in reports.values()):
         link.add_event(lt("mag_cal_done", link.locale), "cal_compass")
         link.add_event(lt("mag_cal_reboot", link.locale), "cal_compass")
+        # Started with autosave 0 (cmd_cal_compass), so the FC keeps a result only when told
+        # to (AP_Compass_Calibration.cpp:32). Here and not in a panel: it holds however the
+        # run was started and whichever panel is open. Not sooner: an accept stops a compass
+        # that is still running and drops what it had (:233-236).
+        if link._mag_cal_ours:
+            from .commands._helpers import send_cmd
+
+            send_cmd(link, 42425, p1=0)
     else:
         link.add_event(lt("mag_cal_fail", link.locale), "cal_compass")
+    link._mag_cal_ours = False
 
 
 # ArduPilot: libraries/GCS_MAVLink/GCS_Common.cpp:2684 — GCS_MAVLINK::service_statustext

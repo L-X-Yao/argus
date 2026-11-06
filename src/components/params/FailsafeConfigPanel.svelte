@@ -1,8 +1,10 @@
 <script lang="ts">
-  import { addToast } from '../../lib/stores.svelte';
+  import { app, addToast } from '../../lib/stores.svelte';
   import { dispatch } from '../../lib/transport';
   import { paramState, getParam } from '../../lib/paramStore.svelte';
   import { t } from '../../lib/i18n.svelte';
+  import { ekfAction as ekfActionOf, ekfActions as ekfActionsOf, ekfParams, failsafeAction } from '../../lib/failsafe';
+  import { vehicleKind } from '../../lib/vehicleModes';
   import { X, ShieldAlert, Battery, Radio, Wifi, Navigation } from '@lucide/svelte';
   import Button from '$lib/components/ui/button/button.svelte';
 
@@ -35,6 +37,7 @@
   let gcsAction   = $state(0);
 
   /* ── EKF/GPS ── */
+  let ekfEnable   = $state(0);
   let ekfAction   = $state(0);
   let ekfThresh   = $state(0.8);
 
@@ -55,24 +58,21 @@
     battMah     = getParam('BATT_LOW_MAH', 0);
 
     rcEnable    = getParam('FS_THR_ENABLE', 0);
-    // FS_THR_ENABLE is itself the action enum (0=disabled, 1=Always RTL,
-    // 2=Continue with Mission, 3=Always Land, 4=SmartRTL or RTL, ...).
-    // Use the same value for the action selector; the UI then maps it to
-    // a label via rcActions.
-    rcAction    = getParam('FS_THR_ENABLE', 0);
+    // FS_THR_ENABLE and FS_GCS_ENABLE are the action enums themselves, so the same value
+    // feeds the selector, but for the 2 that only old Copter parameter files still hold.
+    rcAction    = failsafeAction(getParam('FS_THR_ENABLE', 0), vehicleKind());
     rcPwm       = getParam('FS_THR_VALUE', 975);
 
     gcsEnable   = getParam('FS_GCS_ENABLE', 0);
-    // FS_GCS_ENABLE is the action enum same as FS_THR_ENABLE.
-    gcsAction   = getParam('FS_GCS_ENABLE', 0);
+    gcsAction   = failsafeAction(getParam('FS_GCS_ENABLE', 0), vehicleKind());
 
-    ekfAction   = getParam('FS_EKF_ACTION', 0);
+    ekfAction   = ekfActionOf(getParam('FS_EKF_ACTION', 0), app.drone.fw_version, vehicleKind());
     ekfThresh   = getParam('FS_EKF_THRESH', 0.8);
+    ekfEnable   = ekfThresh > 0 ? 1 : 0;
   });
 
   /* ── Action option maps ── */
-  // AP_BattMonitor_Params.cpp: BATT_FS_LOW_ACT values for Copter:
-  // 0=Warn only, 1=Land, 2=RTL, 3=SmartRTL or RTL, 4=SmartRTL or Land, 5=Terminate
+  // AP_BattMonitor_Params.cpp:146 BATT_FS_LOW_ACT @Values{Copter}.
   const battActions: [number, string][] = [
     [0, 'failsafe.actionNone'],
     [1, 'failsafe.actionLand'],
@@ -80,38 +80,36 @@
     [3, 'failsafe.actionSmartRtl'],
     [4, 'failsafe.actionSmartRtlLand'],
     [5, 'failsafe.actionTerminate'],
+    [6, 'failsafe.actionAutoLand'],
+    [7, 'failsafe.actionBrakeLand'],
   ];
 
-  // ArduCopter/Parameters.cpp: FS_THR_ENABLE values:
-  // 0=Disabled, 1=Always RTL, 2=Continue Mission in Auto, 3=Always Land,
-  // 4=SmartRTL or RTL, 5=SmartRTL or Land
+  // ArduCopter/Parameters.cpp:127 FS_THR_ENABLE @Values. 2 is "removed in 4.0+": what it
+  // promised lives in FS_OPTIONS now, and the FC flies an RTL for it (events.cpp:24).
   const rcActions: [number, string][] = [
     [0, 'failsafe.actionNone'],
     [1, 'failsafe.actionRtl'],
-    [2, 'failsafe.actionContinue'],
     [3, 'failsafe.actionLand'],
     [4, 'failsafe.actionSmartRtl'],
     [5, 'failsafe.actionSmartRtlLand'],
+    [6, 'failsafe.actionAutoLand'],
+    [7, 'failsafe.actionBrakeLand'],
   ];
 
-  // ArduCopter/Parameters.cpp: FS_GCS_ENABLE values:
-  // 0=Disabled, 1=Always RTL, 2=Continue Mission in Auto,
-  // 3=SmartRTL or RTL, 4=SmartRTL or Land, 5=Always Land
+  // ArduCopter/Parameters.cpp:99 FS_GCS_ENABLE @Values. 2 is removed here too: the FC flies
+  // an RTL for it (events.cpp failsafe_gcs_on_event), and complains before arming
+  // (AP_Arming_Copter.cpp:218).
   const gcsActions: [number, string][] = [
     [0, 'failsafe.actionNone'],
     [1, 'failsafe.actionRtl'],
-    [2, 'failsafe.actionContinue'],
     [3, 'failsafe.actionSmartRtl'],
     [4, 'failsafe.actionSmartRtlLand'],
     [5, 'failsafe.actionLand'],
+    [6, 'failsafe.actionAutoLand'],
+    [7, 'failsafe.actionBrakeLand'],
   ];
 
-  const ekfActions: [number, string][] = [
-    [0, 'failsafe.actionNone'],
-    [1, 'failsafe.actionLand'],
-    // ArduPilot FS_EKF_ACTION value 2 = AltHold mode
-    [2, 'failsafe.actionAltHold'],
-  ];
+  let ekfActions = $derived(ekfActionsOf(app.drone.fw_version, vehicleKind()));
 
   /* ── Section save handlers ── */
   function saveBattery() {
@@ -138,10 +136,7 @@
   }
 
   function saveEkf() {
-    saveParams([
-      ['FS_EKF_ACTION', ekfAction],
-      ['FS_EKF_THRESH', ekfThresh],
-    ]);
+    saveParams(ekfParams(ekfEnable > 0, ekfAction, ekfThresh));
   }
 </script>
 
@@ -326,15 +321,15 @@
               <Navigation size={14} class="text-blue-500" />
               <span class="text-xs font-semibold text-foreground uppercase tracking-wider">{t('failsafe.ekf')}</span>
             </div>
-            <button type="button" role="switch" aria-checked={ekfAction > 0}
+            <button type="button" role="switch" aria-checked={ekfEnable > 0}
                     class="relative inline-flex items-center cursor-pointer"
-                    onclick={() => { ekfAction = ekfAction > 0 ? 0 : 1; }}>
+                    onclick={() => { ekfEnable = ekfEnable > 0 ? 0 : 1; }}>
               <div class="w-9 h-5 rounded-full transition-colors
                           after:content-[''] after:absolute after:top-[2px] after:left-[2px]
                           after:bg-white after:rounded-full after:h-4 after:w-4
-                          after:transition-all {ekfAction > 0 ? 'bg-blue-500 after:translate-x-full' : 'bg-muted-foreground/30'}"></div>
+                          after:transition-all {ekfEnable > 0 ? 'bg-blue-500 after:translate-x-full' : 'bg-muted-foreground/30'}"></div>
               <span class="ml-2 text-[11px] text-muted-foreground">
-                {ekfAction > 0 ? t('failsafe.enable') : t('failsafe.disable')}
+                {ekfEnable > 0 ? t('failsafe.enable') : t('failsafe.disable')}
               </span>
             </button>
           </div>

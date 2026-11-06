@@ -64,6 +64,12 @@ class TestResetSessionState:
         link._reset_session_state()
         assert link.vehicle.vtol_state == 0
 
+    def test_landed_cleared_after_reset(self, link):
+        """Left set, a takeoff could switch the next vehicle to GUIDED in the air."""
+        link.vehicle.landed = True
+        link._reset_session_state()
+        assert link.vehicle.landed is False
+
     def test_home_set_false_after_reset(self, link):
         link.attitude._home_set = True
         link._reset_session_state()
@@ -181,6 +187,7 @@ class TestFlightSummaryClearedOnArm:
         # Set up as if the drone is armed
         link.vehicle.armed = True
         link.vehicle.armed_time = 0.0  # will produce duration ~0
+        link.vehicle.max_alt = 12.0
         link.vehicle.flight_summary = None
 
         # Simulate a heartbeat with armed=False (disarm event)

@@ -259,6 +259,7 @@
     if (d.flight_summary && !app.summaryShown && JSON.stringify(d.flight_summary) !== dismissedSummary) {
       app.summaryShown = true;
     }
+    if (d.flight_summary) app.lastFlight = d.flight_summary;
   });
 
   // A drawing left open in Plan would take the map clicks meant for guided targets.

@@ -88,7 +88,10 @@ test('compass calibration runs to the end and is accepted', async () => {
       intervals: [2000],
     })
     .toMatch(/完成|complete/);
-  expect(await ackOf(42425, 'cal_compass_accept')).toBe(ACCEPTED);
+  // The link accepts by itself, and the FC answers ACCEPTED only if every compass had
+  // finished: one still running fails the command (AP_Compass_Calibration.cpp:233).
+  const accepted = () => sitl.acks.find((a) => a.command === 42425)?.result;
+  await expect.poll(accepted, { message: 'no COMMAND_ACK 42425', timeout: 20000 }).toBe(ACCEPTED);
   servo(5, 1000);
 });
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseDFLog, getTimeSeries, computeFFT } from './dflog';
+import { parseDFLog, getTimeSeries, firstDataColumn, computeFFT, findPeaks, sampleInterval } from './dflog';
 import type { DFLog } from './dflog';
 
 /* ── Helpers ── */
@@ -252,6 +252,87 @@ describe('getTimeSeries', () => {
 });
 
 /* ── computeFFT ── */
+describe('a type with instances', () => {
+  // IMU: TimeUS, I, GyrX, with FMTU marking I as the instance the way ArduPilot does.
+  const imuRow = (timeUS: number, instance: number, gyr: number) => {
+    const buf = new ArrayBuffer(13);
+    const dv = new DataView(buf);
+    dv.setUint32(0, timeUS, true);
+    dv.setUint8(8, instance);
+    dv.setFloat32(9, gyr, true);
+    return buf;
+  };
+  const fmtuRow = (type: number, units: string) => {
+    const buf = new ArrayBuffer(41);
+    const u8 = new Uint8Array(buf);
+    u8[8] = type;
+    for (let i = 0; i < units.length; i++) u8[9 + i] = units.charCodeAt(i);
+    return buf;
+  };
+  const join = (...parts: ArrayBuffer[]) => {
+    const out = new Uint8Array(parts.reduce((n, p) => n + p.byteLength, 0));
+    let at = 0;
+    for (const p of parts) {
+      out.set(new Uint8Array(p), at);
+      at += p.byteLength;
+    }
+    return out.buffer;
+  };
+  const imuHeader = new Uint8Array([0xa3, 0x95, 41]).buffer;
+  const makeLog = () =>
+    parseDFLog(
+      join(
+        buildBinaryLog(41, 'IMU', 'QBf', ['TimeUS', 'I', 'GyrX'], []),
+        buildBinaryLog(40, 'FMTU', 'QBNN', ['TimeUS', 'FmtType', 'UnitIds', 'MultIds'], [fmtuRow(41, 's#E')]),
+        ...[imuRow(1000, 0, 1), imuRow(1000, 1, 9), imuRow(2000, 0, 2), imuRow(2000, 1, 9)].flatMap((row) => [
+          imuHeader,
+          row,
+        ]),
+      ),
+    );
+
+  it('names the column FMTU gives the unit # as the instance', () => {
+    expect(makeLog().formats.get('IMU')?.instance).toBe('I');
+  });
+
+  it('plots the first column that holds data', () => {
+    expect(firstDataColumn(makeLog().formats.get('IMU')!)).toBe('GyrX');
+  });
+
+  it('reads one sensor, not all of them in turn', () => {
+    expect(getTimeSeries(makeLog(), 'IMU', 'GyrX').v).toEqual([1, 2]);
+  });
+});
+
+describe('sampleInterval', () => {
+  it('takes a pause in the log for a pause, not for a slower rate', () => {
+    const times = Array.from({ length: 4000 }, (_, i) => i / 400);
+    const resumed = times.map((t, i) => (i < 2000 ? t : t + 7.4)); // logging stops at a disarm
+    expect(sampleInterval(resumed)).toBeCloseTo(1 / 400, 9);
+  });
+
+  it('has nothing to say about a single sample', () => {
+    expect(sampleInterval([1])).toBe(0);
+  });
+
+  it('looks past samples logged at one instant', () => {
+    expect(sampleInterval([0, 0, 0, 0, 0, 0.01, 0.01, 0.01, 0.01, 0.02])).toBeCloseTo(0.01, 9);
+  });
+});
+
+describe('findPeaks', () => {
+  const freq = [0, 0.1, 0.2, 5, 6, 7, 34, 35, 36, 70, 71, 72];
+  const mag = [0, 9, 0, 0, 8, 0, 0, 3, 0, 0, 2, 0];
+
+  it('leaves out what is under the lowest notch the FC takes', () => {
+    expect(findPeaks(freq, mag, 3).map((p) => p.freq)).toEqual([35, 71]);
+  });
+
+  it('gives the strongest first, and no more than asked for', () => {
+    expect(findPeaks(freq, mag, 1).map((p) => p.freq)).toEqual([35]);
+  });
+});
+
 describe('computeFFT', () => {
   it('returns empty for very short input', () => {
     const result = computeFFT([1, 2, 3], 100);

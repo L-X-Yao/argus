@@ -15,8 +15,10 @@ if TYPE_CHECKING:
 # Sent again when no answer comes, as the command protocol expects of a GCS. On a radio
 # that loses 3% of its frames, 3 in 100 clicks on RTL would otherwise do nothing, and show
 # nothing. Only commands that do no harm twice: takeoff, mode, relay, servo, ROI, gimbal,
-# mission start, arm and disarm. A calibration or a motor test would start over.
-RETRIED_COMMANDS = frozenset({22, 176, 181, 183, 201, 205, 300, 400, 1000})
+# mission start, arm and disarm, and accepting a compass calibration, which nobody clicks and
+# which a saved compass answers the same (AP_Compass_Calibration.cpp _accept_calibration).
+# A calibration or a motor test would start over.
+RETRIED_COMMANDS = frozenset({22, 176, 181, 183, 201, 205, 300, 400, 1000, 42425})
 # Nobody clicked 511 and 512 (see request_streams), a reboot's answer can die with the link,
 # and a calibration answers when it is done, which is no reason to report it silent.
 UNTRACKED_COMMANDS = frozenset({241, 246, 511, 512})
@@ -171,7 +173,9 @@ def send_rally_item_int(link: DroneLink, item: dict) -> None:
 
 
 def send_mission_item_int(link: DroneLink, wp: dict) -> None:
-    frame = 3 if wp["cmd"] in (16, 18, 19, 21, 22, 82) else 2
+    # 201 is DO_SET_ROI: a location, whose altitude the FC would take as above sea level in
+    # the mission frame (AP_Mission.cpp:1496), where every altitude here is above home.
+    frame = 3 if wp["cmd"] in (16, 18, 19, 21, 22, 82, 201) else 2
     lat7 = int(float(wp.get("lat", 0)) * 1e7)
     lon7 = int(float(wp.get("lon", 0)) * 1e7)
     p = struct.pack(

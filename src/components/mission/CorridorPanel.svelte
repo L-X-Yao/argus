@@ -11,7 +11,9 @@
   let spacing = $state(30);
   let altitude = $state(app.defaultAlt);
 
-  let centerLine = $derived(app.waypoints);
+  // Read once. The line is what the waypoints were until now and the corridor takes their
+  // place, or the vehicle would fly the line first and a second press would build on both.
+  const centerLine = $state.snapshot(app.waypoints);
   let canGenerate = $derived(centerLine.length >= 2 && width > 0 && spacing > 0);
 
   const M_PER_DEG_LAT = 111320;
@@ -98,7 +100,7 @@
     }
 
     pushUndo();
-    app.waypoints = [...app.waypoints, ...waypoints];
+    app.waypoints = waypoints;
     saveWaypoints();
     addToast(t('corridor.generate') + ': ' + waypoints.length + ' wp', 'success');
   }

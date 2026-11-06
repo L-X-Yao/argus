@@ -64,12 +64,15 @@ class VehicleState:
     force_plane: bool | None = None
     # MAV_VTOL_STATE, see handle_extended_sys_state for what it is good for.
     vtol_state: int = 0
+    # On the ground as the FC sees it: see handle_heartbeat.
+    landed: bool = False
     sysid: int = 1
     fw_version: str = ""
     fw_git: str = ""
     board_id: int = 0
     flight_summary: dict | None = None
     max_alt: float = 0.0
+    max_depth: float = 0.0
     max_speed: float = 0.0
     total_dist: float = 0.0
 

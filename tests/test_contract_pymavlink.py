@@ -36,6 +36,7 @@ from backend.mavlink_handlers import (
     handle_command_ack,
     handle_global_position_int,
     handle_gps_raw_int,
+    handle_heartbeat,
     handle_mag_cal_progress,
     handle_mag_cal_report,
     handle_mission_ack,
@@ -67,6 +68,8 @@ class FakeLink:
         self._lock = threading.Lock()
         self._mag_cal_pct = -1
         self._mag_cal_done = False
+        self._mag_cal_reports: dict[int, int] = {}
+        self._mag_cal_ours = False
         self._prearm_messages: list[str] = []
         # state subsystems used by handlers
         from backend.state import (
@@ -86,6 +89,7 @@ class FakeLink:
         self.gps = GpsState()
         self.vehicle = VehicleState()
         self.vehicle.sysid = 1
+        self.vehicle.landed = True
         self.mission = MissionState()
         self.diagnostic = DiagnosticState()
         self.rc_servo = RcServoState()
@@ -149,9 +153,24 @@ class TestOutgoingCommands:
     def test_takeoff(self):
         link = FakeLink()
         commands.execute("takeoff", None, link, {"alt": 50})
-        msg = _decode_one(link.captured[0])
+        mode = _decode_one(link.captured[0])
+        assert mode.command == mavlink.MAV_CMD_DO_SET_MODE
+        assert mode.param2 == 4.0  # GUIDED
+        msg = _decode_one(link.captured[1])
         assert msg.command == mavlink.MAV_CMD_NAV_TAKEOFF
         assert msg.param7 == 50.0  # altitude
+
+    def test_takeoff_in_the_air_leaves_the_mode_alone(self):
+        link = FakeLink()
+        link.vehicle.landed = False
+        commands.execute("takeoff", None, link, {"alt": 50})
+        assert [_decode_one(f).command for f in link.captured] == [mavlink.MAV_CMD_NAV_TAKEOFF]
+
+    def test_takeoff_leaves_the_mode_alone_on_what_does_not_fly(self):
+        link = FakeLink()
+        link.vehicle_kind = lambda: "rover"
+        commands.execute("takeoff", None, link, {"alt": 50})
+        assert _decode_one(link.captured[0]).command == mavlink.MAV_CMD_NAV_TAKEOFF
 
     def test_rtl(self):
         link = FakeLink()
@@ -418,6 +437,38 @@ class TestIncomingHandlers:
         assert link._mag_cal_done is True
         assert any("完成" in e["text"] or "complete" in e["text"] for e in link.events)
 
+    def test_mag_cal_report_waits_for_the_compasses_in_its_mask(self):
+        """compass_id and cal_mask, encoded by pymavlink: the offsets the handler reads."""
+
+        def report(compass_id):
+            msg = mavlink.MAVLink_mag_cal_report_message(
+                compass_id=compass_id,
+                cal_mask=0b101,
+                cal_status=4,
+                autosaved=0,
+                fitness=0.5,
+                ofs_x=1,
+                ofs_y=2,
+                ofs_z=3,
+                diag_x=1,
+                diag_y=1,
+                diag_z=1,
+                offdiag_x=0,
+                offdiag_y=0,
+                offdiag_z=0,
+                orientation_confidence=1.0,
+                old_orientation=0,
+                new_orientation=0,
+                scale_factor=1.0,
+            )
+            return _encode_payload(msg)
+
+        link = FakeLink()
+        handle_mag_cal_report(*report(2), link)
+        assert link._mag_cal_done is False
+        handle_mag_cal_report(*report(0), link)
+        assert link._mag_cal_done is True
+
     def test_battery_status(self):
         link = FakeLink()
         cells = [3700, 3700, 3700, 3700] + [0xFFFF] * 6
@@ -527,9 +578,23 @@ class TestIncomingHandlers:
         assert link.diagnostic.mag_y == 178
         assert link.diagnostic.mag_z == 456
 
-    def test_heartbeat_armed_flag(self):
-        from backend.mavlink_handlers import handle_heartbeat
+    def test_heartbeat_landed_is_system_status_standby(self):
+        link = FakeLink()
+        msg = mavlink.MAVLink_heartbeat_message(
+            type=mavlink.MAV_TYPE_QUADROTOR,
+            autopilot=mavlink.MAV_AUTOPILOT_ARDUPILOTMEGA,
+            base_mode=0,
+            custom_mode=0,
+            system_status=mavlink.MAV_STATE_STANDBY,
+            mavlink_version=3,
+        )
+        payload, pl = _encode_payload(msg)
+        link._raw_sysid = 1  # heartbeat handler copies the frame's sysid from here
+        link.vehicle.landed = False
+        handle_heartbeat(payload, pl, link)
+        assert link.vehicle.landed is True
 
+    def test_heartbeat_armed_flag(self):
         link = FakeLink()
         msg = mavlink.MAVLink_heartbeat_message(
             type=2,
@@ -551,8 +616,6 @@ class TestIncomingHandlers:
         # ArduPilot HEARTBEAT (autopilot=3 = MAV_AUTOPILOT_ARDUPILOTMEGA).
         # The handler latches this on first non-zero observation; subsequent
         # GCS/ADSB heartbeats with autopilot=8 (INVALID) must not overwrite.
-        from backend.mavlink_handlers import handle_heartbeat
-
         link = FakeLink()
         msg = mavlink.MAVLink_heartbeat_message(
             type=2,
@@ -568,8 +631,6 @@ class TestIncomingHandlers:
         assert link.vehicle.autopilot == 3
 
     def test_heartbeat_records_autopilot_byte_px4(self):
-        from backend.mavlink_handlers import handle_heartbeat
-
         link = FakeLink()
         msg = mavlink.MAVLink_heartbeat_message(
             type=2,
@@ -593,8 +654,6 @@ class TestIncomingHandlers:
         assert len([e for e in link.events if e["event_type"] == "unsupported_fc"]) == 1
 
     def test_heartbeat_ardupilot_no_unsupported_event(self):
-        from backend.mavlink_handlers import handle_heartbeat
-
         link = FakeLink()
         msg = mavlink.MAVLink_heartbeat_message(
             type=2,
@@ -613,8 +672,6 @@ class TestIncomingHandlers:
         # A GCS / data-link relay heartbeat (autopilot=8 = INVALID) must not
         # clobber the FC's previously-latched value. The handler explicitly
         # filters 8 — see comment above the latch in handle_heartbeat.
-        from backend.mavlink_handlers import handle_heartbeat
-
         link = FakeLink()
         link.vehicle.autopilot = 3  # FC seen earlier
         msg = mavlink.MAVLink_heartbeat_message(
@@ -631,8 +688,6 @@ class TestIncomingHandlers:
         assert link.vehicle.autopilot == 3  # FC value preserved
 
     def test_heartbeat_disarmed(self):
-        from backend.mavlink_handlers import handle_heartbeat
-
         link = FakeLink()
         link.vehicle.armed = True  # was armed, now becoming disarmed
         link.vehicle.armed_time = 1.0

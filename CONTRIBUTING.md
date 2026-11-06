@@ -43,13 +43,14 @@ CI runs on every push to `main` and every PR. On top of the five checks above, i
 | Windows | The same on `windows-latest`, and the zip built and smoke-tested by `scripts/smoke_package.py` |
 | SITL smoke test | `tests/sitl_verify.py`: a full flight on real ArduCopter firmware in simulation, through the backend |
 | WebSerial on SITL | `tests/e2e/run-webserial-sitl.sh`: a full flight and both interactive calibrations, through the browser stack |
+| Panels on SITL | `tests/e2e/run-panels-sitl.sh`: the panels driven with the mouse on real firmware through the backend, each result read back from the FC, and a whole flight |
 | Other vehicles | `tests/sitl_vehicles.py` and `tests/sitl_flights.py`: Plane, QuadPlane, Rover and Sub on real firmware: recognition, mode numbers, parameters, and a whole mission each |
 | Links | `tests/sitl_links.py`: what the jobs above leave out, through the backend on real firmware |
 | End-to-end tests | Playwright specs in `tests/e2e/` |
 
 `make test-integration` runs the integration tests locally, in about 3 minutes.
 
-CI only runs the specs named in `.github/workflows/ci.yml`, so add a new spec to that list.
+CI only runs the specs named in `.github/workflows/ci.yml`, so add a new spec to that list. The specs that need SITL are named in their run scripts, `tests/e2e/run-webserial-sitl.sh` and `tests/e2e/run-panels-sitl.sh`.
 
 ## Commit Messages
 

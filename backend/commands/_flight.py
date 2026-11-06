@@ -47,11 +47,14 @@ def cmd_takeoff(link: DroneLink, param, data: dict):
     alt = float(data.get("alt", 30))
     if not 1 <= alt <= 1000:
         return {"ok": False, "error": lt("err_bad_coord", link.locale)}
-    # QuadPlane.do_user_takeoff (quadplane.cpp:3948) refuses MAV_CMD_NAV_TAKEOFF
-    # unless control_mode == mode_guided. Switch to GUIDED (15) for Plane first;
-    # Copter's takeoff cmd handler doesn't have this strict requirement.
-    if link.is_plane():
-        send_set_mode(link, 15)
+    # GUIDED first, on what can take off. QuadPlane.do_user_takeoff (quadplane.cpp:3948)
+    # refuses MAV_CMD_NAV_TAKEOFF outside it. Copter takes it in a few modes only
+    # (ArduCopter/takeoff.cpp:27 has_user_takeoff): not in STABILIZE, which it boots in, and
+    # in LOITER a stick left low brings it straight back down. There is no button for GUIDED.
+    # On the ground only: in the air it refuses the takeoff (takeoff.cpp:23), and the switch
+    # alone would stop an AUTO, an RTL or a LAND where it is.
+    if link.vehicle_kind() in ("plane", "copter") and link.vehicle.landed:
+        send_set_mode(link, link.special_mode("guided"))
     link.add_event(lt("takeoff", link.locale) % alt, "takeoff")
     send_cmd(link, 22, p7=alt)
 

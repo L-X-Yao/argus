@@ -11,10 +11,13 @@
 
   const connected = $derived(app.drone.connected);
   const armed = $derived(app.drone.armed);
-  let axes = $state(0);
+  // AUTOTUNE_AXES is a bitmask (AC_AutoTune_Multi.cpp:100, 0:Roll 1:Pitch 2:Yaw) that the FC
+  // keeps: All has to be written like the others, or it tunes whatever was picked last.
+  const ALL_AXES = 7;
+  let axes = $state(ALL_AXES);
 
   const AXES_OPTIONS = $derived([
-    { value: 0, label: t('autotune.all') },
+    { value: ALL_AXES, label: t('autotune.all') },
     { value: 1, label: t('autotune.rollOnly') },
     { value: 2, label: t('autotune.pitchOnly') },
     { value: 4, label: t('autotune.yawOnly') },
@@ -25,11 +28,9 @@
   );
 
   function start() {
-    if (axes !== 0) {
-      dispatch('param_set', undefined, { name: 'AUTOTUNE_AXES', value: axes });
-    }
     const mode = specialModes().autotune;
     if (mode === null) return; // Rover and Sub have no AutoTune mode
+    dispatch('param_set', undefined, { name: 'AUTOTUNE_AXES', value: axes });
     dispatch('mode', mode);
     addToast(t('autotune.start'), 'info');
   }

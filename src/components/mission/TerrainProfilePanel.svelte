@@ -1,7 +1,7 @@
 <script lang="ts">
   import { app } from '../../lib/stores.svelte';
   import { t } from '../../lib/i18n.svelte';
-  import { getElevationProfile, interpolateRoute } from '../../lib/terrain';
+  import { groundAboveHome, interpolateRoute } from '../../lib/terrain';
   import { segDist } from '../../lib/missionIO';
   import Button from '$lib/components/ui/button/button.svelte';
   import { X, Mountain } from '@lucide/svelte';
@@ -27,7 +27,7 @@
     const pts = interpolateRoute(wps, Math.max(50, segDist(wps[0], wps[wps.length - 1]) / 200));
     const snapshot = JSON.stringify(wps.map((w) => `${w.lat.toFixed(5)},${w.lon.toFixed(5)}`));
     loading = true;
-    getElevationProfile(pts)
+    groundAboveHome(pts, { lat: app.drone.home_lat, lon: app.drone.home_lon })
       .then((elevs) => {
         const current = app.waypoints.map((w) => `${w.lat.toFixed(5)},${w.lon.toFixed(5)}`);
         if (JSON.stringify(current) !== snapshot) return;
@@ -41,6 +41,22 @@
       .finally(() => {
         loading = false;
       });
+  });
+
+  // The tightest spot on the route, shown beside the chart.
+  let lowestClearance = $derived.by(() => {
+    const ground = terrainElevations;
+    if (!ground || ground.length === 0 || terrainPoints.length !== ground.length) return null;
+    const along = (pts: { lat: number; lon: number }[]) => {
+      const d = [0];
+      for (let i = 1; i < pts.length; i++) d.push(d[i - 1] + segDist(pts[i - 1], pts[i]));
+      return d;
+    };
+    const dists = along(wps);
+    const tDists = along(terrainPoints);
+    const scale = dists[dists.length - 1] / (tDists[tDists.length - 1] || 1);
+    const alts = wps.map((wp) => wp.alt);
+    return Math.min(...ground.map((g, i) => interpFlightAlt(tDists[i] * scale, dists, alts) - g));
   });
 
   $effect(() => {
@@ -358,6 +374,14 @@
           class="w-32 h-1.5 accent-amber-500"
         />
         <span class="text-xs font-mono text-foreground w-10">{minClearance}m</span>
+        {#if lowestClearance !== null}
+          <span
+            data-testid="terrain-lowest-clearance"
+            class="text-[11px] font-mono {lowestClearance < minClearance
+              ? 'text-destructive'
+              : 'text-muted-foreground'}">{t('terrain.lowest')}: {lowestClearance.toFixed(0)}m</span
+          >
+        {/if}
         {#if loading}
           <span class="text-[11px] text-amber-500 ml-auto">{t('terrain.loading')}</span>
         {/if}

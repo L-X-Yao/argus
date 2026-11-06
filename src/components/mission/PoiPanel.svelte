@@ -29,6 +29,8 @@
   }
 
   function clearRoi() {
+    // A location of all zeros turns the ROI off (ArduCopter/autoyaw.cpp:175 set_roi).
+    dispatch('do_set_roi', undefined, { lat: 0, lon: 0, alt: 0 });
     roiSet = false;
     roiLat = 0;
     roiLon = 0;

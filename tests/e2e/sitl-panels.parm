@@ -1,0 +1,10 @@
+# A click and a slide take a second, which is five of the FC's at speedup 5.
+DISARM_DELAY 0
+# The defaults plus bit 18: IMU at the loop rate, or the FFT has 25 Hz to work with.
+LOG_BITMASK 438270
+# A tone on the gyros for panels-sitl-tools.spec.ts to find. It needs the motors on, and
+# has to get through the gyro filter, whose default is 20 Hz.
+SIM_VIB_FREQ_X 35
+SIM_GYR1_RND 3
+SIM_GYR2_RND 3
+INS_GYRO_FILTER 80

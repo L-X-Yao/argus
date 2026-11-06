@@ -160,10 +160,15 @@
     return () => clearTimeout(focusTimer);
   });
 
+  // On the flag alone: tracking the waypoints too would fit the map again after every edit
+  // from the first load on, and pull the next click away from where it was aimed.
   $effect(() => {
-    if (app.fitRouteFlag <= 0 || app.waypoints.length < 2) return;
-    const pts = app.waypoints.map((w) => coord(w.lat, w.lon));
-    map.fitBounds(L.latLngBounds(pts), { padding: [40, 40] });
+    if (app.fitRouteFlag <= 0) return;
+    untrack(() => {
+      if (app.waypoints.length < 2) return;
+      const pts = app.waypoints.map((w) => coord(w.lat, w.lon));
+      map.fitBounds(L.latLngBounds(pts), { padding: [40, 40] });
+    });
   });
 
   onDestroy(() => {

@@ -12,7 +12,7 @@
     showConfirm,
   } from '../../lib/stores.svelte';
   import { t } from '../../lib/i18n.svelte';
-  import { getElevationProfile, adjustWaypointsForTerrain, interpolateRoute } from '../../lib/terrain';
+  import { groundAboveHome, adjustWaypointsForTerrain, interpolateRoute } from '../../lib/terrain';
 
   function fitAfterLoad() {
     requestAnimationFrame(() => app.fitRouteFlag++);
@@ -414,7 +414,7 @@
     // Capture a snapshot to detect staleness after await
     const snapshot = JSON.stringify(wps.map((w) => `${w.lat.toFixed(5)},${w.lon.toFixed(5)}`));
     terrainLoading = true;
-    getElevationProfile(pts)
+    groundAboveHome(pts, { lat: app.drone.home_lat, lon: app.drone.home_lon })
       .then((elevs) => {
         // Only apply if waypoints haven't changed since we started
         const current = app.waypoints.map((w) => `${w.lat.toFixed(5)},${w.lon.toFixed(5)}`);

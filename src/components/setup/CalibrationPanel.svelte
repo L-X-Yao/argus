@@ -204,14 +204,11 @@
     return { done, failed };
   });
 
-  /* Side effects: flip calibrating off on completion/failure; auto-accept compass. */
+  /* Side effects: flip calibrating off on completion/failure. The link accepts a compass run. */
   $effect(() => {
     if (!calibrating) return;
     if (selected === 'compass') {
-      if (compassParsed.done) {
-        calibrating = false;
-        dispatch('cal_compass_accept');
-      } else if (compassParsed.failed) {
+      if (compassParsed.done || compassParsed.failed) {
         calibrating = false;
       }
     } else if (selected === 'accel') {
@@ -579,7 +576,8 @@
         </p>
         <div class="rounded-lg border border-border bg-muted/30 min-h-[60px] max-h-[120px] overflow-y-auto p-2">
           {#if calEvents.length > 0}
-            {#each calEvents as ev (ev.time + ev.text)}
+            <!-- No key: the FC can say the same thing twice within the second a time shows. -->
+            {#each calEvents as ev}
               <div class="flex items-start gap-2 py-0.5">
                 <span class="text-[10px] text-muted-foreground font-mono shrink-0">{ev.time}</span>
                 <span class="text-xs text-foreground">{ev.text}</span>

@@ -106,6 +106,8 @@ class DroneLink:
         self._thread = None
         self._lock = threading.Lock()  # protects _ser.write() only
         self._state_lock = threading.RLock()  # protects all state reads/writes (handlers + get_state)
+        self._mag_cal_reports: dict[int, int] = {}  # compass id -> MAG_CAL_STATUS, this run
+        self._mag_cal_ours = False  # a run started here, so the result is ours to accept
         self._buf = b""
         self.sq = 0
         self._parse_errors = 0
@@ -236,12 +238,14 @@ class DroneLink:
             self.sq = 0
             self.vehicle.vtype_raw = 0
             self.vehicle.vtol_state = 0
+            self.vehicle.landed = False
             # Re-arm the autopilot latch + unsupported-FC warning: the new
             # session may be a different vehicle, and a stale non-ArduPilot
             # value would silently gate every command (or a stale 3 would
             # suppress the warning) until the first heartbeat.
             self.vehicle.autopilot = 0
             self._unsupported_fc_warned = False
+            self._mag_cal_ours = False
             self.attitude.home_lat = self.attitude.home_lon = 0.0
             self.attitude.dist_home = 0.0
             self.vehicle.armed_time = 0.0
@@ -274,6 +278,7 @@ class DroneLink:
             self.connected = False
             self.vehicle.vtype_raw = 0
             self.vehicle.vtol_state = 0
+            self.vehicle.landed = False
             # Same rationale as connect(): a silent in-loop reconnect may be a
             # different vehicle — stale autopilot would mis-gate commands and
             # a spent warning flag would hide the unsupported-FC event.
@@ -459,6 +464,7 @@ class DroneLink:
             "vtype": vn,
             "vtype_raw": v.vtype_raw,
             "vtol_state": v.vtol_state,
+            "landed": v.landed,
             "autopilot": v.autopilot,
             "mode_btns": btns,
             "link_age": round(time.time() - self.last_frame_time, 1)

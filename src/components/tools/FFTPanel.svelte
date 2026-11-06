@@ -1,7 +1,7 @@
 <script lang="ts">
   import { addToast } from '../../lib/stores.svelte';
   import { t } from '../../lib/i18n.svelte';
-  import { parseDFLog, getTimeSeries, computeFFT, type DFLog } from '../../lib/dflog';
+  import { parseDFLog, getTimeSeries, computeFFT, findPeaks, sampleInterval, type DFLog } from '../../lib/dflog';
   import Button from '$lib/components/ui/button/button.svelte';
   import { X, BarChart3 } from '@lucide/svelte';
 
@@ -10,7 +10,6 @@
   let log = $state<DFLog | null>(null);
   let source = $state('IMU.GyrX');
   let canvasEl: HTMLCanvasElement = $state(null!);
-  let peakHz = $state(0);
   let logScale = $state(false);
   let rpmInput = $state('');
   let useHanning = $state(true);
@@ -94,39 +93,14 @@
     return { freq: avgFreq, mag: avgMag };
   }
 
-  /** Detect top N peaks in the magnitude spectrum */
-  function findPeaks(freq: number[], mag: number[], count: number): { freq: number; mag: number; bw: number }[] {
-    if (mag.length < 3) return [];
-    // Find all local maxima
-    const peaks: { idx: number; val: number }[] = [];
-    for (let i = 1; i < mag.length - 1; i++) {
-      if (mag[i] > mag[i - 1] && mag[i] > mag[i + 1]) {
-        peaks.push({ idx: i, val: mag[i] });
-      }
-    }
-    peaks.sort((a, b) => b.val - a.val);
-    const topPeaks = peaks.slice(0, count);
-
-    return topPeaks.map((p) => {
-      const peakFreq = freq[p.idx];
-      // Estimate bandwidth at -3dB (half power)
-      const threshold = p.val * 0.707;
-      let lo = p.idx,
-        hi = p.idx;
-      while (lo > 0 && mag[lo] > threshold) lo--;
-      while (hi < mag.length - 1 && mag[hi] > threshold) hi++;
-      const bw = freq[hi] - freq[lo];
-      return { freq: peakFreq, mag: p.val, bw: Math.max(bw, freq[1] - freq[0]) };
-    });
-  }
-
   $effect(() => {
     if (!canvasEl || !log) return;
     const [msgType, field] = source.split('.');
     const series = getTimeSeries(log, msgType, field);
     if (series.t.length < 64) return;
 
-    const dt = series.t.length > 1 ? (series.t[series.t.length - 1] - series.t[0]) / (series.t.length - 1) : 0.001;
+    const dt = sampleInterval(series.t);
+    if (dt <= 0) return;
     const sampleRate = 1 / dt;
 
     // Compute FFT: either Welch's method or single-shot
@@ -152,10 +126,12 @@
     for (let i = 1; i < mag.length; i++) {
       if (mag[i] > mag[maxIdx]) maxIdx = i;
     }
-    peakHz = freq[maxIdx];
+    const peak = freq[maxIdx];
 
-    // Find top 3 peaks for notch recommendation
-    notchPeaks = findPeaks(freq, mag, 3);
+    // Top 3 peaks for the notch recommendation. The drawing below reads the local: reading
+    // the state back would make this effect depend on a new array of its own every time.
+    const peaks = findPeaks(freq, mag, 3);
+    notchPeaks = peaks;
 
     // Draw
     const ctx = canvasEl.getContext('2d')!;
@@ -262,7 +238,7 @@
     ctx.stroke();
 
     // Peak marker
-    const peakX = (peakHz / maxFreqDisplay) * w;
+    const peakX = (peak / maxFreqDisplay) * w;
     ctx.strokeStyle = '#f44336';
     ctx.lineWidth = 1;
     ctx.setLineDash([4, 4]);
@@ -273,11 +249,11 @@
     ctx.setLineDash([]);
     ctx.fillStyle = '#f44336';
     ctx.font = 'bold 11px monospace';
-    ctx.fillText(`${peakHz.toFixed(1)}Hz`, peakX + 4, 14);
+    ctx.fillText(`${peak.toFixed(1)}Hz`, peakX + 4, 14);
 
     // Mark notch peaks (2nd and 3rd) with smaller markers
-    for (let i = 1; i < notchPeaks.length; i++) {
-      const np = notchPeaks[i];
+    for (let i = 1; i < peaks.length; i++) {
+      const np = peaks[i];
       if (np.freq > maxFreqDisplay) continue;
       const nx = (np.freq / maxFreqDisplay) * w;
       ctx.strokeStyle = '#ffb74d';

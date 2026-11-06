@@ -116,6 +116,17 @@ describe('serial session state', () => {
       expect(H.toasts.filter((t) => t.text.startsWith('toast.')).map((t) => t.level)).toEqual(['warn', 'success']);
     });
 
+    it('takes landed from the FC, which reports STANDBY while land_complete', () => {
+      for (const [systemStatus, landed] of [
+        [3, true],
+        [4, false],
+        [5, false],
+      ] as const) {
+        h.onHeartbeat!({ ...heartbeat(true), systemStatus } as never, frame);
+        expect(H.drone.landed).toBe(landed);
+      }
+    });
+
     it('reports and records the flight at disarm', () => {
       h.onGlobalPositionInt!(position(34.2, 108.9) as never, frame);
       h.onHeartbeat!(heartbeat(true) as never, frame);
@@ -132,6 +143,30 @@ describe('serial session state', () => {
         bat_used: 10,
       });
       expect(H.flights).toHaveLength(1);
+    });
+
+    it('reports no flight when the vehicle went nowhere, as after a motor test', () => {
+      h.onGlobalPositionInt!(position(34.2, 108.9) as never, frame);
+      h.onHeartbeat!(heartbeat(true) as never, frame);
+      vi.advanceTimersByTime(5000);
+      h.onGlobalPositionInt!(position(34.2, 108.9, 0.3) as never, frame);
+      h.onHeartbeat!(heartbeat(false) as never, frame);
+      expect(H.drone.flight_summary).toBeNull();
+      expect(H.flights).toHaveLength(0);
+      expect(H.events.map((e) => e.event_type)).toContain('disarmed');
+    });
+
+    it('takes a dive for a flight on a Sub, and only there', () => {
+      const belowHome = (type: number) => {
+        h.onHeartbeat!({ ...heartbeat(false), type } as never, frame);
+        h.onHeartbeat!({ ...heartbeat(true), type } as never, frame);
+        h.onGlobalPositionInt!(position(0, 0, -8) as never, frame);
+        H.drone.flight_summary = null;
+        h.onHeartbeat!({ ...heartbeat(false), type } as never, frame);
+        return H.drone.flight_summary;
+      };
+      expect(belowHome(2)).toBeNull();
+      expect(belowHome(12)).not.toBeNull();
     });
 
     it('clears the last summary when armed again', () => {
@@ -159,6 +194,13 @@ describe('serial session state', () => {
   });
 
   describe('a session across reconnects', () => {
+    it('forgets that the last vehicle was on the ground', () => {
+      h.onHeartbeat!({ ...heartbeat(false), systemStatus: 3 } as never, frame);
+      expect(H.drone.landed).toBe(true);
+      resetSerialSession();
+      expect(H.drone.landed).toBe(false);
+    });
+
     it('announces an FC that was armed before we connected, as the backend does', () => {
       h.onHeartbeat!(heartbeat(true) as never, frame);
       expect(H.events.map((e) => e.event_type)).toEqual(['armed']);
@@ -181,6 +223,7 @@ describe('serial session state', () => {
     it('reports a flight that ended while the link was down', () => {
       h.onHeartbeat!(heartbeat(false) as never, frame);
       h.onHeartbeat!(heartbeat(true) as never, frame);
+      h.onGlobalPositionInt!(position(34.2, 108.9, 30) as never, frame);
       vi.advanceTimersByTime(10000);
       const again = buildSerialHandlers();
       again.onHeartbeat!(heartbeat(false) as never, frame);
@@ -208,6 +251,17 @@ describe('serial session state', () => {
       vi.advanceTimersByTime(20000);
       h.onSysStatus!(status(78) as never, frame);
       expect(H.drone.bat_time).toBe(780);
+    });
+
+    it('drops the estimate at disarm, flown or not', () => {
+      h.onHeartbeat!(heartbeat(false) as never, frame);
+      h.onHeartbeat!(heartbeat(true) as never, frame);
+      h.onSysStatus!(status(80) as never, frame);
+      vi.advanceTimersByTime(20000);
+      h.onSysStatus!(status(78) as never, frame);
+      h.onHeartbeat!(heartbeat(false) as never, frame);
+      expect(H.drone.flight_summary).toBeFalsy();
+      expect(H.drone.bat_time).toBe(-1);
     });
 
     it('gives no estimate on the ground', () => {

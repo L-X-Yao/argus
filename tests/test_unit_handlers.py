@@ -81,16 +81,70 @@ class TestHeartbeat:
         assert link.vehicle.armed
         assert any(e["event_type"] == "armed" for e in link.events)
 
+    @pytest.mark.parametrize("status, landed", [(3, True), (4, False), (5, False), (0, False)])
+    def test_landed_is_what_the_fc_says(self, status, landed):
+        # MAV_STATE_STANDBY while ap.land_complete (ArduCopter/GCS_MAVLink_Copter.cpp:74).
+        link = make_link()
+        p = struct.pack("<IBBBBB", 5, 2, 3, 0x80, status, 3)
+        handle_heartbeat(p, len(p), link)
+        assert link.vehicle.landed is landed
+        assert link.get_state()["landed"] is landed
+
     def test_disarm_generates_summary(self):
         link = make_link()
         p_arm = struct.pack("<IBBBBB", 5, 2, 3, 0x80, 0, 3)
         handle_heartbeat(p_arm, len(p_arm), link)
         assert link.vehicle.armed
+        link.vehicle.max_alt = 12.0
         p_disarm = struct.pack("<IBBBBB", 5, 2, 3, 0, 0, 3)
         handle_heartbeat(p_disarm, len(p_disarm), link)
         assert not link.vehicle.armed
         assert link.vehicle.flight_summary is not None
         assert "duration" in link.vehicle.flight_summary
+
+    def test_a_drive_counts_as_a_flight(self):
+        link = make_link()
+        p_arm = struct.pack("<IBBBBB", 5, 2, 3, 0x80, 0, 3)
+        handle_heartbeat(p_arm, len(p_arm), link)
+        link.vehicle.total_dist = 40.0
+        p_disarm = struct.pack("<IBBBBB", 5, 2, 3, 0, 0, 3)
+        handle_heartbeat(p_disarm, len(p_disarm), link)
+        assert link.vehicle.flight_summary is not None
+
+    def test_a_motor_test_is_no_flight(self):
+        # The FC reports armed through a motor test and disarmed after it.
+        link = make_link()
+        p_arm = struct.pack("<IBBBBB", 5, 2, 3, 0x80, 0, 3)
+        handle_heartbeat(p_arm, len(p_arm), link)
+        link.vehicle.max_alt = 0.3
+        p_disarm = struct.pack("<IBBBBB", 5, 2, 3, 0, 0, 3)
+        handle_heartbeat(p_disarm, len(p_disarm), link)
+        assert link.vehicle.flight_summary is None
+
+    @staticmethod
+    def _below_home(vtype: int, metres: float):
+        link = make_link()
+        p_arm = struct.pack("<IBBBBB", 5, vtype, 3, 0x80, 0, 3)
+        handle_heartbeat(p_arm, len(p_arm), link)
+        p = struct.pack("<IiiiihhhH", 1000, 0, 0, 400000, int(-metres * 1000), 0, 0, 0, 0)
+        handle_global_position_int(p, len(p), link)
+        p_disarm = struct.pack("<IBBBBB", 5, vtype, 3, 0, 0, 3)
+        handle_heartbeat(p_disarm, len(p_disarm), link)
+        return link.vehicle.flight_summary
+
+    def test_a_dive_counts_as_a_flight(self):
+        # A Sub goes down, often with no position: neither height nor distance would show it.
+        assert TestHeartbeat._below_home(12, 8) is not None
+
+    def test_another_vehicle_does_not_inherit_a_dive(self):
+        link = make_link_connected()
+        link.vehicle.max_depth = 8.0
+        execute("switch_vehicle", 7, link)
+        assert link.vehicle.max_depth == 0
+
+    def test_a_copter_below_home_has_not_flown(self):
+        # What a barometer drifting on the bench looks like.
+        assert TestHeartbeat._below_home(2, 8) is None
 
     def test_empty_payload_ignored(self):
         # Per MAVLink 2 zero-trim, a truncated heartbeat is processed
@@ -122,6 +176,7 @@ class TestHeartbeat:
         link = make_link()
         link.vehicle.armed = True
         link.vehicle.armed_time = time.time() - 60
+        link.vehicle.max_alt = 12.0
         p = bytearray(9)
         p[6] = 0x00
         handle_heartbeat(p, len(p), link)

@@ -69,6 +69,7 @@ vi.mock('./ws', () => ({
 
 // Import AFTER mocks
 import { connectSerial, disconnectSerial, dispatch } from './transport';
+import { app } from './stores.svelte';
 
 // ─────────────────────────────────────────────────────────────────────────
 // Frame decode helpers — MAVLink 2 wire layout
@@ -264,6 +265,7 @@ describe('_serialDispatch wire-byte semantics', () => {
   // ── takeoff: Plane needs GUIDED first ────────────────────────────────
   it('takeoff on Plane switches to GUIDED (15) before sending NAV_TAKEOFF (22)', () => {
     _isPlaneFlag = true;
+    app.drone.landed = true;
     dispatch('takeoff', undefined, { alt: 50 });
     expect(writes.length).toBe(2);
     expect(decodeSetMode(writes[0]).customMode).toBe(15); // GUIDED
@@ -272,13 +274,24 @@ describe('_serialDispatch wire-byte semantics', () => {
     expect(cmd.p7).toBe(50);
   });
 
-  it('takeoff on Copter sends NAV_TAKEOFF directly (no mode switch)', () => {
+  it('takeoff on Copter switches to GUIDED (4) too: it boots in a mode that refuses it', () => {
     _isPlaneFlag = false;
+    app.drone.landed = true;
     dispatch('takeoff', undefined, { alt: 30 });
-    expect(writes.length).toBe(1);
-    const cmd = decodeCommandLong(writes[0]);
+    expect(writes.length).toBe(2);
+    expect(decodeSetMode(writes[0]).customMode).toBe(4);
+    const cmd = decodeCommandLong(writes[1]);
     expect(cmd.command).toBe(22);
     expect(cmd.p7).toBe(30);
+  });
+
+  it.each([false, true])('takeoff in the air leaves the mode alone (plane: %s)', (plane) => {
+    // GUIDED would end an AUTO or an RTL.
+    _isPlaneFlag = plane;
+    app.drone.landed = false;
+    dispatch('takeoff', undefined, { alt: 30 });
+    expect(writes.length).toBe(1);
+    expect(decodeCommandLong(writes[0]).command).toBe(22);
   });
 
   // ── mission_start: AUTO mode + delayed MISSION_START (300) ───────────
@@ -581,13 +594,14 @@ describe('_serialDispatch calibration + gimbal + RC wire bytes', () => {
     expect(decodeCommandLong(writes[0]).command).toBe(2501);
   });
 
-  it('motor_test_stop sends DO_MOTOR_TEST (209) with zero throttle for every motor', () => {
+  it('motor_test_stop ends the running test with one DO_MOTOR_TEST (209)', () => {
     dispatch('motor_test_stop');
     const cmds = filterAppFrames(writes).map(decodeCommandLong);
-    expect(cmds.length).toBe(8);
-    for (const cmd of cmds) {
-      expect(cmd.command).toBe(209);
-      expect(cmd.p3).toBe(0); // throttle 0 = stop
-    }
+    expect(cmds.length).toBe(1);
+    const cmd = cmds[0];
+    expect(cmd.command).toBe(209);
+    expect(cmd.p1).toBe(1);
+    expect(cmd.p3).toBe(0); // no throttle
+    expect(cmd.p4).toBe(0); // a timeout of 0 ends it at the next output
   });
 });

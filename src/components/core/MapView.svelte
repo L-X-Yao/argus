@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, untrack } from 'svelte';
   import { app, addWaypoint, addToast, saveRally, showConfirm } from '../../lib/stores.svelte';
   import { dispatch } from '../../lib/transport';
   import { fmtDist } from '../../lib/units';
@@ -34,7 +34,10 @@
 
   let mapEl: HTMLDivElement;
   let map = $state<L.Map | null>(null);
-  let follow = $state(true);
+  // Not in Plan, where the map is what is drawn on: a vehicle sitting on the bench still
+  // reports a new position every moment, and each would pull the map back to it. The
+  // operator turns this on and off from there: the prop only says where it starts.
+  let follow = $state(untrack(() => showHud));
   let isSat = $state(true);
   let measuring = $state(false);
   let mouseCoord = $state('');

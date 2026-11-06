@@ -316,6 +316,7 @@ export async function disconnectSerial(): Promise<void> {
   _clearMissionStartTimer();
   _wpToSeq.clear();
   _abortParamFetch(false);
+  _resetMagCal();
 }
 
 function sendSerialFrame(msgId: number, payload: Uint8Array): void {
@@ -390,7 +391,7 @@ export function serialSendParamSet(name: string, value: number, type: number = 9
 }
 
 // Twin of backend send_cmd, which says what goes in these and why.
-const RETRIED_COMMANDS = new Set([22, 176, 181, 183, 201, 205, 300, 400, 1000]);
+const RETRIED_COMMANDS = new Set([22, 176, 181, 183, 201, 205, 300, 400, 1000, 42425]);
 const UNTRACKED_COMMANDS = new Set([241, 246, 511, 512]);
 const CMD_RETRY_MS = 1000;
 const CMD_TRIES = 3;
@@ -489,15 +490,16 @@ const _serialDispatch: Record<string, CmdHandler> = {
     }
     serialSendMode(mode);
   },
-  // MAV_CMD_NAV_TAKEOFF (22): p7=alt. AP source ArduPlane/quadplane.cpp:3948 (QuadPlane::do_user_takeoff)
-  // rejects unless control_mode == mode_guided — switch Plane to GUIDED (15) first to match backend cmd_takeoff.
+  // MAV_CMD_NAV_TAKEOFF (22): p7=alt, from GUIDED on what can take off. See backend cmd_takeoff.
   takeoff: (_, d) => {
     const alt = num(d?.alt, 30);
     // Bounds mirror backend cmd_takeoff (_flight.py:47-49), and run BEFORE
-    // the Plane mode switch so an invalid alt doesn't leak a bare GUIDED
+    // the mode switch so an invalid alt doesn't leak a bare GUIDED
     // transition the backend path would never have sent.
     if (!(alt >= 1 && alt <= 1000)) return;
-    if (_isPlane()) serialSendMode(15);
+    if ((_isPlane() || vehicleType(app.drone.vtype_raw) === 'copter') && app.drone.landed) {
+      serialSendMode(_specialModes().guided);
+    }
     serialSendCommandLong(22, 0, 0, 0, 0, 0, 0, alt);
   },
   // Backend cmd_mission_start: switch to AUTO, then send MAV_CMD_MISSION_START (300) after a delay.
@@ -582,7 +584,7 @@ const _serialDispatch: Record<string, CmdHandler> = {
     // live vehicle. Same for a null/non-numeric ELEMENT (backend int(None)
     // raises → whole command error-drops), and in-range coercion clamps to
     // u16 like the backend's max(0, min(65535, ...)) instead of wrapping.
-    // All production callers (gamepad, EscCalPanel) send all 8 as ints.
+    // The production caller (gamepad) sends all 8 as ints.
     if (ch && ch.length >= 8) {
       const vals: number[] = [];
       for (let i = 0; i < 8; i++) {
@@ -646,9 +648,8 @@ const _serialDispatch: Record<string, CmdHandler> = {
     if (!(duration > 0 && duration <= 30)) return;
     serialSendCommandLong(209, motor + 1, 0, throttle, duration, 1);
   },
-  motor_test_stop: () => {
-    for (let i = 1; i <= 8; i++) serialSendCommandLong(209, i, 0, 0, 0, 1);
-  },
+  // One frame: see backend cmd_motor_test_stop.
+  motor_test_stop: () => serialSendCommandLong(209, 1, 0, 0, 0, 1),
 };
 
 /**
@@ -1187,13 +1188,17 @@ export async function serialDownloadMission(): Promise<{ ok: boolean; error?: st
 interface MagCalState {
   pct: number; // last %% emitted, -1 = none
   done: boolean; // one-shot to avoid double "complete" or progress-after-done
+  reports: Map<number, number>; // compass id -> MAG_CAL_STATUS, this run
+  ours: boolean; // a run started here, so the result is ours to accept
 }
 
-const magCal: MagCalState = { pct: -1, done: false };
+const magCal: MagCalState = { pct: -1, done: false, reports: new Map(), ours: false };
 
 function _resetMagCal(): void {
   magCal.pct = -1;
   magCal.done = false;
+  magCal.reports.clear();
+  magCal.ours = false;
 }
 
 function _onMagCalProgress(p: DataView): void {
@@ -1218,12 +1223,16 @@ function _onMagCalProgress(p: DataView): void {
 
 function _onMagCalReport(p: DataView): void {
   // p is pre-padded to ≥44 bytes (matches backend's `_pad(p, 44)`).
-  // cal_status is at offset 42 — see backend handler.
-  if (magCal.done) return;
-  const calStatus = p.getUint8(42);
+  // compass_id @40, cal_mask @41, cal_status @42: the backend handler says why all three.
+  if (magCal.done || (magCal.ours && magCal.pct < 0)) return;
+  const calMask = p.getUint8(41);
+  magCal.reports.set(p.getUint8(40), p.getUint8(42));
+  for (let i = 0; i < 8; i++) {
+    if (calMask & (1 << i) && !magCal.reports.has(i)) return;
+  }
   magCal.done = true;
   magCal.pct = -1;
-  if (calStatus === 4) {
+  if ([...magCal.reports.values()].every((status) => status === 4)) {
     // MAG_CAL_SUCCESS. Backend emits TWO events (done + reboot hint);
     // CalibrationPanel only reads the first for completion detection but
     // we replicate both so the message log looks identical.
@@ -1239,6 +1248,7 @@ function _onMagCalReport(p: DataView): void {
       text: t('cal.s.compassReboot'),
       event_type: 'cal_compass',
     });
+    if (magCal.ours) serialCalCompassAccept();
   } else {
     addEvent({
       type: 'event',
@@ -1247,11 +1257,13 @@ function _onMagCalReport(p: DataView): void {
       event_type: 'cal_compass',
     });
   }
+  magCal.ours = false;
 }
 
 export function serialCalCompass(): void {
   if (!isSerialConnected()) return;
   _resetMagCal();
+  magCal.ours = true;
   // MAV_CMD_DO_START_MAG_CAL: p1=mag_mask(0=all), p2-p4=options(0). Matches
   // backend cmd_cal_compass (send_cmd(link, 42424, p1=0, p2=0, p3=0, p4=0)).
   serialSendCommandLong(42424, 0, 0, 0, 0, 0, 0, 0);
