@@ -169,7 +169,9 @@ def send_rally_item_int(link: DroneLink, item: dict) -> None:
 
 
 def send_mission_item_int(link: DroneLink, wp: dict) -> None:
-    frame = 3 if wp["cmd"] in (16, 18, 19, 21, 22, 82) else 2
+    # 201 is DO_SET_ROI: a location, whose altitude the FC would take as above sea level in
+    # the mission frame (AP_Mission.cpp:1496), where every altitude here is above home.
+    frame = 3 if wp["cmd"] in (16, 18, 19, 21, 22, 82, 201) else 2
     lat7 = int(float(wp.get("lat", 0)) * 1e7)
     lon7 = int(float(wp.get("lon", 0)) * 1e7)
     p = struct.pack(

@@ -11,7 +11,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import pytest
 
-from backend.commands import execute
+from backend.commands import execute, send_mission_item_int
 from backend.commands._mission import check_mission_dl_timeout
 from backend.drone_link import DroneLink
 from backend.mavlink_handlers import handle_mission_ack
@@ -593,6 +593,12 @@ class TestMissionUpload:
         assert [i["cmd"] for i in items] == [16, 22, 16]
         assert items[1]["alt"] == 0
         assert items[2]["alt"] == -5
+
+    def test_a_roi_altitude_is_above_home_like_every_other(self):
+        link = make_link()
+        send_mission_item_int(link, {"seq": 3, "cmd": 201, "lat": -35.3, "lon": 149.1, "alt": 12})
+        raw = link._ser.write.call_args[0][0]
+        assert raw[10 + 34] == 3  # MAV_FRAME_GLOBAL_RELATIVE_ALT, not the mission frame
 
     def test_other_vehicles_keep_the_takeoff_altitude_and_the_closing_rtl(self):
         link = make_link()

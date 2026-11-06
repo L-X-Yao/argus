@@ -37,7 +37,8 @@ export interface MissionItem {
   z: number; // alt (float)
 }
 
-const NAV_FRAME_CMDS = new Set([16, 18, 19, 21, 22, 82]);
+// With 201, DO_SET_ROI: see backend send_mission_item_int.
+const NAV_FRAME_CMDS = new Set([16, 18, 19, 21, 22, 82, 201]);
 
 function navCmdFor(wpType: Waypoint['type']): { cmd: number; p1Source: 'loiter_param' | 'delay'; defaultP1: number } {
   if (wpType === 'loiter_turns') return { cmd: 18, p1Source: 'loiter_param', defaultP1: 3 };
