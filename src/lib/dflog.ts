@@ -168,7 +168,9 @@ export function firstDataColumn(fmt: DFFormat): string | undefined {
  * count takes the pause for a slower rate, and reads every frequency found from it low.
  */
 export function sampleInterval(times: number[]): number {
-  const gaps = Float64Array.from(times.slice(1), (time, i) => time - times[i]).sort();
+  const gaps = Float64Array.from(times.slice(1), (time, i) => time - times[i])
+    .filter((gap) => gap > 0)
+    .sort();
   return gaps.length > 0 ? gaps[gaps.length >> 1] : 0;
 }
 

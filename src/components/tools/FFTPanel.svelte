@@ -100,6 +100,7 @@
     if (series.t.length < 64) return;
 
     const dt = sampleInterval(series.t);
+    if (dt <= 0) return;
     const sampleRate = 1 / dt;
 
     // Compute FFT: either Welch's method or single-shot

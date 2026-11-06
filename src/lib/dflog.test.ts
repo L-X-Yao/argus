@@ -314,6 +314,10 @@ describe('sampleInterval', () => {
   it('has nothing to say about a single sample', () => {
     expect(sampleInterval([1])).toBe(0);
   });
+
+  it('looks past samples logged at one instant', () => {
+    expect(sampleInterval([0, 0, 0, 0, 0, 0.01, 0.01, 0.01, 0.01, 0.02])).toBeCloseTo(0.01, 9);
+  });
 });
 
 describe('findPeaks', () => {
