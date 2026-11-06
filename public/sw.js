@@ -80,12 +80,33 @@ async function staleWhileRevalidate(request, cacheName) {
   return cached || fetchPromise;
 }
 
+// A browser opens six connections to a host, and a map view asks for hundreds of tiles. They
+// all queue ahead of whatever is asked for next, so on a slow map server a panel's own code
+// waited minutes behind them. Tiles get some of the connections, never all of them.
+const MAX_TILE_FETCHES = 3;
+let tileFetches = 0;
+const tileQueue = [];
+
+async function fetchTile(request) {
+  if (tileFetches >= MAX_TILE_FETCHES) await new Promise((resolve) => tileQueue.push(resolve));
+  else tileFetches += 1;
+  try {
+    // The map has moved on while this one waited.
+    if (request.signal?.aborted) return Response.error();
+    return await fetch(request);
+  } finally {
+    const next = tileQueue.shift();
+    if (next) next();
+    else tileFetches -= 1;
+  }
+}
+
 async function handleTileRequest(request) {
   const cache = await caches.open(TILE_CACHE);
   const cached = await cache.match(request);
   if (cached) return cached;
   try {
-    const resp = await fetch(request);
+    const resp = await fetchTile(request);
     if (resp.ok) {
       await cache.put(request, resp.clone());
       evictOldTiles(cache);
