@@ -34,7 +34,9 @@
 
   let mapEl: HTMLDivElement;
   let map = $state<L.Map | null>(null);
-  let follow = $state(true);
+  // Not in Plan, where the map is what is drawn on: a vehicle sitting on the bench still
+  // reports a new position every moment, and each would pull the map back to it.
+  let follow = $state(showHud);
   let isSat = $state(true);
   let measuring = $state(false);
   let mouseCoord = $state('');
