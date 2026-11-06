@@ -27,18 +27,55 @@
 
   interface Step {
     key: string;
+    desc: string;
     icon: typeof Layers;
     color: string;
     callback: () => void;
   }
 
   const steps: Step[] = [
-    { key: 'setup.frame', icon: Layers, color: 'text-blue-500', callback: () => panels.open('frameSelect') },
-    { key: 'setup.rc', icon: Radio, color: 'text-orange-500', callback: () => panels.open('rcCal') },
-    { key: 'setup.motor', icon: Zap, color: 'text-yellow-500', callback: () => panels.open('motorTest') },
-    { key: 'setup.cal', icon: Compass, color: 'text-green-500', callback: () => panels.open('calibration') },
-    { key: 'setup.failsafe', icon: ShieldAlert, color: 'text-red-500', callback: () => panels.open('failsafe') },
-    { key: 'setup.modes', icon: Plane, color: 'text-purple-500', callback: () => panels.open('flightModes') },
+    {
+      key: 'setup.frame',
+      desc: 'setup.frame.desc',
+      icon: Layers,
+      color: 'text-blue-500',
+      callback: () => panels.open('frameSelect'),
+    },
+    {
+      key: 'setup.rc',
+      desc: 'setup.rc.desc',
+      icon: Radio,
+      color: 'text-orange-500',
+      callback: () => panels.open('rcCal'),
+    },
+    {
+      key: 'setup.motor',
+      desc: 'setup.motor.desc',
+      icon: Zap,
+      color: 'text-yellow-500',
+      callback: () => panels.open('motorTest'),
+    },
+    {
+      key: 'setup.cal',
+      desc: 'setup.cal.desc',
+      icon: Compass,
+      color: 'text-green-500',
+      callback: () => panels.open('calibration'),
+    },
+    {
+      key: 'setup.failsafe',
+      desc: 'setup.failsafe.desc',
+      icon: ShieldAlert,
+      color: 'text-red-500',
+      callback: () => panels.open('failsafe'),
+    },
+    {
+      key: 'setup.modes',
+      desc: 'setup.modes.desc',
+      icon: Plane,
+      color: 'text-purple-500',
+      callback: () => panels.open('flightModes'),
+    },
   ];
 
   let currentStep = $state(0);
@@ -70,6 +107,8 @@
     completed[currentStep] = true;
     step.callback();
   }
+
+  const stepLabel = (n: number) => t('setup.step').replace('{n}', String(n)).replace('{total}', String(steps.length));
 
   function goToStep(i: number) {
     if (i >= 0 && i <= steps.length) {
@@ -145,8 +184,7 @@
           </div>
           <h3 class="text-lg font-bold text-foreground mb-2">{t('setup.done')}</h3>
           <p class="text-xs text-muted-foreground mb-6">
-            {completed.filter(Boolean).length}/{steps.length}
-            {t('setup.step')}
+            {stepLabel(completed.filter(Boolean).length)}
           </p>
           <div class="flex gap-2 justify-center">
             <Button variant="default" onclick={onclose}>
@@ -168,11 +206,10 @@
               {/each}
               <div>
                 <h3 class="text-sm font-semibold text-foreground">
-                  {t('setup.step')}
-                  {currentStep + 1}: {t(step.key)}
+                  {stepLabel(currentStep + 1)}: {t(step.key)}
                 </h3>
                 <p class="text-[11px] text-muted-foreground mt-0.5">
-                  {t(step.key + '.desc')}
+                  {t(step.desc)}
                 </p>
               </div>
               {#if completed[currentStep]}
