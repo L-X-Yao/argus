@@ -44,8 +44,9 @@ def handle_heartbeat(p: bytes, pl: int, link: DroneLink) -> None:
     v.mode = p[0] | (p[1] << 8) | (p[2] << 16) | (p[3] << 24)
     old_vtype = v.vtype_raw
     v.vtype_raw = p[4]
-    # ap.land_complete, the flag Copter refuses a takeoff on (ArduCopter/takeoff.cpp:23).
-    # An active failsafe reports CRITICAL instead, and so reads as not landed.
+    # ap.land_complete, the flag Copter refuses a takeoff on (ArduCopter/takeoff.cpp:23), and
+    # on Plane not flying (ArduPlane/GCS_MAVLink_Plane.cpp vehicle_system_status). An active
+    # failsafe reports CRITICAL on both, and so reads as not landed.
     v.landed = p[7] == MAV_STATE_STANDBY
     # HEARTBEAT.autopilot byte (offset 5). The FC advertises its autopilot
     # stack once at boot and the value is stable afterwards. We filter out:

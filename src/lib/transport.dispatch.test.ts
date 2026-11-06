@@ -265,6 +265,7 @@ describe('_serialDispatch wire-byte semantics', () => {
   // ── takeoff: Plane needs GUIDED first ────────────────────────────────
   it('takeoff on Plane switches to GUIDED (15) before sending NAV_TAKEOFF (22)', () => {
     _isPlaneFlag = true;
+    app.drone.landed = true;
     dispatch('takeoff', undefined, { alt: 50 });
     expect(writes.length).toBe(2);
     expect(decodeSetMode(writes[0]).customMode).toBe(15); // GUIDED
@@ -284,8 +285,9 @@ describe('_serialDispatch wire-byte semantics', () => {
     expect(cmd.p7).toBe(30);
   });
 
-  it('takeoff in the air leaves the mode alone: GUIDED would end an AUTO or an RTL', () => {
-    _isPlaneFlag = false;
+  it.each([false, true])('takeoff in the air leaves the mode alone (plane: %s)', (plane) => {
+    // GUIDED would end an AUTO or an RTL.
+    _isPlaneFlag = plane;
     app.drone.landed = false;
     dispatch('takeoff', undefined, { alt: 30 });
     expect(writes.length).toBe(1);
