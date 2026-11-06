@@ -47,6 +47,10 @@ describe('ekfAction', () => {
     expect(ekfAction(0, 'v4.6.3', 'copter')).toBe(1);
   });
 
+  it('leaves a 0 alone until the version is known', () => {
+    expect(ekfAction(0, '', 'copter')).toBe(0);
+  });
+
   it('leaves what the firmware has', () => {
     expect(ekfAction(0, 'v4.7.0', 'copter')).toBe(0);
     expect(ekfAction(3, 'v4.6.3', 'copter')).toBe(3);

@@ -30,9 +30,12 @@ export function ekfActions(fwVersion: string, kind: VehicleType): [number, strin
   return kind !== 'copter' || major > 4 || (major === 4 && minor >= 7) ? EKF_ACTIONS : EKF_ACTIONS.slice(1);
 }
 
-/** What the selector shows for FS_EKF_ACTION: a 0 the firmware lands on reads as the Land it is. */
+/**
+ * What the selector shows for FS_EKF_ACTION: a 0 the firmware lands on reads as the Land it is.
+ * With the version not known yet it stays as it is: Save would turn a report only into a Land.
+ */
 export function ekfAction(value: number, fwVersion: string, kind: VehicleType): number {
-  return ekfActions(fwVersion, kind).some(([offered]) => offered === value) ? value : 1;
+  return !fwVersion || ekfActions(fwVersion, kind).some(([offered]) => offered === value) ? value : 1;
 }
 
 /**
