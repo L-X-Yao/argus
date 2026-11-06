@@ -115,9 +115,10 @@ export async function adjustWaypointsForTerrain(
   }));
 }
 
-/** The same for two lists of waypoints over the same ground. */
-export function routeKey(waypoints: { lat: number; lon: number }[]): string {
-  return waypoints.map((w) => `${w.lat.toFixed(5)},${w.lon.toFixed(5)}`).join(';');
+/** The same for two lists of waypoints over the same ground, measured from the same home. */
+export function routeKey(waypoints: { lat: number; lon: number }[], home?: { lat: number; lon: number }): string {
+  const points = home ? [...waypoints, home] : waypoints;
+  return points.map((w) => `${w.lat.toFixed(5)},${w.lon.toFixed(5)}`).join(';');
 }
 
 /**

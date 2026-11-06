@@ -437,6 +437,12 @@ describe('requests in turn', () => {
     expect(routeKey(route)).not.toBe(routeKey([...route, ...route]));
   });
 
+  it('tells apart a route before and after a home arrives', () => {
+    const route = [{ lat: 41.6, lon: 108 }];
+    expect(routeKey(route, { lat: 0, lon: 0 })).not.toBe(routeKey(route, { lat: 41.5, lon: 108 }));
+    expect(routeKey(route, { lat: 41.5, lon: 108 })).toBe(routeKey(route, { lat: 41.5, lon: 108 }));
+  });
+
   it('puts a limit on how long each may take', async () => {
     const fetchMock = globalThis.fetch as ReturnType<typeof vi.fn>;
     fetchMock.mockResolvedValueOnce(answer([400]));

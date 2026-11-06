@@ -870,7 +870,8 @@ const messages: Record<string, string> = {
   'terrain.loading': 'Loading terrain...',
   'terrain.adjusted': 'Adjusted {n} waypoints for terrain following ({alt}m AGL)',
   'terrain.noData': 'Terrain data unavailable',
-  'terrain.routeChanged': 'The route changed while waiting for terrain data, so nothing was applied. Try again.',
+  'terrain.routeChanged':
+    'The route or home changed while waiting for terrain data, so nothing was applied. Try again.',
   'terrain.clearance': 'Clearance',
   'terrain.profile': 'Terrain Profile',
   'terrain.profileTitle': 'Route Terrain Profile',

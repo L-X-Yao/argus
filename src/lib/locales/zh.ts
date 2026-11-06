@@ -867,7 +867,7 @@ const messages: Record<string, string> = {
   'terrain.loading': '获取地形数据...',
   'terrain.adjusted': '已调整 {n} 个航点为地形跟随 ({alt}m AGL)',
   'terrain.noData': '无法获取地形数据',
-  'terrain.routeChanged': '等待地形数据时航线有改动，未应用，请重试',
+  'terrain.routeChanged': '等待地形数据时航线或起飞点有改动，未应用，请重试',
   'terrain.clearance': '离地',
   'terrain.profile': '地形剖面',
   'terrain.profileTitle': '航线地形剖面',

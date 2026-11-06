@@ -64,10 +64,12 @@
         app.drone.home_lat !== 0 || app.drone.home_lon !== 0
           ? { lat: app.drone.home_lat, lon: app.drone.home_lon }
           : null;
-      const route = routeKey(app.waypoints);
+      const asked = () => routeKey(app.waypoints, { lat: app.drone.home_lat, lon: app.drone.home_lon });
+      const route = asked();
       const adjusted = await adjustWaypointsForTerrain(app.waypoints, app.defaultAlt, home);
-      // It can take a while, and these altitudes belong to the route as it was then.
-      if (routeKey(app.waypoints) !== route) {
+      // It can take a while, and these altitudes belong to the route and the home of then:
+      // with no home yet they are measured from the first waypoint.
+      if (asked() !== route) {
         addToast(t('terrain.routeChanged'), 'error', 5000);
         return;
       }
