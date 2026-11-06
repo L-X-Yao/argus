@@ -22,6 +22,8 @@ export interface Bridge {
   seen: (msgId: number) => boolean;
   /** Pulls the USB cable: the page's read fails as it does in Chrome, and SITL flies on. */
   dropPort: () => Promise<void>;
+  /** Loses this share of the frames each way from now on, as a noisy radio does. */
+  setLoss: (share: number) => void;
   close: () => void;
 }
 
@@ -57,7 +59,31 @@ export async function openBridge(page: Page, target: string, fcSysId = 1): Promi
     feeding = false;
   };
 
-  await page.exposeFunction('__sitlWrite', (bytes: number[]) => void socket.write(Buffer.from(bytes)));
+  let loss = 0;
+  let inbound: Buffer = Buffer.alloc(0);
+  // Whole frames, or the page would only see a CRC error for every lost one.
+  const forward = (chunk: Buffer) => {
+    if (loss === 0) {
+      outgoing.push(...chunk);
+      return;
+    }
+    inbound = Buffer.concat([inbound, chunk]);
+    while (inbound.length >= 12) {
+      if (inbound[0] !== 0xfd) {
+        const next = inbound.indexOf(0xfd, 1);
+        inbound = next < 0 ? Buffer.alloc(0) : inbound.subarray(next);
+        continue;
+      }
+      const size = 12 + inbound[1] + (inbound[2] & 1 ? 13 : 0);
+      if (inbound.length < size) break;
+      if (Math.random() >= loss) outgoing.push(...inbound.subarray(0, size));
+      inbound = inbound.subarray(size);
+    }
+  };
+
+  await page.exposeFunction('__sitlWrite', (bytes: number[]) => {
+    if (Math.random() >= loss) socket.write(Buffer.from(bytes));
+  });
   socket.on('data', (chunk) => {
     const joined = new Uint8Array(pending.length + chunk.length);
     joined.set(pending);
@@ -89,7 +115,7 @@ export async function openBridge(page: Page, target: string, fcSysId = 1): Promi
         texts.push(Buffer.from(raw).toString('latin1').split('\0')[0]);
       }
     }
-    outgoing.push(...chunk);
+    forward(chunk);
     void feed();
   });
 
@@ -155,6 +181,9 @@ export async function openBridge(page: Page, target: string, fcSysId = 1): Promi
     },
     seen: (msgId) => seenIds.has(msgId),
     dropPort: () => page.evaluate(() => (window as unknown as { __sitlDrop: () => void }).__sitlDrop()),
+    setLoss: (share) => {
+      loss = share;
+    },
     close: () => socket.destroy(),
   };
 }

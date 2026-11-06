@@ -111,6 +111,46 @@ test('its mission store takes an upload', async () => {
   expect(await sitl.storeCount(MISSION)).toBeGreaterThanOrEqual(3);
 });
 
+test('a link that loses one frame in ten still moves a mission and a mode change', async () => {
+  const lat = await drone('lat');
+  const lon = await drone('lon');
+  const wps = Array.from({ length: 20 }, (_, i) => ({
+    lat: lat + 0.0002 * (i + 1),
+    lon,
+    alt: 20,
+    drop: false,
+    delay: 0,
+    speed: 0,
+    type: 'wp',
+    loiter_param: 0,
+  }));
+  sitl.setLoss(0.1);
+  try {
+    const uploaded = await page.evaluate(
+      async (w) => {
+        const url = '/src/lib/transport.ts';
+        const { serialUploadMission } = await import(/* @vite-ignore */ url);
+        return serialUploadMission(w, 20);
+      },
+      wps,
+    );
+    expect(uploaded).toEqual({ ok: true });
+
+    const downloaded = await page.evaluate(async () => {
+      const url = '/src/lib/transport.ts';
+      const { serialDownloadMission } = await import(/* @vite-ignore */ url);
+      return serialDownloadMission();
+    });
+    expect(downloaded.ok).toBe(true);
+    expect(downloaded.waypoints.length).toBe(wps.length);
+
+    await send('mode', 5);
+    await expect.poll(() => drone('mode_id'), { timeout: 15000 }).toBe(5);
+  } finally {
+    sitl.setLoss(0);
+  }
+});
+
 test('it arms and takes off', async () => {
   await send('mode', GUIDED);
   await expect.poll(() => drone('mode_id'), { timeout: 15000 }).toBe(GUIDED);
