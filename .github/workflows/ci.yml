@@ -171,7 +171,7 @@ jobs:
   sitl-links:
     runs-on: ubuntu-latest
     needs: check
-    timeout-minutes: 15
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v7
 
@@ -201,10 +201,25 @@ jobs:
           curl -sfL -o ~/sitl/arducopter https://firmware.ardupilot.org/Copter/stable/SITL_x86_64_linux_gnu/arducopter
           curl -sfL -o ~/sitl/copter.parm https://raw.githubusercontent.com/ArduPilot/ardupilot/ArduCopter-stable/Tools/autotest/default_params/copter.parm
 
-      - name: Run the commands that need a vehicle of their own
+      - name: Install socat
+        run: sudo apt-get install -y socat
+
+      - name: Commands that need a vehicle of their own
         run: |
           chmod +x ~/sitl/arducopter
           python tests/sitl_links.py commands
+
+      - name: UDP
+        run: python tests/sitl_links.py udp
+
+      - name: A real tty
+        run: python tests/sitl_links.py tty
+
+      - name: A telemetry radio
+        run: python tests/sitl_links.py radio
+
+      - name: Two vehicles on one link
+        run: python tests/sitl_links.py fleet
 
   # The WebSerial stack against real firmware: a full flight, then both interactive
   # calibrations. A stand-in for navigator.serial carries the bytes to SITL, so

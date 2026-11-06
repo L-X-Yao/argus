@@ -175,6 +175,12 @@ def send_heartbeat(link: DroneLink) -> None:
     link.send(bm(0, payload, link.sq, CRC_EXTRA[0]))
 
 
+def request_fleet_position(link: DroneLink, sysid: int) -> None:
+    """GLOBAL_POSITION_INT once a second from a vehicle that is not the active one."""
+    payload = struct.pack("<fffffffHBBB", 33.0, 1000000.0, 0, 0, 0, 0, 0, 511, sysid, 1, 0)
+    link.send(bm(76, payload, link.sq, CRC_EXTRA[76]))
+
+
 def request_streams(link: DroneLink) -> None:
     link._streams_sysid = link.vehicle.sysid
     # Per-message stream rate, in microseconds. ATTITUDE (30) and

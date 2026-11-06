@@ -76,6 +76,7 @@ interface SerialState {
   hbInterval: ReturnType<typeof setInterval> | null;
   targetSysId: number;
   targetCompId: number;
+  targetLatched: boolean;
   handlers: Partial<MessageHandlers>;
   lastFrameAt: number;
 }
@@ -87,6 +88,7 @@ const serial: SerialState = {
   running: false,
   hbInterval: null,
   targetSysId: 1,
+  targetLatched: false,
   targetCompId: 1,
   handlers: {},
   lastFrameAt: 0,
@@ -140,6 +142,7 @@ export async function connectSerial(baudRate: number, handlers: Partial<MessageH
     // The last session may have been a different vehicle.
     serial.targetSysId = 1;
     serial.targetCompId = 1;
+    serial.targetLatched = false;
 
     // Start heartbeat at 1Hz
     serial.hbInterval = setInterval(() => {
@@ -167,18 +170,22 @@ export async function connectSerial(baudRate: number, handlers: Partial<MessageH
 
       for (const frame of frames) {
         if (
-          serial.targetSysId === 1 &&
+          !serial.targetLatched &&
           frame.sysId > 0 &&
           frame.msgId === 0 &&
           isVehicleHeartbeat(decodeHeartbeat(_padView(frame.payload, 9)))
         ) {
           const wrongTarget = frame.sysId !== 1;
+          serial.targetLatched = true;
           serial.targetSysId = frame.sysId;
           serial.targetCompId = frame.compId;
           // The first request went to sysid 1, and an FC ignores what is addressed to
           // another system (MAVLink_routing.cpp:184).
           if (wrongTarget) requestStreams();
         }
+        // Another vehicle on a shared link would flip every field at each heartbeat, as
+        // backend _process says. There is no fleet list here to feed.
+        if (serial.targetLatched && frame.sysId !== serial.targetSysId) continue;
         // Mission upload state machine runs BEFORE the external dispatch so the
         // upload completes deterministically even if the user's handler set is
         // missing onMissionRequest / onMissionAck. frame.payload is a DataView.

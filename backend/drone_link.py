@@ -15,6 +15,7 @@ from .constants import (
     COPTER_MODES_EN,
     FIX_NAMES,
     FIX_NAMES_EN,
+    NON_VEHICLE_MAV_TYPES,
     PLANE_BTNS,
     PLANE_BTNS_EN,
     PLANE_MODES,
@@ -125,7 +126,7 @@ class DroneLink:
         self.start_time = 0.0
         self.events: list[dict] = []
         self._ws_queue: list[dict] = []
-        self.active_sysid = 1
+        self.active_sysid = 0  # picked in the fleet panel; 0 follows the first vehicle heard
         self.inspector_enabled = False
         self._msg_stats: dict[int, dict] = {}
         self._msg_stats_window = 5.0
@@ -245,6 +246,8 @@ class DroneLink:
             self.vehicle.armed_time = 0.0
             self.last_frame_time = 0.0
             self.start_time = time.time()
+        self.active_sysid = 0
+        self._vehicles.clear()
         self._last_port = port
         self._last_baud = baudrate
         self._reconnect_enabled = True
@@ -688,8 +691,14 @@ class DroneLink:
                 # The first request goes out before any heartbeat, to system 1 or to the last
                 # vehicle, and an FC ignores what is addressed to another system
                 # (libraries/GCS_MAVLink/MAVLink_routing.cpp:184).
-                if not self.connected and self.frame_count < 3 or self.connected and self._streams_sysid != self.vehicle.sysid:
+                if (
+                    not self.connected
+                    and self.frame_count < 3
+                    or self.connected
+                    and self._streams_sysid != self.vehicle.sysid
+                ):
                     cmd_module.request_streams(self)
+                self._ask_fleet_positions()
             # Link-lost DETECTION — fires once per drop (needs connected=True
             # with stale frames). It arms the persistent _reconnecting flag; the
             # actual reopen retry lives in its own block below. Keeping the two
@@ -757,6 +766,14 @@ class DroneLink:
             if not data:
                 time.sleep(cfg.MAIN_LOOP_SLEEP)
 
+    def _ask_fleet_positions(self) -> None:
+        """The other vehicles only reach the fleet list and the map if they report a
+        position, and an FC sends none on a stream nobody asked for."""
+        for sid, veh in list(self._vehicles.items()):
+            if sid != self.vehicle.sysid and not veh.get("asked") and "vtype" in veh:
+                veh["asked"] = True
+                cmd_module.request_fleet_position(self, sid)
+
     def _check_mission_dl_timeout(self) -> None:
         from .commands._mission import check_mission_dl_timeout
 
@@ -809,8 +826,14 @@ class DroneLink:
         pl = payload[1]
         sid = payload[5]
         with self._state_lock:
-            self.last_frame_time = time.time()
-            self._raw_sysid = sid
+            # One vehicle owns the state. The others on a shared link only feed the fleet
+            # list: dispatched too, they would flip every field, and the target of every
+            # command, at each heartbeat.
+            owner = self.active_sysid or (self.vehicle.sysid if self.connected else 0)
+            mine = not owner or sid == owner
+            if mine:
+                self.last_frame_time = time.time()
+                self._raw_sysid = sid
             if self.inspector_enabled:
                 now = time.time()
                 st = self._msg_stats.get(mid)
@@ -847,10 +870,11 @@ class DroneLink:
                     }
                 )
                 self._vehicles[sid] = v
-            if mid == 0 and pl >= 7:
+            if mid == 0 and pl >= 7 and p[5] != 8 and p[4] not in NON_VEHICLE_MAV_TYPES:
                 v = self._vehicles.get(sid, {"sysid": sid, "lat": 0, "lon": 0, "alt": 0, "hdg": 0, "t": 0})
                 v["armed"] = bool(p[6] & 0x80)
                 v["mode"] = p[0] | (p[1] << 8) | (p[2] << 16) | (p[3] << 24)
                 v["vtype"] = p[4]
                 self._vehicles[sid] = v
-            mavlink_dispatch.dispatch(mid, p, pl, self)
+            if mine:
+                mavlink_dispatch.dispatch(mid, p, pl, self)

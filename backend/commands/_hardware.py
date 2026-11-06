@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import math
 import struct
+import time
 from typing import TYPE_CHECKING
 
 from ..crc_extras import CRC_EXTRA
@@ -45,8 +46,21 @@ def cmd_guided_goto(link: DroneLink, param, data: dict):
 
 def cmd_switch_vehicle(link: DroneLink, param, data: dict):
     new_sysid = int(param) if param is not None else int(data.get("sysid", 1))
-    link.active_sysid = new_sysid
-    link.vehicle.sysid = new_sysid
+    with link._state_lock:
+        if new_sysid != link.vehicle.sysid:
+            # A new session, as on a reconnect: what it shows, its parameters and any
+            # transfer in progress belonged to the other vehicle.
+            link._reset_session_state()
+            v = link.vehicle
+            # From what the fleet list knows, so that the first heartbeat does not read as
+            # a landing or a takeoff and write a flight record for it.
+            v.armed = bool(link._vehicles.get(new_sysid, {}).get("armed"))
+            v.armed_time = time.time() if v.armed else 0.0
+            v.max_alt = v.max_speed = v.total_dist = 0
+            link.attitude.home_lat = link.attitude.home_lon = 0.0
+            link.attitude.dist_home = 0.0
+        link.active_sysid = new_sysid
+        link.vehicle.sysid = new_sysid
     link.add_event(lt("vehicle_switch", link.locale) % new_sysid, "vehicle_switch")
 
 

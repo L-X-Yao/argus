@@ -86,7 +86,7 @@ class TestDroneLinkInit:
         assert link._running is False
         assert link._ser is None
         assert link.locale == "zh"
-        assert link.active_sysid == 1
+        assert link.active_sysid == 0
         assert link.inspector_enabled is False
 
     def test_state_objects_created(self):

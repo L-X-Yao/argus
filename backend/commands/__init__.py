@@ -33,6 +33,7 @@ from ._hardware import (
     cmd_set_vtype,
     cmd_switch_vehicle,
 )
+from ._helpers import request_fleet_position as request_fleet_position
 from ._helpers import request_streams as request_streams
 from ._helpers import send_fence_item_int as send_fence_item_int
 from ._helpers import send_heartbeat as send_heartbeat

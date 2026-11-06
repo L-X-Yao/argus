@@ -7,12 +7,13 @@ import struct
 import sys
 import time
 from pathlib import Path
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import pytest
 
+from backend.commands import execute
 from backend.drone_link import DroneLink
 from backend.mavlink_handlers import (
     handle_adsb_vehicle,
@@ -1059,6 +1060,94 @@ class TestVehicleTypes:
         link._process(payload)
         assert 1 in link._vehicles
         assert abs(link._vehicles[1]["lat"] - 34.258) < 0.001
+
+    @staticmethod
+    def _feed(link, msg_id, payload, crc, sysid):
+        from backend.mavlink_frame import bm
+
+        link._buf = bm(msg_id, payload, 1, crc, sysid=sysid)
+        frame, consumed = link._parse_mavlink_frame()
+        link._buf = link._buf[consumed:]
+        link._process(frame)
+
+    def _heartbeat(self, link, sysid, armed=False, mode=0):
+        base = 0x80 if armed else 0
+        self._feed(link, 0, struct.pack("<IBBBBB", mode, 2, 3, base, 0, 3), 50, sysid)
+
+    def _position(self, link, sysid, lat):
+        payload = struct.pack("<IiiiihhhH", 1000, int(lat * 1e7), int(108.9 * 1e7), 430000, 30000, 50, 0, 0, 9000)
+        self._feed(link, 33, payload, 104, sysid)
+
+    def test_a_second_vehicle_does_not_touch_the_state(self):
+        link = make_link_connected()
+        link.vehicle.sysid = 1
+        self._heartbeat(link, 1, armed=True, mode=4)
+        self._position(link, 1, 34.25)
+        self._heartbeat(link, 7, armed=False, mode=0)
+        self._position(link, 7, 35.25)
+        assert link.vehicle.sysid == 1
+        assert link.vehicle.armed is True
+        assert link.vehicle.mode == 4
+        assert abs(link.attitude.lat - 34.25) < 0.001
+        assert link._vehicles[7]["armed"] is False
+        assert abs(link._vehicles[7]["lat"] - 35.25) < 0.001
+
+    def test_only_the_owner_keeps_the_link_alive(self):
+        """Otherwise a vehicle that went silent would never read as lost beside another."""
+        link = make_link_connected()
+        link.last_frame_time = 1.0
+        self._heartbeat(link, 7)
+        assert link.last_frame_time == 1.0
+
+    def test_the_first_vehicle_heard_takes_the_link(self):
+        link = make_link()
+        self._heartbeat(link, 7)
+        assert link.connected is True
+        assert link.vehicle.sysid == 7
+
+    def test_the_first_heartbeat_asks_for_streams_again(self):
+        """Over UDP nothing can leave before the FC's first packet says where it is."""
+        link = make_link()
+        link._streams_sysid = 1
+        self._heartbeat(link, 1)
+        assert link._streams_sysid == 0
+
+    def test_a_gcs_heartbeat_is_no_vehicle(self):
+        link = make_link_connected()
+        self._feed(link, 0, struct.pack("<IBBBBB", 0, 6, 8, 0, 0, 3), 50, 255)
+        assert 255 not in link._vehicles
+
+    def test_each_other_vehicle_is_asked_for_its_position_once(self):
+        link = make_link_connected()
+        self._heartbeat(link, 7)
+        with patch("backend.drone_link.cmd_module.request_fleet_position") as ask:
+            link._ask_fleet_positions()
+            link._ask_fleet_positions()
+        ask.assert_called_once_with(link, 7)
+
+    def test_switching_takes_the_armed_state_from_the_fleet_list(self):
+        """Otherwise the next heartbeat reads as a landing, with a flight record to show for it."""
+        link = make_link_connected()
+        self._heartbeat(link, 1, armed=True)
+        self._heartbeat(link, 7, armed=False)
+        execute("switch_vehicle", 7, link)
+        assert link.vehicle.sysid == 7
+        assert link.vehicle.armed is False
+        self._heartbeat(link, 7, armed=False)
+        assert link.connected is True
+        assert link.vehicle.flight_summary is None
+        assert not [e for e in link.events if e["event_type"] == "disarmed"]
+        self._heartbeat(link, 1, armed=True)
+        assert link.vehicle.armed is False
+
+    def test_connecting_forgets_the_last_choice(self):
+        link = make_link()
+        link.active_sysid = 7
+        link._vehicles[7] = {"sysid": 7}
+        with patch.object(link, "_open_port", return_value=MagicMock(in_waiting=0)), patch("threading.Thread"):
+            link.connect("tcp:127.0.0.1:5760")
+        assert link.active_sysid == 0
+        assert link._vehicles == {}
 
     def test_get_state_vehicles_field(self):
         link = make_link()

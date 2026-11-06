@@ -1029,6 +1029,20 @@ describe('serial link health', () => {
     expect(app.drone.armed).toBe(true); // reconnecting is no reason to show it disarmed
   });
 
+  it('keeps to the first vehicle on a shared link', async () => {
+    const heartbeats: number[] = [];
+    await disconnectSerial();
+    await connectSerial(115200, { onHeartbeat: () => heartbeats.push(1) });
+    const beat = (sysId: number) => inject(encodeFrame(0, encodeHeartbeat(2, 3), sysId, 1, 0));
+    beat(1);
+    beat(7);
+    beat(7);
+    expect(heartbeats).toHaveLength(1);
+    writes.length = 0;
+    dispatch('arm');
+    expect(findWrite(76)![10 + 30]).toBe(1); // COMMAND_LONG target_system, not 7
+  });
+
   it('asks again when the vehicle turns out not to be sysid 1', async () => {
     await disconnectSerial();
     await connectSerial(115200, {});

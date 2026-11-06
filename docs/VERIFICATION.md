@@ -33,7 +33,7 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 | Messages, WebSerial | 35 | 16 | 13 | 0 | 5 | 0 | 1 |
 | REST routes | 28 | 6 | 5 | 8 | 9 | 0 | 0 |
 | Panels | 80 | 13 | 3 | 21 | 41 | 2 | 0 |
-| Platform | 41 | 8 | 5 | 7 | 16 | 2 | 3 |
+| Platform | 43 | 8 | 9 | 7 | 14 | 2 | 3 |
 
 ## Commands / 飞控命令
 
@@ -81,7 +81,7 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 | `serial_control` | MAVLink console | MAVLink 控制台 | Real FC | n/a | Backend 2026-05, CI |
 | `inspector_toggle` | Message inspector | 消息检查器开关 | SITL | n/a | CI, local state only |
 | `set_vtype` | Set vehicle type | 手动设置机型 | SITL | n/a | CI, local state only |
-| `switch_vehicle` | Switch vehicle | 切换当前飞机 | SITL | n/a | CI, local state only |
+| `switch_vehicle` | Switch vehicle | 切换当前飞机 | SITL | n/a | CI: two vehicles on one link |
 | `clear_summary` | Clear flight summary | 清除飞行总结 | SITL | n/a | CI, local state only |
 | `ntrip_start` | Start NTRIP | 启动 NTRIP | Tests only | n/a | No real base station |
 | `ntrip_stop` | Stop NTRIP | 停止 NTRIP | Tests only | n/a | No real base station |
@@ -286,9 +286,11 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 | Video and AR overlay | 视频和 AR 叠加 | Simulator | Integration tests, no real camera |
 | Token login | Token 登录 | Simulator | e2e, real Windows each release |
 | Windows package | Windows 发布包 | Simulator | Smoke test on real Windows each release |
-| UDP | UDP 连接 | Tests only | Unit tests |
+| UDP | UDP 连接 | SITL | CI: a whole session on real firmware |
+| Telemetry radio | 数传电台 | SITL | CI through a stand-in: 57600 baud, 3% of frames lost, 1.5% corrupted, a whole session. No real radio |
+| Linux tty | Linux tty | SITL | CI: a whole session through a pty on real firmware, which reads differently from a socket |
 | Submarine | 水下潜航器 | SITL | CI. No dive in CI |
-| Several vehicles at once | 多机同屏 | Tests only | Unit tests |
+| Several vehicles at once | 多机同屏 | SITL | CI: two vehicles on one link, each flown from the other through the switch |
 | Offline mbtiles maps | 离线 mbtiles 地图 | Tests only | Unit tests |
 | Survey and pattern planning | 测绘和图案规划 | Tests only | Unit tests |
 | Mission file formats | 航线文件格式 | Tests only | Unit tests |
