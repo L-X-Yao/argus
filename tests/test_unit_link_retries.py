@@ -75,12 +75,20 @@ class TestCommands:
         link = make_link()
         execute("motor_test", None, link, data={"motor": 0, "throttle": 5, "duration": 1})
         later(link, 1.1, check_commands)
+        later(link, 2.2, check_commands)
         assert self.confirmations(link) == [0]
+        assert not [e for e in link.events if e["event_type"] == "cmd_ack_fail"]
+        later(link, 3.3, check_commands)
         assert [e for e in link.events if e["event_type"] == "cmd_ack_fail"]
 
     def test_a_reboot_expects_no_answer(self):
         link = make_link()
         execute("reboot", None, link)
+        assert link._cmd_pending == {}
+
+    def test_a_calibration_answers_when_it_is_done(self):
+        link = make_link()
+        execute("cal_gyro", None, link)
         assert link._cmd_pending == {}
 
     def test_a_link_reset_forgets_what_was_waiting(self):

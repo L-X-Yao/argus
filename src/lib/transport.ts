@@ -391,7 +391,7 @@ export function serialSendParamSet(name: string, value: number, type: number = 9
 
 // Twin of backend send_cmd, which says what goes in these and why.
 const RETRIED_COMMANDS = new Set([22, 176, 181, 183, 201, 205, 300, 400, 1000]);
-const UNTRACKED_COMMANDS = new Set([246, 511, 512]);
+const UNTRACKED_COMMANDS = new Set([241, 246, 511, 512]);
 const CMD_RETRY_MS = 1000;
 const CMD_TRIES = 3;
 const pendingCommands = new Map<number, ReturnType<typeof setTimeout>>();
@@ -401,8 +401,8 @@ function _trackCommand(command: number, resend: (confirmation: number) => void):
   clearTimeout(pendingCommands.get(command));
   let tries = 1;
   const tick = () => {
-    if (RETRIED_COMMANDS.has(command) && tries < CMD_TRIES) {
-      resend(tries);
+    if (tries < CMD_TRIES) {
+      if (RETRIED_COMMANDS.has(command)) resend(tries);
       tries += 1;
       pendingCommands.set(command, setTimeout(tick, CMD_RETRY_MS));
     } else {

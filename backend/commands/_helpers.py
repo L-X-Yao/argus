@@ -17,8 +17,9 @@ if TYPE_CHECKING:
 # nothing. Only commands that do no harm twice: takeoff, mode, relay, servo, ROI, gimbal,
 # mission start, arm and disarm. A calibration or a motor test would start over.
 RETRIED_COMMANDS = frozenset({22, 176, 181, 183, 201, 205, 300, 400, 1000})
-# Nobody clicked 511 and 512 (see request_streams), and a reboot's answer can die with the link.
-UNTRACKED_COMMANDS = frozenset({246, 511, 512})
+# Nobody clicked 511 and 512 (see request_streams), a reboot's answer can die with the link,
+# and a calibration answers when it is done, which is no reason to report it silent.
+UNTRACKED_COMMANDS = frozenset({241, 246, 511, 512})
 
 
 def _track(link: DroneLink, command: int, resend) -> None:
@@ -34,9 +35,10 @@ def check_commands(link: DroneLink) -> None:
     for command, entry in list(link._cmd_pending.items()):
         if now - entry["sent"] < cfg.CMD_RETRY_INTERVAL:
             continue
-        if entry["resend"] and entry["tries"] < cfg.CMD_TRIES:
+        if entry["tries"] < cfg.CMD_TRIES:
             entry["sent"] = now
-            entry["resend"](entry["tries"])
+            if entry["resend"]:
+                entry["resend"](entry["tries"])
             entry["tries"] += 1
         else:
             link._cmd_pending.pop(command, None)
