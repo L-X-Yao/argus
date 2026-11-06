@@ -314,6 +314,7 @@ export async function disconnectSerial(): Promise<void> {
   _clearMissionStartTimer();
   _wpToSeq.clear();
   _abortParamFetch(false);
+  _resetMagCal();
 }
 
 function sendSerialFrame(msgId: number, payload: Uint8Array): void {
@@ -388,7 +389,7 @@ export function serialSendParamSet(name: string, value: number, type: number = 9
 }
 
 // Twin of backend send_cmd, which says what goes in these and why.
-const RETRIED_COMMANDS = new Set([22, 176, 181, 183, 201, 205, 300, 400, 1000]);
+const RETRIED_COMMANDS = new Set([22, 176, 181, 183, 201, 205, 300, 400, 1000, 42425]);
 const UNTRACKED_COMMANDS = new Set([246, 511, 512]);
 const CMD_RETRY_MS = 1000;
 const CMD_TRIES = 3;
@@ -1221,7 +1222,7 @@ function _onMagCalProgress(p: DataView): void {
 function _onMagCalReport(p: DataView): void {
   // p is pre-padded to ≥44 bytes (matches backend's `_pad(p, 44)`).
   // compass_id @40, cal_mask @41, cal_status @42: the backend handler says why all three.
-  if (magCal.done) return;
+  if (magCal.done || (magCal.ours && magCal.pct < 0)) return;
   const calMask = p.getUint8(41);
   magCal.reports.set(p.getUint8(40), p.getUint8(42));
   for (let i = 0; i < 8; i++) {

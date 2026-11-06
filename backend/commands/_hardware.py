@@ -56,7 +56,8 @@ def cmd_switch_vehicle(link: DroneLink, param, data: dict):
             # a landing or a takeoff and write a flight record for it.
             v.armed = bool(link._vehicles.get(new_sysid, {}).get("armed"))
             v.armed_time = time.time() if v.armed else 0.0
-            v.max_alt = v.max_speed = v.total_dist = 0
+            v.max_alt = v.max_depth = v.max_speed = v.total_dist = 0
+            link._mag_cal_ours = False
             link.attitude.home_lat = link.attitude.home_lon = 0.0
             link.attitude.dist_home = 0.0
         link.active_sysid = new_sysid

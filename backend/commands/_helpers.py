@@ -15,8 +15,10 @@ if TYPE_CHECKING:
 # Sent again when no answer comes, as the command protocol expects of a GCS. On a radio
 # that loses 3% of its frames, 3 in 100 clicks on RTL would otherwise do nothing, and show
 # nothing. Only commands that do no harm twice: takeoff, mode, relay, servo, ROI, gimbal,
-# mission start, arm and disarm. A calibration or a motor test would start over.
-RETRIED_COMMANDS = frozenset({22, 176, 181, 183, 201, 205, 300, 400, 1000})
+# mission start, arm and disarm, and accepting a compass calibration, which nobody clicks and
+# which a saved compass answers the same (AP_Compass_Calibration.cpp _accept_calibration).
+# A calibration or a motor test would start over.
+RETRIED_COMMANDS = frozenset({22, 176, 181, 183, 201, 205, 300, 400, 1000, 42425})
 # Nobody clicked 511 and 512 (see request_streams), and a reboot's answer can die with the link.
 UNTRACKED_COMMANDS = frozenset({246, 511, 512})
 

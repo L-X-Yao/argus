@@ -284,7 +284,6 @@ class DroneLink:
             # a spent warning flag would hide the unsupported-FC event.
             self.vehicle.autopilot = 0
             self._unsupported_fc_warned = False
-            self._mag_cal_ours = False
             self.vehicle.force_plane = None
             self.vehicle.flight_summary = None
             self.attitude._prev_pos = None

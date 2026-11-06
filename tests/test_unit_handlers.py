@@ -136,6 +136,12 @@ class TestHeartbeat:
         # A Sub goes down, often with no position: neither height nor distance would show it.
         assert TestHeartbeat._below_home(12, 8) is not None
 
+    def test_another_vehicle_does_not_inherit_a_dive(self):
+        link = make_link_connected()
+        link.vehicle.max_depth = 8.0
+        execute("switch_vehicle", 7, link)
+        assert link.vehicle.max_depth == 0
+
     def test_a_copter_below_home_has_not_flown(self):
         # What a barometer drifting on the bench looks like.
         assert TestHeartbeat._below_home(2, 8) is None

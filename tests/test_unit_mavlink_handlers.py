@@ -16,8 +16,9 @@ Targets the 66 uncovered lines identified by --cov-report=term-missing:
 from __future__ import annotations
 
 import struct
+import threading
 import time
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from backend.commands import execute
 from backend.drone_link import DroneLink
@@ -306,6 +307,16 @@ class TestMagCalReport:
         handle_mag_cal_report(p, len(p), link)
 
     @staticmethod
+    def _progress(link):
+        p = bytearray(17)
+        handle_mag_cal_progress(p, len(p), link)
+
+    @classmethod
+    def _start(cls, link):
+        execute("cal_compass", None, link)
+        cls._progress(link)
+
+    @staticmethod
     def _accepts(link):
         frames = [c[0][0] for c in link._ser.write.call_args_list]
         return sum(struct.unpack_from("<H", f, 38)[0] == 42425 for f in frames if len(f) > 39)
@@ -314,7 +325,7 @@ class TestMagCalReport:
         # An accept stops a compass still running and drops what it had
         # (AP_Compass_Calibration.cpp:233-236).
         link = make_link_connected()
-        execute("cal_compass", None, link)
+        self._start(link)
         self._report(link, 2, 4)
         self._report(link, 0, 4)
         self._report(link, 2, 4)  # a finished compass keeps reporting
@@ -328,7 +339,7 @@ class TestMagCalReport:
 
     def test_one_compass_failing_fails_the_run_and_nothing_is_accepted(self):
         link = make_link_connected()
-        execute("cal_compass", None, link)
+        self._start(link)
         self._report(link, 0, 4)
         self._report(link, 1, 5)
         self._report(link, 2, 4)
@@ -344,16 +355,46 @@ class TestMagCalReport:
 
     def test_a_cancelled_run_is_not_accepted(self):
         link = make_link_connected()
-        execute("cal_compass", None, link)
+        self._start(link)
         self._report(link, 2, 4)
         execute("cal_cancel", None, link)
         self._report(link, 0, 4, mask=1)
         assert self._accepts(link) == 0
 
-    def test_a_new_session_accepts_nothing_for_the_old_one(self):
+    def test_what_is_left_of_the_run_before_does_not_count(self):
+        # A failed run goes on reporting until the FC starts the next.
         link = make_link_connected()
+        self._start(link)
+        self._report(link, 0, 5, mask=1)
+        assert link._mag_cal_done is True
         execute("cal_compass", None, link)
+        self._report(link, 0, 5, mask=1)
+        assert link._mag_cal_done is False
+        self._progress(link)
+        self._report(link, 0, 4, mask=1)
+        assert self._accepts(link) == 1
+
+    def test_a_dropped_link_keeps_the_run(self):
+        # The FC goes on calibrating through a frame gap, and keeps nothing unless told to.
+        link = make_link_connected()
+        self._start(link)
         link._reset_session_state()
+        self._report(link, 0, 4, mask=1)
+        assert self._accepts(link) == 1
+
+    def test_a_new_connection_accepts_nothing_for_the_last_one(self):
+        link = make_link_connected()
+        self._start(link)
+        link._loop = MagicMock()
+        with patch.object(DroneLink, "_open_port", return_value=MagicMock()), patch.object(threading.Thread, "start"):
+            link.connect("udp:14550")
+        self._report(link, 0, 4, mask=1)
+        assert self._accepts(link) == 0
+
+    def test_another_vehicle_accepts_nothing_for_the_last_one(self):
+        link = make_link_connected()
+        self._start(link)
+        execute("switch_vehicle", 7, link)
         self._report(link, 0, 4, mask=1)
         assert self._accepts(link) == 0
 

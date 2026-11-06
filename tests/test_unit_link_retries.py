@@ -71,6 +71,13 @@ class TestCommands:
         ack(link, 176, result=4)
         assert link._cmd_pending == {}
 
+    def test_an_accept_goes_out_again(self):
+        # Nobody clicked it, so nobody would notice the compasses left unsaved.
+        link = make_link()
+        execute("cal_compass_accept", None, link)
+        later(link, 1.1, check_commands)
+        assert self.confirmations(link) == [0, 1]
+
     def test_what_must_not_run_twice_is_not_repeated_but_still_reported(self):
         link = make_link()
         execute("motor_test", None, link, data={"motor": 0, "throttle": 5, "duration": 1})

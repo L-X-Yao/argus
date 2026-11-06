@@ -353,6 +353,10 @@ def handle_mag_cal_report(p: bytes, pl: int, link: DroneLink) -> None:
     p = _pad(p, 44)
     if getattr(link, "_mag_cal_done", False):
         return
+    # A failed run goes on reporting until the FC starts the next, so a run of ours counts
+    # reports only once its first progress shows that the FC has.
+    if link._mag_cal_ours and link._mag_cal_pct < 0:
+        return
     # Each compass reports when it finishes, and cal_mask @41 names all those calibrating
     # (AP_Compass_Calibration.cpp:283 send_mag_cal_report, :359 _get_cal_mask). The run is
     # over at the last one.

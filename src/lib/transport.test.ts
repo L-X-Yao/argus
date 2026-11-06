@@ -825,10 +825,14 @@ describe('serialCalCompass + MAG_CAL events', () => {
       inject(fcFrame(192, mkMagCalReport(status, compass, mask)));
     const accepts = () =>
       writes.filter((w) => writeMsgId(w) === 76 && new DataView(w.buffer).getUint16(38, true) === 42425).length;
+    const start = () => {
+      serialCalCompass();
+      inject(fcFrame(191, mkMagCalProgress(0)));
+      events.length = 0;
+    };
 
     it('ends the run at the last compass, and accepts only then', () => {
-      serialCalCompass();
-      events.length = 0;
+      start();
       report(2, 4);
       report(0, 4);
       report(2, 4); // a finished compass keeps reporting
@@ -842,8 +846,7 @@ describe('serialCalCompass + MAG_CAL events', () => {
     });
 
     it('fails the run when one compass fails, and accepts nothing', () => {
-      serialCalCompass();
-      events.length = 0;
+      start();
       report(0, 4);
       report(1, 5);
       report(2, 4);
@@ -858,8 +861,31 @@ describe('serialCalCompass + MAG_CAL events', () => {
       expect(accepts()).toBe(0);
     });
 
-    it('does not accept a run cancelled halfway', () => {
+    it('takes nothing from what is left of the run before', () => {
+      start();
+      report(0, 5, 1); // a failed run goes on reporting until the FC starts the next
       serialCalCompass();
+      events.length = 0;
+      report(0, 5, 1);
+      expect(events).toHaveLength(0);
+      inject(fcFrame(191, mkMagCalProgress(0)));
+      events.length = 0;
+      report(0, 4, 1);
+      expect(events).toHaveLength(2);
+      expect(accepts()).toBe(1);
+    });
+
+    it('forgets the run when the user disconnects', async () => {
+      start();
+      await disconnectSerial();
+      await connectSerial(115200, {});
+      writes.length = 0;
+      report(0, 4, 1);
+      expect(accepts()).toBe(0);
+    });
+
+    it('does not accept a run cancelled halfway', () => {
+      start();
       report(2, 4);
       serialCalCancel();
       report(0, 4, 1);
@@ -869,6 +895,7 @@ describe('serialCalCompass + MAG_CAL events', () => {
 
   it('MAG_CAL_REPORT with non-success status emits failure event', () => {
     serialCalCompass();
+    inject(fcFrame(191, mkMagCalProgress(0)));
     events.length = 0;
     inject(fcFrame(192, mkMagCalReport(5))); // MAG_CAL_FAILED
     expect(events.length).toBe(1);
@@ -1287,6 +1314,12 @@ describe('a lost frame', () => {
     vi.advanceTimersByTime(5000);
     expect(confirmations()).toEqual([0]);
     expect(noAnswer).toEqual([]);
+  });
+
+  it('sends an accept again: nobody clicked it, so nobody would notice it lost', () => {
+    dispatch('cal_compass_accept');
+    vi.advanceTimersByTime(1000);
+    expect(confirmations()).toEqual([0, 1]);
   });
 
   it('never repeats what must not run twice, and still says so', () => {
