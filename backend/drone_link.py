@@ -282,6 +282,8 @@ class DroneLink:
             self.vehicle.vtype_raw = 0
             self.vehicle.vtol_state = 0
             self.vehicle.landed = False
+            # The next vehicle may never send a TERRAIN_REPORT, and this one's would stay up.
+            self.diagnostic.terrain_alt = -1.0
             # Same rationale as connect(): a silent in-loop reconnect may be a
             # different vehicle — stale autopilot would mis-gate commands and
             # a spent warning flag would hide the unsupported-FC event.
@@ -763,6 +765,7 @@ class DroneLink:
                     except OSError:
                         pass
                 self._buf = b""
+                self._unknown_left = 0
                 try:
                     self._ser = self._open_port(self._last_port, self._last_baud)
                     self.sq = 0

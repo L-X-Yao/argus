@@ -327,9 +327,9 @@ describe('serial session state', () => {
 });
 
 describe('height above ground', () => {
-  const report = (currentHeight: number, spacing: number) => {
+  const report = (currentHeight: number, spacing: number, lat = 34, lon = 108) => {
     const h = buildSerialHandlers() as MessageHandlers & SerialHandlers;
-    h.onTerrainReport!({ lat: 34, lon: 108, terrainHeight: 1500, currentHeight, spacing }, {} as MavFrame);
+    h.onTerrainReport!({ lat, lon, terrainHeight: 1500, currentHeight, spacing }, {} as MavFrame);
   };
 
   it('shows how far the vehicle is above the ground, not how high the ground is', () => {
@@ -339,6 +339,11 @@ describe('height above ground', () => {
 
   it('hides it where the FC has no terrain', () => {
     report(0, 0);
+    expect(H.drone.terrain_alt).toBe(-1);
+  });
+
+  it('hides it before there is a position', () => {
+    report(0, 100, 0, 0);
     expect(H.drone.terrain_alt).toBe(-1);
   });
 

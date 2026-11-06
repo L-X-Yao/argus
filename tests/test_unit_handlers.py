@@ -566,14 +566,24 @@ class TestErrorCounter:
 
         return bm(msg_id, payload, 1, crc)
 
+    def _heartbeat(self):
+        return self._frame(0, struct.pack("<IBBBBB", 0, 2, 3, 0, 0, 3), 50)
+
+    def _corrupt(self):
+        """Reads as a known message with a bad CRC."""
+        frame = bytearray(self._heartbeat())
+        frame[-1] ^= 0xFF
+        return bytes(frame)
+
+    def _unknown(self, payload):
+        """A message with no entry here: NAMED_VALUE_FLOAT."""
+        frame = bytearray(self._frame(0, payload, 0))
+        frame[7:10] = (251).to_bytes(3, "little")
+        return bytes(frame)
+
     def _hidden_in_an_unknown_frame(self):
-        """What a real FC sends: a message with no entry here, with 0xFD in its payload."""
-        decoy = bytearray(self._frame(0, struct.pack("<IBBBBB", 0, 2, 3, 0, 0, 3), 50))
-        decoy[-1] ^= 0xFF  # reads as a known message with a bad CRC
-        unknown = self._frame(0, bytes(decoy) + bytes(8), 0)
-        unknown = bytearray(unknown)
-        unknown[7:10] = (251).to_bytes(3, "little")  # NAMED_VALUE_FLOAT
-        return bytes(unknown)
+        """What a real FC sends: a 0xFD in the payload of a message skipped here."""
+        return self._unknown(self._corrupt() + bytes(8))
 
     def test_a_0xfd_inside_a_skipped_message_is_no_error(self):
         link = make_link()
@@ -583,34 +593,52 @@ class TestErrorCounter:
 
     def test_the_frame_after_it_still_arrives(self):
         link = make_link()
-        heartbeat = self._frame(0, struct.pack("<IBBBBB", 0, 2, 3, 0, 0, 3), 50)
-        link.feed(self._hidden_in_an_unknown_frame() + heartbeat)
+        link.feed(self._hidden_in_an_unknown_frame() + self._heartbeat())
         assert link.frame_count == 1
         assert link._parse_errors == 0
 
     def test_a_corrupt_frame_is_still_counted(self):
         link = make_link()
-        corrupt = bytearray(self._frame(0, struct.pack("<IBBBBB", 0, 2, 3, 0, 0, 3), 50))
-        corrupt[-1] ^= 0xFF
-        heartbeat = self._frame(0, struct.pack("<IBBBBB", 0, 2, 3, 0, 0, 3), 50)
-        link.feed(bytes(corrupt) + heartbeat)
+        link.feed(self._corrupt() + self._heartbeat())
         assert link._parse_errors == 1
 
     def test_one_right_after_a_skipped_message_is_counted_too(self):
         link = make_link()
-        corrupt = bytearray(self._frame(0, struct.pack("<IBBBBB", 0, 2, 3, 0, 0, 3), 50))
-        corrupt[-1] ^= 0xFF
-        heartbeat = self._frame(0, struct.pack("<IBBBBB", 0, 2, 3, 0, 0, 3), 50)
-        link.feed(self._hidden_in_an_unknown_frame() + bytes(corrupt) + heartbeat)
+        link.feed(self._hidden_in_an_unknown_frame() + self._corrupt() + self._heartbeat())
+        assert link._parse_errors == 1
+
+    def test_it_holds_when_the_false_frame_ends_in_the_next_read(self):
+        """It starts in the skipped message and runs on into whatever follows."""
+        link = make_link()
+        corrupt = self._corrupt()
+        link.feed(self._unknown(bytes(8) + corrupt[:10]))
+        link.feed(corrupt[10:] + self._heartbeat())
+        assert link._parse_errors == 0
+        assert link.frame_count == 1
+
+    def test_it_reaches_the_last_byte_of_the_skipped_message(self):
+        """Its CRC can hold a 0xFD as well as its payload can."""
+        link = make_link()
+        skipped = bytearray(self._unknown(bytes(8)))
+        skipped[-1] = 0xFD
+        link.feed(bytes(skipped) + self._corrupt()[1:] + self._heartbeat())
+        assert link._parse_errors == 0
+        assert link.frame_count == 1
+
+    def test_a_false_frame_inside_does_not_stretch_it(self):
+        """That one claims 200 bytes, and a real failure right after must still count."""
+        link = make_link()
+        false_frame = bytes([0xFD, 200, 0, 0, 0, 1, 1, 0xEF, 0xCD, 0xAB])
+        link.feed(self._unknown(false_frame) + self._corrupt() + self._heartbeat() + bytes(300))
         assert link._parse_errors == 1
 
 
 class TestTerrainReport:
     @staticmethod
-    def _report(link, terrain_height, current_height, spacing):
+    def _report(link, terrain_height, current_height, spacing, lat=340000000, lon=1080000000):
         # lat(i32, 0), lon(i32, 4), terrain_height(f, 8), current_height(f, 12), spacing(u16, 16),
         # pending(u16, 18), loaded(u16, 20).
-        p = struct.pack("<iiffHHH", 340000000, 1080000000, terrain_height, current_height, spacing, 0, 336)
+        p = struct.pack("<iiffHHH", lat, lon, terrain_height, current_height, spacing, 0, 336)
         handle_terrain_report(p, len(p), link)
 
     def test_shows_the_height_above_ground_not_the_ground(self):
@@ -623,6 +651,24 @@ class TestTerrainReport:
         """TerrainGCS.cpp:238: spacing stays 0 without data, and current_height means nothing."""
         link = make_link()
         self._report(link, 0.0, 0.0, 0)
+        assert link.diagnostic.terrain_alt == -1.0
+
+    def test_no_position_hides_it(self):
+        """TerrainGCS.cpp:219 sends an empty location, which AP_Terrain.cpp:124 answers as home."""
+        link = make_link()
+        self._report(link, 0.0, 0.0, 100, lat=0, lon=0)
+        assert link.diagnostic.terrain_alt == -1.0
+
+    def test_a_new_session_does_not_keep_it(self):
+        link = make_link()
+        self._report(link, 1500.0, 120.0, 100)
+        link._reset_session_state()
+        assert link.diagnostic.terrain_alt == -1.0
+
+    def test_neither_does_the_next_vehicle(self):
+        link = make_link()
+        self._report(link, 1500.0, 120.0, 100)
+        execute("switch_vehicle", 7, link)
         assert link.diagnostic.terrain_alt == -1.0
 
     def test_an_estimate_below_ground_reads_zero(self):

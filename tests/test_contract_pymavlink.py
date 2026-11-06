@@ -817,8 +817,8 @@ class TestIncomingHandlers:
 
         link = FakeLink()
         msg = mavlink.MAVLink_terrain_report_message(
-            lat=0,
-            lon=0,
+            lat=340000000,
+            lon=1080000000,
             spacing=100,
             terrain_height=125.5,
             current_height=120.0,
