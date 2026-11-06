@@ -122,7 +122,7 @@ CI 在两条链路上都驱动 SITL。WebSerial 用模拟串口接真实固件�
 | `LOG_ENTRY` | Log list | 日志列表 | Real FC | Real FC | Both 2026-11-05 |
 | `LOG_DATA` | Log download | 日志下载 | Real FC | Real FC | Both 2026-11-06 on Windows |
 | `SERIAL_CONTROL` | MAVLink console | MAVLink 控制台 | Real FC | n/a | Backend 2026-05 |
-| `TERRAIN_REPORT` | Height above ground | 离地高度 | Real FC | Real FC | Both 2026-11-06, on a board with terrain data: the reading follows altitude less ground |
+| `TERRAIN_REPORT` | Height above ground | 离地高度 | Real FC | Real FC | Both 2026-11-06 with terrain data: the reading follows altitude less ground. Backend on the same FC: hidden with no terrain and with no position |
 | `BATTERY_STATUS` | Cell voltages | 电芯电压 | Real FC | SITL | Backend 2026-05, WebSerial CI |
 | `AUTOPILOT_VERSION` | Firmware version | 固件版本 | Real FC | SITL | Backend 2026-11-05, WebSerial CI |
 | `MOUNT_STATUS` | Gimbal angles | 云台角度 | Tests only | Tests only | No current firmware sends it: both links compared on the same frame |
