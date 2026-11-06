@@ -133,6 +133,17 @@ describe('serial session state', () => {
       expect(H.flights).toHaveLength(1);
     });
 
+    it('reports no flight when the vehicle went nowhere, as after a motor test', () => {
+      h.onGlobalPositionInt!(position(34.2, 108.9) as never, frame);
+      h.onHeartbeat!(heartbeat(true) as never, frame);
+      vi.advanceTimersByTime(5000);
+      h.onGlobalPositionInt!(position(34.2, 108.9, 0.3) as never, frame);
+      h.onHeartbeat!(heartbeat(false) as never, frame);
+      expect(H.drone.flight_summary).toBeNull();
+      expect(H.flights).toHaveLength(0);
+      expect(H.events.map((e) => e.event_type)).toContain('disarmed');
+    });
+
     it('clears the last summary when armed again', () => {
       H.drone.flight_summary = { duration: 1 };
       h.onHeartbeat!(heartbeat(true) as never, frame);
@@ -180,6 +191,7 @@ describe('serial session state', () => {
     it('reports a flight that ended while the link was down', () => {
       h.onHeartbeat!(heartbeat(false) as never, frame);
       h.onHeartbeat!(heartbeat(true) as never, frame);
+      h.onGlobalPositionInt!(position(34.2, 108.9, 30) as never, frame);
       vi.advanceTimersByTime(10000);
       const again = buildSerialHandlers();
       again.onHeartbeat!(heartbeat(false) as never, frame);

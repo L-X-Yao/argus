@@ -59,6 +59,9 @@ const ACK_QUIET = new Set([511, 512]);
 
 const METERS_PER_DEG = 111320;
 const ADSB_MAX_AGE_S = 60;
+// Twins of backend/constants.py.
+const FLOWN_MIN_ALT = 1;
+const FLOWN_MIN_DIST = 5;
 
 function metersBetween(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const dLat = (lat1 - lat2) * METERS_PER_DEG;
@@ -165,6 +168,8 @@ export function buildSerialHandlers(): SerialHandlers {
       session.batStart = app.drone.remaining;
       return;
     }
+    // Armed is not flown: see backend handle_heartbeat.
+    if (session.maxAlt < FLOWN_MIN_ALT && session.totalDist < FLOWN_MIN_DIST) return;
     const remaining = app.drone.remaining;
     const summary = {
       duration: session.armedAt ? Math.trunc((Date.now() - session.armedAt) / 1000) : 0,

@@ -181,6 +181,7 @@ class TestFlightSummaryClearedOnArm:
         # Set up as if the drone is armed
         link.vehicle.armed = True
         link.vehicle.armed_time = 0.0  # will produce duration ~0
+        link.vehicle.max_alt = 12.0
         link.vehicle.flight_summary = None
 
         # Simulate a heartbeat with armed=False (disarm event)

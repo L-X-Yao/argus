@@ -6,7 +6,7 @@ import time
 from typing import TYPE_CHECKING
 
 from . import mavlink_dispatch
-from .constants import NON_VEHICLE_MAV_TYPES
+from .constants import FLOWN_MIN_ALT, FLOWN_MIN_DIST, NON_VEHICLE_MAV_TYPES
 from .crc_extras import CRC_EXTRA
 from .locale_text import lt
 from .statustext_filter import filter_statustext
@@ -84,13 +84,16 @@ def handle_heartbeat(p: bytes, pl: int, link: DroneLink) -> None:
             dur = int(time.time() - v.armed_time) if v.armed_time else 0
             bat = link.battery
             bat_used = (bat._bat_start_pct - bat.remaining) if bat._bat_start_pct >= 0 and bat.remaining >= 0 else -1
-            v.flight_summary = {
-                "duration": dur,
-                "max_alt": round(v.max_alt, 1),
-                "max_speed": round(v.max_speed, 1),
-                "total_dist": round(v.total_dist),
-                "bat_used": bat_used,
-            }
+            # Armed is not flown: a motor test arms the FC too (ArduCopter/motor_test.cpp
+            # mavlink_motor_test_start), and each one would end in a summary and a flight record.
+            if v.max_alt >= FLOWN_MIN_ALT or v.total_dist >= FLOWN_MIN_DIST:
+                v.flight_summary = {
+                    "duration": dur,
+                    "max_alt": round(v.max_alt, 1),
+                    "max_speed": round(v.max_speed, 1),
+                    "total_dist": round(v.total_dist),
+                    "bat_used": bat_used,
+                }
             bat.bat_time_remaining = -1
     v.armed = new_armed
     v.sysid = link._raw_sysid

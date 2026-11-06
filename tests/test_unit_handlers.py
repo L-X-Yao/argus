@@ -86,11 +86,31 @@ class TestHeartbeat:
         p_arm = struct.pack("<IBBBBB", 5, 2, 3, 0x80, 0, 3)
         handle_heartbeat(p_arm, len(p_arm), link)
         assert link.vehicle.armed
+        link.vehicle.max_alt = 12.0
         p_disarm = struct.pack("<IBBBBB", 5, 2, 3, 0, 0, 3)
         handle_heartbeat(p_disarm, len(p_disarm), link)
         assert not link.vehicle.armed
         assert link.vehicle.flight_summary is not None
         assert "duration" in link.vehicle.flight_summary
+
+    def test_a_drive_counts_as_a_flight(self):
+        link = make_link()
+        p_arm = struct.pack("<IBBBBB", 5, 2, 3, 0x80, 0, 3)
+        handle_heartbeat(p_arm, len(p_arm), link)
+        link.vehicle.total_dist = 40.0
+        p_disarm = struct.pack("<IBBBBB", 5, 2, 3, 0, 0, 3)
+        handle_heartbeat(p_disarm, len(p_disarm), link)
+        assert link.vehicle.flight_summary is not None
+
+    def test_a_motor_test_is_no_flight(self):
+        # The FC reports armed through a motor test and disarmed after it.
+        link = make_link()
+        p_arm = struct.pack("<IBBBBB", 5, 2, 3, 0x80, 0, 3)
+        handle_heartbeat(p_arm, len(p_arm), link)
+        link.vehicle.max_alt = 0.3
+        p_disarm = struct.pack("<IBBBBB", 5, 2, 3, 0, 0, 3)
+        handle_heartbeat(p_disarm, len(p_disarm), link)
+        assert link.vehicle.flight_summary is None
 
     def test_empty_payload_ignored(self):
         # Per MAVLink 2 zero-trim, a truncated heartbeat is processed
@@ -122,6 +142,7 @@ class TestHeartbeat:
         link = make_link()
         link.vehicle.armed = True
         link.vehicle.armed_time = time.time() - 60
+        link.vehicle.max_alt = 12.0
         p = bytearray(9)
         p[6] = 0x00
         handle_heartbeat(p, len(p), link)

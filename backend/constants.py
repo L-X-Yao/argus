@@ -119,6 +119,9 @@ VTOL_MODES: dict[str, int] = {"hold": 19, "land": 20}
 # MAV_TYPE of components that send heartbeats but are not the vehicle: GCS,
 # ONBOARD_CONTROLLER, GIMBAL, ADSB.
 NON_VEHICLE_MAV_TYPES = (6, 18, 26, 27)
+# How high or how far a vehicle has to have gone for an arm and disarm to count as a flight.
+FLOWN_MIN_ALT = 1.0
+FLOWN_MIN_DIST = 5.0
 SUB_BTNS = [[0, "自稳"], [2, "定深"], [16, "定点"], [3, "自动"], [4, "引导"]]
 FIX_NAMES = {0: "无定位", 1: "无定位", 2: "2D", 3: "3D", 4: "差分", 5: "RTK浮动", 6: "RTK固定"}
 
