@@ -407,13 +407,11 @@ test.describe('Terrain profile', () => {
       lon: a.lon + ((b.lon - a.lon) * i) / 20,
     }));
     const points = [probe.position!, ...route].map((p) => `${p.lat},${p.lon}`).join(';');
-    const answer = await page.request.get(`/api/terrain/elevation?points=${points}`);
-    const { elevations } = (await answer.json()) as { elevations: number[] };
-    test.skip(
-      elevations.every((e) => e === 0),
-      'no terrain data on this machine',
-    );
-    const [home, ...ground] = elevations;
+    // The first ask downloads the tile, which a slow line can take a while over.
+    const answer = await page.request.get(`/api/terrain/elevation?points=${points}`, { timeout: 60000 });
+    const { elevations } = (await answer.json()) as { elevations: (number | null)[] };
+    test.skip(elevations.includes(null), 'no terrain data on this machine');
+    const [home, ...ground] = elevations as number[];
     const lowest = 30 - (Math.max(...ground) - home);
 
     // Waypoints at 30 m above home over ground near the height of home, which is 584 m

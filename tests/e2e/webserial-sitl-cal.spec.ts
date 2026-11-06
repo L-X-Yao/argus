@@ -73,21 +73,40 @@ test.afterAll(async () => {
 });
 
 test('compass calibration runs to the end and is accepted', async () => {
-  expect(await ackOf(42424, 'cal_compass')).toBe(ACCEPTED);
-  servo(5, 1250);
+  test.setTimeout(600000);
   const events = () =>
     page.evaluate(async () => {
       const url = '/src/lib/stores.svelte.ts';
       const { app } = await import(/* @vite-ignore */ url);
       return app.events.map((e: { event_type: string; text: string }) => `${e.event_type}|${e.text}`);
     });
-  await expect
-    .poll(async () => (await events()).find((e) => /^cal_compass\|.*(完成|complete|失败|FAILED)/.test(e)), {
-      message: 'no MAG_CAL_REPORT result',
-      timeout: 240000,
-      intervals: [2000],
-    })
-    .toMatch(/完成|complete/);
+  const results = async () =>
+    (await events()).filter((e: string) => /^cal_compass\|.*(完成|complete|失败|FAILED)/.test(e));
+  const forget = () =>
+    page.evaluate(async () => {
+      const url = '/src/lib/stores.svelte.ts';
+      const { app } = await import(/* @vite-ignore */ url);
+      app.events.length = 0;
+    });
+  // The firmware's own fit on simulated samples can fail on a busy runner. MAG_CAL_REPORT says
+  // so, Argus is right to show it, and a user would run it again.
+  for (let run = 1; ; run++) {
+    await forget();
+    expect(await ackOf(42424, 'cal_compass')).toBe(ACCEPTED);
+    servo(5, 1250);
+    await expect
+      .poll(async () => (await results()).length, {
+        message: 'no MAG_CAL_REPORT result',
+        timeout: 240000,
+        intervals: [2000],
+      })
+      .toBeGreaterThan(0);
+    const result = (await results()).join(' ');
+    if (/完成|complete/.test(result)) break;
+    console.log(`compass run ${run}: ${result} after: ${sitl.texts.slice(-8).join(' / ')}`);
+    servo(5, 1000);
+    expect(run, 'the FC failed the fit on both runs').toBeLessThan(2);
+  }
   // The link accepts by itself, and the FC answers ACCEPTED only if every compass had
   // finished: one still running fails the command (AP_Compass_Calibration.cpp:233).
   const accepted = () => sitl.acks.find((a) => a.command === 42425)?.result;
