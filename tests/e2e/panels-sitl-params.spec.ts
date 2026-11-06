@@ -135,6 +135,15 @@ test.describe('Failsafe', () => {
     await gcs.getByRole('switch').click();
     await gcs.getByRole('button', { name: label('failsafe.save') }).click();
     await onFc('FS_GCS_ENABLE').toBe(0);
+
+    // Off is the threshold on this one: an action of 0 lands on 4.6 (lib/failsafe.ts).
+    const action = await probe.param('FS_EKF_ACTION');
+    const ekf = section(page, 'failsafe.ekf');
+    await expect(ekf.getByRole('switch')).toHaveAttribute('aria-checked', 'true');
+    await ekf.getByRole('switch').click();
+    await ekf.getByRole('button', { name: label('failsafe.save') }).click();
+    await onFc('FS_EKF_THRESH').toBe(0);
+    expect(await probe.param('FS_EKF_ACTION')).toBe(action);
     await close(page, dialog);
   });
 
@@ -146,7 +155,7 @@ test.describe('Failsafe', () => {
         .evaluateAll((options) => options.map((o) => Number((o as HTMLOptionElement).value)));
     // @Values of each parameter: ArduCopter/Parameters.cpp and AP_BattMonitor_Params.cpp.
     // 2 on the two loss failsafes is "removed in 4.0+", and the FC flies an RTL for it
-    // (events.cpp:24, :189). 0 on the EKF is report only from 4.7 on: see lib/failsafe.ts.
+    // (events.cpp). 0 on the EKF is report only from 4.7 on: see lib/failsafe.ts.
     expect(await values('#fs-batt-action')).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
     expect(await values('#fs-rc-action')).toEqual([0, 1, 3, 4, 5, 6, 7]);
     expect(await values('#fs-gcs-action')).toEqual([0, 1, 3, 4, 5, 6, 7]);
@@ -205,7 +214,10 @@ test.describe('Power', () => {
     const measured = Number((shown * 0.9).toFixed(2));
     await dialog.locator('#power-measured-volt').fill(String(measured));
     await dialog.getByRole('button', { name: label('power.calculate') }).click();
-    await dialog.getByRole('button', { name: new RegExp(label('power.write')) }).first().click();
+    await dialog
+      .getByRole('button', { name: new RegExp(label('power.write')) })
+      .first()
+      .click();
     await expect.poll(() => probe.param('BATT_VOLT_MULT')).toBeCloseTo((before * measured) / shown, 3);
     // The firmware now reads what the meter did.
     await expect.poll(async () => Number(await reading.textContent())).toBeCloseTo(measured, 1);
@@ -358,7 +370,9 @@ test.describe('Parameter file', () => {
     await expect(row('RTL_ALT')).toContainText(String(rtlAlt));
 
     // One on its own, the rest together, and nothing else moves.
-    await row('WPNAV_SPEED').getByRole('button', { name: label('paramdiff.apply') }).click();
+    await row('WPNAV_SPEED')
+      .getByRole('button', { name: label('paramdiff.apply') })
+      .click();
     await onFc('WPNAV_SPEED').toBe(speed);
     expect(await probe.param('RTL_ALT')).toBe(rtlAlt - 100);
     expect(await probe.param('ANGLE_MAX')).toBe(angle - 100);

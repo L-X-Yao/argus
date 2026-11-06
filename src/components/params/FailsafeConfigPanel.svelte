@@ -3,7 +3,7 @@
   import { dispatch } from '../../lib/transport';
   import { paramState, getParam } from '../../lib/paramStore.svelte';
   import { t } from '../../lib/i18n.svelte';
-  import { ekfActions as ekfActionsOf, failsafeAction } from '../../lib/failsafe';
+  import { ekfAction as ekfActionOf, ekfActions as ekfActionsOf, ekfParams, failsafeAction } from '../../lib/failsafe';
   import { vehicleKind } from '../../lib/vehicleModes';
   import { X, ShieldAlert, Battery, Radio, Wifi, Navigation } from '@lucide/svelte';
   import Button from '$lib/components/ui/button/button.svelte';
@@ -37,6 +37,7 @@
   let gcsAction   = $state(0);
 
   /* ── EKF/GPS ── */
+  let ekfEnable   = $state(0);
   let ekfAction   = $state(0);
   let ekfThresh   = $state(0.8);
 
@@ -65,8 +66,9 @@
     gcsEnable   = getParam('FS_GCS_ENABLE', 0);
     gcsAction   = failsafeAction(getParam('FS_GCS_ENABLE', 0), vehicleKind());
 
-    ekfAction   = getParam('FS_EKF_ACTION', 0);
+    ekfAction   = ekfActionOf(getParam('FS_EKF_ACTION', 0), app.drone.fw_version, vehicleKind());
     ekfThresh   = getParam('FS_EKF_THRESH', 0.8);
+    ekfEnable   = ekfThresh > 0 ? 1 : 0;
   });
 
   /* ── Action option maps ── */
@@ -95,7 +97,8 @@
   ];
 
   // ArduCopter/Parameters.cpp:99 FS_GCS_ENABLE @Values. 2 is removed here too: the FC flies
-  // an RTL for it (events.cpp:189), and complains before arming (AP_Arming_Copter.cpp:218).
+  // an RTL for it (events.cpp failsafe_gcs_on_event), and complains before arming
+  // (AP_Arming_Copter.cpp:218).
   const gcsActions: [number, string][] = [
     [0, 'failsafe.actionNone'],
     [1, 'failsafe.actionRtl'],
@@ -106,7 +109,7 @@
     [7, 'failsafe.actionBrakeLand'],
   ];
 
-  let ekfActions = $derived(ekfActionsOf(app.drone.fw_version));
+  let ekfActions = $derived(ekfActionsOf(app.drone.fw_version, vehicleKind()));
 
   /* ── Section save handlers ── */
   function saveBattery() {
@@ -133,10 +136,7 @@
   }
 
   function saveEkf() {
-    saveParams([
-      ['FS_EKF_ACTION', ekfAction],
-      ['FS_EKF_THRESH', ekfThresh],
-    ]);
+    saveParams(ekfParams(ekfEnable > 0, ekfAction, ekfThresh));
   }
 </script>
 
@@ -321,15 +321,15 @@
               <Navigation size={14} class="text-blue-500" />
               <span class="text-xs font-semibold text-foreground uppercase tracking-wider">{t('failsafe.ekf')}</span>
             </div>
-            <button type="button" role="switch" aria-checked={ekfAction > 0}
+            <button type="button" role="switch" aria-checked={ekfEnable > 0}
                     class="relative inline-flex items-center cursor-pointer"
-                    onclick={() => { ekfAction = ekfAction > 0 ? 0 : 1; }}>
+                    onclick={() => { ekfEnable = ekfEnable > 0 ? 0 : 1; }}>
               <div class="w-9 h-5 rounded-full transition-colors
                           after:content-[''] after:absolute after:top-[2px] after:left-[2px]
                           after:bg-white after:rounded-full after:h-4 after:w-4
-                          after:transition-all {ekfAction > 0 ? 'bg-blue-500 after:translate-x-full' : 'bg-muted-foreground/30'}"></div>
+                          after:transition-all {ekfEnable > 0 ? 'bg-blue-500 after:translate-x-full' : 'bg-muted-foreground/30'}"></div>
               <span class="ml-2 text-[11px] text-muted-foreground">
-                {ekfAction > 0 ? t('failsafe.enable') : t('failsafe.disable')}
+                {ekfEnable > 0 ? t('failsafe.enable') : t('failsafe.disable')}
               </span>
             </button>
           </div>

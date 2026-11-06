@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { ekfActions, failsafeAction } from './failsafe';
+import { ekfAction, ekfActions, ekfParams, failsafeAction } from './failsafe';
+import type { VehicleType } from './modeStore';
 
 describe('failsafeAction', () => {
   it('shows the RTL a Copter flies for a removed 2', () => {
@@ -19,7 +20,7 @@ describe('failsafeAction', () => {
 });
 
 describe('ekfActions', () => {
-  const values = (version: string) => ekfActions(version).map(([value]) => value);
+  const values = (version: string, kind: VehicleType = 'copter') => ekfActions(version, kind).map(([value]) => value);
 
   it('offers report only from 4.7 on', () => {
     expect(values('v4.7.0')).toEqual([0, 1, 2, 3]);
@@ -33,5 +34,44 @@ describe('ekfActions', () => {
 
   it('keeps it off until the version is known', () => {
     expect(values('')).toEqual([1, 2, 3]);
+  });
+
+  it('leaves it on what means Disabled by it', () => {
+    expect(values('v4.6.3', 'rover')).toEqual([0, 1, 2, 3]);
+    expect(values('v4.6.3', 'sub')).toEqual([0, 1, 2, 3]);
+  });
+});
+
+describe('ekfAction', () => {
+  it('shows the Land a 0 means on 4.6', () => {
+    expect(ekfAction(0, 'v4.6.3', 'copter')).toBe(1);
+  });
+
+  it('leaves what the firmware has', () => {
+    expect(ekfAction(0, 'v4.7.0', 'copter')).toBe(0);
+    expect(ekfAction(3, 'v4.6.3', 'copter')).toBe(3);
+  });
+});
+
+describe('ekfParams', () => {
+  it('turns the check off by its threshold, and leaves the action', () => {
+    expect(ekfParams(false, 2, 0.7)).toEqual([
+      ['FS_EKF_ACTION', 2],
+      ['FS_EKF_THRESH', 0],
+    ]);
+  });
+
+  it('writes what is shown when on', () => {
+    expect(ekfParams(true, 2, 0.7)).toEqual([
+      ['FS_EKF_ACTION', 2],
+      ['FS_EKF_THRESH', 0.7],
+    ]);
+  });
+
+  it('turns a check that was off back on at the default', () => {
+    expect(ekfParams(true, 1, 0)).toEqual([
+      ['FS_EKF_ACTION', 1],
+      ['FS_EKF_THRESH', 0.8],
+    ]);
   });
 });
