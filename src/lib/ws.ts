@@ -110,6 +110,8 @@ export function connectWs(): void {
               break;
             case 'rally_ack_fail':
             case 'rally_clear_fail':
+            case 'mission_clear_fail':
+            case 'param_set_fail':
               addToast(msg.text, 'error');
               break;
             case 'cmd_ack_fail':

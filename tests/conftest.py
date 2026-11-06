@@ -124,8 +124,6 @@ def _reset_backend_globals():
             pass
         _video._active_proc = None
 
-    import backend.commands._mission as _mission
+    import backend.commands._helpers as _helpers
 
-    if _mission._mission_timer is not None:
-        _mission._mission_timer.cancel()
-        _mission._mission_timer = None
+    _helpers.cancel_mission_timer()

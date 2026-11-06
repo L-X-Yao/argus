@@ -202,6 +202,7 @@ beforeEach(async () => {
   readLoopResolve = null;
   _seq = 0;
   await connectSerial(115200, {});
+  app.drone.connected = true; // as the first heartbeat does
   // connectSerial issues an immediate heartbeat + a batch of REQUEST_DATA_STREAM
   // frames at boot. Flush them so each test starts with an empty write log.
   writes.length = 0;
@@ -360,6 +361,7 @@ describe('serialUploadMission', () => {
     expect(writes[0][10 + 30]).toBe(2); // COMMAND_LONG target_system
     await disconnectSerial();
     await connectSerial(115200, {});
+    app.drone.connected = true; // as the first heartbeat does
     inject(encodeFrame(0, encodeHeartbeat(2, 3), 1, 1, 0));
     writes.length = 0;
     dispatch('arm');
@@ -880,6 +882,7 @@ describe('serialCalCompass + MAG_CAL events', () => {
       start();
       await disconnectSerial();
       await connectSerial(115200, {});
+      app.drone.connected = true; // as the first heartbeat does
       writes.length = 0;
       report(0, 4, 1);
       expect(accepts()).toBe(0);
@@ -1024,6 +1027,7 @@ describe('serialClearFence', () => {
     vi.useFakeTimers();
     try {
       await connectSerial(115200, {});
+      app.drone.connected = true; // as the first heartbeat does
       const result = serialClearFence();
       vi.advanceTimersByTime(3100);
       const res = await result;
@@ -1063,6 +1067,7 @@ describe('serial link health', () => {
     vi.useFakeTimers();
     try {
       await connectSerial(115200, {});
+      app.drone.connected = true; // as the first heartbeat does
       await body();
     } finally {
       vi.useRealTimers();
@@ -1116,6 +1121,7 @@ describe('serial link health', () => {
     expect(app.drone).toMatchObject({ connected: false, armed: true, link_age: -1 });
     expect(app.serialLinkLost).toBe(true);
     await connectSerial(115200, {});
+    app.drone.connected = true; // as the first heartbeat does
     expect(app.serialLinkLost).toBe(false);
     expect(app.drone.armed).toBe(true); // reconnecting is no reason to show it disarmed
   });
@@ -1124,6 +1130,7 @@ describe('serial link health', () => {
     const heartbeats: number[] = [];
     await disconnectSerial();
     await connectSerial(115200, { onHeartbeat: () => heartbeats.push(1) });
+    app.drone.connected = true; // as the first heartbeat does
     const beat = (sysId: number) => inject(encodeFrame(0, encodeHeartbeat(2, 3), sysId, 1, 0));
     beat(1);
     beat(7);
@@ -1137,6 +1144,7 @@ describe('serial link health', () => {
   it('asks again when the vehicle turns out not to be sysid 1', async () => {
     await disconnectSerial();
     await connectSerial(115200, {});
+    app.drone.connected = true; // as the first heartbeat does
     writes.length = 0;
     inject(encodeFrame(0, encodeHeartbeat(2, 3), 42, 1, 0));
     const sent = writes.filter((w) => writeMsgId(w) === 66);
@@ -1148,6 +1156,7 @@ describe('serial link health', () => {
     await disconnectSerial();
     handleParamBatch([{ name: 'A', value: 1, ptype: 9, index: 0, total: 1, received: 1 }]);
     await connectSerial(115200, {});
+    app.drone.connected = true; // as the first heartbeat does
     expect(paramState.list).toHaveLength(0);
   });
 
@@ -1155,6 +1164,7 @@ describe('serial link health', () => {
     await disconnectSerial();
     writes.length = 0;
     await connectSerial(115200, {});
+    app.drone.connected = true; // as the first heartbeat does
     const asked = writes.filter((w) => writeMsgId(w) === 76).map(commandLongFields);
     expect(asked).toContainEqual({ command: 511, p1: 245, p2: 1000000 });
     expect(asked).toContainEqual({ command: 512, p1: 242, p2: 0 }); // HOME_POSITION, once
@@ -1164,6 +1174,7 @@ describe('serial link health', () => {
     const onHeartbeat = vi.fn();
     await disconnectSerial();
     await connectSerial(115200, { onHeartbeat });
+    app.drone.connected = true; // as the first heartbeat does
     const late = readLoopOnChunk;
     await disconnectSerial();
     late?.(heartbeat());
@@ -1288,6 +1299,7 @@ describe('a lost frame', () => {
     await disconnectSerial();
     noAnswer.length = 0;
     await connectSerial(115200, { onCommandNoAnswer: (c) => noAnswer.push(c) });
+    app.drone.connected = true; // as the first heartbeat does
     writes.length = 0;
     vi.useFakeTimers();
   });
@@ -1422,6 +1434,7 @@ describe('the error counter', () => {
   it('counts frames that fail their CRC', async () => {
     await disconnectSerial();
     await connectSerial(115200, {});
+    app.drone.connected = true; // as the first heartbeat does
     const bad = encodeFrame(0, encodeHeartbeat(2, 3), 1, 1, 0);
     bad[bad.length - 1] ^= 0xff;
     inject(bad);
@@ -1431,6 +1444,7 @@ describe('the error counter', () => {
   it('counts nothing for a message nobody here reads', async () => {
     await disconnectSerial();
     await connectSerial(115200, {});
+    app.drone.connected = true; // as the first heartbeat does
     inject(encodeFrame(9999, new Uint8Array([1, 2, 3]), 1, 1, 0));
     expect(app.drone.parse_errors).toBe(0);
   });

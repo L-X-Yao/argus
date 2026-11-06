@@ -381,6 +381,7 @@ export function serialSendDisarm(): void {
 // (GCS_Common.cpp:2890 handle_set_mode), so a refused change went unreported. This one
 // is acked (:5045 handle_command_do_set_mode). p1 = custom mode enabled.
 export function serialSendMode(mode: number): void {
+  _clearMissionStartTimer(); // a MISSION_START on its way would switch to AUTO over this
   serialSendCommandLong(176, 1, mode);
 }
 
@@ -685,6 +686,8 @@ const _serialDispatch: Record<string, CmdHandler> = {
  * back to the WebSocket backend. Use this everywhere instead of
  * sendCommand() — new serial commands only need a table entry above.
  */
+const _NO_VEHICLE_NEEDED = new Set(['cal_cancel', 'log_cancel']);
+
 export function dispatch(name: string, param?: number, data?: Record<string, unknown>): void {
   if (isSerialConnected()) {
     // Mirror backend commands.execute (commands/__init__.py:153-155): once a
@@ -701,6 +704,12 @@ export function dispatch(name: string, param?: number, data?: Record<string, unk
     }
     const handler = _serialDispatch[name];
     if (handler) {
+      // Port open, no vehicle heard: as in backend execute, it would go nowhere, or to
+      // whatever answers next.
+      if (!app.drone?.connected && !_NO_VEHICLE_NEEDED.has(name)) {
+        addToast(t('err.noLink'), 'error', 5000);
+        return;
+      }
       handler(param, data);
       return;
     }
@@ -964,9 +973,10 @@ export async function serialUploadRally(points: RallyPoint[]): Promise<{ ok: boo
 
 export function serialClearMission(): void {
   if (!isSerialConnected()) return;
-  _wpToSeq.clear();
   void _clearStore(0).then((r) => {
-    if (!r.ok) addToast(`${t('toast.missionFail')}: ${r.error}`, 'error', 5000);
+    // Only now: see backend handle_mission_ack.
+    if (r.ok) _wpToSeq.clear();
+    else addToast(`${t('mission.clearFailed')}: ${r.error}`, 'error', 5000);
   });
 }
 

@@ -1121,6 +1121,10 @@ const messages: Record<string, string> = {
   'fltmode.noSwitch': 'Ce firmware n’a pas de paramètres de sélecteur de mode',
   'mission.splinePlane': 'ArduPlane ne prend pas en charge les points de passage spline',
   'mission.subDepth': 'Les points de passage Sub exigent une altitude négative (profondeur)',
+  'wp.frameRefused':
+    'Non chargé : le fichier utilise des altitudes au-dessus de la mer ou du terrain, et Argus envoie des altitudes au-dessus du point de départ',
+  'mission.clearFailed': 'Échec de l’effacement de la mission',
+  'err.noLink': 'Pas de contrôleur connecté : rien n’a été envoyé',
   'param.noAnswer': 'Paramètre {name} : pas de réponse, non confirmé',
   'setup.copterOnly': 'Ce panneau est réservé à Copter. Sur ce véhicule, utilisez la liste des paramètres.',
   'serial.err.notConnected': 'Non connecté en série',

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import struct
+import threading
 import time
 from typing import TYPE_CHECKING
 
@@ -111,7 +112,31 @@ def send_cmd_int(
         _track(link, command, lambda _n: send_cmd_int(link, command, p1, p2, p3, p4, x, y, z, frame, resent=True))
 
 
+_mission_timer: threading.Timer | None = None
+_timer_lock = threading.Lock()
+
+
+def cancel_mission_timer() -> None:
+    global _mission_timer
+    with _timer_lock:
+        if _mission_timer:
+            _mission_timer.cancel()
+            _mission_timer = None
+
+
+def start_mission_timer(delay: float, fn) -> None:
+    global _mission_timer
+    with _timer_lock:
+        if _mission_timer:
+            _mission_timer.cancel()
+        _mission_timer = threading.Timer(delay, fn)
+        _mission_timer.daemon = True
+        _mission_timer.start()
+
+
 def send_set_mode(link: DroneLink, mode: int) -> None:
+    # A MISSION_START still on its way would switch to AUTO over this: see _track.
+    cancel_mission_timer()
     # MAV_CMD_DO_SET_MODE, not the SET_MODE message: the FC drops the result of that
     # one (GCS_Common.cpp:2890 handle_set_mode), so a refused change went unreported.
     # This one is acked (:5045 handle_command_do_set_mode). p1 = custom mode enabled.

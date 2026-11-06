@@ -201,6 +201,10 @@ const messages: Record<string, string> = {
   'wp.spline': 'Spline',
   'mission.splinePlane': 'Spline waypoints are not supported on ArduPlane',
   'mission.subDepth': 'Sub waypoints need a negative altitude (depth)',
+  'wp.frameRefused':
+    'Not loaded: the file uses altitudes above sea level or terrain, and Argus uploads altitudes above home',
+  'mission.clearFailed': 'Clearing the mission failed',
+  'err.noLink': 'Not connected to a flight controller: nothing was sent',
   'param.noAnswer': 'Parameter {name}: no answer, not confirmed',
   'setup.copterOnly': 'This panel is for Copter. On this vehicle, use the parameter list.',
   'serial.err.notConnected': 'Not connected via serial',

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import struct
-import threading
 import time
 from typing import TYPE_CHECKING
 
@@ -9,17 +8,13 @@ from ..config import cfg
 from ..crc_extras import CRC_EXTRA
 from ..locale_text import lt
 from ..mavlink_frame import bm
-from ._helpers import send_cmd, send_fence_count, send_mission_count, send_set_mode
+from ._helpers import send_cmd, send_fence_count, send_mission_count, send_set_mode, start_mission_timer
 
 if TYPE_CHECKING:
     from ..drone_link import DroneLink
 
-_mission_timer: threading.Timer | None = None
-_timer_lock = threading.Lock()
-
 
 def cmd_mission_start(link: DroneLink, param, data: dict):
-    global _mission_timer
     am = link.special_mode("auto")
     link.add_event(lt("mission_start", link.locale), "mission_start")
     send_set_mode(link, am)
@@ -30,12 +25,7 @@ def cmd_mission_start(link: DroneLink, param, data: dict):
         except OSError:
             link.add_event(lt("err_mission_start", link.locale), "cmd_ack_fail")
 
-    with _timer_lock:
-        if _mission_timer:
-            _mission_timer.cancel()
-        _mission_timer = threading.Timer(cfg.MISSION_START_DELAY, _delayed)
-        _mission_timer.daemon = True
-        _mission_timer.start()
+    start_mission_timer(cfg.MISSION_START_DELAY, _delayed)
 
 
 def cmd_mission_set_current(link: DroneLink, param, data: dict):
@@ -61,8 +51,6 @@ def cmd_mission_clear(link: DroneLink, param, data: dict):
     link.mission._mission_clear_start_time = time.time()
     link.mission._mission_clear_sent = 0.0
     link.send(bm(45, bytes([link.vehicle.sysid, 1, 0]), link.sq, CRC_EXTRA[45]))
-    link.mission._mission_items = []
-    link.mission._seq_to_wp = {}
     link.mission._mission_pending = False
     link.mission._mission_ul_start_time = 0.0
 

@@ -1230,6 +1230,8 @@ class TestVehicleTypes:
     def test_a_lost_link_does_not_move_to_the_vehicle_next_door(self):
         link = make_link()
         self._heartbeat(link, 1, armed=True)
+        self._heartbeat(link, 7, armed=False)
+        self._heartbeat(link, 1, armed=True)  # both alive at once: a shared link
         link._reset_session_state()
         self._heartbeat(link, 7, armed=False)
         assert link.connected is False
@@ -1237,6 +1239,16 @@ class TestVehicleTypes:
         assert link.vehicle.armed is True
         self._heartbeat(link, 1, armed=True)
         assert link.connected is True
+
+    def test_a_vehicle_alone_on_its_link_can_come_back_under_a_new_id(self):
+        """A MAV_SYSID write applies live, and a reboot after SYSID_THISMAV does the same."""
+        link = make_link()
+        self._heartbeat(link, 1)
+        self._heartbeat(link, 7)  # the old id has gone quiet: no sign of a second vehicle
+        link._reset_session_state()
+        self._heartbeat(link, 7)
+        assert link.connected is True
+        assert link.vehicle.sysid == 7
 
     def test_a_switch_leaves_nothing_of_the_old_vehicle(self):
         link = make_link_connected()

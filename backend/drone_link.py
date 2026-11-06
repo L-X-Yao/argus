@@ -303,6 +303,9 @@ class DroneLink:
                 (self.mission._mission_pending, "mission_ack_fail"),
                 (self.mission._fence_pending, "fence_ack_fail"),
                 (self.mission._rally_pending, "rally_ack_fail"),
+                (self.mission._mission_clear_pending, "mission_clear_fail"),
+                (self.mission._fence_clear_pending, "fence_clear_fail"),
+                (self.mission._rally_clear_pending, "rally_clear_fail"),
             ):
                 if pending:
                     self.add_event(lt(event, self.locale) % 99, event)
@@ -897,7 +900,16 @@ class DroneLink:
                 )
                 self._vehicles[sid] = v
             if mid == 0 and pl >= 7 and p[5] != 8 and p[4] not in NON_VEHICLE_MAV_TYPES:
+                now = time.time()
+                # Two vehicles alive at once is a shared link. From here on a lost link stays
+                # with this one: the next vehicle heard would be someone else's flight. Alone
+                # on its link it is free to come back under a new id, as after a MAV_SYSID change.
+                if mine and not self.active_sysid:
+                    alive = (veh for other, veh in self._vehicles.items() if other != sid)
+                    if any(now - veh.get("heard", 0) < 3 for veh in alive):
+                        self.active_sysid = sid
                 v = self._vehicles.get(sid, {"sysid": sid, "lat": 0, "lon": 0, "alt": 0, "hdg": 0, "t": 0})
+                v["heard"] = now
                 v["armed"] = bool(p[6] & 0x80)
                 v["mode"] = p[0] | (p[1] << 8) | (p[2] << 16) | (p[3] << 24)
                 v["vtype"] = p[4]

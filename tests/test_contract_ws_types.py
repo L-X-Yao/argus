@@ -81,6 +81,8 @@ class TestWSTypeContract:
             "link_lost",
             "mission_ack_ok",
             "mission_ack_fail",
+            "mission_clear_fail",
+            "param_set_fail",
             "fence_ack_ok",
             "fence_ack_fail",
             "fence_clear_ok",

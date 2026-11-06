@@ -213,6 +213,7 @@ beforeEach(async () => {
   readLoopResolve = null;
   _isPlaneFlag = false;
   await connectSerial(115200, {});
+  app.drone.connected = true; // as the first heartbeat does
   writes.length = 0; // discard boot frames
 });
 

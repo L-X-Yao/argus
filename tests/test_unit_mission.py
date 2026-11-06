@@ -4,6 +4,7 @@ download, timeout watchdogs, and waypoint type variants."""
 import time
 from unittest.mock import MagicMock, patch
 
+import backend.commands._helpers as helpers
 from backend.commands._mission import (
     _upload_mission,
     check_mission_dl_timeout,
@@ -35,10 +36,9 @@ class TestMissionStartDelayedError:
         with patch("backend.commands._mission.send_cmd", side_effect=OSError("write failed")):
             cmd_mission_start(link, None, {})
             # The timer fires asynchronously — give it time
-            import backend.commands._mission as m
 
-            with m._timer_lock:
-                timer = m._mission_timer
+            with helpers._timer_lock:
+                timer = helpers._mission_timer
             if timer:
                 timer.join(timeout=2)
 

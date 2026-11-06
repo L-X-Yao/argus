@@ -153,6 +153,7 @@ describe('dual-stack parity dump', () => {
     try {
       H.writes.length = 0;
       const ok = await connectSerial(115200, {});
+      app.drone.connected = true; // as the first heartbeat does
       expect(ok).toBe(true);
       // One heartbeat-interval tick so the boot heartbeat lands in `writes`.
       await vi.advanceTimersByTimeAsync(1000);

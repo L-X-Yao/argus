@@ -1113,6 +1113,10 @@ const messages: Record<string, string> = {
   'fltmode.noSwitch': 'لا يحتوي هذا البرنامج الثابت على معلمات مفتاح الأوضاع',
   'mission.splinePlane': 'لا يدعم ArduPlane نقاط الطريق المنحنية',
   'mission.subDepth': 'يجب أن يكون ارتفاع نقاط طريق Sub سالبًا (العمق)',
+  'wp.frameRefused':
+    'لم يُحمَّل: يستخدم الملف ارتفاعات فوق البحر أو التضاريس، بينما يرفع Argus الارتفاع فوق نقطة البداية',
+  'mission.clearFailed': 'فشل مسح المهمة',
+  'err.noLink': 'غير متصل بوحدة التحكم: لم يُرسل شيء',
   'param.noAnswer': 'المعلمة {name}: لا يوجد رد، لم يتم التأكيد',
   'setup.copterOnly': 'هذه اللوحة مخصصة لـ Copter فقط. في هذه المركبة استخدم قائمة المعلمات.',
   'serial.err.notConnected': 'غير متصل عبر المنفذ التسلسلي',

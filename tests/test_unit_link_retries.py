@@ -111,11 +111,15 @@ class TestNoLink:
         assert result["ok"] is False
         assert link._cmd_pending == {}
 
-    def test_so_is_one_during_an_outage(self):
+    def test_so_is_one_before_a_vehicle_has_been_heard(self):
         link = make_link()
-        link._reconnecting = True
+        link.connected = False  # a port open is not a vehicle: after a loss on UDP, say
         assert execute("rtl", None, link)["ok"] is False
         assert link._ser.write.call_count == 0
+
+    def test_a_cancel_always_gets_through(self):
+        link = DroneLink()
+        assert execute("cal_cancel", None, link) is None
 
     def test_an_upload_is_refused_too(self):
         link = DroneLink()
@@ -216,6 +220,23 @@ class TestMissionClear:
         later(link, cfg.STORE_CLEAR_TIMEOUT + 1, check_mission_dl_timeout)
         assert [e for e in link.events if e["event_type"] == "mission_clear_fail"]
 
+    def test_a_refused_clear_leaves_the_jump_table_alone(self):
+        """The FC refuses it while flying the mission, and a jump must still find its item."""
+        link = make_link()
+        link.mission._seq_to_wp = {2: 0, 4: 1}
+        execute("mission_clear", None, link)
+        assert link.mission._seq_to_wp == {2: 0, 4: 1}
+        handle_mission_ack(bytes([255, 190, 1, 0]), 4, link)
+        assert link.mission._seq_to_wp == {2: 0, 4: 1}
+        assert [e for e in link.events if e["event_type"] == "mission_clear_fail"]
+
+    def test_an_accepted_clear_empties_it(self):
+        link = make_link()
+        link.mission._seq_to_wp = {2: 0}
+        execute("mission_clear", None, link)
+        handle_mission_ack(bytes([255, 190, 0, 0]), 4, link)
+        assert link.mission._seq_to_wp == {}
+
     def test_an_upload_waits_for_it(self):
         link = make_link()
         execute("mission_clear", None, link)
@@ -243,6 +264,15 @@ class TestParamSet:
 
 
 class TestRetriedMissionStart:
+    def test_a_mode_change_also_stops_the_one_about_to_go_out(self):
+        link = make_link()
+        with patch("backend.commands._mission.cfg.MISSION_START_DELAY", 0.05):
+            execute("mission_start", None, link)
+            execute("mode", 6, link)
+            time.sleep(0.15)
+        frames = [c.args[0] for c in link._ser.write.call_args_list]
+        assert not [f for f in frames if f[7] == 76 and struct.unpack_from("<H", f, 10 + 28)[0] == 300]
+
     def test_a_mode_change_cancels_it(self):
         link = make_link()
         execute("mission_start", None, link)

@@ -40,7 +40,7 @@ vi.mock('./serial', () => ({
   }),
 }));
 vi.mock('./stores.svelte', () => ({
-  app: { activeTransport: 'none', drone: {} },
+  app: { activeTransport: 'none', drone: { connected: false } },
   addToast: vi.fn(),
   addEvent: vi.fn(),
   isPlane: () => false,
@@ -80,6 +80,7 @@ vi.mock('./ws', () => ({ sendCommand: vi.fn() }));
 
 // Import AFTER mocks.
 import { connectSerial, disconnectSerial, dispatch } from './transport';
+import { app } from './stores.svelte';
 import { encodeFrame } from './mavlink';
 import { addToast } from './stores.svelte';
 
@@ -116,6 +117,7 @@ describe('WebSerial param fetch state machine', () => {
     H.store.timeouts = 0;
     H.store.starts = 0;
     expect(await connectSerial(115200, {})).toBe(true);
+    app.drone.connected = true; // as the first heartbeat does
     H.writes.length = 0; // drop the connect-time stream-setup frames
   });
 
