@@ -890,7 +890,7 @@ export async function serialUploadMission(
   if (download.pending) return { ok: false, error: t('serial.err.downloadBusy') };
 
   const validation = validateMissionWaypoints(waypoints);
-  if (!validation.ok) return validation;
+  if (!validation.ok) return { ok: false, error: t(validation.error) };
   // Mirrors backend cmd_mission_upload, which cites the firmware for both.
   const kind = vehicleKind();
   if (kind === 'plane' && waypoints.some((w) => w.type === 'spline')) {
@@ -919,7 +919,7 @@ export async function serialUploadFence(
   if (download.pending) return { ok: false, error: t('serial.err.downloadBusy') };
 
   const validation = validateFencePolygon(polygon);
-  if (!validation.ok) return validation;
+  if (!validation.ok) return { ok: false, error: t(validation.error) };
   return _startUpload(buildFenceItems(polygon), 1);
 }
 
@@ -930,7 +930,7 @@ export async function serialUploadRally(points: RallyPoint[]): Promise<{ ok: boo
   if (download.pending) return { ok: false, error: t('serial.err.downloadBusy') };
 
   const validation = validateRallyPoints(points);
-  if (!validation.ok) return validation;
+  if (!validation.ok) return { ok: false, error: t(validation.error) };
   return _startUpload(buildRallyItems(points), 2);
 }
 

@@ -21,8 +21,6 @@ import subprocess
 from pathlib import Path
 from unittest.mock import MagicMock
 
-import pytest
-
 ROOT = Path(__file__).resolve().parent.parent
 
 GOLDEN_WAYPOINTS = [
@@ -75,24 +73,32 @@ def _backend_items() -> list[dict]:
 def _frontend_items() -> list[dict]:
     """Run buildMissionItems via a Node one-liner and parse the JSON output."""
     script = r"""
+    import { readFileSync } from 'node:fs';
     import { buildMissionItems } from './src/lib/missionUpload.ts';
-    const wps = JSON.parse(process.argv[1]);
-    const items = buildMissionItems(wps, parseFloat(process.argv[2]));
+    const { wps, alt } = JSON.parse(readFileSync(0, 'utf8'));
+    const items = buildMissionItems(wps, alt);
     console.log(JSON.stringify(items.map(i => ({
         seq: i.seq, cmd: i.command, frame: i.frame,
         p1: i.p1, p2: i.p2, p3: i.p3, p4: i.p4,
         x: i.x, y: i.y, z: i.z
     }))));
     """
-    result = subprocess.run(
-        [shutil.which("npx") or "npx", "tsx", "-e", script, json.dumps(GOLDEN_WAYPOINTS), str(GOLDEN_TAKEOFF_ALT)],
-        capture_output=True,
-        text=True,
-        cwd=str(ROOT),
-        timeout=30,
-    )
-    if result.returncode != 0:
-        pytest.skip(f"tsx not available or failed: {result.stderr[:200]}")
+    # A file and stdin, not -e and argv: on Windows npx is a .cmd, and cmd.exe mangles both.
+    path = ROOT / ".mission_parity_tmp.ts"
+    path.write_text(script, encoding="utf-8")
+    try:
+        result = subprocess.run(
+            [shutil.which("npx") or "npx", "tsx", path.name],
+            input=json.dumps({"wps": GOLDEN_WAYPOINTS, "alt": GOLDEN_TAKEOFF_ALT}),
+            capture_output=True,
+            text=True,
+            cwd=str(ROOT),
+            timeout=60,
+        )
+    finally:
+        path.unlink()
+    # Not a skip: a broken import here would quietly stop comparing the two stacks.
+    assert result.returncode == 0, result.stderr[:500]
     return json.loads(result.stdout.strip())
 
 
