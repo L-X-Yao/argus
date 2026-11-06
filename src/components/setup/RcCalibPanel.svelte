@@ -35,7 +35,11 @@
     });
   });
 
-  let allRangeOk = $derived(minValues.every((min, i) => maxValues[i] - min > 300));
+  // Roll, pitch, throttle and yaw have to be there. A radio may stop short of eight
+  // channels, and a channel nobody moved says nothing about its ends.
+  const MAIN_CHANNELS = 4;
+  const moved = (i: number) => maxValues[i] - minValues[i] > 300;
+  let allRangeOk = $derived(minValues.slice(0, MAIN_CHANNELS).every((_, i) => moved(i)));
 
   /* ── Helpers ── */
   function barWidth(v: number): number {
@@ -56,39 +60,22 @@
     }
   }
 
-  let reversed = $state(Array(CH_COUNT).fill(false));
-
-  function detectReverse() {
-    for (let i = 0; i < 4; i++) {
-      const expectedHighFirst = i === 0 || i === 3;
-      if (minValues[i] < 2200 && maxValues[i] > 800) {
-        const range = maxValues[i] - minValues[i];
-        if (range > 300) {
-          const centerToTrim = trimValues[i] - (minValues[i] + maxValues[i]) / 2;
-          if ((expectedHighFirst && centerToTrim < -50) || (!expectedHighFirst && centerToTrim > 50)) {
-            reversed[i] = true;
-          }
-        }
-      }
-    }
-    reversed = [...reversed];
-  }
-
   async function writeToFc() {
     writing = true;
-    detectReverse();
+    // The ends and the centre, and nothing about direction: min stays below max whichever
+    // way a stick runs (AP_Arming.cpp rc_calibration_checks), RCn_REVERSED holds that, and
+    // where a stick sits between its ends says nothing about it.
+    let written = 0;
     for (let i = 0; i < CH_COUNT; i++) {
+      if (!moved(i)) continue;
       const ch = i + 1;
-      const rev = reversed[i];
-      dispatch('param_set', undefined, { name: `RC${ch}_MIN`, value: rev ? maxValues[i] : minValues[i] });
-      dispatch('param_set', undefined, { name: `RC${ch}_MAX`, value: rev ? minValues[i] : maxValues[i] });
+      dispatch('param_set', undefined, { name: `RC${ch}_MIN`, value: minValues[i] });
+      dispatch('param_set', undefined, { name: `RC${ch}_MAX`, value: maxValues[i] });
       dispatch('param_set', undefined, { name: `RC${ch}_TRIM`, value: trimValues[i] });
-      dispatch('param_set', undefined, { name: `RC${ch}_REVERSED`, value: rev ? 1 : 0 });
+      written += 3;
     }
     writing = false;
-    const revCount = reversed.filter((r) => r).length;
-    const msg = t('rccal.writeDone').replace('{n}', String(CH_COUNT * 4));
-    addToast(msg + (revCount > 0 ? ` (${revCount} reversed)` : ''), 'success');
+    addToast(t('rccal.writeDone').replace('{n}', String(written)), 'success');
   }
 
   function resetWizard() {
@@ -249,12 +236,14 @@
             </thead>
             <tbody>
               {#each Array(CH_COUNT) as _, i}
-                <tr class="border-t border-border/50 hover:bg-muted/30 transition-colors">
-                  <td class="px-3 py-1.5 font-medium text-foreground">{CH_LABELS[i]}</td>
-                  <td class="px-3 py-1.5 text-right font-mono text-muted-foreground">{minValues[i]}</td>
-                  <td class="px-3 py-1.5 text-right font-mono text-foreground">{trimValues[i]}</td>
-                  <td class="px-3 py-1.5 text-right font-mono text-muted-foreground">{maxValues[i]}</td>
-                </tr>
+                {#if moved(i)}
+                  <tr class="border-t border-border/50 hover:bg-muted/30 transition-colors">
+                    <td class="px-3 py-1.5 font-medium text-foreground">{CH_LABELS[i]}</td>
+                    <td class="px-3 py-1.5 text-right font-mono text-muted-foreground">{minValues[i]}</td>
+                    <td class="px-3 py-1.5 text-right font-mono text-foreground">{trimValues[i]}</td>
+                    <td class="px-3 py-1.5 text-right font-mono text-muted-foreground">{maxValues[i]}</td>
+                  </tr>
+                {/if}
               {/each}
             </tbody>
           </table>
