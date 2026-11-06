@@ -69,6 +69,13 @@ jobs:
       - name: Security audit
         run: npm audit --audit-level=critical
 
+      # pip itself is left out: it is the runner's, and none of it ships.
+      - name: Python dependency audit
+        run: |
+          pip install pip-audit
+          pip freeze --exclude-editable --exclude pip --exclude setuptools > /tmp/requirements.txt
+          pip-audit -r /tmp/requirements.txt --no-deps --disable-pip
+
   # Real backend and simulator over WebSocket, about 3 minutes. tests/conftest.py
   # starts both on their own ports, so this job needs no frontend build.
   integration:

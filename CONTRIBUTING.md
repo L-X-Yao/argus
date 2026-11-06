@@ -36,6 +36,8 @@ CI runs on every push to `main` and every PR. On top of the five checks above, i
 | Build | `npm run build` succeeds |
 | Bundle size | `dist/assets/` is at most 3 MiB |
 | npm audit | No critical issues |
+| pip-audit | No known vulnerability in the Python dependencies |
+| CodeQL | `.github/workflows/codeql.yml`, on every push and weekly |
 | Integration tests | `tests/test_integration.py`: real backend and simulator over WebSocket. `tests/test_integration_rest.py`: REST routes with real files and the real terrain and firmware servers |
 | macOS | Unit and contract tests on `macos-latest`, then the app itself in a browser. SITL ships as a Linux binary, so the SITL jobs stay on Linux |
 | Windows | The same on `windows-latest`, and the zip built and smoke-tested by `scripts/smoke_package.py` |
@@ -114,7 +116,7 @@ Release from `main`, on a commit whose CI run is green. `scripts/make-release.sh
 1. Build the Windows package with `python scripts/build_package.py`. It writes a zip to `release/`.
 2. On a real Windows machine, run `python scripts/smoke_package.py release/<zip>`. It extracts the zip and checks the REST API, the WebSocket, that a request from another origin is rejected, and token login. CI runs the same on a hosted runner.
 3. Run `bash scripts/make-release.sh X.Y.Z`. It bumps the version, runs the frontend, unit and contract tests, commits, tags and pushes.
-4. The tag starts `.github/workflows/release.yml`, which builds the zip and publishes the GitHub Release.
+4. The tag starts `.github/workflows/release.yml`, which builds the zip, attests it, and publishes the GitHub Release with `SHA256SUMS.txt`.
 5. Repeat step 2 on the published zip.
 
 ## Reporting Issues
