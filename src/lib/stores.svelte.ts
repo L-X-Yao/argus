@@ -1,4 +1,4 @@
-import type { DroneState, DroneEvent, Waypoint, Toast, RallyPoint } from './types';
+import type { DroneState, DroneEvent, FlightSummary, Waypoint, Toast, RallyPoint } from './types';
 import { defaultState } from './types';
 
 class AppState {
@@ -24,6 +24,8 @@ class AppState {
   chartsOpen: boolean = $state(false);
   mapExpanded: boolean = $state(false);
   summaryShown: boolean = $state(false);
+  // The summary window clears drone.flight_summary when it closes, and the report comes after.
+  lastFlight: FlightSummary | null = $state(null);
   toasts: Toast[] = $state([]);
   guidedMode: boolean = $state(false);
   focusWp: number = $state(-1);

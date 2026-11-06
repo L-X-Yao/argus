@@ -20,7 +20,7 @@
   );
 
   /* ── Flight summary ── */
-  let summary = $derived(app.drone.flight_summary);
+  let summary = $derived(app.drone.flight_summary ?? app.lastFlight);
 
   /* ── Recent events (last 50) ── */
   let recentEvents = $derived(app.events.slice(-50));
