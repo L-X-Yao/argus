@@ -9,6 +9,27 @@ import { apiUrl } from './backend';
 
 const elevationCache = new Map<string, number>();
 
+// Long enough for the backend to fetch a tile of ground data over a slow line.
+const REQUEST_TIMEOUT_MS = 30000;
+
+// One at a time, like the tiles in sw.js. A request can wait a long time for its file, and each
+// edit of a route sends another: over a slow line they took all six connections the browser
+// gives this host, and the next panel to open never got its code.
+let lastRequest: Promise<unknown> = Promise.resolve();
+
+async function request(url: string): Promise<(number | null)[]> {
+  const res = await fetch(url, { signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS) });
+  if (!res.ok) throw new Error(`Terrain API ${res.status}`);
+  const data: { elevations: (number | null)[] } = await res.json();
+  return data.elevations;
+}
+
+function inTurn(url: string): Promise<(number | null)[]> {
+  const turn = lastRequest.then(() => request(url));
+  lastRequest = turn.catch(() => undefined);
+  return turn;
+}
+
 // The backend answers null where it has no data. Reading that as 0 would be sea level, and
 // terrain following would then send a route into the ground: callers show "no data" instead.
 function known(elevations: (number | null)[]): number[] {
@@ -25,10 +46,7 @@ export async function getElevation(lat: number, lon: number): Promise<number> {
   if (elevationCache.has(key)) return elevationCache.get(key)!;
 
   const url = apiUrl(`/api/terrain/elevation?points=${lat.toFixed(6)},${lon.toFixed(6)}`);
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Terrain API ${res.status}`);
-  const data: { elevations: (number | null)[] } = await res.json();
-  const [elev] = known(data.elevations);
+  const [elev] = known(await inTurn(url));
   elevationCache.set(key, elev);
   return elev;
 }
@@ -49,10 +67,7 @@ export async function getElevationProfile(points: { lat: number; lon: number }[]
   // Build query string (semicolon-separated lat,lon pairs)
   const pairs = points.map((p) => `${p.lat.toFixed(6)},${p.lon.toFixed(6)}`).join(';');
   const url = apiUrl(`/api/terrain/elevation?points=${pairs}`);
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Terrain API ${res.status}`);
-  const data: { elevations: (number | null)[] } = await res.json();
-  const elevations = known(data.elevations);
+  const elevations = known(await inTurn(url));
 
   // Populate cache
   for (let i = 0; i < points.length; i++) {

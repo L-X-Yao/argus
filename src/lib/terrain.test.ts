@@ -371,3 +371,54 @@ describe('missing terrain data', () => {
     await expect(getElevationProfile(points)).resolves.toEqual([300, 310]);
   });
 });
+
+describe('requests in turn', () => {
+  const answer = (elevations: number[]) => ({ ok: true, json: async () => ({ elevations }) });
+  const pending = () => {
+    let release!: (value: unknown) => void;
+    return { promise: new Promise((ok) => (release = ok)), release };
+  };
+  const route = (lat: number) => [{ lat, lon: 108 }];
+  const settle = async () => {
+    for (let i = 0; i < 20; i++) await Promise.resolve();
+  };
+
+  beforeEach(() => vi.stubGlobal('fetch', vi.fn()));
+
+  it('keeps one connection, however many routes are waiting', async () => {
+    const first = pending();
+    const second = pending();
+    const fetchMock = globalThis.fetch as ReturnType<typeof vi.fn>;
+    fetchMock.mockReturnValueOnce(first.promise).mockReturnValueOnce(second.promise);
+
+    const a = getElevationProfile(route(41.1));
+    const b = getElevationProfile(route(41.2));
+    await settle();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
+    first.release(answer([100]));
+    await settle();
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+
+    second.release(answer([200]));
+    expect(await a).toEqual([100]);
+    expect(await b).toEqual([200]);
+  });
+
+  it('goes on after a request that failed', async () => {
+    const fetchMock = globalThis.fetch as ReturnType<typeof vi.fn>;
+    fetchMock.mockRejectedValueOnce(new Error('offline')).mockResolvedValueOnce(answer([300]));
+
+    const a = getElevationProfile(route(41.3));
+    const b = getElevationProfile(route(41.4));
+    await expect(a).rejects.toThrow('offline');
+    expect(await b).toEqual([300]);
+  });
+
+  it('puts a limit on how long each may take', async () => {
+    const fetchMock = globalThis.fetch as ReturnType<typeof vi.fn>;
+    fetchMock.mockResolvedValueOnce(answer([400]));
+    await getElevationProfile(route(41.5));
+    expect(fetchMock.mock.calls[0][1].signal).toBeInstanceOf(AbortSignal);
+  });
+});
