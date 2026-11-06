@@ -16,9 +16,9 @@ describe('parseQgcWaypoints', () => {
 1\t0\t3\t16\t0\t0\t0\t0\t34.259\t108.943\t50\t1
 2\t0\t3\t82\t0\t0\t0\t0\t34.260\t108.944\t60\t1`;
     const wps = parseQgcWaypoints(text);
-    expect(wps).toHaveLength(3);
-    expect(wps[0].lat).toBeCloseTo(34.258);
-    expect(wps[2].type).toBe('spline');
+    expect(wps).toHaveLength(2);
+    expect(wps[0].lat).toBeCloseTo(34.259);
+    expect(wps[1].type).toBe('spline');
   });
 
   it('skips header and non-nav commands', () => {
@@ -203,5 +203,30 @@ describe('pointInPoly', () => {
 
   it('returns false for empty polygon', () => {
     expect(pointInPoly(5, 5, [])).toBe(false);
+  });
+});
+
+describe('files from other ground stations', () => {
+  it('takes row 0 of a .waypoints file for home, not for a waypoint', () => {
+    const file = [
+      'QGC WPL 110',
+      '0\t1\t0\t16\t0\t0\t0\t0\t-35.363\t149.165\t584\t1',
+      '1\t0\t3\t22\t0\t0\t0\t0\t0\t0\t30\t1',
+      '2\t0\t3\t16\t0\t0\t0\t0\t-35.36\t149.16\t30\t1',
+    ].join('\r\n');
+    expect(parseQgcWaypoints(file).map((w) => w.lat)).toEqual([-35.36]);
+  });
+
+  it('reads the waypoints inside a survey in a .plan file', () => {
+    const wp = (lat: number) => ({ command: 16, type: 'SimpleItem', params: [0, 0, 0, null, lat, 8.5, 50] });
+    const plan = {
+      mission: {
+        items: [
+          wp(47.1),
+          { type: 'ComplexItem', complexItemType: 'survey', TransectStyleComplexItem: { Items: [wp(47.2), wp(47.3)] } },
+        ],
+      },
+    };
+    expect(parseQgcPlan(JSON.stringify(plan)).map((w) => w.lat)).toEqual([47.1, 47.2, 47.3]);
   });
 });

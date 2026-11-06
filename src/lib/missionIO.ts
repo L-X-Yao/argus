@@ -7,6 +7,9 @@ export function parseQgcWaypoints(text: string): Waypoint[] {
     if (!trimmed || trimmed.startsWith('QGC') || trimmed.startsWith('#')) continue;
     const cols = trimmed.split('\t');
     if (cols.length < 12) continue;
+    // Row 0 is the home position in files from Mission Planner and QGroundControl
+    // (Tools/autotest/Generic_Missions/CMAC-circuit.txt), not a place to fly to.
+    if (parseInt(cols[0]) === 0) continue;
     const cmd = parseInt(cols[3]);
     if (cmd !== 16 && cmd !== 18 && cmd !== 19 && cmd !== 82) continue;
     const lat = parseFloat(cols[8]),
@@ -31,7 +34,11 @@ export function parseQgcWaypoints(text: string): Waypoint[] {
 
 export function parseQgcPlan(text: string): Waypoint[] {
   const plan = JSON.parse(text);
-  const items = plan?.mission?.items || [];
+  // A survey is one ComplexItem that holds its own list of simple items.
+  const items = (plan?.mission?.items || []).flatMap(
+    (item: { type?: string; TransectStyleComplexItem?: { Items?: unknown[] } }) =>
+      item.type === 'ComplexItem' ? (item.TransectStyleComplexItem?.Items ?? []) : [item],
+  );
   const wps: Waypoint[] = [];
   for (const item of items) {
     const cmd = item.command;
