@@ -10,7 +10,6 @@
   let log = $state<DFLog | null>(null);
   let source = $state('IMU.GyrX');
   let canvasEl: HTMLCanvasElement = $state(null!);
-  let peakHz = $state(0);
   let logScale = $state(false);
   let rpmInput = $state('');
   let useHanning = $state(true);
@@ -152,10 +151,12 @@
     for (let i = 1; i < mag.length; i++) {
       if (mag[i] > mag[maxIdx]) maxIdx = i;
     }
-    peakHz = freq[maxIdx];
+    const peak = freq[maxIdx];
 
-    // Find top 3 peaks for notch recommendation
-    notchPeaks = findPeaks(freq, mag, 3);
+    // Top 3 peaks for the notch recommendation. The drawing below reads the local: reading
+    // the state back would make this effect depend on a new array of its own every time.
+    const peaks = findPeaks(freq, mag, 3);
+    notchPeaks = peaks;
 
     // Draw
     const ctx = canvasEl.getContext('2d')!;
@@ -262,7 +263,7 @@
     ctx.stroke();
 
     // Peak marker
-    const peakX = (peakHz / maxFreqDisplay) * w;
+    const peakX = (peak / maxFreqDisplay) * w;
     ctx.strokeStyle = '#f44336';
     ctx.lineWidth = 1;
     ctx.setLineDash([4, 4]);
@@ -273,11 +274,11 @@
     ctx.setLineDash([]);
     ctx.fillStyle = '#f44336';
     ctx.font = 'bold 11px monospace';
-    ctx.fillText(`${peakHz.toFixed(1)}Hz`, peakX + 4, 14);
+    ctx.fillText(`${peak.toFixed(1)}Hz`, peakX + 4, 14);
 
     // Mark notch peaks (2nd and 3rd) with smaller markers
-    for (let i = 1; i < notchPeaks.length; i++) {
-      const np = notchPeaks[i];
+    for (let i = 1; i < peaks.length; i++) {
+      const np = peaks[i];
       if (np.freq > maxFreqDisplay) continue;
       const nx = (np.freq / maxFreqDisplay) * w;
       ctx.strokeStyle = '#ffb74d';
