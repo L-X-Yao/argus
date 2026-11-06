@@ -63,11 +63,12 @@ test.describe('Token authentication', () => {
     await expect(page.getByRole('dialog')).toContainText(/令牌无效|Invalid token/i);
     await expect(page.locator('.leaflet-container')).toHaveCount(0);
 
-    const tile = page.waitForResponse((r) => r.url().includes('/api/tile/'));
     await signIn(page);
     await expect(page.locator('#auth-token-input')).toHaveCount(0);
     await expect(page.locator('.leaflet-container')).toBeVisible();
-    expect((await tile).status()).not.toBe(401);
+    // A style that does not exist gets past the token and no further: a real tile would wait on
+    // a map server, which has gone silent for minutes on end from CI.
+    expect(await restStatus(page, '/api/tile/none/0/0/0')).toBe(404);
     expect(await restStatus(page, '/api/ports')).toBe(200);
     expect(denied).toEqual([]);
   });
