@@ -1,6 +1,7 @@
 #!/bin/bash
-# Runs the WebSerial specs against real ArduCopter SITL: a full flight, then the
-# two interactive calibrations on the `calibration` vehicle model.
+# Runs the WebSerial specs against real ArduCopter SITL: a full flight, a vehicle that
+# is not system 1 losing its USB in the air, then the two interactive calibrations on
+# the `calibration` vehicle model.
 #
 # Needs ~/sitl/arducopter and ~/sitl/copter.parm, and the Vite dev server on
 # VITE_URL (default http://localhost:5173). The specs reach the page's own modules
@@ -59,6 +60,10 @@ PLAYWRIGHT=(npx playwright test --config=tests/playwright.config.ts --project=ch
 
 start_sitl + "$SITL_DIR/copter.parm,$REPO/tests/e2e/sitl-gimbal.parm"
 "${PLAYWRIGHT[@]}" tests/e2e/webserial-sitl.spec.ts
+stop_sitl
+
+start_sitl + "$SITL_DIR/copter.parm,$REPO/tests/e2e/sitl-sysid.parm"
+"${PLAYWRIGHT[@]}" tests/e2e/webserial-sitl-link.spec.ts
 stop_sitl
 
 start_sitl calibration "$SITL_DIR/copter.parm"

@@ -27,13 +27,13 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 
 | Area | Items | Real FC | SITL | Simulator | Tests only | None | n/a |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Commands, backend | 53 | 19 | 22 | 0 | 12 | 0 | 0 |
+| Commands, backend | 53 | 19 | 28 | 0 | 6 | 0 | 0 |
 | Commands, WebSerial | 53 | 9 | 31 | 0 | 3 | 0 | 10 |
-| Messages, backend | 35 | 28 | 2 | 0 | 5 | 0 | 0 |
+| Messages, backend | 35 | 28 | 3 | 0 | 4 | 0 | 0 |
 | Messages, WebSerial | 35 | 16 | 13 | 0 | 5 | 0 | 1 |
 | REST routes | 28 | 6 | 5 | 8 | 9 | 0 | 0 |
 | Panels | 80 | 13 | 3 | 21 | 41 | 2 | 0 |
-| Platform | 40 | 8 | 4 | 7 | 16 | 2 | 3 |
+| Platform | 41 | 8 | 5 | 7 | 16 | 2 | 3 |
 
 ## Commands / 飞控命令
 
@@ -47,7 +47,7 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 | `takeoff` | Take off | 起飞 | SITL | SITL | CI on both links |
 | `guided_goto` | Fly to a point | 引导飞行 | SITL | SITL | WebSerial CI, backend manual SITL 2026-05 |
 | `mission_start` | Start the mission | 开始任务 | SITL | SITL | CI on both links |
-| `mission_set_current` | Jump to a waypoint | 跳到指定航点 | Tests only | SITL | WebSerial CI |
+| `mission_set_current` | Jump to a waypoint | 跳到指定航点 | SITL | SITL | CI on both links |
 | `drop` | Release payload | 投放 | SITL | SITL | CI on both links |
 | `drop_stop` | Stop release | 停止投放 | SITL | SITL | CI on both links |
 | `do_set_roi` | Set region of interest | 设置兴趣点 | SITL | SITL | CI on both links |
@@ -76,8 +76,8 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 | `log_list` | List logs | 日志列表 | Real FC | Real FC | Both 2026-11-05 |
 | `log_download` | Download a log | 下载日志 | Real FC | Real FC | Both 2026-11-05, same sha256 on both links |
 | `log_cancel` | Cancel a download | 取消下载 | SITL | SITL | CI on both links |
-| `reboot` | Reboot the FC | 重启飞控 | Tests only | SITL | WebSerial CI |
-| `reboot_bootloader` | Reboot to bootloader | 重启到 Bootloader | Tests only | SITL | WebSerial CI |
+| `reboot` | Reboot the FC | 重启飞控 | SITL | SITL | CI on both links |
+| `reboot_bootloader` | Reboot to bootloader | 重启到 Bootloader | SITL | SITL | CI on both links |
 | `serial_control` | MAVLink console | MAVLink 控制台 | Real FC | n/a | Backend 2026-05, CI |
 | `inspector_toggle` | Message inspector | 消息检查器开关 | SITL | n/a | CI, local state only |
 | `set_vtype` | Set vehicle type | 手动设置机型 | SITL | n/a | CI, local state only |
@@ -86,9 +86,9 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 | `ntrip_start` | Start NTRIP | 启动 NTRIP | Tests only | n/a | No real base station |
 | `ntrip_stop` | Stop NTRIP | 停止 NTRIP | Tests only | n/a | No real base station |
 | `inject_rtcm` | Inject RTCM | 注入 RTCM | Tests only | n/a | No real base station |
-| `gimbal_angle` | Gimbal angle | 云台角度 | Tests only | SITL | WebSerial CI with a servo gimbal in SITL |
-| `gimbal_pitchyaw` | Gimbal pitch and yaw | 云台俯仰偏航 | Tests only | SITL | WebSerial CI with a servo gimbal in SITL |
-| `camera_trigger` | Take a photo | 拍照 | Tests only | SITL | WebSerial CI, no real camera |
+| `gimbal_angle` | Gimbal angle | 云台角度 | SITL | SITL | CI on both links with a servo gimbal in SITL |
+| `gimbal_pitchyaw` | Gimbal pitch and yaw | 云台俯仰偏航 | SITL | SITL | CI on both links with a servo gimbal in SITL |
+| `camera_trigger` | Take a photo | 拍照 | SITL | SITL | CI on both links, no real camera |
 | `camera_video_start` | Start recording | 开始录像 | Tests only | Tests only | Bytes checked. SITL answers but refuses: no camera |
 | `camera_video_stop` | Stop recording | 停止录像 | Tests only | Tests only | Bytes checked. SITL answers but refuses: no camera |
 | `camera_zoom` | Zoom | 相机变焦 | Tests only | Tests only | Bytes checked. SITL answers but refuses: no camera |
@@ -135,7 +135,7 @@ CI 在两条链路上都驱动 SITL。WebSerial 用模拟串口接真实固件�
 | `EXTENDED_SYS_STATE` | Tells a QuadPlane from a plane | 区分 QuadPlane 和固定翼 | SITL | SITL | Backend CI on a QuadPlane. WebSerial CI on Copter, which reports the same field |
 | `ADSB_VEHICLE` | Nearby aircraft | 周边飞机 | Tests only | Tests only | No ADS-B receiver |
 | `STATUSTEXT` | FC messages | 飞控文字消息 | Real FC | Real FC | Both 2026-11-05 |
-| `GIMBAL_DEVICE_ATTITUDE_STATUS` | Gimbal attitude | 云台姿态 | Tests only | SITL | WebSerial CI with a servo gimbal in SITL |
+| `GIMBAL_DEVICE_ATTITUDE_STATUS` | Gimbal attitude | 云台姿态 | SITL | SITL | CI on both links with a servo gimbal in SITL |
 
 ## REST routes / REST 接口
 
@@ -270,14 +270,15 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 | Serial through the backend | 后端串口 | Real FC | 2026-11-05 |
 | WebSerial | 浏览器直连 USB | Real FC | 2026-11-05, Chromium on Linux through usbipd |
 | Log download speed | 日志下载速度 | Real FC | 2026-11-05, about 700 KB/s on both links |
-| Reconnect after a lost link | 断链重连 | Real FC | 2026-11-05, USB pulled on both links. WebSerial keeping the last state through a drop came later: unit tests only |
+| Reconnect after a lost link | 断链重连 | Real FC | 2026-11-05, USB pulled on both links. CI: WebSerial keeps the flight through a drop in the air, on SITL |
 | PFD and HUD | PFD 和 HUD | Real FC | 2026-11-05 on both links; west heading and RC not checked |
 | Preflight checks | 起飞前检查 | Real FC | 2026-11-05 on both links |
 | Copter | 多旋翼 | Real FC | Bench 2026-11-05, flight modes in SITL |
 | Linux from source | Linux 源码运行 | Real FC | Daily development |
 | TCP | TCP 连接 | SITL | CI |
-| Plane and VTOL | 固定翼和 VTOL | SITL | CI, a plain plane and a QuadPlane: recognition, mode numbers for Hold and Land. Real telemetry 2026-05. No flight in CI |
-| Rover | 地面车 | SITL | CI. No drive in CI |
+| Plane and VTOL | 固定翼和 VTOL | SITL | CI: a plain plane and a QuadPlane fly a whole mission on SITL, the QuadPlane with VTOL takeoff, transition and VTOL landing. Real telemetry 2026-05 |
+| Rover | 地面车 | SITL | CI: drives a whole mission and comes back on SITL |
+| Sub | 水下机器人 | SITL | CI: dives, runs a whole mission and surfaces on SITL |
 | 2D map | 2D 地图 | Simulator | e2e; only the default of 8 sources exercised |
 | 3D map | 3D 地图 | Simulator | e2e, headless Chromium; Windows browser not checked |
 | PWA and offline use | PWA 和离线 | Simulator | e2e, Chromium |
@@ -314,7 +315,7 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 2. **Arm, take off, RTL and mission start on a real FC.** These have only run in SITL. They need a battery, so they need a separate, deliberate session.
 3. **Calibration and reboot on a real FC over WebSerial.** SITL only so far, and compass and accelerometer need the board turned by hand.
 4. **RTK, gimbal, camera and ADS-B.** These need hardware that has not been available.
-5. **Flight on vehicles other than Copter.** Plane, QuadPlane, Rover and Sub run in SITL in CI through the backend: recognition, mode numbers, parameters, missions and arming, not a flight.
+5. **Vehicles other than Copter on real hardware.** Plane, QuadPlane, Rover and Sub run whole missions in SITL in CI through the backend. None has been on a real board since the 2026-05 telemetry check.
 6. **WebSerial in Chrome on Windows.** The 2026-11-05 run used Chromium on Linux with the port chooser automated.
 7. **Four panels nobody can open.** Scripts, scheduler, AI planner and AI annotation exist in code only.
 
@@ -322,7 +323,7 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 2. **真机上的解锁、起飞、返航、开始任务。** 只在 SITL 跑过。这些需要接电池，要单独安排。
 3. **真机上经 WebSerial 的校准和重启。** 目前只在 SITL 跑过，罗盘和加速度计需要手动翻转板子。
 4. **RTK、云台、相机、ADS-B。** 缺硬件。
-5. **多旋翼以外机型的飞行。** 固定翼、QuadPlane、地面车、水下机器人在 CI 里经后端跑 SITL，覆盖机型识别、模式号、参数、航线和解锁，没有跑飞行。
+5. **多旋翼以外机型上真机。** 固定翼、QuadPlane、地面车、水下机器人在 CI 里经后端跑完整任务（SITL）。除 2026-05 的遥测检查外，都没有接过真实飞控。
 6. **Windows 上 Chrome 的 WebSerial。** 2026-11-05 的测试用的是 Linux 上的 Chromium，端口选择由脚本代替。
 7. **4 个打不开的面板。** 脚本、定时任务、AI 规划、AI 标注只存在于代码中。
 

@@ -20,10 +20,12 @@ export interface Bridge {
   storeItem: (missionType: number, seq: number) => Promise<{ lat: number; lon: number; alt: number } | null>;
   /** Whether a message id has arrived from the FC. */
   seen: (msgId: number) => boolean;
+  /** Pulls the USB cable: the page's read fails as it does in Chrome, and SITL flies on. */
+  dropPort: () => Promise<void>;
   close: () => void;
 }
 
-export async function openBridge(page: Page, target: string): Promise<Bridge> {
+export async function openBridge(page: Page, target: string, fcSysId = 1): Promise<Bridge> {
   const [host, port] = target.split(':');
   const socket = net.connect(Number(port), host);
   await new Promise((ok, fail) => socket.once('connect', ok).once('error', fail));
@@ -92,9 +94,18 @@ export async function openBridge(page: Page, target: string): Promise<Bridge> {
   });
 
   await page.addInitScript(() => {
-    const w = window as unknown as { __sitlWrite: (b: number[]) => void; __sitlFeed: (b: number[]) => void };
+    const w = window as unknown as {
+      __sitlWrite: (b: number[]) => void;
+      __sitlFeed: (b: number[]) => void;
+      __sitlDrop: () => void;
+    };
     let controller: ReadableStreamDefaultController<Uint8Array> | null = null;
     w.__sitlFeed = (b) => controller?.enqueue(new Uint8Array(b));
+    w.__sitlDrop = () => {
+      controller?.error(new DOMException('The device has been lost.', 'NetworkError'));
+      controller = null;
+      fake.readable = null;
+    };
     const fake = {
       readable: null as ReadableStream<Uint8Array> | null,
       writable: null as WritableStream<Uint8Array> | null,
@@ -127,7 +138,7 @@ export async function openBridge(page: Page, target: string): Promise<Bridge> {
     logDataFrames: () => logDataFrames,
     storeCount: async (missionType) => {
       storeCounts.delete(missionType);
-      socket.write(encodeFrame(43, encodeMissionRequestList(1, 1, missionType), 255, 190, 0));
+      socket.write(encodeFrame(43, encodeMissionRequestList(fcSysId, 1, missionType), 255, 190, 0));
       for (let i = 0; i < 50 && !storeCounts.has(missionType); i++) {
         await new Promise((r) => setTimeout(r, 100));
       }
@@ -136,13 +147,14 @@ export async function openBridge(page: Page, target: string): Promise<Bridge> {
     storeItem: async (missionType, seq) => {
       const key = `${missionType}:${seq}`;
       storeItems.delete(key);
-      socket.write(encodeFrame(51, encodeMissionRequestInt(1, 1, seq, missionType), 255, 190, 0));
+      socket.write(encodeFrame(51, encodeMissionRequestInt(fcSysId, 1, seq, missionType), 255, 190, 0));
       for (let i = 0; i < 50 && !storeItems.has(key); i++) {
         await new Promise((r) => setTimeout(r, 100));
       }
       return storeItems.get(key) ?? null;
     },
     seen: (msgId) => seenIds.has(msgId),
+    dropPort: () => page.evaluate(() => (window as unknown as { __sitlDrop: () => void }).__sitlDrop()),
     close: () => socket.destroy(),
   };
 }
