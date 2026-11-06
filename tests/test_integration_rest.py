@@ -115,8 +115,16 @@ class TestFirmware:
 class TestTileBulkDownload:
     def test_counts_the_tiles_of_an_area(self, backend_url):
         # One tile at this zoom. Whether a map server serves it is up to that server.
-        body = {"lat_min": 34.2, "lat_max": 34.21, "lon_min": 108.9, "lon_max": 108.91, "z_min": 3, "z_max": 3}
-        r = httpx.post(f"{backend_url}/api/tile_bulk_download", json=body, timeout=60)
+        body = {
+            "lat_min": 34.2,
+            "lat_max": 34.21,
+            "lon_min": 108.9,
+            "lon_max": 108.91,
+            "z_min": 3,
+            "z_max": 3,
+            "style": "osm",  # the default is a server in China, and a hosted runner is not
+        }
+        r = httpx.post(f"{backend_url}/api/tile_bulk_download", json=body, timeout=120)
         data = r.json()
         assert data["total"] == 1
         assert data["truncated"] is False
