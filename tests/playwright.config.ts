@@ -36,7 +36,8 @@ export default defineConfig({
   ],
   outputDir: '../test-results',
   webServer: {
-    command: 'ARGUS_NO_BROWSER=1 python run.py --sim --port 8100',
+    command: 'python run.py --sim --port 8100',
+    env: { ARGUS_NO_BROWSER: '1' },
     cwd: repoRoot,
     url: 'http://localhost:8100/health',
     timeout: 15000,

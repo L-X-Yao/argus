@@ -117,6 +117,62 @@ jobs:
       - name: Python tests
         run: python -m pytest tests/test_unit_*.py tests/test_contract_*.py -q --tb=short
 
+      - name: Build the app
+        run: npm run build
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium
+
+      - name: Run the app and drive it
+        run: npx playwright test --config=tests/playwright.config.ts --project=chromium tests/e2e/smoke.spec.ts tests/e2e/connection.spec.ts tests/e2e/map3d.spec.ts
+
+  # The one platform releases ship for. The zip is built here as release.yml builds it,
+  # and tested as CONTRIBUTING.md asks of a release.
+  windows:
+    runs-on: windows-latest
+    needs: check
+    timeout-minutes: 25
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.10'
+
+      - name: Set up Node
+        uses: actions/setup-node@v7
+        with:
+          node-version: '24'
+          cache: npm
+
+      - name: Install Python deps
+        run: pip install -e '.[dev]'
+
+      - name: Install Node deps
+        run: npm ci
+
+      - name: Python tests
+        run: python -m pytest tests/test_unit_*.py tests/test_contract_*.py -q --tb=short
+
+      - name: Frontend tests
+        run: npx vitest run
+
+      - name: Build the package
+        run: python scripts/build_package.py --arch amd64
+
+      - name: Smoke-test the package
+        run: python scripts/smoke_package.py release/Argus_GCS_v*_amd64.zip
+
+      - name: Install Playwright browsers
+        run: npx playwright install chromium
+
+      - name: Run the app and drive it
+        run: npx playwright test --config=tests/playwright.config.ts --project=chromium tests/e2e/smoke.spec.ts tests/e2e/connection.spec.ts tests/e2e/map3d.spec.ts
+
   # Plane, Rover and Sub on real firmware: what differs per vehicle, mainly mode
   # numbers. tests/sitl_vehicles.py boots SITL and a backend of its own.
   sitl-vehicles:
@@ -466,6 +522,7 @@ jobs:
           tests/e2e/drone-control.spec.ts
           tests/e2e/event-log.spec.ts
           tests/e2e/panels.spec.ts
+          tests/e2e/observer.spec.ts
           tests/e2e/params.spec.ts
           tests/e2e/websocket.spec.ts
           tests/e2e/memory.spec.ts

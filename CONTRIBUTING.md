@@ -37,7 +37,8 @@ CI runs on every push to `main` and every PR. On top of the five checks above, i
 | Bundle size | `dist/assets/` is at most 3 MiB |
 | npm audit | No critical issues |
 | Integration tests | `tests/test_integration.py`: real backend and simulator over WebSocket. `tests/test_integration_rest.py`: REST routes with real files and the real terrain and firmware servers |
-| macOS | Unit and contract tests on `macos-latest`. SITL ships as a Linux binary, so the SITL jobs stay on Linux |
+| macOS | Unit and contract tests on `macos-latest`, then the app itself in a browser. SITL ships as a Linux binary, so the SITL jobs stay on Linux |
+| Windows | The same on `windows-latest`, and the zip built and smoke-tested by `scripts/smoke_package.py` |
 | SITL smoke test | `tests/sitl_verify.py`: a full flight on real ArduCopter firmware in simulation, through the backend |
 | WebSerial on SITL | `tests/e2e/run-webserial-sitl.sh`: a full flight and both interactive calibrations, through the browser stack |
 | Other vehicles | `tests/sitl_vehicles.py` and `tests/sitl_flights.py`: Plane, QuadPlane, Rover and Sub on real firmware: recognition, mode numbers, parameters, and a whole mission each |
@@ -111,7 +112,7 @@ Versions are `MAJOR.MINOR.PATCH`: PATCH for fixes, MINOR for new features, MAJOR
 Release from `main`, on a commit whose CI run is green. `scripts/make-release.sh` checks the branch and a clean tree, but not CI.
 
 1. Build the Windows package with `python scripts/build_package.py`. It writes a zip to `release/`.
-2. Extract the zip on a real Windows machine and start the backend and the simulator. Check the REST API, the WebSocket, that a request from another origin is rejected, and token login.
+2. On a real Windows machine, run `python scripts/smoke_package.py release/<zip>`. It extracts the zip and checks the REST API, the WebSocket, that a request from another origin is rejected, and token login. CI runs the same on a hosted runner.
 3. Run `bash scripts/make-release.sh X.Y.Z`. It bumps the version, runs the frontend, unit and contract tests, commits, tags and pushes.
 4. The tag starts `.github/workflows/release.yml`, which builds the zip and publishes the GitHub Release.
 5. Repeat step 2 on the published zip.
