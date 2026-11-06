@@ -34,9 +34,10 @@ const CRC_LEN = 2;
  * Parse zero or more MAVLink v2 frames from a buffer.
  * Returns parsed frames and the remaining unprocessed bytes.
  */
-export function parseFrames(buf: Uint8Array): { frames: MavFrame[]; remaining: Uint8Array } {
+export function parseFrames(buf: Uint8Array): { frames: MavFrame[]; remaining: Uint8Array; crcErrors: number } {
   const frames: MavFrame[] = [];
   let offset = 0;
+  let crcErrors = 0;
 
   while (offset < buf.length) {
     const stxIdx = buf.indexOf(STX, offset);
@@ -65,6 +66,7 @@ export function parseFrames(buf: Uint8Array): { frames: MavFrame[]; remaining: U
       const computed = crc16(new Uint8Array([...crcData, ...seed]));
       const received = buf[offset + HEADER_LEN + payloadLen] | (buf[offset + HEADER_LEN + payloadLen + 1] << 8);
       if (computed !== received) {
+        crcErrors++;
         offset++;
         continue;
       }
@@ -82,7 +84,7 @@ export function parseFrames(buf: Uint8Array): { frames: MavFrame[]; remaining: U
     offset += frameLen;
   }
 
-  return { frames, remaining: buf.slice(offset) };
+  return { frames, remaining: buf.slice(offset), crcErrors };
 }
 
 /**

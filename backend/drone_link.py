@@ -642,10 +642,12 @@ class DroneLink:
                 # generates random sync errors can't grow this unboundedly.
                 if len(self._unknown_msg_ids) < 256 or mid in self._unknown_msg_ids:
                     self._unknown_msg_ids[mid] = self._unknown_msg_ids.get(mid, 0) + 1
-                self._parse_errors += 1
                 return None, 1
             calc_crc = self._mavlink_crc16(crc_data + bytes([crc_extra]))
             if calc_crc != expected_crc:
+                # What the E: counter in the status bar is for. A healthy link sends
+                # plenty of messages with no handler here, and those say nothing.
+                self._parse_errors += 1
                 return None, 1
         return bytes(buf[:frame_len]), frame_len
 

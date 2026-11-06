@@ -145,6 +145,7 @@ export async function connectSerial(baudRate: number, handlers: SerialHandlers):
     serial.targetSysId = 1;
     serial.targetCompId = 1;
     serial.targetLatched = false;
+    app.drone.parse_errors = 0;
 
     // Start heartbeat at 1Hz
     serial.hbInterval = setInterval(() => {
@@ -167,8 +168,9 @@ export async function connectSerial(baudRate: number, handlers: SerialHandlers):
       combined.set(serial.buf);
       combined.set(chunk, serial.buf.length);
 
-      const { frames, remaining } = parseFrames(combined);
+      const { frames, remaining, crcErrors } = parseFrames(combined);
       serial.buf = remaining;
+      if (crcErrors > 0) app.drone.parse_errors += crcErrors;
 
       for (const frame of frames) {
         if (
@@ -264,16 +266,16 @@ export async function connectSerial(baudRate: number, handlers: SerialHandlers):
         // Surface a link-lost error to any in-flight upload promise so the
         // MissionPanel doesn't wait the full 30s timeout.
         if (upload?.pending) {
-          _resolveUpload({ ok: false, error: 'Serial link lost mid-upload' });
+          _resolveUpload({ ok: false, error: t('serial.err.linkLost') });
         }
         if (download.pending) {
-          _resolveDownload({ ok: false, error: 'Serial link lost mid-download' });
+          _resolveDownload({ ok: false, error: t('serial.err.linkLost') });
         }
-        _resolveStoreClear({ ok: false, error: 'Serial link lost' });
+        _resolveStoreClear({ ok: false, error: t('serial.err.linkLost') });
         // Tear down any in-flight log operation so its watchdog doesn't
         // fire spuriously after disconnect.
-        if (logSession.listPending) _resolveLogList({ ok: false, error: 'Serial link lost' });
-        if (logSession.dlPending) _abortLogDownload('Serial link lost mid-download');
+        if (logSession.listPending) _resolveLogList({ ok: false, error: t('serial.err.linkLost') });
+        if (logSession.dlPending) _abortLogDownload(t('serial.err.linkLost'));
         // Param fetch: stop the gap-fill ticker; link-lost toast already
         // shown above, so no second toast.
         _abortParamFetch(false);
@@ -833,7 +835,7 @@ function _armUploadRetry(): void {
   upload.itemTimer = setTimeout(() => {
     if (!upload?.pending) return;
     if (upload.restarts >= UPLOAD_RESTARTS) {
-      _resolveUpload({ ok: false, error: `FC stopped requesting items after seq ${upload.lastSeq}` });
+      _resolveUpload({ ok: false, error: t('serial.err.uploadStalled') });
       return;
     }
     upload.restarts += 1;
@@ -868,7 +870,7 @@ function _startUpload(items: MissionItem[], missionType: number): Promise<{ ok: 
       resolve,
       itemTimer: null,
       overallTimer: setTimeout(() => {
-        _resolveUpload({ ok: false, error: 'Mission upload timed out (30s overall)' });
+        _resolveUpload({ ok: false, error: t('serial.err.uploadTimeout') });
       }, 30000),
       pending: true,
       lastSeq: -1,
@@ -883,9 +885,9 @@ export async function serialUploadMission(
   waypoints: Waypoint[],
   takeoffAlt: number,
 ): Promise<{ ok: boolean; error?: string }> {
-  if (!isSerialConnected()) return { ok: false, error: 'Not connected via serial' };
-  if (upload?.pending || storeClear) return { ok: false, error: 'Another upload is in progress' };
-  if (download.pending) return { ok: false, error: 'A mission download is in progress' };
+  if (!isSerialConnected()) return { ok: false, error: t('serial.err.notConnected') };
+  if (upload?.pending || storeClear) return { ok: false, error: t('serial.err.uploadBusy') };
+  if (download.pending) return { ok: false, error: t('serial.err.downloadBusy') };
 
   const validation = validateMissionWaypoints(waypoints);
   if (!validation.ok) return validation;
@@ -912,9 +914,9 @@ export async function serialUploadMission(
 export async function serialUploadFence(
   polygon: { lat: number; lon: number }[],
 ): Promise<{ ok: boolean; error?: string }> {
-  if (!isSerialConnected()) return { ok: false, error: 'Not connected via serial' };
-  if (upload?.pending || storeClear) return { ok: false, error: 'Another upload is in progress' };
-  if (download.pending) return { ok: false, error: 'A mission download is in progress' };
+  if (!isSerialConnected()) return { ok: false, error: t('serial.err.notConnected') };
+  if (upload?.pending || storeClear) return { ok: false, error: t('serial.err.uploadBusy') };
+  if (download.pending) return { ok: false, error: t('serial.err.downloadBusy') };
 
   const validation = validateFencePolygon(polygon);
   if (!validation.ok) return validation;
@@ -923,9 +925,9 @@ export async function serialUploadFence(
 
 /** Rally points: the mission protocol with mission_type=2. Mirrors backend cmd_rally_upload. */
 export async function serialUploadRally(points: RallyPoint[]): Promise<{ ok: boolean; error?: string }> {
-  if (!isSerialConnected()) return { ok: false, error: 'Not connected via serial' };
-  if (upload?.pending || storeClear) return { ok: false, error: 'Another upload is in progress' };
-  if (download.pending) return { ok: false, error: 'A mission download is in progress' };
+  if (!isSerialConnected()) return { ok: false, error: t('serial.err.notConnected') };
+  if (upload?.pending || storeClear) return { ok: false, error: t('serial.err.uploadBusy') };
+  if (download.pending) return { ok: false, error: t('serial.err.downloadBusy') };
 
   const validation = validateRallyPoints(points);
   if (!validation.ok) return validation;
@@ -957,11 +959,11 @@ function _resolveStoreClear(result: { ok: boolean; error?: string }): void {
 // MISSION_CLEAR_ALL wipes the store its mission_type names, and the FC's MISSION_ACK
 // says whether it did. Mirrors backend cmd_fence_clear and cmd_rally_clear.
 function _clearStore(missionType: number): Promise<{ ok: boolean; error?: string }> {
-  if (!isSerialConnected()) return Promise.resolve({ ok: false, error: 'Not connected via serial' });
-  if (upload?.pending || storeClear) return Promise.resolve({ ok: false, error: 'Another upload is in progress' });
+  if (!isSerialConnected()) return Promise.resolve({ ok: false, error: t('serial.err.notConnected') });
+  if (upload?.pending || storeClear) return Promise.resolve({ ok: false, error: t('serial.err.uploadBusy') });
   return new Promise((resolve) => {
     const send = () => sendSerialFrame(45, encodeMissionClearAll(serial.targetSysId, serial.targetCompId, missionType));
-    const timer = setTimeout(() => _resolveStoreClear({ ok: false, error: 'No response from the FC' }), 3000);
+    const timer = setTimeout(() => _resolveStoreClear({ ok: false, error: t('serial.err.noResponse') }), 3000);
     storeClear = { missionType, resolve, timer, retry: setTimeout(send, 1500) };
     send();
   });
@@ -1016,7 +1018,7 @@ function _armDownloadRetry(): void {
   download.timer = setTimeout(() => {
     if (!download.pending) return;
     if (download.retries >= DOWNLOAD_RETRIES) {
-      _resolveDownload({ ok: false, error: 'Mission download stalled (no FC reply)' });
+      _resolveDownload({ ok: false, error: t('serial.err.downloadStalled') });
       return;
     }
     download.retries += 1;
@@ -1151,9 +1153,9 @@ export function serialWpIndex(seq: number): number {
 }
 
 export async function serialDownloadMission(): Promise<{ ok: boolean; error?: string; waypoints?: Waypoint[] }> {
-  if (!isSerialConnected()) return { ok: false, error: 'Not connected via serial' };
-  if (download.pending) return { ok: false, error: 'Another mission download is in progress' };
-  if (upload?.pending) return { ok: false, error: 'A mission upload is in progress' };
+  if (!isSerialConnected()) return { ok: false, error: t('serial.err.notConnected') };
+  if (download.pending) return { ok: false, error: t('serial.err.downloadBusy') };
+  if (upload?.pending) return { ok: false, error: t('serial.err.uploadRunning') };
 
   return new Promise((resolve) => {
     download.pending = true;
@@ -1467,7 +1469,7 @@ function _onLogEntry(p: DataView): void {
   // tens of seconds to list 100+ logs.
   if (logSession.listTimer) clearTimeout(logSession.listTimer);
   logSession.listTimer = setTimeout(() => {
-    _resolveLogList({ ok: false, error: 'FC stopped sending LOG_ENTRY' });
+    _resolveLogList({ ok: false, error: t('serial.err.logListTimeout') });
   }, 5000);
   if (entry.id === lastLogNum) {
     setLogList([...logSession.listEntries]);
@@ -1623,29 +1625,29 @@ export function isSerialLogBusy(): boolean {
 }
 
 export async function serialLogList(): Promise<{ ok: boolean; error?: string }> {
-  if (!isSerialConnected()) return { ok: false, error: 'Not connected via serial' };
+  if (!isSerialConnected()) return { ok: false, error: t('serial.err.notConnected') };
   if (logSession.listPending || logSession.dlPending) {
-    return { ok: false, error: 'Another log operation is in progress' };
+    return { ok: false, error: t('serial.err.logBusy') };
   }
   return new Promise((resolve) => {
     logSession.listPending = true;
     logSession.listResolve = resolve;
     logSession.listEntries = [];
     logSession.listTimer = setTimeout(() => {
-      _resolveLogList({ ok: false, error: 'LOG_REQUEST_LIST timed out (no LOG_ENTRY in 5s)' });
+      _resolveLogList({ ok: false, error: t('serial.err.logListTimeout') });
     }, 5000);
     sendSerialFrame(117, encodeLogRequestList(serial.targetSysId, serial.targetCompId, 0, 0xffff));
   });
 }
 
 export async function serialLogDownload(id: number): Promise<{ ok: boolean; error?: string }> {
-  if (!isSerialConnected()) return { ok: false, error: 'Not connected via serial' };
+  if (!isSerialConnected()) return { ok: false, error: t('serial.err.notConnected') };
   if (logSession.listPending || logSession.dlPending) {
-    return { ok: false, error: 'Another log operation is in progress' };
+    return { ok: false, error: t('serial.err.logBusy') };
   }
   const entry = logState.list.find((e) => e.id === id);
-  if (!entry) return { ok: false, error: 'Log not in list — request the list first' };
-  if (entry.size === 0) return { ok: false, error: 'Log is empty' };
+  if (!entry) return { ok: false, error: t('serial.err.logNotListed') };
+  if (entry.size === 0) return { ok: false, error: t('serial.err.logEmpty') };
 
   startDownload(id, entry.size);
   return new Promise((resolve) => {
@@ -1672,8 +1674,8 @@ export async function serialLogDownload(id: number): Promise<{ ok: boolean; erro
 export function serialLogCancel(): void {
   if (!isSerialConnected()) return;
   sendSerialFrame(122, encodeLogRequestEnd(serial.targetSysId, serial.targetCompId));
-  if (logSession.dlPending) _abortLogDownload('Cancelled');
-  if (logSession.listPending) _resolveLogList({ ok: false, error: 'Cancelled' });
+  if (logSession.dlPending) _abortLogDownload(t('serial.err.cancelled'));
+  if (logSession.listPending) _resolveLogList({ ok: false, error: t('serial.err.cancelled') });
 }
 
 // ── Parameter fetch (serial twin of backend/param_manager.py) ──────────────

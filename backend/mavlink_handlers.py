@@ -210,6 +210,8 @@ def handle_home_position(p: bytes, pl: int, link: DroneLink) -> None:
     # FC only sends HOME_POSITION when home is actually set
     # (GCS_Common.cpp:3064 `if (!AP::ahrs().home_is_set()) return`),
     # so trust it even for equator coordinates.
+    if not link.attitude._home_set:
+        link.add_event(lt("home_set", link.locale) % (hlat, hlon), "home_set")
     link.attitude.home_lat = hlat
     link.attitude.home_lon = hlon
     link.attitude._home_set = True

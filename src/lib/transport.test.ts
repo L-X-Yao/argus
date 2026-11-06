@@ -45,7 +45,7 @@ vi.mock('./serial', () => ({
 vi.mock('./stores.svelte', () => {
   const app = {
     activeTransport: 'none' as 'none' | 'ws' | 'serial',
-    drone: { connected: false, armed: false, link_age: -1, frames: 0, vtype_raw: 0 },
+    drone: { connected: false, armed: false, link_age: -1, frames: 0, vtype_raw: 0, parse_errors: 0 },
   };
   return {
     app,
@@ -317,7 +317,7 @@ describe('serialUploadMission', () => {
   it('refuses a rally point the FC would reject', async () => {
     await expect(serialUploadRally([{ lat: 91, lon: 120, alt: 50 }])).resolves.toEqual({
       ok: false,
-      error: 'Invalid rally point',
+      error: 'mission.err.badRally',
     });
   });
 
@@ -336,7 +336,7 @@ describe('serialUploadMission', () => {
     const clear = serialClearRally();
     await expect(serialUploadRally([{ lat: 30, lon: 120, alt: 50 }])).resolves.toEqual({
       ok: false,
-      error: 'Another upload is in progress',
+      error: 'serial.err.uploadBusy',
     });
     inject(fcFrame(47, encodeMissionAck(1, 1, 0, 2)));
     await expect(clear).resolves.toEqual({ ok: true });
@@ -444,7 +444,7 @@ describe('serialUploadFence', () => {
       { lat: 31, lon: 121 },
     ]);
     expect(res.ok).toBe(false);
-    expect(res.error).toMatch(/3 vertices/i);
+    expect(res.error).toMatch(/fenceMin/);
   });
 });
 
@@ -862,7 +862,7 @@ describe('upload watchdogs', () => {
     await vi.advanceTimersByTimeAsync(12001);
     const res = await promise;
     expect(res.ok).toBe(false);
-    expect(res.error).toMatch(/stopped requesting/i);
+    expect(res.error).toBe('serial.err.uploadStalled');
   });
 
   it('30s overall watchdog rejects an upload that crawls', async () => {
@@ -873,7 +873,7 @@ describe('upload watchdogs', () => {
     }
     const res = await promise;
     expect(res.ok).toBe(false);
-    expect(res.error).toMatch(/timed out|30s/i);
+    expect(res.error).toBe('serial.err.uploadTimeout');
   });
 
   it('gives up when the FC stops requesting mid-upload', async () => {
@@ -882,7 +882,7 @@ describe('upload watchdogs', () => {
     await vi.advanceTimersByTimeAsync(12001);
     const res = await promise;
     expect(res.ok).toBe(false);
-    expect(res.error).toMatch(/stopped requesting|seq 0/i);
+    expect(res.error).toBe('serial.err.uploadStalled');
   });
 
   it('leaves a slow-but-steady FC alone', async () => {
@@ -1302,5 +1302,23 @@ describe('a lost frame', () => {
     expect(countWrites(45)).toBe(2);
     inject(fcFrame(47, encodeMissionAck(1, 1, 0, 1)));
     await expect(promise).resolves.toEqual({ ok: true });
+  });
+});
+
+describe('the error counter', () => {
+  it('counts frames that fail their CRC', async () => {
+    await disconnectSerial();
+    await connectSerial(115200, {});
+    const bad = encodeFrame(0, encodeHeartbeat(2, 3), 1, 1, 0);
+    bad[bad.length - 1] ^= 0xff;
+    inject(bad);
+    expect(app.drone.parse_errors).toBe(1);
+  });
+
+  it('counts nothing for a message nobody here reads', async () => {
+    await disconnectSerial();
+    await connectSerial(115200, {});
+    inject(encodeFrame(9999, new Uint8Array([1, 2, 3]), 1, 1, 0));
+    expect(app.drone.parse_errors).toBe(0);
   });
 });

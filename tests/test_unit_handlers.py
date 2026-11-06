@@ -1078,6 +1078,31 @@ class TestVehicleTypes:
         payload = struct.pack("<IiiiihhhH", 1000, int(lat * 1e7), int(108.9 * 1e7), 430000, 30000, 50, 0, 0, 9000)
         self._feed(link, 33, payload, 104, sysid)
 
+    def test_a_message_nobody_reads_is_no_error(self):
+        from backend.mavlink_frame import bm
+
+        link = make_link()
+        link._buf = bm(9999, b"\x01\x02\x03", 1, 7, sysid=1)
+        assert link.feed(b"") == 0
+        assert link._parse_errors == 0
+        assert link._unknown_msg_ids.get(9999, 0) >= 1
+
+    def test_a_frame_with_a_bad_crc_is_an_error(self):
+        from backend.mavlink_frame import bm
+
+        link = make_link()
+        frame = bytearray(bm(0, struct.pack("<IBBBBB", 5, 2, 3, 0, 0, 3), 0, 50, sysid=1))
+        frame[-1] ^= 0xFF
+        link.feed(bytes(frame))
+        assert link._parse_errors >= 1
+
+    def test_home_is_reported_once_whichever_message_brings_it(self):
+        link = make_link_connected()
+        payload = struct.pack("<iii", int(34.2 * 1e7), int(108.9 * 1e7), 430000) + bytes(40)
+        handle_home_position(payload, len(payload), link)
+        handle_home_position(payload, len(payload), link)
+        assert len([e for e in link.events if e["event_type"] == "home_set"]) == 1
+
     def test_a_second_vehicle_does_not_touch_the_state(self):
         link = make_link_connected()
         link.vehicle.sysid = 1

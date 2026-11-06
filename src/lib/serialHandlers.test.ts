@@ -21,6 +21,7 @@ vi.mock('./flightDb', () => ({ saveFlightRecord: (r: Record<string, unknown>) =>
 vi.mock('./transport', () => ({ serialWpIndex: (seq: number) => seq - 2 }));
 
 import { buildSerialHandlers, resetSerialSession } from './serialHandlers';
+import type { SerialHandlers } from './transport';
 import type { MavFrame, MessageHandlers } from './mavlink';
 
 const frame = {} as MavFrame;
@@ -268,5 +269,24 @@ describe('serial session state', () => {
   it('names the vehicle, which flight records store', () => {
     h.onHeartbeat!({ ...heartbeat(false), type: 10 } as never, frame);
     expect(H.drone.vtype).toBe('Rover');
+  });
+});
+
+describe('home', () => {
+  it('reports it once, whichever message brings it first', () => {
+    resetSerialSession();
+    H.events.length = 0;
+    const h = buildSerialHandlers();
+    h.onHomePosition!({ lat: 34.2, lon: 108.9 } as never, {} as never);
+    h.onHomePosition!({ lat: 34.2, lon: 108.9 } as never, {} as never);
+    expect(H.events.filter((e) => e.event_type === 'home_set')).toHaveLength(1);
+  });
+});
+
+describe('no answer', () => {
+  it('reports a command nobody answered, as a failure', () => {
+    H.events.length = 0;
+    (buildSerialHandlers() as SerialHandlers).onCommandNoAnswer!(176);
+    expect(H.events.map((e) => e.event_type)).toEqual(['cmd_ack_fail']);
   });
 });

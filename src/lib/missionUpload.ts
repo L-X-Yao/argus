@@ -20,6 +20,7 @@
  *   last   RTL (cmd 20), except on a Sub
  */
 
+import { t } from './i18n.svelte';
 import type { RallyPoint, Waypoint } from './types';
 
 export interface MissionItem {
@@ -138,13 +139,13 @@ export function buildFenceItems(polygon: { lat: number; lon: number }[]): Missio
 export function validateFencePolygon(
   polygon: { lat: number; lon: number }[],
 ): { ok: true } | { ok: false; error: string } {
-  if (polygon.length < 3) return { ok: false, error: 'Fence needs at least 3 vertices' };
-  if (polygon.length > 200) return { ok: false, error: 'Fence too large (max 200 vertices)' };
+  if (polygon.length < 3) return { ok: false, error: t('mission.err.fenceMin') };
+  if (polygon.length > 200) return { ok: false, error: t('mission.err.fenceMax') };
   for (const p of polygon) {
     const lat = Number(p.lat),
       lon = Number(p.lon);
-    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return { ok: false, error: 'Invalid fence coordinates' };
-    if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return { ok: false, error: 'Invalid fence coordinates' };
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return { ok: false, error: t('mission.err.badCoords') };
+    if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return { ok: false, error: t('mission.err.badCoords') };
   }
   return { ok: true };
 }
@@ -172,29 +173,29 @@ export function buildRallyItems(points: RallyPoint[]): MissionItem[] {
 
 // The FC refuses these one item in (MissionItemProtocol_Rally.cpp:63-69), so catch them first.
 export function validateRallyPoints(points: RallyPoint[]): { ok: true } | { ok: false; error: string } {
-  if (points.length === 0) return { ok: false, error: 'No rally points' };
+  if (points.length === 0) return { ok: false, error: t('mission.err.noRally') };
   for (const p of points) {
     const lat = Number(p.lat),
       lon = Number(p.lon),
       alt = Number(p.alt);
     if (!(lat >= -90 && lat <= 90) || !(lon >= -180 && lon <= 180) || !(alt >= -32768 && alt <= 32767)) {
-      return { ok: false, error: 'Invalid rally point' };
+      return { ok: false, error: t('mission.err.badRally') };
     }
   }
   return { ok: true };
 }
 
 export function validateMissionWaypoints(waypoints: Waypoint[]): { ok: true } | { ok: false; error: string } {
-  if (waypoints.length === 0) return { ok: false, error: 'No waypoints' };
-  if (waypoints.length > 500) return { ok: false, error: 'Mission too large (max 500 WP)' };
+  if (waypoints.length === 0) return { ok: false, error: t('mission.err.noWaypoints') };
+  if (waypoints.length > 500) return { ok: false, error: t('mission.err.tooLarge') };
   for (const wp of waypoints) {
     const lat = Number(wp.lat),
       lon = Number(wp.lon);
-    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return { ok: false, error: 'Invalid coordinates' };
-    if (Math.abs(lat) < 0.001) return { ok: false, error: 'Invalid coordinates' };
-    if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return { ok: false, error: 'Invalid coordinates' };
+    if (!Number.isFinite(lat) || !Number.isFinite(lon)) return { ok: false, error: t('mission.err.badCoords') };
+    if (Math.abs(lat) < 0.001) return { ok: false, error: t('mission.err.badCoords') };
+    if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return { ok: false, error: t('mission.err.badCoords') };
     const alt = Number(wp.alt ?? 0);
-    if (!Number.isFinite(alt) || alt < -500 || alt > 100000) return { ok: false, error: 'Invalid coordinates' };
+    if (!Number.isFinite(alt) || alt < -500 || alt > 100000) return { ok: false, error: t('mission.err.badCoords') };
   }
   return { ok: true };
 }

@@ -102,7 +102,8 @@ class TestCorruption:
             hdr = bytes([2, 0, 0, 0, 1, 1, mid & 0xFF, (mid >> 8) & 0xFF, (mid >> 16) & 0xFF])
             link.feed(b"\xfd" + hdr + b"\x00\x00" + b"\x00\x00")
         assert len(link._unknown_msg_ids) <= 256
-        assert link._parse_errors >= 300
+        assert sum(link._unknown_msg_ids.values()) >= 256
+        assert link._parse_errors == 0  # no sign of a bad link: see the E: counter
 
     def test_buffer_flood_drains_then_recovers(self):
         link = DroneLink()

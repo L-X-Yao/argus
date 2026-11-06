@@ -153,6 +153,9 @@ export function buildSerialHandlers(): SerialHandlers {
     app.drone.adsb = [...session.adsb.values()] as typeof app.drone.adsb;
   };
 
+  const reportHome = (lat: number, lon: number) =>
+    event(t('evt.homeSet').replace('{lat}', lat.toFixed(5)).replace('{lon}', lon.toFixed(5)), 'home_set');
+
   const onArmedChange = (armed: boolean) => {
     event(t(armed ? 'toast.armed' : 'toast.disarmed'), armed ? 'armed' : 'disarmed');
     addToast(t(armed ? 'toast.armed' : 'toast.disarmed'), armed ? 'warn' : 'success', armed ? 5000 : 4000);
@@ -246,7 +249,7 @@ export function buildSerialHandlers(): SerialHandlers {
         session.homeSet = true;
         app.drone.home_lat = msg.lat;
         app.drone.home_lon = msg.lon;
-        event(t('evt.homeSet').replace('{lat}', msg.lat.toFixed(5)).replace('{lon}', msg.lon.toFixed(5)), 'home_set');
+        reportHome(msg.lat, msg.lon);
       }
       if (session.homeSet) {
         app.drone.dist_home = metersBetween(msg.lat, msg.lon, app.drone.home_lat, app.drone.home_lon);
@@ -330,6 +333,7 @@ export function buildSerialHandlers(): SerialHandlers {
       app.drone.mag = [msg.xmag, msg.ymag, msg.zmag];
     },
     onHomePosition: (msg) => {
+      if (!session.homeSet) reportHome(msg.lat, msg.lon);
       session.homeSet = true;
       app.drone.home_lat = msg.lat;
       app.drone.home_lon = msg.lon;
