@@ -1098,6 +1098,7 @@ const messages: Record<string, string> = {
   'ack.result.failed': 'ошибка',
   'ack.result.commandLongOnly': 'только COMMAND_LONG',
   'ack.result.commandIntOnly': 'только COMMAND_INT',
+  'ack.result.noAnswer': 'нет ответа',
   'ack.result.unknown': 'неизвестно({n})',
   'pid.autoSaved': 'Каждое изменение сразу уходит на контроллер и сохраняется на нём',
   'ortho.badCoords': 'Северо-западный угол должен быть севернее и западнее юго-восточного',

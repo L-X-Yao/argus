@@ -525,6 +525,9 @@ class Simulator:
             params = struct.unpack_from("<fffffff", p, 0)
             cmd = struct.unpack_from("<H", p, 28)[0]
             resp = self._handle_cmd(cmd, params)
+        elif mid == 75 and len(p) >= 30:
+            # COMMAND_INT: command at 28, as in COMMAND_LONG here. Nothing to act on.
+            resp = [self.msg_command_ack(struct.unpack_from("<H", p, 28)[0], 0)]
         elif mid == 11 and len(p) >= 5:
             mode = struct.unpack_from("<I", p, 0)[0]
             self.mode = mode

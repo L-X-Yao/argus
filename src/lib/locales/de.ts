@@ -1099,6 +1099,7 @@ const messages: Record<string, string> = {
   'ack.result.failed': 'fehlgeschlagen',
   'ack.result.commandLongOnly': 'nur COMMAND_LONG',
   'ack.result.commandIntOnly': 'nur COMMAND_INT',
+  'ack.result.noAnswer': 'keine Antwort',
   'ack.result.unknown': 'unbekannt({n})',
   'pid.autoSaved': 'Jede Reglerbewegung geht sofort an den FC, der sie speichert',
   'ortho.badCoords': 'Die NW-Ecke muss nördlich und westlich der SO-Ecke liegen',

@@ -1093,6 +1093,7 @@ const messages: Record<string, string> = {
   'ack.result.failed': '실패',
   'ack.result.commandLongOnly': 'COMMAND_LONG 전용',
   'ack.result.commandIntOnly': 'COMMAND_INT 전용',
+  'ack.result.noAnswer': '응답 없음',
   'ack.result.unknown': '알 수 없음({n})',
   'pid.autoSaved': '슬라이더를 바꾸면 바로 FC로 전송되어 저장됩니다',
   'ortho.badCoords': '북서쪽 모서리는 남동쪽 모서리의 북서쪽에 있어야 합니다',

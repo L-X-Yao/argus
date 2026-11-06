@@ -94,11 +94,18 @@ class MissionState:
     _mission_ul_start_time: float = 0.0
     _fence_ul_start_time: float = 0.0
     _rally_ul_start_time: float = 0.0
+    # When the count or the clear last went out, for sending it again.
+    _mission_count_sent: float = 0.0
+    _fence_count_sent: float = 0.0
+    _rally_count_sent: float = 0.0
+    _fence_clear_sent: float = 0.0
+    _rally_clear_sent: float = 0.0
     _dl_pending: bool = False
     _dl_total: int = 0
     _dl_items: list = field(default_factory=list)
     _dl_messages: list[dict] = field(default_factory=list)
     _dl_start_time: float = 0.0
+    _dl_last_send: float = 0.0
 
 
 @dataclass

@@ -1087,6 +1087,7 @@ const messages: Record<string, string> = {
   'ack.result.failed': '失败',
   'ack.result.commandLongOnly': '只接受 COMMAND_LONG',
   'ack.result.commandIntOnly': '只接受 COMMAND_INT',
+  'ack.result.noAnswer': '无应答',
   'ack.result.unknown': '未知({n})',
   'ortho.badCoords': '西北角必须在东南角的西北方向',
   'ortho.notKept': '叠加层已应用，但图片太大无法保存，关闭页面后会消失',

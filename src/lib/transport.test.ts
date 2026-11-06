@@ -96,11 +96,13 @@ import {
   dispatch,
   serialClearMission,
   serialClearFence,
+  serialSendCommandLong,
 } from './transport';
 import { encodeFrame } from './mavlink/codec';
 import {
   encodeHeartbeat,
   encodeMissionCount,
+  encodeCommandAck,
   encodeMissionItemInt,
   encodeMissionAck,
   encodeMissionRequestInt,
@@ -854,36 +856,46 @@ describe('upload watchdogs', () => {
     },
   ];
 
-  it('30s overall watchdog rejects upload when FC sends no MISSION_REQUEST', async () => {
+  it('gives up when the FC never answers the count', async () => {
     const promise = serialUploadMission(oneWp(), 30);
-    // No FC frame injected. Advance just past the 30s overall timeout.
-    await vi.advanceTimersByTimeAsync(30001);
+    // No FC frame injected: the count goes out four times, 3 s apart.
+    await vi.advanceTimersByTimeAsync(12001);
+    const res = await promise;
+    expect(res.ok).toBe(false);
+    expect(res.error).toMatch(/stopped requesting/i);
+  });
+
+  it('30s overall watchdog rejects an upload that crawls', async () => {
+    const promise = serialUploadMission(oneWp(), 30);
+    for (let i = 0; i < 16; i++) {
+      inject(fcFrame(51, encodeMissionRequestInt(1, 1, 0)));
+      await vi.advanceTimersByTimeAsync(2000);
+    }
     const res = await promise;
     expect(res.ok).toBe(false);
     expect(res.error).toMatch(/timed out|30s/i);
   });
 
-  it('5s per-item watchdog fires when FC stops requesting mid-upload', async () => {
+  it('gives up when the FC stops requesting mid-upload', async () => {
     const promise = serialUploadMission(oneWp(), 30);
-    // FC sends the first request — this arms the 5s per-item timer.
     inject(fcFrame(51, encodeMissionRequestInt(1, 1, 0)));
-    // No further FC traffic. The per-item watchdog should fire.
-    await vi.advanceTimersByTimeAsync(5001);
+    await vi.advanceTimersByTimeAsync(12001);
     const res = await promise;
     expect(res.ok).toBe(false);
     expect(res.error).toMatch(/stopped requesting|seq 0/i);
   });
 
-  it('per-item timer resets on each MISSION_REQUEST so a slow-but-steady FC succeeds', async () => {
+  it('leaves a slow-but-steady FC alone', async () => {
     const promise = serialUploadMission(oneWp(), 30);
-    // Drip 4 requests with 4s between each — under 5s per-item, so the
-    // watchdog never fires. Then send the ACK.
+    writes.length = 0;
+    // Under the 3 s it takes to send the count again.
     for (let seq = 0; seq < 4; seq++) {
       inject(fcFrame(51, encodeMissionRequestInt(1, 1, seq)));
-      await vi.advanceTimersByTimeAsync(4000);
+      await vi.advanceTimersByTimeAsync(2500);
     }
     inject(fcFrame(47, encodeMissionAck(1, 1, 0)));
     await expect(promise).resolves.toEqual({ ok: true });
+    expect(countWrites(44)).toBe(0);
   });
 });
 
@@ -1185,5 +1197,110 @@ describe('mission_set_current seq map (post-download)', () => {
     // After clear, no map. wp_index=5 → fallback seq=7 (no map could have produced this).
     dispatch('mission_set_current', undefined, { wp_index: 5 });
     expect(decodeSeq(findWrite(41)!)).toBe(7);
+  });
+});
+
+describe('a lost frame', () => {
+  const wps = [{ lat: 30, lon: 120, alt: 50, drop: false, delay: 0, speed: 0, type: 'wp' as const, loiter_param: 0 }];
+  const noAnswer: number[] = [];
+  const confirmations = () => writes.filter((w) => writeMsgId(w) === 76).map((w) => w[10 + 32]);
+
+  beforeEach(async () => {
+    await disconnectSerial();
+    noAnswer.length = 0;
+    await connectSerial(115200, { onCommandNoAnswer: (c) => noAnswer.push(c) });
+    writes.length = 0;
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('sends a mode change again, then says nobody answered', () => {
+    dispatch('mode', 4);
+    expect(confirmations()).toEqual([0]);
+    vi.advanceTimersByTime(1000);
+    expect(confirmations()).toEqual([0, 1]);
+    vi.advanceTimersByTime(1000);
+    expect(confirmations()).toEqual([0, 1, 2]);
+    expect(noAnswer).toEqual([]);
+    vi.advanceTimersByTime(1000);
+    expect(confirmations()).toEqual([0, 1, 2]);
+    expect(noAnswer).toEqual([176]);
+  });
+
+  it('stops once the FC answers', () => {
+    dispatch('mode', 4);
+    inject(fcFrame(77, encodeCommandAck(176, 0)));
+    vi.advanceTimersByTime(5000);
+    expect(confirmations()).toEqual([0]);
+    expect(noAnswer).toEqual([]);
+  });
+
+  it('never repeats what must not run twice, and still says so', () => {
+    dispatch('motor_test', undefined, { motor: 0, throttle: 5, duration: 1 });
+    vi.advanceTimersByTime(5000);
+    expect(confirmations()).toEqual([0]);
+    expect(noAnswer).toEqual([209]);
+  });
+
+  it('expects no answer to a reboot or the connect-time requests', () => {
+    dispatch('reboot');
+    serialSendCommandLong(512, 148);
+    vi.advanceTimersByTime(5000);
+    expect(noAnswer).toEqual([]);
+  });
+
+  it('asks for the mission list again', async () => {
+    const promise = serialDownloadMission();
+    expect(countWrites(43)).toBe(1);
+    vi.advanceTimersByTime(1500);
+    expect(countWrites(43)).toBe(2);
+    inject(fcFrame(44, encodeMissionCount(1, 1, 0)));
+    await expect(promise).resolves.toMatchObject({ ok: true });
+  });
+
+  it('asks again for a mission item, and only that one', async () => {
+    const promise = serialDownloadMission();
+    inject(fcFrame(44, encodeMissionCount(1, 1, 2)));
+    inject(fcFrame(73, mkMissionItemInt(0, 16, 0, 0, 0)));
+    writes.length = 0;
+    vi.advanceTimersByTime(1500);
+    expect(countWrites(51)).toBe(1);
+    expect(findWrite(51)![10]).toBe(1); // seq
+    inject(fcFrame(73, mkMissionItemInt(1, 22, 0, 0, 30)));
+    await expect(promise).resolves.toMatchObject({ ok: true });
+  });
+
+  it('gives a mission download up after six silent tries', async () => {
+    const promise = serialDownloadMission();
+    vi.advanceTimersByTime(1500 * 7);
+    await expect(promise).resolves.toMatchObject({ ok: false });
+    expect(countWrites(43)).toBe(7);
+  });
+
+  it('sends the count of an upload again, and starts over from it', async () => {
+    const promise = serialUploadMission(wps, 30);
+    expect(countWrites(44)).toBe(1);
+    vi.advanceTimersByTime(3000);
+    expect(countWrites(44)).toBe(2);
+    inject(fcFrame(47, encodeMissionAck(1, 1, 0)));
+    await expect(promise).resolves.toEqual({ ok: true });
+  });
+
+  it('gives an upload up after three silent restarts', async () => {
+    const promise = serialUploadMission(wps, 30);
+    vi.advanceTimersByTime(3000 * 4);
+    await expect(promise).resolves.toMatchObject({ ok: false });
+    expect(countWrites(44)).toBe(4);
+  });
+
+  it('sends a clear again before giving it up', async () => {
+    const promise = serialClearFence();
+    vi.advanceTimersByTime(1500);
+    expect(countWrites(45)).toBe(2);
+    inject(fcFrame(47, encodeMissionAck(1, 1, 0, 1)));
+    await expect(promise).resolves.toEqual({ ok: true });
   });
 });

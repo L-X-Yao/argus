@@ -118,8 +118,9 @@ async def run(spec: dict) -> None:
         record("EKF has a position", bool(ok), f"flags=0x{s.state.get('ekf_flags', 0):x}")
 
         home = (s.state.get("lat", -35.36), s.state.get("lon", 149.16))
+        alt = -5 if spec["binary"] == "ardusub" else 30  # a Sub's waypoints are depths
         wps = [
-            {"lat": home[0] + d, "lon": home[1] + d, "alt": 30, "speed": 0, "type": "wp", "drop": False, "delay": 0}
+            {"lat": home[0] + d, "lon": home[1] + d, "alt": alt, "speed": 0, "type": "wp", "drop": False, "delay": 0}
             for d in (0.001, 0.002, 0.003)
         ]
         await s.command("mission_upload", waypoints=wps)

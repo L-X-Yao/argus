@@ -25,6 +25,7 @@ _T = {
     "wp_reached": ("航点 %d 已到达", "Waypoint %d reached"),
     "fw_info": ("固件: %s (%s)", "Firmware: %s (%s)"),
     "cmd_ack": ("指令应答: %s — %s", "Command: %s — %s"),
+    "cmd_no_answer": ("无应答", "no answer"),
     "arm_send": ("发送解锁...", "Arming..."),
     "disarm_send": ("发送锁定...", "Disarming..."),
     "force_disarm": ("强制锁定", "Force disarm"),

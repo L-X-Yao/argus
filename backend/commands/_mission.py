@@ -74,6 +74,7 @@ def cmd_fence_clear(link: DroneLink, param, data: dict):
         return {"ok": False, "error": lt("err_fence_busy", link.locale)}
     link.mission._fence_clear_pending = True
     link.mission._fence_clear_start_time = time.time()
+    link.mission._fence_clear_sent = 0.0
     link.send(bm(45, bytes([link.vehicle.sysid, 1, 1]), link.sq, CRC_EXTRA[45]))
 
 
@@ -137,6 +138,7 @@ def cmd_fence_upload(link: DroneLink, param, data: dict):
     link.mission._fence_items = items
     link.mission._fence_pending = True
     link.mission._fence_ul_start_time = time.time()
+    link.mission._fence_count_sent = 0.0
     send_fence_count(link, len(items))
     link.add_event(lt("fence_upload", link.locale) % len(polygon), "fence_upload")
 
@@ -145,15 +147,70 @@ def cmd_mission_download(link: DroneLink, param, data: dict):
     link.mission._dl_pending = True
     link.mission._dl_total = 0
     link.mission._dl_items = []
-    link.mission._dl_start_time = time.time()
+    link.mission._dl_start_time = link.mission._dl_last_send = time.time()
     link.add_event(lt("mission_dl", link.locale), "mission_dl")
+    _send_request_list(link)
+
+
+def _send_request_list(link: DroneLink) -> None:
     link.send(bm(43, struct.pack("<BBB", link.vehicle.sysid, 1, 0), link.sq, CRC_EXTRA[43]))
+
+
+def _send_rally_count(link: DroneLink, count: int) -> None:
+    link.send(bm(44, struct.pack("<HBB", count, link.vehicle.sysid, 1) + bytes([2]), link.sq, CRC_EXTRA[44]))
+
+
+def _resend_stalled(link: DroneLink, now: float) -> None:
+    """One lost frame leaves each side waiting for the other, and on a radio that loses
+    3% of its frames a 100-item mission would hardly ever come through otherwise."""
+    from ..mavlink_handlers import _request_dl_item
+
+    m = link.mission
+    if m._dl_pending and m._dl_start_time > 0 and now - m._dl_last_send > cfg.MISSION_RETRY_INTERVAL:
+        m._dl_last_send = now
+        missing = next((i for i, item in enumerate(m._dl_items) if item is None), None)
+        if m._dl_total == 0:
+            _send_request_list(link)
+        elif missing is not None:
+            _request_dl_item(link, missing)
+    # Sent again from the top: AP_Mission takes a new count as a new upload
+    # (MissionItemProtocol::handle_mission_count, cancel_upload), which also covers an ack lost after the last item.
+    wait = cfg.MISSION_UPLOAD_RETRY
+    if (
+        m._mission_pending
+        and m._mission_ul_start_time > 0
+        and now - max(m._mission_ul_start_time, m._mission_count_sent) > wait
+    ):
+        m._mission_count_sent = now
+        send_mission_count(link, len(m._mission_items))
+    if (
+        m._fence_pending
+        and m._fence_ul_start_time > 0
+        and now - max(m._fence_ul_start_time, m._fence_count_sent) > wait
+    ):
+        m._fence_count_sent = now
+        send_fence_count(link, len(m._fence_items))
+    if (
+        m._rally_pending
+        and m._rally_ul_start_time > 0
+        and now - max(m._rally_ul_start_time, m._rally_count_sent) > wait
+    ):
+        m._rally_count_sent = now
+        _send_rally_count(link, len(m._rally_items))
+    half = cfg.STORE_CLEAR_TIMEOUT / 2
+    if m._fence_clear_pending and now - max(m._fence_clear_start_time, m._fence_clear_sent) > half:
+        m._fence_clear_sent = now
+        link.send(bm(45, bytes([link.vehicle.sysid, 1, 1]), link.sq, CRC_EXTRA[45]))
+    if m._rally_clear_pending and now - max(m._rally_clear_start_time, m._rally_clear_sent) > half:
+        m._rally_clear_sent = now
+        link.send(bm(45, bytes([link.vehicle.sysid, 1, 2]), link.sq, CRC_EXTRA[45]))
 
 
 def check_mission_dl_timeout(link: DroneLink) -> None:
     m = link.mission
     now = time.time()
     timeout = cfg.MISSION_DL_TIMEOUT
+    _resend_stalled(link, now)
     if m._dl_pending and m._dl_start_time > 0:
         if now - m._dl_start_time > timeout:
             m._dl_pending = False
@@ -207,6 +264,7 @@ def cmd_rally_clear(link: DroneLink, param, data: dict):
         return {"ok": False, "error": lt("err_rally_busy", link.locale)}
     link.mission._rally_clear_pending = True
     link.mission._rally_clear_start_time = time.time()
+    link.mission._rally_clear_sent = 0.0
     link.send(bm(45, bytes([link.vehicle.sysid, 1, 2]), link.sq, CRC_EXTRA[45]))
 
 
@@ -332,6 +390,7 @@ def _upload_mission(link: DroneLink, waypoints: list, takeoff_alt: float) -> Non
             s2 += 1
     m._mission_pending = True
     m._mission_ul_start_time = time.time()
+    m._mission_count_sent = 0.0
     send_mission_count(link, len(items))
     drop_n = sum(1 for w in waypoints if w.get("drop"))
     link.add_event(lt("mission_upload", link.locale) % (len(waypoints), drop_n, takeoff_alt))
@@ -360,6 +419,6 @@ def _upload_rally(link: DroneLink, points: list) -> None:
     m._rally_items = items
     m._rally_pending = True
     m._rally_ul_start_time = time.time()
-    count = len(items)
-    link.send(bm(44, struct.pack("<HBB", count, link.vehicle.sysid, 1) + bytes([2]), link.sq, CRC_EXTRA[44]))
-    link.add_event(lt("rally_uploading", link.locale) % count, "rally_uploading")
+    m._rally_count_sent = 0.0
+    _send_rally_count(link, len(items))
+    link.add_event(lt("rally_uploading", link.locale) % len(items), "rally_uploading")

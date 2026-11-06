@@ -111,6 +111,7 @@ class DroneLink:
         self._parse_errors = 0
         self._raw_sysid = 1
         self._streams_sysid = 0  # who the last request_streams() was addressed to
+        self._cmd_pending: dict[int, dict] = {}  # sent and not answered yet, see send_cmd
         self._logfile = None
         self._tlog = None
         self._tlog_lock = threading.Lock()  # tlog writes come from link thread (_process) AND API threads (send)
@@ -288,6 +289,7 @@ class DroneLink:
             # transport reset and the UI freezes.
             self.frame_count = 0
             self.last_frame_time = 0.0
+            self._cmd_pending.clear()
             self.mission._mission_pending = False
             self.mission._fence_pending = False
             self.mission._fence_clear_pending = False
@@ -757,6 +759,7 @@ class DroneLink:
             self._write_log_line()
             self.param_mgr.check_timeout()
             self._check_mission_dl_timeout()
+            cmd_module.check_commands(self)
             self._check_log_dl_stall()
             # Every read above already blocks up to its port timeout, so a pause
             # only matters when nothing arrived. A Linux tty hands over about

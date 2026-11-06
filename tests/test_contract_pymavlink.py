@@ -60,6 +60,7 @@ class FakeLink:
 
     def __init__(self):
         self.sq = 0
+        self._cmd_pending = {}
         self.vehicle = SimpleNamespace(sysid=1, armed=False, vtype_raw=0, force_plane=None)
         self.locale = "zh"
         self.captured: list[bytes] = []

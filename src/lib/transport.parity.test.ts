@@ -82,6 +82,7 @@ import {
   serialUploadMission,
   serialUploadFence,
   serialUploadRally,
+  forgetSerialCommands,
 } from './transport';
 import { app } from './stores.svelte';
 import { encodeFrame } from './mavlink';
@@ -179,7 +180,11 @@ describe('dual-stack parity dump', () => {
             dispatch(op.op!, op.param, op.data);
             if (op.flush_timer_ms) await vi.advanceTimersByTimeAsync(op.flush_timer_ms);
             // Only one store can be cleared at a time: let this one time out for the next.
-            if (op.op?.endsWith('_clear')) await vi.advanceTimersByTimeAsync(3100);
+            if (op.op?.endsWith('_clear')) {
+              dump[op.id] = toHex(H.writes); // before it goes out again
+              await vi.advanceTimersByTimeAsync(3100);
+              continue;
+            }
             break;
           case 'log_list': {
             const p = serialLogList();
@@ -203,7 +208,7 @@ describe('dual-stack parity dump', () => {
           case 'mission_download': {
             const p = serialDownloadMission();
             dump[op.id] = toHex(H.writes);
-            await vi.advanceTimersByTimeAsync(6000);
+            await vi.advanceTimersByTimeAsync(11000); // the retries, until it gives up
             await p;
             continue;
           }
@@ -229,6 +234,7 @@ describe('dual-stack parity dump', () => {
             throw new Error(`unknown op kind: ${op.kind}`);
         }
         dump[op.id] = toHex(H.writes);
+        forgetSerialCommands(); // nobody answers here, and the retries belong to no later op
       }
     } finally {
       vi.useRealTimers();

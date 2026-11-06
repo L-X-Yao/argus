@@ -1093,6 +1093,7 @@ const messages: Record<string, string> = {
   'ack.result.failed': 'فشل',
   'ack.result.commandLongOnly': 'COMMAND_LONG فقط',
   'ack.result.commandIntOnly': 'COMMAND_INT فقط',
+  'ack.result.noAnswer': 'لا يوجد رد',
   'ack.result.unknown': 'غير معروف({n})',
   'pid.autoSaved': 'يُرسَل كل تغيير في المنزلق فورًا إلى المتحكم الذي يحفظه',
   'ortho.badCoords': 'يجب أن تقع الزاوية الشمالية الغربية شمال وغرب الزاوية الجنوبية الشرقية',

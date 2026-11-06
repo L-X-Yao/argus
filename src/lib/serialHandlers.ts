@@ -9,12 +9,12 @@
  * from drifting apart — update BOTH sides (and the parity fixture) when
  * adding a field.
  */
-import { isVehicleHeartbeat, type MessageHandlers } from './mavlink';
+import { isVehicleHeartbeat } from './mavlink';
 import { app, addEvent, addToast } from './stores.svelte';
 import { t, i18nState } from './i18n.svelte';
 import { getModeButtons, getModeName, vehicleType, type VehicleType } from './modeStore';
 import { saveFlightRecord } from './flightDb';
-import { serialWpIndex } from './transport';
+import { serialWpIndex, type SerialHandlers } from './transport';
 import { defaultState } from './types';
 
 // Mirrors backend/constants.py FIX_NAMES and FIX_NAMES_EN.
@@ -141,7 +141,7 @@ export function resetSerialSession(): void {
   });
 }
 
-export function buildSerialHandlers(): Partial<MessageHandlers> {
+export function buildSerialHandlers(): SerialHandlers {
   // One-shot per connection, like the backend's _unsupported_fc_warned
   // (reset on connect) — a mixed AP+GCS link must not toast every second.
   let warnedUnsupported = false;
@@ -407,6 +407,14 @@ export function buildSerialHandlers(): Partial<MessageHandlers> {
       const ok = msg.result === 0;
       event(text, ok ? 'cmd_ack_ok' : 'cmd_ack_fail');
       if (!ok) addToast(text, 'error', 5000);
+    },
+    onCommandNoAnswer: (command) => {
+      const cmdKey = ACK_COMMANDS[command];
+      const text = t('ack.text')
+        .replace('{cmd}', cmdKey ? t(cmdKey) : String(command))
+        .replace('{result}', t('ack.result.noAnswer'));
+      event(text, 'cmd_ack_fail');
+      addToast(text, 'error', 5000);
     },
     onStatusText: (msg) => {
       // PreArm checks repeat about every 5 s until fixed: one entry per cause,

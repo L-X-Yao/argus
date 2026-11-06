@@ -1098,6 +1098,7 @@ const messages: Record<string, string> = {
   'ack.result.failed': 'falhou',
   'ack.result.commandLongOnly': 'apenas COMMAND_LONG',
   'ack.result.commandIntOnly': 'apenas COMMAND_INT',
+  'ack.result.noAnswer': 'sem resposta',
   'ack.result.unknown': 'desconhecido({n})',
   'pid.autoSaved': 'Cada ajuste vai na hora para a controladora, que o guarda',
   'ortho.badCoords': 'O canto NO deve ficar ao norte e a oeste do canto SE',

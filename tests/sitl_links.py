@@ -65,11 +65,11 @@ async def ready_to_fly(s: Session) -> None:
     record("EKF has a position", bool(ok))
 
 
-def waypoints(s: Session, alt: float = 20) -> list[dict]:
+def waypoints(s: Session, alt: float = 20, count: int = 3) -> list[dict]:
     lat, lon = s.state.get("lat", -35.36), s.state.get("lon", 149.16)
     return [
-        {"lat": lat + d, "lon": lon, "alt": alt, "speed": 0, "type": "wp", "drop": False, "delay": 0}
-        for d in (0.0005, 0.001, 0.0015)
+        {"lat": lat + 0.0005 * (i + 1), "lon": lon, "alt": alt, "speed": 0, "type": "wp", "drop": False, "delay": 0}
+        for i in range(count)
     ]
 
 
@@ -172,7 +172,7 @@ async def commands() -> None:
         s.reader.cancel()
 
 
-async def whole_session(s: Session, port: str, read_timeout: float = 90) -> None:
+async def whole_session(s: Session, port: str, read_timeout: float = 90, mission_size: int = 3) -> None:
     """Connect, read every parameter, move a mission both ways, fly and land."""
     await connect(s, port)
     await ready_to_fly(s)
@@ -183,7 +183,7 @@ async def whole_session(s: Session, port: str, read_timeout: float = 90) -> None
     count = sum(len(m.get("params", [])) for m in s.messages if m.get("type") == "param_batch")
     record("reads every parameter", ok and count > 500 and count >= done.get("total", 0), f"{count} of {done}")
 
-    wps = waypoints(s)
+    wps = waypoints(s, count=mission_size)
     await s.command("mission_upload", waypoints=wps)
     ok = await s.until(
         lambda: s.seen(lambda m: m.get("type") == "event" and m.get("event_type") == "mission_ack_ok"), 60
@@ -204,9 +204,9 @@ async def whole_session(s: Session, port: str, read_timeout: float = 90) -> None
     s.reader.cancel()
 
 
-async def over(port: str, read_timeout: float = 90) -> None:
+async def over(port: str, read_timeout: float = 90, mission_size: int = 3) -> None:
     async with websockets.connect(ws_url(), max_size=None) as ws:
-        await whole_session(Session(ws), port, read_timeout)
+        await whole_session(Session(ws), port, read_timeout, mission_size)
 
 
 class Radio:
@@ -216,7 +216,9 @@ class Radio:
     def __init__(self, listen_port: int, fc_port: int, baud: int = 57600, loss: float = 0.03, delay: float = 0.03):
         self.listen_port, self.fc_port = listen_port, fc_port
         self.rate, self.loss, self.delay = baud / 10, loss, delay
-        self.rng = random.Random(7)
+        seed = int(os.environ.get("RADIO_SEED", time.time()))
+        print(f"  RADIO_SEED={seed}", flush=True)
+        self.rng = random.Random(seed)
         self.lost = self.corrupted = self.overflowed = 0
 
     async def serve(self) -> asyncio.AbstractServer:
@@ -282,7 +284,8 @@ async def over_radio(fc_port: int) -> None:
     radio = Radio(fc_port + 100, fc_port)
     server = await radio.serve()
     try:
-        await over(f"tcp:127.0.0.1:{radio.listen_port}", read_timeout=240)
+        # 30 waypoints: about 70 frames each way, so a transfer is sure to lose some.
+        await over(f"tcp:127.0.0.1:{radio.listen_port}", read_timeout=240, mission_size=30)
     finally:
         server.close()
     print(f"  radio lost {radio.lost}, corrupted {radio.corrupted}, overflowed {radio.overflowed}", flush=True)

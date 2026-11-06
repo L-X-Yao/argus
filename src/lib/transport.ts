@@ -68,6 +68,8 @@ import {
 
 export type TransportMode = 'websocket' | 'serial';
 
+export type SerialHandlers = Partial<MessageHandlers> & { onCommandNoAnswer?: (command: number) => void };
+
 interface SerialState {
   conn: SerialConnection | null;
   buf: Uint8Array;
@@ -77,7 +79,7 @@ interface SerialState {
   targetSysId: number;
   targetCompId: number;
   targetLatched: boolean;
-  handlers: Partial<MessageHandlers>;
+  handlers: SerialHandlers;
   lastFrameAt: number;
 }
 
@@ -125,7 +127,7 @@ export function webSerialAvailable(): boolean {
  * Connect via WebSerial.
  * Returns true if connection was established.
  */
-export async function connectSerial(baudRate: number, handlers: Partial<MessageHandlers>): Promise<boolean> {
+export async function connectSerial(baudRate: number, handlers: SerialHandlers): Promise<boolean> {
   if (serial.conn) await disconnectSerial();
 
   try {
@@ -186,6 +188,7 @@ export async function connectSerial(baudRate: number, handlers: Partial<MessageH
         // Another vehicle on a shared link would flip every field at each heartbeat, as
         // backend _process says. There is no fleet list here to feed.
         if (serial.targetLatched && frame.sysId !== serial.targetSysId) continue;
+        if (frame.msgId === 77) _onCommandAnswered(_padView(frame.payload, 3).getUint16(0, true));
         // Mission upload state machine runs BEFORE the external dispatch so the
         // upload completes deterministically even if the user's handler set is
         // missing onMissionRequest / onMissionAck. frame.payload is a DataView.
@@ -294,6 +297,7 @@ function _clearSerialLink(): void {
   app.drone.connected = false;
   app.drone.link_age = -1;
   app.drone.adsb = [];
+  forgetSerialCommands();
 }
 
 export async function disconnectSerial(): Promise<void> {
@@ -361,11 +365,11 @@ function requestStreams(): void {
 /* ── Serial command API (mirrors ws.ts sendCommand) ── */
 
 export function serialSendArm(): void {
-  sendSerialFrame(76, encodeCommandLong(serial.targetSysId, serial.targetCompId, 400, 0, 1, 0, 0, 0, 0, 0, 0));
+  serialSendCommandLong(400, 1);
 }
 
 export function serialSendDisarm(): void {
-  sendSerialFrame(76, encodeCommandLong(serial.targetSysId, serial.targetCompId, 400, 0, 0, 0, 0, 0, 0, 0, 0));
+  serialSendCommandLong(400, 0);
 }
 
 // MAV_CMD_DO_SET_MODE, not the SET_MODE message: the FC drops the result of that one
@@ -383,11 +387,48 @@ export function serialSendParamSet(name: string, value: number, type: number = 9
   sendSerialFrame(23, encodeParamSet(serial.targetSysId, serial.targetCompId, name, value, type));
 }
 
+// Twin of backend send_cmd, which says what goes in these and why.
+const RETRIED_COMMANDS = new Set([22, 176, 181, 183, 201, 205, 300, 400, 1000]);
+const UNTRACKED_COMMANDS = new Set([246, 511, 512]);
+const CMD_RETRY_MS = 1000;
+const CMD_TRIES = 3;
+const pendingCommands = new Map<number, ReturnType<typeof setTimeout>>();
+
+function _trackCommand(command: number, resend: (confirmation: number) => void): void {
+  if (UNTRACKED_COMMANDS.has(command)) return;
+  clearTimeout(pendingCommands.get(command));
+  let tries = 1;
+  const tick = () => {
+    if (RETRIED_COMMANDS.has(command) && tries < CMD_TRIES) {
+      resend(tries);
+      tries += 1;
+      pendingCommands.set(command, setTimeout(tick, CMD_RETRY_MS));
+    } else {
+      pendingCommands.delete(command);
+      serial.handlers.onCommandNoAnswer?.(command);
+    }
+  };
+  pendingCommands.set(command, setTimeout(tick, CMD_RETRY_MS));
+}
+
+function _onCommandAnswered(command: number): void {
+  clearTimeout(pendingCommands.get(command));
+  pendingCommands.delete(command);
+}
+
+export function forgetSerialCommands(): void {
+  pendingCommands.forEach((timer) => clearTimeout(timer));
+  pendingCommands.clear();
+}
+
 export function serialSendCommandLong(command: number, p1 = 0, p2 = 0, p3 = 0, p4 = 0, p5 = 0, p6 = 0, p7 = 0): void {
-  sendSerialFrame(
-    76,
-    encodeCommandLong(serial.targetSysId, serial.targetCompId, command, 0, p1, p2, p3, p4, p5, p6, p7),
-  );
+  const send = (confirmation: number) =>
+    sendSerialFrame(
+      76,
+      encodeCommandLong(serial.targetSysId, serial.targetCompId, command, confirmation, p1, p2, p3, p4, p5, p6, p7),
+    );
+  send(0);
+  _trackCommand(command, send);
 }
 
 // SET_POSITION_TARGET_GLOBAL_INT (msg 86, 53 bytes). Mirrors backend cmd_guided_goto's struct.pack at
@@ -704,6 +745,7 @@ export function serialGimbalPitchYaw(data: {
   dv.setUint8(33, 0); // current
   dv.setUint8(34, 0); // autocontinue
   sendSerialFrame(75, payload);
+  _trackCommand(1000, () => sendSerialFrame(75, payload));
 }
 
 /* ── Mission upload state machine (WebSerial direct mode) ───────────────
@@ -713,9 +755,9 @@ export function serialGimbalPitchYaw(data: {
  * → MISSION_ACK handshake as it would from a WebSocket-backed upload.
  *
  * The FC drives the cadence — every MISSION_REQUEST(_INT) we receive maps to
- * a single MISSION_ITEM_INT response. The 5s per-item timer guards against a
- * silent FC; the 30s overall guard catches the link-up-but-not-responding
- * case so the UI doesn't hang.
+ * a single MISSION_ITEM_INT response. _armUploadRetry guards against a lost
+ * frame and a silent FC; the 30s overall guard catches the link-up-but-not-
+ * responding case so the UI doesn't hang.
  */
 
 interface UploadState {
@@ -728,6 +770,7 @@ interface UploadState {
   overallTimer: ReturnType<typeof setTimeout> | null;
   pending: boolean;
   lastSeq: number; // last seq the FC requested, -1 before first MISSION_REQUEST
+  restarts: number; // counts sent again since the FC last asked for something
 }
 
 let upload: UploadState | null = null;
@@ -769,11 +812,34 @@ function _onMissionRequest(seq: number): void {
       item.z,
     ),
   );
-  // 5s per-item watchdog: if the FC never asks for the next seq, fail loud.
+  upload.restarts = 0;
+  _armUploadRetry();
+}
+
+// Twin of backend _resend_stalled: the FC asks again for an item by itself, so silence
+// means its count or its ack went missing, and a new count starts the upload over.
+const UPLOAD_RETRY_MS = 3000;
+const UPLOAD_RESTARTS = 3;
+
+function _sendUploadCount(): void {
+  if (!upload) return;
+  const { items, missionType } = upload;
+  sendSerialFrame(44, encodeMissionCount(serial.targetSysId, serial.targetCompId, items.length, missionType));
+}
+
+function _armUploadRetry(): void {
+  if (!upload) return;
   if (upload.itemTimer) clearTimeout(upload.itemTimer);
   upload.itemTimer = setTimeout(() => {
-    _resolveUpload({ ok: false, error: `FC stopped requesting items after seq ${seq}` });
-  }, 5000);
+    if (!upload?.pending) return;
+    if (upload.restarts >= UPLOAD_RESTARTS) {
+      _resolveUpload({ ok: false, error: `FC stopped requesting items after seq ${upload.lastSeq}` });
+      return;
+    }
+    upload.restarts += 1;
+    _sendUploadCount();
+    _armUploadRetry();
+  }, UPLOAD_RETRY_MS);
 }
 
 function _onMissionAck(type: number): void {
@@ -806,8 +872,10 @@ function _startUpload(items: MissionItem[], missionType: number): Promise<{ ok: 
       }, 30000),
       pending: true,
       lastSeq: -1,
+      restarts: 0,
     };
-    sendSerialFrame(44, encodeMissionCount(serial.targetSysId, serial.targetCompId, items.length, missionType));
+    _sendUploadCount();
+    _armUploadRetry();
   });
 }
 
@@ -874,11 +942,13 @@ let storeClear: {
   missionType: number;
   resolve: (r: { ok: boolean; error?: string }) => void;
   timer: ReturnType<typeof setTimeout>;
+  retry: ReturnType<typeof setTimeout>;
 } | null = null;
 
 function _resolveStoreClear(result: { ok: boolean; error?: string }): void {
   if (!storeClear) return;
   clearTimeout(storeClear.timer);
+  clearTimeout(storeClear.retry);
   const { resolve } = storeClear;
   storeClear = null;
   resolve(result);
@@ -890,9 +960,10 @@ function _clearStore(missionType: number): Promise<{ ok: boolean; error?: string
   if (!isSerialConnected()) return Promise.resolve({ ok: false, error: 'Not connected via serial' });
   if (upload?.pending || storeClear) return Promise.resolve({ ok: false, error: 'Another upload is in progress' });
   return new Promise((resolve) => {
+    const send = () => sendSerialFrame(45, encodeMissionClearAll(serial.targetSysId, serial.targetCompId, missionType));
     const timer = setTimeout(() => _resolveStoreClear({ ok: false, error: 'No response from the FC' }), 3000);
-    storeClear = { missionType, resolve, timer };
-    sendSerialFrame(45, encodeMissionClearAll(serial.targetSysId, serial.targetCompId, missionType));
+    storeClear = { missionType, resolve, timer, retry: setTimeout(send, 1500) };
+    send();
   });
 }
 
@@ -924,6 +995,7 @@ interface DownloadState {
   items: (RawMissionItem | null)[];
   total: number;
   timer: ReturnType<typeof setTimeout> | null;
+  retries: number;
 }
 
 const download: DownloadState = {
@@ -932,13 +1004,35 @@ const download: DownloadState = {
   items: [],
   total: 0,
   timer: null,
+  retries: 0,
 };
 
-function _resetDownloadTimer(): void {
+// Twin of backend _resend_stalled: nothing else asks again after a lost frame.
+const DOWNLOAD_RETRY_MS = 1500;
+const DOWNLOAD_RETRIES = 6;
+
+function _armDownloadRetry(): void {
   if (download.timer) clearTimeout(download.timer);
   download.timer = setTimeout(() => {
-    _resolveDownload({ ok: false, error: 'Mission download stalled (no FC reply in 5s)' });
-  }, 5000);
+    if (!download.pending) return;
+    if (download.retries >= DOWNLOAD_RETRIES) {
+      _resolveDownload({ ok: false, error: 'Mission download stalled (no FC reply)' });
+      return;
+    }
+    download.retries += 1;
+    const missing = download.items.findIndex((i) => i === null);
+    if (download.total === 0) {
+      sendSerialFrame(43, encodeMissionRequestList(serial.targetSysId, serial.targetCompId, 0));
+    } else if (missing !== -1) {
+      sendSerialFrame(51, encodeMissionRequestInt(serial.targetSysId, serial.targetCompId, missing, 0));
+    }
+    _armDownloadRetry();
+  }, DOWNLOAD_RETRY_MS);
+}
+
+function _resetDownloadTimer(): void {
+  download.retries = 0;
+  _armDownloadRetry();
 }
 
 function _resolveDownload(result: { ok: boolean; error?: string; waypoints?: Waypoint[] }): void {

@@ -12,7 +12,38 @@ if TYPE_CHECKING:
     from ..drone_link import DroneLink
 
 
-def send_cmd(link: DroneLink, command: int, p1=0, p2=0, p3=0, p4=0, p5=0, p6=0, p7=0) -> None:
+# Sent again when no answer comes, as the command protocol expects of a GCS. On a radio
+# that loses 3% of its frames, 3 in 100 clicks on RTL would otherwise do nothing, and show
+# nothing. Only commands that do no harm twice: takeoff, mode, relay, servo, ROI, gimbal,
+# mission start, arm and disarm. A calibration or a motor test would start over.
+RETRIED_COMMANDS = frozenset({22, 176, 181, 183, 201, 205, 300, 400, 1000})
+# Nobody clicked 511 and 512 (see request_streams), and a reboot's answer can die with the link.
+UNTRACKED_COMMANDS = frozenset({246, 511, 512})
+
+
+def _track(link: DroneLink, command: int, resend) -> None:
+    if command not in UNTRACKED_COMMANDS:
+        retry = resend if command in RETRIED_COMMANDS else None
+        link._cmd_pending[command] = {"sent": time.time(), "tries": 1, "resend": retry}
+
+
+def check_commands(link: DroneLink) -> None:
+    from ..mavlink_handlers import report_no_answer
+
+    now = time.time()
+    for command, entry in list(link._cmd_pending.items()):
+        if now - entry["sent"] < cfg.CMD_RETRY_INTERVAL:
+            continue
+        if entry["resend"] and entry["tries"] < cfg.CMD_TRIES:
+            entry["sent"] = now
+            entry["resend"](entry["tries"])
+            entry["tries"] += 1
+        else:
+            link._cmd_pending.pop(command, None)
+            report_no_answer(link, command)
+
+
+def send_cmd(link: DroneLink, command: int, p1=0, p2=0, p3=0, p4=0, p5=0, p6=0, p7=0, confirmation=0) -> None:
     payload = struct.pack(
         "<fffffffHBBB",
         float(p1),
@@ -25,9 +56,11 @@ def send_cmd(link: DroneLink, command: int, p1=0, p2=0, p3=0, p4=0, p5=0, p6=0, 
         command,
         link.vehicle.sysid,
         1,
-        0,
+        confirmation,
     )
     link.send(bm(76, payload, link.sq, CRC_EXTRA[76]))
+    if confirmation == 0:
+        _track(link, command, lambda n: send_cmd(link, command, p1, p2, p3, p4, p5, p6, p7, confirmation=n))
 
 
 def send_cmd_int(
@@ -41,6 +74,7 @@ def send_cmd_int(
     y: int = 0,
     z: float = 0.0,
     frame: int = 0,
+    resent: bool = False,
 ) -> None:
     # COMMAND_INT (msg 75, CRC_EXTRA 158). Use this instead of send_cmd when
     # the handler reads x/y/z as type-specific slots (scaled lat/lon int32,
@@ -65,6 +99,8 @@ def send_cmd_int(
         0,
     )
     link.send(bm(75, payload, link.sq, CRC_EXTRA[75]))
+    if not resent:
+        _track(link, command, lambda _n: send_cmd_int(link, command, p1, p2, p3, p4, x, y, z, frame, resent=True))
 
 
 def send_set_mode(link: DroneLink, mode: int) -> None:

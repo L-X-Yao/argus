@@ -293,6 +293,7 @@ def handle_command_ack(p: bytes, pl: int, link: DroneLink) -> None:
     p = _pad(p, 3)
     cmd_id = struct.unpack_from("<H", p, 0)[0]
     result = p[2]
+    link._cmd_pending.pop(cmd_id, None)
     en = link.locale == "en"
     cmd_name = (_CMD_NAMES_EN if en else _CMD_NAMES_ZH).get(cmd_id, str(cmd_id))
     result_text = (_ACK_RESULTS_EN if en else _ACK_RESULTS_ZH).get(
@@ -311,6 +312,12 @@ def handle_command_ack(p: bytes, pl: int, link: DroneLink) -> None:
         return
     etype = "cmd_ack_ok" if result == 0 else "cmd_ack_fail"
     link.add_event(lt("cmd_ack", link.locale) % (cmd_name, result_text), etype)
+
+
+def report_no_answer(link: DroneLink, cmd_id: int) -> None:
+    en = link.locale == "en"
+    cmd_name = (_CMD_NAMES_EN if en else _CMD_NAMES_ZH).get(cmd_id, str(cmd_id))
+    link.add_event(lt("cmd_ack", link.locale) % (cmd_name, lt("cmd_no_answer", link.locale)), "cmd_ack_fail")
 
 
 # ArduPilot: libraries/AP_Compass/AP_Compass_Calibration.cpp:270 — Compass::send_mag_cal_progress
@@ -646,6 +653,7 @@ def handle_mission_item_int(p: bytes, pl: int, link: DroneLink) -> None:
 def _request_dl_item(link: DroneLink, seq: int) -> None:
     from .mavlink_frame import bm
 
+    link.mission._dl_last_send = time.time()
     link.send(bm(51, struct.pack("<HBBB", seq, link.vehicle.sysid, 1, 0), link.sq, CRC_EXTRA[51]))
 
 

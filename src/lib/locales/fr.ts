@@ -1100,6 +1100,7 @@ const messages: Record<string, string> = {
   'ack.result.failed': 'échec',
   'ack.result.commandLongOnly': 'COMMAND_LONG uniquement',
   'ack.result.commandIntOnly': 'COMMAND_INT uniquement',
+  'ack.result.noAnswer': 'pas de réponse',
   'ack.result.unknown': 'inconnu({n})',
   'pid.autoSaved': 'Chaque réglage part aussitôt vers le contrôleur, qui le conserve',
   'ortho.badCoords': 'Le coin NO doit être au nord et à l’ouest du coin SE',
