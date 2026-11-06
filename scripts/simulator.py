@@ -744,6 +744,8 @@ class Simulator:
 
 
 def serve(port):
+    # Its messages are Chinese, and an English Windows would crash printing them to a pipe.
+    sys.stdout.reconfigure(encoding="utf-8", errors="replace")
     sim = Simulator()
     srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
