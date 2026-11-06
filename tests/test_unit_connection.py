@@ -173,3 +173,19 @@ class TestTcpSocketCleanup:
         with patch("backend.connection.socket.socket", return_value=mock_sock), pytest.raises(OSError):
             open_port("tcp:127.0.0.1:5770", 57600)
         mock_sock.close.assert_called_once()
+
+
+class TestUdpDatagrams:
+    def test_a_datagram_longer_than_the_read_keeps_its_tail(self):
+        """SITL packs several frames into one datagram, and recvfrom drops what does not fit."""
+        import socket
+
+        wrapper = UdpWrapper(0, "127.0.0.1")
+        port = wrapper._sock.getsockname()[1]
+        sender = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        try:
+            sender.sendto(b"x" * 2000, ("127.0.0.1", port))
+            assert len(wrapper.read(1024)) == 2000
+        finally:
+            sender.close()
+            wrapper.close()

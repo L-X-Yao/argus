@@ -1,0 +1,4 @@
+# The FC paces parameters by the port baud rate, as it would on a telemetry radio. SITL
+# only does that with the limit on (libraries/AP_HAL_SITL/UARTDriver.cpp:1027).
+SERIAL0_BAUD 57
+SIM_BAUDLIMIT_EN 1

@@ -63,7 +63,9 @@ class UdpWrapper:
         try:
             import time as _t
 
-            data, addr = self._sock.recvfrom(n)
+            # Whatever n says: a datagram longer than the buffer loses its tail, and SITL
+            # packs several frames into one.
+            data, addr = self._sock.recvfrom(65535)
             now = _t.monotonic()
             if self._remote is None or (
                 addr != self._remote and (now - self._remote_last_seen) > self._PEER_HIJACK_GUARD

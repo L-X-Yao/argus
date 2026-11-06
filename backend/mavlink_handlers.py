@@ -96,6 +96,9 @@ def handle_heartbeat(p: bytes, pl: int, link: DroneLink) -> None:
     v.sysid = link._raw_sysid
     if not link.connected:
         link.connected = True
+        # Ask again now that the FC is known to hear us. Over UDP nothing can leave before
+        # its first packet says where it is, so the earlier requests went nowhere.
+        link._streams_sysid = 0
         link.add_event(lt("connected", link.locale) % v.sysid, "connected")
 
 
