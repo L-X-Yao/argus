@@ -50,3 +50,14 @@ export async function login(token: string): Promise<boolean> {
   const data = await res.json();
   return data.ok === true;
 }
+
+// A map source for an .mbtiles file in the backend's mbtiles/ folder.
+const OFFLINE_PREFIX = 'mbtiles:';
+export const offlineSource = (file: string): string => OFFLINE_PREFIX + file;
+export const isOfflineSource = (id: string): boolean => id.startsWith(OFFLINE_PREFIX);
+
+export function tileUrl(style: string): string {
+  if (!isOfflineSource(style)) return `${API_BASE}/api/tile/${style}/{z}/{x}/{y}`;
+  const file = encodeURIComponent(style.slice(OFFLINE_PREFIX.length));
+  return `${API_BASE}/api/mbtiles/${file}/{z}/{x}/{y}`;
+}

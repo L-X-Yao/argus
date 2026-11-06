@@ -428,6 +428,7 @@ const messages: Record<string, string> = {
   'settings.mapRegion': '地図リージョン',
   'settings.mapSource': '地図ソース',
   'settings.china': '中国',
+  'settings.offlineMaps': 'オフライン地図',
   'map.amap': 'Amap（高徳）',
   'map.tianditu': '天地図',
   'settings.language': '言語',

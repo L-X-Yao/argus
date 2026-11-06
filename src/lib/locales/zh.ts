@@ -472,6 +472,7 @@ const messages: Record<string, string> = {
   'settings.mapRegion': '地图区域',
   'settings.mapSource': '地图源',
   'settings.china': '中国',
+  'settings.offlineMaps': '离线地图',
   'map.amap': '高德地图',
   'map.tianditu': '天地图',
   'settings.language': '语言',

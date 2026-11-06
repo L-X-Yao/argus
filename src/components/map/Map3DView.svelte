@@ -4,7 +4,7 @@
   import { dispatch } from '../../lib/transport';
   import { toGcj, toWgs } from '../../lib/gcj02';
   import { t } from '../../lib/i18n.svelte';
-  import { API_BASE } from '../../lib/backend';
+  import { isOfflineSource, tileUrl } from '../../lib/backend';
   import { Ruler, Square, ShieldAlert, Grid3x3, X as XIcon } from '@lucide/svelte';
   import { segDist } from '../../lib/missionIO';
   import { polygonArea } from '../../lib/survey';
@@ -59,7 +59,9 @@
   };
 
   function curSource(): TileSourceDef {
-    return SOURCES[app.tileSource] || SOURCES['osm'];
+    const id = app.tileSource;
+    if (isOfflineSource(id)) return { name: id, sat: id, gcj02: false } as TileSourceDef;
+    return SOURCES[id] || SOURCES['osm'];
   }
   let useGcj = $derived(curSource().gcj02);
   function toMap(lat: number, lon: number): [number, number] {
@@ -128,7 +130,7 @@
 
   onMount(() => {
     const src = curSource();
-    const tileUrl = `${API_BASE}/api/tile/${src.sat}/{z}/{x}/{y}`;
+    const url = tileUrl(src.sat);
     // Track the initial tile source so the prevTileSource $effect doesn't
     // fire a redundant swap on first render. Mirrors MapView.svelte:97.
     prevTileSource = app.tileSource;
@@ -142,7 +144,7 @@
           sources: {
             'raster-tiles': {
               type: 'raster',
-              tiles: [tileUrl],
+              tiles: [url],
               tileSize: 256,
               maxzoom: 18,
             },
@@ -857,7 +859,7 @@
     if (!map || !overlaysReady || ts === prevTileSource) return;
     prevTileSource = ts;
     const src = curSource();
-    const url = `${API_BASE}/api/tile/${src.sat}/{z}/{x}/{y}`;
+    const url = tileUrl(src.sat);
     if (map.getLayer('raster')) map.removeLayer('raster');
     if (map.getSource('raster-tiles')) map.removeSource('raster-tiles');
     map.addSource('raster-tiles', {

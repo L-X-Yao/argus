@@ -4,7 +4,7 @@
   import { dispatch } from '../../lib/transport';
   import { fmtDist } from '../../lib/units';
   import { toGcj, toWgs } from '../../lib/gcj02';
-  import { API_BASE } from '../../lib/backend';
+  import { isOfflineSource, tileUrl } from '../../lib/backend';
   import MapControls from './MapControls.svelte';
   import HudOverlay from './HudOverlay.svelte';
   import { FileUp } from '@lucide/svelte';
@@ -98,12 +98,10 @@
     tianditu: { name: 'Tianditu', sat: 'tdt_sat', vec: 'tdt_vec', label: 'tdt_label', gcj02: false, region: 'china' },
   };
 
-  function tileUrl(style: string): string {
-    return `${API_BASE}/api/tile/${style}/{z}/{x}/{y}`;
-  }
-
   function curSource(): TileSourceDef {
-    return SOURCES[app.tileSource] || SOURCES['amap'];
+    const id = app.tileSource;
+    if (isOfflineSource(id)) return { name: id, sat: id, vec: id, label: null, gcj02: false, region: 'global' };
+    return SOURCES[id] || SOURCES['amap'];
   }
 
   let useGcj = $derived(curSource().gcj02);

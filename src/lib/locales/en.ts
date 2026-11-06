@@ -472,6 +472,7 @@ const messages: Record<string, string> = {
   'settings.mapRegion': 'Map Region',
   'settings.mapSource': 'Map Source',
   'settings.china': 'China',
+  'settings.offlineMaps': 'Offline maps',
   'map.amap': 'Amap (Gaode)',
   'map.tianditu': 'Tianditu',
   'settings.language': 'Language',

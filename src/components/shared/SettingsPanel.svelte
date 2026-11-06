@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount } from 'svelte';
   import { app, saveSettings } from '../../lib/stores.svelte';
   import { t, i18nState, setLocale, VALID_LOCALES, LOCALE_BETA } from '../../lib/i18n.svelte';
   import type { Locale } from '../../lib/i18n.svelte';
@@ -16,6 +17,7 @@
     ar: 'العربية',
   };
   import { gamepad, startGamepad, stopGamepad } from '../../lib/gamepad.svelte';
+  import { apiUrl, offlineSource } from '../../lib/backend';
   import Button from '$lib/components/ui/button/button.svelte';
   import FirmwarePanel from '../setup/FirmwarePanel.svelte';
   import {
@@ -34,6 +36,16 @@
   } from '@lucide/svelte';
 
   let { onclose }: { onclose: () => void } = $props();
+
+  let offlineMaps = $state<string[]>([]);
+  onMount(async () => {
+    try {
+      const r = await fetch(apiUrl('/api/mbtiles/list'));
+      offlineMaps = (await r.json()).files ?? [];
+    } catch {
+      // No backend: the list stays empty, and so does the group in the source picker.
+    }
+  });
   const VERSION = '3.4.0';
   const BUILD = __BUILD_DATE__;
 </script>
@@ -219,6 +231,13 @@
                 <option value="carto_dark">CartoDB Dark</option>
                 <option value="carto_light">CartoDB Light</option>
               </optgroup>
+              {#if offlineMaps.length > 0}
+                <optgroup label={t('settings.offlineMaps')}>
+                  {#each offlineMaps as file}
+                    <option value={offlineSource(file)}>{file}</option>
+                  {/each}
+                </optgroup>
+              {/if}
             </select>
           </div>
           <div class="flex justify-between items-center py-2 border-b border-border/50">

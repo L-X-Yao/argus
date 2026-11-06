@@ -493,6 +493,8 @@ jobs:
           tests/e2e/map.spec.ts
           tests/e2e/map3d.spec.ts
           tests/e2e/mission.spec.ts
+          tests/e2e/mission-files.spec.ts
+          tests/e2e/offline-map.spec.ts
           tests/e2e/mobile.spec.ts
           tests/e2e/pwa.spec.ts
           tests/e2e/settings.spec.ts
