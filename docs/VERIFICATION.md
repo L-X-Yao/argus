@@ -27,12 +27,12 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 
 | Area | Items | Real FC | SITL | Simulator | Tests only | None | n/a |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Commands, backend | 53 | 17 | 30 | 0 | 6 | 0 | 0 |
-| Commands, WebSerial | 53 | 9 | 31 | 0 | 3 | 0 | 10 |
+| Commands, backend | 53 | 19 | 28 | 0 | 6 | 0 | 0 |
+| Commands, WebSerial | 53 | 12 | 28 | 0 | 3 | 0 | 10 |
 | Messages, backend | 35 | 28 | 3 | 0 | 4 | 0 | 0 |
-| Messages, WebSerial | 35 | 16 | 13 | 0 | 5 | 0 | 1 |
+| Messages, WebSerial | 35 | 17 | 13 | 0 | 4 | 0 | 1 |
 | REST routes | 28 | 6 | 5 | 17 | 0 | 0 | 0 |
-| Panels | 80 | 13 | 33 | 18 | 14 | 2 | 0 |
+| Panels | 80 | 14 | 33 | 17 | 14 | 2 | 0 |
 | Platform | 44 | 8 | 14 | 10 | 7 | 2 | 3 |
 
 ## Commands / 飞控命令
@@ -42,7 +42,7 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 | `arm` | Arm | 解锁 | SITL | SITL | CI on both links |
 | `disarm` | Disarm | 上锁 | Real FC | SITL | Backend 2026-07-16, WebSerial CI |
 | `force_disarm` | Force disarm | 强制上锁 | SITL | SITL | CI on both links |
-| `mode` | Change mode | 切换模式 | SITL | SITL | CI on both links. Real FC 2026-11-05 used the SET_MODE message, since replaced by a command the FC answers |
+| `mode` | Change mode | 切换模式 | Real FC | Real FC | Both 2026-11-06 on Windows, the command the FC answers: in about 0.3 s, and Stabilize put back. CI on both links |
 | `rtl` | Return to launch | 返航 | SITL | SITL | CI on both links |
 | `takeoff` | Take off | 起飞 | SITL | SITL | CI on both links |
 | `guided_goto` | Fly to a point | 引导飞行 | SITL | SITL | WebSerial CI, backend manual SITL 2026-05 |
@@ -68,15 +68,15 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 | `cal_gyro` | Gyro calibration | 陀螺仪校准 | Real FC | SITL | Backend 2026-05, CI on both links |
 | `cal_level` | Level calibration | 水平校准 | SITL | SITL | CI on both links |
 | `cal_baro` | Barometer calibration | 气压计校准 | SITL | SITL | CI on both links |
-| `cal_compass` | Compass calibration | 罗盘校准 | SITL | SITL | CI on both links. Backend on a real FC 2026-05, before the link took over accepting: worth a new hardware run |
+| `cal_compass` | Compass calibration | 罗盘校准 | SITL | SITL | CI on both links. On a real FC 2026-11-06 it starts and cancels on both links; a whole run needs the board turned by hand |
 | `cal_compass_accept` | Accept compass result | 确认罗盘结果 | SITL | SITL | CI on both links. Backend on a real FC 2026-05, before the link took over accepting: worth a new hardware run |
 | `cal_accel` | Accelerometer calibration | 加速度计校准 | Real FC | SITL | Backend 2026-05, WebSerial CI, SITL recording replayed in CI |
 | `cal_accel_next` | Next calibration pose | 校准下一姿态 | Real FC | SITL | Backend 2026-05, WebSerial CI, SITL recording replayed in CI |
-| `cal_cancel` | Cancel calibration | 取消校准 | Real FC | SITL | Backend 2026-05, CI on both links |
-| `log_list` | List logs | 日志列表 | Real FC | Real FC | Both 2026-11-05 |
-| `log_download` | Download a log | 下载日志 | Real FC | Real FC | Both 2026-11-05, same sha256 on both links |
+| `cal_cancel` | Cancel calibration | 取消校准 | Real FC | Real FC | Both 2026-11-06 on Windows, CI on both links |
+| `log_list` | List logs | 日志列表 | Real FC | Real FC | Both 2026-11-06 on Windows |
+| `log_download` | Download a log | 下载日志 | Real FC | Real FC | Both 2026-11-06 on Windows, same sha256 on both links |
 | `log_cancel` | Cancel a download | 取消下载 | SITL | SITL | CI on both links |
-| `reboot` | Reboot the FC | 重启飞控 | SITL | SITL | CI on both links |
+| `reboot` | Reboot the FC | 重启飞控 | Real FC | Real FC | Both 2026-11-06 on Windows, disarmed. WebSerial comes back by the USB button, the backend by itself |
 | `reboot_bootloader` | Reboot to bootloader | 重启到 Bootloader | SITL | SITL | CI on both links |
 | `serial_control` | MAVLink console | MAVLink 控制台 | Real FC | n/a | Backend 2026-05, CI |
 | `inspector_toggle` | Message inspector | 消息检查器开关 | SITL | n/a | CI, local state only |
@@ -120,9 +120,9 @@ CI 在两条链路上都驱动 SITL。WebSerial 用模拟串口接真实固件�
 | `VFR_HUD` | Airspeed, climb, throttle | 空速、爬升、油门 | Real FC | Real FC | Both 2026-11-05 |
 | `COMMAND_ACK` | Command result | 命令结果 | Real FC | SITL | Backend 2026-07-16, both links CI |
 | `LOG_ENTRY` | Log list | 日志列表 | Real FC | Real FC | Both 2026-11-05 |
-| `LOG_DATA` | Log download | 日志下载 | Real FC | Real FC | Both 2026-11-05 |
+| `LOG_DATA` | Log download | 日志下载 | Real FC | Real FC | Both 2026-11-06 on Windows |
 | `SERIAL_CONTROL` | MAVLink console | MAVLink 控制台 | Real FC | n/a | Backend 2026-05 |
-| `TERRAIN_REPORT` | Terrain height | 地形高度 | Real FC | Tests only | Backend 2026-05, both links compared on the same frame |
+| `TERRAIN_REPORT` | Height above ground | 离地高度 | Real FC | Real FC | Both 2026-11-06, on a board with terrain data: the reading follows altitude less ground |
 | `BATTERY_STATUS` | Cell voltages | 电芯电压 | Real FC | SITL | Backend 2026-05, WebSerial CI |
 | `AUTOPILOT_VERSION` | Firmware version | 固件版本 | Real FC | SITL | Backend 2026-11-05, WebSerial CI |
 | `MOUNT_STATUS` | Gimbal angles | 云台角度 | Tests only | Tests only | No current firmware sends it: both links compared on the same frame |
@@ -190,7 +190,7 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 | `LazyPanelHost` | core | 按需加载弹出面板 | Real FC | 2026-11-05 on both links |
 | `MapControls` | core | 放大地图时快捷操控 | SITL | CI by clicks on firmware: pause by FC mode |
 | `MapView` | core | 看地图并点选航点 | Real FC | 2026-11-05 on both links |
-| `StatusBar` | core | 看链路电池定位状态 | Real FC | 2026-11-05 on both links |
+| `StatusBar` | core | 看链路电池定位状态 | Real FC | 2026-11-06 on both links on Windows. The E: counter stayed at 0 for 75 s on the backend, where a parser fix stopped it counting skipped messages |
 | `ToastContainer` | core | 查看操作提示消息 | Real FC | 2026-11-05 on both links |
 | `DroneLayer` | layers | 地图上看飞机位置 | Real FC | 2026-11-05 on both links |
 | `FenceLayer` | layers | 地图上看围栏范围 | Tests only | Browser test: a saved fence is drawn |
@@ -218,7 +218,7 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 | `FailsafeConfigPanel` | params | 配置失控保护 | SITL | CI by clicks on firmware: every section written and read back |
 | `FlightModePanel` | params | 配置六档飞行模式 | SITL | CI by clicks on firmware: six slots read, FLTMODE written |
 | `ParamDiffPanel` | params | 对比参数文件差异 | SITL | CI by clicks on firmware: export, compare, apply |
-| `ParamPanel` | params | 读取编辑飞控参数 | Real FC | 2026-11-05 on both links, reading; writes used the same dispatch, not the row editor |
+| `ParamPanel` | params | 读取编辑飞控参数 | Real FC | 2026-11-06 on both links on Windows: 1028 parameters in about 4 s. Writes 2026-11-05 used the same dispatch, not the row editor |
 | `PidPanel` | params | 调节PID参数 | SITL | CI by clicks on firmware: typed and slider gains reach the FC |
 | `PowerCalPanel` | params | 校准电压电流 | SITL | CI by clicks on firmware: voltage and current scale on the FC |
 | `AiAnnotationPanel` | planning | 标注图像缺陷 | None | No test. Auto-detect is a stub. No way to open it |
@@ -228,7 +228,7 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 | `OverlapCalcPanel` | planning | 计算相机重叠率 | Tests only | Browser test: opens without an error |
 | `SchedulerPanel` | planning | 定时执行任务 | Tests only | Logic: scheduler. No way to open it |
 | `ScriptPanel` | planning | 运行用户脚本 | Tests only | Logic: ws. No way to open it |
-| `CalibrationPanel` | setup | 校准传感器 | Simulator | e2e: connected-flow |
+| `CalibrationPanel` | setup | 校准传感器 | Real FC | 2026-11-06 on both links: compass start and cancel only, no whole run. e2e: connected-flow |
 | `EscCalPanel` | setup | 校准电调 | SITL | CI by clicks on firmware: parameter and undo. The calibration itself needs a power cycle |
 | `FirmwarePanel` | setup | 上传固件并重启 | Simulator | e2e: settings, mobile |
 | `FrameSelectPanel` | setup | 选择机架类型 | SITL | CI by clicks on firmware: class and type written, layouts match the firmware |
@@ -248,14 +248,14 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 | `EkfPanel` | telemetry | 查看导航滤波状态 | Simulator | e2e: connected-flow, navigation |
 | `RcPanel` | telemetry | 查看遥控通道 | Simulator | e2e: connected-flow, navigation |
 | `ServoPanel` | telemetry | 查看舵机输出 | Simulator | e2e: connected-flow, navigation |
-| `TelemetryOverlay` | telemetry | 飞行中看关键遥测 | Real FC | 2026-11-05 on both links |
+| `TelemetryOverlay` | telemetry | 飞行中看关键遥测 | Real FC | 2026-11-06 on both links on Windows. Above ground was showing the height of the ground, found and fixed that day |
 | `VibrationPanel` | telemetry | 查看振动水平 | Simulator | e2e: connected-flow, navigation |
 | `AdvancedCmdPanel` | tools | 给航点加高级指令 | SITL | CI by clicks on firmware: items land on the FC |
 | `ConsolePanel` | tools | 发送飞控控制台命令 | Simulator | e2e: memory |
 | `FFTPanel` | tools | 分析日志频谱 | SITL | CI on a real .BIN: finds an injected 35 Hz tone |
 | `FlightReportPanel` | tools | 填写导出飞行报告 | SITL | CI by clicks on firmware: keeps the flight after the summary closes |
 | `InspectorPanel` | tools | 检视实时消息流 | Simulator | e2e: memory |
-| `LogPanel` | tools | 下载机载日志 | Real FC | 2026-11-05 on both links |
+| `LogPanel` | tools | 下载机载日志 | Real FC | 2026-11-06 on both links on Windows |
 | `LogViewerPanel` | tools | 绘图查看日志 | SITL | CI on a real .BIN, compared with pymavlink |
 | `RemotePanel` | tools | 查看会话复制链接 | SITL | CI: client count from the backend |
 | `ReplayPanel` | tools | 加载并回放飞行日志 | Simulator | e2e: map3d |
@@ -267,10 +267,10 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 
 | Feature | 功能 | Level | Evidence |
 | --- | --- | --- | --- |
-| Serial through the backend | 后端串口 | Real FC | 2026-11-05 |
-| WebSerial | 浏览器直连 USB | Real FC | 2026-11-05, Chromium on Linux through usbipd |
-| Log download speed | 日志下载速度 | Real FC | 2026-11-05, about 700 KB/s on both links |
-| Reconnect after a lost link | 断链重连 | Real FC | 2026-11-05, USB pulled on both links. CI: WebSerial keeps the flight through a drop in the air, on SITL |
+| Serial through the backend | 后端串口 | Real FC | 2026-11-06 on Windows, COM port; 2026-11-05 on Linux through usbipd |
+| WebSerial | 浏览器直连 USB | Real FC | 2026-11-06, real Edge on Windows, the port chooser used with the mouse. 2026-11-05, Chromium on Linux through usbipd |
+| Log download speed | 日志下载速度 | Real FC | 2026-11-06 on Windows, about 660 KB/s on both links. 2026-11-05 through usbipd, about 700 KB/s |
+| Reconnect after a lost link | 断链重连 | Real FC | 2026-11-06, FC reboot on Windows on both links. 2026-11-05, USB pulled on both links. CI: WebSerial keeps the flight through a drop in the air, on SITL |
 | PFD and HUD | PFD 和 HUD | Real FC | 2026-11-05 on both links; west heading and RC not checked |
 | Preflight checks | 起飞前检查 | Real FC | 2026-11-05 on both links |
 | Copter | 多旋翼 | Real FC | Bench 2026-11-05, flight modes in SITL |
@@ -316,18 +316,18 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 
 1. **Real flight.** Nothing has flown. Everything below is a bench or simulation result at best.
 2. **Arm, take off, RTL and mission start on a real FC.** These have only run in SITL. They need a battery, so they need a separate, deliberate session.
-3. **Calibration and reboot on a real FC over WebSerial.** SITL only so far, and compass and accelerometer need the board turned by hand.
+3. **A whole calibration on a real FC.** Compass start and cancel ran on both links 2026-11-06. A whole run needs the board turned by hand.
 4. **RTK, gimbal, camera and ADS-B.** These need hardware that has not been available.
 5. **Vehicles other than Copter on real hardware.** Plane, QuadPlane, Rover and Sub run whole missions in SITL in CI through the backend. None has been on a real board since the 2026-05 telemetry check.
-6. **WebSerial in Chrome on Windows.** The 2026-11-05 run used Chromium on Linux with the port chooser automated.
+6. **Chrome itself on Windows.** Edge on Windows ran through the real port chooser 2026-11-06. Chrome was not on that machine.
 7. **Four panels nobody can open.** Scripts, scheduler, AI planner and AI annotation exist in code only.
 
 1. **真实飞行。** 没有飞过。下面都只是台架或仿真结果。
 2. **真机上的解锁、起飞、返航、开始任务。** 只在 SITL 跑过。这些需要接电池，要单独安排。
-3. **真机上经 WebSerial 的校准和重启。** 目前只在 SITL 跑过，罗盘和加速度计需要手动翻转板子。
+3. **真机上的完整校准。** 2026-11-06 两条链路都跑过罗盘的启动和取消，完整校准需要手动翻转板子。
 4. **RTK、云台、相机、ADS-B。** 缺硬件。
 5. **多旋翼以外机型上真机。** 固定翼、QuadPlane、地面车、水下机器人在 CI 里经后端跑完整任务（SITL）。除 2026-05 的遥测检查外，都没有接过真实飞控。
-6. **Windows 上 Chrome 的 WebSerial。** 2026-11-05 的测试用的是 Linux 上的 Chromium，端口选择由脚本代替。
+6. **Windows 上的 Chrome 本身。** 2026-11-06 已用 Windows 上的 Edge 走真实端口弹窗，那台机器没有装 Chrome。
 7. **4 个打不开的面板。** 脚本、定时任务、AI 规划、AI 标注只存在于代码中。
 
 ## Keeping this file honest / 维护规则
