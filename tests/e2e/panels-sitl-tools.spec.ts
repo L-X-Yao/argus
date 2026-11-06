@@ -102,7 +102,7 @@ test.describe('FFT', () => {
     const peaks = (await notch.locator('span.font-mono').allTextContents())
       .filter((t) => t.endsWith('Hz'))
       .map((t) => parseFloat(t));
-    expect(peaks.some((hz) => Math.abs(hz - TONE_HZ) < 1.5)).toBe(true);
+    expect(Math.abs(peaks[0] - TONE_HZ)).toBeLessThan(1.5);
     await close(page, dialog);
   });
 });

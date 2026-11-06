@@ -163,6 +163,15 @@ export function firstDataColumn(fmt: DFFormat): string | undefined {
  * One field over time. Where a type has instances, only the first: every IMU writes its
  * rows into the same stream, and read as one series they make a saw-tooth at the log rate.
  */
+/**
+ * Seconds between samples. The median, because logging pauses at a disarm: the span over the
+ * count takes the pause for a slower rate, and reads every frequency found from it low.
+ */
+export function sampleInterval(times: number[]): number {
+  const gaps = Float64Array.from(times.slice(1), (time, i) => time - times[i]).sort();
+  return gaps.length > 0 ? gaps[gaps.length >> 1] : 0;
+}
+
 export function getTimeSeries(log: DFLog, msgType: string, field: string): { t: number[]; v: number[] } {
   const t: number[] = [];
   const v: number[] = [];
@@ -183,6 +192,31 @@ export function getTimeSeries(log: DFLog, msgType: string, field: string): { t: 
     }
   }
   return { t, v };
+}
+
+// INS_HNTCH_FREQ @Range (libraries/Filter/HarmonicNotchFilter.cpp:71). Under it is the vehicle
+// flying, not a vibration, and it is often the strongest thing in a spectrum.
+const NOTCH_MIN_HZ = 10;
+
+/** The strongest peaks a notch could be put on, with their width at half power. */
+export function findPeaks(freq: number[], mag: number[], count: number): { freq: number; mag: number; bw: number }[] {
+  if (mag.length < 3) return [];
+  const peaks: { idx: number; val: number }[] = [];
+  for (let i = 1; i < mag.length - 1; i++) {
+    if (freq[i] >= NOTCH_MIN_HZ && mag[i] > mag[i - 1] && mag[i] > mag[i + 1]) {
+      peaks.push({ idx: i, val: mag[i] });
+    }
+  }
+  peaks.sort((a, b) => b.val - a.val);
+
+  return peaks.slice(0, count).map((p) => {
+    const threshold = p.val * 0.707;
+    let lo = p.idx,
+      hi = p.idx;
+    while (lo > 0 && mag[lo] > threshold) lo--;
+    while (hi < mag.length - 1 && mag[hi] > threshold) hi++;
+    return { freq: freq[p.idx], mag: p.val, bw: Math.max(freq[hi] - freq[lo], freq[1] - freq[0]) };
+  });
 }
 
 export function computeFFT(values: number[], sampleRate: number): { freq: number[]; mag: number[] } {

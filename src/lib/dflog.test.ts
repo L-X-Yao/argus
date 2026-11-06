@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { parseDFLog, getTimeSeries, firstDataColumn, computeFFT } from './dflog';
+import { parseDFLog, getTimeSeries, firstDataColumn, computeFFT, findPeaks, sampleInterval } from './dflog';
 import type { DFLog } from './dflog';
 
 /* ── Helpers ── */
@@ -301,6 +301,31 @@ describe('a type with instances', () => {
 
   it('reads one sensor, not all of them in turn', () => {
     expect(getTimeSeries(makeLog(), 'IMU', 'GyrX').v).toEqual([1, 2]);
+  });
+});
+
+describe('sampleInterval', () => {
+  it('takes a pause in the log for a pause, not for a slower rate', () => {
+    const times = Array.from({ length: 4000 }, (_, i) => i / 400);
+    const resumed = times.map((t, i) => (i < 2000 ? t : t + 7.4)); // logging stops at a disarm
+    expect(sampleInterval(resumed)).toBeCloseTo(1 / 400, 9);
+  });
+
+  it('has nothing to say about a single sample', () => {
+    expect(sampleInterval([1])).toBe(0);
+  });
+});
+
+describe('findPeaks', () => {
+  const freq = [0, 0.1, 0.2, 5, 6, 7, 34, 35, 36, 70, 71, 72];
+  const mag = [0, 9, 0, 0, 8, 0, 0, 3, 0, 0, 2, 0];
+
+  it('leaves out what is under the lowest notch the FC takes', () => {
+    expect(findPeaks(freq, mag, 3).map((p) => p.freq)).toEqual([35, 71]);
+  });
+
+  it('gives the strongest first, and no more than asked for', () => {
+    expect(findPeaks(freq, mag, 1).map((p) => p.freq)).toEqual([35]);
   });
 });
 

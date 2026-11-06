@@ -1,7 +1,7 @@
 <script lang="ts">
   import { addToast } from '../../lib/stores.svelte';
   import { t } from '../../lib/i18n.svelte';
-  import { parseDFLog, getTimeSeries, computeFFT, type DFLog } from '../../lib/dflog';
+  import { parseDFLog, getTimeSeries, computeFFT, findPeaks, sampleInterval, type DFLog } from '../../lib/dflog';
   import Button from '$lib/components/ui/button/button.svelte';
   import { X, BarChart3 } from '@lucide/svelte';
 
@@ -93,39 +93,13 @@
     return { freq: avgFreq, mag: avgMag };
   }
 
-  /** Detect top N peaks in the magnitude spectrum */
-  function findPeaks(freq: number[], mag: number[], count: number): { freq: number; mag: number; bw: number }[] {
-    if (mag.length < 3) return [];
-    // Find all local maxima
-    const peaks: { idx: number; val: number }[] = [];
-    for (let i = 1; i < mag.length - 1; i++) {
-      if (mag[i] > mag[i - 1] && mag[i] > mag[i + 1]) {
-        peaks.push({ idx: i, val: mag[i] });
-      }
-    }
-    peaks.sort((a, b) => b.val - a.val);
-    const topPeaks = peaks.slice(0, count);
-
-    return topPeaks.map((p) => {
-      const peakFreq = freq[p.idx];
-      // Estimate bandwidth at -3dB (half power)
-      const threshold = p.val * 0.707;
-      let lo = p.idx,
-        hi = p.idx;
-      while (lo > 0 && mag[lo] > threshold) lo--;
-      while (hi < mag.length - 1 && mag[hi] > threshold) hi++;
-      const bw = freq[hi] - freq[lo];
-      return { freq: peakFreq, mag: p.val, bw: Math.max(bw, freq[1] - freq[0]) };
-    });
-  }
-
   $effect(() => {
     if (!canvasEl || !log) return;
     const [msgType, field] = source.split('.');
     const series = getTimeSeries(log, msgType, field);
     if (series.t.length < 64) return;
 
-    const dt = series.t.length > 1 ? (series.t[series.t.length - 1] - series.t[0]) / (series.t.length - 1) : 0.001;
+    const dt = sampleInterval(series.t);
     const sampleRate = 1 / dt;
 
     // Compute FFT: either Welch's method or single-shot
