@@ -29,7 +29,12 @@ test.describe('3D map', () => {
   test('boots with a running worker and its controls', async ({ page }) => {
     const pageErrors: string[] = [];
     page.on('pageerror', (e) => pageErrors.push(e.message));
-    const worker = page.waitForEvent('worker', { predicate: (w) => w.url().includes('maplibre-gl-worker') });
+    // Hosted macOS and Windows runners do not reliably report the worker to Playwright. The
+    // tests below still show it working there: GeoJSON overlays draw through it.
+    const worker =
+      process.platform === 'linux'
+        ? page.waitForEvent('worker', { predicate: (w) => w.url().includes('maplibre-gl-worker') })
+        : null;
 
     await open3d(page);
 
@@ -38,9 +43,7 @@ test.describe('3D map', () => {
     await expect(page.locator('.maplibregl-ctrl-scale')).toBeVisible();
     // `self.worker` is set by maplibre's worker entry, so this proves the
     // script executed rather than just that a Worker object was constructed.
-    // Hosted macOS and Windows runners do not reliably answer an evaluate inside the worker.
-    // The tests below still show it working there: GeoJSON overlays draw through it.
-    if (process.platform === 'linux') {
+    if (worker) {
       await expect
         .poll(async () => (await worker).evaluate(() => typeof (self as { worker?: unknown }).worker))
         .toBe('object');
