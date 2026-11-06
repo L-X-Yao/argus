@@ -119,9 +119,9 @@ VTOL_MODES: dict[str, int] = {"hold": 19, "land": 20}
 # MAV_TYPE of components that send heartbeats but are not the vehicle: GCS,
 # ONBOARD_CONTROLLER, GIMBAL, ADSB.
 NON_VEHICLE_MAV_TYPES = (6, 18, 26, 27)
-# How high or how far a vehicle has to have gone for an arm and disarm to count as a flight.
 # HEARTBEAT.system_status while Copter has ap.land_complete (ArduCopter/GCS_MAVLink_Copter.cpp:74).
 MAV_STATE_STANDBY = 3
+# How high or how far a vehicle has to have gone for an arm and disarm to count as a flight.
 FLOWN_MIN_ALT = 1.0
 FLOWN_MIN_DIST = 5.0
 SUB_BTNS = [[0, "自稳"], [2, "定深"], [16, "定点"], [3, "自动"], [4, "引导"]]

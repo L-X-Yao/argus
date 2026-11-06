@@ -249,7 +249,9 @@ class Simulator:
 
     def msg_heartbeat(self):
         base = 0x80 if self.armed else 0
-        p = struct.pack("<IBBBBB", self.mode, self.vtype, 3, base, 0, 3)
+        # MAV_STATE_STANDBY on the ground and ACTIVE off it, as ArduPilot reports it.
+        status = 4 if self.alt > 0.3 else 3
+        p = struct.pack("<IBBBBB", self.mode, self.vtype, 3, base, status, 3)
         return bm(0, p, self.sq, 50)
 
     def msg_attitude(self):
