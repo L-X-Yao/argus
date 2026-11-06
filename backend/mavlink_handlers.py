@@ -79,7 +79,7 @@ def handle_heartbeat(p: bytes, pl: int, link: DroneLink) -> None:
         if new_armed:
             v.flight_summary = None  # clear previous record so ws.ts guard fires on next disarm
             v.armed_time = time.time()
-            v.max_alt = v.max_speed = v.total_dist = 0
+            v.max_alt = v.max_depth = v.max_speed = v.total_dist = 0
             link.attitude._prev_pos = None
             link.battery._bat_history = []
             link.battery._bat_start_pct = link.battery.remaining
@@ -89,7 +89,7 @@ def handle_heartbeat(p: bytes, pl: int, link: DroneLink) -> None:
             bat_used = (bat._bat_start_pct - bat.remaining) if bat._bat_start_pct >= 0 and bat.remaining >= 0 else -1
             # Armed is not flown: a motor test arms the FC too (ArduCopter/motor_test.cpp
             # mavlink_motor_test_start), and each one would end in a summary and a flight record.
-            if v.max_alt >= FLOWN_MIN_ALT or v.total_dist >= FLOWN_MIN_DIST:
+            if max(v.max_alt, v.max_depth) >= FLOWN_MIN_ALT or v.total_dist >= FLOWN_MIN_DIST:
                 v.flight_summary = {
                     "duration": dur,
                     "max_alt": round(v.max_alt, 1),
@@ -158,6 +158,9 @@ def handle_global_position_int(p: bytes, pl: int, link: DroneLink) -> None:
     if v.armed:
         if a.alt_rel > v.max_alt:
             v.max_alt = a.alt_rel
+        # A Sub dives instead, often with no position to measure a distance from.
+        if link.vehicle_kind() == "sub" and -a.alt_rel > v.max_depth:
+            v.max_depth = -a.alt_rel
         if a.gs > v.max_speed:
             v.max_speed = a.gs
         if a._prev_pos:

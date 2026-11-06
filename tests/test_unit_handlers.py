@@ -121,6 +121,25 @@ class TestHeartbeat:
         handle_heartbeat(p_disarm, len(p_disarm), link)
         assert link.vehicle.flight_summary is None
 
+    @staticmethod
+    def _below_home(vtype: int, metres: float):
+        link = make_link()
+        p_arm = struct.pack("<IBBBBB", 5, vtype, 3, 0x80, 0, 3)
+        handle_heartbeat(p_arm, len(p_arm), link)
+        p = struct.pack("<IiiiihhhH", 1000, 0, 0, 400000, int(-metres * 1000), 0, 0, 0, 0)
+        handle_global_position_int(p, len(p), link)
+        p_disarm = struct.pack("<IBBBBB", 5, vtype, 3, 0, 0, 3)
+        handle_heartbeat(p_disarm, len(p_disarm), link)
+        return link.vehicle.flight_summary
+
+    def test_a_dive_counts_as_a_flight(self):
+        # A Sub goes down, often with no position: neither height nor distance would show it.
+        assert TestHeartbeat._below_home(12, 8) is not None
+
+    def test_a_copter_below_home_has_not_flown(self):
+        # What a barometer drifting on the bench looks like.
+        assert TestHeartbeat._below_home(2, 8) is None
+
     def test_empty_payload_ignored(self):
         # Per MAVLink 2 zero-trim, a truncated heartbeat is processed
         # zero-padded. Only an entirely empty payload (pl=0) is dropped.

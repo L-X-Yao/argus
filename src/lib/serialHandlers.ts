@@ -82,6 +82,7 @@ function newSession() {
     armed: false,
     armedAt: 0,
     maxAlt: 0,
+    maxDepth: 0,
     maxSpeed: 0,
     totalDist: 0,
     prevPos: null as [number, number] | null,
@@ -165,14 +166,15 @@ export function buildSerialHandlers(): SerialHandlers {
     if (armed) {
       app.drone.flight_summary = null;
       session.armedAt = Date.now();
-      session.maxAlt = session.maxSpeed = session.totalDist = 0;
+      session.maxAlt = session.maxDepth = session.maxSpeed = session.totalDist = 0;
       session.prevPos = null;
       session.batHistory = [];
       session.batStart = app.drone.remaining;
       return;
     }
+    app.drone.bat_time = -1;
     // Armed is not flown: see backend handle_heartbeat.
-    if (session.maxAlt < FLOWN_MIN_ALT && session.totalDist < FLOWN_MIN_DIST) return;
+    if (Math.max(session.maxAlt, session.maxDepth) < FLOWN_MIN_ALT && session.totalDist < FLOWN_MIN_DIST) return;
     const remaining = app.drone.remaining;
     const summary = {
       duration: session.armedAt ? Math.trunc((Date.now() - session.armedAt) / 1000) : 0,
@@ -182,7 +184,6 @@ export function buildSerialHandlers(): SerialHandlers {
       bat_used: session.batStart >= 0 && remaining >= 0 ? session.batStart - remaining : -1,
     };
     app.drone.flight_summary = summary;
-    app.drone.bat_time = -1;
     saveFlightRecord({
       date: new Date().toISOString(),
       duration: summary.duration,
@@ -263,6 +264,7 @@ export function buildSerialHandlers(): SerialHandlers {
       }
       if (app.drone.armed) {
         session.maxAlt = Math.max(session.maxAlt, msg.altRel);
+        if (vehicleType(app.drone.vtype_raw) === 'sub') session.maxDepth = Math.max(session.maxDepth, -msg.altRel);
         session.maxSpeed = Math.max(session.maxSpeed, app.drone.gs ?? 0);
         if (session.prevPos) {
           session.totalDist += metersBetween(msg.lat, msg.lon, session.prevPos[0], session.prevPos[1]);

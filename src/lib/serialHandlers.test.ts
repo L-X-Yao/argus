@@ -155,6 +155,19 @@ describe('serial session state', () => {
       expect(H.events.map((e) => e.event_type)).toContain('disarmed');
     });
 
+    it('takes a dive for a flight on a Sub, and only there', () => {
+      const belowHome = (type: number) => {
+        h.onHeartbeat!({ ...heartbeat(false), type } as never, frame);
+        h.onHeartbeat!({ ...heartbeat(true), type } as never, frame);
+        h.onGlobalPositionInt!(position(0, 0, -8) as never, frame);
+        H.drone.flight_summary = null;
+        h.onHeartbeat!({ ...heartbeat(false), type } as never, frame);
+        return H.drone.flight_summary;
+      };
+      expect(belowHome(2)).toBeNull();
+      expect(belowHome(12)).not.toBeNull();
+    });
+
     it('clears the last summary when armed again', () => {
       H.drone.flight_summary = { duration: 1 };
       h.onHeartbeat!(heartbeat(true) as never, frame);
@@ -237,6 +250,17 @@ describe('serial session state', () => {
       vi.advanceTimersByTime(20000);
       h.onSysStatus!(status(78) as never, frame);
       expect(H.drone.bat_time).toBe(780);
+    });
+
+    it('drops the estimate at disarm, flown or not', () => {
+      h.onHeartbeat!(heartbeat(false) as never, frame);
+      h.onHeartbeat!(heartbeat(true) as never, frame);
+      h.onSysStatus!(status(80) as never, frame);
+      vi.advanceTimersByTime(20000);
+      h.onSysStatus!(status(78) as never, frame);
+      h.onHeartbeat!(heartbeat(false) as never, frame);
+      expect(H.drone.flight_summary).toBeFalsy();
+      expect(H.drone.bat_time).toBe(-1);
     });
 
     it('gives no estimate on the ground', () => {

@@ -72,6 +72,7 @@ class VehicleState:
     board_id: int = 0
     flight_summary: dict | None = None
     max_alt: float = 0.0
+    max_depth: float = 0.0
     max_speed: float = 0.0
     total_dist: float = 0.0
 
