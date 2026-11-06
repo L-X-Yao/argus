@@ -325,9 +325,11 @@ test.describe('Parameter file', () => {
       page.waitForEvent('download'),
       page.getByRole('button', { name: label('param.export'), exact: true }).click(),
     ]);
-    const exported = readFileSync(await download.path(), 'utf-8');
-    const lines = exported.split('\n');
-    expect(lines).toHaveLength(await probe.paramCount());
+    const exported = readFileSync(await download.path(), 'utf-8').split('\n');
+    expect(exported).toHaveLength(await probe.paramCount());
+    // The FC saves its own counters every 30 s and announces each save (AP_Stats.cpp:88,
+    // AP_Param.cpp:1190), which the comparison is right to show. Not part of this test.
+    const lines = exported.filter((l) => !l.startsWith('STAT_'));
 
     // Relative to what the FC holds, so that the spec can run twice on one SITL.
     const set = async (name: string, change: number) => {
