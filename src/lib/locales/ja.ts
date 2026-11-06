@@ -801,6 +801,7 @@ const messages: Record<string, string> = {
   'terrain.profile': '地形プロファイル',
   'terrain.profileTitle': 'ルート地形プロファイル',
   'terrain.minClearance': '最低クリアランス',
+  'terrain.lowest': '最低対地高度',
   'terrain.distance': '距離',
   'terrain.flightAlt': '飛行高度',
   'terrain.groundElev': '地表高度',

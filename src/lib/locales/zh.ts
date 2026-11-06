@@ -844,6 +844,7 @@ const messages: Record<string, string> = {
   'terrain.profile': '地形剖面',
   'terrain.profileTitle': '航线地形剖面',
   'terrain.minClearance': '最低净空',
+  'terrain.lowest': '最低离地',
   'terrain.distance': '距离',
   'terrain.flightAlt': '飞行高度',
   'terrain.groundElev': '地面高度',

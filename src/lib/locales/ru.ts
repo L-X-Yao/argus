@@ -801,6 +801,7 @@ const messages: Record<string, string> = {
   'terrain.profile': 'Профиль рельефа',
   'terrain.profileTitle': 'Профиль рельефа маршрута',
   'terrain.minClearance': 'Мин. просвет',
+  'terrain.lowest': 'Наименьший запас',
   'terrain.distance': 'Расстояние',
   'terrain.flightAlt': 'Высота полёта',
   'terrain.groundElev': 'Высота земли',

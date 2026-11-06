@@ -3,7 +3,8 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 // backend.ts accesses `window` at module scope — stub before import
 vi.stubGlobal('window', { location: { protocol: 'http:', host: 'localhost' } });
 
-const { interpolateRoute, getElevation, getElevationProfile, adjustWaypointsForTerrain } = await import('./terrain');
+const { interpolateRoute, getElevation, getElevationProfile, adjustWaypointsForTerrain, groundAboveHome } =
+  await import('./terrain');
 
 describe('interpolateRoute', () => {
   it('returns single point for a single waypoint', () => {
@@ -213,6 +214,37 @@ describe('getElevationProfile', () => {
 
     const points = [{ lat: 80.0, lon: 40.0 }];
     await expect(getElevationProfile(points)).rejects.toThrow('Terrain API 404');
+  });
+});
+
+describe('groundAboveHome', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.stubGlobal('window', { location: { protocol: 'http:', host: 'localhost' } });
+  });
+
+  const answer = (elevations: number[]) => ({ ok: true, json: () => Promise.resolve({ elevations }) });
+
+  it('takes the ground at home off, so that it compares with a mission altitude', async () => {
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(answer([590, 610]))
+      .mockResolvedValueOnce(answer([584]));
+    vi.stubGlobal('fetch', fetchMock);
+    const points = [
+      { lat: 80.0001, lon: 40.0001 },
+      { lat: 80.0002, lon: 40.0002 },
+    ];
+    expect(await groundAboveHome(points, { lat: 80.0003, lon: 40.0003 })).toEqual([6, 26]);
+  });
+
+  it('falls back to the first point with no home yet', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(answer([590, 610])));
+    const points = [
+      { lat: 81.0001, lon: 41.0001 },
+      { lat: 81.0002, lon: 41.0002 },
+    ];
+    expect(await groundAboveHome(points, { lat: 0, lon: 0 })).toEqual([0, 20]);
   });
 });
 

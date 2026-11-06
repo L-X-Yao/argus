@@ -802,6 +802,7 @@ const messages: Record<string, string> = {
   'terrain.profile': 'Profil de terrain',
   'terrain.profileTitle': 'Profil de terrain de la route',
   'terrain.minClearance': 'Dégagement min.',
+  'terrain.lowest': 'Marge la plus faible',
   'terrain.distance': 'Distance terrain',
   'terrain.flightAlt': 'Alt. de vol',
   'terrain.groundElev': 'Alt. du sol',

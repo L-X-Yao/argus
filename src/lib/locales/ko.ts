@@ -800,6 +800,7 @@ const messages: Record<string, string> = {
   'terrain.profile': '지형 프로필',
   'terrain.profileTitle': '경로 지형 프로필',
   'terrain.minClearance': '최소 이격',
+  'terrain.lowest': '최저 지상고',
   'terrain.distance': '거리',
   'terrain.flightAlt': '비행 고도',
   'terrain.groundElev': '지면 고도',

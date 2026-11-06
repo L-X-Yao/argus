@@ -800,6 +800,7 @@ const messages: Record<string, string> = {
   'terrain.profile': 'ملف التضاريس',
   'terrain.profileTitle': 'ملف تضاريس المسار',
   'terrain.minClearance': 'الحد الأدنى للخلوص',
+  'terrain.lowest': 'أدنى ارتفاع عن الأرض',
   'terrain.distance': 'المسافة',
   'terrain.flightAlt': 'ارتفاع الطيران',
   'terrain.groundElev': 'ارتفاع الأرض',

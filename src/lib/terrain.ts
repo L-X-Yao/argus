@@ -55,15 +55,26 @@ export async function getElevationProfile(points: { lat: number; lon: number }[]
 }
 
 /**
+ * The ground under each point, in metres above home. Mission items use frame=3
+ * (GLOBAL_RELATIVE_ALT) so the FC reads alt as metres above home, while SRTM gives
+ * metres above sea level: the two only compare once the home ground is taken off.
+ *
+ * @param home  If unknown, the first point's ground serves as the reference.
+ */
+export async function groundAboveHome(
+  points: { lat: number; lon: number }[],
+  home?: { lat: number; lon: number } | null,
+): Promise<number[]> {
+  const elevations = await getElevationProfile(points);
+  const reference = home && (home.lat !== 0 || home.lon !== 0) ? await getElevation(home.lat, home.lon) : elevations[0];
+  return elevations.map((e) => e - reference);
+}
+
+/**
  * Adjust waypoint altitudes so that every point maintains a constant AGL
- * clearance over the terrain.
+ * clearance over the terrain: alt = (groundMSL - homeMSL) + targetAGL.
  *
- * Mission items use frame=3 (GLOBAL_RELATIVE_ALT) so the FC interprets alt
- * as meters above home. SRTM returns MSL, so we subtract the home ground
- * elevation: alt = (groundMSL - homeMSL) + targetAGL.
- *
- * @param homeLatLon  Home position for MSL-to-relative conversion. If null,
- *                    the first waypoint's ground elevation is used as reference.
+ * @param homeLatLon  See groundAboveHome.
  * @returns A new array (original waypoints are not mutated).
  */
 export async function adjustWaypointsForTerrain(
@@ -71,16 +82,10 @@ export async function adjustWaypointsForTerrain(
   targetAGL: number,
   homeLatLon?: { lat: number; lon: number } | null,
 ): Promise<{ lat: number; lon: number; alt: number }[]> {
-  const elevations = await getElevationProfile(waypoints);
-  let homeElev: number;
-  if (homeLatLon && (homeLatLon.lat !== 0 || homeLatLon.lon !== 0)) {
-    homeElev = await getElevation(homeLatLon.lat, homeLatLon.lon);
-  } else {
-    homeElev = elevations[0];
-  }
+  const ground = await groundAboveHome(waypoints, homeLatLon);
   return waypoints.map((wp, i) => ({
     ...wp,
-    alt: Math.round(elevations[i] - homeElev + targetAGL),
+    alt: Math.round(ground[i] + targetAGL),
   }));
 }
 

@@ -846,6 +846,7 @@ const messages: Record<string, string> = {
   'terrain.profile': 'Terrain Profile',
   'terrain.profileTitle': 'Route Terrain Profile',
   'terrain.minClearance': 'Min Clearance',
+  'terrain.lowest': 'Lowest clearance',
   'terrain.distance': 'Distance',
   'terrain.flightAlt': 'Flight Alt',
   'terrain.groundElev': 'Ground Elev',
