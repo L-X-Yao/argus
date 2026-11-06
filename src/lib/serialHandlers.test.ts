@@ -326,6 +326,28 @@ describe('serial session state', () => {
   });
 });
 
+describe('height above ground', () => {
+  const report = (currentHeight: number, spacing: number) => {
+    const h = buildSerialHandlers() as MessageHandlers & SerialHandlers;
+    h.onTerrainReport!({ lat: 34, lon: 108, terrainHeight: 1500, currentHeight, spacing }, {} as MavFrame);
+  };
+
+  it('shows how far the vehicle is above the ground, not how high the ground is', () => {
+    report(42.5, 100);
+    expect(H.drone.terrain_alt).toBe(42.5);
+  });
+
+  it('hides it where the FC has no terrain', () => {
+    report(0, 0);
+    expect(H.drone.terrain_alt).toBe(-1);
+  });
+
+  it('reads 0 for an estimate below ground', () => {
+    report(-2, 100);
+    expect(H.drone.terrain_alt).toBe(0);
+  });
+});
+
 describe('home', () => {
   it('reports it once, whichever message brings it first', () => {
     resetSerialSession();

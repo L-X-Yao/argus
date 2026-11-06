@@ -523,12 +523,16 @@ def handle_terrain_report(p: bytes, pl: int, link: DroneLink) -> None:
     #   lat (i32, 0..3), lon (i32, 4..7), terrain_height (float, 8..11),
     #   current_height (float, 12..15), spacing (u16, 16..17),
     #   pending (u16, 18..19), loaded (u16, 20..21).
-    # We want terrain_height (ground elevation) for "terrain altitude" display,
-    # not current_height (vehicle altitude above the ground).
+    # current_height is the height above ground the flight view shows. terrain_height is the
+    # ground above sea level, and a vehicle standing on high ground read as far above it, in green.
+    # spacing 0 means the FC has no terrain here (TerrainGCS.cpp:238), and -1 hides the reading.
+    # An estimate below ground reads 0, so that it does not hide it as well.
     if pl < 1:
         return
-    p = _pad(p, 16)
-    link.diagnostic.terrain_alt = struct.unpack_from("<f", p, 8)[0]
+    p = _pad(p, 18)
+    height = struct.unpack_from("<f", p, 12)[0]
+    spacing = struct.unpack_from("<H", p, 16)[0]
+    link.diagnostic.terrain_alt = max(height, 0.0) if spacing else -1.0
 
 
 # ArduPilot: libraries/AP_WindVane/AP_WindVane.cpp:427 — AP_WindVane::send_wind

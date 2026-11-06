@@ -827,7 +827,7 @@ class TestIncomingHandlers:
         )
         payload, pl = _encode_payload(msg)
         handle_terrain_report(payload, pl, link)
-        assert link.diagnostic.terrain_alt == pytest.approx(125.5, abs=0.01)
+        assert link.diagnostic.terrain_alt == pytest.approx(120.0, abs=0.01)
 
     def test_wind(self):
         from backend.mavlink_handlers import handle_wind

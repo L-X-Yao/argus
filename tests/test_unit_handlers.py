@@ -557,19 +557,79 @@ class TestEkfDispatchRegistration:
 # ── Terrain Report ───────────────────────────────────────────────────────────
 
 
-class TestTerrainReport:
-    def test_parses_terrain_alt(self):
-        # TERRAIN_REPORT (136) wire layout sorted by field size:
-        #   lat(i32, 0), lon(i32, 4), terrain_height(f, 8),
-        #   current_height(f, 12), spacing(u16, 16), pending(u16, 18),
-        #   loaded(u16, 20). The previous test used a 2-byte gap between
-        #   the int32s and the float (i.e. <iiHHf) which placed the float
-        #   at offset 12 (current_height) — masking the original handler
-        #   bug that also read offset 12. Use correct wire order here.
+class TestErrorCounter:
+    """The E: counter: real CRC failures, and nothing a healthy link does."""
+
+    @staticmethod
+    def _frame(msg_id, payload, crc):
+        from backend.mavlink_frame import bm
+
+        return bm(msg_id, payload, 1, crc)
+
+    def _hidden_in_an_unknown_frame(self):
+        """What a real FC sends: a message with no entry here, with 0xFD in its payload."""
+        decoy = bytearray(self._frame(0, struct.pack("<IBBBBB", 0, 2, 3, 0, 0, 3), 50))
+        decoy[-1] ^= 0xFF  # reads as a known message with a bad CRC
+        unknown = self._frame(0, bytes(decoy) + bytes(8), 0)
+        unknown = bytearray(unknown)
+        unknown[7:10] = (251).to_bytes(3, "little")  # NAMED_VALUE_FLOAT
+        return bytes(unknown)
+
+    def test_a_0xfd_inside_a_skipped_message_is_no_error(self):
         link = make_link()
-        p = struct.pack("<iiffHHH", int(34.0 * 1e7), int(108.0 * 1e7), 456.78, 0.0, 100, 0, 0)
+        link.feed(self._hidden_in_an_unknown_frame())
+        assert link._parse_errors == 0
+        assert list(link._unknown_msg_ids) == [251]
+
+    def test_the_frame_after_it_still_arrives(self):
+        link = make_link()
+        heartbeat = self._frame(0, struct.pack("<IBBBBB", 0, 2, 3, 0, 0, 3), 50)
+        link.feed(self._hidden_in_an_unknown_frame() + heartbeat)
+        assert link.frame_count == 1
+        assert link._parse_errors == 0
+
+    def test_a_corrupt_frame_is_still_counted(self):
+        link = make_link()
+        corrupt = bytearray(self._frame(0, struct.pack("<IBBBBB", 0, 2, 3, 0, 0, 3), 50))
+        corrupt[-1] ^= 0xFF
+        heartbeat = self._frame(0, struct.pack("<IBBBBB", 0, 2, 3, 0, 0, 3), 50)
+        link.feed(bytes(corrupt) + heartbeat)
+        assert link._parse_errors == 1
+
+    def test_one_right_after_a_skipped_message_is_counted_too(self):
+        link = make_link()
+        corrupt = bytearray(self._frame(0, struct.pack("<IBBBBB", 0, 2, 3, 0, 0, 3), 50))
+        corrupt[-1] ^= 0xFF
+        heartbeat = self._frame(0, struct.pack("<IBBBBB", 0, 2, 3, 0, 0, 3), 50)
+        link.feed(self._hidden_in_an_unknown_frame() + bytes(corrupt) + heartbeat)
+        assert link._parse_errors == 1
+
+
+class TestTerrainReport:
+    @staticmethod
+    def _report(link, terrain_height, current_height, spacing):
+        # lat(i32, 0), lon(i32, 4), terrain_height(f, 8), current_height(f, 12), spacing(u16, 16),
+        # pending(u16, 18), loaded(u16, 20).
+        p = struct.pack("<iiffHHH", 340000000, 1080000000, terrain_height, current_height, spacing, 0, 336)
         handle_terrain_report(p, len(p), link)
-        assert abs(link.diagnostic.terrain_alt - 456.78) < 0.01
+
+    def test_shows_the_height_above_ground_not_the_ground(self):
+        """The panel labels it AGL and turns red under 10 m: 1500 is where the ground is."""
+        link = make_link()
+        self._report(link, 1500.0, 42.5, 100)
+        assert link.diagnostic.terrain_alt == pytest.approx(42.5)
+
+    def test_no_terrain_here_hides_it(self):
+        """TerrainGCS.cpp:238: spacing stays 0 without data, and current_height means nothing."""
+        link = make_link()
+        self._report(link, 0.0, 0.0, 0)
+        assert link.diagnostic.terrain_alt == -1.0
+
+    def test_an_estimate_below_ground_reads_zero(self):
+        """On a bench the baro drifts, and a real FC does report below ground."""
+        link = make_link()
+        self._report(link, 1500.0, -2.0, 100)
+        assert link.diagnostic.terrain_alt == 0.0
 
 
 # ── Wind ─────────────────────────────────────────────────────────────────────

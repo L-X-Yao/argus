@@ -111,6 +111,7 @@ class DroneLink:
         self._buf = b""
         self.sq = 0
         self._parse_errors = 0
+        self._unknown_left = 0  # bytes still to pass of a frame no CRC here can check
         self._raw_sysid = 1
         self._streams_sysid = 0  # who the last request_streams() was addressed to
         self._cmd_pending: dict[int, dict] = {}  # sent and not answered yet, see send_cmd
@@ -235,6 +236,7 @@ class DroneLink:
             self.connected = False
             self.frame_count = 0
             self._buf = b""
+            self._unknown_left = 0
             self.sq = 0
             self.vehicle.vtype_raw = 0
             self.vehicle.vtol_state = 0
@@ -377,6 +379,7 @@ class DroneLink:
         self._reconnecting = False
         self._reconnect_attempts = 0
         self._buf = b""
+        self._unknown_left = 0
         try:
             self._ser = self._open_port(self._last_port, self._last_baud)
         except OSError as e:
@@ -662,14 +665,19 @@ class DroneLink:
                 # tests/test_contract_handlers_crc.py.
                 # Cap dict size at 256 distinct ids so a noisy serial line that
                 # generates random sync errors can't grow this unboundedly.
-                if len(self._unknown_msg_ids) < 256 or mid in self._unknown_msg_ids:
-                    self._unknown_msg_ids[mid] = self._unknown_msg_ids.get(mid, 0) + 1
+                if self._unknown_left <= 0:
+                    self._unknown_left = frame_len
+                    if len(self._unknown_msg_ids) < 256 or mid in self._unknown_msg_ids:
+                        self._unknown_msg_ids[mid] = self._unknown_msg_ids.get(mid, 0) + 1
                 return None, 1
             calc_crc = self._mavlink_crc16(crc_data + bytes([crc_extra]))
             if calc_crc != expected_crc:
-                # What the E: counter in the status bar is for. A healthy link sends
-                # plenty of messages with no handler here, and those say nothing.
-                self._parse_errors += 1
+                # What the E: counter in the status bar is for. A healthy link sends plenty
+                # of messages with no handler here, and those say nothing. Neither does a
+                # 0xFD in the payload of one: it reads as a frame with a bad CRC, about
+                # once a second on a real FC, while pymavlink found no bad frame in the bytes.
+                if self._unknown_left <= 0:
+                    self._parse_errors += 1
                 return None, 1
         return bytes(buf[:frame_len]), frame_len
 
@@ -687,6 +695,7 @@ class DroneLink:
         frames = 0
         while len(self._buf) >= 7:
             payload, consumed = self._parse_mavlink_frame()
+            self._unknown_left -= consumed
             if payload:
                 self._buf = self._buf[consumed:]
                 self.frame_count += 1

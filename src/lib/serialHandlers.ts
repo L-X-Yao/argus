@@ -365,7 +365,8 @@ export function buildSerialHandlers(): SerialHandlers {
       app.drone.wind_speed = msg.speed;
     },
     onTerrainReport: (msg) => {
-      app.drone.terrain_alt = msg.terrainHeight;
+      // Height above ground, and -1 for no terrain here: see backend handle_terrain_report.
+      app.drone.terrain_alt = msg.spacing ? Math.max(msg.currentHeight, 0) : -1;
     },
     onBatteryStatus: (msg) => {
       app.drone.cells = msg.cells;

@@ -193,6 +193,7 @@ export interface TerrainReport {
   lon: number;
   terrainHeight: number;
   currentHeight: number;
+  spacing: number;
 }
 
 export interface BatteryStatus {
@@ -478,6 +479,7 @@ export function decodeTerrainReport(p: DataView): TerrainReport {
     lon: p.getInt32(4, true) / 1e7,
     terrainHeight: p.getFloat32(8, true),
     currentHeight: p.getFloat32(12, true),
+    spacing: p.getUint16(16, true),
   };
 }
 
