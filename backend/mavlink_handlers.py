@@ -296,7 +296,7 @@ def handle_command_ack(p: bytes, pl: int, link: DroneLink) -> None:
     cmd_id = struct.unpack_from("<H", p, 0)[0]
     result = p[2]
     link._cmd_pending.pop(cmd_id, None)
-    en = link.locale == "en"
+    en = link.locale != "zh"
     cmd_name = (_CMD_NAMES_EN if en else _CMD_NAMES_ZH).get(cmd_id, str(cmd_id))
     result_text = (_ACK_RESULTS_EN if en else _ACK_RESULTS_ZH).get(
         result, "unknown(%d)" % result if en else "未知(%d)" % result
@@ -317,7 +317,7 @@ def handle_command_ack(p: bytes, pl: int, link: DroneLink) -> None:
 
 
 def report_no_answer(link: DroneLink, cmd_id: int) -> None:
-    en = link.locale == "en"
+    en = link.locale != "zh"
     cmd_name = (_CMD_NAMES_EN if en else _CMD_NAMES_ZH).get(cmd_id, str(cmd_id))
     link.add_event(lt("cmd_ack", link.locale) % (cmd_name, lt("cmd_no_answer", link.locale)), "cmd_ack_fail")
 
@@ -374,7 +374,7 @@ def handle_statustext(p: bytes, pl: int, link: DroneLink) -> None:
         if len(link._prearm_messages) > 20:
             link._prearm_messages = link._prearm_messages[-10:]
     text = filter_statustext(text, link.locale)
-    link.add_event(("%s: %s" % ("FC" if link.locale == "en" else "飞控", text)), "statustext")
+    link.add_event(("%s: %s" % ("飞控" if link.locale == "zh" else "FC", text)), "statustext")
 
 
 # ArduPilot: libraries/GCS_MAVLink/GCS_Common.cpp:3394 — GCS_MAVLINK::send_servo_output_raw

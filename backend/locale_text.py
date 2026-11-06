@@ -143,4 +143,5 @@ def lt(key: str, locale: str = "zh") -> str:
     pair = _T.get(key)
     if not pair:
         return key
-    return pair[1] if locale == "en" else pair[0]
+    # Chinese for zh and English for the rest: the other languages have no backend texts.
+    return pair[0] if locale == "zh" else pair[1]

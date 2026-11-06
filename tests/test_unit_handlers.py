@@ -1221,3 +1221,29 @@ class TestShortPayloadGuards:
         for handler, min_pl in handlers_min:
             short = b"\x00" * min_pl
             handler(short, min_pl, link)  # should not raise
+
+
+class TestLanguages:
+    """Only zh has backend texts in its own language, and everyone else can read English."""
+
+    @pytest.mark.parametrize("locale", ["en", "de", "fr", "ja", "ar", "ru"])
+    def test_the_other_languages_get_english(self, locale):
+        from backend.locale_text import lt
+        from backend.statustext_filter import filter_statustext
+
+        link = make_link_connected()
+        link.locale = locale
+        link.vehicle.vtype_raw = 2
+        state = link.get_state()
+        assert lt("link_lost", locale) == "Link lost"
+        assert [name for _, name in state["mode_btns"]][0] == "Stabilize"
+        assert state["gps_fix"] == "No Fix"
+        assert filter_statustext("PreArm: Compass not calibrated", locale) == "PreArm: Compass not calibrated"
+
+    def test_chinese_stays_chinese(self):
+        from backend.locale_text import lt
+
+        link = make_link_connected()
+        link.vehicle.vtype_raw = 2
+        assert lt("link_lost", "zh") == "链路丢失"
+        assert link.get_state()["gps_fix"] == "无定位"

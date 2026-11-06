@@ -100,7 +100,7 @@ _BRAND_ONLY = [
 
 
 def filter_statustext(text: str, locale: str = "zh") -> str:
-    if locale == "en":
+    if locale != "zh":
         for old, new in _BRAND_ONLY:
             text = text.replace(old, new)
         return text

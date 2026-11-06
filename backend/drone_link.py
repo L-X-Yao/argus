@@ -371,7 +371,7 @@ class DroneLink:
 
     def _get_vehicle_info(self) -> tuple[dict, list, str]:
         vt = self.vehicle.vtype_raw
-        en = self.locale == "en"
+        en = self.locale != "zh"
         if self.vehicle.force_plane is True:
             return (
                 PLANE_MODES_EN if en else PLANE_MODES,
@@ -451,7 +451,7 @@ class DroneLink:
             "voltage": round(bat.voltage, 2),
             "current": round(bat.current, 2),
             "remaining": bat.remaining,
-            "gps_fix": (FIX_NAMES_EN if self.locale == "en" else FIX_NAMES).get(g.gps_fix, "?"),
+            "gps_fix": (FIX_NAMES if self.locale == "zh" else FIX_NAMES_EN).get(g.gps_fix, "?"),
             "gps_fix_raw": g.gps_fix,
             "gps_sats": g.gps_sats,
             "wp": m.wp_seq,

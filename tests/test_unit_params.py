@@ -29,6 +29,7 @@ def _param_value_payload(name: str, value: float, index: int, total: int, ptype:
 class TestParamManager:
     def test_request_all_sends_message(self):
         link = _make_link()
+        link.locale = "zh"
         mgr = ParamManager(link)
         mgr.request_all()
         assert mgr.fetching is True
