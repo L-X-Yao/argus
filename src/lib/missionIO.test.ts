@@ -230,3 +230,25 @@ describe('files from other ground stations', () => {
     expect(parseQgcPlan(JSON.stringify(plan)).map((w) => w.lat)).toEqual([47.1, 47.2, 47.3]);
   });
 });
+
+describe('altitudes in other frames', () => {
+  it('brings an absolute altitude of a .waypoints file down to above home', () => {
+    const file = [
+      'QGC WPL 110',
+      '0\t1\t0\t16\t0\t0\t0\t0\t-35.363\t149.165\t584\t1',
+      '1\t0\t0\t16\t0\t0\t0\t0\t-35.36\t149.16\t634\t1',
+      '2\t0\t3\t16\t0\t0\t0\t0\t-35.35\t149.15\t50\t1',
+    ].join('\n');
+    expect(parseQgcWaypoints(file).map((w) => w.alt)).toEqual([50, 50]);
+  });
+
+  it('does the same for a .plan file', () => {
+    const plan = {
+      mission: {
+        plannedHomePosition: [47.1, 8.5, 400],
+        items: [{ command: 16, frame: 0, type: 'SimpleItem', params: [0, 0, 0, null, 47.2, 8.5, 450] }],
+      },
+    };
+    expect(parseQgcPlan(JSON.stringify(plan))[0].alt).toBe(50);
+  });
+});

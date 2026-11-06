@@ -1,7 +1,11 @@
 import type { Waypoint } from './types';
 
+// MAV_FRAME_GLOBAL: above sea level, where Argus works above home.
+const FRAME_ABSOLUTE = 0;
+
 export function parseQgcWaypoints(text: string): Waypoint[] {
   const wps: Waypoint[] = [];
+  let homeAlt = 0;
   for (const line of text.split('\n')) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith('QGC') || trimmed.startsWith('#')) continue;
@@ -9,12 +13,15 @@ export function parseQgcWaypoints(text: string): Waypoint[] {
     if (cols.length < 12) continue;
     // Row 0 is the home position in files from Mission Planner and QGroundControl
     // (Tools/autotest/Generic_Missions/CMAC-circuit.txt), not a place to fly to.
-    if (parseInt(cols[0]) === 0) continue;
+    if (parseInt(cols[0]) === 0) {
+      homeAlt = parseFloat(cols[10]) || 0;
+      continue;
+    }
     const cmd = parseInt(cols[3]);
     if (cmd !== 16 && cmd !== 18 && cmd !== 19 && cmd !== 82) continue;
     const lat = parseFloat(cols[8]),
       lon = parseFloat(cols[9]),
-      alt = parseFloat(cols[10]);
+      alt = parseFloat(cols[10]) - (parseInt(cols[2]) === FRAME_ABSOLUTE ? homeAlt : 0);
     if (Math.abs(lat) < 0.001) continue;
     const type: Waypoint['type'] =
       cmd === 18 ? 'loiter_turns' : cmd === 19 ? 'loiter_time' : cmd === 82 ? 'spline' : 'wp';
@@ -39,6 +46,7 @@ export function parseQgcPlan(text: string): Waypoint[] {
     (item: { type?: string; TransectStyleComplexItem?: { Items?: unknown[] } }) =>
       item.type === 'ComplexItem' ? (item.TransectStyleComplexItem?.Items ?? []) : [item],
   );
+  const homeAlt = plan?.mission?.plannedHomePosition?.[2] ?? 0;
   const wps: Waypoint[] = [];
   for (const item of items) {
     const cmd = item.command;
@@ -46,7 +54,7 @@ export function parseQgcPlan(text: string): Waypoint[] {
     const params = item.params || [];
     const lat = params[4] ?? 0,
       lon = params[5] ?? 0,
-      alt = params[6] ?? 30;
+      alt = (params[6] ?? 30) - (item.frame === FRAME_ABSOLUTE ? homeAlt : 0);
     if (Math.abs(lat) < 0.001) continue;
     const type: Waypoint['type'] =
       cmd === 18 ? 'loiter_turns' : cmd === 19 ? 'loiter_time' : cmd === 82 ? 'spline' : 'wp';
