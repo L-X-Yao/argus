@@ -144,9 +144,10 @@ def cmd_motor_test(link: DroneLink, param, data: dict):
 
 
 def cmd_motor_test_stop(link: DroneLink, param, data: dict):
-    # 1-based motor sequence numbers, see cmd_motor_test.
-    for i in range(1, 9):
-        send_cmd(link, 209, p1=float(i), p2=0, p3=0, p4=0, p5=1)
+    # The FC runs one test at a time, and a timeout of 0 ends it at the next output
+    # (ArduCopter/motor_test.cpp motor_test_output). One per motor would start and stop
+    # seven more tests after the first, arming the motors each time.
+    send_cmd(link, 209, p1=1, p2=0, p3=0, p4=0, p5=1)
 
 
 # --- Camera / Gimbal ---

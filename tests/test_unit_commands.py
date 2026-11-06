@@ -342,10 +342,15 @@ class TestMotorTest:
         assert any("电机测试" in e["text"] for e in link.events)
         assert link._ser.write.called
 
-    def test_motor_test_stop(self):
+    def test_motor_test_stop_is_one_frame(self):
+        # The FC runs one test at a time: more would each start a new one.
         link = make_link()
         execute("motor_test_stop", None, link)
-        assert link._ser.write.call_count >= 8
+        assert link._ser.write.call_count == 1
+        raw = link._ser.write.call_args[0][0]
+        assert struct.unpack_from("<H", raw, 38)[0] == 209
+        assert struct.unpack_from("<f", raw, 18)[0] == 0  # throttle
+        assert struct.unpack_from("<f", raw, 22)[0] == 0  # timeout: ends it at the next output
 
 
 class TestGimbal:

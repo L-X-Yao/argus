@@ -582,13 +582,14 @@ describe('_serialDispatch calibration + gimbal + RC wire bytes', () => {
     expect(decodeCommandLong(writes[0]).command).toBe(2501);
   });
 
-  it('motor_test_stop sends DO_MOTOR_TEST (209) with zero throttle for every motor', () => {
+  it('motor_test_stop ends the running test with one DO_MOTOR_TEST (209)', () => {
     dispatch('motor_test_stop');
     const cmds = filterAppFrames(writes).map(decodeCommandLong);
-    expect(cmds.length).toBe(8);
-    for (const cmd of cmds) {
-      expect(cmd.command).toBe(209);
-      expect(cmd.p3).toBe(0); // throttle 0 = stop
-    }
+    expect(cmds.length).toBe(1);
+    const cmd = cmds[0];
+    expect(cmd.command).toBe(209);
+    expect(cmd.p1).toBe(1);
+    expect(cmd.p3).toBe(0); // no throttle
+    expect(cmd.p4).toBe(0); // a timeout of 0 ends it at the next output
   });
 });

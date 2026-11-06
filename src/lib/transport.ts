@@ -643,9 +643,8 @@ const _serialDispatch: Record<string, CmdHandler> = {
     if (!(duration > 0 && duration <= 30)) return;
     serialSendCommandLong(209, motor + 1, 0, throttle, duration, 1);
   },
-  motor_test_stop: () => {
-    for (let i = 1; i <= 8; i++) serialSendCommandLong(209, i, 0, 0, 0, 1);
-  },
+  // One frame: see backend cmd_motor_test_stop.
+  motor_test_stop: () => serialSendCommandLong(209, 1, 0, 0, 0, 1),
 };
 
 /**

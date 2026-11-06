@@ -46,8 +46,12 @@
     }
   }
 
+  let anySpinning = $derived(Object.keys(spinning).length > 0);
+
   function stopAll() {
-    dispatch('motor_test_stop');
+    // Only with a test running: on an idle FC a stop is a test of its own, which arms the
+    // motors for a moment (ArduCopter/motor_test.cpp mavlink_motor_test_start).
+    if (anySpinning) dispatch('motor_test_stop');
     for (let i = 0; i < MOTOR_COUNT; i++) {
       stopTimer(i);
     }
@@ -63,13 +67,9 @@
     return r > 0 ? r.toFixed(1) + 's' : '';
   }
 
-  /* Quad X motor position labels */
-  const quadLabels: Record<number, string> = {
-    0: t('motor.fl'),
-    1: t('motor.fr'),
-    2: t('motor.bl'),
-    3: t('motor.br'),
-  };
+  // Where each button's motor sits on a quad X, laid out as seen from above. The FC numbers
+  // a motor test by test order, clockwise from the front right (AP_MotorsMatrix.cpp:592).
+  const quadLabels: string[] = [t('motor.fl'), t('motor.fr'), t('motor.bl'), t('motor.br')];
 
   // Stop motors and clear intervals if the panel unmounts mid-spin so the
   // backend doesn't keep a motor running and we don't leak setInterval timers.
@@ -158,9 +158,9 @@
             {t('label.quadX')}
           </p>
           <div class="grid grid-cols-2 gap-1 max-w-[160px] mx-auto">
-            {#each [0, 1, 2, 3] as m}
+            {#each quadLabels as label}
               <div class="text-center text-[10px] font-mono text-muted-foreground py-0.5 rounded bg-muted/40">
-                {quadLabels[m]}
+                {label}
               </div>
             {/each}
           </div>
@@ -205,7 +205,7 @@
       </div>
 
       <!-- Stop All button -->
-      <Button variant="destructive" class="w-full" onclick={stopAll} disabled={!connected}>
+      <Button variant="destructive" class="w-full" onclick={stopAll} disabled={!connected || !anySpinning}>
         <Square size={14} />
         {t('motor.stop')}
       </Button>
