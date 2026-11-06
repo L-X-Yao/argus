@@ -55,6 +55,7 @@ async function armWhenReady() {
 }
 
 test.beforeAll(async ({ browser }) => {
+  test.setTimeout(240000);
   page = await browser.newPage();
   sitl = await openBridge(page, SITL!);
   await connectUsb(page);

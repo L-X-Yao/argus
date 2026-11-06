@@ -56,6 +56,7 @@ async function ackOf(command: number, name: string): Promise<number | undefined>
 }
 
 test.beforeAll(async ({ browser }) => {
+  test.setTimeout(240000);
   const [host, port] = DRIVER!.split(':');
   driver = net.connect(Number(port), host);
   await new Promise((ok, fail) => driver.once('connect', ok).once('error', fail));

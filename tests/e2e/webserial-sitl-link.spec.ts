@@ -43,6 +43,7 @@ const store = <T>(body: string) =>
   }, body);
 
 test.beforeAll(async ({ browser }) => {
+  test.setTimeout(240000);
   page = await browser.newPage();
   sitl = await openBridge(page, SITL!, SYSID);
   // Voice and a gamepad, as far as a headless browser has them: what the app says, and

@@ -33,7 +33,7 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 | Messages, WebSerial | 35 | 16 | 13 | 0 | 5 | 0 | 1 |
 | REST routes | 28 | 6 | 5 | 17 | 0 | 0 | 0 |
 | Panels | 80 | 13 | 3 | 21 | 41 | 2 | 0 |
-| Platform | 43 | 8 | 11 | 9 | 10 | 2 | 3 |
+| Platform | 44 | 8 | 12 | 10 | 9 | 2 | 3 |
 
 ## Commands / 飞控命令
 
@@ -279,16 +279,17 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 | Plane and VTOL | 固定翼和 VTOL | SITL | CI: a plain plane and a QuadPlane fly a whole mission on SITL, the QuadPlane with VTOL takeoff, transition and VTOL landing. Real telemetry 2026-05 |
 | Rover | 地面车 | SITL | CI: drives a whole mission and comes back on SITL |
 | Sub | 水下机器人 | SITL | CI: dives, runs a whole mission and surfaces on SITL |
-| 2D map | 2D 地图 | Simulator | e2e; only the default of 8 sources exercised |
-| 3D map | 3D 地图 | Simulator | e2e, headless Chromium; Windows browser not checked |
-| PWA and offline use | PWA 和离线 | Simulator | e2e, Chromium |
+| 2D map | 2D 地图 | Simulator | e2e, and real Edge on Windows 2026-11-06. Only the default of 8 sources exercised |
+| 3D map | 3D 地图 | Simulator | e2e, and real Edge on Windows with a real GPU 2026-11-06 |
+| PWA and offline use | PWA 和离线 | Simulator | e2e, and real Edge on Windows 2026-11-06 |
 | Several browser clients | 多浏览器客户端 | Simulator | Integration tests |
 | Video and AR overlay | 视频和 AR 叠加 | Simulator | Integration tests, no real camera |
 | Token login | Token 登录 | Simulator | e2e, real Windows each release |
-| Windows package | Windows 发布包 | Simulator | Smoke test on real Windows each release |
+| Windows package | Windows 发布包 | Simulator | CI builds and smoke-tests it on every push, real Windows each release |
 | UDP | UDP 连接 | SITL | CI: a whole session on real firmware |
 | Telemetry radio | 数传电台 | SITL | CI through a stand-in: 57600 baud, 3% of frames lost, 1.5% corrupted, a whole session. No real radio |
 | Linux tty | Linux tty | SITL | CI: a whole session through a pty on real firmware, which reads differently from a socket |
+| Long sessions | 长时间运行 | SITL | 2026-11-06: 60 minutes at 5x, 189 flights, 900,000 frames: browser heap flat at 7 MB, backend memory not growing. tests/e2e/run-soak.sh, not in CI |
 | Submarine | 水下潜航器 | SITL | CI. No dive in CI |
 | Several vehicles at once | 多机同屏 | SITL | CI: two vehicles on one link, each flown from the other through the switch |
 | Offline mbtiles maps | 离线 mbtiles 地图 | Simulator | e2e: a real file picked in Settings shows on the map |
@@ -305,7 +306,7 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 | STATUSTEXT filter | STATUSTEXT 过滤 | Tests only | Unit tests |
 | Real flight | 真实飞行 | None | Never properly flown |
 | Right-to-left layout | 阿拉伯语从右到左布局 | Tests only | Browser test: page turns around and stays inside the window |
-| macOS | macOS | Tests only | CI: unit and contract tests on macos-latest. The app itself has not been run there |
+| macOS | macOS | Simulator | CI: unit and contract tests, then the app in a browser on macos-latest. No SITL there |
 | Desktop app (Tauri) | 桌面版（Tauri） | None | Not built |
 | Firmware flashing | 固件刷写 | n/a | Not implemented |
 | PX4 | PX4 | n/a | Refused on connect, not implemented |

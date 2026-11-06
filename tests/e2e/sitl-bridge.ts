@@ -190,11 +190,15 @@ export async function openBridge(page: Page, target: string, fcSysId = 1): Promi
 
 /** Clicks USB the way a user does. Loads the page twice: on a cold start Vite reloads it once it has bundled the dependencies. */
 export async function connectUsb(page: Page) {
+  // Not networkidle: map tiles that no server answers keep the network busy for as long
+  // as they like, which took a hosted runner past the hook's timeout.
+  const usb = page.locator('button', { hasText: /^USB$/ });
   await page.goto('/');
-  await page.waitForLoadState('networkidle');
+  await usb.waitFor({ timeout: 90000 });
+  await page.waitForTimeout(2000);
   await page.reload();
-  await page.waitForLoadState('networkidle');
-  await page.locator('button', { hasText: /^USB$/ }).click();
+  await usb.waitFor({ timeout: 90000 });
+  await usb.click();
 }
 
 /** Reads a field of app.drone. Needs the Vite dev server: the module must be the page's own. */
