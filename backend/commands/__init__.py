@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from ..locale_text import lt
 from ._flight import (
     cmd_arm,
     cmd_disarm,
@@ -135,6 +136,8 @@ _DISPATCH = {
 # unsupported autopilot is latched (ntrip_stop tears down the GCS-side
 # client; the others only mutate GCS display/selection state).
 _GCS_LOCAL = {"switch_vehicle", "set_vtype", "clear_summary", "inspector_toggle", "ntrip_stop"}
+# These work on what the GCS already holds, link or no link.
+_NO_LINK_NEEDED = _GCS_LOCAL | {"param_save"}
 
 
 def execute(cmd: str, param, link: DroneLink, data: dict | None = None) -> dict | None:
@@ -157,6 +160,12 @@ def execute(cmd: str, param, link: DroneLink, data: dict | None = None) -> dict 
     ap = link.vehicle.autopilot
     if ap not in (0, 3) and cmd not in _GCS_LOCAL:
         return {"ok": False, "error": "unsupported autopilot (%s): ArduPilot only" % ap}
+    # Nothing to send it to, and said so now: kept for a retry, a key pressed with no vehicle
+    # would arm whatever connects next.
+    if cmd not in _NO_LINK_NEEDED and (
+        not getattr(link, "_ser", True) or getattr(link, "_reconnecting", False) is True
+    ):
+        return {"ok": False, "error": lt("err_no_link", link.locale)}
     try:
         return handler(link, param, data)
     except Exception as exc:

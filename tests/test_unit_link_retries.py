@@ -105,6 +105,40 @@ class TestCommands:
         assert link._cmd_pending == {}
 
 
+class TestNoLink:
+    """A key pressed with no vehicle must not wait for the next one that connects."""
+
+    def test_a_command_with_no_port_is_refused_and_not_kept(self):
+        link = DroneLink()
+        result = execute("arm", None, link)
+        assert result["ok"] is False
+        assert link._cmd_pending == {}
+
+    def test_so_is_one_during_an_outage(self):
+        link = make_link()
+        link._reconnecting = True
+        assert execute("rtl", None, link)["ok"] is False
+        assert link._ser.write.call_count == 0
+
+    def test_an_upload_is_refused_too(self):
+        link = DroneLink()
+        result = execute("mission_upload", None, link, data={"waypoints": [{"lat": 30.0, "lon": 120.0, "alt": 50}]})
+        assert result["ok"] is False
+        assert link.mission._mission_pending is False
+
+    def test_what_only_touches_the_gcs_still_works(self):
+        link = DroneLink()
+        assert execute("clear_summary", None, link) is None
+
+    def test_connecting_starts_with_nothing_waiting(self):
+        link = make_link()
+        link._cmd_pending[400] = {"sent": 0, "tries": 1, "resend": None}
+        link._ser = None
+        with patch.object(link, "_open_port", return_value=MagicMock(in_waiting=0)), patch("threading.Thread"):
+            link.connect("tcp:127.0.0.1:5760")
+        assert link._cmd_pending == {}
+
+
 class TestMissionTransfers:
     WPS = [{"lat": 30.0, "lon": 120.0, "alt": 50}]
 

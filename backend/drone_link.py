@@ -253,6 +253,7 @@ class DroneLink:
             self.start_time = time.time()
         self.active_sysid = 0
         self._vehicles.clear()
+        self._cmd_pending.clear()
         self._last_port = port
         self._last_baud = baudrate
         self._reconnect_enabled = True
