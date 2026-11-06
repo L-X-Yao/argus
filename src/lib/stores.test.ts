@@ -256,9 +256,18 @@ describe('confirm dialog', () => {
     expect(confirmState.danger).toBe(true);
   });
 
+  it('takes a yes when the wall clock has stepped back', async () => {
+    const answer = showConfirm('sure?');
+    confirmState.shownAt = performance.now() - 400;
+    const stepped = vi.spyOn(Date, 'now').mockReturnValue(0);
+    resolveConfirm(true);
+    stepped.mockRestore();
+    await expect(answer).resolves.toBe(true);
+  });
+
   it('resolveConfirm hides and resolves', async () => {
     const promise = showConfirm('test?');
-    confirmState.shownAt = Date.now() - 400; // past the input-arming window
+    confirmState.shownAt = performance.now() - 400; // past the input-arming window
     resolveConfirm(true);
     const result = await promise;
     expect(result).toBe(true);
@@ -280,7 +289,7 @@ describe('confirm dialog', () => {
     const first = showConfirm('first?');
     const second = showConfirm('second?');
     expect(await first).toBe(false); // resolved, not leaked
-    confirmState.shownAt = Date.now() - 400;
+    confirmState.shownAt = performance.now() - 400;
     resolveConfirm(true);
     expect(await second).toBe(true);
   });
