@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { isCalEvent } from '../../lib/calEvents';
   import { app } from '../../lib/stores.svelte';
   import { dispatch } from '../../lib/transport';
   import { API_BASE } from '../../lib/backend';
@@ -104,19 +105,16 @@
   // Filtering by timestamp (instead of a length cursor) survives backend events-array trim.
   let calRunStartTime = $state('');
 
-  const calPattern =
-    /校准|calibrat|cal |gyro|compass|accel|baro|level|place|rotate|orientation|complete|success|完成|成功|失败|failed|progress/i;
-
-  function eventInRun(ev: { time: string; text: string }): boolean {
+  function eventInRun(ev: { time: string; text: string; event_type?: string }): boolean {
     if (!calRunStartTime) return false;
     if (ev.time < calRunStartTime) return false;
-    if (!calPattern.test(ev.text)) return false;
+    if (!isCalEvent(ev)) return false;
     if (/^指令应答:|^Command:/i.test(ev.text)) return false;
     return true;
   }
 
   /* Display: last 20 cal-pattern events for the message log */
-  let calEvents = $derived(app.events.filter((e) => calPattern.test(e.text)).slice(-20));
+  let calEvents = $derived(app.events.filter((e) => isCalEvent(e)).slice(-20));
 
   /* ── Compass: pure-derived progress/done/failed ── */
   let compassParsed = $derived.by(() => {

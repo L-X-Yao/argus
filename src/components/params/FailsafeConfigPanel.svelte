@@ -222,7 +222,7 @@
               </div>
             </div>
             <div class="flex justify-end pt-1">
-              <Button variant="default" size="sm" class="h-7 text-xs px-4" onclick={saveBattery} disabled={!copter}>
+              <Button variant="default" size="sm" class="h-7 text-xs px-4" onclick={saveBattery} disabled={!copter || !app.drone.connected}>
                 {t('failsafe.save')}
               </Button>
             </div>
@@ -272,7 +272,7 @@
               </div>
             </div>
             <div class="flex justify-end pt-1">
-              <Button variant="default" size="sm" class="h-7 text-xs px-4" onclick={saveRc} disabled={!copter}>
+              <Button variant="default" size="sm" class="h-7 text-xs px-4" onclick={saveRc} disabled={!copter || !app.drone.connected}>
                 {t('failsafe.save')}
               </Button>
             </div>
@@ -312,7 +312,7 @@
               </select>
             </div>
             <div class="flex justify-end pt-1">
-              <Button variant="default" size="sm" class="h-7 text-xs px-4" onclick={saveGcs} disabled={!copter}>
+              <Button variant="default" size="sm" class="h-7 text-xs px-4" onclick={saveGcs} disabled={!copter || !app.drone.connected}>
                 {t('failsafe.save')}
               </Button>
             </div>
@@ -361,7 +361,7 @@
               </div>
             </div>
             <div class="flex justify-end pt-1">
-              <Button variant="default" size="sm" class="h-7 text-xs px-4" onclick={saveEkf} disabled={!copter}>
+              <Button variant="default" size="sm" class="h-7 text-xs px-4" onclick={saveEkf} disabled={!copter || !app.drone.connected}>
                 {t('failsafe.save')}
               </Button>
             </div>
