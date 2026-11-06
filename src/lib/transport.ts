@@ -34,6 +34,7 @@ import { openSerial, serialWrite, serialReadLoop, isWebSerialSupported } from '.
 import type { SerialConnection } from './serial';
 import { addToast, addEvent, app, isPlane as _isPlane } from './stores.svelte';
 import { t } from './i18n.svelte';
+import { vehicleKind } from './vehicleModes';
 import { SPECIAL_MODES, vehicleType } from './modeStore';
 import {
   buildMissionItems,
@@ -813,7 +814,15 @@ export async function serialUploadMission(
 
   const validation = validateMissionWaypoints(waypoints);
   if (!validation.ok) return validation;
-  const items = buildMissionItems(waypoints, takeoffAlt);
+  // Mirrors backend cmd_mission_upload, which cites the firmware for both.
+  const kind = vehicleKind();
+  if (kind === 'plane' && waypoints.some((w) => w.type === 'spline')) {
+    return { ok: false, error: t('mission.splinePlane') };
+  }
+  if (kind === 'sub' && waypoints.some((w) => Number(w.alt ?? 0) > 0)) {
+    return { ok: false, error: t('mission.subDepth') };
+  }
+  const items = buildMissionItems(waypoints, kind === 'sub' ? 0 : takeoffAlt, kind !== 'sub');
   const result = await _startUpload(items, 0);
   if (result.ok) _buildWpToSeqMap(items.map((item) => ({ seq: item.seq, cmd: item.command })));
   return result;

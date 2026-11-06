@@ -19,6 +19,7 @@
   }
   import { dispatch } from '../../lib/transport';
   import { isSerialConnected, serialUploadMission } from '../../lib/transport';
+  import { vehicleKind } from '../../lib/vehicleModes';
   import {
     parseQgcWaypoints,
     parseQgcPlan,
@@ -374,7 +375,7 @@
         );
     }
     for (let i = 0; i < wps.length; i++) {
-      if (wps[i].alt < 2 || wps[i].alt > 500)
+      if (vehicleKind() === 'sub' ? wps[i].alt > 0 : wps[i].alt < 2 || wps[i].alt > 500)
         issues.push(
           t('wp.tooHigh')
             .replace('{n}', String(i + 1))

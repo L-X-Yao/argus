@@ -560,6 +560,33 @@ class TestMissionUpload:
         assert len(link.mission._mission_items) == 6
         assert any("任务" in e["text"] for e in link.events)
 
+    def test_sub_waypoint_above_home_is_refused(self):
+        link = make_link()
+        link.vehicle.vtype_raw = 12
+        wps = [{"lat": 30.0, "lon": 120.0, "alt": 30}]
+        result = execute("mission_upload", None, link, data={"waypoints": wps})
+        assert result["ok"] is False
+        assert link.mission._mission_pending is False
+
+    def test_sub_gets_no_takeoff_altitude_and_no_closing_rtl(self):
+        link = make_link()
+        link.vehicle.vtype_raw = 12
+        wps = [{"lat": 30.0, "lon": 120.0, "alt": -5}]
+        execute("mission_upload", None, link, data={"waypoints": wps, "takeoff_alt": 30})
+        items = link.mission._mission_items
+        assert [i["cmd"] for i in items] == [16, 22, 16]
+        assert items[1]["alt"] == 0
+        assert items[2]["alt"] == -5
+
+    def test_other_vehicles_keep_the_takeoff_altitude_and_the_closing_rtl(self):
+        link = make_link()
+        link.vehicle.vtype_raw = 2
+        wps = [{"lat": 30.0, "lon": 120.0, "alt": 50}]
+        execute("mission_upload", None, link, data={"waypoints": wps, "takeoff_alt": 30})
+        items = link.mission._mission_items
+        assert [i["cmd"] for i in items] == [16, 22, 16, 20]
+        assert items[1]["alt"] == 30
+
     def test_advcmd_servo_uploaded(self):
         link = make_link()
         wps = [{"lat": 34.258, "lon": 108.942, "alt": 30, "cmd_servo": {"num": 9, "pwm": 1100}}]

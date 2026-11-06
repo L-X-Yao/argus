@@ -1111,6 +1111,8 @@ const messages: Record<string, string> = {
   'rally.clearFc': 'Sammelpunkte auf dem FC löschen',
   'rally.clearFcDone': 'Sammelpunkte auf dem FC gelöscht',
   'fltmode.noSwitch': 'Diese Firmware hat keine Parameter für den Modusschalter',
+  'mission.splinePlane': 'Spline-Wegpunkte werden von ArduPlane nicht unterstützt',
+  'mission.subDepth': 'Sub-Wegpunkte brauchen eine negative Höhe (Tiefe)',
 };
 
 export default messages;

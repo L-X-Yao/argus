@@ -81,6 +81,11 @@ describe('buildMissionItems', () => {
     expect(items[3].x).toBe(310000000);
   });
 
+  it('leaves out the closing RTL when asked: a Sub cannot run it', () => {
+    const items = buildMissionItems([baseWp()], 30, false);
+    expect(items.map((i) => i.command)).toEqual([16, 22, 16]);
+  });
+
   it('NAV cmds use frame=3 (REL_ALT) and DO_* / RTL use frame=2 (MISSION)', () => {
     // Backend rule (send_mission_item_int): frame=3 only for cmd in
     // (16, 18, 19, 21, 22, 82). RTL (20) is NOT in that set — it gets frame=2.

@@ -1104,6 +1104,8 @@ const messages: Record<string, string> = {
   'rally.clearFc': 'FC의 집결 지점 지우기',
   'rally.clearFcDone': 'FC의 집결 지점을 지웠습니다',
   'fltmode.noSwitch': '이 펌웨어에는 모드 스위치 파라미터가 없습니다',
+  'mission.splinePlane': 'ArduPlane은 스플라인 웨이포인트를 지원하지 않습니다',
+  'mission.subDepth': 'Sub 웨이포인트의 고도는 음수(수심)여야 합니다',
 };
 
 export default messages;

@@ -17,7 +17,7 @@
  *            CONDITION_YAW (cmd 115) if cmd_yaw
  *            DO_VTOL_TRANSITION (cmd 3000) if cmd_vtol
  *            DO_SET_RELAY (cmd 181) if drop
- *   last   RTL (cmd 20)
+ *   last   RTL (cmd 20), except on a Sub
  */
 
 import type { RallyPoint, Waypoint } from './types';
@@ -46,7 +46,7 @@ function navCmdFor(wpType: Waypoint['type']): { cmd: number; p1Source: 'loiter_p
   return { cmd: 16, p1Source: 'delay', defaultP1: 0 };
 }
 
-export function buildMissionItems(waypoints: Waypoint[], takeoffAlt: number): MissionItem[] {
+export function buildMissionItems(waypoints: Waypoint[], takeoffAlt: number, endWithRtl = true): MissionItem[] {
   const items: MissionItem[] = [];
   const push = (cmd: number, p1: number, p2: number, p3: number, p4: number, lat: number, lon: number, alt: number) => {
     const seq = items.length;
@@ -101,7 +101,8 @@ export function buildMissionItems(waypoints: Waypoint[], takeoffAlt: number): Mi
     }
   }
 
-  push(20, 0, 0, 0, 0, 0, 0, 0); // RTL
+  // Sub cannot run this item: see backend _upload_mission.
+  if (endWithRtl) push(20, 0, 0, 0, 0, 0, 0, 0); // RTL
 
   return items;
 }

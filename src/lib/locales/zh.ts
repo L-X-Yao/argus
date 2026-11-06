@@ -199,6 +199,8 @@ const messages: Record<string, string> = {
   'wp.loiterTime': '盘旋秒',
   'wp.waypoint': '航点',
   'wp.spline': '曲线',
+  'mission.splinePlane': '固定翼不支持样条航点',
+  'mission.subDepth': '水下机器人的航点高度必须是负数（深度）',
   'welcome.subtitle': '地面控制站',
   'welcome.hint': '在顶部输入连接地址后点击"连接"',
   'welcome.shortcuts': '快捷键',

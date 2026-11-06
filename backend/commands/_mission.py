@@ -90,6 +90,13 @@ def cmd_mission_upload(link: DroneLink, param, data: dict):
     # clear error rather than a confusing FC ack failure.
     if link.is_plane() and any(wp.get("type") == "spline" for wp in wps):
         return {"ok": False, "error": lt("err_spline_plane", link.locale)}
+    # Sub::start_command refuses a waypoint above home (ArduSub/commands_logic.cpp:13), so
+    # the upload would read as a success and the vehicle would never dive. NAV_TAKEOFF
+    # means nothing there, and a positive altitude on it only earns the same warning.
+    if link.vehicle_kind() == "sub":
+        takeoff_alt = 0.0
+        if any(float(wp.get("alt") or 0) > 0 for wp in wps):
+            return {"ok": False, "error": lt("err_sub_depth", link.locale)}
     for wp in wps:
         try:
             lat, lon = float(wp.get("lat", 0)), float(wp.get("lon", 0))
@@ -297,7 +304,11 @@ def _upload_mission(link: DroneLink, waypoints: list, takeoff_alt: float) -> Non
         if wp.get("drop"):
             items.append({"seq": seq, "cmd": 181, "lat": 0, "lon": 0, "alt": 0, "p1": 0, "p2": 0})
             seq += 1
-    items.append({"seq": seq, "cmd": 20, "lat": 0, "lon": 0, "alt": 0, "p1": 0, "p2": 0})
+    # Sub cannot run RTL as an item, whatever frame it arrives in: it is not stored with a
+    # location (AP_Mission.cpp:897), so Sub::start_command reads an absolute frame and answers
+    # "Bad alt frame" (ArduSub/commands_logic.cpp:13). Its mission ends in a loiter by itself.
+    if link.vehicle_kind() != "sub":
+        items.append({"seq": seq, "cmd": 20, "lat": 0, "lon": 0, "alt": 0, "p1": 0, "p2": 0})
     m = link.mission
     m._mission_items = items
     m._seq_to_wp = {}

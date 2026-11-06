@@ -1106,6 +1106,8 @@ const messages: Record<string, string> = {
   'rally.clearFc': 'FC のラリーポイントを消去',
   'rally.clearFcDone': 'FC のラリーポイントを消去しました',
   'fltmode.noSwitch': 'このファームウェアにはモードスイッチのパラメータがありません',
+  'mission.splinePlane': 'ArduPlane はスプライン経由点に対応していません',
+  'mission.subDepth': 'Sub の経由点の高度は負の値（深度）にしてください',
 };
 
 export default messages;

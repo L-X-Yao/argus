@@ -1112,6 +1112,8 @@ const messages: Record<string, string> = {
   'rally.clearFc': 'Effacer les points de ralliement du contrôleur',
   'rally.clearFcDone': 'Points de ralliement effacés du contrôleur',
   'fltmode.noSwitch': 'Ce firmware n’a pas de paramètres de sélecteur de mode',
+  'mission.splinePlane': 'ArduPlane ne prend pas en charge les points de passage spline',
+  'mission.subDepth': 'Les points de passage Sub exigent une altitude négative (profondeur)',
 };
 
 export default messages;

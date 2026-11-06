@@ -1110,6 +1110,8 @@ const messages: Record<string, string> = {
   'rally.clearFc': 'Borrar puntos de reunión de la controladora',
   'rally.clearFcDone': 'Puntos de reunión borrados de la controladora',
   'fltmode.noSwitch': 'Este firmware no tiene parámetros de selector de modo',
+  'mission.splinePlane': 'ArduPlane no admite waypoints spline',
+  'mission.subDepth': 'Los waypoints de Sub necesitan una altitud negativa (profundidad)',
 };
 
 export default messages;

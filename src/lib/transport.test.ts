@@ -42,18 +42,22 @@ vi.mock('./serial', () => ({
   ),
 }));
 
-vi.mock('./stores.svelte', () => ({
-  app: {
+vi.mock('./stores.svelte', () => {
+  const app = {
     activeTransport: 'none' as 'none' | 'ws' | 'serial',
-    drone: { connected: false, armed: false, link_age: -1, frames: 0 },
-  },
-  addToast: vi.fn((text: string, level: string) => {
-    toasts.push({ text, level });
-  }),
-  addEvent: vi.fn((ev: { text: string; event_type: string }) => {
-    events.push(ev);
-  }),
-}));
+    drone: { connected: false, armed: false, link_age: -1, frames: 0, vtype_raw: 0 },
+  };
+  return {
+    app,
+    isPlane: () => app.drone.vtype_raw === 1,
+    addToast: vi.fn((text: string, level: string) => {
+      toasts.push({ text, level });
+    }),
+    addEvent: vi.fn((ev: { text: string; event_type: string }) => {
+      events.push(ev);
+    }),
+  };
+});
 
 vi.mock('./i18n.svelte', () => ({
   t: (key: string) => key,
@@ -254,6 +258,41 @@ describe('serialUploadMission', () => {
     const promise = serialUploadMission(wps, 30);
     inject(fcFrame(47, encodeMissionAck(1, 1, 14))); // MAV_MISSION_INVALID_PARAM7
     await expect(promise).resolves.toEqual({ ok: false, error: 'MISSION_ACK type=14' });
+  });
+
+  it('refuses a Sub waypoint above home, as the backend does', async () => {
+    app.drone.vtype_raw = 12;
+    const wps = [{ lat: 30, lon: 120, alt: 50, drop: false, delay: 0, speed: 0, type: 'wp' as const, loiter_param: 0 }];
+    const result = await serialUploadMission(wps, 30);
+    app.drone.vtype_raw = 0;
+    expect(result.ok).toBe(false);
+    expect(countWrites(44)).toBe(0);
+  });
+
+  it('sends a Sub no takeoff altitude and no closing RTL', async () => {
+    app.drone.vtype_raw = 12;
+    const wps = [{ lat: 30, lon: 120, alt: -5, drop: false, delay: 0, speed: 0, type: 'wp' as const, loiter_param: 0 }];
+    const promise = serialUploadMission(wps, 30);
+    const count = new DataView(findWrite(44)!.buffer).getUint16(10, true);
+    writes.length = 0;
+    inject(fcFrame(51, encodeMissionRequestInt(1, 1, 1)));
+    const item = findWrite(73);
+    inject(fcFrame(47, encodeMissionAck(1, 1, 0)));
+    await promise;
+    app.drone.vtype_raw = 0;
+    expect(count).toBe(3); // HOME, TAKEOFF, the waypoint
+    expect(new DataView(item!.buffer).getFloat32(10 + 24, true)).toBe(0);
+  });
+
+  it('refuses a spline waypoint on a Plane, as the backend does', async () => {
+    app.drone.vtype_raw = 1;
+    const wps = [
+      { lat: 30, lon: 120, alt: 50, drop: false, delay: 0, speed: 0, type: 'spline' as const, loiter_param: 0 },
+    ];
+    const result = await serialUploadMission(wps, 30);
+    app.drone.vtype_raw = 0;
+    expect(result.ok).toBe(false);
+    expect(countWrites(44)).toBe(0);
   });
 
   it('uploads rally points as mission_type 2', async () => {

@@ -199,6 +199,8 @@ const messages: Record<string, string> = {
   'wp.loiterTime': 'Loiter Time',
   'wp.waypoint': 'Waypoint',
   'wp.spline': 'Spline',
+  'mission.splinePlane': 'Spline waypoints are not supported on ArduPlane',
+  'mission.subDepth': 'Sub waypoints need a negative altitude (depth)',
   'welcome.subtitle': 'Ground Control Station',
   'welcome.hint': 'Enter connection address above and click "Connect"',
   'welcome.shortcuts': 'Shortcuts',

@@ -1104,6 +1104,8 @@ const messages: Record<string, string> = {
   'rally.clearFc': 'مسح نقاط التجمع من المتحكم',
   'rally.clearFcDone': 'تم مسح نقاط التجمع من المتحكم',
   'fltmode.noSwitch': 'لا يحتوي هذا البرنامج الثابت على معلمات مفتاح الأوضاع',
+  'mission.splinePlane': 'لا يدعم ArduPlane نقاط الطريق المنحنية',
+  'mission.subDepth': 'يجب أن يكون ارتفاع نقاط طريق Sub سالبًا (العمق)',
 };
 
 export default messages;

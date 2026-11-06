@@ -1109,6 +1109,8 @@ const messages: Record<string, string> = {
   'rally.clearFc': 'Очистить точки сбора на контроллере',
   'rally.clearFcDone': 'Точки сбора на контроллере очищены',
   'fltmode.noSwitch': 'В этой прошивке нет параметров переключателя режимов',
+  'mission.splinePlane': 'ArduPlane не поддерживает сплайновые точки маршрута',
+  'mission.subDepth': 'Для Sub высота точек маршрута должна быть отрицательной (глубина)',
 };
 
 export default messages;

@@ -110,6 +110,7 @@ _T = {
     "mission_dl_timeout": ("任务下载超时", "Mission download timeout"),
     "err_mission_too_large": ("任务过大 (最多 500 航点)", "Mission too large (max 500 WP)"),
     "err_spline_plane": ("固定翼不支持样条航点", "Spline waypoints are not supported on ArduPlane"),
+    "err_sub_depth": ("水下机器人的航点高度必须是负数（深度）", "Sub waypoints need a negative altitude (depth)"),
     "err_mission_start": ("任务启动命令失败", "Mission start command failed"),
     "rally_uploading": ("备降点: 上传中 (%d 个)", "Rally: uploading %d points"),
     "ntrip_connected": ("NTRIP 已连接: %s", "NTRIP connected: %s"),
