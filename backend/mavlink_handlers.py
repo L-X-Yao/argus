@@ -6,7 +6,7 @@ import time
 from typing import TYPE_CHECKING
 
 from . import mavlink_dispatch
-from .constants import FLOWN_MIN_ALT, FLOWN_MIN_DIST, NON_VEHICLE_MAV_TYPES
+from .constants import FLOWN_MIN_ALT, FLOWN_MIN_DIST, MAV_STATE_STANDBY, NON_VEHICLE_MAV_TYPES
 from .crc_extras import CRC_EXTRA
 from .locale_text import lt
 from .statustext_filter import filter_statustext
@@ -44,6 +44,9 @@ def handle_heartbeat(p: bytes, pl: int, link: DroneLink) -> None:
     v.mode = p[0] | (p[1] << 8) | (p[2] << 16) | (p[3] << 24)
     old_vtype = v.vtype_raw
     v.vtype_raw = p[4]
+    # ap.land_complete, the flag Copter refuses a takeoff on (ArduCopter/takeoff.cpp:23).
+    # An active failsafe reports CRITICAL instead, and so reads as not landed.
+    v.landed = p[7] == MAV_STATE_STANDBY
     # HEARTBEAT.autopilot byte (offset 5). The FC advertises its autopilot
     # stack once at boot and the value is stable afterwards. We filter out:
     #   - 0 (GENERIC, uninitialized — keep our default of 0)

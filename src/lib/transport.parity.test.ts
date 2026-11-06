@@ -97,6 +97,7 @@ interface ParityOp {
   data?: Record<string, unknown>;
   plane?: boolean;
   vtype_raw?: number;
+  landed?: boolean;
   flush_timer_ms?: number;
   log_entry?: { id: number; size: number };
   expect: string;
@@ -165,6 +166,7 @@ describe('dual-stack parity dump', () => {
       for (const op of fixture.ops) {
         H.isPlane = op.plane === true;
         app.drone.vtype_raw = op.vtype_raw ?? 0;
+        app.drone.landed = op.landed === true;
         H.writes.length = 0;
         if (op.kind === 'dispatch') {
           // A typo'd op name would fall through to the (mocked) WS backend and

@@ -81,6 +81,15 @@ class TestHeartbeat:
         assert link.vehicle.armed
         assert any(e["event_type"] == "armed" for e in link.events)
 
+    @pytest.mark.parametrize("status, landed", [(3, True), (4, False), (5, False), (0, False)])
+    def test_landed_is_what_the_fc_says(self, status, landed):
+        # MAV_STATE_STANDBY while ap.land_complete (ArduCopter/GCS_MAVLink_Copter.cpp:74).
+        link = make_link()
+        p = struct.pack("<IBBBBB", 5, 2, 3, 0x80, status, 3)
+        handle_heartbeat(p, len(p), link)
+        assert link.vehicle.landed is landed
+        assert link.get_state()["landed"] is landed
+
     def test_disarm_generates_summary(self):
         link = make_link()
         p_arm = struct.pack("<IBBBBB", 5, 2, 3, 0x80, 0, 3)

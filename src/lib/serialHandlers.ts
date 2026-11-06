@@ -60,6 +60,7 @@ const ACK_QUIET = new Set([511, 512]);
 const METERS_PER_DEG = 111320;
 const ADSB_MAX_AGE_S = 60;
 // Twins of backend/constants.py.
+const MAV_STATE_STANDBY = 3;
 const FLOWN_MIN_ALT = 1;
 const FLOWN_MIN_DIST = 5;
 
@@ -98,6 +99,7 @@ export function resetSerialSession(): void {
   app.serialLinkLost = false;
   const {
     vtol_state,
+    landed,
     flight_summary,
     home_lat,
     home_lon,
@@ -121,6 +123,7 @@ export function resetSerialSession(): void {
   } = defaultState;
   Object.assign(app.drone, {
     vtol_state,
+    landed,
     flight_summary,
     home_lat,
     home_lon,
@@ -202,6 +205,8 @@ export function buildSerialHandlers(): SerialHandlers {
         addToast(t('conn.serialConnected'), 'success');
       }
       app.drone.vtype_raw = msg.type;
+      // Twin of backend handle_heartbeat, which says what this is.
+      app.drone.landed = msg.systemStatus === MAV_STATE_STANDBY;
       app.drone.vtype = VEHICLE_LABELS[uiLocale()][vehicleType(msg.type)];
       const armed = (msg.baseMode & 128) !== 0;
       // A session starts disarmed, so connecting to an armed vehicle announces it and

@@ -51,7 +51,10 @@ def cmd_takeoff(link: DroneLink, param, data: dict):
     # refuses MAV_CMD_NAV_TAKEOFF outside it. Copter takes it in a few modes only
     # (ArduCopter/takeoff.cpp:27 has_user_takeoff): not in STABILIZE, which it boots in, and
     # in LOITER a stick left low brings it straight back down. There is no button for GUIDED.
-    if link.vehicle_kind() in ("plane", "copter"):
+    # On the ground only: in the air it refuses the takeoff (takeoff.cpp:23), and the switch
+    # alone would stop an AUTO, an RTL or a LAND where it is.
+    kind = link.vehicle_kind()
+    if kind == "plane" or (kind == "copter" and link.vehicle.landed):
         send_set_mode(link, link.special_mode("guided"))
     link.add_event(lt("takeoff", link.locale) % alt, "takeoff")
     send_cmd(link, 22, p7=alt)

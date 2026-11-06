@@ -73,12 +73,22 @@ class TestCommandExecute:
         # ArduCopter/takeoff.cpp:27: STABILIZE, where it boots, refuses a takeoff.
         link = make_link()
         link.vehicle.vtype_raw = 2
+        link.vehicle.landed = True
         execute("takeoff", None, link, data={"alt": 50})
         mode, takeoff = (c[0][0] for c in link._ser.write.call_args_list)
         assert struct.unpack_from("<H", mode, 38)[0] == 176
         assert struct.unpack_from("<f", mode, 14)[0] == 4
         assert struct.unpack_from("<H", takeoff, 38)[0] == 22
         assert struct.unpack_from("<f", takeoff, 34)[0] == 50
+
+    def test_takeoff_in_the_air_leaves_the_mode_alone(self):
+        # ArduCopter/takeoff.cpp:23 refuses it up there, and GUIDED would end an AUTO or an RTL.
+        link = make_link()
+        link.vehicle.vtype_raw = 2
+        link.vehicle.landed = False
+        execute("takeoff", None, link, data={"alt": 50})
+        (takeoff,) = (c[0][0] for c in link._ser.write.call_args_list)
+        assert struct.unpack_from("<H", takeoff, 38)[0] == 22
 
     def test_drop(self):
         link = make_link()

@@ -494,7 +494,9 @@ const _serialDispatch: Record<string, CmdHandler> = {
     // the mode switch so an invalid alt doesn't leak a bare GUIDED
     // transition the backend path would never have sent.
     if (!(alt >= 1 && alt <= 1000)) return;
-    if (_isPlane() || vehicleType(app.drone.vtype_raw) === 'copter') serialSendMode(_specialModes().guided);
+    if (_isPlane() || (vehicleType(app.drone.vtype_raw) === 'copter' && app.drone.landed)) {
+      serialSendMode(_specialModes().guided);
+    }
     serialSendCommandLong(22, 0, 0, 0, 0, 0, 0, alt);
   },
   // Backend cmd_mission_start: switch to AUTO, then send MAV_CMD_MISSION_START (300) after a delay.

@@ -115,6 +115,17 @@ describe('serial session state', () => {
       expect(H.toasts.filter((t) => t.text.startsWith('toast.')).map((t) => t.level)).toEqual(['warn', 'success']);
     });
 
+    it('takes landed from the FC, which reports STANDBY while land_complete', () => {
+      for (const [systemStatus, landed] of [
+        [3, true],
+        [4, false],
+        [5, false],
+      ] as const) {
+        h.onHeartbeat!({ ...heartbeat(true), systemStatus } as never, frame);
+        expect(H.drone.landed).toBe(landed);
+      }
+    });
+
     it('reports and records the flight at disarm', () => {
       h.onGlobalPositionInt!(position(34.2, 108.9) as never, frame);
       h.onHeartbeat!(heartbeat(true) as never, frame);
@@ -169,6 +180,13 @@ describe('serial session state', () => {
   });
 
   describe('a session across reconnects', () => {
+    it('forgets that the last vehicle was on the ground', () => {
+      h.onHeartbeat!({ ...heartbeat(false), systemStatus: 3 } as never, frame);
+      expect(H.drone.landed).toBe(true);
+      resetSerialSession();
+      expect(H.drone.landed).toBe(false);
+    });
+
     it('announces an FC that was armed before we connected, as the backend does', () => {
       h.onHeartbeat!(heartbeat(true) as never, frame);
       expect(H.events.map((e) => e.event_type)).toEqual(['armed']);

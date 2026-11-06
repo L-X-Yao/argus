@@ -69,6 +69,7 @@ vi.mock('./ws', () => ({
 
 // Import AFTER mocks
 import { connectSerial, disconnectSerial, dispatch } from './transport';
+import { app } from './stores.svelte';
 
 // ─────────────────────────────────────────────────────────────────────────
 // Frame decode helpers — MAVLink 2 wire layout
@@ -274,12 +275,21 @@ describe('_serialDispatch wire-byte semantics', () => {
 
   it('takeoff on Copter switches to GUIDED (4) too: it boots in a mode that refuses it', () => {
     _isPlaneFlag = false;
+    app.drone.landed = true;
     dispatch('takeoff', undefined, { alt: 30 });
     expect(writes.length).toBe(2);
     expect(decodeSetMode(writes[0]).customMode).toBe(4);
     const cmd = decodeCommandLong(writes[1]);
     expect(cmd.command).toBe(22);
     expect(cmd.p7).toBe(30);
+  });
+
+  it('takeoff in the air leaves the mode alone: GUIDED would end an AUTO or an RTL', () => {
+    _isPlaneFlag = false;
+    app.drone.landed = false;
+    dispatch('takeoff', undefined, { alt: 30 });
+    expect(writes.length).toBe(1);
+    expect(decodeCommandLong(writes[0]).command).toBe(22);
   });
 
   // ── mission_start: AUTO mode + delayed MISSION_START (300) ───────────

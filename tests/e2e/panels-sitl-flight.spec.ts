@@ -171,6 +171,14 @@ test('Start mission flies it, and MissionProgress keeps up with the FC', async (
     .toBe(true);
 });
 
+test('a takeoff asked for in the air leaves the mission flying', async () => {
+  await palette(page, 'cmd-takeoff');
+  await slide();
+  // The FC refuses it up there (ArduCopter/takeoff.cpp:23), and GUIDED would stop the mission.
+  await page.waitForTimeout(2000);
+  expect(probe.mode).toBe(AUTO);
+});
+
 test('Pause holds the vehicle where it is, and the mission resumes', async () => {
   const at = probe.missionSeq;
   await button('ctrl.pauseMission').click();

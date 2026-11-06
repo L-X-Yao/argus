@@ -120,6 +120,7 @@ def _backend_frames(op: dict) -> list[bytes]:
         link.is_plane = lambda: True
     if "vtype_raw" in op:
         link.vehicle.vtype_raw = op["vtype_raw"]
+    link.vehicle.landed = op.get("landed", False)
     kind = op["kind"]
 
     if kind == "boot_heartbeat":

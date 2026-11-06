@@ -236,6 +236,7 @@ class DroneLink:
             self.sq = 0
             self.vehicle.vtype_raw = 0
             self.vehicle.vtol_state = 0
+            self.vehicle.landed = False
             # Re-arm the autopilot latch + unsupported-FC warning: the new
             # session may be a different vehicle, and a stale non-ArduPilot
             # value would silently gate every command (or a stale 3 would
@@ -274,6 +275,7 @@ class DroneLink:
             self.connected = False
             self.vehicle.vtype_raw = 0
             self.vehicle.vtol_state = 0
+            self.vehicle.landed = False
             # Same rationale as connect(): a silent in-loop reconnect may be a
             # different vehicle — stale autopilot would mis-gate commands and
             # a spent warning flag would hide the unsupported-FC event.
@@ -459,6 +461,7 @@ class DroneLink:
             "vtype": vn,
             "vtype_raw": v.vtype_raw,
             "vtol_state": v.vtol_state,
+            "landed": v.landed,
             "autopilot": v.autopilot,
             "mode_btns": btns,
             "link_age": round(time.time() - self.last_frame_time, 1)
