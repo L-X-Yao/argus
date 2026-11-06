@@ -290,3 +290,57 @@ test('an arm and disarm with no flight reports none', async () => {
   await page.waitForTimeout(1000);
   await expect(page.getByRole('dialog').filter({ hasText: label('summary.title') })).toHaveCount(0);
 });
+
+test('a survey drawn in its panel is flown to the last waypoint', async () => {
+  test.setTimeout(240000);
+  await nav('tab.plan').click();
+  await page.locator('button.map-btn', { hasText: label('map.home') }).click();
+  await page.locator('button.map-btn', { hasText: label('map.survey') }).click();
+  await page.getByRole('button', { name: label('survey.drawArea') }).click();
+  const { x, y } = await vehicleOnMap(page);
+  for (const [dx, dy] of [
+    [-40, -60],
+    [40, -60],
+    [40, -20],
+    [-40, -20],
+  ]) {
+    await page.mouse.click(x + dx, y + dy);
+  }
+  await page.getByRole('button', { name: label('survey.finishDraw') }).click();
+  await page.locator('#sv-angle').fill('90');
+  await page.locator('#sv-spacing').fill('60');
+  await page.locator('#sv-over').fill('0');
+  const preview = page.getByText(label('survey.previewCount')).locator('b');
+  await expect.poll(async () => Number(await preview.textContent())).toBeGreaterThan(1);
+  const count = Number(await preview.textContent());
+  await page.getByRole('button', { name: label('survey.generate') }).click();
+
+  const panel = page
+    .getByRole('heading', { name: label('wp.title'), exact: true })
+    .locator('xpath=ancestor::div[contains(@class,"bg-card")][1]');
+  await panel.getByRole('button', { name: label('wp.upload'), exact: true }).click();
+  await expect.poll(async () => (await probe.store()).length).toBe(count + 3); // home, takeoff, RTL
+  await page.getByRole('button', { name: label('survey.clear') }).last().click();
+  await page.locator('button.map-btn', { hasText: label('map.survey') }).click();
+
+  await nav('tab.fly').click();
+  await page.getByRole('button', { name: label('nav.controls') }).click();
+  controls = page.locator('div.w-44');
+  await expect
+    .poll(
+      async () => {
+        await button('ctrl.arm').click();
+        await slide();
+        await page.waitForTimeout(1000);
+        return probe.armed;
+      },
+      { timeout: 30000, intervals: [500] },
+    )
+    .toBe(true);
+  await button('ctrl.startMission').click();
+  await slide();
+  await expect.poll(() => probe.mode).toBe(AUTO);
+  // The last item is the RTL, so reaching it is having flown every waypoint of the grid.
+  await expect.poll(() => probe.missionSeq, { timeout: 180000 }).toBe(count + 2);
+  await expect.poll(() => probe.armed, { timeout: 120000 }).toBe(false);
+});

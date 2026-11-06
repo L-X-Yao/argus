@@ -27,13 +27,13 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 
 | Area | Items | Real FC | SITL | Simulator | Tests only | None | n/a |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Commands, backend | 53 | 19 | 28 | 0 | 6 | 0 | 0 |
+| Commands, backend | 53 | 17 | 30 | 0 | 6 | 0 | 0 |
 | Commands, WebSerial | 53 | 9 | 31 | 0 | 3 | 0 | 10 |
 | Messages, backend | 35 | 28 | 3 | 0 | 4 | 0 | 0 |
 | Messages, WebSerial | 35 | 16 | 13 | 0 | 5 | 0 | 1 |
 | REST routes | 28 | 6 | 5 | 17 | 0 | 0 | 0 |
-| Panels | 80 | 13 | 3 | 21 | 41 | 2 | 0 |
-| Platform | 44 | 8 | 12 | 10 | 9 | 2 | 3 |
+| Panels | 80 | 13 | 33 | 18 | 14 | 2 | 0 |
+| Platform | 44 | 8 | 14 | 10 | 7 | 2 | 3 |
 
 ## Commands / 飞控命令
 
@@ -68,8 +68,8 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 | `cal_gyro` | Gyro calibration | 陀螺仪校准 | Real FC | SITL | Backend 2026-05, CI on both links |
 | `cal_level` | Level calibration | 水平校准 | SITL | SITL | CI on both links |
 | `cal_baro` | Barometer calibration | 气压计校准 | SITL | SITL | CI on both links |
-| `cal_compass` | Compass calibration | 罗盘校准 | Real FC | SITL | Backend 2026-05, WebSerial CI, SITL recording replayed in CI |
-| `cal_compass_accept` | Accept compass result | 确认罗盘结果 | Real FC | SITL | Backend 2026-05, WebSerial CI, SITL recording replayed in CI |
+| `cal_compass` | Compass calibration | 罗盘校准 | SITL | SITL | CI on both links. Backend on a real FC 2026-05, before the link took over accepting: worth a new hardware run |
+| `cal_compass_accept` | Accept compass result | 确认罗盘结果 | SITL | SITL | CI on both links. Backend on a real FC 2026-05, before the link took over accepting: worth a new hardware run |
 | `cal_accel` | Accelerometer calibration | 加速度计校准 | Real FC | SITL | Backend 2026-05, WebSerial CI, SITL recording replayed in CI |
 | `cal_accel_next` | Next calibration pose | 校准下一姿态 | Real FC | SITL | Backend 2026-05, WebSerial CI, SITL recording replayed in CI |
 | `cal_cancel` | Cancel calibration | 取消校准 | Real FC | SITL | Backend 2026-05, CI on both links |
@@ -184,11 +184,11 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 | --- | --- | --- | --- | --- |
 | `ChartPanel` | core | 查看实时遥测曲线 | Simulator | e2e: connected-flow, error-boundary |
 | `ConnectionForm` | core | 连接或断开飞控 | Real FC | 2026-11-05 on both links |
-| `ControlPanel` | core | 解锁起飞切模式 | Simulator | e2e: connected-flow, drone-control |
+| `ControlPanel` | core | 解锁起飞切模式 | SITL | CI by clicks on firmware: arm, takeoff, pause, RTL, by FC mode |
 | `EventLog` | core | 筛选导出事件日志 | Simulator | e2e: connected-flow, event-log |
 | `HudOverlay` | core | 看主飞行姿态仪表 | Real FC | 2026-11-05 on both links |
 | `LazyPanelHost` | core | 按需加载弹出面板 | Real FC | 2026-11-05 on both links |
-| `MapControls` | core | 放大地图时快捷操控 | Tests only | Logic: transport.dispatch |
+| `MapControls` | core | 放大地图时快捷操控 | SITL | CI by clicks on firmware: pause by FC mode |
 | `MapView` | core | 看地图并点选航点 | Real FC | 2026-11-05 on both links |
 | `StatusBar` | core | 看链路电池定位状态 | Real FC | 2026-11-05 on both links |
 | `ToastContainer` | core | 查看操作提示消息 | Real FC | 2026-11-05 on both links |
@@ -199,28 +199,28 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 | `GuidedLayer` | layers | 地图上看引导目标 | SITL | WebSerial CI: right click, target marked, the vehicle moves off |
 | `ReplayLayer` | layers | 地图上看回放位置 | Tests only | Browser test: draws from its state |
 | `SurveyLayer` | layers | 地图上看测绘区域 | Tests only | Browser test: draws from its state |
-| `WaypointLayer` | layers | 地图上拖改航点 | Simulator | e2e: mission |
+| `WaypointLayer` | layers | 地图上拖改航点 | SITL | CI by clicks on firmware: clicks land where aimed |
 | `AirspacePanel` | map | 查看机场限飞区 | Tests only | Logic: units. Demo data |
-| `Compass3DPanel` | map | 校准罗盘看磁场球 | Tests only | Logic: transport |
+| `Compass3DPanel` | map | 校准罗盘看磁场球 | SITL | CI by clicks on firmware: three compass offsets saved |
 | `Map3DView` | map | 三维地图查看编辑 | Simulator | e2e: map3d |
-| `Mission3DPanel` | map | 三维预览航线 | Tests only | Browser test: opens without an error |
+| `Mission3DPanel` | map | 三维预览航线 | SITL | CI by clicks on firmware: waypoint count matches the FC |
 | `OfflineMapPanel` | map | 下载离线地图瓦片 | Tests only | Browser test: opens without an error |
 | `OrthoOverlayPanel` | map | 叠加正射图 | Tests only | Browser test: image reaches the map, survives a reload, wrong corners refused |
-| `CorridorPanel` | mission | 生成走廊扫描航线 | Tests only | Browser test: opens without an error |
-| `RallyPanel` | mission | 添加并上传备降点 | Tests only | Browser test. Upload and clear run on SITL through their commands |
+| `CorridorPanel` | mission | 生成走廊扫描航线 | SITL | CI by clicks on firmware: parallel lines on the FC |
+| `RallyPanel` | mission | 添加并上传备降点 | SITL | CI by clicks on firmware: points on the FC, clear works |
 | `FencePanel` | mission | 绘制上传地理围栏 | Real FC | 2026-11-05, Clear on FC through the panel on WebSerial |
-| `MissionPanel` | mission | 编辑上传任务航点 | Simulator | e2e: mission, connected-flow |
-| `MissionProgress` | mission | 看任务执行进度 | Tests only | Logic: units |
-| `PoiPanel` | mission | 设置相机兴趣点 | Tests only | Logic: transport.dispatch |
-| `SurveyPanel` | mission | 生成测绘网格航线 | Tests only | Logic: survey |
-| `TerrainProfilePanel` | mission | 查看航线地形剖面 | Tests only | Logic: terrain |
-| `AutoTunePanel` | params | 启动自动调参 | Tests only | Logic: paramStore |
-| `FailsafeConfigPanel` | params | 配置失控保护 | Tests only | Logic: paramStore |
-| `FlightModePanel` | params | 配置六档飞行模式 | Tests only | Logic: paramStore |
-| `ParamDiffPanel` | params | 对比参数文件差异 | Tests only | Logic: paramStore |
+| `MissionPanel` | mission | 编辑上传任务航点 | SITL | CI by clicks on firmware: upload and download match the FC store |
+| `MissionProgress` | mission | 看任务执行进度 | SITL | CI by clicks on firmware: tracks the FC mission sequence |
+| `PoiPanel` | mission | 设置相机兴趣点 | SITL | CI by clicks on firmware: the vehicle turns, clear reaches the FC |
+| `SurveyPanel` | mission | 生成测绘网格航线 | SITL | CI by clicks on firmware: spacing and heading on the FC, and the grid flown |
+| `TerrainProfilePanel` | mission | 查看航线地形剖面 | SITL | CI by clicks on firmware: clearance from home. Skips without the terrain server |
+| `AutoTunePanel` | params | 启动自动调参 | SITL | CI by clicks on firmware, on the ground only: refusal, axes written. Not run in the air |
+| `FailsafeConfigPanel` | params | 配置失控保护 | SITL | CI by clicks on firmware: every section written and read back |
+| `FlightModePanel` | params | 配置六档飞行模式 | SITL | CI by clicks on firmware: six slots read, FLTMODE written |
+| `ParamDiffPanel` | params | 对比参数文件差异 | SITL | CI by clicks on firmware: export, compare, apply |
 | `ParamPanel` | params | 读取编辑飞控参数 | Real FC | 2026-11-05 on both links, reading; writes used the same dispatch, not the row editor |
-| `PidPanel` | params | 调节PID参数 | Tests only | Logic: paramStore |
-| `PowerCalPanel` | params | 校准电压电流 | Tests only | Logic: paramStore |
+| `PidPanel` | params | 调节PID参数 | SITL | CI by clicks on firmware: typed and slider gains reach the FC |
+| `PowerCalPanel` | params | 校准电压电流 | SITL | CI by clicks on firmware: voltage and current scale on the FC |
 | `AiAnnotationPanel` | planning | 标注图像缺陷 | None | No test. Auto-detect is a stub. No way to open it |
 | `AiPlannerPanel` | planning | 文字生成航线 | None | No test. Rule-based parser, not an LLM. No way to open it |
 | `AnnotationPanel` | planning | 记录地图标注点 | Tests only | Browser test: opens without an error |
@@ -229,35 +229,35 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 | `SchedulerPanel` | planning | 定时执行任务 | Tests only | Logic: scheduler. No way to open it |
 | `ScriptPanel` | planning | 运行用户脚本 | Tests only | Logic: ws. No way to open it |
 | `CalibrationPanel` | setup | 校准传感器 | Simulator | e2e: connected-flow |
-| `EscCalPanel` | setup | 校准电调 | Tests only | Logic: transport.dispatch |
+| `EscCalPanel` | setup | 校准电调 | SITL | CI by clicks on firmware: parameter and undo. The calibration itself needs a power cycle |
 | `FirmwarePanel` | setup | 上传固件并重启 | Simulator | e2e: settings, mobile |
-| `FrameSelectPanel` | setup | 选择机架类型 | Tests only | Logic: paramStore |
-| `MotorTestPanel` | setup | 逐个测试电机 | Tests only | Logic: transport.dispatch |
+| `FrameSelectPanel` | setup | 选择机架类型 | SITL | CI by clicks on firmware: class and type written, layouts match the firmware |
+| `MotorTestPanel` | setup | 逐个测试电机 | SITL | CI by clicks on firmware: outputs per motor, stop in real time. Props never involved |
 | `NtripPanel` | setup | 接入RTK | Simulator | e2e: command-palette. Opens; no real base station |
 | `PositionSourcePanel` | setup | 查看定位源 | SITL | WebSerial CI, GPS and EKF rows |
-| `RcCalibPanel` | setup | 校准遥控器行程 | Tests only | Logic: transport.parity |
-| `SetupWizard` | setup | 按向导完成初始设置 | Tests only | Logic: panels |
+| `RcCalibPanel` | setup | 校准遥控器行程 | SITL | CI by clicks on firmware: four channels, ends kept |
+| `SetupWizard` | setup | 按向导完成初始设置 | SITL | CI by clicks on firmware: six steps, tools reach the FC |
 | `CommandPalette` | shared | 搜索并执行命令 | Simulator | e2e: command-palette, keyboard |
 | `ConfirmDialog` | shared | 确认危险操作 | Real FC | 2026-11-05 |
-| `FlightSummary` | shared | 查看飞行总结 | Tests only | Logic: units |
+| `FlightSummary` | shared | 查看飞行总结 | SITL | CI by clicks on firmware: matches the flight the FC reported |
 | `LoginDialog` | shared | 输入令牌登录 | Simulator | e2e: auth |
 | `PreflightPanel` | shared | 查看起飞前检查 | Real FC | 2026-11-05 on both links |
 | `RolePanel` | shared | 切换操作角色 | Tests only | Browser test: opens without an error. Demo, not wired to roles |
 | `SettingsPanel` | shared | 修改应用设置 | Simulator | e2e: settings, mobile |
-| `SlideConfirm` | shared | 滑动确认关键指令 | Tests only | Logic: stores |
+| `SlideConfirm` | shared | 滑动确认关键指令 | SITL | CI by clicks on firmware: an early release arms nothing |
 | `EkfPanel` | telemetry | 查看导航滤波状态 | Simulator | e2e: connected-flow, navigation |
 | `RcPanel` | telemetry | 查看遥控通道 | Simulator | e2e: connected-flow, navigation |
 | `ServoPanel` | telemetry | 查看舵机输出 | Simulator | e2e: connected-flow, navigation |
 | `TelemetryOverlay` | telemetry | 飞行中看关键遥测 | Real FC | 2026-11-05 on both links |
 | `VibrationPanel` | telemetry | 查看振动水平 | Simulator | e2e: connected-flow, navigation |
-| `AdvancedCmdPanel` | tools | 给航点加高级指令 | Tests only | Logic: missionUpload |
+| `AdvancedCmdPanel` | tools | 给航点加高级指令 | SITL | CI by clicks on firmware: items land on the FC |
 | `ConsolePanel` | tools | 发送飞控控制台命令 | Simulator | e2e: memory |
-| `FFTPanel` | tools | 分析日志频谱 | Tests only | Logic: dflog |
-| `FlightReportPanel` | tools | 填写导出飞行报告 | Tests only | Browser test: opens without an error |
+| `FFTPanel` | tools | 分析日志频谱 | SITL | CI on a real .BIN: finds an injected 35 Hz tone |
+| `FlightReportPanel` | tools | 填写导出飞行报告 | SITL | CI by clicks on firmware: keeps the flight after the summary closes |
 | `InspectorPanel` | tools | 检视实时消息流 | Simulator | e2e: memory |
 | `LogPanel` | tools | 下载机载日志 | Real FC | 2026-11-05 on both links |
-| `LogViewerPanel` | tools | 绘图查看日志 | Tests only | Logic: dflog |
-| `RemotePanel` | tools | 查看会话复制链接 | Tests only | Browser test: opens without an error. Partly wired |
+| `LogViewerPanel` | tools | 绘图查看日志 | SITL | CI on a real .BIN, compared with pymavlink |
+| `RemotePanel` | tools | 查看会话复制链接 | SITL | CI: client count from the backend |
 | `ReplayPanel` | tools | 加载并回放飞行日志 | Simulator | e2e: map3d |
 | `FleetDashboard` | vehicle | 查看并切换多机 | Tests only | Logic: ws |
 | `GimbalPanel` | vehicle | 控制云台相机 | Simulator | e2e: command-palette. Opens; no gimbal |
@@ -293,9 +293,9 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 | Submarine | 水下潜航器 | SITL | CI. No dive in CI |
 | Several vehicles at once | 多机同屏 | SITL | CI: two vehicles on one link, each flown from the other through the switch |
 | Offline mbtiles maps | 离线 mbtiles 地图 | Simulator | e2e: a real file picked in Settings shows on the map |
-| Survey and pattern planning | 测绘和图案规划 | Tests only | Unit tests |
+| Survey and pattern planning | 测绘和图案规划 | SITL | CI: drawn in the panel, read back from the firmware, and the grid flown |
 | Mission file formats | 航线文件格式 | Simulator | e2e: .waypoints, .plan and .kml as other ground stations write them |
-| Terrain profile | 地形剖面 | Tests only | Unit tests |
+| Terrain profile | 地形剖面 | SITL | CI: clearance from home on real firmware, heights from the real terrain server |
 | Voice and audio alerts | 语音和声音告警 | SITL | CI: the armed message on real firmware, with speech stubbed. Sound itself not checked |
 | Gamepad | 手柄 | SITL | CI: a stubbed pad moves channel 1 on real firmware. No real pad |
 | 10 languages | 10 种语言 | Tests only | Key completeness only, not reviewed by native speakers |
