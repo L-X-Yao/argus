@@ -69,6 +69,17 @@ class TestCommandExecute:
         execute("takeoff", None, link, data={"alt": 50})
         assert any("起飞" in e["text"] for e in link.events)
 
+    def test_takeoff_on_copter_goes_through_guided(self):
+        # ArduCopter/takeoff.cpp:27: STABILIZE, where it boots, refuses a takeoff.
+        link = make_link()
+        link.vehicle.vtype_raw = 2
+        execute("takeoff", None, link, data={"alt": 50})
+        mode, takeoff = (c[0][0] for c in link._ser.write.call_args_list)
+        assert struct.unpack_from("<H", mode, 38)[0] == 176
+        assert struct.unpack_from("<f", mode, 14)[0] == 4
+        assert struct.unpack_from("<H", takeoff, 38)[0] == 22
+        assert struct.unpack_from("<f", takeoff, 34)[0] == 50
+
     def test_drop(self):
         link = make_link()
         execute("drop", None, link)

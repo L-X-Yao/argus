@@ -149,9 +149,18 @@ class TestOutgoingCommands:
     def test_takeoff(self):
         link = FakeLink()
         commands.execute("takeoff", None, link, {"alt": 50})
-        msg = _decode_one(link.captured[0])
+        mode = _decode_one(link.captured[0])
+        assert mode.command == mavlink.MAV_CMD_DO_SET_MODE
+        assert mode.param2 == 4.0  # GUIDED
+        msg = _decode_one(link.captured[1])
         assert msg.command == mavlink.MAV_CMD_NAV_TAKEOFF
         assert msg.param7 == 50.0  # altitude
+
+    def test_takeoff_leaves_the_mode_alone_on_what_does_not_fly(self):
+        link = FakeLink()
+        link.vehicle_kind = lambda: "rover"
+        commands.execute("takeoff", None, link, {"alt": 50})
+        assert _decode_one(link.captured[0]).command == mavlink.MAV_CMD_NAV_TAKEOFF
 
     def test_rtl(self):
         link = FakeLink()

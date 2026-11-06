@@ -487,15 +487,14 @@ const _serialDispatch: Record<string, CmdHandler> = {
     }
     serialSendMode(mode);
   },
-  // MAV_CMD_NAV_TAKEOFF (22): p7=alt. AP source ArduPlane/quadplane.cpp:3948 (QuadPlane::do_user_takeoff)
-  // rejects unless control_mode == mode_guided — switch Plane to GUIDED (15) first to match backend cmd_takeoff.
+  // MAV_CMD_NAV_TAKEOFF (22): p7=alt, from GUIDED on what can take off. See backend cmd_takeoff.
   takeoff: (_, d) => {
     const alt = num(d?.alt, 30);
     // Bounds mirror backend cmd_takeoff (_flight.py:47-49), and run BEFORE
-    // the Plane mode switch so an invalid alt doesn't leak a bare GUIDED
+    // the mode switch so an invalid alt doesn't leak a bare GUIDED
     // transition the backend path would never have sent.
     if (!(alt >= 1 && alt <= 1000)) return;
-    if (_isPlane()) serialSendMode(15);
+    if (_isPlane() || vehicleType(app.drone.vtype_raw) === 'copter') serialSendMode(_specialModes().guided);
     serialSendCommandLong(22, 0, 0, 0, 0, 0, 0, alt);
   },
   // Backend cmd_mission_start: switch to AUTO, then send MAV_CMD_MISSION_START (300) after a delay.

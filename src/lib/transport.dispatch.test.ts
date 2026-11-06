@@ -272,11 +272,12 @@ describe('_serialDispatch wire-byte semantics', () => {
     expect(cmd.p7).toBe(50);
   });
 
-  it('takeoff on Copter sends NAV_TAKEOFF directly (no mode switch)', () => {
+  it('takeoff on Copter switches to GUIDED (4) too: it boots in a mode that refuses it', () => {
     _isPlaneFlag = false;
     dispatch('takeoff', undefined, { alt: 30 });
-    expect(writes.length).toBe(1);
-    const cmd = decodeCommandLong(writes[0]);
+    expect(writes.length).toBe(2);
+    expect(decodeSetMode(writes[0]).customMode).toBe(4);
+    const cmd = decodeCommandLong(writes[1]);
     expect(cmd.command).toBe(22);
     expect(cmd.p7).toBe(30);
   });
