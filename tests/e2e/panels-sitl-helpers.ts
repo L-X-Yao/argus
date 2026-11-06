@@ -28,6 +28,9 @@ export async function connect(page: Page) {
 
 export async function openSession(browser: Browser): Promise<{ page: Page; probe: Probe }> {
   const page = await browser.newPage();
+  // Map servers far from a hosted runner hold every connection the browser allows a host,
+  // and the panels load behind them. No test here reads a tile.
+  await page.route('**/api/tile/**', (route) => route.abort());
   const probe = await Probe.open(SITL_PROBE_TCP);
   await connect(page);
   return { page, probe };

@@ -343,7 +343,8 @@ test.describe('Parameter file', () => {
     // AP_Param.cpp:1190), which the comparison is right to show. Not part of this test.
     const lines = exported.filter((l) => !l.startsWith('STAT_'));
 
-    // Relative to what the FC holds, so that the spec can run twice on one SITL.
+    // Relative to what the FC holds, so that the spec can run twice on one SITL. Names that
+    // Copter 4.6 and 4.7 share: 4.7 renamed more than a hundred, RTL_ALT and WPNAV_SPEED too.
     const set = async (name: string, change: number) => {
       const at = lines.findIndex((l) => l.startsWith(`${name}\t`));
       expect(at).toBeGreaterThanOrEqual(0);
@@ -351,9 +352,9 @@ test.describe('Parameter file', () => {
       lines[at] = `${name}\t${value}`;
       return value;
     };
-    const speed = await set('WPNAV_SPEED', 50);
-    const rtlAlt = await set('RTL_ALT', 100);
-    const angle = await set('ANGLE_MAX', 100);
+    const speed = await set('RTL_LOIT_TIME', 50);
+    const rtlAlt = await set('FENCE_RADIUS', 100);
+    const angle = await set('ACRO_RP_RATE', 100);
     lines.push('NOT_ON_THIS_FC\t1');
     writeFileSync(file, lines.join('\n'));
 
@@ -366,20 +367,20 @@ test.describe('Parameter file', () => {
     await expect(dialog.getByText(label('paramdiff.count').replace('{n}', '3'))).toBeVisible();
 
     const row = (name: string) => dialog.locator('div.flex.items-center').filter({ hasText: name }).last();
-    await expect(row('WPNAV_SPEED')).toContainText(String(speed));
-    await expect(row('RTL_ALT')).toContainText(String(rtlAlt));
+    await expect(row('RTL_LOIT_TIME')).toContainText(String(speed));
+    await expect(row('FENCE_RADIUS')).toContainText(String(rtlAlt));
 
     // One on its own, the rest together, and nothing else moves.
-    await row('WPNAV_SPEED')
+    await row('RTL_LOIT_TIME')
       .getByRole('button', { name: label('paramdiff.apply') })
       .click();
-    await onFc('WPNAV_SPEED').toBe(speed);
-    expect(await probe.param('RTL_ALT')).toBe(rtlAlt - 100);
-    expect(await probe.param('ANGLE_MAX')).toBe(angle - 100);
+    await onFc('RTL_LOIT_TIME').toBe(speed);
+    expect(await probe.param('FENCE_RADIUS')).toBe(rtlAlt - 100);
+    expect(await probe.param('ACRO_RP_RATE')).toBe(angle - 100);
 
     await dialog.getByRole('button', { name: label('paramdiff.applyAll') }).click();
-    await onFc('RTL_ALT').toBe(rtlAlt);
-    await onFc('ANGLE_MAX').toBe(angle);
+    await onFc('FENCE_RADIUS').toBe(rtlAlt);
+    await onFc('ACRO_RP_RATE').toBe(angle);
 
     await dialog.locator('button', { hasText: label('paramdiff.onlyFile') }).click();
     await expect(dialog.getByText('NOT_ON_THIS_FC')).toBeVisible();

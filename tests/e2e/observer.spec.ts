@@ -18,13 +18,23 @@ test('an observer can close the flight summary', async ({ page }) => {
     await expect
       .poll(
         async () => {
+          // Off the ground: an arm and disarm alone reports no flight, and the simulator
+          // only climbs on a mission.
+          send({
+            type: 'command',
+            cmd: 'mission_upload',
+            waypoints: [{ lat: 34.26, lon: 108.95, alt: 30, speed: 0, type: 'wp', drop: false, delay: 0 }],
+          });
+          await page.waitForTimeout(1000);
           command('arm');
           await page.waitForTimeout(1000);
-          command('disarm');
+          command('mission_start');
+          await page.waitForTimeout(5000);
+          command('force_disarm');
           await page.waitForTimeout(1000);
           return page.getByRole('heading', { name: /飞行完成|Flight Complete/ }).isVisible();
         },
-        { message: 'no flight summary', timeout: 30000 },
+        { message: 'no flight summary', timeout: 40000 },
       )
       .toBe(true);
 
