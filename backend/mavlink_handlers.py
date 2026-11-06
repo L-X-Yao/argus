@@ -350,14 +350,30 @@ def handle_mag_cal_report(p: bytes, pl: int, link: DroneLink) -> None:
     p = _pad(p, 44)
     if getattr(link, "_mag_cal_done", False):
         return
-    cal_status = p[42]
+    # Each compass reports when it finishes, and cal_mask @41 names all those calibrating
+    # (AP_Compass_Calibration.cpp:283 send_mag_cal_report, :359 _get_cal_mask). The run is
+    # over at the last one.
+    compass, cal_mask = p[40], p[41]
+    reports = link._mag_cal_reports
+    reports[compass] = p[42]
+    if any(cal_mask >> i & 1 and i not in reports for i in range(8)):
+        return
     link._mag_cal_done = True
     link._mag_cal_pct = -1
-    if cal_status == 4:
+    if all(status == 4 for status in reports.values()):
         link.add_event(lt("mag_cal_done", link.locale), "cal_compass")
         link.add_event(lt("mag_cal_reboot", link.locale), "cal_compass")
+        # Started with autosave 0 (cmd_cal_compass), so the FC keeps a result only when told
+        # to (AP_Compass_Calibration.cpp:32). Here and not in a panel: it holds however the
+        # run was started and whichever panel is open. Not sooner: an accept stops a compass
+        # that is still running and drops what it had (:233-236).
+        if link._mag_cal_ours:
+            from .commands._helpers import send_cmd
+
+            send_cmd(link, 42425, p1=0)
     else:
         link.add_event(lt("mag_cal_fail", link.locale), "cal_compass")
+    link._mag_cal_ours = False
 
 
 # ArduPilot: libraries/GCS_MAVLink/GCS_Common.cpp:2684 — GCS_MAVLINK::service_statustext

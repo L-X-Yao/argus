@@ -102,21 +102,7 @@
     dragging = false;
   }
 
-  // Started with autosave 0, so the FC keeps a result only when told to: see
-  // cmd_cal_compass, and CalibrationPanel, which does the same for its own runs.
-  let calFrom = $state(-1); // where the event log stood when this panel started a calibration
-  $effect(() => {
-    if (calFrom < 0) return;
-    const result = app.events
-      .slice(calFrom > app.events.length ? 0 : calFrom)
-      .find((ev) => ev.event_type === 'cal_compass' && /complete|完成|failed|失败/i.test(ev.text));
-    if (!result) return;
-    calFrom = -1;
-    if (!/failed|失败/i.test(result.text)) dispatch('cal_compass_accept');
-  });
-
   function startCal() {
-    calFrom = app.events.length;
     dispatch('cal_compass');
   }
   function clearSamples() {

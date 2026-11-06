@@ -8,6 +8,7 @@ test.skip(!READY, 'run through tests/e2e/run-panels-sitl.sh');
 test.describe.configure({ mode: 'serial', timeout: 300000 });
 
 const MAV_CMD_DO_SET_SERVO = 183;
+const OFFSETS = ['COMPASS_OFS_X', 'COMPASS_OFS2_X', 'COMPASS_OFS3_X']; // SITL has three
 
 let page: Page;
 let probe: Probe;
@@ -26,8 +27,8 @@ test.afterAll(async () => {
   await page?.close();
 });
 
-test('draws the field as the vehicle turns, and the FC keeps what the calibration found', async () => {
-  const before = await probe.param('COMPASS_OFS_X');
+test('draws the field as the vehicle turns, and the FC keeps what each compass found', async () => {
+  const before = await Promise.all(OFFSETS.map((name) => probe.param(name)));
   const dialog = await tool(page, 'tool-compass3d', label('compass3d.title'));
   const samples = async () =>
     Number(
@@ -39,12 +40,11 @@ test('draws the field as the vehicle turns, and the FC keeps what the calibratio
   poses(1250);
   await expect.poll(samples, { timeout: 30000 }).toBeGreaterThan(20);
 
-  await expect
-    .poll(() => probe.magCalResult, { message: 'no MAG_CAL_REPORT', timeout: 240000, intervals: [2000] })
-    .toBe(4);
+  // Accepted, or the FC drops the results: it was started with autosave 0. They finish one
+  // after the other, and an accept at the first would stop the rest with nothing saved.
+  for (const [i, name] of OFFSETS.entries()) {
+    await expect.poll(() => probe.param(name), { message: name, timeout: 240000, intervals: [2000] }).not.toBe(before[i]);
+  }
   poses(1000);
-
-  // Accepted, or the FC drops the result: it was started with autosave 0.
-  await expect.poll(() => probe.param('COMPASS_OFS_X'), { timeout: 15000 }).not.toBe(before);
   await close(page, dialog);
 });

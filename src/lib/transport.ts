@@ -1185,13 +1185,17 @@ export async function serialDownloadMission(): Promise<{ ok: boolean; error?: st
 interface MagCalState {
   pct: number; // last %% emitted, -1 = none
   done: boolean; // one-shot to avoid double "complete" or progress-after-done
+  reports: Map<number, number>; // compass id -> MAG_CAL_STATUS, this run
+  ours: boolean; // a run started here, so the result is ours to accept
 }
 
-const magCal: MagCalState = { pct: -1, done: false };
+const magCal: MagCalState = { pct: -1, done: false, reports: new Map(), ours: false };
 
 function _resetMagCal(): void {
   magCal.pct = -1;
   magCal.done = false;
+  magCal.reports.clear();
+  magCal.ours = false;
 }
 
 function _onMagCalProgress(p: DataView): void {
@@ -1216,12 +1220,16 @@ function _onMagCalProgress(p: DataView): void {
 
 function _onMagCalReport(p: DataView): void {
   // p is pre-padded to ≥44 bytes (matches backend's `_pad(p, 44)`).
-  // cal_status is at offset 42 — see backend handler.
+  // compass_id @40, cal_mask @41, cal_status @42: the backend handler says why all three.
   if (magCal.done) return;
-  const calStatus = p.getUint8(42);
+  const calMask = p.getUint8(41);
+  magCal.reports.set(p.getUint8(40), p.getUint8(42));
+  for (let i = 0; i < 8; i++) {
+    if (calMask & (1 << i) && !magCal.reports.has(i)) return;
+  }
   magCal.done = true;
   magCal.pct = -1;
-  if (calStatus === 4) {
+  if ([...magCal.reports.values()].every((status) => status === 4)) {
     // MAG_CAL_SUCCESS. Backend emits TWO events (done + reboot hint);
     // CalibrationPanel only reads the first for completion detection but
     // we replicate both so the message log looks identical.
@@ -1237,6 +1245,7 @@ function _onMagCalReport(p: DataView): void {
       text: t('cal.s.compassReboot'),
       event_type: 'cal_compass',
     });
+    if (magCal.ours) serialCalCompassAccept();
   } else {
     addEvent({
       type: 'event',
@@ -1245,11 +1254,13 @@ function _onMagCalReport(p: DataView): void {
       event_type: 'cal_compass',
     });
   }
+  magCal.ours = false;
 }
 
 export function serialCalCompass(): void {
   if (!isSerialConnected()) return;
   _resetMagCal();
+  magCal.ours = true;
   // MAV_CMD_DO_START_MAG_CAL: p1=mag_mask(0=all), p2-p4=options(0). Matches
   // backend cmd_cal_compass (send_cmd(link, 42424, p1=0, p2=0, p3=0, p4=0)).
   serialSendCommandLong(42424, 0, 0, 0, 0, 0, 0, 0);

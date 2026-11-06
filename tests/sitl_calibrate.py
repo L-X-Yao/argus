@@ -7,8 +7,8 @@ outputs 5-8), connects the Argus backend to SERIAL0 (tcp:5760), and drives
 the two interactive calibrations end-to-end THROUGH THE BACKEND'S OWN
 command path:
 
-  1. onboard compass cal   cal_compass -> rotation poses -> MAG_CAL_REPORT
-                           -> cal_compass_accept
+  1. onboard compass cal   cal_compass -> rotation poses -> MAG_CAL_REPORT from
+                           each compass, and the backend accepts after the last
   2. 6-position accel cal  cal_accel -> 6x (attitude + cal_accel_next)
                            -> "Calibration successful"
 
@@ -333,8 +333,7 @@ async def drive_magcal(ws, sim: SimDriver):
     text = done.get("text", "")
     if "失败" in text or "FAILED" in text:
         die(f"magcal reported failure: {text}")
-    log(f"magcal: complete after {pct_events} progress events — accepting (42425)")
-    await ws_cmd(ws, "cal_compass_accept")
+    log(f"magcal: complete after {pct_events} progress events, accepted by the backend (42425)")
     await asyncio.sleep(3)  # let the ACK land in the recording
     sim.stop()
 

@@ -68,6 +68,8 @@ class FakeLink:
         self._lock = threading.Lock()
         self._mag_cal_pct = -1
         self._mag_cal_done = False
+        self._mag_cal_reports: dict[int, int] = {}
+        self._mag_cal_ours = False
         self._prearm_messages: list[str] = []
         # state subsystems used by handlers
         from backend.state import (
@@ -435,6 +437,38 @@ class TestIncomingHandlers:
         assert link._mag_cal_done is True
         assert any("完成" in e["text"] or "complete" in e["text"] for e in link.events)
 
+    def test_mag_cal_report_waits_for_the_compasses_in_its_mask(self):
+        """compass_id and cal_mask, encoded by pymavlink: the offsets the handler reads."""
+
+        def report(compass_id):
+            msg = mavlink.MAVLink_mag_cal_report_message(
+                compass_id=compass_id,
+                cal_mask=0b101,
+                cal_status=4,
+                autosaved=0,
+                fitness=0.5,
+                ofs_x=1,
+                ofs_y=2,
+                ofs_z=3,
+                diag_x=1,
+                diag_y=1,
+                diag_z=1,
+                offdiag_x=0,
+                offdiag_y=0,
+                offdiag_z=0,
+                orientation_confidence=1.0,
+                old_orientation=0,
+                new_orientation=0,
+                scale_factor=1.0,
+            )
+            return _encode_payload(msg)
+
+        link = FakeLink()
+        handle_mag_cal_report(*report(2), link)
+        assert link._mag_cal_done is False
+        handle_mag_cal_report(*report(0), link)
+        assert link._mag_cal_done is True
+
     def test_battery_status(self):
         link = FakeLink()
         cells = [3700, 3700, 3700, 3700] + [0xFFFF] * 6
@@ -560,6 +594,7 @@ class TestIncomingHandlers:
         handle_heartbeat(payload, pl, link)
         assert link.vehicle.landed is True
 
+    def test_heartbeat_armed_flag(self):
         link = FakeLink()
         msg = mavlink.MAVLink_heartbeat_message(
             type=2,

@@ -19,6 +19,7 @@ import struct
 import time
 from unittest.mock import MagicMock
 
+from backend.commands import execute
 from backend.drone_link import DroneLink
 from backend.mavlink_handlers import (
     _emit_log_chunks,
@@ -296,6 +297,65 @@ class TestMagCalReport:
         p = bytearray(42)  # too short (needs 43)
         handle_mag_cal_report(p, len(p), link)
         assert not hasattr(link, "_mag_cal_done") or not link._mag_cal_done
+
+    # tests/fixtures/magcal_sitl.tlog: cal_mask 7, compass 2 reports first and compass 1 last.
+    @staticmethod
+    def _report(link, compass, status, mask=7):
+        p = bytearray(44)
+        p[40], p[41], p[42] = compass, mask, status
+        handle_mag_cal_report(p, len(p), link)
+
+    @staticmethod
+    def _accepts(link):
+        frames = [c[0][0] for c in link._ser.write.call_args_list]
+        return sum(struct.unpack_from("<H", f, 38)[0] == 42425 for f in frames if len(f) > 39)
+
+    def test_the_run_ends_at_the_last_compass_and_only_then_is_accepted(self):
+        # An accept stops a compass still running and drops what it had
+        # (AP_Compass_Calibration.cpp:233-236).
+        link = make_link_connected()
+        execute("cal_compass", None, link)
+        self._report(link, 2, 4)
+        self._report(link, 0, 4)
+        self._report(link, 2, 4)  # a finished compass keeps reporting
+        assert link._mag_cal_done is False
+        assert self._accepts(link) == 0
+        self._report(link, 1, 4)
+        assert link._mag_cal_done is True
+        assert self._accepts(link) == 1
+        self._report(link, 1, 4)
+        assert self._accepts(link) == 1
+
+    def test_one_compass_failing_fails_the_run_and_nothing_is_accepted(self):
+        link = make_link_connected()
+        execute("cal_compass", None, link)
+        self._report(link, 0, 4)
+        self._report(link, 1, 5)
+        self._report(link, 2, 4)
+        assert link._mag_cal_done is True
+        assert self._accepts(link) == 0
+        assert any("失败" in e["text"] or "FAILED" in e["text"] for e in link.events)
+
+    def test_a_run_started_elsewhere_is_not_ours_to_accept(self):
+        link = make_link_connected()
+        self._report(link, 0, 4, mask=1)
+        assert link._mag_cal_done is True
+        assert self._accepts(link) == 0
+
+    def test_a_cancelled_run_is_not_accepted(self):
+        link = make_link_connected()
+        execute("cal_compass", None, link)
+        self._report(link, 2, 4)
+        execute("cal_cancel", None, link)
+        self._report(link, 0, 4, mask=1)
+        assert self._accepts(link) == 0
+
+    def test_a_new_session_accepts_nothing_for_the_old_one(self):
+        link = make_link_connected()
+        execute("cal_compass", None, link)
+        link._reset_session_state()
+        self._report(link, 0, 4, mask=1)
+        assert self._accepts(link) == 0
 
 
 # ---------------------------------------------------------------------------

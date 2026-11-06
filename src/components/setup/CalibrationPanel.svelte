@@ -204,14 +204,11 @@
     return { done, failed };
   });
 
-  /* Side effects: flip calibrating off on completion/failure; auto-accept compass. */
+  /* Side effects: flip calibrating off on completion/failure. The link accepts a compass run. */
   $effect(() => {
     if (!calibrating) return;
     if (selected === 'compass') {
-      if (compassParsed.done) {
-        calibrating = false;
-        dispatch('cal_compass_accept');
-      } else if (compassParsed.failed) {
+      if (compassParsed.done || compassParsed.failed) {
         calibrating = false;
       }
     } else if (selected === 'accel') {

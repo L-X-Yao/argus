@@ -92,6 +92,7 @@ import {
   serialLogList,
   serialLogDownload,
   serialLogCancel,
+  serialCalCancel,
   serialCalCompass,
   dispatch,
   serialClearMission,
@@ -174,11 +175,13 @@ function mkMagCalProgress(pct: number): Uint8Array {
   return buf;
 }
 
-function mkMagCalReport(calStatus: number): Uint8Array {
+function mkMagCalReport(calStatus: number, compass = 0, mask = 0): Uint8Array {
   // cal_status at offset 42; total length 44 (autosaved+orientation trim
   // is irrelevant after _padView). We pre-pad to 44 in transport, so a
   // 43-byte payload would also work, but tests use the full 44 for clarity.
   const buf = new Uint8Array(44);
+  buf[40] = compass;
+  buf[41] = mask;
   buf[42] = calStatus;
   return buf;
 }
@@ -814,6 +817,54 @@ describe('serialCalCompass + MAG_CAL events', () => {
     // Subsequent progress frames suppressed.
     inject(fcFrame(191, mkMagCalProgress(99)));
     expect(events.filter((e) => e.event_type === 'cal_compass').length).toBe(2);
+  });
+
+  describe('with several compasses', () => {
+    // tests/fixtures/magcal_sitl.tlog: cal_mask 7, compass 2 reports first and compass 1 last.
+    const report = (compass: number, status: number, mask = 7) =>
+      inject(fcFrame(192, mkMagCalReport(status, compass, mask)));
+    const accepts = () =>
+      writes.filter((w) => writeMsgId(w) === 76 && new DataView(w.buffer).getUint16(38, true) === 42425).length;
+
+    it('ends the run at the last compass, and accepts only then', () => {
+      serialCalCompass();
+      events.length = 0;
+      report(2, 4);
+      report(0, 4);
+      report(2, 4); // a finished compass keeps reporting
+      expect(events).toHaveLength(0);
+      expect(accepts()).toBe(0);
+      report(1, 4);
+      expect(events).toHaveLength(2); // done + reboot
+      expect(accepts()).toBe(1);
+      report(1, 4);
+      expect(accepts()).toBe(1);
+    });
+
+    it('fails the run when one compass fails, and accepts nothing', () => {
+      serialCalCompass();
+      events.length = 0;
+      report(0, 4);
+      report(1, 5);
+      report(2, 4);
+      expect(events).toHaveLength(1);
+      expect(accepts()).toBe(0);
+    });
+
+    it('leaves alone a run it did not start', () => {
+      serialCalCancel();
+      writes.length = 0;
+      report(0, 4, 1);
+      expect(accepts()).toBe(0);
+    });
+
+    it('does not accept a run cancelled halfway', () => {
+      serialCalCompass();
+      report(2, 4);
+      serialCalCancel();
+      report(0, 4, 1);
+      expect(accepts()).toBe(0);
+    });
   });
 
   it('MAG_CAL_REPORT with non-success status emits failure event', () => {
