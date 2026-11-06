@@ -1,7 +1,7 @@
 <script lang="ts">
   import { addToast } from '../../lib/stores.svelte';
   import { t } from '../../lib/i18n.svelte';
-  import { parseDFLog, getTimeSeries, type DFLog } from '../../lib/dflog';
+  import { parseDFLog, getTimeSeries, firstDataColumn, type DFLog } from '../../lib/dflog';
   import Button from '$lib/components/ui/button/button.svelte';
   import { X, FileText, Download, BarChart3, Table2, Activity } from '@lucide/svelte';
 
@@ -103,8 +103,7 @@
     for (const tp of selectedTypes) {
       const fmt = log.formats.get(tp);
       if (!fmt) continue;
-      const numCols = fmt.columns.filter((c) => c !== 'TimeUS' && c !== 'TimeMS');
-      const col = numCols[0];
+      const col = firstDataColumn(fmt);
       if (!col) continue;
       const series = getTimeSeries(log, tp, col);
       if (series.t.length < 2) continue;
@@ -370,7 +369,7 @@
     let csv = 'time,' + types.join(',') + '\n';
     const series = types.map((tp) => {
       const fmt = log!.formats.get(tp);
-      const col = fmt?.columns.filter((c) => c !== 'TimeUS' && c !== 'TimeMS')[0] || '';
+      const col = (fmt && firstDataColumn(fmt)) || '';
       return getTimeSeries(log!, tp, col);
     });
     const maxLen = Math.max(...series.map((s) => s.t.length));

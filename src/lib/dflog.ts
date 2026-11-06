@@ -10,6 +10,8 @@ export interface DFFormat {
   name: string;
   format: string;
   columns: string[];
+  /** The column that says which GPS, IMU or battery a row belongs to, if there are several. */
+  instance?: string;
 }
 
 export interface DFLog {
@@ -106,8 +108,9 @@ export function parseDFLog(buffer: ArrayBuffer): DFLog {
       const colBytes = data.slice(pos + 22, pos + 86);
       const colStr = String.fromCharCode(...colBytes).replace(/\0/g, '');
       const columns = colStr.split(',').filter((c) => c);
-      formats.set(type, { type, length, name, format, columns });
-      formatsByName.set(name, { type, length, name, format, columns });
+      const def = { type, length, name, format, columns };
+      formats.set(type, def);
+      formatsByName.set(name, def);
       pos += 86;
       continue;
     }
@@ -129,6 +132,14 @@ export function parseDFLog(buffer: ArrayBuffer): DFLog {
       fpos += size;
     }
 
+    // FMTU gives each column of a type a unit, and '#' is the instance
+    // (libraries/AP_Logger/LogStructure.h log_Units).
+    if (fmt.name === 'FMTU') {
+      const described = formats.get(fields['FmtType'] as number);
+      const at = String(fields['UnitIds'] ?? '').indexOf('#');
+      if (described && at >= 0) described.instance = described.columns[at];
+    }
+
     let timestamp = 0;
     if ('TimeUS' in fields) timestamp = (fields['TimeUS'] as number) / 1e6;
     else if ('TimeMS' in fields) timestamp = (fields['TimeMS'] as number) / 1e3;
@@ -143,12 +154,27 @@ export function parseDFLog(buffer: ArrayBuffer): DFLog {
   return { messages, formats: formatsByName, types, duration };
 }
 
+/** The first column worth plotting: not the time, and not which sensor it is. */
+export function firstDataColumn(fmt: DFFormat): string | undefined {
+  return fmt.columns.find((c) => c !== 'TimeUS' && c !== 'TimeMS' && c !== fmt.instance);
+}
+
+/**
+ * One field over time. Where a type has instances, only the first: every IMU writes its
+ * rows into the same stream, and read as one series they make a saw-tooth at the log rate.
+ */
 export function getTimeSeries(log: DFLog, msgType: string, field: string): { t: number[]; v: number[] } {
   const t: number[] = [];
   const v: number[] = [];
   const t0 = log.messages.length > 0 ? log.messages[0].timestamp : 0;
+  const instance = log.formats.get(msgType)?.instance;
+  let first: number | string | undefined;
   for (const m of log.messages) {
     if (m.type === msgType && field in m.fields) {
+      if (instance !== undefined) {
+        first ??= m.fields[instance];
+        if (m.fields[instance] !== first) continue;
+      }
       const val = m.fields[field];
       if (typeof val === 'number') {
         t.push(m.timestamp - t0);
