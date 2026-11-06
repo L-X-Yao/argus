@@ -148,6 +148,7 @@ describe('i18n completeness', () => {
   describe('no untranslated placeholders in non-English locales', () => {
     const TECHNICAL_TERMS = new Set([
       'Argus',
+      'Failsafe',
       'MAVLink',
       'NTRIP',
       'RTSP',

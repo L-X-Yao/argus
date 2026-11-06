@@ -63,12 +63,14 @@
     return r > 0 ? r.toFixed(1) + 's' : '';
   }
 
-  /* Quad X motor position labels */
+  /* Quad X by the test order the FC goes by, which runs clockwise from front right
+     (AP_MotorsMatrix.cpp:592 MOTOR_FRAME_TYPE_X, the last number of each MotorDef).
+     Motor test 1 spins output 1 and 2 spins output 4, on real firmware in SITL. */
   const quadLabels: Record<number, string> = {
-    0: t('motor.fl'),
-    1: t('motor.fr'),
+    0: t('motor.fr'),
+    1: t('motor.br'),
     2: t('motor.bl'),
-    3: t('motor.br'),
+    3: t('motor.fl'),
   };
 
   // Stop motors and clear intervals if the panel unmounts mid-spin so the
@@ -158,7 +160,8 @@
             {t('label.quadX')}
           </p>
           <div class="grid grid-cols-2 gap-1 max-w-[160px] mx-auto">
-            {#each [0, 1, 2, 3] as m}
+            <!-- As the vehicle looks from above: the front pair, then the back pair. -->
+            {#each [3, 0, 2, 1] as m}
               <div class="text-center text-[10px] font-mono text-muted-foreground py-0.5 rounded bg-muted/40">
                 {quadLabels[m]}
               </div>
