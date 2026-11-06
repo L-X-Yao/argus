@@ -126,6 +126,19 @@ class TestTileBulkDownload:
         assert r.json() == {"total": 0, "downloaded": 0, "skipped": 0, "truncated": False}
 
 
+class TestMapSources:
+    @pytest.mark.parametrize("style", ["osm", "esri_topo", "carto_light"])
+    def test_a_real_server_gives_a_real_tile(self, backend_url, style):
+        needs("https://tile.openstreetmap.org/0/0/0.png")
+        r = httpx.get(f"{backend_url}/api/tile/{style}/3/6/3", timeout=60)
+        assert r.status_code == 200
+        assert len(r.content) > 500
+
+    def test_tianditu_is_not_offered_without_a_key(self, backend_url):
+        assert "tianditu" not in httpx.get(f"{backend_url}/api/tile_sources").json()
+        assert httpx.get(f"{backend_url}/api/tile/tdt_vec/3/6/3").status_code == 404
+
+
 class TestVideoCapabilities:
     def test_says_what_this_machine_has(self, backend_url):
         data = httpx.get(f"{backend_url}/api/video/capabilities").json()

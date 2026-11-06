@@ -36,9 +36,12 @@ TILE_URLS = {
     "carto_dark": "https://a.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}.png",
     "carto_light": "https://a.basemaps.cartocdn.com/light_all/{z}/{x}/{y}.png",
     "esri_topo": "https://server.arcgisonline.com/ArcGIS/rest/services/World_Topo_Map/MapServer/tile/{z}/{y}/{x}",
-    "tdt_vec": "https://t0.tianditu.gov.cn/vec_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=vec&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILECOL={x}&TILEROW={y}&TILEMATRIX={z}&tk=",
-    "tdt_sat": "https://t0.tianditu.gov.cn/img_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=img&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILECOL={x}&TILEROW={y}&TILEMATRIX={z}&tk=",
-    "tdt_label": "https://t0.tianditu.gov.cn/cia_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=cia&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILECOL={x}&TILEROW={y}&TILEMATRIX={z}&tk=",
+    "tdt_vec": "https://t0.tianditu.gov.cn/vec_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=vec&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILECOL={x}&TILEROW={y}&TILEMATRIX={z}&tk="
+    + cfg.TIANDITU_KEY,
+    "tdt_sat": "https://t0.tianditu.gov.cn/img_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=img&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILECOL={x}&TILEROW={y}&TILEMATRIX={z}&tk="
+    + cfg.TIANDITU_KEY,
+    "tdt_label": "https://t0.tianditu.gov.cn/cia_w/wmts?SERVICE=WMTS&REQUEST=GetTile&VERSION=1.0.0&LAYER=cia&STYLE=default&TILEMATRIXSET=w&FORMAT=tiles&TILECOL={x}&TILEROW={y}&TILEMATRIX={z}&tk="
+    + cfg.TIANDITU_KEY,
 }
 
 TILE_SOURCES = {
@@ -111,12 +114,12 @@ TILE_SOURCES = {
 
 @router.get("/api/tile_sources")
 async def api_tile_sources():
-    return TILE_SOURCES
+    return {name: source for name, source in TILE_SOURCES.items() if name != "tianditu" or cfg.TIANDITU_KEY}
 
 
 @router.get("/api/tile/{style}/{z}/{x}/{y}")
 async def api_tile(style: str, z: int, x: int, y: int):
-    if style not in TILE_URLS:
+    if style not in TILE_URLS or (style.startswith("tdt_") and not cfg.TIANDITU_KEY):
         return Response(status_code=404, content="unknown tile style")
     global _tile_count
     cache_dir = TILE_CACHE / style / str(z) / str(x)

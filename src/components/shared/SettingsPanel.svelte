@@ -38,12 +38,14 @@
   let { onclose }: { onclose: () => void } = $props();
 
   let offlineMaps = $state<string[]>([]);
+  let tiandituReady = $state(false);
   onMount(async () => {
     try {
       const r = await fetch(apiUrl('/api/mbtiles/list'));
       offlineMaps = (await r.json()).files ?? [];
+      tiandituReady = 'tianditu' in (await (await fetch(apiUrl('/api/tile_sources'))).json());
     } catch {
-      // No backend: the list stays empty, and so does the group in the source picker.
+      // No backend: both stay as they are, and no tiles would come anyway.
     }
   });
   const VERSION = '3.4.0';
@@ -221,7 +223,9 @@
             >
               <optgroup label={t('settings.china')}>
                 <option value="amap">{t('map.amap')}</option>
-                <option value="tianditu">{t('map.tianditu')}</option>
+                {#if tiandituReady || app.tileSource === 'tianditu'}
+                  <option value="tianditu">{t('map.tianditu')}</option>
+                {/if}
               </optgroup>
               <optgroup label="Global">
                 <option value="google_sat">Google Satellite</option>

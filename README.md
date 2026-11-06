@@ -35,7 +35,7 @@ Argus fills the gap: **open-source + web-native**.
 | **Connections** | TCP / UDP / Serial / WebSerial (browser-direct USB, no backend needed for telemetry + basic control) |
 | **Protocols** | MAVLink v2 (ArduPilot verified on SITL and on the bench, not flight-tested; PX4 adapter scaffolded, unwired) |
 | **Vehicles** | Copter, Plane, VTOL, Rover, Sub |
-| **Map** | 8 tile sources (Amap, Google, OSM, Esri, CartoDB, Tianditu) + 3D terrain (MapLibre GL) + offline mbtiles |
+| **Map** | 8 tile sources (Amap, Google, OSM, Esri, CartoDB; Tianditu with a key of your own) + 3D terrain (MapLibre GL) + offline mbtiles |
 | **Mission** | WP / Spline / Loiter / Survey grid / Crosshatch / Spiral / Orbit + terrain profile with clearance check |
 | **Formats** | `.waypoints` (MP) / `.plan` (QGC) / `.gpx` / `.kml` import & export |
 | **Parameters** | Metadata-driven UI (desc/range/units/enum/bitmask), tree view, diff export, default reset |

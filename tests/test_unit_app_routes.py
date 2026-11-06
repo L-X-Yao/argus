@@ -296,6 +296,21 @@ class TestFirmwareOnline:
         assert data["versions"] == []
 
 
+class TestTianditu:
+    def test_a_key_turns_it_on(self):
+        from backend.config import cfg
+
+        with patch.object(cfg, "TIANDITU_KEY", "abc"):
+            assert "tianditu" in client.get("/api/tile_sources").json()
+
+    def test_without_a_key_it_is_not_offered(self):
+        from backend.config import cfg
+
+        with patch.object(cfg, "TIANDITU_KEY", ""):
+            assert "tianditu" not in client.get("/api/tile_sources").json()
+            assert client.get("/api/tile/tdt_vec/1/0/0").status_code == 404
+
+
 class TestLogDownload:
     def test_a_log_that_grows_during_the_download_stays_at_the_announced_length(self, tmp_path):
         log = tmp_path / "flight.csv"

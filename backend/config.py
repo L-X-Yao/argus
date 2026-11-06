@@ -64,6 +64,8 @@ def _env(key: str, default, cast=None):
 class Config:
     HOST: str = _env("ARGUS_HOST", "127.0.0.1")
     PORT: int = _env("ARGUS_PORT", 8100)
+    # Tianditu serves nothing without a key of your own (console.tianditu.gov.cn).
+    TIANDITU_KEY: str = _env("ARGUS_TIANDITU_KEY", "")
 
     # Connection
     TCP_CONNECT_TIMEOUT: float = 5.0
