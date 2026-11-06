@@ -90,6 +90,11 @@ export function createPluginAPI(): PluginAPI {
 }
 
 export async function loadPlugin(url: string): Promise<PluginInstance> {
+  // A plugin runs with the app's rights, so it does not travel in the clear.
+  const { protocol, hostname } = new URL(url, location.href);
+  if (protocol !== 'https:' && !['localhost', '127.0.0.1'].includes(hostname)) {
+    throw new Error(`Plugin needs https: ${url}`);
+  }
   const resp = await fetch(url);
   const text = await resp.text();
   const blob = new Blob([text], { type: 'application/javascript' });

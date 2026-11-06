@@ -20,6 +20,7 @@ const createEl = (tag: string) => {
 };
 
 vi.stubGlobal('document', { createElement: vi.fn(createEl) });
+vi.stubGlobal('location', { href: 'http://localhost:8100/' });
 
 import { getPlugins, getPanels, createPluginAPI, loadPlugin, unloadPlugin, emitPluginEvent } from './plugins';
 import { sendCommand } from './ws';
@@ -157,6 +158,18 @@ describe('plugins', () => {
   });
 
   describe('loadPlugin()', () => {
+    beforeEach(() => {
+      vi.stubGlobal('location', { href: 'http://localhost:8100/' });
+    });
+
+    it('refuses code over plain http, except from this machine', async () => {
+      const fetchMock = vi.fn().mockRejectedValue(new Error('stop here'));
+      vi.stubGlobal('fetch', fetchMock);
+      await expect(loadPlugin('http://example.com/plugin.js')).rejects.toThrow('https');
+      expect(fetchMock).not.toHaveBeenCalled();
+      await expect(loadPlugin('http://localhost:9000/plugin.js')).rejects.toThrow('stop here');
+    });
+
     it('fetches plugin code from the given URL', async () => {
       const mockFetch = vi.fn().mockResolvedValue({
         text: () => Promise.resolve('// plugin code'),
@@ -165,18 +178,18 @@ describe('plugins', () => {
 
       // loadPlugin will fail at Blob/URL/import in Node, but fetch should be called
       try {
-        await loadPlugin('http://example.com/plugin.js');
+        await loadPlugin('https://example.com/plugin.js');
       } catch {
         // Expected: Blob/URL/import not available in this test env
       }
 
-      expect(mockFetch).toHaveBeenCalledWith('http://example.com/plugin.js');
+      expect(mockFetch).toHaveBeenCalledWith('https://example.com/plugin.js');
     });
 
     it('propagates fetch errors', async () => {
       vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network failure')));
 
-      await expect(loadPlugin('http://example.com/fail.js')).rejects.toThrow('Network failure');
+      await expect(loadPlugin('https://example.com/fail.js')).rejects.toThrow('Network failure');
     });
   });
 
