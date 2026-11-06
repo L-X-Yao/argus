@@ -29,7 +29,8 @@
   // FRAME_CLASS @Values, ArduCopter/Parameters.cpp:689. Helicopters need firmware of their
   // own, and the scripted classes a script on the FC. types: what each matrix takes,
   // AP_MotorsMatrix.cpp:576 setup_quad_matrix and the setup_* after it. Any other
-  // combination leaves the FC refusing to arm, so only these are on offer.
+  // combination leaves the FC refusing to arm, so only these are on offer. Y6 alone arms
+  // on any type, with a default layout of its own (:1224).
   const frameClasses: FrameClassDef[] = [
     {
       value: 1,
