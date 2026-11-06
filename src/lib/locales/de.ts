@@ -1120,6 +1120,7 @@ const messages: Record<string, string> = {
   'fltmode.noSwitch': 'Diese Firmware hat keine Parameter für den Modusschalter',
   'mission.splinePlane': 'Spline-Wegpunkte werden von ArduPlane nicht unterstützt',
   'mission.subDepth': 'Sub-Wegpunkte brauchen eine negative Höhe (Tiefe)',
+  'param.noAnswer': 'Parameter {name}: keine Antwort, nicht bestätigt',
   'setup.copterOnly': 'Dieses Fenster gilt nur für Copter. Bei diesem Fahrzeug die Parameterliste verwenden.',
   'serial.err.notConnected': 'Nicht über die serielle Verbindung verbunden',
   'serial.err.uploadBusy': 'Ein anderer Upload läuft',

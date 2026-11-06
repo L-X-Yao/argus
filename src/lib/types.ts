@@ -43,6 +43,7 @@ export interface DroneState {
   home_lat: number;
   home_lon: number;
   parse_errors: number;
+  sysid: number;
   flight_summary: FlightSummary | null;
   log_active: boolean;
   fw_version: string;
@@ -296,6 +297,7 @@ export const defaultState: DroneState = {
   home_lat: 0,
   home_lon: 0,
   parse_errors: 0,
+  sysid: 1,
   flight_summary: null,
   log_active: false,
   fw_version: '',

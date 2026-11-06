@@ -296,8 +296,19 @@ class DroneLink:
             self.frame_count = 0
             self.last_frame_time = 0.0
             self._cmd_pending.clear()
+            self.param_mgr._set_pending.clear()
+            # An upload the link took with it: nothing else would tell the operator, and
+            # the FC is left with part of a mission.
+            for pending, event in (
+                (self.mission._mission_pending, "mission_ack_fail"),
+                (self.mission._fence_pending, "fence_ack_fail"),
+                (self.mission._rally_pending, "rally_ack_fail"),
+            ):
+                if pending:
+                    self.add_event(lt(event, self.locale) % 99, event)
             self.mission._mission_pending = False
             self.mission._fence_pending = False
+            self.mission._mission_clear_pending = False
             self.mission._fence_clear_pending = False
             self.mission._rally_clear_pending = False
             self.mission._rally_pending = False
@@ -497,6 +508,7 @@ class DroneLink:
             "gimbal_pitch": round(d.gimbal_pitch, 1),
             "gimbal_yaw": round(d.gimbal_yaw, 1),
             **self.param_mgr.get_status(),
+            "sysid": v.sysid,
             "vehicles": [
                 veh
                 for veh in self._vehicles.values()

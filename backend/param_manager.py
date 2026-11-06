@@ -22,6 +22,8 @@ def _pad(p: bytes, n: int) -> bytes:
 
 class ParamManager:
     def __init__(self, link: DroneLink):
+        self._set_pending: dict[str, dict] = {}  # sent, and no PARAM_VALUE back yet
+        self._load_generation = 0
         self._link = link
         self.params: dict[str, dict] = {}
         self.total_count = -1
@@ -102,6 +104,7 @@ class ParamManager:
             return
 
         self._last_value_time = time.time()
+        self._set_pending.pop(name, None)
         if self.total_count < 0:
             self.total_count = count
         # Index 0xFFFF is what AP sends for replies to PARAM_REQUEST_READ
@@ -163,14 +166,19 @@ class ParamManager:
         from .crc_extras import CRC_EXTRA
         from .mavlink_frame import bm
 
-        name_bytes = name.encode("ascii")[:16].ljust(16, b"\x00")
-        payload = (
-            struct.pack("<f", value)
-            + struct.pack("<BB", self._link.vehicle.sysid, 1)
-            + name_bytes
-            + struct.pack("<B", ptype)
-        )
-        self._link.send(bm(23, payload, self._link.sq, CRC_EXTRA[23]))
+        def send() -> None:
+            name_bytes = name.encode("ascii")[:16].ljust(16, b"\x00")
+            payload = (
+                struct.pack("<f", value)
+                + struct.pack("<BB", self._link.vehicle.sysid, 1)
+                + name_bytes
+                + struct.pack("<B", ptype)
+            )
+            self._link.send(bm(23, payload, self._link.sq, CRC_EXTRA[23]))
+
+        send()
+        # The FC answers every PARAM_SET with a PARAM_VALUE (GCS_Param.cpp handle_param_set).
+        self._set_pending[name] = {"send": send, "sent": time.time(), "tries": 1}
         self._link.add_event(lt("param_set", self._link.locale) % (name, value), "param_set")
 
     def save_to_file(self, path: str | None = None) -> str:
@@ -202,12 +210,15 @@ class ParamManager:
             self._link.add_event(lt("param_load_err", self._link.locale) % "not a JSON object", "param_load_err")
             return []
         changed = []
+        generation = self._load_generation
         for name, value in data.items():
             # bool is a subclass of int — exclude it so JSON `true`/`false` don't become 1.0/0.0 on the wire.
             # Also exclude non-finite floats (Inf/-Inf): set_param rejects them, but without this guard
             # `changed.append` + `time.sleep` still run, inflating param_loaded count and load time.
             if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
                 continue
+            if generation != self._load_generation:
+                break
             current = self.params.get(name)
             if current and abs(current["value"] - value) > 1e-7:
                 self.set_param(name, value)
@@ -216,7 +227,29 @@ class ParamManager:
         self._link.add_event(lt("param_loaded", self._link.locale) % (len(data), len(changed)), "param_loaded")
         return changed
 
+    def forget(self) -> None:
+        """Another vehicle: its parameters are not these, and a file being written stops."""
+        self.params.clear()
+        self.received_count = 0
+        self.total_count = -1
+        self._received_indices.clear()
+        self._set_pending.clear()
+        self._load_generation += 1
+
+    def _resend_sets(self, now: float) -> None:
+        for name, entry in list(self._set_pending.items()):
+            if now - entry["sent"] < cfg.CMD_RETRY_INTERVAL:
+                continue
+            if entry["tries"] < cfg.CMD_TRIES:
+                entry["sent"] = now
+                entry["tries"] += 1
+                entry["send"]()
+            else:
+                self._set_pending.pop(name, None)
+                self._link.add_event(lt("param_no_answer", self._link.locale) % name, "param_set_fail")
+
     def check_timeout(self) -> None:
+        self._resend_sets(time.time())
         if not self.fetching:
             return
         now = time.time()

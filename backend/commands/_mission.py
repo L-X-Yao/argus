@@ -55,12 +55,16 @@ def cmd_mission_set_current(link: DroneLink, param, data: dict):
 
 
 def cmd_mission_clear(link: DroneLink, param, data: dict):
+    # Reported when the FC says so, as cmd_fence_clear does: a lost frame would otherwise leave
+    # the mission on the vehicle and "cleared" on the screen.
+    link.mission._mission_clear_pending = True
+    link.mission._mission_clear_start_time = time.time()
+    link.mission._mission_clear_sent = 0.0
     link.send(bm(45, bytes([link.vehicle.sysid, 1, 0]), link.sq, CRC_EXTRA[45]))
     link.mission._mission_items = []
     link.mission._seq_to_wp = {}
     link.mission._mission_pending = False
     link.mission._mission_ul_start_time = 0.0
-    link.add_event(lt("mission_clear", link.locale), "mission_clear")
 
 
 def cmd_fence_clear(link: DroneLink, param, data: dict):
@@ -79,6 +83,8 @@ def cmd_fence_clear(link: DroneLink, param, data: dict):
 
 
 def cmd_mission_upload(link: DroneLink, param, data: dict):
+    if link.mission._mission_clear_pending:  # see cmd_fence_upload
+        return {"ok": False, "error": lt("err_clear_busy", link.locale)}
     wps = data.get("waypoints", [])
     takeoff_alt = float(data.get("takeoff_alt", 30))
     if not wps:
@@ -198,6 +204,9 @@ def _resend_stalled(link: DroneLink, now: float) -> None:
         m._rally_count_sent = now
         _send_rally_count(link, len(m._rally_items))
     half = cfg.STORE_CLEAR_TIMEOUT / 2
+    if m._mission_clear_pending and now - max(m._mission_clear_start_time, m._mission_clear_sent) > half:
+        m._mission_clear_sent = now
+        link.send(bm(45, bytes([link.vehicle.sysid, 1, 0]), link.sq, CRC_EXTRA[45]))
     if m._fence_clear_pending and now - max(m._fence_clear_start_time, m._fence_clear_sent) > half:
         m._fence_clear_sent = now
         link.send(bm(45, bytes([link.vehicle.sysid, 1, 1]), link.sq, CRC_EXTRA[45]))
@@ -231,6 +240,9 @@ def check_mission_dl_timeout(link: DroneLink) -> None:
         m._rally_ul_start_time = 0.0
         link.add_event(lt("rally_ack_fail", link.locale) % 99, "rally_ack_fail")
     # A clear gets one MISSION_ACK or nothing: 99 is the same no-answer code as above.
+    if m._mission_clear_pending and now - m._mission_clear_start_time > cfg.STORE_CLEAR_TIMEOUT:
+        m._mission_clear_pending = False
+        link.add_event(lt("mission_clear_fail", link.locale) % 99, "mission_clear_fail")
     if m._fence_clear_pending and now - m._fence_clear_start_time > cfg.STORE_CLEAR_TIMEOUT:
         m._fence_clear_pending = False
         link.add_event(lt("fence_clear_fail", link.locale) % 99, "fence_clear_fail")

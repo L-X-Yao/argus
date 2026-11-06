@@ -98,6 +98,7 @@ import {
   serialClearMission,
   serialClearFence,
   serialSendCommandLong,
+  serialSendParamSet,
 } from './transport';
 import { encodeFrame } from './mavlink/codec';
 import {
@@ -1320,6 +1321,34 @@ describe('a lost frame', () => {
     dispatch('cal_compass_accept');
     vi.advanceTimersByTime(1000);
     expect(confirmations()).toEqual([0, 1]);
+  });
+
+  it('drops a pending MISSION_START when a mode change follows', () => {
+    dispatch('mission_start');
+    vi.advanceTimersByTime(400);
+    dispatch('rtl');
+    writes.length = 0;
+    vi.advanceTimersByTime(1100);
+    expect(writes.filter((w) => writeMsgId(w) === 76).map((w) => w[10 + 28] | (w[10 + 29] << 8))).not.toContain(300);
+  });
+
+  it('does not take another vehicle for a live link', async () => {
+    await disconnectSerial();
+    await connectSerial(115200, {}); // under the fake clock this time, for its link_age timer
+    inject(encodeFrame(0, encodeHeartbeat(2, 3), 1, 1, 0));
+    await vi.advanceTimersByTimeAsync(5000);
+    inject(encodeFrame(0, encodeHeartbeat(2, 3), 7, 1, 0));
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(app.drone.link_age).toBeGreaterThan(4);
+  });
+
+  it('sends a PARAM_SET again until the FC echoes it', () => {
+    serialSendParamSet('RTL_ALT', 3000);
+    expect(countWrites(23)).toBe(1);
+    vi.advanceTimersByTime(1000);
+    expect(countWrites(23)).toBe(2);
+    vi.advanceTimersByTime(2000);
+    expect(toasts.some((x) => x.text === 'param.noAnswer')).toBe(true);
   });
 
   it('never repeats what must not run twice, and still says so', () => {

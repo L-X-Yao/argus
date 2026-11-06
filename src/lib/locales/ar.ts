@@ -1113,6 +1113,7 @@ const messages: Record<string, string> = {
   'fltmode.noSwitch': 'لا يحتوي هذا البرنامج الثابت على معلمات مفتاح الأوضاع',
   'mission.splinePlane': 'لا يدعم ArduPlane نقاط الطريق المنحنية',
   'mission.subDepth': 'يجب أن يكون ارتفاع نقاط طريق Sub سالبًا (العمق)',
+  'param.noAnswer': 'المعلمة {name}: لا يوجد رد، لم يتم التأكيد',
   'setup.copterOnly': 'هذه اللوحة مخصصة لـ Copter فقط. في هذه المركبة استخدم قائمة المعلمات.',
   'serial.err.notConnected': 'غير متصل عبر المنفذ التسلسلي',
   'serial.err.uploadBusy': 'عملية رفع أخرى قيد التنفيذ',

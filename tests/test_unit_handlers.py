@@ -1227,6 +1227,33 @@ class TestVehicleTypes:
         self._heartbeat(link, 1, armed=True)
         assert link.vehicle.armed is False
 
+    def test_a_lost_link_does_not_move_to_the_vehicle_next_door(self):
+        link = make_link()
+        self._heartbeat(link, 1, armed=True)
+        link._reset_session_state()
+        self._heartbeat(link, 7, armed=False)
+        assert link.connected is False
+        assert link.vehicle.sysid == 1
+        assert link.vehicle.armed is True
+        self._heartbeat(link, 1, armed=True)
+        assert link.connected is True
+
+    def test_a_switch_leaves_nothing_of_the_old_vehicle(self):
+        link = make_link_connected()
+        self._heartbeat(link, 1)
+        self._heartbeat(link, 7)
+        link.mission._seq_to_wp = {2: 0}
+        link.battery._bat_history = [(1, 2)]
+        link.log_dl._log_list = [{"id": 1}]
+        link.param_mgr.params["X"] = {"value": 1}
+        link.param_mgr.received_count = 1
+        execute("switch_vehicle", 7, link)
+        assert link.mission._seq_to_wp == {}
+        assert link.battery._bat_history == []
+        assert link.log_dl._log_list == []
+        assert link.param_mgr.params == {}
+        assert link.param_mgr.received_count == 0
+
     def test_connecting_forgets_the_last_choice(self):
         link = make_link()
         link.active_sysid = 7

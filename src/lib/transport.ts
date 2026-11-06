@@ -172,6 +172,7 @@ export async function connectSerial(baudRate: number, handlers: SerialHandlers):
       serial.buf = remaining;
       if (crcErrors > 0) app.drone.parse_errors += crcErrors;
 
+      let own = 0;
       for (const frame of frames) {
         if (
           !serial.targetLatched &&
@@ -182,6 +183,7 @@ export async function connectSerial(baudRate: number, handlers: SerialHandlers):
           const wrongTarget = frame.sysId !== 1;
           serial.targetLatched = true;
           serial.targetSysId = frame.sysId;
+          app.drone.sysid = frame.sysId;
           serial.targetCompId = frame.compId;
           // The first request went to sysid 1, and an FC ignores what is addressed to
           // another system (MAVLink_routing.cpp:184).
@@ -190,6 +192,7 @@ export async function connectSerial(baudRate: number, handlers: SerialHandlers):
         // Another vehicle on a shared link would flip every field at each heartbeat, as
         // backend _process says. There is no fleet list here to feed.
         if (serial.targetLatched && frame.sysId !== serial.targetSysId) continue;
+        own += 1;
         if (frame.msgId === 77) _onCommandAnswered(_padView(frame.payload, 3).getUint16(0, true));
         // Mission upload state machine runs BEFORE the external dispatch so the
         // upload completes deterministically even if the user's handler set is
@@ -240,10 +243,9 @@ export async function connectSerial(baudRate: number, handlers: SerialHandlers):
         if (frame.msgId === 22) _onParamValue(_padView(frame.payload, 25));
         dispatchFrame(frame, serial.handlers);
       }
-      if (frames.length > 0) {
-        serial.lastFrameAt = Date.now();
-        app.drone.frames += frames.length;
-      }
+      // Only the vehicle's own: another one still talking must not hide that this one stopped.
+      if (own > 0) serial.lastFrameAt = Date.now();
+      if (frames.length > 0) app.drone.frames += frames.length;
     })
       .catch((e) => {
         console.error('[Serial] read loop error', e);
@@ -387,7 +389,9 @@ export function serialSendParamRequestAll(): void {
 }
 
 export function serialSendParamSet(name: string, value: number, type: number = 9): void {
-  sendSerialFrame(23, encodeParamSet(serial.targetSysId, serial.targetCompId, name, value, type));
+  const send = () => sendSerialFrame(23, encodeParamSet(serial.targetSysId, serial.targetCompId, name, value, type));
+  send();
+  _trackParamSet(name, send);
 }
 
 // Twin of backend send_cmd, which says what goes in these and why.
@@ -398,6 +402,8 @@ const CMD_TRIES = 3;
 const pendingCommands = new Map<number, ReturnType<typeof setTimeout>>();
 
 function _trackCommand(command: number, resend: (confirmation: number) => void): void {
+  // A retried MISSION_START would undo the mode just asked for: see backend _track.
+  if (command === 176) _onCommandAnswered(300);
   if (UNTRACKED_COMMANDS.has(command)) return;
   clearTimeout(pendingCommands.get(command));
   let tries = 1;
@@ -422,6 +428,27 @@ function _onCommandAnswered(command: number): void {
 export function forgetSerialCommands(): void {
   pendingCommands.forEach((timer) => clearTimeout(timer));
   pendingCommands.clear();
+  pendingParamSets.forEach((timer) => clearTimeout(timer));
+  pendingParamSets.clear();
+}
+
+// Twin of backend set_param: the FC answers every PARAM_SET with a PARAM_VALUE.
+const pendingParamSets = new Map<string, ReturnType<typeof setTimeout>>();
+
+function _trackParamSet(name: string, resend: () => void): void {
+  clearTimeout(pendingParamSets.get(name));
+  let tries = 1;
+  const tick = () => {
+    if (tries < CMD_TRIES) {
+      resend();
+      tries += 1;
+      pendingParamSets.set(name, setTimeout(tick, CMD_RETRY_MS));
+    } else {
+      pendingParamSets.delete(name);
+      addToast(t('param.noAnswer').replace('{name}', name), 'error', 5000);
+    }
+  };
+  pendingParamSets.set(name, setTimeout(tick, CMD_RETRY_MS));
 }
 
 export function serialSendCommandLong(command: number, p1 = 0, p2 = 0, p3 = 0, p4 = 0, p5 = 0, p6 = 0, p7 = 0): void {
@@ -937,8 +964,10 @@ export async function serialUploadRally(points: RallyPoint[]): Promise<{ ok: boo
 
 export function serialClearMission(): void {
   if (!isSerialConnected()) return;
-  sendSerialFrame(45, encodeMissionClearAll(serial.targetSysId, serial.targetCompId, 0));
   _wpToSeq.clear();
+  void _clearStore(0).then((r) => {
+    if (!r.ok) addToast(`${t('toast.missionFail')}: ${r.error}`, 'error', 5000);
+  });
 }
 
 let storeClear: {
@@ -1771,6 +1800,8 @@ function _onParamValue(p: DataView): void {
   // Empty name = all-zero/garbage frame — don't poison the store with a
   // blank row (same guard as the backend).
   if (!name) return;
+  clearTimeout(pendingParamSets.get(name));
+  pendingParamSets.delete(name);
 
   if (!paramFetch.active) {
     // PARAM_SET echo or unsolicited value: upsert the row only. Feeding

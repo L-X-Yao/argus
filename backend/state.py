@@ -102,6 +102,9 @@ class MissionState:
     _fence_count_sent: float = 0.0
     _rally_count_sent: float = 0.0
     _fence_clear_sent: float = 0.0
+    _mission_clear_pending: bool = False
+    _mission_clear_start_time: float = 0.0
+    _mission_clear_sent: float = 0.0
     _rally_clear_sent: float = 0.0
     _dl_pending: bool = False
     _dl_total: int = 0

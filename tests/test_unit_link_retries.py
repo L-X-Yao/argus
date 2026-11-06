@@ -1,13 +1,14 @@
 """One lost frame must not end a transfer or swallow a click: see send_cmd and _resend_stalled."""
 
 import struct
+import time
 from unittest.mock import MagicMock, patch
 
 from backend.commands import check_commands, execute
 from backend.commands._mission import check_mission_dl_timeout
 from backend.config import cfg
 from backend.drone_link import DroneLink
-from backend.mavlink_handlers import handle_command_ack
+from backend.mavlink_handlers import handle_command_ack, handle_mission_ack
 
 
 def make_link():
@@ -24,13 +25,9 @@ def msg_ids(link):
 
 
 def later(link, seconds, check):
-    """Runs a check as if the seconds had gone by."""
-    import backend.commands._helpers as helpers
-    import backend.commands._mission as mission
-
-    real = helpers.time.time()
-    with patch.object(helpers.time, "time", return_value=real + seconds):
-        assert mission.time is helpers.time
+    """Runs a check as if the seconds had gone by. All the modules share one time module."""
+    real = time.time()
+    with patch.object(time, "time", return_value=real + seconds):
         check(link)
 
 
@@ -200,3 +197,63 @@ class TestMissionTransfers:
         execute("fence_clear", None, link)
         later(link, cfg.STORE_CLEAR_TIMEOUT / 2 + 0.1, check_mission_dl_timeout)
         assert msg_ids(link).count(45) == 2
+
+
+class TestMissionClear:
+    def test_goes_out_again_and_reports_only_what_the_fc_said(self):
+        link = make_link()
+        execute("mission_clear", None, link)
+        assert not [e for e in link.events if e["event_type"] == "mission_clear"]
+        later(link, cfg.STORE_CLEAR_TIMEOUT / 2 + 0.1, check_mission_dl_timeout)
+        assert msg_ids(link).count(45) == 2
+        handle_mission_ack(bytes([255, 190, 0, 0]), 4, link)
+        assert link.mission._mission_clear_pending is False
+        assert [e for e in link.events if e["event_type"] == "mission_clear"]
+
+    def test_no_answer_is_a_failure(self):
+        link = make_link()
+        execute("mission_clear", None, link)
+        later(link, cfg.STORE_CLEAR_TIMEOUT + 1, check_mission_dl_timeout)
+        assert [e for e in link.events if e["event_type"] == "mission_clear_fail"]
+
+    def test_an_upload_waits_for_it(self):
+        link = make_link()
+        execute("mission_clear", None, link)
+        wps = [{"lat": 30.0, "lon": 120.0, "alt": 50}]
+        assert execute("mission_upload", None, link, data={"waypoints": wps})["ok"] is False
+
+
+class TestParamSet:
+    def test_goes_out_again_until_the_fc_echoes_it(self):
+        link = make_link()
+        link.param_mgr.set_param("RTL_ALT", 3000)
+        later(link, 1.1, lambda _l: link.param_mgr.check_timeout())
+        assert msg_ids(link).count(23) == 2
+        echo = struct.pack("<fHH", 3000, 100, 5) + b"RTL_ALT".ljust(16, b"\x00") + bytes([9])
+        link.param_mgr.handle_param_value(echo, len(echo))
+        later(link, 5, lambda _l: link.param_mgr.check_timeout())
+        assert msg_ids(link).count(23) == 2
+
+    def test_silence_is_reported(self):
+        link = make_link()
+        link.param_mgr.set_param("RTL_ALT", 3000)
+        for seconds in (1.1, 2.2, 3.3):
+            later(link, seconds, lambda _l: link.param_mgr.check_timeout())
+        assert [e for e in link.events if e["event_type"] == "param_set_fail"]
+
+
+class TestRetriedMissionStart:
+    def test_a_mode_change_cancels_it(self):
+        link = make_link()
+        execute("mission_start", None, link)
+        link._cmd_pending[300] = {"sent": 0, "tries": 1, "resend": lambda n: None}
+        execute("mode", 6, link)
+        assert 300 not in link._cmd_pending
+
+
+class TestLinkLostDuringUpload:
+    def test_is_reported(self):
+        link = make_link()
+        execute("mission_upload", None, link, data={"waypoints": [{"lat": 30.0, "lon": 120.0, "alt": 50}]})
+        link._reset_session_state()
+        assert [e for e in link.events if e["event_type"] == "mission_ack_fail"]

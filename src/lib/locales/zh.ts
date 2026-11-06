@@ -201,6 +201,7 @@ const messages: Record<string, string> = {
   'wp.spline': '曲线',
   'mission.splinePlane': '固定翼不支持样条航点',
   'mission.subDepth': '水下机器人的航点高度必须是负数（深度）',
+  'param.noAnswer': '参数 {name} 没有应答，未确认写入',
   'setup.copterOnly': '此面板只适用于多旋翼。这台飞机请在参数列表里设置。',
   'serial.err.notConnected': '未通过串口连接',
   'serial.err.uploadBusy': '另一个上传正在进行',

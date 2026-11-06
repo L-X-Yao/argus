@@ -106,6 +106,9 @@ def handle_heartbeat(p: bytes, pl: int, link: DroneLink) -> None:
         # Ask again now that the FC is known to hear us. Over UDP nothing can leave before
         # its first packet says where it is, so the earlier requests went nowhere.
         link._streams_sysid = 0
+        # Kept through an outage: on a shared link, the next vehicle heard is someone else's
+        # flight, and the operator would be looking at it, and commanding it, unawares.
+        link.active_sysid = link.active_sysid or v.sysid
         link.add_event(lt("connected", link.locale) % v.sysid, "connected")
 
 
@@ -723,6 +726,13 @@ def handle_mission_ack(p: bytes, pl: int, link: DroneLink) -> None:
     mtype = p[2]
     mission_type = p[3]
     m = link.mission
+    if mission_type == 0 and m._mission_clear_pending:
+        m._mission_clear_pending = False
+        link.add_event(
+            lt("mission_clear", link.locale) if mtype == 0 else lt("mission_clear_fail", link.locale) % mtype,
+            "mission_clear" if mtype == 0 else "mission_clear_fail",
+        )
+        return
     if mission_type == 1 and m._fence_clear_pending:
         m._fence_clear_pending = False
         link.add_event(

@@ -1120,6 +1120,7 @@ const messages: Record<string, string> = {
   'fltmode.noSwitch': 'Este firmware no tiene parámetros de selector de modo',
   'mission.splinePlane': 'ArduPlane no admite waypoints spline',
   'mission.subDepth': 'Los waypoints de Sub necesitan una altitud negativa (profundidad)',
+  'param.noAnswer': 'Parámetro {name}: sin respuesta, no confirmado',
   'setup.copterOnly': 'Este panel es solo para Copter. En este vehículo, usa la lista de parámetros.',
   'serial.err.notConnected': 'No conectado por serie',
   'serial.err.uploadBusy': 'Hay otra subida en curso',

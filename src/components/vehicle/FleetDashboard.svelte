@@ -48,7 +48,7 @@
       <div class="p-3 rounded-lg border-2 border-primary bg-primary/5">
         <div class="flex items-center gap-2">
           <div class="w-3 h-3 rounded-full {app.drone.armed ? 'bg-destructive animate-pulse' : 'bg-green-500'}"></div>
-          <span class="font-bold text-sm">#{app.drone.vtype_raw > 0 ? 1 : '---'}</span>
+          <span class="font-bold text-sm">#{app.drone.vtype_raw > 0 ? app.drone.sysid : '---'}</span>
           <span class="text-xs text-muted-foreground">{app.drone.vtype || '---'}</span>
           <span class="text-xs ml-auto font-mono text-primary">{t('fleet.active')}</span>
         </div>

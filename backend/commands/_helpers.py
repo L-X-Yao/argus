@@ -25,6 +25,10 @@ UNTRACKED_COMMANDS = frozenset({241, 246, 511, 512})
 
 
 def _track(link: DroneLink, command: int, resend) -> None:
+    # MISSION_START switches to AUTO by itself (ArduCopter/GCS_MAVLink_Copter.cpp:701), so a
+    # retry of it after an RTL or a pause would undo what the operator just asked for.
+    if command == 176:
+        link._cmd_pending.pop(300, None)
     if command not in UNTRACKED_COMMANDS:
         retry = resend if command in RETRIED_COMMANDS else None
         link._cmd_pending[command] = {"sent": time.time(), "tries": 1, "resend": retry}

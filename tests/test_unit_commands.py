@@ -141,6 +141,8 @@ class TestCommandExecute:
     def test_mission_clear(self):
         link = make_link()
         execute("mission_clear", None, link)
+        assert not any("任务已清除" in e["text"] for e in link.events)  # the FC has not said so yet
+        handle_mission_ack(bytes([255, 190, 0, 0]), 4, link)
         assert any("任务已清除" in e["text"] for e in link.events)
 
     def test_fence_clear_waits_for_the_fc(self):

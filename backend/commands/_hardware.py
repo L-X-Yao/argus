@@ -60,6 +60,12 @@ def cmd_switch_vehicle(link: DroneLink, param, data: dict):
             link._mag_cal_ours = False
             link.attitude.home_lat = link.attitude.home_lon = 0.0
             link.attitude.dist_home = 0.0
+            link.mission._seq_to_wp = {}
+            link.battery._bat_history = []
+            link.battery._bat_start_pct = -1
+            link.battery.bat_time_remaining = -1
+            link.log_dl._log_list = []
+            link.param_mgr.forget()
         link.active_sysid = new_sysid
         link.vehicle.sysid = new_sysid
     link.add_event(lt("vehicle_switch", link.locale) % new_sysid, "vehicle_switch")

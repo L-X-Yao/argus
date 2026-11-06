@@ -111,6 +111,8 @@ _T = {
     "mission_dl_timeout": ("任务下载超时", "Mission download timeout"),
     "err_mission_too_large": ("任务过大 (最多 500 航点)", "Mission too large (max 500 WP)"),
     "err_spline_plane": ("固定翼不支持样条航点", "Spline waypoints are not supported on ArduPlane"),
+    "param_no_answer": ("参数 %s 没有应答，未确认写入", "Parameter %s: no answer, not confirmed"),
+    "mission_clear_fail": ("清除任务失败(%d)", "Clearing the mission failed(%d)"),
     "err_no_link": ("未连接飞控，指令没有发送", "Not connected to a flight controller: nothing was sent"),
     "err_sub_depth": ("水下机器人的航点高度必须是负数（深度）", "Sub waypoints need a negative altitude (depth)"),
     "err_mission_start": ("任务启动命令失败", "Mission start command failed"),
