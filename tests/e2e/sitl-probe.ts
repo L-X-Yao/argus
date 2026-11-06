@@ -31,6 +31,8 @@ export interface StoredItem {
 const GCS_SYSID = 255; // SYSID_MYGCS: the FC takes RC override only from this system
 const PROBE_COMPID = 190;
 const MSG_INTERVAL = 511;
+const MAV_CMD_REQUEST_MESSAGE = 512;
+const AUTOPILOT_VERSION = 148;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export class Probe {
@@ -46,8 +48,8 @@ export class Probe {
   reached: number[] = [];
   /** MAG_CAL_PROGRESS: -1 until a compass calibration runs, then how far it got. */
   magCal = -1;
-  /** MAG_CAL_REPORT: cal_status of the last run, 4 = success. */
-  magCalResult = -1;
+  /** AUTOPILOT_VERSION: major and minor, 0 until the FC has answered. */
+  firmware = [0, 0];
 
   private seq = 0;
   private pending: Uint8Array = new Uint8Array(0);
@@ -75,10 +77,10 @@ export class Probe {
       [65, 100_000], // RC_CHANNELS
       [42, 500_000], // MISSION_CURRENT
       [191, 500_000], // MAG_CAL_PROGRESS
-      [192, 500_000], // MAG_CAL_REPORT
     ]) {
       probe.command(MSG_INTERVAL, id, interval);
     }
+    probe.command(MAV_CMD_REQUEST_MESSAGE, AUTOPILOT_VERSION);
     return probe;
   }
 
@@ -123,7 +125,9 @@ export class Probe {
           };
         },
         onMagCalProgress: (m) => (this.magCal = m.completionPct),
-        onMagCalReport: (m) => (this.magCalResult = m.calStatus),
+        onAutopilotVersion: (m) => {
+          this.firmware = [(m.flightSwVersion >>> 24) & 0xff, (m.flightSwVersion >>> 16) & 0xff];
+        },
         onStatusText: (m) => this.texts.push(m.text),
       });
     }

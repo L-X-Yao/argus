@@ -1,8 +1,10 @@
 <script lang="ts">
-  import { addToast } from '../../lib/stores.svelte';
+  import { app, addToast } from '../../lib/stores.svelte';
   import { dispatch } from '../../lib/transport';
   import { paramState, getParam } from '../../lib/paramStore.svelte';
   import { t } from '../../lib/i18n.svelte';
+  import { ekfActions as ekfActionsOf, failsafeAction } from '../../lib/failsafe';
+  import { vehicleKind } from '../../lib/vehicleModes';
   import { X, ShieldAlert, Battery, Radio, Wifi, Navigation } from '@lucide/svelte';
   import Button from '$lib/components/ui/button/button.svelte';
 
@@ -56,12 +58,12 @@
 
     rcEnable    = getParam('FS_THR_ENABLE', 0);
     // FS_THR_ENABLE and FS_GCS_ENABLE are the action enums themselves, so the same value
-    // feeds the selector. 2 survives only in old parameter files: see rcActions below.
-    rcAction    = removedAction(getParam('FS_THR_ENABLE', 0));
+    // feeds the selector, but for the 2 that only old Copter parameter files still hold.
+    rcAction    = failsafeAction(getParam('FS_THR_ENABLE', 0), vehicleKind());
     rcPwm       = getParam('FS_THR_VALUE', 975);
 
     gcsEnable   = getParam('FS_GCS_ENABLE', 0);
-    gcsAction   = removedAction(getParam('FS_GCS_ENABLE', 0));
+    gcsAction   = failsafeAction(getParam('FS_GCS_ENABLE', 0), vehicleKind());
 
     ekfAction   = getParam('FS_EKF_ACTION', 0);
     ekfThresh   = getParam('FS_EKF_THRESH', 0.8);
@@ -92,8 +94,8 @@
     [7, 'failsafe.actionBrakeLand'],
   ];
 
-  // ArduCopter/Parameters.cpp:99 FS_GCS_ENABLE @Values. 2 is removed here too, and the FC
-  // refuses to arm on it (AP_Arming_Copter.cpp:216).
+  // ArduCopter/Parameters.cpp:99 FS_GCS_ENABLE @Values. 2 is removed here too: the FC flies
+  // an RTL for it (events.cpp:189), and complains before arming (AP_Arming_Copter.cpp:218).
   const gcsActions: [number, string][] = [
     [0, 'failsafe.actionNone'],
     [1, 'failsafe.actionRtl'],
@@ -104,18 +106,7 @@
     [7, 'failsafe.actionBrakeLand'],
   ];
 
-  /** The action the FC takes for a removed 2, which is also what Save puts in its place. */
-  function removedAction(value: number): number {
-    return value === 2 ? 1 : value;
-  }
-
-  // ArduCopter/Parameters.cpp:270 FS_EKF_ACTION @Values.
-  const ekfActions: [number, string][] = [
-    [0, 'failsafe.actionNone'],
-    [1, 'failsafe.actionLand'],
-    [2, 'failsafe.actionAltHold'],
-    [3, 'failsafe.actionLandAlways'],
-  ];
+  let ekfActions = $derived(ekfActionsOf(app.drone.fw_version));
 
   /* ── Section save handlers ── */
   function saveBattery() {

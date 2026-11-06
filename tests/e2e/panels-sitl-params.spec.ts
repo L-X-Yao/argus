@@ -145,12 +145,14 @@ test.describe('Failsafe', () => {
         .locator(`${id} option`)
         .evaluateAll((options) => options.map((o) => Number((o as HTMLOptionElement).value)));
     // @Values of each parameter: ArduCopter/Parameters.cpp and AP_BattMonitor_Params.cpp.
-    // 2 on the two loss failsafes is "removed in 4.0+": the FC takes it for an RTL on RC
-    // loss (events.cpp:24) and refuses to arm on it for GCS loss (AP_Arming_Copter.cpp:216).
+    // 2 on the two loss failsafes is "removed in 4.0+", and the FC flies an RTL for it
+    // (events.cpp:24, :189). 0 on the EKF is report only from 4.7 on: see lib/failsafe.ts.
     expect(await values('#fs-batt-action')).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
     expect(await values('#fs-rc-action')).toEqual([0, 1, 3, 4, 5, 6, 7]);
     expect(await values('#fs-gcs-action')).toEqual([0, 1, 3, 4, 5, 6, 7]);
-    expect(await values('#fs-ekf-action')).toEqual([0, 1, 2, 3]);
+    const [major, minor] = probe.firmware;
+    expect(major).toBeGreaterThan(0);
+    expect(await values('#fs-ekf-action')).toEqual(major > 4 || minor >= 7 ? [0, 1, 2, 3] : [1, 2, 3]);
     await close(page, dialog);
   });
 });
