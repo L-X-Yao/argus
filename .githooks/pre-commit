@@ -20,6 +20,12 @@ if [ -s "$_WORDS" ]; then
     echo "$_HITS"
     exit 1
   fi
+  _NAMES=$(git diff --cached --name-only --diff-filter=d | grep -i -F -f "$_WORDS" || true)
+  if [ -n "$_NAMES" ]; then
+    echo "ERROR: sensitive-word check failed on staged file names"
+    echo "$_NAMES"
+    exit 1
+  fi
 fi
 
 echo "[pre-commit] i18n error-string check..."

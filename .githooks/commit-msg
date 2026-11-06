@@ -1,0 +1,8 @@
+#!/bin/bash
+# The sensitive-word list of pre-commit, on the commit message.
+_WORDS=$(git rev-parse --git-path info/sensitive-words)
+[ -s "$_WORDS" ] || exit 0
+if grep -v '^#' "$1" | grep -i -F -f "$_WORDS"; then
+  echo "ERROR: sensitive-word check failed on the commit message"
+  exit 1
+fi
