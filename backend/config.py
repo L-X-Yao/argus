@@ -91,6 +91,7 @@ class Config:
     # Tile cache
     TILE_CACHE_MAX: int = 50000
     TILE_DOWNLOAD_TIMEOUT: float = 10.0
+    TILE_RETRY_AFTER: float = 30.0
 
     # SRTM terrain
     SRTM_CACHE_MAX: int = 500

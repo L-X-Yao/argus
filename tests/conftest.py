@@ -107,6 +107,7 @@ def _reset_backend_globals():
     import backend.tiles as _tiles
 
     _tiles._tile_count = -1
+    _tiles._server_down_until.clear()
 
     import backend.auth as _auth
 

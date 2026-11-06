@@ -480,3 +480,42 @@ class TestTileCacheClear:
         r = client.post("/api/tile_cache_clear")
         assert r.status_code == 200
         assert r.json()["ok"] is True
+
+
+class TestSilentServer:
+    def test_one_silence_stops_the_asking_for_a_while(self):
+        import urllib.error
+
+        from backend import tiles
+
+        with patch("backend.tiles.urlreq.urlopen", side_effect=urllib.error.URLError("timed out")) as urlopen:
+            for _ in range(5):
+                with pytest.raises(OSError):
+                    tiles._fetch_tile("osm", "https://tiles.invalid/1/0/0.png")
+        assert urlopen.call_count == 1
+
+    def test_another_server_is_still_asked(self):
+        from backend import tiles
+
+        tiles._server_down_until["osm"] = float("inf")
+        with patch("backend.tiles.urlreq.urlopen") as urlopen:
+            urlopen.return_value.read.return_value = b"tile"
+            assert tiles._fetch_tile("6", "https://tiles.invalid/1/0/0.png") == b"tile"
+
+    def test_a_missing_tile_is_an_answer(self):
+        import urllib.error
+
+        from backend import tiles
+
+        missing = urllib.error.HTTPError("https://tiles.invalid", 404, "Not Found", None, None)
+        with patch("backend.tiles.urlreq.urlopen", side_effect=missing), pytest.raises(urllib.error.HTTPError):
+            tiles._fetch_tile("osm", "https://tiles.invalid/1/0/0.png")
+        assert "osm" not in tiles._server_down_until
+
+    def test_it_is_asked_again_after_the_wait(self):
+        from backend import tiles
+
+        tiles._server_down_until["osm"] = 0.0
+        with patch("backend.tiles.urlreq.urlopen") as urlopen:
+            urlopen.return_value.read.return_value = b"tile"
+            assert tiles._fetch_tile("osm", "https://tiles.invalid/1/0/0.png") == b"tile"

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import shutil
 import sqlite3
+import time
 import urllib.error
 import urllib.request as urlreq
 from pathlib import Path
@@ -21,6 +22,7 @@ MBTILES_DIR = ROOT_DIR / "mbtiles"
 _TILE_MAX = cfg.TILE_CACHE_MAX
 _TILE_MAX_BYTES = 2 * 1024 * 1024
 _tile_count = -1
+_server_down_until: dict[str, float] = {}
 
 
 TILE_URLS = {
@@ -117,6 +119,23 @@ async def api_tile_sources():
     return {name: source for name, source in TILE_SOURCES.items() if name != "tianditu" or cfg.TIANDITU_KEY}
 
 
+def _fetch_tile(style: str, url: str) -> bytes:
+    """A map server that does not answer costs a download worker TILE_DOWNLOAD_TIMEOUT per
+    tile, and a view asks for dozens: with no internet in the field the queue would last
+    minutes, with terrain and firmware downloads behind it. One silence stops the asking
+    for a while. A 404 is an answer, and says nothing about the server."""
+    if time.monotonic() < _server_down_until.get(style, 0):
+        raise OSError("map server not answering")
+    req = urlreq.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    try:
+        return urlreq.urlopen(req, timeout=cfg.TILE_DOWNLOAD_TIMEOUT).read(_TILE_MAX_BYTES + 1)
+    except urllib.error.HTTPError:
+        raise
+    except OSError:
+        _server_down_until[style] = time.monotonic() + cfg.TILE_RETRY_AFTER
+        raise
+
+
 @router.get("/api/tile/{style}/{z}/{x}/{y}")
 async def api_tile(style: str, z: int, x: int, y: int):
     if style not in TILE_URLS or (style.startswith("tdt_") and not cfg.TIANDITU_KEY):
@@ -129,10 +148,7 @@ async def api_tile(style: str, z: int, x: int, y: int):
         return Response(content=data, media_type="image/png", headers={"Cache-Control": "public, max-age=604800"})
     url = TILE_URLS.get(style, TILE_URLS["6"]).format(x=x, y=y, z=z)
     try:
-        req = urlreq.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-        data = await aio_download(
-            lambda: urlreq.urlopen(req, timeout=cfg.TILE_DOWNLOAD_TIMEOUT).read(_TILE_MAX_BYTES + 1)
-        )
+        data = await aio_download(_fetch_tile, style, url)
         if len(data) > _TILE_MAX_BYTES:
             return Response(status_code=502, content="Tile too large")
         if _tile_count < 0:
