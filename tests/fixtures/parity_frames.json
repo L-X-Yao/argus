@@ -297,7 +297,7 @@
   {
    "id": "terrain_report",
    "msg": "TERRAIN_REPORT",
-   "hex": "fd1200000001018800009efeebeacccee85800201244000048416400b103",
+   "hex": "fd1100000001018800009efeebeacccee858002012440000484164634e",
    "compare": [
     "terrain_alt"
    ]
@@ -305,7 +305,7 @@
   {
    "id": "terrain_report_no_position",
    "msg": "TERRAIN_REPORT",
-   "hex": "fd1200000001018800000000000000000000000000000000000064001730",
+   "hex": "fd1100000001018800000000000000000000000000000000000064717b",
    "compare": [
     "terrain_alt"
    ]
