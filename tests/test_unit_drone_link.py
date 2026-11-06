@@ -1532,6 +1532,43 @@ class TestLoop:
             link._loop()
             mock_streams.assert_called()
 
+    def _one_loop_tick(self, link):
+        link._running = True
+        link._ser = MagicMock(in_waiting=0)
+        link._ser.read.return_value = b""
+        ticks = 0
+
+        def stop_sleep(*a, **kw):
+            nonlocal ticks
+            ticks += 1
+            if ticks > 1:
+                link._running = False
+
+        with (
+            patch("backend.drone_link.cmd_module.send_heartbeat"),
+            patch("backend.drone_link.cmd_module.request_streams") as streams,
+            patch("backend.drone_link.time.sleep", side_effect=stop_sleep),
+        ):
+            link._loop()
+        return streams
+
+    def test_loop_asks_again_when_the_vehicle_is_another_system(self):
+        """The first request went to system 1, which a vehicle on system 7 ignores."""
+        link = DroneLink()
+        link.connected = True
+        link.frame_count = 50
+        link._streams_sysid = 1
+        link.vehicle.sysid = 7
+        self._one_loop_tick(link).assert_called_once_with(link)
+
+    def test_loop_does_not_ask_again_for_the_same_system(self):
+        link = DroneLink()
+        link.connected = True
+        link.frame_count = 50
+        link._streams_sysid = 7
+        link.vehicle.sysid = 7
+        self._one_loop_tick(link).assert_not_called()
+
     def test_loop_processes_valid_frame(self):
         """_loop processes a valid frame and increments frame_count."""
         link = DroneLink()

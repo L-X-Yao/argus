@@ -109,6 +109,7 @@ class DroneLink:
         self.sq = 0
         self._parse_errors = 0
         self._raw_sysid = 1
+        self._streams_sysid = 0  # who the last request_streams() was addressed to
         self._logfile = None
         self._tlog = None
         self._tlog_lock = threading.Lock()  # tlog writes come from link thread (_process) AND API threads (send)
@@ -684,7 +685,10 @@ class DroneLink:
             if now - last_hb >= cfg.HEARTBEAT_INTERVAL:
                 cmd_module.send_heartbeat(self)
                 last_hb = now
-                if not self.connected and self.frame_count < 3:
+                # The first request goes out before any heartbeat, to system 1 or to the last
+                # vehicle, and an FC ignores what is addressed to another system
+                # (libraries/GCS_MAVLink/MAVLink_routing.cpp:184).
+                if not self.connected and self.frame_count < 3 or self.connected and self._streams_sysid != self.vehicle.sysid:
                     cmd_module.request_streams(self)
             # Link-lost DETECTION — fires once per drop (needs connected=True
             # with stale frames). It arms the persistent _reconnecting flag; the

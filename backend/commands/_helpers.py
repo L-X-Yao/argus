@@ -176,6 +176,7 @@ def send_heartbeat(link: DroneLink) -> None:
 
 
 def request_streams(link: DroneLink) -> None:
+    link._streams_sysid = link.vehicle.sysid
     # Per-message stream rate, in microseconds. ATTITUDE (30) and
     # GLOBAL_POSITION_INT (33) drive every animated UI element — old
     # rate of 250000us = 4Hz made the heading needle / position arrow

@@ -122,7 +122,7 @@ jobs:
   sitl-vehicles:
     runs-on: ubuntu-latest
     needs: check
-    timeout-minutes: 15
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
@@ -163,6 +163,48 @@ jobs:
 
       - name: Run the vehicle checks
         run: python tests/sitl_vehicles.py ${{ matrix.vehicle }}
+
+      - name: Fly a whole mission
+        run: python tests/sitl_flights.py ${{ matrix.vehicle }}
+
+  # What the other SITL jobs leave out, through the backend: see tests/sitl_links.py.
+  sitl-links:
+    runs-on: ubuntu-latest
+    needs: check
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.10'
+
+      - name: Install Python deps
+        run: pip install -e '.[dev]'
+
+      - name: Probe current Copter stable version
+        id: sitl-ver
+        run: echo "ver=$(curl -sf https://firmware.ardupilot.org/Copter/stable/SITL_x86_64_linux_gnu/firmware-version.txt)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache SITL binary
+        id: sitl-cache
+        uses: actions/cache@v6
+        with:
+          path: ~/sitl
+          key: sitl-copter-${{ steps.sitl-ver.outputs.ver }}
+
+      - name: Download SITL binary + default params
+        if: steps.sitl-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p ~/sitl
+          curl -sfL -o ~/sitl/arducopter https://firmware.ardupilot.org/Copter/stable/SITL_x86_64_linux_gnu/arducopter
+          curl -sfL -o ~/sitl/copter.parm https://raw.githubusercontent.com/ArduPilot/ardupilot/ArduCopter-stable/Tools/autotest/default_params/copter.parm
+
+      - name: Run the commands that need a vehicle of their own
+        run: |
+          chmod +x ~/sitl/arducopter
+          python tests/sitl_links.py commands
 
   # The WebSerial stack against real firmware: a full flight, then both interactive
   # calibrations. A stand-in for navigator.serial carries the bytes to SITL, so
