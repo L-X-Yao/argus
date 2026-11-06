@@ -7,6 +7,7 @@ import gzip
 import io
 import math
 import struct
+import time
 import urllib.error
 import urllib.request as urlreq
 
@@ -18,6 +19,7 @@ router = APIRouter()
 
 SRTM_CACHE = ROOT_DIR / "srtm_cache"
 _tile_locks: dict[str, asyncio.Lock] = {}
+_tile_failed_until: dict[str, float] = {}
 
 
 @router.get("/api/terrain/elevation", tags=["Map"])
@@ -59,7 +61,9 @@ async def _fetch_tile(ns: str, ilat: int, fname: str, cache_file) -> bool:
         return False
 
 
-async def _get_srtm_elevation(lat: float, lon: float) -> float:
+async def _get_srtm_elevation(lat: float, lon: float) -> float | None:
+    """Ground height in metres above sea level, or None when it is not known. Never 0 for
+    that: 0 reads as sea level, and terrain following would fly the route into a hillside."""
     ilat = int(math.floor(lat))
     ilon = int(math.floor(lon))
     ns = "N" if ilat >= 0 else "S"
@@ -67,6 +71,9 @@ async def _get_srtm_elevation(lat: float, lon: float) -> float:
     fname = "%s%02d%s%03d.hgt" % (ns, abs(ilat), ew, abs(ilon))
     cache_file = SRTM_CACHE / fname
     if not cache_file.exists():
+        # Every point of a long route would try a dead download in turn otherwise.
+        if time.monotonic() < _tile_failed_until.get(fname, 0):
+            return None
         SRTM_CACHE.mkdir(parents=True, exist_ok=True)
         # The points of a route mostly share a tile, and each would download it otherwise.
         lock = _tile_locks.setdefault(fname, asyncio.Lock())
@@ -74,8 +81,11 @@ async def _get_srtm_elevation(lat: float, lon: float) -> float:
             async with lock:
                 if not cache_file.exists():
                     srtm_count = await aio(lambda: sum(1 for _ in SRTM_CACHE.glob("*.hgt")))
-                    if srtm_count >= cfg.SRTM_CACHE_MAX or not await _fetch_tile(ns, ilat, fname, cache_file):
-                        return 0
+                    if time.monotonic() < _tile_failed_until.get(fname, 0) or srtm_count >= cfg.SRTM_CACHE_MAX:
+                        return None
+                    if not await _fetch_tile(ns, ilat, fname, cache_file):
+                        _tile_failed_until[fname] = time.monotonic() + cfg.TILE_RETRY_AFTER
+                        return None
         finally:
             _tile_locks.pop(fname, None)
     try:
@@ -86,17 +96,17 @@ async def _get_srtm_elevation(lat: float, lon: float) -> float:
         elif len(data) == 25934402:
             samples = 3601
         else:
-            return 0
+            return None
         frac_lat = lat - ilat
         frac_lon = lon - ilon
         row = int((1 - frac_lat) * (samples - 1))
         col = int(frac_lon * (samples - 1))
         idx = (row * samples + col) * 2
         if idx + 2 > len(data):
-            return 0
+            return None
         elev = struct.unpack(">h", data[idx : idx + 2])[0]
         if elev == -32768:
-            return 0
+            return None
         return float(elev)
     except (OSError, struct.error):
-        return 0
+        return None

@@ -104,10 +104,12 @@ def sim_port():
 def _reset_backend_globals():
     """Reset mutable module-level globals after each test to prevent leakage."""
     yield
+    import backend.terrain as _terrain
     import backend.tiles as _tiles
 
     _tiles._tile_count = -1
     _tiles._server_down_until.clear()
+    _terrain._tile_failed_until.clear()
 
     import backend.auth as _auth
 

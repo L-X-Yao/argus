@@ -357,3 +357,17 @@ describe('adjustWaypointsForTerrain', () => {
     expect(result).toEqual([]);
   });
 });
+
+describe('missing terrain data', () => {
+  it('is an error, never sea level, and is not remembered', async () => {
+    const fetchMock = vi.fn(async () => ({ ok: true, json: async () => ({ elevations: [300, null] }) }));
+    vi.stubGlobal('fetch', fetchMock);
+    const points = [
+      { lat: 61.1, lon: 7.1 },
+      { lat: 61.2, lon: 7.2 },
+    ];
+    await expect(getElevationProfile(points)).rejects.toThrow('No terrain data');
+    fetchMock.mockResolvedValue({ ok: true, json: async () => ({ elevations: [300, 310] }) });
+    await expect(getElevationProfile(points)).resolves.toEqual([300, 310]);
+  });
+});

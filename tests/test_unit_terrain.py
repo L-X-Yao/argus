@@ -49,7 +49,7 @@ class TestSrtmElevation:
             import asyncio
 
             elev = asyncio.run(_get_srtm_elevation(30.5, 120.5))
-        assert elev == 0
+        assert elev is None
 
     def test_3arcsec_file_detected(self, tmp_path):
         import backend.terrain as t_mod
@@ -70,7 +70,7 @@ class TestSrtmElevation:
             import asyncio
 
             elev = asyncio.run(_get_srtm_elevation(30.5, 120.5))
-        assert elev == 0
+        assert elev is None
 
     def test_cache_max_reached_returns_zero(self, tmp_path):
         import backend.terrain as t_mod
@@ -79,7 +79,7 @@ class TestSrtmElevation:
             import asyncio
 
             elev = asyncio.run(_get_srtm_elevation(30.5, 120.5))
-        assert elev == 0
+        assert elev is None
 
     def test_download_success(self, tmp_path):
         import backend.terrain as t_mod
@@ -116,6 +116,21 @@ class TestSrtmElevation:
             assert asyncio.run(route()) == [55.0] * 5
         assert urlopen.call_count == 1
 
+    def test_a_dead_tile_is_not_tried_again_by_every_point(self, tmp_path):
+        import asyncio
+
+        import backend.terrain as t_mod
+
+        async def route():
+            return await asyncio.gather(*(_get_srtm_elevation(30.1 + i / 100, 120.5) for i in range(5)))
+
+        with (
+            patch.object(t_mod, "SRTM_CACHE", tmp_path),
+            patch("backend.terrain.urlreq.urlopen", side_effect=OSError("timeout")) as urlopen,
+        ):
+            assert asyncio.run(route()) == [None] * 5
+        assert urlopen.call_count == 1
+
     def test_a_truncated_download_returns_zero(self, tmp_path):
         import asyncio
 
@@ -127,7 +142,7 @@ class TestSrtmElevation:
             patch.object(t_mod, "SRTM_CACHE", tmp_path),
             patch("backend.terrain.urlreq.urlopen", return_value=mock_resp),
         ):
-            assert asyncio.run(_get_srtm_elevation(30.5, 120.5)) == 0
+            assert asyncio.run(_get_srtm_elevation(30.5, 120.5)) is None
         assert not (tmp_path / "N30E120.hgt").exists()
 
     def test_download_too_large_returns_zero(self, tmp_path):
@@ -143,7 +158,7 @@ class TestSrtmElevation:
             import asyncio
 
             elev = asyncio.run(_get_srtm_elevation(30.5, 120.5))
-        assert elev == 0
+        assert elev is None
 
     def test_download_oserror_returns_zero(self, tmp_path):
         import backend.terrain as t_mod
@@ -155,7 +170,7 @@ class TestSrtmElevation:
             import asyncio
 
             elev = asyncio.run(_get_srtm_elevation(30.5, 120.5))
-        assert elev == 0
+        assert elev is None
 
     def test_southern_hemisphere_filename(self, tmp_path):
         import backend.terrain as t_mod

@@ -9,6 +9,13 @@ import { apiUrl } from './backend';
 
 const elevationCache = new Map<string, number>();
 
+// The backend answers null where it has no data. Reading that as 0 would be sea level, and
+// terrain following would then send a route into the ground: callers show "no data" instead.
+function known(elevations: (number | null)[]): number[] {
+  if (elevations.some((e) => e === null || e === undefined)) throw new Error('No terrain data');
+  return elevations as number[];
+}
+
 /**
  * Get ground elevation (MSL) for a single point.
  * Results are cached to 4 decimal places (~11 m resolution).
@@ -20,8 +27,8 @@ export async function getElevation(lat: number, lon: number): Promise<number> {
   const url = apiUrl(`/api/terrain/elevation?points=${lat.toFixed(6)},${lon.toFixed(6)}`);
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Terrain API ${res.status}`);
-  const data: { elevations: number[] } = await res.json();
-  const elev = data.elevations[0];
+  const data: { elevations: (number | null)[] } = await res.json();
+  const [elev] = known(data.elevations);
   elevationCache.set(key, elev);
   return elev;
 }
@@ -44,14 +51,15 @@ export async function getElevationProfile(points: { lat: number; lon: number }[]
   const url = apiUrl(`/api/terrain/elevation?points=${pairs}`);
   const res = await fetch(url);
   if (!res.ok) throw new Error(`Terrain API ${res.status}`);
-  const data: { elevations: number[] } = await res.json();
+  const data: { elevations: (number | null)[] } = await res.json();
+  const elevations = known(data.elevations);
 
   // Populate cache
   for (let i = 0; i < points.length; i++) {
-    elevationCache.set(keys[i], data.elevations[i]);
+    elevationCache.set(keys[i], elevations[i]);
   }
 
-  return data.elevations;
+  return elevations;
 }
 
 /**
