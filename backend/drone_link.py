@@ -774,9 +774,11 @@ class DroneLink:
     def _ask_fleet_positions(self) -> None:
         """The other vehicles only reach the fleet list and the map if they report a
         position, and an FC sends none on a stream nobody asked for."""
+        now = time.time()
         for sid, veh in list(self._vehicles.items()):
-            if sid != self.vehicle.sysid and not veh.get("asked") and "vtype" in veh:
-                veh["asked"] = True
+            # Until one arrives: an FC still booting drops the request.
+            if sid != self.vehicle.sysid and veh.get("lat", 0) == 0 and now - veh.get("asked", 0) > 5:
+                veh["asked"] = now
                 cmd_module.request_fleet_position(self, sid)
 
     def _check_mission_dl_timeout(self) -> None:

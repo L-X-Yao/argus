@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI, Request, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from .auth import auth_middleware, auth_required, generate_token, set_session_cookie, verify_token, verify_ws_token
@@ -194,10 +194,25 @@ async def api_log():
     if path:
         import os
 
-        return FileResponse(
-            path,
+        # The link keeps appending to this file. FileResponse sends what is there by the
+        # time it reads, past the length it announced, and the download dies half way.
+        size = os.path.getsize(path)
+
+        def snapshot():
+            left = size
+            with open(path, "rb") as f:
+                while left > 0:
+                    chunk = f.read(min(65536, left))
+                    if not chunk:
+                        return
+                    left -= len(chunk)
+                    yield chunk
+
+        name = os.path.basename(path)
+        return StreamingResponse(
+            snapshot(),
             media_type="text/csv",
-            filename=os.path.basename(path),
+            headers={"Content-Length": str(size), "Content-Disposition": f'attachment; filename="{name}"'},
         )
     return Response(status_code=404, content="No active log")
 

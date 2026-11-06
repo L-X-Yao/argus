@@ -1142,13 +1142,20 @@ class TestVehicleTypes:
         self._feed(link, 0, struct.pack("<IBBBBB", 0, 6, 8, 0, 0, 3), 50, 255)
         assert 255 not in link._vehicles
 
-    def test_each_other_vehicle_is_asked_for_its_position_once(self):
+    def test_each_other_vehicle_is_asked_for_its_position_until_it_answers(self):
         link = make_link_connected()
         self._heartbeat(link, 7)
         with patch("backend.drone_link.cmd_module.request_fleet_position") as ask:
             link._ask_fleet_positions()
             link._ask_fleet_positions()
-        ask.assert_called_once_with(link, 7)
+            ask.assert_called_once_with(link, 7)
+            link._vehicles[7]["asked"] -= 10
+            link._ask_fleet_positions()
+            assert ask.call_count == 2
+            self._position(link, 7, 35.25)
+            link._vehicles[7]["asked"] -= 10
+            link._ask_fleet_positions()
+            assert ask.call_count == 2
 
     def test_switching_takes_the_armed_state_from_the_fleet_list(self):
         """Otherwise the next heartbeat reads as a landing, with a flight record to show for it."""

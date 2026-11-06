@@ -1,2 +1,4 @@
 # A vehicle that is not system 1: nothing addressed to system 1 reaches it.
+# SYSID_THISMAV up to Copter 4.6, MAV_SYSID since. The firmware skips the one it lacks.
 SYSID_THISMAV 7
+MAV_SYSID 7

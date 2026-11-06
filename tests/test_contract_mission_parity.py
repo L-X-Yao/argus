@@ -16,6 +16,7 @@ How it works:
 from __future__ import annotations
 
 import json
+import shutil
 import subprocess
 from pathlib import Path
 from unittest.mock import MagicMock
@@ -84,7 +85,7 @@ def _frontend_items() -> list[dict]:
     }))));
     """
     result = subprocess.run(
-        ["npx", "tsx", "-e", script, json.dumps(GOLDEN_WAYPOINTS), str(GOLDEN_TAKEOFF_ALT)],
+        [shutil.which("npx") or "npx", "tsx", "-e", script, json.dumps(GOLDEN_WAYPOINTS), str(GOLDEN_TAKEOFF_ALT)],
         capture_output=True,
         text=True,
         cwd=str(ROOT),

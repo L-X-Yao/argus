@@ -296,6 +296,21 @@ class TestFirmwareOnline:
         assert data["versions"] == []
 
 
+class TestLogDownload:
+    def test_a_log_that_grows_during_the_download_stays_at_the_announced_length(self, tmp_path):
+        log = tmp_path / "flight.csv"
+        log.write_bytes(b"x" * 100)
+        with (
+            patch.object(app.state.link, "get_log_path", return_value=str(log)),
+            patch("os.path.getsize", return_value=60),
+        ):
+            r = client.get("/api/log")
+        assert r.status_code == 200
+        assert r.headers["content-length"] == "60"
+        assert len(r.content) == 60
+        assert "flight.csv" in r.headers["content-disposition"]
+
+
 class TestSecurityHeaders:
     def test_nosniff(self):
         r = client.get("/health")

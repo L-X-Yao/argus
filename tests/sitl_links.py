@@ -325,8 +325,10 @@ async def fleet(hub_port: int, homes: dict[int, float]) -> None:
         def others() -> list[dict]:
             return s.state.get("vehicles") or []
 
-        ok = await s.until(lambda: len(others()) == 1 and others()[0].get("lat", 0) != 0, 30)
+        ok = await s.until(lambda: len(others()) == 1 and others()[0].get("lat", 0) != 0, 120)
         record("the other vehicle is on the list, with a position", ok, str(others())[:120])
+        if not ok:
+            return
         second = others()[0]["sysid"]
         first = next(sid for sid in homes if sid != second)
 
