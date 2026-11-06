@@ -21,6 +21,7 @@
   import { isSerialConnected, serialUploadMission } from '../../lib/transport';
   import { vehicleKind } from '../../lib/vehicleModes';
   import {
+    AltitudeFrameError,
     parseQgcWaypoints,
     parseQgcPlan,
     exportKml as buildKml,
@@ -52,6 +53,7 @@
   let terrainElevations: number[] | null = $state(null);
   let terrainPoints: { lat: number; lon: number; wpIndex: number }[] = $state([]);
   let terrainLoading = $state(false);
+  let terrainFailed = $state(false);
 
   async function applyTerrainFollow() {
     if (!app.waypoints.length) return;
@@ -237,7 +239,7 @@
           }
           fitAfterLoad();
         } catch (err) {
-          addToast(t('toast.loadFail'), 'error');
+          addToast(t(err instanceof AltitudeFrameError ? 'wp.frameRefused' : 'toast.loadFail'), 'error', 8000);
         }
       };
       reader.readAsText(file);
@@ -413,6 +415,7 @@
     const wps = app.waypoints.map((w) => ({ lat: w.lat, lon: w.lon }));
     const pts = interpolateRoute(wps, 50);
     // Capture a snapshot to detect staleness after await
+    terrainFailed = false;
     const snapshot = JSON.stringify(wps.map((w) => `${w.lat.toFixed(5)},${w.lon.toFixed(5)}`));
     terrainLoading = true;
     groundAboveHome(pts, { lat: app.drone.home_lat, lon: app.drone.home_lon })
@@ -424,8 +427,12 @@
         terrainElevations = elevs;
       })
       .catch(() => {
+        // An answer about a route that has changed since says nothing about this one.
+        const current = app.waypoints.map((w) => `${w.lat.toFixed(5)},${w.lon.toFixed(5)}`);
+        if (JSON.stringify(current) !== snapshot) return;
         terrainElevations = null;
         terrainPoints = [];
+        terrainFailed = true;
       })
       .finally(() => {
         terrainLoading = false;
@@ -704,6 +711,9 @@
   {#if app.waypoints.length >= 2}
     <div class="mt-1.5">
       <canvas bind:this={profileCanvas} height="50" class="w-full bg-background rounded-lg"></canvas>
+      {#if terrainFailed}
+        <p class="text-[10px] text-warning">{t('terrain.noData')}</p>
+      {/if}
     </div>
   {/if}
   <div class="flex gap-1 mt-1.5 items-center flex-wrap">

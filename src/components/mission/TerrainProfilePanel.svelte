@@ -12,6 +12,7 @@
   let terrainElevations: number[] | null = $state(null);
   let terrainPoints: { lat: number; lon: number; wpIndex: number }[] = $state([]);
   let loading = $state(false);
+  let failed = $state(false);
   let hoverX: number | null = $state(null);
   let minClearance = $state(10);
   let frameId = 0;
@@ -27,6 +28,7 @@
     const pts = interpolateRoute(wps, Math.max(50, segDist(wps[0], wps[wps.length - 1]) / 200));
     const snapshot = JSON.stringify(wps.map((w) => `${w.lat.toFixed(5)},${w.lon.toFixed(5)}`));
     loading = true;
+    failed = false;
     groundAboveHome(pts, { lat: app.drone.home_lat, lon: app.drone.home_lon })
       .then((elevs) => {
         const current = app.waypoints.map((w) => `${w.lat.toFixed(5)},${w.lon.toFixed(5)}`);
@@ -35,8 +37,11 @@
         terrainElevations = elevs;
       })
       .catch(() => {
+        const current = app.waypoints.map((w) => `${w.lat.toFixed(5)},${w.lon.toFixed(5)}`);
+        if (JSON.stringify(current) !== snapshot) return;
         terrainElevations = null;
         terrainPoints = [];
+        failed = true;
       })
       .finally(() => {
         loading = false;
@@ -384,6 +389,8 @@
         {/if}
         {#if loading}
           <span class="text-[11px] text-amber-500 ml-auto">{t('terrain.loading')}</span>
+        {:else if failed}
+          <span class="text-[11px] text-warning ml-auto">{t('terrain.noData')}</span>
         {/if}
       </div>
 

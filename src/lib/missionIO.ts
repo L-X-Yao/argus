@@ -1,11 +1,14 @@
 import type { Waypoint } from './types';
 
-// MAV_FRAME_GLOBAL: above sea level, where Argus works above home.
-const FRAME_ABSOLUTE = 0;
+// MAV_FRAME_GLOBAL_RELATIVE_ALT and its INT twin, the only altitudes Argus uploads. A file above
+// sea level or above terrain cannot be turned into those without the home of the day, and read
+// as they stand, 1900 m above sea level would fly 1900 m above home.
+const RELATIVE_FRAMES = new Set([3, 6]);
+
+export class AltitudeFrameError extends Error {}
 
 export function parseQgcWaypoints(text: string): Waypoint[] {
   const wps: Waypoint[] = [];
-  let homeAlt = 0;
   for (const line of text.split('\n')) {
     const trimmed = line.trim();
     if (!trimmed || trimmed.startsWith('QGC') || trimmed.startsWith('#')) continue;
@@ -13,15 +16,13 @@ export function parseQgcWaypoints(text: string): Waypoint[] {
     if (cols.length < 12) continue;
     // Row 0 is the home position in files from Mission Planner and QGroundControl
     // (Tools/autotest/Generic_Missions/CMAC-circuit.txt), not a place to fly to.
-    if (parseInt(cols[0]) === 0) {
-      homeAlt = parseFloat(cols[10]) || 0;
-      continue;
-    }
+    if (parseInt(cols[0]) === 0) continue;
     const cmd = parseInt(cols[3]);
     if (cmd !== 16 && cmd !== 18 && cmd !== 19 && cmd !== 82) continue;
+    if (!RELATIVE_FRAMES.has(parseInt(cols[2]))) throw new AltitudeFrameError();
     const lat = parseFloat(cols[8]),
       lon = parseFloat(cols[9]),
-      alt = parseFloat(cols[10]) - (parseInt(cols[2]) === FRAME_ABSOLUTE ? homeAlt : 0);
+      alt = parseFloat(cols[10]);
     if (Math.abs(lat) < 0.001) continue;
     const type: Waypoint['type'] =
       cmd === 18 ? 'loiter_turns' : cmd === 19 ? 'loiter_time' : cmd === 82 ? 'spline' : 'wp';
@@ -46,15 +47,15 @@ export function parseQgcPlan(text: string): Waypoint[] {
     (item: { type?: string; TransectStyleComplexItem?: { Items?: unknown[] } }) =>
       item.type === 'ComplexItem' ? (item.TransectStyleComplexItem?.Items ?? []) : [item],
   );
-  const homeAlt = plan?.mission?.plannedHomePosition?.[2] ?? 0;
   const wps: Waypoint[] = [];
   for (const item of items) {
     const cmd = item.command;
     if (cmd !== 16 && cmd !== 18 && cmd !== 19 && cmd !== 82) continue;
+    if (!RELATIVE_FRAMES.has(item.frame ?? 3)) throw new AltitudeFrameError();
     const params = item.params || [];
     const lat = params[4] ?? 0,
       lon = params[5] ?? 0,
-      alt = (params[6] ?? 30) - (item.frame === FRAME_ABSOLUTE ? homeAlt : 0);
+      alt = params[6] ?? 30;
     if (Math.abs(lat) < 0.001) continue;
     const type: Waypoint['type'] =
       cmd === 18 ? 'loiter_turns' : cmd === 19 ? 'loiter_time' : cmd === 82 ? 'spline' : 'wp';
