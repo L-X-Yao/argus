@@ -798,6 +798,7 @@ const messages: Record<string, string> = {
   'terrain.loading': 'Загрузка рельефа...',
   'terrain.adjusted': 'Скорректировано {n} точек для следования рельефу ({alt}m AGL)',
   'terrain.noData': 'Данные рельефа недоступны',
+  'terrain.routeChanged': 'Маршрут изменился, пока загружались данные рельефа, ничего не применено. Повторите попытку.',
   'terrain.clearance': 'Просвет',
   'terrain.profile': 'Профиль рельефа',
   'terrain.profileTitle': 'Профиль рельефа маршрута',

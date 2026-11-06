@@ -13,6 +13,7 @@
   let terrainPoints: { lat: number; lon: number; wpIndex: number }[] = $state([]);
   let loading = $state(false);
   let failed = $state(false);
+  let ask = 0; // only the latest answer may end the loading state
   let hoverX: number | null = $state(null);
   let minClearance = $state(10);
   let frameId = 0;
@@ -23,12 +24,15 @@
     if (wps.length < 2) {
       terrainElevations = null;
       terrainPoints = [];
+      ask++;
+      loading = false;
       return;
     }
     const pts = interpolateRoute(wps, Math.max(50, segDist(wps[0], wps[wps.length - 1]) / 200));
     const snapshot = JSON.stringify(wps.map((w) => `${w.lat.toFixed(5)},${w.lon.toFixed(5)}`));
     loading = true;
     failed = false;
+    const mine = ++ask;
     groundAboveHome(pts, { lat: app.drone.home_lat, lon: app.drone.home_lon })
       .then((elevs) => {
         const current = app.waypoints.map((w) => `${w.lat.toFixed(5)},${w.lon.toFixed(5)}`);
@@ -44,7 +48,7 @@
         failed = true;
       })
       .finally(() => {
-        loading = false;
+        if (mine === ask) loading = false;
       });
   });
 

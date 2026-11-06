@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 // backend.ts accesses `window` at module scope — stub before import
 vi.stubGlobal('window', { location: { protocol: 'http:', host: 'localhost' } });
 
-const { interpolateRoute, getElevation, getElevationProfile, adjustWaypointsForTerrain, groundAboveHome } =
+const { interpolateRoute, getElevation, getElevationProfile, adjustWaypointsForTerrain, groundAboveHome, routeKey } =
   await import('./terrain');
 
 describe('interpolateRoute', () => {
@@ -413,6 +413,28 @@ describe('requests in turn', () => {
     const b = getElevationProfile(route(41.4));
     await expect(a).rejects.toThrow('offline');
     expect(await b).toEqual([300]);
+  });
+
+  it('answers for the route it was asked about, whatever happens to the list meanwhile', async () => {
+    const reply = pending();
+    const fetchMock = globalThis.fetch as ReturnType<typeof vi.fn>;
+    fetchMock.mockReturnValueOnce(reply.promise);
+
+    const waypoints = [{ lat: 41.6, lon: 108, alt: 30 }];
+    const adjusted = adjustWaypointsForTerrain(waypoints, 50, { lat: 41.6, lon: 108 });
+    waypoints.push({ lat: 41.7, lon: 108, alt: 30 });
+    reply.release(answer([100]));
+
+    const result = await adjusted;
+    expect(result).toHaveLength(1);
+    expect(result[0].alt).toBe(50);
+  });
+
+  it('tells two routes apart, and not two lists of the same one', () => {
+    const route = [{ lat: 41.6, lon: 108 }];
+    expect(routeKey(route)).toBe(routeKey([{ lat: 41.6, lon: 108 }]));
+    expect(routeKey(route)).not.toBe(routeKey([{ lat: 41.61, lon: 108 }]));
+    expect(routeKey(route)).not.toBe(routeKey([...route, ...route]));
   });
 
   it('puts a limit on how long each may take', async () => {

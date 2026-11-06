@@ -797,6 +797,7 @@ const messages: Record<string, string> = {
   'terrain.loading': 'جاري تحميل التضاريس...',
   'terrain.adjusted': 'تم تعديل {n} نقطة لمتابعة التضاريس ({alt}m AGL)',
   'terrain.noData': 'بيانات التضاريس غير متوفرة',
+  'terrain.routeChanged': 'تغير المسار أثناء انتظار بيانات التضاريس، ولم يُطبَّق شيء. حاول مرة أخرى',
   'terrain.clearance': 'الخلوص',
   'terrain.profile': 'ملف التضاريس',
   'terrain.profileTitle': 'ملف تضاريس المسار',

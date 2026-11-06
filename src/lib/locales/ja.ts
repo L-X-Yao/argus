@@ -798,6 +798,7 @@ const messages: Record<string, string> = {
   'terrain.loading': '地形データ読込中...',
   'terrain.adjusted': '{n}個のウェイポイントを地形追従に調整しました（{alt}m AGL）',
   'terrain.noData': '地形データ利用不可',
+  'terrain.routeChanged': '地形データの待機中にルートが変更されたため、適用しませんでした。もう一度お試しください',
   'terrain.clearance': 'クリアランス',
   'terrain.profile': '地形プロファイル',
   'terrain.profileTitle': 'ルート地形プロファイル',

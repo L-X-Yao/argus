@@ -12,7 +12,7 @@
     showConfirm,
   } from '../../lib/stores.svelte';
   import { t } from '../../lib/i18n.svelte';
-  import { groundAboveHome, adjustWaypointsForTerrain, interpolateRoute } from '../../lib/terrain';
+  import { groundAboveHome, adjustWaypointsForTerrain, interpolateRoute, routeKey } from '../../lib/terrain';
 
   function fitAfterLoad() {
     requestAnimationFrame(() => app.fitRouteFlag++);
@@ -54,6 +54,7 @@
   let terrainPoints: { lat: number; lon: number; wpIndex: number }[] = $state([]);
   let terrainLoading = $state(false);
   let terrainFailed = $state(false);
+  let terrainAsk = 0; // only the latest answer may end the loading state
 
   async function applyTerrainFollow() {
     if (!app.waypoints.length) return;
@@ -63,7 +64,13 @@
         app.drone.home_lat !== 0 || app.drone.home_lon !== 0
           ? { lat: app.drone.home_lat, lon: app.drone.home_lon }
           : null;
+      const route = routeKey(app.waypoints);
       const adjusted = await adjustWaypointsForTerrain(app.waypoints, app.defaultAlt, home);
+      // It can take a while, and these altitudes belong to the route as it was then.
+      if (routeKey(app.waypoints) !== route) {
+        addToast(t('terrain.routeChanged'), 'error', 5000);
+        return;
+      }
       pushUndo();
       for (let i = 0; i < app.waypoints.length; i++) {
         app.waypoints[i].alt = adjusted[i].alt;
@@ -410,6 +417,8 @@
     if (app.waypoints.length < 2) {
       terrainElevations = null;
       terrainPoints = [];
+      terrainAsk++;
+      terrainLoading = false;
       return;
     }
     const wps = app.waypoints.map((w) => ({ lat: w.lat, lon: w.lon }));
@@ -418,6 +427,7 @@
     terrainFailed = false;
     const snapshot = JSON.stringify(wps.map((w) => `${w.lat.toFixed(5)},${w.lon.toFixed(5)}`));
     terrainLoading = true;
+    const ask = ++terrainAsk;
     groundAboveHome(pts, { lat: app.drone.home_lat, lon: app.drone.home_lon })
       .then((elevs) => {
         // Only apply if waypoints haven't changed since we started
@@ -435,7 +445,7 @@
         terrainFailed = true;
       })
       .finally(() => {
-        terrainLoading = false;
+        if (ask === terrainAsk) terrainLoading = false;
       });
   });
 

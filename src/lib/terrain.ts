@@ -9,8 +9,8 @@ import { apiUrl } from './backend';
 
 const elevationCache = new Map<string, number>();
 
-// Long enough for the backend to fetch a tile of ground data over a slow line.
-const REQUEST_TIMEOUT_MS = 30000;
+// Long enough for the backend to fetch a large tile of ground data over a slow line.
+const REQUEST_TIMEOUT_MS = 120000;
 
 // One at a time, like the tiles in sw.js. A request can wait a long time for its file, and each
 // edit of a route sends another: over a slow line they took all six connections the browser
@@ -105,11 +105,19 @@ export async function adjustWaypointsForTerrain(
   targetAGL: number,
   homeLatLon?: { lat: number; lon: number } | null,
 ): Promise<{ lat: number; lon: number; alt: number }[]> {
-  const ground = await groundAboveHome(waypoints, homeLatLon);
-  return waypoints.map((wp, i) => ({
+  // A copy: the answer can take a while, and a waypoint added to the caller's list meanwhile
+  // would have no ground to go with it, and come back with an altitude of NaN.
+  const route = waypoints.map((wp) => ({ ...wp }));
+  const ground = await groundAboveHome(route, homeLatLon);
+  return route.map((wp, i) => ({
     ...wp,
     alt: Math.round(ground[i] + targetAGL),
   }));
+}
+
+/** The same for two lists of waypoints over the same ground. */
+export function routeKey(waypoints: { lat: number; lon: number }[]): string {
+  return waypoints.map((w) => `${w.lat.toFixed(5)},${w.lon.toFixed(5)}`).join(';');
 }
 
 /**
