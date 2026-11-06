@@ -579,7 +579,7 @@ const _serialDispatch: Record<string, CmdHandler> = {
     // live vehicle. Same for a null/non-numeric ELEMENT (backend int(None)
     // raises → whole command error-drops), and in-range coercion clamps to
     // u16 like the backend's max(0, min(65535, ...)) instead of wrapping.
-    // All production callers (gamepad, EscCalPanel) send all 8 as ints.
+    // The production caller (gamepad) sends all 8 as ints.
     if (ch && ch.length >= 8) {
       const vals: number[] = [];
       for (let i = 0; i < 8; i++) {

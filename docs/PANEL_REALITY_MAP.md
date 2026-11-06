@@ -128,7 +128,7 @@ Format: `Panel | verdict | what it does / evidence`.
 | panel | verdict | note |
 |---|---|---|
 | CalibrationPanel | WIRED | all cal commands; progress parsed from live events |
-| EscCalPanel | WIRED | ESC wizard via real rc_override |
+| EscCalPanel | WIRED | Sets ESC_CALIBRATION: the FC calibrates by itself at the next power-up |
 | FirmwarePanel | WIRED | /api/firmware/* + reboot/reboot_bootloader |
 | FrameSelectPanel | WIRED | FRAME_CLASS/TYPE via param store |
 | MotorTestPanel | WIRED | motor_test/stop real; countdown cosmetic |
