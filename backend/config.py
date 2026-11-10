@@ -42,7 +42,7 @@ async def json_object(request) -> dict:
 
 async def aio(fn, *args):
     """Run a blocking function in the default executor."""
-    loop = asyncio.get_event_loop()
+    loop = asyncio.get_running_loop()
     return await loop.run_in_executor(None, partial(fn, *args) if args else fn)
 
 

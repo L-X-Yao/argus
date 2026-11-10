@@ -5,18 +5,9 @@ import json
 import sys
 from pathlib import Path
 
-import pytest
 import websockets
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
-
-@pytest.fixture
-def event_loop():
-    loop = asyncio.new_event_loop()
-    yield loop
-    loop.close()
 
 
 async def ws_connect(ws_url, timeout=5):
@@ -27,8 +18,8 @@ async def ws_connect(ws_url, timeout=5):
 
 
 async def recv_until(ws, predicate, timeout=10):
-    deadline = asyncio.get_event_loop().time() + timeout
-    while asyncio.get_event_loop().time() < deadline:
+    deadline = asyncio.get_running_loop().time() + timeout
+    while asyncio.get_running_loop().time() < deadline:
         try:
             raw = await asyncio.wait_for(ws.recv(), timeout=2)
             msg = json.loads(raw)
@@ -87,7 +78,7 @@ class TestConnection:
             finally:
                 await ws.close()
 
-        asyncio.get_event_loop().run_until_complete(run())
+        asyncio.run(run())
 
     def test_connect_to_sim(self, ws_url, sim_port):
         async def run():
@@ -116,7 +107,7 @@ class TestConnection:
                 await asyncio.sleep(0.5)
                 await ws.close()
 
-        asyncio.get_event_loop().run_until_complete(run())
+        asyncio.run(run())
 
 
 class TestTelemetry:
@@ -146,7 +137,7 @@ class TestTelemetry:
                 await asyncio.sleep(0.5)
                 await ws.close()
 
-        asyncio.get_event_loop().run_until_complete(run())
+        asyncio.run(run())
 
     def test_receives_battery(self, ws_url, sim_port):
         async def run():
@@ -173,7 +164,7 @@ class TestTelemetry:
                 await asyncio.sleep(0.5)
                 await ws.close()
 
-        asyncio.get_event_loop().run_until_complete(run())
+        asyncio.run(run())
 
     def test_receives_events(self, ws_url, sim_port):
         async def run():
@@ -200,7 +191,7 @@ class TestTelemetry:
                 await asyncio.sleep(0.5)
                 await ws.close()
 
-        asyncio.get_event_loop().run_until_complete(run())
+        asyncio.run(run())
 
 
 class TestCommands:
@@ -245,7 +236,7 @@ class TestCommands:
                 await asyncio.sleep(0.5)
                 await ws.close()
 
-        asyncio.get_event_loop().run_until_complete(run())
+        asyncio.run(run())
 
     def test_mode_change(self, ws_url, sim_port):
         async def run():
@@ -285,7 +276,7 @@ class TestCommands:
                 await asyncio.sleep(0.5)
                 await ws.close()
 
-        asyncio.get_event_loop().run_until_complete(run())
+        asyncio.run(run())
 
     def test_disconnect(self, ws_url, sim_port):
         async def run():
@@ -321,7 +312,7 @@ class TestCommands:
             finally:
                 await ws.close()
 
-        asyncio.get_event_loop().run_until_complete(run())
+        asyncio.run(run())
 
 
 class TestLogAndReconnect:
@@ -349,7 +340,7 @@ class TestLogAndReconnect:
                 await asyncio.sleep(0.5)
                 await ws.close()
 
-        asyncio.get_event_loop().run_until_complete(run())
+        asyncio.run(run())
 
     def test_log_download_api(self, backend_url, ws_url, sim_port):
         async def run():
@@ -382,7 +373,7 @@ class TestLogAndReconnect:
                 await asyncio.sleep(0.5)
                 await ws.close()
 
-        asyncio.get_event_loop().run_until_complete(run())
+        asyncio.run(run())
 
     def test_log_not_available_disconnected(self, backend_url):
         import httpx
@@ -424,7 +415,7 @@ class TestMission:
                 await asyncio.sleep(0.5)
                 await ws.close()
 
-        asyncio.get_event_loop().run_until_complete(run())
+        asyncio.run(run())
 
     def test_mission_clear(self, ws_url, sim_port):
         async def run():
@@ -464,7 +455,7 @@ class TestMission:
                 await asyncio.sleep(0.5)
                 await ws.close()
 
-        asyncio.get_event_loop().run_until_complete(run())
+        asyncio.run(run())
 
 
 class TestParams:
@@ -499,7 +490,7 @@ class TestParams:
                 await asyncio.sleep(0.5)
                 await ws.close()
 
-        asyncio.get_event_loop().run_until_complete(run())
+        asyncio.run(run())
 
     def test_param_set(self, ws_url, sim_port):
         async def run():
@@ -549,7 +540,7 @@ class TestParams:
                 await asyncio.sleep(0.5)
                 await ws.close()
 
-        asyncio.get_event_loop().run_until_complete(run())
+        asyncio.run(run())
 
     def test_param_state_in_telemetry(self, ws_url, sim_port):
         async def run():
@@ -578,7 +569,7 @@ class TestParams:
                 await asyncio.sleep(0.5)
                 await ws.close()
 
-        asyncio.get_event_loop().run_until_complete(run())
+        asyncio.run(run())
 
 
 class TestFirmwareVersion:
@@ -601,7 +592,7 @@ class TestFirmwareVersion:
                 await asyncio.sleep(0.5)
                 await ws.close()
 
-        asyncio.get_event_loop().run_until_complete(run())
+        asyncio.run(run())
 
 
 class TestMissionDownload:
@@ -655,7 +646,7 @@ class TestMissionDownload:
                 await asyncio.sleep(0.5)
                 await ws.close()
 
-        asyncio.get_event_loop().run_until_complete(run())
+        asyncio.run(run())
 
     def test_download_empty_mission(self, ws_url, sim_port):
         async def run():
@@ -697,7 +688,7 @@ class TestMissionDownload:
                 await asyncio.sleep(0.5)
                 await ws.close()
 
-        asyncio.get_event_loop().run_until_complete(run())
+        asyncio.run(run())
 
 
 class TestOnboardLog:
@@ -730,7 +721,7 @@ class TestOnboardLog:
                 await asyncio.sleep(0.5)
                 await ws.close()
 
-        asyncio.get_event_loop().run_until_complete(run())
+        asyncio.run(run())
 
     def test_log_download(self, ws_url, sim_port):
         async def run():
@@ -768,8 +759,8 @@ class TestOnboardLog:
 
                 chunks: dict[int, bytes] = {}
                 done = None
-                deadline = asyncio.get_event_loop().time() + 20
-                while asyncio.get_event_loop().time() < deadline:
+                deadline = asyncio.get_running_loop().time() + 20
+                while asyncio.get_running_loop().time() < deadline:
                     try:
                         raw = await asyncio.wait_for(ws.recv(), timeout=2)
                         m = json.loads(raw)
@@ -790,7 +781,7 @@ class TestOnboardLog:
                 await asyncio.sleep(0.5)
                 await ws.close()
 
-        asyncio.get_event_loop().run_until_complete(run())
+        asyncio.run(run())
 
     def test_log_cancel(self, ws_url, sim_port):
         async def run():
@@ -831,7 +822,7 @@ class TestOnboardLog:
                 await asyncio.sleep(0.5)
                 await ws.close()
 
-        asyncio.get_event_loop().run_until_complete(run())
+        asyncio.run(run())
 
 
 class TestDataStreams:
@@ -860,7 +851,7 @@ class TestDataStreams:
                 await asyncio.sleep(0.5)
                 await ws.close()
 
-        asyncio.get_event_loop().run_until_complete(run())
+        asyncio.run(run())
 
     def test_vibration_in_state(self, ws_url, sim_port):
         async def run():
@@ -890,7 +881,7 @@ class TestDataStreams:
                 await asyncio.sleep(0.5)
                 await ws.close()
 
-        asyncio.get_event_loop().run_until_complete(run())
+        asyncio.run(run())
 
     def test_servo_output_in_state(self, ws_url, sim_port):
         async def run():
@@ -909,7 +900,7 @@ class TestDataStreams:
                 await asyncio.sleep(0.5)
                 await ws.close()
 
-        asyncio.get_event_loop().run_until_complete(run())
+        asyncio.run(run())
 
 
 class TestFenceUpload:
@@ -946,7 +937,7 @@ class TestFenceUpload:
                 await asyncio.sleep(0.5)
                 await ws.close()
 
-        asyncio.get_event_loop().run_until_complete(run())
+        asyncio.run(run())
 
     def test_fence_upload_too_few_points(self, ws_url, sim_port):
         async def run():
@@ -976,7 +967,7 @@ class TestFenceUpload:
                 await asyncio.sleep(0.5)
                 await ws.close()
 
-        asyncio.get_event_loop().run_until_complete(run())
+        asyncio.run(run())
 
 
 class TestMissionAdvanced:
@@ -1048,7 +1039,7 @@ class TestMissionAdvanced:
                 await asyncio.sleep(0.5)
                 await ws.close()
 
-        asyncio.get_event_loop().run_until_complete(run())
+        asyncio.run(run())
 
     def test_upload_with_loiter_roundtrip(self, ws_url, sim_port):
         async def run():
@@ -1120,7 +1111,7 @@ class TestMissionAdvanced:
                 await asyncio.sleep(0.5)
                 await ws.close()
 
-        asyncio.get_event_loop().run_until_complete(run())
+        asyncio.run(run())
 
 
 class TestCalibration:
@@ -1150,7 +1141,7 @@ class TestCalibration:
                 await asyncio.sleep(0.5)
                 await ws.close()
 
-        asyncio.get_event_loop().run_until_complete(run())
+        asyncio.run(run())
 
     def test_compass_calibration(self, ws_url, sim_port):
         async def run():
@@ -1178,7 +1169,7 @@ class TestCalibration:
                 await asyncio.sleep(0.5)
                 await ws.close()
 
-        asyncio.get_event_loop().run_until_complete(run())
+        asyncio.run(run())
 
     def test_cal_cancel(self, ws_url, sim_port):
         async def run():
@@ -1206,7 +1197,7 @@ class TestCalibration:
                 await asyncio.sleep(0.5)
                 await ws.close()
 
-        asyncio.get_event_loop().run_until_complete(run())
+        asyncio.run(run())
 
 
 # ═══════════════════════════════════════════════════════════════════════
@@ -1274,7 +1265,7 @@ class TestVzConvention:
                 await asyncio.sleep(0.5)
                 await ws.close()
 
-        asyncio.get_event_loop().run_until_complete(run())
+        asyncio.run(run())
 
 
 class TestEkfInState:
@@ -1298,7 +1289,7 @@ class TestEkfInState:
                 await asyncio.sleep(0.5)
                 await ws.close()
 
-        asyncio.get_event_loop().run_until_complete(run())
+        asyncio.run(run())
 
 
 class TestMissionFileFormats:
@@ -1459,7 +1450,7 @@ class TestVersionApi:
         assert r.status_code == 200
         assert isinstance(r.json(), dict)
 
-    def test_set_locale_via_ws(self, ws_url, event_loop):
+    def test_set_locale_via_ws(self, ws_url):
         import websockets
 
         async def _test():
@@ -1469,7 +1460,7 @@ class TestVersionApi:
             assert msg["type"] == "state"
             await ws.close()
 
-        event_loop.run_until_complete(_test())
+        asyncio.run(_test())
 
     def test_tile_sources_endpoint(self, backend_url):
         import httpx

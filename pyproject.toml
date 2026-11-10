@@ -43,6 +43,10 @@ dev = [
 [tool.setuptools.packages.find]
 include = ["backend*"]
 
+[tool.pytest.ini_options]
+# pytest-asyncio warns until this is stated, and is about to change what it defaults to.
+asyncio_default_fixture_loop_scope = "function"
+
 [tool.coverage.run]
 omit = [
     "backend/server.py",
