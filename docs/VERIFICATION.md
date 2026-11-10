@@ -162,7 +162,7 @@ Real FC here means the route was in use during a session with a real flight cont
 | `GET /api/session` | Session info | 会话信息 | Simulator | e2e |
 | `GET /api/version` | Version | 版本 | Simulator | e2e, real Windows each release |
 | `GET /api/tile_sources` | Map sources | 地图源列表 | Simulator | Integration tests |
-| `GET /api/video` | Video stream | 视频流 | Simulator | Integration tests, no real camera |
+| `GET /api/video` | Video stream | 视频流 | Simulator | Integration tests. 2026-11-10: real ffmpeg, an HTTP test stream at a private address came out as MJPEG. RTSP by its command line only, no real camera |
 | `GET /api/video/stop` | Stop video | 停止视频 | Simulator | Integration tests, no real camera |
 | `POST /api/auth/generate` | Generate a token | 生成 Token | Simulator | Integration tests |
 | `POST /api/tile_bulk_download` | Download tiles for offline use | 批量下载瓦片 | Simulator | Integration tests: counts tiles. Whether a map server answers is up to it |
@@ -267,7 +267,7 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 
 | Feature | 功能 | Level | Evidence |
 | --- | --- | --- | --- |
-| Serial through the backend | 后端串口 | Real FC | 2026-11-06 on Windows, COM port; 2026-11-05 on Linux through usbipd |
+| Serial through the backend | 后端串口 | Real FC | 2026-11-06 on Windows, COM port, on the Python 3.10 the package bundled then; 2026-11-05 on Linux through usbipd. On the Python 3.14 it bundles since v3.7.8: a COM port opened and closed 2026-11-10, no FC on it |
 | WebSerial | 浏览器直连 USB | Real FC | 2026-11-06, real Edge on Windows, the port chooser used with the mouse. 2026-11-05, Chromium on Linux through usbipd |
 | Log download speed | 日志下载速度 | Real FC | 2026-11-06 on Windows, about 660 KB/s on both links. 2026-11-05 through usbipd, about 700 KB/s |
 | Reconnect after a lost link | 断链重连 | Real FC | 2026-11-06, FC reboot on Windows on both links. 2026-11-05, USB pulled on both links. CI: WebSerial keeps the flight through a drop in the air, on SITL |
@@ -283,7 +283,7 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 | 3D map | 3D 地图 | Simulator | e2e, and real Edge on Windows with a real GPU 2026-11-06 |
 | PWA and offline use | PWA 和离线 | Simulator | e2e, and real Edge on Windows 2026-11-06 |
 | Several browser clients | 多浏览器客户端 | Simulator | Integration tests |
-| Video and AR overlay | 视频和 AR 叠加 | Simulator | Integration tests, no real camera |
+| Video and AR overlay | 视频和 AR 叠加 | Simulator | Integration tests, and real ffmpeg on an HTTP test stream 2026-11-10. No real camera |
 | Token login | Token 登录 | Simulator | e2e, real Windows each release |
 | Windows package | Windows 发布包 | Simulator | CI builds and smoke-tests it on every push, real Windows each release |
 | UDP | UDP 连接 | SITL | CI: a whole session on real firmware |
@@ -323,6 +323,8 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 5. **Vehicles other than Copter on real hardware.** Plane, QuadPlane, Rover and Sub run whole missions in SITL in CI through the backend. None has been on a real board since the 2026-05 telemetry check.
 6. **Chrome itself on Windows.** Edge on Windows ran through the real port chooser 2026-11-06. Chrome was not on that machine.
 7. **Four panels nobody can open.** Scripts, scheduler, AI planner and AI annotation exist in code only.
+8. **The backend's serial link on Windows since the package bundles Python 3.14 (v3.7.8).** It ran on a real FC on the Python 3.10 of earlier packages. On 3.14 a COM port was opened and closed 2026-11-10, with no FC on it. WebSerial does not use that Python.
+9. **Video from a real camera.** ffmpeg turned an HTTP test stream into frames 2026-11-10. No RTSP camera has been on it, and until v3.7.8 only `rtsp://` addresses could play at all.
 
 1. **真实飞行。** 没有飞过。下面都只是台架或仿真结果。
 2. **真机上的解锁、起飞、返航、开始任务。** 只在 SITL 跑过。这些需要接电池，要单独安排。
@@ -331,6 +333,20 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 5. **多旋翼以外机型上真机。** 固定翼、QuadPlane、地面车、水下机器人在 CI 里经后端跑完整任务（SITL）。除 2026-05 的遥测检查外，都没有接过真实飞控。
 6. **Windows 上的 Chrome 本身。** 2026-11-06 已用 Windows 上的 Edge 走真实端口弹窗，那台机器没有装 Chrome。
 7. **4 个打不开的面板。** 脚本、定时任务、AI 规划、AI 标注只存在于代码中。
+8. **发布包改用 Python 3.14（v3.7.8）之后，Windows 上的后端串口。** 之前的发布包内置 Python 3.10，在真实飞控上跑过。3.14 上只在 2026-11-10 打开并关闭过一个 COM 口，没有接飞控。WebSerial 不经过这个 Python。
+9. **真实相机的视频。** 2026-11-10 用 ffmpeg 把一路 HTTP 测试流转成了画面。没有接过 RTSP 相机，而且 v3.7.8 之前只有 `rtsp://` 地址能播放。
+
+## Known limits / 已知限制
+
+- The mode list comes from tables in Argus, one per vehicle type. A firmware built without a mode still shows it, and refuses it when asked.
+- A compass calibration is saved only by the session that started it. After Disconnect and Connect during a run, the result is reported as not saved, and the run has to be repeated.
+- Roles are a courtesy between operators, not access control: everyone who holds the token can command the vehicle.
+- Arming and fence terms in German, Arabic and Russian have not been checked by a native speaker.
+
+- 模式列表来自 Argus 内置的表，每种机型一张。固件编译时去掉的模式仍会显示，选择时由飞控拒绝。
+- 罗盘校准只能由发起它的那次会话保存。校准途中断开再连接，结果会报告为未保存，需要重新校准。
+- 角色只是操作员之间的约定，不是访问控制：持有 Token 的人都能指挥飞行器。
+- 德语、阿拉伯语和俄语里的解锁与围栏术语没有经过母语者校对。
 
 ## Keeping this file honest / 维护规则
 

@@ -17,6 +17,8 @@
 Argus 是一个通用 **Web 地面站** —— 一个浏览器界面控制 MAVLink 无人机，支持桌面 / 平板 / 手机，内置 10 种语言。目前没有托管版本：运行 Python 后端，或解压 Windows 发布包（已内置 Python），再用浏览器打开。
 
 > **当前状态**：ArduPilot 已通过 CI 中的 ArduCopter SITL 和真实飞控台架验证，尚未经过正式飞行测试。每项功能验证到什么程度，见 [docs/VERIFICATION.md](docs/VERIFICATION.md)。PX4 前端适配器已搭建，后端可读取 `HEARTBEAT.autopilot` 字节，但端到端链路尚未贯通 —— 详见 `CLAUDE.md ## PX4 Status`。
+>
+> **2026 年 11 月起仅做维护**：修复缺陷和安全问题，不再计划新功能。见[项目状态](#项目状态)。
 
 为什么还需要一个 GCS：
 
@@ -43,13 +45,13 @@ Argus 填补空缺：**开源 + Web 原生**。
 | **RTK** | NTRIP 客户端，HTTP/1.0 + ICY-200 协商，RTCM 流式注入 |
 | **固件** | 在后端保存 `.apj` 文件，在线固件浏览器，重启至 Bootloader（不含刷写功能） |
 | **编队** | 多机仪表盘，每架飞机实时遥测 |
-| **视频** | RTSP 代理，AR 航点叠加，截图 |
+| **视频** | 后端经 ffmpeg 转发 RTSP、HTTP 和 RTMP 视频流，AR 航点叠加，截图 |
 | **HUD** | PFD（姿态/速度/高度/罗盘/风向），实时图表，EKF 状态 |
 | **语音** | 10 语言本地化语音播报（模式、电量、高度、航点） |
 | **多语言** | 10 种语言（中/英/日/韩/德/法/西/葡/俄/阿）+ RTL |
 | **离线** | PWA + Service Worker，mbtiles 支持，瓦片缓存（5000 条 LRU） |
 | **桌面** | 已包含 Tauri v2 配置；应用图标尚未提交，CI 也未构建 |
-| **安全** | Token 认证，SSRF + 路径穿越防护，statustext 过滤 |
+| **安全** | Token 认证，跨站与 DNS 重绑定请求拦截，SSRF + 路径穿越防护，statustext 过滤 |
 
 ## 快速开始
 
@@ -59,6 +61,8 @@ Argus 填补空缺：**开源 + Web 原生**。
 npm install        # 前端依赖
 pip install -e .   # 后端依赖（使用 pyproject.toml）
 ```
+
+需要 Python 3.10 或更高版本。CI 运行在 3.14 上，Windows 发布包内置的也是 3.14。
 
 ### 方式一 —— 真实硬件（USB 连接 Pixhawk）
 
@@ -97,16 +101,16 @@ python run.py --sim            # 同时启动后端 + simulator.py
 ```
 +------------------------------------------+
 |  浏览器 (Svelte 5 + TypeScript 6)        |
-|  77 组件, 26K 行                          |
+|  80 组件, 27K 行                          |
 |  MAVLink v2 编解码器 (纯 TS)              |
 |  WebSerial 直连 USB                       |
-|  43 个懒加载面板 + 视图分割               |
+|  41 个懒加载面板 + 视图分割               |
 +------------------------------------------+
 |          WebSocket (JSON 增量推送)        |
 +------------------------------------------+
 |  Python 后端 (FastAPI + uvicorn)          |
-|  31 模块, 6.2K 行                        |
-|  MAVLink 分发 + 33 消息处理器             |
+|  31 模块, 7.1K 行                        |
+|  MAVLink 分发 + 35 消息处理器             |
 |  53 条命令, 瓦片/视频/固件 API            |
 +------------------------------------------+
 |          MAVLink v2                       |
@@ -187,9 +191,11 @@ bash scripts/make-release.sh X.Y.Z
 bash scripts/changelog.sh v3.5.0   # 查看 v3.5.0 以来的变更
 ```
 
-## 路线图
+## 项目状态
 
-**近期已发布**
+Argus 自 2026 年 11 月起进入维护阶段：修复缺陷和安全问题，不再计划新功能。
+
+**已完成**
 
 - 备降点：地图编辑，两条链路都能上传和清除
 - 地形剖面面板，净空可视化
@@ -205,21 +211,22 @@ bash scripts/changelog.sh v3.5.0   # 查看 v3.5.0 以来的变更
 - 云台俯仰/偏航控制
 - Tag 触发的发布流程，自动生成 changelog
 
-**已列入计划**
+**不再计划**
+
+以下各项曾列入路线图，本项目不会再实现：
 
 - 固件刷写（APJ 解析 + Bootloader 协议）
-- PX4 端到端支持（后端已读取 `HEARTBEAT.autopilot`，目前拒绝 PX4；前端只有模式表）
-
-**未来计划**
-
-- WebRTC 视频流（替代 RTSP 代理）
+- PX4 端到端支持（后端读取 `HEARTBEAT.autopilot` 并拒绝 PX4；前端只有模式表）
+- WebRTC 视频流（替代 ffmpeg 代理）
 - MQTT 云端中继，用于编队管理
 - MAVLink FTP，用于固件上传和 Lua 脚本管理
 - MSP 协议支持（BetaFlight / iNav）
 
+Argus 不做什么、哪些从未测试过，见 [docs/VERIFICATION.md](docs/VERIFICATION.md) 和 [SECURITY.md](SECURITY.md)。
+
 ## 贡献
 
-欢迎提 Issue 和 PR。提交 PR 前请确保：
+欢迎报告缺陷和提交修复。功能请求大概率不会被采纳，见[项目状态](#项目状态)。提交 PR 前请确保：
 
 1. 本地测试通过：`npx vitest run && python -m pytest tests/test_unit_*.py tests/test_contract_*.py`
 2. 类型检查清洁：`npx svelte-check`（0 错误，0 警告）

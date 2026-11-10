@@ -17,6 +17,8 @@
 Argus is a universal **web GCS** — one browser interface for MAVLink drones, on any platform (desktop, tablet, mobile), in 10 languages. There is no hosted version yet: run the Python backend, or unzip the Windows package (Python included), then open it in a browser.
 
 > **Status**: ArduPilot is verified on ArduCopter SITL in CI and on a real flight controller on the bench, but Argus has not been through proper flight testing. [docs/VERIFICATION.md](docs/VERIFICATION.md) lists what has been tested and how, feature by feature. PX4 has frontend adapter scaffolding in `src/lib/fc/` and the backend reads `HEARTBEAT.autopilot`, but end-to-end wiring is incomplete — see `CLAUDE.md ## PX4 Status`.
+>
+> **Maintenance only since November 2026**: bugs and security problems get fixed, and no new features are planned. See [Project Status](#project-status).
 
 Why another GCS:
 
@@ -43,13 +45,13 @@ Argus fills the gap: **open-source + web-native**.
 | **RTK** | NTRIP client with HTTP/1.0 + ICY-200 negotiation, streaming RTCM injection |
 | **Firmware** | Store `.apj` files on the backend, online firmware browser, reboot to bootloader (no built-in flashing) |
 | **Fleet** | Multi-vehicle dashboard with live telemetry per vehicle |
-| **Video** | RTSP proxy, AR waypoint overlay, screenshot capture |
+| **Video** | RTSP, HTTP and RTMP streams through ffmpeg on the backend, AR waypoint overlay, screenshot capture |
 | **HUD** | PFD (attitude/speed/altitude/compass/wind), real-time charts, EKF status |
 | **Audio** | Localized voice callouts (mode, battery, altitude, waypoints) in all 10 languages |
 | **i18n** | 10 languages (zh, en, ja, ko, de, fr, es, pt, ru, ar) + RTL |
 | **Offline** | PWA with service worker, mbtiles support, tile caching (5000-entry LRU) |
 | **Desktop** | Tauri v2 config included; app icons are not committed yet and no CI job builds it |
-| **Security** | Token auth, SSRF + path-traversal guards, statustext filtering |
+| **Security** | Token auth, cross-site and DNS-rebinding request blocking, SSRF + path-traversal guards, statustext filtering |
 
 ## Quick Start
 
@@ -59,6 +61,8 @@ One-time setup:
 npm install        # Frontend dependencies
 pip install -e .   # Backend (uses pyproject.toml — pulls all required deps)
 ```
+
+Needs Python 3.10 or newer. CI runs on 3.14, which is also what the Windows package bundles.
 
 > **Windows / recent Node note**: Node ≥17 may resolve `localhost` to IPv6 `::1`, while the backend binds IPv4-only `127.0.0.1` — use `127.0.0.1` in dev URLs.
 
@@ -99,16 +103,16 @@ Open Argus in Chrome/Edge, click the **USB** button, pick your flight controller
 ```
 +------------------------------------------+
 |  Browser (Svelte 5 + TypeScript 6)       |
-|  77 components, 26K lines                |
+|  80 components, 27K lines                |
 |  MAVLink v2 codec (pure TS)              |
 |  WebSerial direct USB connection         |
-|  43 lazy-loaded panels + view splitting  |
+|  41 lazy-loaded panels + view splitting  |
 +------------------------------------------+
 |          WebSocket (JSON delta push)     |
 +------------------------------------------+
 |  Python Backend (FastAPI + uvicorn)      |
-|  31 modules, 6.2K lines                  |
-|  MAVLink dispatch + 33 message handlers  |
+|  31 modules, 7.1K lines                  |
+|  MAVLink dispatch + 35 message handlers  |
 |  53 commands, tile/video/firmware API    |
 +------------------------------------------+
 |          MAVLink v2                      |
@@ -189,9 +193,11 @@ Alternatively, to generate a changelog preview locally:
 bash scripts/changelog.sh v3.5.0   # Changes since v3.5.0
 ```
 
-## Roadmap
+## Project Status
 
-**Recently shipped**
+Argus is in maintenance since November 2026. Bugs and security problems get fixed. No new features are planned.
+
+**Built**
 
 - Rally points: map editing, upload and clear on both links
 - Terrain profile panel with clearance visualization
@@ -207,21 +213,22 @@ bash scripts/changelog.sh v3.5.0   # Changes since v3.5.0
 - Gimbal pitch/yaw control
 - Tag-triggered release workflow with auto-changelog
 
-**Planned**
+**No longer planned**
+
+These were on the roadmap and will not be built here:
 
 - Firmware flashing (APJ parsing + bootloader protocol)
-- PX4 end-to-end support (backend reads `HEARTBEAT.autopilot` and refuses PX4 for now; frontend holds a mode table only)
-
-**Future**
-
-- WebRTC video streaming (replace RTSP proxy)
+- PX4 end-to-end support (the backend reads `HEARTBEAT.autopilot` and refuses PX4; the frontend holds a mode table only)
+- WebRTC video streaming (replace the ffmpeg proxy)
 - MQTT cloud relay for fleet management
 - MAVLink FTP for firmware upload and Lua script management
 - MSP protocol support (BetaFlight / iNav)
 
+What Argus does not do, and what has never been tested, is listed in [docs/VERIFICATION.md](docs/VERIFICATION.md) and [SECURITY.md](SECURITY.md).
+
 ## Contributing
 
-Issues and PRs welcome. Before sending a PR:
+Bug reports and fixes are welcome. A feature request is unlikely to be picked up: see [Project Status](#project-status). Before sending a PR:
 
 1. Tests pass locally: `npx vitest run && python -m pytest tests/test_unit_*.py tests/test_contract_*.py`
 2. Type check is clean: `npx svelte-check` (0 errors, 0 warnings)

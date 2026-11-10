@@ -2,6 +2,8 @@
 
 Thanks for your interest! Here's how to get started.
 
+Argus is in maintenance: fixes for bugs and security problems are welcome, and new features are no longer added. See Project Status in the README.
+
 ## Setup
 
 ```bash
@@ -37,10 +39,11 @@ CI runs on every push to `main` and every PR. On top of the five checks above, i
 | Bundle size | `dist/assets/` is at most 3 MiB |
 | npm audit | No critical issues |
 | pip-audit | No known vulnerability in the Python dependencies |
+| Oldest Python | Unit and contract tests on the oldest Python `pyproject.toml` allows. Every other job runs on the version the Windows package bundles, `PY_VER` in `scripts/build_package.py` |
 | CodeQL | `.github/workflows/codeql.yml`, on every push and weekly |
 | Integration tests | `tests/test_integration.py`: real backend and simulator over WebSocket. `tests/test_integration_rest.py`: REST routes with real files and the real terrain and firmware servers |
 | macOS | Unit and contract tests on `macos-latest`, then the app itself in a browser. SITL ships as a Linux binary, so the SITL jobs stay on Linux |
-| Windows | The same on `windows-latest`, and the zip built and smoke-tested by `scripts/smoke_package.py` |
+| Windows | The same on `windows-latest`, and the zip built and smoke-tested by `scripts/smoke_package.py`. pip-audit then runs on the wheels inside the zip, as it does before a release is published |
 | SITL smoke test | `tests/sitl_verify.py`: a full flight on real ArduCopter firmware in simulation, through the backend |
 | WebSerial on SITL | `tests/e2e/run-webserial-sitl.sh`: a full flight and both interactive calibrations, through the browser stack |
 | Panels on SITL | `tests/e2e/run-panels-sitl.sh`: the panels driven with the mouse on real firmware through the backend, each result read back from the FC, and a whole flight |
@@ -114,8 +117,8 @@ Versions are `MAJOR.MINOR.PATCH`: PATCH for fixes, MINOR for new features, MAJOR
 
 Release from `main`, on a commit whose CI run is green. `scripts/make-release.sh` checks the branch and a clean tree, but not CI.
 
-1. Build the Windows package with `python scripts/build_package.py`. It writes a zip to `release/`.
-2. On a real Windows machine, run `python scripts/smoke_package.py release/<zip>`. It extracts the zip and checks the REST API, the WebSocket, that a request from another origin is rejected, and token login. CI runs the same on a hosted runner.
+1. Build the Windows package with `python scripts/build_package.py`, on Python 3.11 or newer. It writes a zip to `release/`. The package bundles the Python named by `PY_VER`: move it to a version python.org still builds for Windows when the current one stops getting them.
+2. On a real Windows machine, run `python scripts/smoke_package.py release/<zip>`. It extracts the zip and checks the REST API, the WebSocket, that a request from another origin or under another host name is rejected, and token login. CI runs the same on a hosted runner.
 3. Run `bash scripts/make-release.sh X.Y.Z`. It bumps the version, runs the frontend, unit and contract tests, commits, tags and pushes.
 4. The tag starts `.github/workflows/release.yml`, which builds the zip, attests it, and publishes the GitHub Release with `SHA256SUMS.txt`.
 5. Repeat step 2 on the published zip.
