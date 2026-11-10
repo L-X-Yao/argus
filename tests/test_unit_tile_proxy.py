@@ -1,5 +1,6 @@
 """Unit tests for tile proxy routes: URL construction, caching, mbtiles, bulk download."""
 
+import json
 import math
 import sqlite3
 import sys
@@ -466,6 +467,58 @@ class TestTileBulkDownload:
             assert r.status_code == 200
             data = r.json()
             assert data["skipped"] >= 1
+
+    BOX = {"lat_min": 30.0, "lat_max": 30.001, "lon_min": 120.0, "lon_max": 120.001, "z_min": 10, "z_max": 10}
+
+    @pytest.mark.parametrize("body", [b"not json", b"[1, 2]", b"{}", b"\xff\xfe", b""])
+    def test_a_body_that_is_no_request_is_refused(self, tile_cache_dir, body):
+        with patch("backend.tiles.urlreq.urlopen") as fetch:
+            r = client.post("/api/tile_bulk_download", content=body, headers={"content-type": "application/json"})
+        assert (r.status_code, r.json()) == (400, {"error": "Invalid params"})
+        assert not fetch.called
+
+    @pytest.mark.parametrize(
+        "field, value",
+        [("lat_min", '"north"'), ("lon_max", "null"), ("z_min", "[10]"), ("lat_max", "Infinity"), ("lon_min", "NaN")],
+    )
+    def test_a_field_that_is_no_number_is_refused(self, tile_cache_dir, field, value):
+        fields = {k: json.dumps(v) for k, v in self.BOX.items()} | {field: value}
+        body = "{%s}" % ", ".join(f'"{k}": {v}' for k, v in fields.items())
+        with patch("backend.tiles.urlreq.urlopen") as fetch:
+            r = client.post("/api/tile_bulk_download", content=body, headers={"content-type": "application/json"})
+        assert (r.status_code, r.json()) == (400, {"error": "Invalid params"})
+        assert not fetch.called
+
+    @pytest.mark.parametrize("style", [["osm"], {"a": 1}, 6, None, "tdt_sat"])
+    def test_a_style_that_is_none_of_ours_downloads_nothing(self, tile_cache_dir, style):
+        with patch("backend.tiles.urlreq.urlopen") as fetch:
+            r = client.post("/api/tile_bulk_download", json={**self.BOX, "style": style})
+        assert r.json() == {"total": 0, "downloaded": 0, "skipped": 0, "truncated": False}
+        assert not fetch.called
+
+    def test_a_silent_map_server_is_asked_once(self, tile_cache_dir):
+        """Each tile used to wait for its own timeout: 5000 of them held the request for hours."""
+        box = {"lat_min": 30.0, "lat_max": 30.5, "lon_min": 120.0, "lon_max": 120.5, "z_min": 12, "z_max": 12}
+        with patch("backend.tiles.urlreq.urlopen", side_effect=TimeoutError("timed out")) as fetch:
+            r = client.post("/api/tile_bulk_download", json={**box, "style": "osm"})
+        data = r.json()
+        assert data["total"] > 20 and data["downloaded"] == 0
+        assert fetch.call_count == 1
+
+    def test_the_edge_of_the_map_asks_for_no_tile_beyond_it(self, tile_cache_dir):
+        asked = []
+
+        def fetch(req, timeout=None):
+            asked.append(req.full_url)
+            response = MagicMock()
+            response.read.return_value = b"\x89PNG"
+            return response
+
+        box = {"lat_min": -85.06, "lat_max": -85.0, "lon_min": 179.9, "lon_max": 180.0, "z_min": 2, "z_max": 2}
+        with patch("backend.tiles.urlreq.urlopen", side_effect=fetch):
+            r = client.post("/api/tile_bulk_download", json={**box, "style": "osm"})
+        assert r.json()["downloaded"] == 1
+        assert asked == ["https://tile.openstreetmap.org/2/3/3.png"]
 
 
 class TestTileCacheClear:

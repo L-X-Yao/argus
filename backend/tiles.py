@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import math
 import shutil
 import sqlite3
 import time
@@ -10,9 +11,9 @@ import urllib.request as urlreq
 from pathlib import Path
 
 from fastapi import APIRouter, Request
-from fastapi.responses import Response
+from fastapi.responses import JSONResponse, Response
 
-from .config import ROOT_DIR, aio, aio_download, cfg
+from .config import ROOT_DIR, aio, aio_download, cfg, json_object
 
 router = APIRouter()
 
@@ -182,30 +183,39 @@ async def api_tile_cache():
 @router.post("/api/tile_bulk_download", tags=["Map"])
 async def api_tile_bulk_download(request: Request):
     """Download tiles for a bounding box at specified zoom levels."""
-    import math
-
-    body = await request.json()
-    lat_min, lat_max = float(body.get("lat_min", 0)), float(body.get("lat_max", 0))
-    lon_min, lon_max = float(body.get("lon_min", 0)), float(body.get("lon_max", 0))
+    body = await json_object(request)
+    if not body:
+        return JSONResponse(status_code=400, content={"error": "Invalid params"})
+    try:
+        lat_min, lat_max = float(body.get("lat_min", 0)), float(body.get("lat_max", 0))
+        lon_min, lon_max = float(body.get("lon_min", 0)), float(body.get("lon_max", 0))
+        z_min, z_max = int(body.get("z_min", 10)), int(body.get("z_max", 16))
+    except (TypeError, ValueError, OverflowError):
+        return JSONResponse(status_code=400, content={"error": "Invalid params"})
+    if not all(math.isfinite(v) for v in (lat_min, lat_max, lon_min, lon_max)):
+        return JSONResponse(status_code=400, content={"error": "Invalid params"})
     _MERC_LAT = 85.05112878
     lat_min = max(-_MERC_LAT, min(_MERC_LAT, lat_min))
     lat_max = max(-_MERC_LAT, min(_MERC_LAT, lat_max))
-    z_min = max(0, min(int(body.get("z_min", 10)), 18))
-    z_max = min(max(z_min, int(body.get("z_max", 16))), 18)
+    lon_min = max(-180.0, min(180.0, lon_min))
+    lon_max = max(-180.0, min(180.0, lon_max))
+    z_min = max(0, min(z_min, 18))
+    z_max = min(max(z_min, z_max), 18)
     style = body.get("style", "6")
-    if style not in TILE_URLS:
+    if not isinstance(style, str) or style not in TILE_URLS or (style.startswith("tdt_") and not cfg.TIANDITU_KEY):
         return {"total": 0, "downloaded": 0, "skipped": 0, "truncated": False}
     total = downloaded = skipped = 0
     for z in range(z_min, z_max + 1):
         n = 2**z
         x_min = int((lon_min + 180) / 360 * n)
-        x_max = int((lon_max + 180) / 360 * n)
+        x_max = min(int((lon_max + 180) / 360 * n), n - 1)
         y_min = int(
             (1 - math.log(math.tan(math.radians(lat_max)) + 1 / math.cos(math.radians(lat_max))) / math.pi) / 2 * n
         )
         y_max = int(
             (1 - math.log(math.tan(math.radians(lat_min)) + 1 / math.cos(math.radians(lat_min))) / math.pi) / 2 * n
         )
+        y_max = min(y_max, n - 1)
         for x in range(x_min, x_max + 1):
             for y in range(y_min, y_max + 1):
                 total += 1
@@ -213,12 +223,11 @@ async def api_tile_bulk_download(request: Request):
                 if cache_file.exists():
                     skipped += 1
                     continue
-                url = TILE_URLS.get(style, TILE_URLS["6"]).format(x=x, y=y, z=z)
+                url = TILE_URLS[style].format(x=x, y=y, z=z)
                 try:
-                    req = urlreq.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-                    data = await aio_download(
-                        lambda: urlreq.urlopen(req, timeout=cfg.TILE_DOWNLOAD_TIMEOUT).read(_TILE_MAX_BYTES + 1)
-                    )
+                    # Through _fetch_tile, so that a map server that does not answer costs one
+                    # timeout and not one per tile: 5000 of them held this request for hours.
+                    data = await aio_download(_fetch_tile, style, url)
                     if len(data) > _TILE_MAX_BYTES:
                         continue
                     cache_file.parent.mkdir(parents=True, exist_ok=True)

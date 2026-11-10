@@ -19,6 +19,27 @@ FAKE_IP_RANGE = ipaddress.ip_network("198.18.0.0/15")
 VERSION = re.search(r'^version = "([^"]+)"', (ROOT_DIR / "pyproject.toml").read_text(), re.MULTILINE).group(1)
 
 
+def off_limits(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
+    """True for an address a camera or caster URL may not name: this machine, link-local
+    (where a cloud host keeps its metadata service), multicast and the reserved blocks.
+    A private address passes. A vehicle's camera and an RTK base live on one, and the
+    vehicle link already connects to whatever address the operator names."""
+    if ip.version == 6 and ip.ipv4_mapped:
+        ip = ip.ipv4_mapped
+    return ip.is_loopback or ip.is_link_local or ip.is_multicast or ip.is_unspecified or ip.is_reserved
+
+
+async def json_object(request) -> dict:
+    """The body of a request as a JSON object, and {} for anything else, which a route then
+    answers as it answers a missing field. Each one used to fail with a 500 on a body that
+    was not JSON, or was JSON but a list."""
+    try:
+        body = await request.json()
+    except ValueError:
+        return {}
+    return body if isinstance(body, dict) else {}
+
+
 async def aio(fn, *args):
     """Run a blocking function in the default executor."""
     loop = asyncio.get_event_loop()

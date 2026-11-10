@@ -176,6 +176,14 @@ class TestProtectedEndpoints:
         assert r.status_code == 401
 
 
+class TestLoginBody:
+    @pytest.mark.parametrize("body", [b"not json", b"[1, 2]", b'"text"', b"\xff\xfe", b""])
+    def test_a_body_that_is_no_json_object_is_a_wrong_token(self, client, body):
+        generate_token()
+        r = client.post("/api/auth/login", content=body, headers={"content-type": "application/json"})
+        assert (r.status_code, r.json()) == (401, {"ok": False, "error": "invalid token"})
+
+
 class TestSessionCookie:
     TOKEN = "cookie_test_token_123456"
 

@@ -12,7 +12,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response, StreamingRes
 from fastapi.staticfiles import StaticFiles
 
 from .auth import auth_middleware, auth_required, generate_token, set_session_cookie, verify_token, verify_ws_token
-from .config import ROOT_DIR, VERSION, aio, aio_download, cfg
+from .config import ROOT_DIR, VERSION, aio, aio_download, cfg, json_object
 from .drone_link import DroneLink
 from .firmware import router as firmware_router
 from .param_meta import get_metadata
@@ -129,7 +129,7 @@ async def api_version():
 @app.post("/api/auth/login", tags=["Auth"])
 async def api_auth_login(request: Request):
     """Authenticate with token. A valid one also gets a session cookie."""
-    body = await request.json()
+    body = await json_object(request)
     token = body.get("token", "")
     if verify_token(token):
         response = JSONResponse({"ok": True})
