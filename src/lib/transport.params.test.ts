@@ -202,6 +202,19 @@ describe('WebSerial param fetch state machine', () => {
     expect(H.store.timeouts).toBe(0);
   });
 
+  it('fills the gaps although the vehicle keeps repeating a value', () => {
+    // A real FC sends PARAM_VALUE on its own too. One a second kept the link from ever
+    // looking silent, and the missing ones from ever being asked for.
+    dispatch('param_request_all');
+    inject('P0', 1, 0, 3);
+    inject('P2', 1, 2, 3); // index 1 is lost
+    for (let i = 0; i < 8; i++) {
+      vi.advanceTimersByTime(1500);
+      inject('P0', 1, 0, 3); // the repeat
+    }
+    expect(writesOf(20).length).toBeGreaterThan(0);
+  });
+
   it('times out when the same parameter is all that comes', () => {
     dispatch('param_request_all');
     for (let i = 0; i < 50; i++) {

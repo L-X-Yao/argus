@@ -49,15 +49,15 @@ class ParamManager:
         self._fetch_gen = 0
 
     def request_all(self) -> None:
+        # The clock first and `fetching` last. check_timeout runs on the link thread: a fetch
+        # flagged as running while it still held the last one's times was timed out at once.
+        self._fetch_start = self._last_value_time = self._last_progress = time.time()
         self.params.clear()
         self.total_count = -1
         self.received_count = 0
-        self.fetching = True
         self._complete_emitted = False
         self._fetch_gen += 1
-        self._fetch_start = time.time()
-        self._last_value_time = self._fetch_start
-        self._last_progress = self._fetch_start
+        self.fetching = True
         self._received_indices.clear()
         self._gap_fill_attempts.clear()
         self._list_attempts = 0
@@ -105,7 +105,6 @@ class ParamManager:
         if not name:
             return
 
-        self._last_value_time = time.time()
         self._set_pending.pop(name, None)
         if self.total_count < 0:
             self.total_count = count
@@ -117,7 +116,10 @@ class ParamManager:
 
         if name not in self.params:
             self.received_count += 1
-            self._last_progress = self._last_value_time
+            # Only a parameter that is new counts, for the timeout and for the pause before
+            # the gaps are filled. One the vehicle repeats says nothing about the list, and
+            # repeated every second it kept the gaps from ever being asked for.
+            self._last_value_time = self._last_progress = time.time()
 
         self.params[name] = {
             "name": name,

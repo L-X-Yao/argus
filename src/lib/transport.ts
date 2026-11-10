@@ -1860,10 +1860,11 @@ function _onParamValue(p: DataView): void {
     return;
   }
 
-  paramFetch.lastValueTime = Date.now();
   if (paramFetch.total < 0) paramFetch.total = count;
   if (index !== 0xffff) paramFetch.indices.add(index);
-  if (!paramFetch.names.has(name)) paramFetch.lastProgress = paramFetch.lastValueTime;
+  // Only a parameter that is new counts, for the timeout and for the pause before the gaps
+  // are filled: see backend handle_param_value.
+  if (!paramFetch.names.has(name)) paramFetch.lastValueTime = paramFetch.lastProgress = Date.now();
   paramFetch.names.add(name);
   handleParamBatch([{ name, value, ptype, index, total: paramFetch.total, received: paramFetch.names.size }]);
   if (paramFetch.total > 0 && paramFetch.names.size >= paramFetch.total) {

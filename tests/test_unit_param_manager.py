@@ -465,13 +465,53 @@ class TestSlowLink:
         mgr = ParamManager(link)
         mgr.request_all()
         mgr._fetch_start = time.time() - 300.0  # five minutes in
+        mgr._last_progress = time.time() - 59.0  # and the last new one nearly a minute ago
         p = self._value("NEW_ONE", 0, 1400)
         mgr.handle_param_value(p, len(p))
+        assert time.time() - mgr._last_progress < 1.0
 
         mgr.check_timeout()
 
         assert mgr.fetching is True
         assert not [m for m in mgr._messages if m.get("type") == "param_timeout"]
+
+    def test_a_value_the_vehicle_repeats_does_not_put_off_filling_the_gaps(self):
+        """A real FC sends PARAM_VALUE on its own too. One a second kept the link from ever
+        looking silent, and the missing ones from ever being asked for."""
+        link = _make_link()
+        mgr = ParamManager(link)
+        mgr.request_all()
+        for i in (0, 1, 3):  # index 2 is lost
+            p = self._value(f"P{i}", i, 4)
+            mgr.handle_param_value(p, len(p))
+        link.send.reset_mock()
+        mgr._last_value_time = time.time() - 10.0  # nothing new for ten seconds
+        p = self._value("P0", 0, 4)
+        mgr.handle_param_value(p, len(p))  # the repeat, just now
+
+        mgr.check_timeout()
+
+        link.send.assert_called_once()
+        assert mgr._gap_fill_attempts == {2: 1}
+
+    def test_a_second_fetch_starts_its_clock_before_it_counts_as_running(self):
+        """check_timeout runs on another thread. Seeing `fetching` set while the times were
+        still those of the fetch before, it timed the new one out as it began."""
+        link = _make_link()
+        mgr = ParamManager(link)
+        mgr._last_progress = mgr._fetch_start = time.time() - 600.0  # the fetch before
+        seen = []
+
+        class Clock(dict):
+            def clear(inner):  # the first thing request_all does after reading the clock
+                seen.append((mgr.fetching, time.time() - mgr._last_progress < 1.0))
+                super().clear()
+
+        mgr.params = Clock()
+        mgr.request_all()
+
+        assert seen == [(False, True)]
+        assert mgr.fetching is True
 
     def test_the_same_parameter_over_and_over_is_no_progress(self):
         """Or an FC that repeats one value would keep a fetch open for ever."""
