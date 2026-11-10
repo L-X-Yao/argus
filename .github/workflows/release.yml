@@ -21,7 +21,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
-          python-version: '3.10'
+          python-version: '3.14'
 
       - name: Set up Node
         uses: actions/setup-node@v7
@@ -47,6 +47,13 @@ jobs:
       - name: Build Windows package (amd64)
         run: python scripts/build_package.py --arch amd64
 
+      - name: Audit what the package bundles
+        run: |
+          python scripts/package_requirements.py release/*.zip > bundled.txt
+          cat bundled.txt
+          pip install pip-audit
+          pip-audit -r bundled.txt --no-deps --disable-pip
+
       - name: Checksum the package
         run: cd release && sha256sum *.zip > SHA256SUMS.txt
 
@@ -66,7 +73,8 @@ jobs:
           cat RELEASE_NOTES.md
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v3
+        # Not GitHub's own, and it runs with this job's write access: held to one commit.
+        uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3.0.4
         with:
           body_path: RELEASE_NOTES.md
           files: |
