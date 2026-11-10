@@ -329,20 +329,40 @@ class TestCheckTimeout:
         link.send.assert_called_once()
         assert mgr._gap_fill_attempts[2] == 1
 
-    def test_gap_fill_respects_max_retries(self):
-        """Lines 182-183: index with >= max_retries is skipped."""
+    def test_gap_fill_asks_again_after_three_tries(self):
+        """Three tries each was the limit. On a radio that loses 3% of its frames, about one
+        read in twenty-five ran out of them and could not complete."""
         link = _make_link()
         mgr = ParamManager(link)
         mgr.fetching = True
         mgr.total_count = 3
         mgr._received_indices = {0, 2}  # index 1 missing
         mgr._last_value_time = time.time() - 10.0
-        mgr._fetch_start = time.time()
-        mgr._gap_fill_attempts = {1: 3}  # already at max
+        mgr._last_progress = time.time()
+        mgr._gap_fill_attempts = {1: 3}
 
         mgr.check_timeout()
 
-        link.send.assert_not_called()
+        link.send.assert_called_once()
+        assert mgr._gap_fill_attempts[1] == 4
+
+    def test_gap_fill_asks_first_for_those_asked_least(self):
+        """One index that never answers must not hold a place the others need: the first ten
+        missing used to be taken before the worn-out ones were set aside."""
+        link = _make_link()
+        mgr = ParamManager(link)
+        mgr.fetching = True
+        mgr.total_count = 25
+        mgr._received_indices = set()
+        mgr._last_value_time = time.time() - 10.0
+        mgr._last_progress = time.time()
+        mgr._gap_fill_attempts = {i: 5 for i in range(10)}  # the first ten, asked five times each
+
+        mgr.check_timeout()
+
+        asked = {i for i, n in mgr._gap_fill_attempts.items() if n == 1}
+        assert asked == set(range(10, 20))
+        assert link.send.call_count == 10
 
     def test_gap_fill_throttled_to_10(self):
         """Line 180: only up to 10 missing indices per cycle."""
@@ -399,8 +419,9 @@ class TestCheckTimeout:
         mgr.fetching = True
         mgr.total_count = 10
         mgr._received_indices = {0, 1, 2}  # 7 missing
-        # Set fetch_start far in the past
+        # Nothing new for two minutes
         mgr._fetch_start = time.time() - 120.0
+        mgr._last_progress = time.time() - 120.0
         mgr._last_value_time = time.time()
 
         mgr.check_timeout()
@@ -420,6 +441,7 @@ class TestCheckTimeout:
         mgr.total_count = 3
         mgr._received_indices = {0}  # indices 1, 2 missing
         mgr._fetch_start = time.time() - 120.0
+        mgr._last_progress = time.time() - 120.0
         mgr._last_value_time = time.time() - 10.0
 
         mgr.check_timeout()
@@ -427,6 +449,53 @@ class TestCheckTimeout:
         # Gap fill sent requests for missing indices
         assert link.send.call_count == 2
         # Then timeout fired
+        assert mgr.fetching is False
+
+
+class TestSlowLink:
+    """ArduPilot gives the list at most 30% of the link (GCS_Param.cpp:55-58). At 57600 baud
+    1369 parameters took 55 s with the gaps filled, and a slower radio takes longer."""
+
+    @staticmethod
+    def _value(name: str, index: int, count: int) -> bytes:
+        return struct.pack("<fHH16sB", 1.0, count, index, name.encode().ljust(16, b"\x00"), 9)
+
+    def test_a_fetch_that_keeps_bringing_new_parameters_is_not_timed_out(self):
+        link = _make_link()
+        mgr = ParamManager(link)
+        mgr.request_all()
+        mgr._fetch_start = time.time() - 300.0  # five minutes in
+        p = self._value("NEW_ONE", 0, 1400)
+        mgr.handle_param_value(p, len(p))
+
+        mgr.check_timeout()
+
+        assert mgr.fetching is True
+        assert not [m for m in mgr._messages if m.get("type") == "param_timeout"]
+
+    def test_the_same_parameter_over_and_over_is_no_progress(self):
+        """Or an FC that repeats one value would keep a fetch open for ever."""
+        link = _make_link()
+        mgr = ParamManager(link)
+        mgr.request_all()
+        p = self._value("SAME", 0, 1400)
+        mgr.handle_param_value(p, len(p))
+        mgr._last_progress = time.time() - 120.0
+        mgr.handle_param_value(p, len(p))  # again, just now
+
+        mgr.check_timeout()
+
+        assert mgr.fetching is False
+        assert [m for m in mgr._messages if m.get("type") == "param_timeout"]
+
+    def test_a_vehicle_that_never_answers_times_out_as_before(self):
+        link = _make_link()
+        mgr = ParamManager(link)
+        mgr.request_all()
+        mgr._last_progress = mgr._fetch_start = time.time() - 61.0
+
+        mgr.check_timeout()
+
         assert mgr.fetching is False
 
 

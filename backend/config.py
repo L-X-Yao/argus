@@ -139,6 +139,7 @@ class Config:
     PARAM_META_MAX: int = 50 * 1024 * 1024  # 50 MB: each file is about 3
     PARAM_CACHE_TTL: int = 86400 * 7
     PARAM_DOWNLOAD_TIMEOUT: float = 15.0
+    # Without one new parameter for this long, a fetch ends as timed out.
     PARAM_FETCH_TIMEOUT: float = 60.0
     # If no PARAM_VALUE has been seen for this many seconds during a fetch,
     # but total_count > received, assume packet loss and start re-requesting

@@ -172,11 +172,43 @@ describe('WebSerial param fetch state machine', () => {
     expect(writesOf(20).length).toBe(1);
   });
 
-  it('gap-fill retries a missing index at most 3 times', () => {
+  it('gap-fill asks for a missing index again after three tries', () => {
+    // Three was the limit. On a radio that loses 3% of its frames about one read in
+    // twenty-five ran out of them and could not complete.
     dispatch('param_request_all');
     inject('A', 1, 0, 2); // index 1 never arrives
     vi.advanceTimersByTime(30_000);
-    expect(writesOf(20).length).toBe(3);
+    expect(writesOf(20).length).toBeGreaterThan(8);
+  });
+
+  it('gap-fill asks first for those asked least', () => {
+    // One index that never answers must not hold a place the others need.
+    dispatch('param_request_all');
+    inject('P24', 1, 24, 25); // 0..23 missing
+    vi.advanceTimersByTime(2600); // first window: 0..9
+    vi.advanceTimersByTime(2500); // second: 10..19, not 0..9 again
+    const asked = writesOf(20).map((w) => new DataView(w.buffer).getInt16(10, true));
+    expect(asked.slice(0, 20)).toEqual([...Array(20).keys()]);
+  });
+
+  it('does not time out a slow link that keeps bringing new parameters', () => {
+    // ArduPilot gives the list at most 30% of the link (GCS_Param.cpp:55-58): at 57600 baud
+    // 1369 parameters took 55 s, and the fetch used to stop 60 s after it began.
+    dispatch('param_request_all');
+    for (let i = 0; i < 100; i++) {
+      inject(`P${i}`, 1, i, 5000);
+      vi.advanceTimersByTime(1500); // 150 s in all, a new one every 1.5 s
+    }
+    expect(H.store.timeouts).toBe(0);
+  });
+
+  it('times out when the same parameter is all that comes', () => {
+    dispatch('param_request_all');
+    for (let i = 0; i < 50; i++) {
+      inject('SAME', 1, 0, 5000);
+      vi.advanceTimersByTime(1500);
+    }
+    expect(H.store.timeouts).toBe(1);
   });
 
   it('re-sends a dropped PARAM_REQUEST_LIST up to 3 extra times', () => {

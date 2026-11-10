@@ -37,6 +37,7 @@ class ParamManager:
         # (PARAM_REQUEST_READ).
         self._received_indices: set[int] = set()
         self._last_value_time = 0.0
+        self._last_progress = 0.0  # when the last parameter that was new came in
         self._gap_fill_attempts: dict[int, int] = {}  # index -> retry count
         self._list_attempts = 0  # PARAM_REQUEST_LIST re-sends (dropped-request recovery)
         self._messages: list[dict] = []  # kept for backward compat with ws_manager cursor
@@ -56,6 +57,7 @@ class ParamManager:
         self._fetch_gen += 1
         self._fetch_start = time.time()
         self._last_value_time = self._fetch_start
+        self._last_progress = self._fetch_start
         self._received_indices.clear()
         self._gap_fill_attempts.clear()
         self._list_attempts = 0
@@ -115,6 +117,7 @@ class ParamManager:
 
         if name not in self.params:
             self.received_count += 1
+            self._last_progress = self._last_value_time
 
         self.params[name] = {
             "name": name,
@@ -256,8 +259,7 @@ class ParamManager:
         # If we've been waiting `PARAM_GAP_FILL_DELAY` seconds since the last
         # PARAM_VALUE but still don't have everything, the FC either finished
         # streaming with packet loss OR has stopped responding entirely.
-        # Fill known gaps with PARAM_REQUEST_READ (msg 20). Each missing
-        # index gets up to 3 retries.
+        # Fill known gaps with PARAM_REQUEST_READ (msg 20).
         gap_delay = getattr(cfg, "PARAM_GAP_FILL_DELAY", 2.0)
         max_retries = 3
         # Dropped initial request: if not a single PARAM_VALUE has come back,
@@ -270,17 +272,23 @@ class ParamManager:
                 self._request_list()
                 self._last_value_time = now  # back off until next tick
         if self.total_count > 0 and now - self._last_value_time > gap_delay:
+            attempts = self._gap_fill_attempts
             missing = [i for i in range(self.total_count) if i not in self._received_indices]
-            # Throttle: only send up to 10 per cycle so we don't flood the FC.
-            for i in missing[:10]:
-                attempts = self._gap_fill_attempts.get(i, 0)
-                if attempts >= max_retries:
-                    continue
-                self._gap_fill_attempts[i] = attempts + 1
+            # Up to 10 a cycle: the FC queues 20 such requests and drops the rest
+            # (GCS_Param.cpp:31, :227). Those asked for least go first, so that one index
+            # that never answers does not hold a place the others need. And asked again
+            # until the fetch ends: three tries each was the limit, and on a radio that
+            # loses 3% of its frames about one read in twenty-five ran out of them.
+            for i in sorted(missing, key=lambda index: attempts.get(index, 0))[:10]:
+                attempts[i] = attempts.get(i, 0) + 1
                 self._request_one(i)
             self._last_value_time = now  # back off until next tick
 
-        if now - self._fetch_start > cfg.PARAM_FETCH_TIMEOUT:
+        # Counted from the last parameter that was new, not from the start of the fetch.
+        # ArduPilot gives the list at most 30% of the link (GCS_Param.cpp:55-58): at 57600
+        # baud 1369 parameters took 55 s with the gaps filled (tests/sitl_links.py radio),
+        # and a fetch that stopped 60 s after it began gave up while they still came in.
+        if now - self._last_progress > cfg.PARAM_FETCH_TIMEOUT:
             self.fetching = False
             n_missing = max(0, (self.total_count or 0) - len(self._received_indices))
             self._link.add_event(lt("param_timeout", self._link.locale), "param_timeout")

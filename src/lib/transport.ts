@@ -1773,14 +1773,17 @@ export function serialLogCancel(): void {
  *          total (param_manager.handle_param_value).
  * Gaps:    after PARAM_GAP_FILL_MS of silence with slots still missing,
  *          re-request individually via PARAM_REQUEST_READ (20) by index,
- *          ≤10 per window and ≤3 tries per index; a dropped initial msg 21
- *          (total still unknown) is re-sent up to 3 times instead
- *          (param_manager.check_timeout — one dropped request must not
- *          stall the whole fetch).
+ *          ≤10 per window, those asked for least first, until the fetch
+ *          ends; a dropped initial msg 21 (total still unknown) is re-sent
+ *          up to 3 times instead (param_manager.check_timeout — one dropped
+ *          request must not stall the whole fetch).
  * 0xFFFF:  by-name replies carry param_index -1: ArduPilot GCS_Param.cpp:396
  *          branches on `req.param_index != -1` and :420 echoes it back —
  *          count the param, never mark an index slot.
- * Timeout: PARAM_FETCH_TIMEOUT_MS overall → handleParamTimeout + toast.
+ * Timeout: PARAM_FETCH_TIMEOUT_MS without one new parameter →
+ *          handleParamTimeout + toast. Not counted from the start: on a
+ *          57600 baud radio the list alone takes about a minute, as the
+ *          backend's check_timeout says.
  * Until 2026-07-16 the serial path SENT msg 21 but dropped every PARAM_VALUE
  * reply (no handler) — the panel sat empty while the FC streamed 1000+
  * params. Found live against a real FC; the SIM path never exercises this.
@@ -1796,8 +1799,8 @@ interface ParamFetchState {
   indices: Set<number>;
   gapAttempts: Map<number, number>;
   listAttempts: number;
-  startTime: number;
   lastValueTime: number;
+  lastProgress: number; // when the last parameter that was new came in
   timer: ReturnType<typeof setInterval> | null;
 }
 
@@ -1808,8 +1811,8 @@ const paramFetch: ParamFetchState = {
   indices: new Set(),
   gapAttempts: new Map(),
   listAttempts: 0,
-  startTime: 0,
   lastValueTime: 0,
+  lastProgress: 0,
   timer: null,
 };
 
@@ -1823,8 +1826,8 @@ function serialParamRequestAll(): void {
   paramFetch.indices.clear();
   paramFetch.gapAttempts.clear();
   paramFetch.listAttempts = 1;
-  paramFetch.startTime = Date.now();
   paramFetch.lastValueTime = Date.now();
+  paramFetch.lastProgress = Date.now();
   startParamFetch();
   paramFetch.timer = setInterval(_paramFetchTick, 500);
   serialSendParamRequestAll();
@@ -1860,6 +1863,7 @@ function _onParamValue(p: DataView): void {
   paramFetch.lastValueTime = Date.now();
   if (paramFetch.total < 0) paramFetch.total = count;
   if (index !== 0xffff) paramFetch.indices.add(index);
+  if (!paramFetch.names.has(name)) paramFetch.lastProgress = paramFetch.lastValueTime;
   paramFetch.names.add(name);
   handleParamBatch([{ name, value, ptype, index, total: paramFetch.total, received: paramFetch.names.size }]);
   if (paramFetch.total > 0 && paramFetch.names.size >= paramFetch.total) {
@@ -1880,22 +1884,19 @@ function _paramFetchTick(): void {
       serialSendParamRequestAll();
     }
   } else if (paramFetch.total > 0 && silent) {
-    let sent = 0;
-    // Intentional divergence from backend check_timeout: it slices
-    // missing[:10] BEFORE the retry filter, so retry-exhausted indices eat
-    // window slots (a fully-exhausted head wedges it at 0 sends/window).
-    // Here exhausted indices don't consume a slot and the scan goes deeper.
-    for (let i = 0; i < paramFetch.total && sent < 10; i++) {
-      if (paramFetch.indices.has(i)) continue;
-      const attempts = paramFetch.gapAttempts.get(i) ?? 0;
-      if (attempts >= 3) continue;
-      paramFetch.gapAttempts.set(i, attempts + 1);
+    // As backend check_timeout: up to 10 a window, those asked for least first, and asked
+    // again until the fetch ends.
+    const tries = (i: number) => paramFetch.gapAttempts.get(i) ?? 0;
+    const missing: number[] = [];
+    for (let i = 0; i < paramFetch.total; i++) if (!paramFetch.indices.has(i)) missing.push(i);
+    missing.sort((a, b) => tries(a) - tries(b) || a - b);
+    for (const i of missing.slice(0, 10)) {
+      paramFetch.gapAttempts.set(i, tries(i) + 1);
       sendSerialFrame(20, encodeParamRequestRead(serial.targetSysId, serial.targetCompId, i));
-      sent++;
     }
     paramFetch.lastValueTime = now;
   }
-  if (now - paramFetch.startTime > PARAM_FETCH_TIMEOUT_MS) {
+  if (now - paramFetch.lastProgress > PARAM_FETCH_TIMEOUT_MS) {
     _abortParamFetch(true);
   }
 }

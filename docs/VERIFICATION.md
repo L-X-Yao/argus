@@ -287,7 +287,7 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 | Token login | Token 登录 | Simulator | e2e, real Windows each release |
 | Windows package | Windows 发布包 | Simulator | CI builds and smoke-tests it on every push, real Windows each release |
 | UDP | UDP 连接 | SITL | CI: a whole session on real firmware |
-| Telemetry radio | 数传电台 | SITL | CI through a stand-in: 57600 baud, 3% of frames lost, 1.5% corrupted, a whole session. No real radio |
+| Telemetry radio | 数传电台 | SITL | CI through a stand-in: 57600 baud, 3% of frames lost, 1.5% corrupted, a whole session. 2026-11-11 at 38400 baud and 5% lost: all 1369 parameters in 68 s, where v3.7.8 stopped at 1349. No real radio |
 | Linux tty | Linux tty | SITL | CI: a whole session through a pty on real firmware, which reads differently from a socket |
 | Long sessions | 长时间运行 | SITL | 2026-11-06: 60 minutes at 5x, 189 flights, 900,000 frames: browser heap flat at 7 MB, backend memory not growing. tests/e2e/run-soak.sh, not in CI |
 | Submarine | 水下潜航器 | SITL | CI. No dive in CI |
