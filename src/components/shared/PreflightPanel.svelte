@@ -1,6 +1,7 @@
 <script lang="ts">
   import { app } from '../../lib/stores.svelte';
   import { t } from '../../lib/i18n.svelte';
+  import { worst } from '../../lib/worst';
   import { Check, X as XIcon, Settings2 } from '@lucide/svelte';
 
   const d = app.drone;
@@ -74,27 +75,23 @@
       {
         key: 'nav',
         name: t('check.nav'),
-        ok: !(d.ekf_flags & 0x480) && Math.max(d.ekf_vel, d.ekf_pos_h, d.ekf_pos_v, d.ekf_compass) < 1.0,
+        ok: !(d.ekf_flags & 0x480) && worst(d.ekf_vel, d.ekf_pos_h, d.ekf_pos_v, d.ekf_compass) < 1.0,
         detail:
-          d.ekf_flags & 0x480
-            ? 'ERR'
-            : Math.max(d.ekf_vel, d.ekf_pos_h, d.ekf_pos_v, d.ekf_compass) < 0.5
-              ? 'OK'
-              : 'WARN',
+          d.ekf_flags & 0x480 ? 'ERR' : worst(d.ekf_vel, d.ekf_pos_h, d.ekf_pos_v, d.ekf_compass) < 0.5 ? 'OK' : 'WARN',
         critical: true,
       },
       {
         key: 'vibe',
         name: t('check.vibe'),
-        ok: Math.max(d.vibe[0], d.vibe[1], d.vibe[2]) < 30,
+        ok: worst(d.vibe[0], d.vibe[1], d.vibe[2]) < 30,
         detail: `${Math.max(d.vibe[0], d.vibe[1], d.vibe[2]).toFixed(0)} m/s2`,
         critical: true,
       },
       {
         key: 'compass',
         name: t('check.compass'),
-        ok: d.ekf_compass < 0.8,
-        detail: d.ekf_compass < 0.5 ? 'OK' : d.ekf_compass < 0.8 ? 'WARN' : `${d.ekf_compass.toFixed(2)}`,
+        ok: worst(d.ekf_compass) < 0.8,
+        detail: worst(d.ekf_compass) < 0.5 ? 'OK' : worst(d.ekf_compass) < 0.8 ? 'WARN' : `${d.ekf_compass.toFixed(2)}`,
         critical: true,
       },
       {
@@ -107,8 +104,8 @@
       {
         key: 'ahrs',
         name: t('check.ahrs'),
-        ok: !(d.ekf_flags & 0x800) && d.ekf_vel < 1.0 && d.ekf_pos_v < 1.0,
-        detail: d.ekf_flags & 0x800 ? 'ERR' : d.ekf_vel < 0.5 && d.ekf_pos_v < 0.5 ? 'OK' : 'WARN',
+        ok: !(d.ekf_flags & 0x800) && worst(d.ekf_vel, d.ekf_pos_v) < 1.0,
+        detail: d.ekf_flags & 0x800 ? 'ERR' : worst(d.ekf_vel, d.ekf_pos_v) < 0.5 ? 'OK' : 'WARN',
         critical: true,
       },
       {

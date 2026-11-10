@@ -3,6 +3,7 @@
   import { app } from '../../lib/stores.svelte';
   import Badge from '$lib/components/ui/badge/badge.svelte';
   import { t } from '../../lib/i18n.svelte';
+  import { worst } from '../../lib/worst';
 
   const MAX = 60;
   let xData: number[] = [];
@@ -98,8 +99,8 @@
       <span class="text-red-400">X: {d.vibe[0]?.toFixed(1)}</span>
       <span class="text-green-400">Y: {d.vibe[1]?.toFixed(1)}</span>
       <span class="text-sky-400">Z: {d.vibe[2]?.toFixed(1)}</span>
-      <Badge variant={vibeBadgeVariant(Math.max(...d.vibe))} class="text-[10px]">
-        {vibeLevel(Math.max(...d.vibe))}
+      <Badge variant={vibeBadgeVariant(worst(...d.vibe))} class="text-[10px]">
+        {vibeLevel(worst(...d.vibe))}
       </Badge>
       {#if d.vibe_clip[0] + d.vibe_clip[1] + d.vibe_clip[2] > 0}
         <span class="text-destructive text-[10px]"

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { worst } from './worst';
+import { worst, wrapPi } from './worst';
 
 describe('worst', () => {
   it('is the largest of healthy values', () => {
@@ -16,5 +16,25 @@ describe('worst', () => {
   it('is beyond every limit for an infinity of either sign', () => {
     expect(worst(0.1, Infinity)).toBe(Infinity);
     expect(worst(0.1, -Infinity)).toBe(Infinity);
+  });
+});
+
+describe('wrapPi', () => {
+  it('leaves an angle already in range alone', () => {
+    expect(wrapPi(1)).toBe(1);
+    expect(wrapPi(-3)).toBe(-3);
+  });
+
+  it('brings any angle into -π..π', () => {
+    expect(wrapPi(Math.PI + 0.5)).toBeCloseTo(-Math.PI + 0.5);
+    expect(wrapPi(-Math.PI - 0.5)).toBeCloseTo(Math.PI - 0.5);
+    expect(wrapPi(7 * 2 * Math.PI + 0.25)).toBeCloseTo(0.25);
+    expect(Math.abs(wrapPi(1e12))).toBeLessThanOrEqual(Math.PI);
+  });
+
+  it('gives NaN for a heading that is no number, where a loop never ended', () => {
+    expect(wrapPi(Infinity)).toBeNaN();
+    expect(wrapPi(-Infinity)).toBeNaN();
+    expect(wrapPi(NaN)).toBeNaN();
   });
 });

@@ -3,6 +3,7 @@
   import { app } from '../../lib/stores.svelte';
   import { apiUrl } from '../../lib/backend';
   import { t } from '../../lib/i18n.svelte';
+  import { wrapPi } from '../../lib/worst';
   import { X, VideoOff, Camera, Crosshair } from '@lucide/svelte';
   import Button from '$lib/components/ui/button/button.svelte';
 
@@ -127,10 +128,8 @@
       const dist = Math.sqrt(dlat * dlat + dlon * dlon);
       if (dist < 1 || dist > 5000) continue;
       const bearing = Math.atan2(dlon, dlat);
-      let relBearing = bearing - yawRad;
-      while (relBearing > Math.PI) relBearing -= 2 * Math.PI;
-      while (relBearing < -Math.PI) relBearing += 2 * Math.PI;
-      if (Math.abs(relBearing) > hfov / 2) continue;
+      const relBearing = wrapPi(bearing - yawRad);
+      if (!(Math.abs(relBearing) <= hfov / 2)) continue; // out of view, or no heading to tell
       const dalt = wps[i].alt - d.alt_rel;
       const elevAngle = Math.atan2(dalt, dist) - pitchRad;
       if (Math.abs(elevAngle) > vfov / 2) continue;
@@ -154,9 +153,7 @@
       const dlon = (d.home_lon - d.lon) * 111320 * Math.cos((d.lat * Math.PI) / 180);
       const dist = Math.sqrt(dlat * dlat + dlon * dlon);
       const bearing = Math.atan2(dlon, dlat);
-      let relBearing = bearing - yawRad;
-      while (relBearing > Math.PI) relBearing -= 2 * Math.PI;
-      while (relBearing < -Math.PI) relBearing += 2 * Math.PI;
+      const relBearing = wrapPi(bearing - yawRad);
       if (Math.abs(relBearing) <= hfov / 2) {
         const sx = w / 2 + (relBearing / (hfov / 2)) * (w / 2);
         ctx.fillStyle = '#f44336';

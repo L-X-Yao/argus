@@ -357,11 +357,10 @@ describe('restoreNonFinite', () => {
     expect(await restore({ type: 'state', flight_summary: null })).toEqual({ type: 'state', flight_summary: null });
   });
 
-  it('touches nothing but a null of the backend', async () => {
+  it('writes only where the message holds a null', async () => {
     const msg = await restore({
       type: 'state',
       roll: 2,
-      flight_summary: null,
       _nonfinite: [
         ['roll', 'NaN'],
         ['missing', 'NaN'],
@@ -371,7 +370,23 @@ describe('restoreNonFinite', () => {
         [],
       ],
     });
-    expect(msg).toEqual({ type: 'state', roll: 2, flight_summary: null });
+    expect(msg).toEqual({ type: 'state', roll: 2 });
     expect(({} as Record<string, unknown>).polluted).toBeUndefined();
+  });
+
+  it('writes nothing but NaN and the two infinities', async () => {
+    // Number('5') is 5: a list gone wrong must not turn a null into a reading.
+    const msg = await restore({
+      type: 'state',
+      roll: null,
+      pitch: null,
+      yaw: null,
+      _nonfinite: [
+        ['roll', '5'],
+        ['pitch', ''],
+        ['yaw', 'toString'],
+      ],
+    });
+    expect(msg).toEqual({ type: 'state', roll: null, pitch: null, yaw: null });
   });
 });

@@ -2,6 +2,7 @@
   import { app, saveSettings, isPlane } from '../../lib/stores.svelte';
   import { t } from '../../lib/i18n.svelte';
   import { apiUrl } from '../../lib/backend';
+  import { worst } from '../../lib/worst';
   import ConnectionForm from './ConnectionForm.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
   import Badge from '$lib/components/ui/badge/badge.svelte';
@@ -71,10 +72,8 @@
   let ekfLevel = $derived.by(() => {
     const f = app.drone.ekf_flags;
     if (f & EKF_CONST_POS || f & EKF_UNINITIALIZED) return 'red';
-    const vars = [app.drone.ekf_vel, app.drone.ekf_pos_h, app.drone.ekf_pos_v, app.drone.ekf_compass];
-    if (vars.some((v) => v > 0.8)) return 'yellow';
-    if (vars.every((v) => v < 0.5)) return 'green';
-    return 'yellow';
+    const variance = worst(app.drone.ekf_vel, app.drone.ekf_pos_h, app.drone.ekf_pos_v, app.drone.ekf_compass);
+    return variance < 0.5 ? 'green' : 'yellow';
   });
 
   let ekfVariant = $derived(

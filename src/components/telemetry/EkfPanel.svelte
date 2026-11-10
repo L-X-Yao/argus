@@ -52,14 +52,14 @@
   ]);
 
   function varColor(v: number): string {
-    if (v < 0.5) return '#22c55e';
-    if (v < 1.0) return '#eab308';
+    if (worst(v) < 0.5) return '#22c55e';
+    if (worst(v) < 1.0) return '#eab308';
     return '#ef4444';
   }
 
   function varLevel(v: number): string {
-    if (v < 0.5) return t('ekf.good');
-    if (v < 1.0) return t('ekf.warn');
+    if (worst(v) < 0.5) return t('ekf.good');
+    if (worst(v) < 1.0) return t('ekf.warn');
     return t('ekf.bad');
   }
 
