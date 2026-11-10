@@ -75,6 +75,25 @@ def download(url, desc):
     return data
 
 
+def python_embeddable(arch: str) -> bytes:
+    """The embeddable zip of PY_VER: from the cache beside the scripts, or from python.org.
+    Checked against PY_SHA256 before it is cached. A download cut short used to be kept,
+    and failed every build after it until someone deleted the file."""
+    cache = SCRIPT_DIR / f"python-{PY_VER}-embed-{arch}.zip"
+    if cache.exists():
+        data = cache.read_bytes()
+        if hashlib.sha256(data).hexdigest() == PY_SHA256[arch]:
+            print("  Using cached %s" % cache.name)
+            return data
+        print("  Cached %s is not the file PY_SHA256 names: downloading it again" % cache.name)
+    data = download(PY_BASE_URL.format(ver=PY_VER, arch=arch), f"Python {PY_VER} ({arch})")
+    if hashlib.sha256(data).hexdigest() != PY_SHA256[arch]:
+        print("  ERROR: what python.org sent for %s is not the file PY_SHA256 names" % cache.name)
+        sys.exit(1)
+    cache.write_bytes(data)
+    return data
+
+
 def copy_app_files(build_dir: Path) -> None:
     """Copy everything the packaged app reads at runtime, apart from Python and dist/."""
     # Copy the entire backend tree so subpackages (e.g. backend/commands/)
@@ -96,7 +115,6 @@ def copy_app_files(build_dir: Path) -> None:
 
 def build(arch: str = "amd64"):
     pip_platform = f"win_{arch}"
-    py_url = PY_BASE_URL.format(ver=PY_VER, arch=arch)
 
     print(f"=== Argus GCS v3 Package Builder (arch={arch}) ===\n")
 
@@ -122,16 +140,7 @@ def build(arch: str = "amd64"):
 
     # ── 2. Download Python embeddable ──
     print("[2/5] Python embeddable")
-    cache = SCRIPT_DIR / (f"python-{PY_VER}-embed-{arch}.zip")
-    if cache.exists():
-        print("  Using cached %s" % cache.name)
-        py_data = cache.read_bytes()
-    else:
-        py_data = download(py_url, f"Python {PY_VER} ({arch})")
-        cache.write_bytes(py_data)
-    if hashlib.sha256(py_data).hexdigest() != PY_SHA256[arch]:
-        print("  ERROR: %s is not the file PY_SHA256 names" % cache.name)
-        sys.exit(1)
+    py_data = python_embeddable(arch)
 
     py_dir = build_dir / "python"
     py_dir.mkdir()

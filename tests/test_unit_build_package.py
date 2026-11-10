@@ -50,3 +50,43 @@ def test_lists_what_a_zip_bundles(tmp_path):
         z.writestr(site + "starlette/__init__.py", "")
         z.writestr("Argus_GCS_v0.0.0/backend/app.py", "")
     assert bundled(str(path)) == ["pydantic_core==2.50.4", "starlette==1.10.0"]
+
+
+class TestPythonEmbeddable:
+    GOOD = b"the file python.org serves"
+
+    @pytest.fixture
+    def here(self, tmp_path, monkeypatch):
+        import hashlib
+
+        import scripts.build_package as build
+
+        monkeypatch.setattr(build, "SCRIPT_DIR", tmp_path)
+        monkeypatch.setitem(build.PY_SHA256, "amd64", hashlib.sha256(self.GOOD).hexdigest())
+        return build, tmp_path / f"python-{build.PY_VER}-embed-amd64.zip"
+
+    def test_a_download_that_matches_is_cached(self, here, monkeypatch):
+        build, cache = here
+        monkeypatch.setattr(build, "download", lambda url, desc: self.GOOD)
+        assert build.python_embeddable("amd64") == self.GOOD
+        assert cache.read_bytes() == self.GOOD
+
+    def test_a_download_that_does_not_match_stops_the_build_and_is_not_kept(self, here, monkeypatch):
+        build, cache = here
+        monkeypatch.setattr(build, "download", lambda url, desc: self.GOOD[:10])
+        with pytest.raises(SystemExit):
+            build.python_embeddable("amd64")
+        assert not cache.exists()
+
+    def test_a_cached_file_that_matches_is_used_without_a_download(self, here, monkeypatch):
+        build, cache = here
+        cache.write_bytes(self.GOOD)
+        monkeypatch.setattr(build, "download", lambda url, desc: pytest.fail("downloaded"))
+        assert build.python_embeddable("amd64") == self.GOOD
+
+    def test_a_cached_file_that_does_not_match_is_replaced(self, here, monkeypatch):
+        build, cache = here
+        cache.write_bytes(self.GOOD[:10])
+        monkeypatch.setattr(build, "download", lambda url, desc: self.GOOD)
+        assert build.python_embeddable("amd64") == self.GOOD
+        assert cache.read_bytes() == self.GOOD
