@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import base64
 import ipaddress
 import logging
 import re
@@ -14,13 +13,13 @@ from urllib.parse import urlparse
 
 from fastapi import APIRouter, Request, UploadFile
 
-from .config import FAKE_IP_RANGE, ROOT_DIR, aio_download, cfg
+from .config import FAKE_IP_RANGE, ROOT_DIR, aio_download, cfg, json_object
 
 router = APIRouter()
 
 FIRMWARE_DIR = ROOT_DIR / "firmware"
 
-_FW_BASE = base64.b64decode(b"aHR0cHM6Ly9maXJtd2FyZS5hcmR1cGlsb3Qub3JnLw==").decode()
+_FW_BASE = "https://firmware.ardupilot.org/"
 
 _BOARD_MAP = {
     9: ("Copter", "Pixhawk1"),
@@ -102,11 +101,12 @@ async def api_firmware_online(board_id: int = 0):
 
 
 def _download_firmware(fw_url: str, filename: str) -> dict:
-    parsed = urlparse(fw_url)
-    if parsed.scheme != "https" or not parsed.hostname:
-        return {"ok": False, "error": "Only HTTPS URLs allowed"}
+    # Every URL the firmware panel is offered comes from there. Any other server could also
+    # get past the address check below with a redirect, which urlopen follows.
+    if not isinstance(fw_url, str) or not fw_url.startswith(_FW_BASE):
+        return {"ok": False, "error": "Only the ArduPilot firmware server is allowed"}
     try:
-        addrs = _socket.getaddrinfo(parsed.hostname, None)
+        addrs = _socket.getaddrinfo(urlparse(fw_url).hostname, None)
     except _socket.gaierror:
         return {"ok": False, "error": "Cannot resolve host"}
     for _fam, *_rest, sockaddr in addrs:
@@ -155,10 +155,10 @@ def _download_firmware(fw_url: str, filename: str) -> dict:
 
 @router.post("/api/firmware/download")
 async def api_firmware_download(request: Request):
-    body = await request.json()
+    body = await json_object(request)
     fw_url = body.get("url", "")
     raw_filename = body.get("filename", "firmware.apj")
-    if not fw_url:
+    if not fw_url or not isinstance(raw_filename, str):
         return {"ok": False, "error": "Invalid params"}
     filename = Path(raw_filename).name
     if not filename.endswith(".apj") or filename in ("", ".", ".."):

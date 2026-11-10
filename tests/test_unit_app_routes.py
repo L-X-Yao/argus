@@ -195,10 +195,12 @@ class TestFirmwareDownload:
         assert data["ok"] is False
 
     def test_http_url_rejected(self):
-        r = client.post("/api/firmware/download", json={"url": "http://example.com/fw.apj", "filename": "fw.apj"})
+        r = client.post(
+            "/api/firmware/download", json={"url": "http://firmware.ardupilot.org/fw.apj", "filename": "fw.apj"}
+        )
         data = r.json()
         assert data["ok"] is False
-        assert "HTTPS" in data["error"]
+        assert "firmware server" in data["error"]
 
     def test_non_apj_filename_rejected(self):
         r = client.post("/api/firmware/download", json={"url": "https://example.com/fw.bin", "filename": "fw.bin"})

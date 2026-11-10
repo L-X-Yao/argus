@@ -74,7 +74,7 @@ class TestFirmwareDownloadSuccess:
             r = client.post(
                 "/api/firmware/download",
                 json={
-                    "url": "https://firmware.example.com/test.apj",
+                    "url": "https://firmware.ardupilot.org/Copter/stable/Pixhawk1/arducopter.apj",
                     "filename": "test.apj",
                 },
             )
@@ -103,7 +103,7 @@ class TestFirmwareDownloadSuccess:
             r = client.post(
                 "/api/firmware/download",
                 json={
-                    "url": "https://firmware.example.com/huge.apj",
+                    "url": "https://firmware.ardupilot.org/huge.apj",
                     "filename": "huge.apj",
                 },
             )
@@ -119,7 +119,7 @@ class TestFirmwareDownloadSuccess:
             r = client.post(
                 "/api/firmware/download",
                 json={
-                    "url": "https://nonexistent.example.com/fw.apj",
+                    "url": "https://firmware.ardupilot.org/fw.apj",
                     "filename": "fw.apj",
                 },
             )
@@ -154,13 +154,46 @@ class TestFirmwareDownloadSuccess:
             r = client.post(
                 "/api/firmware/download",
                 json={
-                    "url": "https://internal.example.com/fw.apj",
+                    "url": "https://firmware.ardupilot.org/fw.apj",
                     "filename": "fw.apj",
                 },
             )
         data = r.json()
         assert data["ok"] is False
         assert "internal" in data["error"].lower()
+
+    @pytest.mark.parametrize(
+        "url",
+        [
+            "https://firmware.example.com/fw.apj",
+            "https://firmware.ardupilot.org.evil.example/fw.apj",
+            "https://firmware.ardupilot.org@evil.example/fw.apj",
+            "https://evil.example/https://firmware.ardupilot.org/fw.apj",
+            "http://firmware.ardupilot.org/fw.apj",
+            " https://firmware.ardupilot.org/fw.apj",
+            ["https://firmware.ardupilot.org/fw.apj"],
+            123,
+        ],
+    )
+    def test_only_the_firmware_server_is_asked(self, url):
+        """Any other server could send the download on to an internal address with a
+        redirect, which urlopen follows and the address check never sees."""
+        with (
+            patch("backend.firmware._socket.getaddrinfo") as resolve,
+            patch("backend.firmware.urlreq.urlopen") as fetch,
+        ):
+            r = client.post("/api/firmware/download", json={"url": url, "filename": "fw.apj"})
+        assert r.json() == {"ok": False, "error": "Only the ArduPilot firmware server is allowed"}
+        assert not resolve.called and not fetch.called
+
+    @pytest.mark.parametrize("body", [b"not json", b"[1, 2]", b'"text"', b"\xff\xfe", b""])
+    def test_a_body_that_is_no_json_object_is_an_invalid_request(self, body):
+        r = client.post("/api/firmware/download", content=body, headers={"content-type": "application/json"})
+        assert (r.status_code, r.json()) == (200, {"ok": False, "error": "Invalid params"})
+
+    def test_a_filename_that_is_no_text_is_an_invalid_request(self):
+        r = client.post("/api/firmware/download", json={"url": "https://firmware.ardupilot.org/fw.apj", "filename": 5})
+        assert r.json() == {"ok": False, "error": "Invalid params"}
 
     def test_download_path_traversal_neutralized(self, tmp_path):
         """Path(filename).name strips ../ so traversal is neutralized."""
@@ -181,7 +214,7 @@ class TestFirmwareDownloadSuccess:
             r = client.post(
                 "/api/firmware/download",
                 json={
-                    "url": "https://example.com/fw.apj",
+                    "url": "https://firmware.ardupilot.org/fw.apj",
                     "filename": "../../../etc/passwd.apj",
                 },
             )
@@ -205,7 +238,7 @@ class TestFirmwareDownloadSuccess:
             r = client.post(
                 "/api/firmware/download",
                 json={
-                    "url": "https://firmware.example.com/fw.apj",
+                    "url": "https://firmware.ardupilot.org/fw.apj",
                     "filename": "fw.apj",
                 },
             )
