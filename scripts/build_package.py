@@ -1,15 +1,19 @@
 #!/usr/bin/env python3
 """
 Build self-contained Windows package for Argus GCS v3.
-Downloads Python 3.10 embeddable, bundles all dependencies offline,
+Downloads the Python embeddable below, bundles all dependencies offline,
 produces a zip that runs on any Windows 10/11 x64 with zero install.
 
 Usage:
     python3 build_package.py              # x64 (default)
-    python3 build_package.py --arch arm64 # ARM64 Windows (requires Python 3.11+)
+    python3 build_package.py --arch arm64 # ARM64 Windows
+
+Run it on the Python version it bundles, as CI does: pip decides which conditional
+dependencies to fetch from the interpreter running this script.
 """
 
 import argparse
+import hashlib
 import io
 import os
 import re
@@ -28,23 +32,38 @@ OUTPUT_DIR = SCRIPT_DIR / "release"
 
 _VERSION = re.search(r'^version = "([^"]+)"', (SCRIPT_DIR / "pyproject.toml").read_text(), re.MULTILINE).group(1)
 
-PY_VER = "3.10.11"
+# A version python.org still builds for Windows: it stops two years after x.y.0, and
+# the fixes after that never reach an embeddable zip (3.10 stayed at 3.10.11 from 2023).
+PY_VER = "3.14.10"
 PY_BASE_URL = "https://www.python.org/ftp/python/{ver}/python-{ver}-embed-{arch}.zip"
+# What python.org served for PY_VER, as its .spdx.json beside the zip states too.
+PY_SHA256 = {
+    "amd64": "90905e64a840557d8c1bc4f5b74db3d7ee85e3ffb217611cac1c7813acea4159",
+    "arm64": "bbe116bb1248820359cbf25127ac5c7794ea161869d83686cfbc9a45203ff836",
+}
 
 PIP_DEPS = [
     "fastapi",
     "uvicorn",
     "pyserial",
-    "httpx",
     "websockets",
     "python-multipart",
     # pip evaluates environment markers against the interpreter running this
-    # script, not the Windows Python 3.10 target, so conditional dependencies
-    # of the packages above have to be listed by hand.
-    "exceptiongroup",
+    # script, not the Windows target, so what the packages above only need on
+    # Windows has to be listed by hand.
     "typing_extensions",
     "colorama",
 ]
+
+
+def allowed_versions() -> list[str]:
+    """What pyproject.toml allows of each dependency, as pip constraints: the package ships
+    what the tests ran against, and none of the versions it rules out. Without the extras,
+    which a constraint cannot carry."""
+    import tomllib  # here, so that Python 3.10 can still import this file for its tests
+
+    project = tomllib.loads((SCRIPT_DIR / "pyproject.toml").read_text(encoding="utf-8"))["project"]
+    return [re.sub(r"\[[^\]]*\]", "", dep) for dep in project["dependencies"]]
 
 
 def download(url, desc):
@@ -110,6 +129,9 @@ def build(arch: str = "amd64"):
     else:
         py_data = download(py_url, f"Python {PY_VER} ({arch})")
         cache.write_bytes(py_data)
+    if hashlib.sha256(py_data).hexdigest() != PY_SHA256[arch]:
+        print("  ERROR: %s is not the file PY_SHA256 names" % cache.name)
+        sys.exit(1)
 
     py_dir = build_dir / "python"
     py_dir.mkdir()
@@ -128,6 +150,8 @@ def build(arch: str = "amd64"):
     site_pkg = py_dir / "Lib" / "site-packages"
     site_pkg.mkdir(parents=True, exist_ok=True)
 
+    constraints = build_dir / "_constraints.txt"
+    constraints.write_text("\n".join(allowed_versions()) + "\n", encoding="utf-8")
     for dep in PIP_DEPS:
         print("  %s" % dep)
         subprocess.run(
@@ -139,6 +163,8 @@ def build(arch: str = "amd64"):
                 "--only-binary=:all:",
                 f"--platform={pip_platform}",
                 "--python-version=%s" % PY_VER.rsplit(".", 1)[0],
+                "-c",
+                str(constraints),
                 "-d",
                 str(wheels_dir),
                 dep,
@@ -146,6 +172,7 @@ def build(arch: str = "amd64"):
             check=True,
             capture_output=True,
         )
+    constraints.unlink()
 
     for whl in wheels_dir.glob("*.whl"):
         with zipfile.ZipFile(whl) as zf:
@@ -214,7 +241,7 @@ if __name__ == "__main__":
         "--arch",
         choices=["amd64", "arm64"],
         default="amd64",
-        help="Target architecture (default: amd64). arm64 Windows embeddable Python requires PY_VER >= 3.11.",
+        help="Target architecture (default: amd64).",
     )
     args = ap.parse_args()
     build(arch=args.arch)
