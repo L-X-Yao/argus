@@ -126,6 +126,7 @@ class Config:
     FIRMWARE_DOWNLOAD_TIMEOUT: float = 60.0
 
     # Param metadata
+    PARAM_META_MAX: int = 50 * 1024 * 1024  # 50 MB: each file is about 3
     PARAM_CACHE_TTL: int = 86400 * 7
     PARAM_DOWNLOAD_TIMEOUT: float = 15.0
     PARAM_FETCH_TIMEOUT: float = 60.0

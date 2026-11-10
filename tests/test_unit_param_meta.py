@@ -287,3 +287,27 @@ class TestGetMetadata:
         pm._cache["rover"] = {"ROVER": True}
         assert get_metadata("ROVER") == {"ROVER": True}
         assert get_metadata("Rover") == {"ROVER": True}
+
+    def test_an_oversized_download_is_dropped(self, tmp_path):
+        """A server gone wrong could otherwise hand the backend any amount to hold in memory."""
+        import backend.param_meta as pm
+
+        sent = []
+        mock_resp = MagicMock()
+        mock_resp.read.side_effect = lambda limit: sent.append(limit) or SAMPLE_XML
+
+        with (
+            patch.object(pm, "CACHE_DIR", tmp_path),
+            patch.object(pm.cfg, "PARAM_META_MAX", len(SAMPLE_XML) - 1),
+            patch("backend.param_meta.urllib.request.urlopen", return_value=mock_resp),
+        ):
+            assert get_metadata("copter") == {}
+        assert sent == [len(SAMPLE_XML)]
+        assert not (tmp_path / "copter.json").exists()
+
+    def test_the_urls_are_the_ardupilot_ones(self):
+        import backend.param_meta as pm
+
+        assert pm._URLS["copter"] == "https://autotest.ardupilot.org/Parameters/ArduCopter/apm.pdef.xml"
+        assert all(url.startswith("https://autotest.ardupilot.org/Parameters/") for url in pm._URLS.values())
+        assert all(url.endswith("/apm.pdef.xml") for url in pm._URLS.values())
