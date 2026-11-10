@@ -260,13 +260,14 @@ test('the flight report keeps the flight after the summary is gone', async () =>
     dialog.getByRole('button', { name: label('report.export') }).click(),
   ]);
   const report = readFileSync(await download.path(), 'utf-8');
-  expect(report).toContain('Pilot: Li Si');
-  expect(report).toContain('Weather: Clear');
+  // The report is written in the UI language, like the panel it comes from.
+  expect(report).toContain(`${label('report.pilot')}: Li Si`);
+  expect(report).toContain(`${label('report.weather')}: Clear`);
   expect(report).toContain('SITL run');
-  expect(report).toMatch(/Vehicle: .*v4\.\d+\.\d+/);
-  const reported = parseFloat(report.match(/Max Altitude: ([\d.]+) m/)![1]);
+  expect(report).toMatch(new RegExp(`${label('report.vehicle')}: .*v4\\.\\d+\\.\\d+`));
+  const reported = parseFloat(report.match(new RegExp(`${label('summary.maxAlt')}: ([\\d.]+) m`))![1]);
   expect(Math.abs(reported - probe.maxAltitude)).toBeLessThan(1);
-  expect(report).toMatch(/--- Events ---\n.+/);
+  expect(report).toMatch(new RegExp(`--- ${label('event.title')} ---\\n.+`));
   await close(page, dialog);
 });
 
