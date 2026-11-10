@@ -1,6 +1,6 @@
 [package]
 name = "argus-gcs"
-version = "3.7.8"
+version = "3.7.9"
 description = "Argus 地面控制站"
 authors = ["L-X-Yao"]
 edition = "2021"
