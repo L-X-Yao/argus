@@ -8,6 +8,7 @@ import os
 import sys
 import threading
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -393,10 +394,13 @@ class TestRequestsUnderAnotherName:
     def test_loopback_names_pass(self, client, host):
         assert client.get("/api/ports", headers={"host": host}).status_code == 200
 
-    def test_host_of_a_configured_origin_passes(self, client, monkeypatch):
-        monkeypatch.setattr(app.state, "own_hosts", {"gcs.example"})
-        assert client.get("/api/ports", headers={"host": "gcs.example:8100"}).status_code == 200
-        assert client.get("/api/ports", headers={"host": "other.example:8100"}).status_code == 403
+    def test_host_of_a_configured_origin_passes(self, client):
+        # Not monkeypatch.setattr: since pytest 9.2 it restores from the instance __dict__, which
+        # app.state does not keep its values in, and so deletes own_hosts for every later test.
+        with patch.object(app.state, "own_hosts", {"gcs.example"}):
+            assert client.get("/api/ports", headers={"host": "gcs.example:8100"}).status_code == 200
+            assert client.get("/api/ports", headers={"host": "other.example:8100"}).status_code == 403
+        assert app.state.own_hosts == {"localhost", "127.0.0.1"}
 
     def test_default_origins_name_this_machine_only(self):
         from backend.app import _cors_origins
