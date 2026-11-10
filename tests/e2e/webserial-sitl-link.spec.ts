@@ -127,14 +127,11 @@ test('a link that loses one frame in ten still moves a mission and a mode change
   }));
   sitl.setLoss(0.1);
   try {
-    const uploaded = await page.evaluate(
-      async (w) => {
-        const url = '/src/lib/transport.ts';
-        const { serialUploadMission } = await import(/* @vite-ignore */ url);
-        return serialUploadMission(w, 20);
-      },
-      wps,
-    );
+    const uploaded = await page.evaluate(async (w) => {
+      const url = '/src/lib/transport.ts';
+      const { serialUploadMission } = await import(/* @vite-ignore */ url);
+      return serialUploadMission(w, 20);
+    }, wps);
     expect(uploaded).toEqual({ ok: true });
 
     const downloaded = await page.evaluate(async () => {
@@ -145,6 +142,10 @@ test('a link that loses one frame in ten still moves a mission and a mode change
     expect(downloaded.ok).toBe(true);
     expect(downloaded.waypoints.length).toBe(wps.length);
 
+    // Loiter is refused until the estimator has a position (ArduCopter/mode.cpp:398
+    // "requires position"), which comes some seconds after the GPS fix beforeAll waits for:
+    // on a runner that reached this line sooner, the mode stayed where it was.
+    await expect.poll(async () => (await drone('ekf_flags')) & 0x10, { timeout: 60000 }).toBeTruthy();
     await send('mode', 5);
     await expect.poll(() => drone('mode_id'), { timeout: 15000 }).toBe(5);
   } finally {
