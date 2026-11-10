@@ -839,6 +839,12 @@ const messages: Record<string, string> = {
   'remote.latency': 'Latency',
   'remote.hint':
     'Copies this page URL only; remote access needs the backend reachable (same LAN / VPN / port-forward) — no built-in tunnel',
+  'remote.backendUrl': 'Backend URL',
+  'remote.connected': 'Connected',
+  'remote.share': 'Share',
+  'remote.shareHint': 'Share this URL with team members to observe the flight session.',
+  'remote.copy': 'Copy URL',
+  'remote.copied': 'Copied!',
   'role.pilot': 'Pilot',
   'role.observer': 'Observer',
   'role.commander': 'Commander',

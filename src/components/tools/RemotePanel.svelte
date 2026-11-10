@@ -90,7 +90,7 @@
         <div class="p-3 rounded-lg bg-muted/30 border border-border space-y-2">
           <!-- Backend URL -->
           <div class="flex items-center justify-between text-xs">
-            <span class="text-muted-foreground">Backend URL</span>
+            <span class="text-muted-foreground">{t('remote.backendUrl')}</span>
             <span class="font-mono text-foreground truncate max-w-[200px]">{apiUrl('') || window.location.origin}</span>
           </div>
 
@@ -98,7 +98,7 @@
           <div class="flex items-center justify-between text-xs">
             <span class="text-muted-foreground">WebSocket</span>
             <span class="font-medium {app.wsConnected ? 'text-green-500' : 'text-destructive'}">
-              {app.wsConnected ? 'Connected' : 'Disconnected'}
+              {app.wsConnected ? t('remote.connected') : t('conn.disconnected')}
             </span>
           </div>
 
@@ -131,10 +131,10 @@
 
       <!-- Share section -->
       <div class="space-y-2">
-        <span class="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Share</span>
+        <span class="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('remote.share')}</span>
 
         <div class="p-3 rounded-lg bg-muted/30 border border-border space-y-3">
-          <p class="text-xs text-muted-foreground">Share this URL with team members to observe the flight session.</p>
+          <p class="text-xs text-muted-foreground">{t('remote.shareHint')}</p>
 
           <div class="flex items-center gap-2">
             <div
@@ -143,7 +143,7 @@
               {window.location.href}
             </div>
             <Button variant="outline" size="xs" onclick={copyUrl}>
-              {copied ? 'Copied!' : 'Copy URL'}
+              {copied ? t('remote.copied') : t('remote.copy')}
             </Button>
           </div>
         </div>

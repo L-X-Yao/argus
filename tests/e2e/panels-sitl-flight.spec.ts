@@ -266,7 +266,7 @@ test('the flight report keeps the flight after the summary is gone', async () =>
   expect(report).toMatch(/Vehicle: .*v4\.\d+\.\d+/);
   const reported = parseFloat(report.match(/Max Altitude: ([\d.]+) m/)![1]);
   expect(Math.abs(reported - probe.maxAltitude)).toBeLessThan(1);
-  expect(report).toMatch(/--- Event Log ---\n.+/);
+  expect(report).toMatch(/--- Events ---\n.+/);
   await close(page, dialog);
 });
 
@@ -322,7 +322,10 @@ test('a survey drawn in its panel is flown to the last waypoint', async () => {
   await panel.getByRole('button', { name: label('wp.upload'), exact: true }).click();
   // The grid goes after the route already planned.
   await expect.poll(async () => (await probe.store()).length).toBe(before + count);
-  await page.getByRole('button', { name: label('survey.clear') }).last().click();
+  await page
+    .getByRole('button', { name: label('survey.clear') })
+    .last()
+    .click();
   await page.locator('button.map-btn', { hasText: label('map.survey') }).click();
 
   await nav('tab.fly').click();

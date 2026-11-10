@@ -52,42 +52,42 @@
     savePilot();
 
     const lines: string[] = [];
-    lines.push('=== Argus Flight Report ===');
-    lines.push(`Date: ${reportDate}`);
-    lines.push(`Pilot: ${pilotName || '---'}`);
-    lines.push(`Vehicle: ${vehicleInfo}`);
-    lines.push(`Weather: ${weather || '---'}`);
+    lines.push(`=== Argus ${t('report.title')} ===`);
+    lines.push(`${t('report.date')}: ${reportDate}`);
+    lines.push(`${t('report.pilot')}: ${pilotName || '---'}`);
+    lines.push(`${t('report.vehicle')}: ${vehicleInfo}`);
+    lines.push(`${t('report.weather')}: ${weather || '---'}`);
     lines.push('');
 
     /* Flight summary */
-    lines.push('--- Flight Summary ---');
+    lines.push(`--- ${t('summary.subtitle')} ---`);
     if (summary) {
-      lines.push(`Duration: ${fmtDuration(summary.duration)}`);
-      lines.push(`Max Altitude: ${summary.max_alt.toFixed(1)} m`);
-      lines.push(`Max Speed: ${summary.max_speed.toFixed(1)} m/s`);
-      lines.push(`Distance: ${summary.total_dist} m`);
+      lines.push(`${t('summary.duration')}: ${fmtDuration(summary.duration)}`);
+      lines.push(`${t('summary.maxAlt')}: ${summary.max_alt.toFixed(1)} m`);
+      lines.push(`${t('summary.maxSpd')}: ${summary.max_speed.toFixed(1)} m/s`);
+      lines.push(`${t('summary.dist')}: ${summary.total_dist} m`);
       if (summary.bat_used >= 0) {
-        lines.push(`Battery Used: ${summary.bat_used}%`);
+        lines.push(`${t('summary.batUsed')}: ${summary.bat_used}%`);
       }
     } else {
-      lines.push('(No flight data available)');
+      lines.push(`(${t('fltdb.noData')})`);
     }
     lines.push('');
 
     /* Event log */
-    lines.push('--- Event Log ---');
+    lines.push(`--- ${t('event.title')} ---`);
     if (recentEvents.length > 0) {
       for (const ev of recentEvents) {
         lines.push(`${fmtTime(ev.time)}  ${ev.text}`);
       }
     } else {
-      lines.push('(No events)');
+      lines.push(`(${t('event.empty')})`);
     }
     lines.push('');
 
     /* Notes */
-    lines.push('--- Notes ---');
-    lines.push(notes || '(none)');
+    lines.push(`--- ${t('report.notes')} ---`);
+    lines.push(notes || '---');
 
     const text = lines.join('\n');
     const blob = new Blob([text], { type: 'text/plain' });
@@ -203,35 +203,35 @@
         <h3
           class="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider border-b border-border pb-1"
         >
-          Flight Summary
+          {t('summary.subtitle')}
         </h3>
         {#if summary}
           <div class="grid grid-cols-2 gap-x-4 gap-y-1.5 text-xs">
             <div class="flex justify-between">
-              <span class="text-muted-foreground">Duration</span>
+              <span class="text-muted-foreground">{t('summary.duration')}</span>
               <span class="font-mono font-medium text-foreground">{fmtDuration(summary.duration)}</span>
             </div>
             <div class="flex justify-between">
-              <span class="text-muted-foreground">Max Alt</span>
+              <span class="text-muted-foreground">{t('summary.maxAlt')}</span>
               <span class="font-mono font-medium text-foreground">{summary.max_alt.toFixed(1)} m</span>
             </div>
             <div class="flex justify-between">
-              <span class="text-muted-foreground">Max Speed</span>
+              <span class="text-muted-foreground">{t('summary.maxSpd')}</span>
               <span class="font-mono font-medium text-foreground">{summary.max_speed.toFixed(1)} m/s</span>
             </div>
             <div class="flex justify-between">
-              <span class="text-muted-foreground">Distance</span>
+              <span class="text-muted-foreground">{t('summary.dist')}</span>
               <span class="font-mono font-medium text-foreground">{summary.total_dist} m</span>
             </div>
             {#if summary.bat_used >= 0}
               <div class="flex justify-between">
-                <span class="text-muted-foreground">Battery Used</span>
+                <span class="text-muted-foreground">{t('summary.batUsed')}</span>
                 <span class="font-mono font-medium text-foreground">{summary.bat_used}%</span>
               </div>
             {/if}
           </div>
         {:else}
-          <p class="text-xs text-muted-foreground italic">No flight data available</p>
+          <p class="text-xs text-muted-foreground italic">{t('fltdb.noData')}</p>
         {/if}
       </div>
 
@@ -240,7 +240,7 @@
         <h3
           class="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider border-b border-border pb-1"
         >
-          Event Log ({recentEvents.length})
+          {t('event.title')} ({recentEvents.length})
         </h3>
         {#if recentEvents.length > 0}
           <div class="bg-background rounded-lg p-2 max-h-40 overflow-y-auto text-[11px] font-mono space-y-0.5">
@@ -252,7 +252,7 @@
             {/each}
           </div>
         {:else}
-          <p class="text-xs text-muted-foreground italic">No events recorded</p>
+          <p class="text-xs text-muted-foreground italic">{t('event.empty')}</p>
         {/if}
       </div>
     </div>

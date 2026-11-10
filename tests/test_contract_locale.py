@@ -56,7 +56,6 @@ KNOWN_ORPHAN_LOCALE_KEYS: set[str] = {
     "fft.peak",
     "fltdb.count",
     "fltdb.delete",
-    "fltdb.noData",
     "fltdb.replay",
     "fltdb.title",
     "inspector.expanded",
