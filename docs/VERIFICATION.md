@@ -33,7 +33,7 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 | Messages, WebSerial | 35 | 17 | 13 | 0 | 4 | 0 | 1 |
 | REST routes | 28 | 6 | 5 | 17 | 0 | 0 | 0 |
 | Panels | 80 | 14 | 33 | 17 | 14 | 2 | 0 |
-| Platform | 46 | 8 | 14 | 10 | 9 | 2 | 3 |
+| Platform | 47 | 8 | 14 | 10 | 10 | 2 | 3 |
 
 ## Commands / 飞控命令
 
@@ -306,6 +306,7 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 | DNS rebinding blocking | DNS 重绑定拦截 | Tests only | Unit tests, real Windows each release |
 | SSRF and path traversal protection | SSRF 和路径穿越防护 | Tests only | Unit tests |
 | STATUSTEXT filter | STATUSTEXT 过滤 | Tests only | Unit tests |
+| Telemetry that is no number | 非数值遥测（NaN） | Tests only | Unit tests on both links. 2026-11-10, a real browser and a stand-in vehicle sending NaN and infinities: v3.7.7 showed no vehicle and logged 117 parse errors in 23 s, this version showed NaN and kept updating |
 | Real flight | 真实飞行 | None | Never properly flown |
 | Right-to-left layout | 阿拉伯语从右到左布局 | Tests only | Browser test: page turns around and stays inside the window |
 | macOS | macOS | Simulator | CI: unit and contract tests, then the app in a browser on macos-latest. No SITL there |
