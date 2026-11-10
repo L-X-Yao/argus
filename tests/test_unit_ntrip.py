@@ -4,6 +4,8 @@ import socket
 import threading
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from backend.commands._ntrip import _inject_chunk, _ntrip_loop, cmd_ntrip_start, cmd_ntrip_stop
 from backend.drone_link import DroneLink
 
@@ -182,6 +184,28 @@ class TestCmdNtripStartFullPath:
             )
         assert r and r["ok"] is False
         assert r["error"]  # non-empty error message (locale-dependent)
+
+    @pytest.mark.parametrize("address", ["192.168.1.50", "10.8.0.2", "100.64.0.9"])
+    def test_a_base_station_on_the_local_network_is_accepted(self, address):
+        link = make_link()
+        with (
+            patch("backend.commands._ntrip.socket.getaddrinfo", return_value=[(2, 1, 6, "", (address, 2101))]),
+            patch("backend.commands._ntrip.threading.Thread") as thread,
+        ):
+            r = cmd_ntrip_start(link, None, {"host": "base.lan", "port": 2101, "mountpoint": "M"})
+        assert not r or r.get("ok") is not False
+        assert thread.called
+
+    @pytest.mark.parametrize("address", ["169.254.169.254", "0.0.0.0", "::1", "::ffff:127.0.0.1"])
+    def test_this_machine_and_link_local_are_refused(self, address):
+        link = make_link()
+        with (
+            patch("backend.commands._ntrip.socket.getaddrinfo", return_value=[(2, 1, 6, "", (address, 2101))]),
+            patch("backend.commands._ntrip.threading.Thread") as thread,
+        ):
+            r = cmd_ntrip_start(link, None, {"host": "evil.example", "port": 2101, "mountpoint": "M"})
+        assert r == {"ok": False, "error": "NTRIP 主机解析到本机或链路本地地址"}
+        assert not thread.called
 
     def test_a_fake_ip_from_a_proxy_tool_is_not_private(self):
         link = make_link()

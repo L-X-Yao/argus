@@ -3,6 +3,8 @@
 import socket
 from unittest.mock import patch
 
+import pytest
+
 from backend.commands import execute
 from backend.config import cfg
 from backend.drone_link import DroneLink
@@ -54,14 +56,42 @@ class TestVideoUrlValidation:
     def test_reject_loopback_ip(self):
         assert _validate_video_url("rtsp://127.0.0.1:554/stream") is not None
 
-    def test_reject_private_ip_192(self):
-        assert _validate_video_url("rtsp://192.168.1.1:554/stream") is not None
+    @pytest.mark.parametrize(
+        "host", ["192.168.144.25", "10.0.0.1", "172.16.0.1", "100.64.0.1", "[fd00::1]", "[::ffff:192.168.1.5]"]
+    )
+    def test_camera_on_a_private_network_allowed(self, host):
+        """Where a vehicle's camera lives. Refusing these left the panel with no camera to show."""
+        assert _validate_video_url(f"rtsp://{host}:8554/main.264") is None
 
-    def test_reject_private_ip_10(self):
-        assert _validate_video_url("rtsp://10.0.0.1:554/stream") is not None
+    @pytest.mark.parametrize(
+        "host",
+        [
+            "169.254.169.254",
+            "0.0.0.0",
+            "224.0.0.1",
+            "255.255.255.255",
+            "[::1]",
+            "[::]",
+            "[fe80::1]",
+            "[::ffff:127.0.0.1]",
+        ],
+    )
+    def test_reject_this_machine_and_link_local(self, host):
+        assert _validate_video_url(f"rtsp://{host}:554/stream") is not None
 
-    def test_reject_private_ip_172(self):
-        assert _validate_video_url("rtsp://172.16.0.1:554/stream") is not None
+    def test_hostname_resolving_to_a_private_address_allowed(self):
+        def camera_dns(host, *args, **kwargs):
+            return [(socket.AF_INET, socket.SOCK_STREAM, 0, "", ("192.168.144.25", 0))]
+
+        with patch("socket.getaddrinfo", side_effect=camera_dns):
+            assert _validate_video_url("rtsp://camera.lan:8554/main.264") is None
+
+    def test_hostname_resolving_to_cloud_metadata_blocked(self):
+        def metadata_dns(host, *args, **kwargs):
+            return [(socket.AF_INET, socket.SOCK_STREAM, 0, "", ("169.254.169.254", 0))]
+
+        with patch("socket.getaddrinfo", side_effect=metadata_dns):
+            assert _validate_video_url("http://metadata.example/latest") is not None
 
     def test_reject_too_long_url(self):
         url = "rtsp://example.com/" + "a" * 3000

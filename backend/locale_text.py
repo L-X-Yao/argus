@@ -137,7 +137,10 @@ _T = {
     "err_ntrip_mount": ("NTRIP 挂载点无效 (1-100 字符)", "NTRIP mountpoint required (1-100 chars)"),
     "err_ntrip_mount_chars": ("NTRIP 挂载点含非法字符", "NTRIP mountpoint contains invalid chars"),
     "err_ntrip_cred_chars": ("NTRIP 凭据含非法字符", "NTRIP credentials contain invalid chars"),
-    "err_ntrip_private": ("NTRIP 主机解析到内网地址", "NTRIP host resolves to private/internal address"),
+    "err_ntrip_address": (
+        "NTRIP 主机解析到本机或链路本地地址",
+        "NTRIP host resolves to this machine or a link-local address",
+    ),
     "err_ntrip_running": ("NTRIP 已在运行", "NTRIP already running"),
 }
 

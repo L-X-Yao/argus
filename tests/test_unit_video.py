@@ -4,7 +4,9 @@ Tests RTSP URL validation, video start/stop lifecycle, duplicate process
 prevention, cleanup behavior, and capabilities endpoint.
 """
 
+import shutil
 import socket
+import subprocess
 import sys
 import threading
 from pathlib import Path
@@ -18,7 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import backend.video as video_module
 from backend.app import app
 from backend.drone_link import DroneLink
-from backend.video import _ffmpeg_available, _proc_lock, _validate_video_url
+from backend.video import _ffmpeg_available, _ffmpeg_command, _proc_lock, _validate_video_url
 from backend.ws_manager import WSManager
 
 
@@ -292,10 +294,8 @@ class TestValidateVideoUrlEdgeCases:
         err = _validate_video_url("rtsp://localhost.localdomain/stream")
         assert err is not None
 
-    def test_private_ip_rejected(self):
-        err = _validate_video_url("rtsp://192.168.1.1/stream")
-        assert err is not None
-        assert "private" in err.lower() or "loopback" in err.lower()
+    def test_private_ip_allowed(self):
+        assert _validate_video_url("rtsp://192.168.1.1/stream") is None
 
     def test_loopback_ip_rejected(self):
         err = _validate_video_url("rtsp://127.0.0.1/stream")
@@ -447,3 +447,53 @@ class TestVideoStreamJpegExtraction:
         body = r.content
         # Both frames should appear
         assert body.count(b"--frame") == 2
+
+
+class TestFfmpegCommand:
+    def test_rtsp_goes_over_tcp(self):
+        args = _ffmpeg_command("rtsp://192.168.144.25:8554/main.264")
+        assert args[:5] == ["ffmpeg", "-rtsp_transport", "tcp", "-i", "rtsp://192.168.144.25:8554/main.264"]
+
+    @pytest.mark.parametrize(
+        "url", ["http://cam.example/live.mjpg", "https://cam.example/live.m3u8", "rtmp://cam.example/app/key"]
+    )
+    def test_other_inputs_get_no_rtsp_option(self, url):
+        """ffmpeg refuses an input given an option its reader does not have."""
+        args = _ffmpeg_command(url)
+        assert "-rtsp_transport" not in args
+        assert args[:3] == ["ffmpeg", "-i", url]
+
+    @pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="needs ffmpeg")
+    def test_real_ffmpeg_turns_an_http_stream_into_jpeg_frames(self, tmp_path):
+        """With every Popen mocked, nothing noticed that only rtsp:// URLs could ever play."""
+        import functools
+        import http.server
+        import os
+        import threading
+
+        made = subprocess.run(
+            ["ffmpeg", "-loglevel", "error", "-f", "lavfi", "-i", "testsrc=duration=1:size=160x120:rate=10"]
+            + ["-c:v", "mpeg2video", "-f", "mpegts", str(tmp_path / "cam.ts")],
+            stdin=subprocess.DEVNULL,
+            capture_output=True,
+            timeout=60,
+        )
+        if made.returncode != 0:
+            pytest.skip("this ffmpeg cannot make the test stream: %s" % made.stderr[-200:])
+
+        handler = functools.partial(http.server.SimpleHTTPRequestHandler, directory=str(tmp_path))
+        handler.log_message = lambda *args: None
+        server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        try:
+            url = "http://127.0.0.1:%d/cam.ts" % server.server_address[1]
+            env = {k: v for k, v in os.environ.items() if not k.lower().endswith("_proxy")}
+            out = subprocess.run(
+                _ffmpeg_command(url), stdin=subprocess.DEVNULL, capture_output=True, timeout=60, env=env
+            )
+        finally:
+            server.shutdown()
+            server.server_close()
+        assert out.returncode == 0, out.stderr[-400:]
+        assert out.stdout.startswith(b"\xff\xd8")
+        assert out.stdout.count(b"\xff\xd8\xff") >= 5

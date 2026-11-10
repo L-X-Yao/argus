@@ -12,15 +12,11 @@ from urllib.parse import urlparse
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 
-from .config import cfg
+from .config import cfg, off_limits
 
 router = APIRouter()
 
 _ALLOWED_SCHEMES = {"rtsp", "rtmp", "http", "https"}
-
-
-def _is_private_or_special(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
-    return ip.is_private or ip.is_loopback or ip.is_reserved or ip.is_link_local or ip.is_multicast
 
 
 def _validate_video_url(url: str) -> str | None:
@@ -42,13 +38,13 @@ def _validate_video_url(url: str) -> str | None:
     # slip past the IP-literal check entirely.
     try:
         addr = ipaddress.ip_address(host)
-        if _is_private_or_special(addr):
-            return "Private/loopback addresses not allowed"
+        if off_limits(addr):
+            return "Loopback and link-local addresses not allowed"
         return None
     except ValueError:
         pass
     if host in ("localhost", "localhost.localdomain"):
-        return "Private/loopback addresses not allowed"
+        return "Loopback and link-local addresses not allowed"
     import socket as _socket
 
     try:
@@ -60,8 +56,8 @@ def _validate_video_url(url: str) -> str | None:
             resolved = ipaddress.ip_address(sockaddr[0])
         except ValueError:
             continue
-        if _is_private_or_special(resolved):
-            return "Resolves to a private/loopback/reserved address"
+        if off_limits(resolved):
+            return "Resolves to a loopback, link-local or reserved address"
     return None
 
 
@@ -71,6 +67,14 @@ _proc_lock = threading.Lock()
 
 def _ffmpeg_available() -> bool:
     return shutil.which("ffmpeg") is not None
+
+
+def _ffmpeg_command(url: str) -> list[str]:
+    """ffmpeg reading the stream at url and writing MJPEG to its stdout."""
+    # An option of the RTSP reader alone. Given it with any other input, ffmpeg stops at
+    # "Option rtsp_transport not found": http, https and rtmp streams never played.
+    transport = ["-rtsp_transport", "tcp"] if urlparse(url).scheme == "rtsp" else []
+    return ["ffmpeg", *transport, "-i", url, "-f", "mjpeg", "-q:v", "5", "-r", "15", "-an", "pipe:1"]
 
 
 @router.get("/api/video")
@@ -95,21 +99,9 @@ async def video_stream(url: str = ""):
     async def generate():
         global _active_proc  # noqa: PLW0603
         proc = subprocess.Popen(
-            [
-                "ffmpeg",
-                "-rtsp_transport",
-                "tcp",
-                "-i",
-                url,
-                "-f",
-                "mjpeg",
-                "-q:v",
-                "5",
-                "-r",
-                "15",
-                "-an",
-                "pipe:1",
-            ],
+            _ffmpeg_command(url),
+            # Its own, or it reads the keys typed into the console the server runs in.
+            stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
             stderr=subprocess.DEVNULL,
         )

@@ -238,12 +238,18 @@ class TestVideo:
         data = r.json()
         assert "error" in data
 
-    def test_video_private_ip_rejected(self):
-        r = client.get("/api/video?url=rtsp://192.168.1.1:554/stream")
+    @pytest.mark.parametrize("host", ["127.0.0.1", "localhost", "169.254.169.254", "[::1]", "0.0.0.0"])
+    def test_video_from_this_machine_rejected(self, host):
+        r = client.get(f"/api/video?url=rtsp://{host}:554/stream")
         assert r.status_code == 200
         data = r.json()
         assert "error" in data
         assert "Invalid" in data["error"]
+
+    def test_video_from_a_camera_on_the_vehicle_network_gets_past_the_address_check(self):
+        with patch("backend.video._ffmpeg_available", return_value=False):
+            r = client.get("/api/video?url=rtsp://192.168.144.25:8554/main.264")
+        assert r.json() == {"error": "ffmpeg not installed on server"}
 
     def test_video_file_scheme_rejected(self):
         r = client.get("/api/video?url=file:///etc/passwd")
