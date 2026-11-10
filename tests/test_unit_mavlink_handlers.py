@@ -270,6 +270,7 @@ class TestMagCalReport:
         link = make_link()
         p = bytearray(44)
         p[42] = 4  # cal_status = SUCCESS
+        p[43] = 1  # autosaved: a run started elsewhere, with autosave
         handle_mag_cal_report(p, len(p), link)
         assert link._mag_cal_done is True
         # Two events: cal done + reboot
@@ -301,10 +302,14 @@ class TestMagCalReport:
 
     # tests/fixtures/magcal_sitl.tlog: cal_mask 7, compass 2 reports first and compass 1 last.
     @staticmethod
-    def _report(link, compass, status, mask=7):
+    def _report(link, compass, status, mask=7, saved=0):
         p = bytearray(44)
-        p[40], p[41], p[42] = compass, mask, status
+        p[40], p[41], p[42], p[43] = compass, mask, status, saved
         handle_mag_cal_report(p, len(p), link)
+
+    @staticmethod
+    def _texts(link):
+        return [e["text"] for e in link.events if e["event_type"] == "cal_compass"]
 
     @staticmethod
     def _progress(link):
@@ -352,6 +357,72 @@ class TestMagCalReport:
         self._report(link, 0, 4, mask=1)
         assert link._mag_cal_done is True
         assert self._accepts(link) == 0
+
+    def test_a_run_started_elsewhere_and_left_unsaved_does_not_ask_for_a_reboot(self):
+        """Without an accept the FC drops the result at its next boot
+        (AP_Compass_Calibration.cpp:41-49), so "reboot to apply" would throw it away."""
+        link = make_link_connected()
+        self._report(link, 0, 4, mask=1)
+        assert self._texts(link) == ["罗盘校准结果未保存：这次校准不是本次会话发起的。需要保存请重新校准"]
+
+    def test_a_run_of_ours_is_unsaved_once_the_user_has_connected_again(self):
+        """Disconnect and Connect during a run: connect() starts a session that owns no run,
+        while the FC goes on calibrating."""
+        link = make_link_connected()
+        self._start(link)
+        self._report(link, 0, 4, mask=3)
+        with (
+            patch.object(link, "_open_port", return_value=MagicMock()),
+            patch.object(link, "_loop"),
+            patch.object(link, "_start_log"),
+        ):
+            assert link.connect("tcp:127.0.0.1:1") is True
+        link._running = False
+        link.connected = True  # as the first heartbeat does
+        link.events.clear()
+        self._report(link, 1, 4, mask=3)
+        assert self._accepts(link) == 0
+        assert self._texts(link) == ["罗盘校准结果未保存：这次校准不是本次会话发起的。需要保存请重新校准"]
+
+    def test_a_run_of_ours_is_still_accepted_after_the_link_dropped_and_came_back(self):
+        # The loop's own reconnect goes through _reset_session_state alone.
+        link = make_link_connected()
+        self._start(link)
+        self._report(link, 0, 4, mask=3)
+        link._reset_session_state()
+        link.connected = True
+        self._report(link, 1, 4, mask=3)
+        assert self._accepts(link) == 1
+
+    def test_a_run_started_elsewhere_that_the_fc_saved_is_complete(self):
+        # autosaved @43 is _cal_saved (AP_Compass_Calibration.cpp:348).
+        link = make_link_connected()
+        self._report(link, 0, 4, mask=3, saved=1)
+        self._report(link, 1, 4, mask=3, saved=1)
+        assert self._texts(link) == ["罗盘校准完成", "请重启飞控以使罗盘校准生效"]
+        assert self._accepts(link) == 0
+
+    def test_one_compass_left_unsaved_leaves_the_run_unsaved(self):
+        link = make_link_connected()
+        self._report(link, 0, 4, mask=3, saved=1)
+        self._report(link, 1, 4, mask=3, saved=0)
+        assert len(self._texts(link)) == 1 and "未保存" in self._texts(link)[0]
+
+    def test_a_run_of_ours_is_complete_before_the_fc_reports_it_saved(self):
+        # Ours is accepted right here, and the report that says so comes after.
+        link = make_link_connected()
+        self._start(link)
+        link.events.clear()
+        self._report(link, 0, 4, mask=1, saved=0)
+        assert self._texts(link) == ["罗盘校准完成", "请重启飞控以使罗盘校准生效"]
+        assert self._accepts(link) == 1
+
+    def test_a_report_trimmed_before_the_saved_flag_reads_as_unsaved(self):
+        link = make_link_connected()
+        p = bytearray(43)  # MAVLink 2 drops the trailing zero bytes
+        p[40], p[41], p[42] = 0, 1, 4
+        handle_mag_cal_report(p, len(p), link)
+        assert "未保存" in self._texts(link)[0]
 
     def test_a_cancelled_run_is_not_accepted(self):
         link = make_link_connected()

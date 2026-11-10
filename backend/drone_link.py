@@ -107,6 +107,7 @@ class DroneLink:
         self._lock = threading.Lock()  # protects _ser.write() only
         self._state_lock = threading.RLock()  # protects all state reads/writes (handlers + get_state)
         self._mag_cal_reports: dict[int, int] = {}  # compass id -> MAG_CAL_STATUS, this run
+        self._mag_cal_saved: dict[int, bool] = {}  # compass id -> the FC holds the result
         self._mag_cal_ours = False  # a run started here, so the result is ours to accept
         self._buf = b""
         self.sq = 0

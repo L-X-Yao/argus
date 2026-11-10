@@ -168,6 +168,8 @@ const messages: Record<string, string> = {
   'cal.s.compassDone': 'Kompasskalibrierung abgeschlossen',
   'cal.s.compassReboot': 'FC neu starten, um Kompasskalibrierung anzuwenden',
   'cal.s.compassFailed': 'Kompasskalibrierung FEHLGESCHLAGEN',
+  'cal.s.compassUnsaved':
+    'Kompasskalibrierung nicht gespeichert: Sie wurde nicht in dieser Sitzung gestartet. Zum Speichern erneut ausführen',
   'toast.arming': 'Entsichere...',
   'toast.armFail': 'Entsichern fehlgeschlagen — Vorflugprüfung beachten',
   'toast.takeoffFail': 'Start fehlgeschlagen — Höhe steigt nicht',

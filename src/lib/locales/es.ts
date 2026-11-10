@@ -168,6 +168,7 @@ const messages: Record<string, string> = {
   'cal.s.compassDone': 'Calibración de brújula completa',
   'cal.s.compassReboot': 'Reiniciar FC para aplicar calibración de brújula',
   'cal.s.compassFailed': 'Calibración de brújula FALLIDA',
+  'cal.s.compassUnsaved': 'Calibración de brújula no guardada: no se inició en esta sesión. Repítala para guardarla',
   'toast.arming': 'Armando...',
   'toast.armFail': 'Armado fallido — revise prevuelo',
   'toast.takeoffFail': 'Despegue fallido — altitud no aumenta',

@@ -366,11 +366,16 @@ def handle_mag_cal_report(p: bytes, pl: int, link: DroneLink) -> None:
     compass, cal_mask = p[40], p[41]
     reports = link._mag_cal_reports
     reports[compass] = p[42]
+    # autosaved @43 is _cal_saved (AP_Compass_Calibration.cpp:348): set by an accept, or by
+    # the FC itself in a run started with autosave (:41-49).
+    link._mag_cal_saved[compass] = bool(p[43])
     if any(cal_mask >> i & 1 and i not in reports for i in range(8)):
         return
     link._mag_cal_done = True
     link._mag_cal_pct = -1
-    if all(status == 4 for status in reports.values()):
+    if not all(status == 4 for status in reports.values()):
+        link.add_event(lt("mag_cal_fail", link.locale), "cal_compass")
+    elif link._mag_cal_ours or all(link._mag_cal_saved.values()):
         link.add_event(lt("mag_cal_done", link.locale), "cal_compass")
         link.add_event(lt("mag_cal_reboot", link.locale), "cal_compass")
         # Started with autosave 0 (cmd_cal_compass), so the FC keeps a result only when told
@@ -382,7 +387,10 @@ def handle_mag_cal_report(p: bytes, pl: int, link: DroneLink) -> None:
 
             send_cmd(link, 42425, p1=0)
     else:
-        link.add_event(lt("mag_cal_fail", link.locale), "cal_compass")
+        # A run this session did not start gets no accept from here, and that includes one
+        # of ours that a reconnect cut us off from. Unsaved, the FC drops the result at its
+        # next boot: the wrong moment to ask for a reboot, as this used to.
+        link.add_event(lt("mag_cal_unsaved", link.locale), "cal_compass")
     link._mag_cal_ours = False
 
 

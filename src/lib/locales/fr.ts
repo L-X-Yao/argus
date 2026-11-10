@@ -168,6 +168,8 @@ const messages: Record<string, string> = {
   'cal.s.compassDone': 'Calibration boussole terminée',
   'cal.s.compassReboot': 'Redémarrer le FC pour appliquer la calibration boussole',
   'cal.s.compassFailed': 'Calibration boussole ÉCHOUÉE',
+  'cal.s.compassUnsaved':
+    "Calibration boussole non enregistrée : elle n'a pas été lancée dans cette session. Relancez-la pour l'enregistrer",
   'toast.arming': 'Armement...',
   'toast.armFail': 'Armement échoué — vérifier le prévol',
   'toast.takeoffFail': "Décollage échoué — l'altitude ne monte pas",

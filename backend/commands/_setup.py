@@ -21,6 +21,7 @@ def cmd_cal_compass(link: DroneLink, param, data: dict):
     link._mag_cal_pct = -1
     link._mag_cal_done = False
     link._mag_cal_reports = {}
+    link._mag_cal_saved = {}
     link._mag_cal_ours = True
     send_cmd(link, 42424, p1=0, p2=0, p3=0, p4=0)
 
@@ -73,6 +74,7 @@ def cmd_cal_cancel(link: DroneLink, param, data: dict):
     # state on cancel, which is what the user sees and expects.
     link.add_event(lt("cal_cancel", link.locale), "cal_cancel")
     link._mag_cal_reports = {}
+    link._mag_cal_saved = {}
     link._mag_cal_ours = False
     send_cmd(link, 42426, p1=0)
 

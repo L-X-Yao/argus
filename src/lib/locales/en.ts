@@ -190,6 +190,7 @@ const messages: Record<string, string> = {
   'cal.s.compassDone': 'Compass calibration complete',
   'cal.s.compassReboot': 'Reboot FC to apply compass calibration',
   'cal.s.compassFailed': 'Compass calibration FAILED',
+  'cal.s.compassUnsaved': 'Compass calibration not saved: this session did not start it. Run it again to save it',
   'toast.arming': 'Arming...',
   'toast.armFail': 'Arm failed — check preflight',
   'toast.takeoffFail': 'Takeoff failed — altitude not rising',

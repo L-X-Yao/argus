@@ -134,7 +134,13 @@
       ) {
         done = true; // on WebSerial the text is in the UI language
       }
-      if (/failed|失败/i.test(ev.text) || ev.text === t('cal.s.compassFailed')) failed = true;
+      // Unsaved counts as failed: the vehicle flies on with the offsets it had.
+      if (
+        /failed|失败|not saved|未保存/i.test(ev.text) ||
+        ev.text === t('cal.s.compassFailed') ||
+        ev.text === t('cal.s.compassUnsaved')
+      )
+        failed = true;
     }
     return { pct, done, failed };
   });

@@ -28,14 +28,18 @@ ACCELCAL = str(FIXTURES / "accelcal_sitl.tlog")
 GCS_SYSID = 255
 
 
-def _replay_capturing_events(path: str):
+def _replay_capturing_events(path: str, started_here: bool = True):
     """Replay a fixture and capture EVERY event emitted along the way.
 
     link.events is a display buffer trimmed to the last 50 past 100 entries;
     a full session replay overflows it. Live WS clients see every event via
     the queue cursor, so tests observe the same stream by tapping add_event.
+
+    A replay feeds the FC's frames only, so the command that started the recorded
+    compass run is not among them: started_here says whether this session sent it.
     """
     link = DroneLink()
+    link._mag_cal_ours = started_here
     captured: list[dict] = []
     orig = link.add_event
 
@@ -115,6 +119,15 @@ class TestMagcalReplay:
         assert any("%" in t for t in texts), "no progress events surfaced"
         assert any(("完成" in t) or ("complete" in t) for t in texts), texts[-3:]
         assert not any(("失败" in t) or ("FAILED" in t) for t in texts)
+
+    def test_the_same_run_seen_by_a_session_that_did_not_start_it_is_unsaved(self):
+        """The recorded run was started with autosave off, as Argus starts them, so its
+        reports say unsaved: a station that only watched may not call it complete."""
+        link, events, _ = _replay_capturing_events(MAGCAL, started_here=False)
+        assert link._mag_cal_done is True
+        texts = [e["text"] for e in events if e["event_type"] == "cal_compass"]
+        assert "未保存" in texts[-1]
+        assert not any("完成" in t for t in texts)
 
     def test_progress_events_monotonic(self):
         _, events, _ = _replay_capturing_events(MAGCAL)

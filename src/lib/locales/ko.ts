@@ -168,6 +168,8 @@ const messages: Record<string, string> = {
   'cal.s.compassDone': '나침반 캘리브레이션 완료',
   'cal.s.compassReboot': '나침반 캘리브레이션 적용을 위해 FC를 재부팅하세요',
   'cal.s.compassFailed': '나침반 캘리브레이션 실패',
+  'cal.s.compassUnsaved':
+    '나침반 캘리브레이션이 저장되지 않았습니다: 이 세션에서 시작한 것이 아닙니다. 저장하려면 다시 실행하세요',
   'toast.arming': '시동 중...',
   'toast.armFail': '시동 실패 — 비행 전 점검을 확인하세요',
   'toast.takeoffFail': '이륙 실패 — 고도가 상승하지 않음',

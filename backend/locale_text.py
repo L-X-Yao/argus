@@ -58,6 +58,10 @@ _T = {
     "mag_cal_done": ("罗盘校准完成", "Compass calibration complete"),
     "mag_cal_fail": ("罗盘校准失败", "Compass calibration FAILED"),
     "mag_cal_reboot": ("请重启飞控以使罗盘校准生效", "Reboot the FC to apply compass calibration"),
+    "mag_cal_unsaved": (
+        "罗盘校准结果未保存：这次校准不是本次会话发起的。需要保存请重新校准",
+        "Compass calibration not saved: this session did not start it. Run it again to save it",
+    ),
     "param_reading": ("参数: 正在读取...", "Params: reading..."),
     "param_done": ("参数: %d 个已读取 (%.1fs)", "Params: %d read (%.1fs)"),
     "param_set": ("参数: %s → %.4g", "Param: %s → %.4g"),

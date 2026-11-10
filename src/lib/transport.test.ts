@@ -176,7 +176,7 @@ function mkMagCalProgress(pct: number): Uint8Array {
   return buf;
 }
 
-function mkMagCalReport(calStatus: number, compass = 0, mask = 0): Uint8Array {
+function mkMagCalReport(calStatus: number, compass = 0, mask = 0, saved = 0): Uint8Array {
   // cal_status at offset 42; total length 44 (autosaved+orientation trim
   // is irrelevant after _padView). We pre-pad to 44 in transport, so a
   // 43-byte payload would also work, but tests use the full 44 for clarity.
@@ -184,6 +184,7 @@ function mkMagCalReport(calStatus: number, compass = 0, mask = 0): Uint8Array {
   buf[40] = compass;
   buf[41] = mask;
   buf[42] = calStatus;
+  buf[43] = saved;
   return buf;
 }
 
@@ -824,8 +825,8 @@ describe('serialCalCompass + MAG_CAL events', () => {
 
   describe('with several compasses', () => {
     // tests/fixtures/magcal_sitl.tlog: cal_mask 7, compass 2 reports first and compass 1 last.
-    const report = (compass: number, status: number, mask = 7) =>
-      inject(fcFrame(192, mkMagCalReport(status, compass, mask)));
+    const report = (compass: number, status: number, mask = 7, saved = 0) =>
+      inject(fcFrame(192, mkMagCalReport(status, compass, mask, saved)));
     const accepts = () =>
       writes.filter((w) => writeMsgId(w) === 76 && new DataView(w.buffer).getUint16(38, true) === 42425).length;
     const start = () => {
@@ -862,6 +863,47 @@ describe('serialCalCompass + MAG_CAL events', () => {
       writes.length = 0;
       report(0, 4, 1);
       expect(accepts()).toBe(0);
+    });
+
+    it('does not ask for a reboot after a run it did not start and nobody saved', () => {
+      // Without an accept the FC drops the result at its next boot
+      // (AP_Compass_Calibration.cpp:41-49), so "reboot to apply" would throw it away.
+      serialCalCancel();
+      events.length = 0;
+      report(0, 4, 1);
+      expect(events.map((e) => e.text)).toEqual(['cal.s.compassUnsaved']);
+    });
+
+    it('calls a run it did not start complete when the FC saved it', () => {
+      // autosaved @43 is _cal_saved (AP_Compass_Calibration.cpp:348).
+      serialCalCancel();
+      events.length = 0;
+      report(0, 4, 3, 1);
+      report(1, 4, 3, 1);
+      expect(events.map((e) => e.text)).toEqual(['cal.s.compassDone', 'cal.s.compassReboot']);
+      expect(accepts()).toBe(0);
+    });
+
+    it('leaves the run unsaved when one compass is', () => {
+      serialCalCancel();
+      events.length = 0;
+      report(0, 4, 3, 1);
+      report(1, 4, 3, 0);
+      expect(events.map((e) => e.text)).toEqual(['cal.s.compassUnsaved']);
+    });
+
+    it('reports a run of ours as unsaved once a reconnect has cut us off from it', async () => {
+      start();
+      report(0, 4, 3);
+      await disconnectSerial();
+      await connectSerial(115200, {});
+      app.drone.connected = true; // as the first heartbeat does
+      writes.length = 0;
+      events.length = 0;
+      report(0, 4, 3); // a finished compass keeps reporting
+      report(1, 4, 3);
+      expect(accepts()).toBe(0);
+      expect(events.map((e) => e.text)).toContain('cal.s.compassUnsaved');
     });
 
     it('takes nothing from what is left of the run before', () => {

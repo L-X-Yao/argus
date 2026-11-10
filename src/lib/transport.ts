@@ -1228,15 +1228,17 @@ interface MagCalState {
   pct: number; // last %% emitted, -1 = none
   done: boolean; // one-shot to avoid double "complete" or progress-after-done
   reports: Map<number, number>; // compass id -> MAG_CAL_STATUS, this run
+  saved: Map<number, boolean>; // compass id -> the FC holds the result
   ours: boolean; // a run started here, so the result is ours to accept
 }
 
-const magCal: MagCalState = { pct: -1, done: false, reports: new Map(), ours: false };
+const magCal: MagCalState = { pct: -1, done: false, reports: new Map(), saved: new Map(), ours: false };
 
 function _resetMagCal(): void {
   magCal.pct = -1;
   magCal.done = false;
   magCal.reports.clear();
+  magCal.saved.clear();
   magCal.ours = false;
 }
 
@@ -1266,12 +1268,26 @@ function _onMagCalReport(p: DataView): void {
   if (magCal.done || (magCal.ours && magCal.pct < 0)) return;
   const calMask = p.getUint8(41);
   magCal.reports.set(p.getUint8(40), p.getUint8(42));
+  // autosaved @43 is _cal_saved (AP_Compass_Calibration.cpp:348): set by an accept, or by
+  // the FC itself in a run started with autosave (:41-49).
+  magCal.saved.set(p.getUint8(40), p.getUint8(43) !== 0);
   for (let i = 0; i < 8; i++) {
     if (calMask & (1 << i) && !magCal.reports.has(i)) return;
   }
   magCal.done = true;
   magCal.pct = -1;
-  if ([...magCal.reports.values()].every((status) => status === 4)) {
+  const success = [...magCal.reports.values()].every((status) => status === 4);
+  if (success && !magCal.ours && ![...magCal.saved.values()].every(Boolean)) {
+    // A run this session did not start gets no accept from here, and that includes one of
+    // ours that a reconnect cut us off from. Unsaved, the FC drops the result at its next
+    // boot: the wrong moment to ask for a reboot, as this used to.
+    addEvent({
+      type: 'event',
+      time: new Date().toLocaleTimeString(),
+      text: t('cal.s.compassUnsaved'),
+      event_type: 'cal_compass',
+    });
+  } else if (success) {
     // MAG_CAL_SUCCESS. Backend emits TWO events (done + reboot hint);
     // CalibrationPanel only reads the first for completion detection but
     // we replicate both so the message log looks identical.

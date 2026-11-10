@@ -168,6 +168,8 @@ const messages: Record<string, string> = {
   'cal.s.compassDone': 'コンパスキャリブレーション完了',
   'cal.s.compassReboot': 'コンパスキャリブレーションを適用するためFCを再起動してください',
   'cal.s.compassFailed': 'コンパスキャリブレーション失敗',
+  'cal.s.compassUnsaved':
+    'コンパスキャリブレーションは保存されていません：このセッションで開始したものではありません。保存するにはやり直してください',
   'toast.arming': 'アーム中...',
   'toast.armFail': 'アーム失敗 — プリフライトを確認',
   'toast.takeoffFail': '離陸失敗 — 高度が上昇しません',

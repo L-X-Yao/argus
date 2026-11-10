@@ -69,6 +69,7 @@ class FakeLink:
         self._mag_cal_pct = -1
         self._mag_cal_done = False
         self._mag_cal_reports: dict[int, int] = {}
+        self._mag_cal_saved: dict[int, bool] = {}
         self._mag_cal_ours = False
         self._prearm_messages: list[str] = []
         # state subsystems used by handlers
@@ -410,13 +411,16 @@ class TestIncomingHandlers:
         handle_mag_cal_progress(payload, pl, link)
         assert link._mag_cal_pct == 42
 
-    def test_mag_cal_report_success(self):
+    @pytest.mark.parametrize("autosaved, said", [(1, "完成"), (0, "未保存")])
+    def test_mag_cal_report_success(self, autosaved, said):
+        """autosaved, encoded by pymavlink: the offset the handler reads it at. This link
+        started no run, so what the FC saved by itself is all that makes it complete."""
         link = FakeLink()
         msg = mavlink.MAVLink_mag_cal_report_message(
             compass_id=0,
             cal_mask=1,
             cal_status=4,  # SUCCESS
-            autosaved=0,
+            autosaved=autosaved,
             fitness=0.5,
             ofs_x=0,
             ofs_y=0,
@@ -435,7 +439,8 @@ class TestIncomingHandlers:
         payload, pl = _encode_payload(msg)
         handle_mag_cal_report(payload, pl, link)
         assert link._mag_cal_done is True
-        assert any("完成" in e["text"] or "complete" in e["text"] for e in link.events)
+        assert link._mag_cal_saved == {0: bool(autosaved)}
+        assert said in link.events[0]["text"]
 
     def test_mag_cal_report_waits_for_the_compasses_in_its_mask(self):
         """compass_id and cal_mask, encoded by pymavlink: the offsets the handler reads."""

@@ -168,6 +168,7 @@ const messages: Record<string, string> = {
   'cal.s.compassDone': 'اكتملت معايرة البوصلة',
   'cal.s.compassReboot': 'أعد تشغيل FC لتطبيق معايرة البوصلة',
   'cal.s.compassFailed': 'فشلت معايرة البوصلة',
+  'cal.s.compassUnsaved': 'لم تُحفظ معايرة البوصلة: لم تبدأ في هذه الجلسة. أعد تشغيلها لحفظها',
   'toast.arming': 'جاري التسليح...',
   'toast.armFail': 'فشل التسليح — تحقق من فحوصات ما قبل الطيران',
   'toast.takeoffFail': 'فشل الإقلاع — الارتفاع لا يزداد',

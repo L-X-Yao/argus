@@ -190,6 +190,7 @@ const messages: Record<string, string> = {
   'cal.s.compassDone': '罗盘校准完成',
   'cal.s.compassReboot': '请重启飞控以使罗盘校准生效',
   'cal.s.compassFailed': '罗盘校准失败',
+  'cal.s.compassUnsaved': '罗盘校准结果未保存：这次校准不是本次会话发起的。需要保存请重新校准',
   'toast.arming': '解锁中...',
   'toast.armFail': '解锁失败 — 请检查预飞条件',
   'toast.takeoffFail': '起飞失败 — 高度未上升',
