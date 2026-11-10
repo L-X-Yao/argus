@@ -35,7 +35,8 @@ Argus GCS is a ground control station that runs on a local network. Security con
 - The token is one shared secret. Everyone who holds it can command the vehicle: the observer role keeps a second browser from sending commands by accident, and is not access control. Use a long random value.
 - It speaks plain HTTP. On a network you do not trust, put it behind a TLS proxy, or the token and the commands can be read on the way.
 - It does not sign MAVLink. Use a radio link with encryption of its own, or anyone on the frequency can send the vehicle commands.
-- Video and NTRIP connect to the address you type, a private one included: that is where a vehicle's camera and an RTK base are. They refuse this machine itself and link-local addresses.
+- Video and NTRIP connect to the address you type, a private one included: that is where a vehicle's camera and an RTK base are. They refuse this machine itself, link-local addresses and cloud metadata services.
+- Play only video streams you trust. That rule covers the address you type: ffmpeg then follows the redirects and playlists the server sends it, wherever they point.
 - The Windows package is not code-signed. Check it against `SHA256SUMS.txt` and the build attestation of its release.
 - The Windows package bundles its own Python and libraries, as they were on the day it was built. They are not updated in place: take the newest release.
 

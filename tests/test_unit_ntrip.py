@@ -196,7 +196,9 @@ class TestCmdNtripStartFullPath:
         assert not r or r.get("ok") is not False
         assert thread.called
 
-    @pytest.mark.parametrize("address", ["169.254.169.254", "0.0.0.0", "::1", "::ffff:127.0.0.1"])
+    @pytest.mark.parametrize(
+        "address", ["169.254.169.254", "0.0.0.0", "::1", "::ffff:127.0.0.1", "fd00:ec2::254", "100.100.100.200"]
+    )
     def test_this_machine_and_link_local_are_refused(self, address):
         link = make_link()
         with (

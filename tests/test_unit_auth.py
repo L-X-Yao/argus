@@ -372,10 +372,30 @@ class TestRequestsUnderAnotherName:
 
     def test_rebound_page_cannot_lock_the_operator_out(self, client):
         r = client.post("/api/auth/generate", headers={**self.REBOUND, "Authorization": "x"})
-        assert r.status_code == 403
+        # By this rule, and not by the route's own check of the peer address, which refuses
+        # the test client whatever its Host says.
+        assert (r.status_code, r.json()) == (403, {"error": "host not allowed"})
         assert not TOKEN_FILE.exists()
 
-    @pytest.mark.parametrize("host", ["0.0.0.0:8100", "192.168.1.5:8100", "localhost.evil.example", "[::]:8100", ""])
+    @pytest.mark.parametrize(
+        "host",
+        [
+            "0.0.0.0:8100",
+            "192.168.1.5:8100",
+            "localhost.evil.example",
+            "[::]:8100",
+            "",
+            # Forms no browser sends, read strictly all the same.
+            "[::1].evil.example:8100",
+            "[::1]evil.example",
+            "[localhost]",
+            "[127.0.0.1]:8100",
+            "localhost:8100:evil.example",
+            "evil.example@localhost",
+            "localhost:port",
+            "localhost evil.example",
+        ],
+    )
     def test_other_names_for_this_machine_are_refused(self, client, host):
         assert client.get("/api/ports", headers={"host": host}).status_code == 403
 

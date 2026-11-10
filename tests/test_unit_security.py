@@ -79,6 +79,15 @@ class TestVideoUrlValidation:
     def test_reject_this_machine_and_link_local(self, host):
         assert _validate_video_url(f"rtsp://{host}:554/stream") is not None
 
+    @pytest.mark.parametrize("host", ["[fd00:ec2::254]", "100.100.100.200", "192.0.0.192", "[::ffff:100.100.100.200]"])
+    def test_reject_a_cloud_metadata_service_on_a_private_address(self, host):
+        """AWS over IPv6 and Alibaba Cloud keep theirs outside the link-local block."""
+        assert _validate_video_url(f"http://{host}/latest/meta-data/") is not None
+
+    @pytest.mark.parametrize("host", ["[fd00:ec3::1]", "100.100.100.201", "192.0.0.191"])
+    def test_their_neighbours_are_ordinary_private_addresses(self, host):
+        assert _validate_video_url(f"rtsp://{host}:8554/main.264") is None
+
     def test_hostname_resolving_to_a_private_address_allowed(self):
         def camera_dns(host, *args, **kwargs):
             return [(socket.AF_INET, socket.SOCK_STREAM, 0, "", ("192.168.144.25", 0))]

@@ -19,13 +19,23 @@ FAKE_IP_RANGE = ipaddress.ip_network("198.18.0.0/15")
 VERSION = re.search(r'^version = "([^"]+)"', (ROOT_DIR / "pyproject.toml").read_text(), re.MULTILINE).group(1)
 
 
+# Where a cloud host answers for its metadata service on an address that is not link-local:
+# AWS over IPv6, Alibaba Cloud, and the one listed for Oracle Cloud. The usual
+# 169.254.169.254 is link-local.
+_METADATA_SERVICES = tuple(
+    ipaddress.ip_network(net) for net in ("fd00:ec2::/32", "100.100.100.200/32", "192.0.0.192/32")
+)
+
+
 def off_limits(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
-    """True for an address a camera or caster URL may not name: this machine, link-local
-    (where a cloud host keeps its metadata service), multicast and the reserved blocks.
+    """True for an address a camera or caster URL may not name: this machine, link-local,
+    a cloud host's metadata service, multicast and the reserved blocks.
     A private address passes. A vehicle's camera and an RTK base live on one, and the
     vehicle link already connects to whatever address the operator names."""
     if ip.version == 6 and ip.ipv4_mapped:
         ip = ip.ipv4_mapped
+    if any(ip in net for net in _METADATA_SERVICES):
+        return True
     return ip.is_loopback or ip.is_link_local or ip.is_multicast or ip.is_unspecified or ip.is_reserved
 
 
