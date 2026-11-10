@@ -871,6 +871,34 @@ describe('serialCalCompass + MAG_CAL events', () => {
       serialCalCancel();
       events.length = 0;
       report(0, 4, 1);
+      expect(events).toHaveLength(0); // one more round first
+      report(0, 4, 1);
+      expect(events.map((e) => e.text)).toEqual(['cal.s.compassUnsaved']);
+    });
+
+    it('calls a run complete that the FC saves just after its first report', () => {
+      // A run started with autosave is saved in the FC's next cal_update
+      // (AP_Compass_Calibration.cpp:41-49), which can come after the report that first says
+      // SUCCESS: that report alone would call a saved calibration unsaved.
+      serialCalCancel();
+      events.length = 0;
+      report(0, 4, 3, 0);
+      report(1, 4, 3, 0);
+      expect(events).toHaveLength(0);
+      report(0, 4, 3, 1);
+      report(1, 4, 3, 1);
+      expect(events.map((e) => e.text)).toEqual(['cal.s.compassDone', 'cal.s.compassReboot']);
+      expect(accepts()).toBe(0);
+    });
+
+    it('is told of the next run from its first report after a cancel', () => {
+      // As the backend after cal_cancel: tests/test_unit_mavlink_handlers.py holds it to the same.
+      start();
+      report(0, 5, 1);
+      serialCalCancel();
+      events.length = 0;
+      report(0, 4, 1);
+      report(0, 4, 1);
       expect(events.map((e) => e.text)).toEqual(['cal.s.compassUnsaved']);
     });
 
@@ -887,8 +915,10 @@ describe('serialCalCompass + MAG_CAL events', () => {
     it('leaves the run unsaved when one compass is', () => {
       serialCalCancel();
       events.length = 0;
-      report(0, 4, 3, 1);
-      report(1, 4, 3, 0);
+      for (let round = 0; round < 2; round++) {
+        report(0, 4, 3, 1);
+        report(1, 4, 3, 0);
+      }
       expect(events.map((e) => e.text)).toEqual(['cal.s.compassUnsaved']);
     });
 
@@ -900,8 +930,10 @@ describe('serialCalCompass + MAG_CAL events', () => {
       app.drone.connected = true; // as the first heartbeat does
       writes.length = 0;
       events.length = 0;
-      report(0, 4, 3); // a finished compass keeps reporting
-      report(1, 4, 3);
+      for (let round = 0; round < 2; round++) {
+        report(0, 4, 3); // a finished compass keeps reporting
+        report(1, 4, 3);
+      }
       expect(accepts()).toBe(0);
       expect(events.map((e) => e.text)).toContain('cal.s.compassUnsaved');
     });

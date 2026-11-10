@@ -1230,9 +1230,17 @@ interface MagCalState {
   reports: Map<number, number>; // compass id -> MAG_CAL_STATUS, this run
   saved: Map<number, boolean>; // compass id -> the FC holds the result
   ours: boolean; // a run started here, so the result is ours to accept
+  recheck: boolean; // an unsaved run of someone else's gets one more round
 }
 
-const magCal: MagCalState = { pct: -1, done: false, reports: new Map(), saved: new Map(), ours: false };
+const magCal: MagCalState = {
+  pct: -1,
+  done: false,
+  reports: new Map(),
+  saved: new Map(),
+  ours: false,
+  recheck: false,
+};
 
 function _resetMagCal(): void {
   magCal.pct = -1;
@@ -1240,6 +1248,7 @@ function _resetMagCal(): void {
   magCal.reports.clear();
   magCal.saved.clear();
   magCal.ours = false;
+  magCal.recheck = false;
 }
 
 function _onMagCalProgress(p: DataView): void {
@@ -1274,10 +1283,20 @@ function _onMagCalReport(p: DataView): void {
   for (let i = 0; i < 8; i++) {
     if (calMask & (1 << i) && !magCal.reports.has(i)) return;
   }
+  const success = [...magCal.reports.values()].every((status) => status === 4);
+  const saved = [...magCal.saved.values()].every(Boolean);
+  if (success && !saved && !magCal.ours && !magCal.recheck) {
+    // The FC saves a run started with autosave in its next cal_update (:41-49), which may
+    // come after the report that first says SUCCESS. Every compass reports again, and that
+    // round decides.
+    magCal.recheck = true;
+    magCal.reports.clear();
+    magCal.saved.clear();
+    return;
+  }
   magCal.done = true;
   magCal.pct = -1;
-  const success = [...magCal.reports.values()].every((status) => status === 4);
-  if (success && !magCal.ours && ![...magCal.saved.values()].every(Boolean)) {
+  if (success && !magCal.ours && !saved) {
     // A run this session did not start gets no accept from here, and that includes one of
     // ours that a reconnect cut us off from. Unsaved, the FC drops the result at its next
     // boot: the wrong moment to ask for a reboot, as this used to.

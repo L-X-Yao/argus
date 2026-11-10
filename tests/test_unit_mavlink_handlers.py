@@ -355,6 +355,7 @@ class TestMagCalReport:
     def test_a_run_started_elsewhere_is_not_ours_to_accept(self):
         link = make_link_connected()
         self._report(link, 0, 4, mask=1)
+        self._report(link, 0, 4, mask=1)
         assert link._mag_cal_done is True
         assert self._accepts(link) == 0
 
@@ -363,7 +364,22 @@ class TestMagCalReport:
         (AP_Compass_Calibration.cpp:41-49), so "reboot to apply" would throw it away."""
         link = make_link_connected()
         self._report(link, 0, 4, mask=1)
+        assert self._texts(link) == [] and link._mag_cal_done is False  # one more round first
+        self._report(link, 0, 4, mask=1)
         assert self._texts(link) == ["罗盘校准结果未保存：这次校准不是本次会话发起的。需要保存请重新校准"]
+
+    def test_a_run_the_fc_saves_just_after_its_first_report_is_complete(self):
+        """A run started with autosave is saved in the FC's next cal_update
+        (AP_Compass_Calibration.cpp:41-49), which can come after the report that first says
+        SUCCESS: that report alone would call a saved calibration unsaved."""
+        link = make_link_connected()
+        self._report(link, 0, 4, mask=3, saved=0)
+        self._report(link, 1, 4, mask=3, saved=0)
+        assert self._texts(link) == []
+        self._report(link, 0, 4, mask=3, saved=1)
+        self._report(link, 1, 4, mask=3, saved=1)
+        assert self._texts(link) == ["罗盘校准完成", "请重启飞控以使罗盘校准生效"]
+        assert self._accepts(link) == 0
 
     def test_a_run_of_ours_is_unsaved_once_the_user_has_connected_again(self):
         """Disconnect and Connect during a run: connect() starts a session that owns no run,
@@ -380,7 +396,9 @@ class TestMagCalReport:
         link._running = False
         link.connected = True  # as the first heartbeat does
         link.events.clear()
-        self._report(link, 1, 4, mask=3)
+        for _ in range(2):  # a finished compass keeps reporting
+            self._report(link, 0, 4, mask=3)
+            self._report(link, 1, 4, mask=3)
         assert self._accepts(link) == 0
         assert self._texts(link) == ["罗盘校准结果未保存：这次校准不是本次会话发起的。需要保存请重新校准"]
 
@@ -404,8 +422,9 @@ class TestMagCalReport:
 
     def test_one_compass_left_unsaved_leaves_the_run_unsaved(self):
         link = make_link_connected()
-        self._report(link, 0, 4, mask=3, saved=1)
-        self._report(link, 1, 4, mask=3, saved=0)
+        for _ in range(2):
+            self._report(link, 0, 4, mask=3, saved=1)
+            self._report(link, 1, 4, mask=3, saved=0)
         assert len(self._texts(link)) == 1 and "未保存" in self._texts(link)[0]
 
     def test_a_run_of_ours_is_complete_before_the_fc_reports_it_saved(self):
@@ -422,7 +441,22 @@ class TestMagCalReport:
         p = bytearray(43)  # MAVLink 2 drops the trailing zero bytes
         p[40], p[41], p[42] = 0, 1, 4
         handle_mag_cal_report(p, len(p), link)
+        handle_mag_cal_report(p, len(p), link)
         assert "未保存" in self._texts(link)[0]
+
+    def test_a_cancel_forgets_the_run_before_as_a_new_session_does(self):
+        """Both ends of the run: the next one, whoever starts it, is told from its first report.
+        WebSerial has always done so (_resetMagCal), and the two links must show the same."""
+        link = make_link_connected()
+        self._start(link)
+        self._report(link, 0, 5, mask=1)
+        assert link._mag_cal_done is True
+        execute("cal_cancel", None, link)
+        assert (link._mag_cal_done, link._mag_cal_pct, link._mag_cal_reports) == (False, -1, {})
+        link.events.clear()
+        self._report(link, 0, 4, mask=1)
+        self._report(link, 0, 4, mask=1)
+        assert self._texts(link) == ["罗盘校准结果未保存：这次校准不是本次会话发起的。需要保存请重新校准"]
 
     def test_a_cancelled_run_is_not_accepted(self):
         link = make_link_connected()
@@ -1139,7 +1173,7 @@ class TestRemainingShortPayloads:
     def test_mag_cal_progress_empty(self):
         link = make_link()
         handle_mag_cal_progress(b"", 0, link)
-        assert not hasattr(link, "_mag_cal_pct")
+        assert link._mag_cal_pct == -1
 
     def test_mission_ack_empty(self):
         link = make_link()

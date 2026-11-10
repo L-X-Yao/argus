@@ -187,3 +187,13 @@ class LogState:
 @dataclass
 class TrafficState:
     _adsb_vehicles: dict[int, dict] = field(default_factory=dict)
+
+
+def reset_mag_cal(link) -> None:
+    """Forget the compass run: at a new session, at the start of a run and at a cancel."""
+    link._mag_cal_pct = -1  # the last percentage shown
+    link._mag_cal_done = False  # the run has been reported, and its later reports are repeats
+    link._mag_cal_reports = {}  # compass id -> MAG_CAL_STATUS, this run
+    link._mag_cal_saved = {}  # compass id -> the FC holds the result
+    link._mag_cal_ours = False  # a run started here, so the result is ours to accept
+    link._mag_cal_recheck = False  # an unsaved run of someone else's gets one more round

@@ -45,6 +45,7 @@ from .state import (
     RcServoState,
     TrafficState,
     VehicleState,
+    reset_mag_cal,
 )
 
 _MSG_NAMES = {
@@ -106,9 +107,7 @@ class DroneLink:
         self._thread = None
         self._lock = threading.Lock()  # protects _ser.write() only
         self._state_lock = threading.RLock()  # protects all state reads/writes (handlers + get_state)
-        self._mag_cal_reports: dict[int, int] = {}  # compass id -> MAG_CAL_STATUS, this run
-        self._mag_cal_saved: dict[int, bool] = {}  # compass id -> the FC holds the result
-        self._mag_cal_ours = False  # a run started here, so the result is ours to accept
+        reset_mag_cal(self)
         self._buf = b""
         self.sq = 0
         self._parse_errors = 0
@@ -248,7 +247,8 @@ class DroneLink:
             # suppress the warning) until the first heartbeat.
             self.vehicle.autopilot = 0
             self._unsupported_fc_warned = False
-            self._mag_cal_ours = False
+            # A new session owns no run and has seen none, as on WebSerial (_resetMagCal).
+            reset_mag_cal(self)
             self.attitude.home_lat = self.attitude.home_lon = 0.0
             self.attitude.dist_home = 0.0
             self.vehicle.armed_time = 0.0

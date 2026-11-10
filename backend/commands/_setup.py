@@ -7,6 +7,7 @@ from typing import TYPE_CHECKING
 from ..crc_extras import CRC_EXTRA
 from ..locale_text import lt
 from ..mavlink_frame import bm
+from ..state import reset_mag_cal
 from ._helpers import send_cmd
 
 if TYPE_CHECKING:
@@ -18,10 +19,7 @@ if TYPE_CHECKING:
 
 def cmd_cal_compass(link: DroneLink, param, data: dict):
     link.add_event(lt("cal_compass", link.locale), "cal_compass")
-    link._mag_cal_pct = -1
-    link._mag_cal_done = False
-    link._mag_cal_reports = {}
-    link._mag_cal_saved = {}
+    reset_mag_cal(link)
     link._mag_cal_ours = True
     send_cmd(link, 42424, p1=0, p2=0, p3=0, p4=0)
 
@@ -73,9 +71,7 @@ def cmd_cal_cancel(link: DroneLink, param, data: dict):
     # cancellation isn't really meaningful. The frontend still resets its UI
     # state on cancel, which is what the user sees and expects.
     link.add_event(lt("cal_cancel", link.locale), "cal_cancel")
-    link._mag_cal_reports = {}
-    link._mag_cal_saved = {}
-    link._mag_cal_ours = False
+    reset_mag_cal(link)
     send_cmd(link, 42426, p1=0)
 
 

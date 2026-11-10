@@ -71,6 +71,7 @@ class FakeLink:
         self._mag_cal_reports: dict[int, int] = {}
         self._mag_cal_saved: dict[int, bool] = {}
         self._mag_cal_ours = False
+        self._mag_cal_recheck = False
         self._prearm_messages: list[str] = []
         # state subsystems used by handlers
         from backend.state import (
@@ -438,6 +439,9 @@ class TestIncomingHandlers:
         )
         payload, pl = _encode_payload(msg)
         handle_mag_cal_report(payload, pl, link)
+        if not autosaved:  # an unsaved run of someone else's is given one more round
+            assert link._mag_cal_done is False
+            handle_mag_cal_report(payload, pl, link)
         assert link._mag_cal_done is True
         assert link._mag_cal_saved == {0: bool(autosaved)}
         assert said in link.events[0]["text"]
@@ -450,7 +454,7 @@ class TestIncomingHandlers:
                 compass_id=compass_id,
                 cal_mask=0b101,
                 cal_status=4,
-                autosaved=0,
+                autosaved=1,
                 fitness=0.5,
                 ofs_x=1,
                 ofs_y=2,

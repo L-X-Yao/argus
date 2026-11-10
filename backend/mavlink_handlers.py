@@ -371,11 +371,21 @@ def handle_mag_cal_report(p: bytes, pl: int, link: DroneLink) -> None:
     link._mag_cal_saved[compass] = bool(p[43])
     if any(cal_mask >> i & 1 and i not in reports for i in range(8)):
         return
+    success = all(status == 4 for status in reports.values())
+    saved = all(link._mag_cal_saved.values())
+    if success and not saved and not link._mag_cal_ours and not link._mag_cal_recheck:
+        # The FC saves a run started with autosave in its next cal_update (:41-49), which may
+        # come after the report that first says SUCCESS. Every compass reports again, and
+        # that round decides.
+        link._mag_cal_recheck = True
+        reports.clear()
+        link._mag_cal_saved.clear()
+        return
     link._mag_cal_done = True
     link._mag_cal_pct = -1
-    if not all(status == 4 for status in reports.values()):
+    if not success:
         link.add_event(lt("mag_cal_fail", link.locale), "cal_compass")
-    elif link._mag_cal_ours or all(link._mag_cal_saved.values()):
+    elif link._mag_cal_ours or saved:
         link.add_event(lt("mag_cal_done", link.locale), "cal_compass")
         link.add_event(lt("mag_cal_reboot", link.locale), "cal_compass")
         # Started with autosave 0 (cmd_cal_compass), so the FC keeps a result only when told
