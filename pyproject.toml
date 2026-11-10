@@ -15,9 +15,12 @@ dependencies = [
     "fastapi>=0.115.0,<1.0",
     "uvicorn[standard]>=0.34.0,<1.0",
     "websockets>=14.0,<17.0",
-    "python-multipart>=0.0.9",
+    "python-multipart>=0.0.31",  # CVE-2026-53538, CVE-2026-53539, CVE-2026-53540
     "pyserial>=3.5",
     "python-dotenv>=1.0",
+    # Not imported here: FastAPI brings them, and older ones have known holes.
+    "starlette>=1.3.1",  # CVE-2026-54282, CVE-2026-54283
+    "anyio>=4.14.2",  # CVE-2026-63374, CVE-2026-64847
 ]
 
 [project.urls]
@@ -30,6 +33,8 @@ dev = [
     "pytest>=8.0",
     "pytest-asyncio>=0.25.0",
     "httpx>=0.28.0",
+    # Starlette's test client asks for httpx2 since 1.8. httpx2 needs Python 3.11.
+    "httpx2>=2.16; python_version >= '3.11'",
     "pytest-cov>=6.0",
     "ruff>=0.17,<0.18",  # npm run format:check needs CI and local on one formatter
     "pymavlink>=2.4.49",
