@@ -15,7 +15,7 @@ from backend.drone_link import DroneLink
 from backend.tiles import TILE_SOURCES, TILE_URLS
 from backend.ws_manager import WSManager
 
-client = TestClient(app, raise_server_exceptions=False)
+client = TestClient(app, base_url="http://localhost", raise_server_exceptions=False)
 
 
 @pytest.fixture(autouse=True)

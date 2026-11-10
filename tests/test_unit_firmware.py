@@ -9,7 +9,7 @@ from backend.app import app
 from backend.drone_link import DroneLink
 from backend.ws_manager import WSManager
 
-client = TestClient(app, raise_server_exceptions=False)
+client = TestClient(app, base_url="http://localhost", raise_server_exceptions=False)
 
 
 @pytest.fixture(autouse=True)

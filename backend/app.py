@@ -4,6 +4,7 @@ import glob
 import os
 import sys
 from contextlib import asynccontextmanager
+from urllib.parse import urlsplit
 
 from fastapi import FastAPI, Request, WebSocket
 from fastapi.middleware.cors import CORSMiddleware
@@ -50,6 +51,8 @@ _cors_origins = [
     if s.strip()
 ]
 app.state.cors_origins = _cors_origins
+# The names a browser may know this server by: see auth._asked_by_our_name.
+app.state.own_hosts = {urlsplit(origin).hostname for origin in _cors_origins} - {None}
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins,

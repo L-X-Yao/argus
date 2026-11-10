@@ -38,7 +38,7 @@ def client():
     if not hasattr(app.state, "link"):
         app.state.link = DroneLink()
         app.state.ws_mgr = WSManager(app.state.link)
-    return TestClient(app, raise_server_exceptions=False)
+    return TestClient(app, base_url="http://localhost", raise_server_exceptions=False)
 
 
 class TestVideoModule:

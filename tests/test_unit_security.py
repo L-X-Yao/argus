@@ -200,7 +200,7 @@ class TestMbtilesPathTraversal:
 
         from backend.app import app
 
-        client = TestClient(app)
+        client = TestClient(app, base_url="http://localhost")
         r = client.get("/api/mbtiles/../../etc/passwd.mbtiles/0/0/0")
         assert r.status_code == 404
 
@@ -209,7 +209,7 @@ class TestMbtilesPathTraversal:
 
         from backend.app import app
 
-        client = TestClient(app)
+        client = TestClient(app, base_url="http://localhost")
         r = client.get("/api/mbtiles/%2F..%2F..%2Fetc%2Fpasswd.mbtiles/0/0/0")
         assert r.status_code == 404
 
@@ -224,7 +224,7 @@ class TestFirmwareUploadSanitization:
         import backend.firmware as fw_mod
         from backend.app import app  # noqa: PLC0415
 
-        client = TestClient(app)
+        client = TestClient(app, base_url="http://localhost")
         with patch.object(fw_mod, "FIRMWARE_DIR", tmp_path):
             r = client.post(
                 "/api/firmware/upload",
@@ -240,7 +240,7 @@ class TestFirmwareUploadSanitization:
 
         from backend.app import app
 
-        client = TestClient(app)
+        client = TestClient(app, base_url="http://localhost")
         r = client.post(
             "/api/firmware/upload",
             files={"file": ("malware.exe", b"\x00", "application/octet-stream")},

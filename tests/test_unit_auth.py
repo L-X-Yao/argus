@@ -51,7 +51,7 @@ def client():
     if not hasattr(app.state, "link"):
         app.state.link = DroneLink()
         app.state.ws_mgr = WSManager(app.state.link)
-    return TestClient(app, raise_server_exceptions=False)
+    return TestClient(app, base_url="http://localhost", raise_server_exceptions=False)
 
 
 class TestTokenGeneration:
@@ -343,6 +343,69 @@ class TestRequestsFromOtherPages:
 
     def test_routes_outside_the_api_are_not_checked(self, client):
         assert client.get("/health", headers={"sec-fetch-site": "cross-site"}).status_code == 200
+
+
+class TestRequestsUnderAnotherName:
+    """DNS rebinding: a hostile page gets its own name pointed at this machine, and is then
+    same-origin with us to the browser. Only the Host header still gives it away."""
+
+    REBOUND = {"host": "evil.example:8100"}
+
+    @pytest.mark.parametrize("path", ["/api/session", "/api/log", "/api/video/stop", "/api/auth/status"])
+    def test_read_is_refused(self, client, path):
+        r = client.get(path, headers=self.REBOUND)
+        assert (r.status_code, r.json()) == (403, {"error": "host not allowed"})
+
+    def test_write_with_any_authorization_header_is_refused(self, client):
+        # Same-origin to the browser, so the page may add the header that skips the page check.
+        headers = {**self.REBOUND, "origin": "http://evil.example:8100", "Authorization": "x"}
+        assert client.post("/api/tile_cache_clear", headers=headers).status_code == 403
+
+    def test_rebound_page_cannot_lock_the_operator_out(self, client):
+        r = client.post("/api/auth/generate", headers={**self.REBOUND, "Authorization": "x"})
+        assert r.status_code == 403
+        assert not TOKEN_FILE.exists()
+
+    @pytest.mark.parametrize("host", ["0.0.0.0:8100", "192.168.1.5:8100", "localhost.evil.example", "[::]:8100", ""])
+    def test_other_names_for_this_machine_are_refused(self, client, host):
+        assert client.get("/api/ports", headers={"host": host}).status_code == 403
+
+    @pytest.mark.parametrize(
+        "host",
+        [
+            "localhost:8100",
+            "localhost",
+            "LOCALHOST:5173",
+            "localhost.:8100",
+            "127.0.0.1:8100",
+            "127.0.0.2",
+            "[::1]:8100",
+        ],
+    )
+    def test_loopback_names_pass(self, client, host):
+        assert client.get("/api/ports", headers={"host": host}).status_code == 200
+
+    def test_host_of_a_configured_origin_passes(self, client, monkeypatch):
+        monkeypatch.setattr(app.state, "own_hosts", {"gcs.example"})
+        assert client.get("/api/ports", headers={"host": "gcs.example:8100"}).status_code == 200
+        assert client.get("/api/ports", headers={"host": "other.example:8100"}).status_code == 403
+
+    def test_default_origins_name_this_machine_only(self):
+        from backend.app import _cors_origins
+        from backend.auth import _is_this_machine
+
+        assert app.state.own_hosts == {"localhost", "127.0.0.1"}
+        assert all(_is_this_machine(host) for host in app.state.own_hosts), _cors_origins
+
+    def test_with_a_token_the_name_is_not_checked(self, client):
+        # The page has neither the token nor the cookie, which belong to the real name.
+        token = generate_token()
+        assert client.get("/api/ports", headers=self.REBOUND).status_code == 401
+        headers = {**self.REBOUND, "Authorization": f"Bearer {token}"}
+        assert client.get("/api/ports", headers=headers).status_code == 200
+
+    def test_routes_outside_the_api_are_not_checked(self, client):
+        assert client.get("/health", headers=self.REBOUND).status_code == 200
 
 
 class TestConcurrentAuth:

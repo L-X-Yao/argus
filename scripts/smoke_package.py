@@ -113,6 +113,8 @@ def main() -> int:
             record("POST from itself", request(f"{base}/api/tile_cache_clear", b"{}", own)[0] == 200)
             image = {"Sec-Fetch-Site": "cross-site", "Sec-Fetch-Dest": "image"}
             record("image from another site", request(f"{base}/api/video/stop", None, image)[0] == 403)
+            rebound = {"Host": f"evil.example:{PORT}", "Authorization": "x"}
+            record("another site's name for this machine", request(f"{base}/api/ports", None, rebound)[0] == 403)
 
             ws = subprocess.run([python, "-c", WS_CHECK], cwd=root, env=env, timeout=120)
             record("live telemetry over the websocket", ws.returncode == 0)

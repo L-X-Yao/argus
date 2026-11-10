@@ -12,7 +12,7 @@ from backend.drone_link import DroneLink
 from backend.terrain import _get_srtm_elevation
 from backend.ws_manager import WSManager
 
-client = TestClient(app, raise_server_exceptions=False)
+client = TestClient(app, base_url="http://localhost", raise_server_exceptions=False)
 
 
 @pytest.fixture(autouse=True)

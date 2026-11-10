@@ -96,6 +96,23 @@ def _from_own_page(request: Request) -> bool:
     return request.headers.get("sec-fetch-site", "same-origin") in ("same-origin", "none")
 
 
+def _is_this_machine(host: str) -> bool:
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return host.lower().rstrip(".") == "localhost"
+
+
+def _asked_by_our_name(request: Request) -> bool:
+    """Tell the names we answer to from one that another site has pointed at this machine.
+    After DNS rebinding a hostile page is same-origin with us to the browser: it sends no
+    Origin on a read, no Fetch Metadata, and may add any header. Only Host still names it.
+    0.0.0.0 reaches this machine too, from any page, and browsers send it no Fetch Metadata."""
+    host = request.headers.get("host", "").strip().lower()
+    name = host[1 : host.find("]")] if host.startswith("[") else host.rsplit(":", 1)[0]
+    return _is_this_machine(name) or name in request.app.state.own_hosts
+
+
 def auth_required() -> bool:
     return _load_token() is not None
 
@@ -108,6 +125,10 @@ async def auth_middleware(request: Request, call_next):
     if path.startswith("/api/") and "Authorization" not in request.headers and not _from_own_page(request):
         return JSONResponse(status_code=403, content={"error": "origin not allowed"})
     if not auth_required():
+        # Nothing else stands between a page and the API here, and the rule above lets any
+        # request with an Authorization header through.
+        if path.startswith("/api/") and not _asked_by_our_name(request):
+            return JSONResponse(status_code=403, content={"error": "host not allowed"})
         return await call_next(request)
     # `/sw.js` and `/manifest.json` MUST be reachable without an Authorization
     # header — browsers don't send auth on service-worker installs or manifest
@@ -136,11 +157,7 @@ def refuse_if_exposed(host: str) -> None:
     machine and nowhere else. A blank host binds every interface."""
     if auth_required():
         return
-    try:
-        local = ipaddress.ip_address(host).is_loopback
-    except ValueError:
-        local = host.lower() == "localhost"
-    if not local:
+    if not _is_this_machine(host):
         raise SystemExit(
             f"Refusing to listen on {host or 'every interface'} without a token: anyone who can "
             "reach it could arm the vehicle. Set GCS_AUTH_TOKEN, or listen on 127.0.0.1."
