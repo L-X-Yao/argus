@@ -463,13 +463,19 @@ class TestFfmpegCommand:
         assert "-rtsp_transport" not in args
         assert args[:2] == ["-i", url]
 
-    @pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="needs ffmpeg")
     def test_real_ffmpeg_turns_an_http_stream_into_jpeg_frames(self, tmp_path):
         """With every Popen mocked, nothing noticed that only rtsp:// URLs could ever play."""
         import functools
         import http.server
         import os
         import threading
+
+        if shutil.which("ffmpeg") is None:
+            # The check job installs ffmpeg and sets this: skipped there, the one test that
+            # runs the real program would pass forever.
+            if os.environ.get("ARGUS_REQUIRE_FFMPEG"):
+                pytest.fail("ARGUS_REQUIRE_FFMPEG is set and ffmpeg is not installed")
+            pytest.skip("needs ffmpeg")
 
         made = subprocess.run(
             ["ffmpeg", "-loglevel", "error", "-f", "lavfi", "-i", "testsrc=duration=1:size=160x120:rate=10"]

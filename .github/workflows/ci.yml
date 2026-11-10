@@ -46,8 +46,14 @@ jobs:
       - name: Format check
         run: npm run format:check
 
+      # One test runs the real program on a real stream, and skips where there is none.
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends ffmpeg
+
       - name: Python tests with coverage
         run: python -m pytest tests/test_unit_*.py tests/test_contract_*.py -v --cov=backend --cov-report=term-missing --cov-fail-under=95
+        env:
+          ARGUS_REQUIRE_FFMPEG: '1'
 
       - name: TypeScript check
         run: npx svelte-check --tsconfig ./tsconfig.json
