@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import json
 import logging
+import math
 
 from fastapi import WebSocket, WebSocketDisconnect
 
@@ -12,6 +13,39 @@ from .drone_link import DroneLink
 from .locale_text import lt
 
 logger = logging.getLogger(__name__)
+
+
+def _strict(obj, path: list, found: list):
+    """A copy of obj that JSON can carry: a NaN or an infinity becomes None, and found gets
+    where each one was and which it was."""
+    if isinstance(obj, float):
+        if math.isfinite(obj):
+            return obj
+        found.append([*path, "NaN" if obj != obj else "Infinity" if obj > 0 else "-Infinity"])
+        return None
+    if isinstance(obj, dict):
+        return {key: _strict(value, [*path, key], found) for key, value in obj.items()}
+    if isinstance(obj, (list, tuple)):
+        return [_strict(value, [*path, i], found) for i, value in enumerate(obj)]
+    return obj
+
+
+def dumps(msg: dict) -> str:
+    """JSON that the page can parse. A float the FC sent as NaN (the variances of an estimator
+    that has diverged, an attitude) is written by json.dumps as the bare word NaN, which is
+    no JSON: JSON.parse threw, and since NaN never equals itself the value went out again
+    with every push. The page dropped every state message from then on and went on showing
+    the last values it had, with no alarm. Each such value goes as null now, and
+    "_nonfinite" lists where they were for the page to put back: see restoreNonFinite in
+    src/lib/ws.ts."""
+    try:
+        return json.dumps(msg, allow_nan=False)
+    except ValueError:
+        found: list = []
+        clean = _strict(msg, [], found)
+        clean["_nonfinite"] = found
+        return json.dumps(clean, allow_nan=False)
+
 
 _VALID_LOCALES = frozenset(("zh", "en", "ja", "ko", "de", "fr", "es", "pt", "ru", "ar"))
 
@@ -44,7 +78,7 @@ class WSManager:
         return len(self._clients)
 
     async def broadcast(self, msg: dict) -> None:
-        text = json.dumps(msg)
+        text = dumps(msg)
         for ws in list(self._clients):
             try:
                 await ws.send_text(text)
@@ -98,7 +132,7 @@ class WSManager:
                     baud = msg.get("baud", cfg.SERIAL_BAUD)
                     if not validate_port(port):
                         await ws.send_text(
-                            json.dumps(
+                            dumps(
                                 {
                                     "type": "connect_result",
                                     "ok": False,
@@ -110,7 +144,7 @@ class WSManager:
                     baud = sanitize_baud(baud)
                     ok = await asyncio.to_thread(self.link.connect, port, baud)
                     await ws.send_text(
-                        json.dumps(
+                        dumps(
                             {
                                 "type": "connect_result",
                                 "ok": ok,
@@ -121,7 +155,7 @@ class WSManager:
                 elif msg_type == "disconnect":
                     await asyncio.to_thread(self.link.disconnect)
                     await ws.send_text(
-                        json.dumps(
+                        dumps(
                             {
                                 "type": "connect_result",
                                 "ok": True,
@@ -147,11 +181,11 @@ class WSManager:
                     )
                 elif msg_type == "request_handoff":
                     if self._pilot_ws and self._pilot_ws != ws and self._pilot_ws in self._clients:
-                        await self._pilot_ws.send_text(json.dumps({"type": "handoff_request", "from": id(ws)}))
+                        await self._pilot_ws.send_text(dumps({"type": "handoff_request", "from": id(ws)}))
                     else:
                         self._pilot_ws = ws
                         self._roles[id(ws)] = "pilot"
-                        await ws.send_text(json.dumps({"type": "handoff_granted"}))
+                        await ws.send_text(dumps({"type": "handoff_granted"}))
                 elif msg_type == "handoff_accept":
                     target_id = msg.get("target")
                     for client in self._clients:
@@ -159,8 +193,8 @@ class WSManager:
                             self._pilot_ws = client
                             self._roles[id(client)] = "pilot"
                             self._roles[id(ws)] = "observer"
-                            await client.send_text(json.dumps({"type": "handoff_granted"}))
-                            await ws.send_text(json.dumps({"type": "handoff_released"}))
+                            await client.send_text(dumps({"type": "handoff_granted"}))
+                            await ws.send_text(dumps({"type": "handoff_released"}))
                             break
                 elif msg_type == "command":
                     # Observer clients must not be able to control the
@@ -188,7 +222,7 @@ class WSManager:
                     is_implicit_pilot = self._pilot_ws is None and role is None and operator is ws
                     if role != "pilot" and not is_implicit_pilot:
                         await ws.send_text(
-                            json.dumps(
+                            dumps(
                                 {
                                     "type": "cmd_result",
                                     "ok": False,
@@ -201,7 +235,7 @@ class WSManager:
                     param = msg.get("param")
                     result = commands.execute(cmd, param, self.link, data=msg)
                     if result:
-                        await ws.send_text(json.dumps({"type": "cmd_result", **result}))
+                        await ws.send_text(dumps({"type": "cmd_result", **result}))
         except WebSocketDisconnect:
             pass
         except (ConnectionError, RuntimeError):
@@ -230,7 +264,7 @@ class WSManager:
                     delta["type"] = "state"
                     delta["connected"] = state["connected"]
                 if delta:
-                    await ws.send_text(json.dumps(delta))
+                    await ws.send_text(dumps(delta))
                     last_sent.update(state)
                 with self.link._state_lock:
                     events = list(self.link.events)
@@ -246,7 +280,7 @@ class WSManager:
                     for ev in events:
                         if ev.get("seq", 0) > event_seq_cursor:
                             await ws.send_text(
-                                json.dumps(
+                                dumps(
                                     {
                                         "type": "event",
                                         "time": ev["time"],
@@ -260,13 +294,13 @@ class WSManager:
                     dl_cursor = 0
                 if len(dlmsg) > dl_cursor:
                     for msg in dlmsg[dl_cursor:]:
-                        await ws.send_text(json.dumps(msg))
+                        await ws.send_text(dumps(msg))
                     dl_cursor = len(dlmsg)
                 if log_cursor > len(logmsg):
                     log_cursor = 0
                 if len(logmsg) > log_cursor:
                     for msg in logmsg[log_cursor:]:
-                        await ws.send_text(json.dumps(msg))
+                        await ws.send_text(dumps(msg))
                     log_cursor = len(logmsg)
                 # A new request_all() clears _messages and refills it. Reset the
                 # cursor on the generation change, not just on an observed length
@@ -284,7 +318,7 @@ class WSManager:
                     others = [m for m in batch if m["type"] != "param_value"]
                     if pvals:
                         await ws.send_text(
-                            json.dumps(
+                            dumps(
                                 {
                                     "type": "param_batch",
                                     "params": pvals,
@@ -292,11 +326,11 @@ class WSManager:
                             )
                         )
                     for msg in others:
-                        await ws.send_text(json.dumps(msg))
+                        await ws.send_text(dumps(msg))
                     param_cursor = len(pmsg)
                 if self.link.inspector_enabled:
                     await ws.send_text(
-                        json.dumps(
+                        dumps(
                             {
                                 "type": "inspector",
                                 "messages": self.link.get_inspector_data(),
@@ -311,7 +345,7 @@ class WSManager:
                         text = ""
                 if text:
                     await ws.send_text(
-                        json.dumps(
+                        dumps(
                             {
                                 "type": "console_output",
                                 "text": text,

@@ -20,6 +20,7 @@
   import { startScheduler } from './lib/scheduler.svelte';
   import { panels } from './lib/panels.svelte';
   import { apiUrl, login } from './lib/backend';
+  import { worst } from './lib/worst';
   import LoginDialog from './components/shared/LoginDialog.svelte';
   import {
     ChevronUp,
@@ -357,9 +358,9 @@
 
   let monitorWarn = $derived(
     app.drone.connected &&
-      (Math.max(app.drone.vibe[0], app.drone.vibe[1], app.drone.vibe[2]) > 30 ||
+      (worst(app.drone.vibe[0], app.drone.vibe[1], app.drone.vibe[2]) > 30 ||
         (app.drone.ekf_flags & 0x480) !== 0 ||
-        Math.max(app.drone.ekf_vel, app.drone.ekf_pos_h, app.drone.ekf_pos_v, app.drone.ekf_compass) > 0.8),
+        worst(app.drone.ekf_vel, app.drone.ekf_pos_h, app.drone.ekf_pos_v, app.drone.ekf_compass) > 0.8),
   );
   let planCount = $derived(app.waypoints.length);
   let paramProgress = $derived(app.drone.param_fetching);

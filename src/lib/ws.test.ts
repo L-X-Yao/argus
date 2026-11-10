@@ -263,6 +263,35 @@ describe('message handling', () => {
     expect(appendConsole).toHaveBeenCalledWith('hello');
   });
 
+  // The text tests/test_unit_ws_json.py holds the backend to for an estimator that has diverged.
+  const DIVERGED =
+    '{"type": "state", "connected": true, "roll": null, "pitch": 1.5, "vibe": [0.1, null, null], "ekf_vel": null, ' +
+    '"_nonfinite": [["roll", "NaN"], ["vibe", 1, "Infinity"], ["vibe", 2, "-Infinity"], ["ekf_vel", "NaN"]]}';
+
+  it('puts back the NaN and the infinities that the backend had to send as null', async () => {
+    await freshConnect();
+    mockWs.onopen?.(new Event('open'));
+    mockWs.onmessage?.(new MessageEvent('message', { data: DIVERGED }));
+    const { updateState } = await import('./stores.svelte');
+    const state = vi.mocked(updateState).mock.calls.at(-1)![0] as Record<string, unknown>;
+    expect(state.roll).toBeNaN();
+    expect(state.ekf_vel).toBeNaN();
+    expect(state.vibe).toEqual([0.1, Infinity, -Infinity]);
+    expect(state.pitch).toBe(1.5);
+    expect(state).not.toHaveProperty('_nonfinite');
+  });
+
+  it('puts them back inside a downloaded mission', async () => {
+    await fire({
+      type: 'mission_downloaded',
+      waypoints: [{ alt: 30, p4: null }],
+      _nonfinite: [['waypoints', 0, 'p4', 'NaN']],
+    });
+    const { loadDownloadedMission } = await import('./stores.svelte');
+    const waypoints = vi.mocked(loadDownloadedMission).mock.calls.at(-1)![0] as unknown as Array<{ p4: number }>;
+    expect(waypoints[0].p4).toBeNaN();
+  });
+
   it('handles malformed JSON gracefully', async () => {
     await freshConnect();
     mockWs.onopen?.(new Event('open'));
@@ -314,5 +343,35 @@ describe('helper functions', () => {
     expect(sent.cmd).toBe('arm');
     expect(sent.param).toBe(1);
     expect(sent.force).toBe(true);
+  });
+});
+
+describe('restoreNonFinite', () => {
+  async function restore(msg: Record<string, unknown>) {
+    const { restoreNonFinite } = await import('./ws');
+    restoreNonFinite(msg);
+    return msg;
+  }
+
+  it('leaves a message with no list alone', async () => {
+    expect(await restore({ type: 'state', flight_summary: null })).toEqual({ type: 'state', flight_summary: null });
+  });
+
+  it('touches nothing but a null of the backend', async () => {
+    const msg = await restore({
+      type: 'state',
+      roll: 2,
+      flight_summary: null,
+      _nonfinite: [
+        ['roll', 'NaN'],
+        ['missing', 'NaN'],
+        ['vibe', 0, 'NaN'],
+        ['__proto__', 'polluted', 'NaN'],
+        'junk',
+        [],
+      ],
+    });
+    expect(msg).toEqual({ type: 'state', roll: 2, flight_summary: null });
+    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
   });
 });

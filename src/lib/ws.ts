@@ -13,6 +13,31 @@ let reconnectAttempts = 0;
 let lastMessageTime = 0;
 let staleCheckTimer: ReturnType<typeof setInterval> | null = null;
 
+/**
+ * JSON has no NaN and no infinity, so the backend sends each as null and lists in
+ * `_nonfinite` where they were: a path, then which of the three it was. Put them back, so
+ * that a value the FC sent as NaN reads NaN here as it does over USB. A null left in place
+ * of a number would read as 0 in arithmetic and throw at the first toFixed.
+ */
+export function restoreNonFinite(msg: Record<string, unknown>): void {
+  const marks = msg._nonfinite;
+  if (!Array.isArray(marks)) return;
+  delete msg._nonfinite;
+  for (const mark of marks) {
+    if (!Array.isArray(mark) || mark.length < 2) continue;
+    const path = mark.slice(0, -1);
+    const last = path.pop() as string | number;
+    let at: unknown = msg;
+    for (const key of path) {
+      at = at !== null && typeof at === 'object' && Object.hasOwn(at, key) ? (at as never)[key] : undefined;
+    }
+    // Only where the backend left a null of its own, whatever the list says.
+    if (at !== null && typeof at === 'object' && Object.hasOwn(at, last) && (at as never)[last] === null) {
+      (at as Record<string | number, unknown>)[last] = Number(mark[mark.length - 1]);
+    }
+  }
+}
+
 export function connectWs(): void {
   if (socket && socket.readyState <= 1) return;
   const ws = new WebSocket(getWsUrl());
@@ -41,6 +66,7 @@ export function connectWs(): void {
     lastMessageTime = Date.now();
     try {
       const msg = JSON.parse(ev.data) as WSMessage;
+      restoreNonFinite(msg as unknown as Record<string, unknown>);
       switch (msg.type) {
         case 'state':
           if (msg.flight_summary && !app.drone.flight_summary) {

@@ -2,6 +2,7 @@
   import { app } from '../../lib/stores.svelte';
   import Badge from '$lib/components/ui/badge/badge.svelte';
   import { t } from '../../lib/i18n.svelte';
+  import { worst } from '../../lib/worst';
 
   const d = app.drone;
 
@@ -71,7 +72,7 @@
   ): { label: string; variant: 'default' | 'secondary' | 'destructive' } {
     if (f & FLAG_UNINITIALIZED) return { label: t('ekf.uninit'), variant: 'destructive' };
     if (f & FLAG_CONST_POS) return { label: t('ekf.degraded'), variant: 'destructive' };
-    const maxVar = Math.max(vel, posH, posV, comp);
+    const maxVar = worst(vel, posH, posV, comp);
     if (maxVar >= 1.0) return { label: t('ekf.bad'), variant: 'destructive' };
     if (maxVar >= 0.5 || !(f & FLAG_POS_HORIZ_ABS)) return { label: t('ekf.warn'), variant: 'secondary' };
     return { label: t('ekf.good'), variant: 'default' };
