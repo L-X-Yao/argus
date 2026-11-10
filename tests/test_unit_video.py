@@ -20,7 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 import backend.video as video_module
 from backend.app import app
 from backend.drone_link import DroneLink
-from backend.video import _ffmpeg_available, _ffmpeg_command, _proc_lock, _validate_video_url
+from backend.video import _ffmpeg_args, _ffmpeg_available, _proc_lock, _validate_video_url
 from backend.ws_manager import WSManager
 
 
@@ -451,17 +451,17 @@ class TestVideoStreamJpegExtraction:
 
 class TestFfmpegCommand:
     def test_rtsp_goes_over_tcp(self):
-        args = _ffmpeg_command("rtsp://192.168.144.25:8554/main.264")
-        assert args[:5] == ["ffmpeg", "-rtsp_transport", "tcp", "-i", "rtsp://192.168.144.25:8554/main.264"]
+        args = _ffmpeg_args("rtsp://192.168.144.25:8554/main.264")
+        assert args[:4] == ["-rtsp_transport", "tcp", "-i", "rtsp://192.168.144.25:8554/main.264"]
 
     @pytest.mark.parametrize(
         "url", ["http://cam.example/live.mjpg", "https://cam.example/live.m3u8", "rtmp://cam.example/app/key"]
     )
     def test_other_inputs_get_no_rtsp_option(self, url):
         """ffmpeg refuses an input given an option its reader does not have."""
-        args = _ffmpeg_command(url)
+        args = _ffmpeg_args(url)
         assert "-rtsp_transport" not in args
-        assert args[:3] == ["ffmpeg", "-i", url]
+        assert args[:2] == ["-i", url]
 
     @pytest.mark.skipif(shutil.which("ffmpeg") is None, reason="needs ffmpeg")
     def test_real_ffmpeg_turns_an_http_stream_into_jpeg_frames(self, tmp_path):
@@ -489,7 +489,7 @@ class TestFfmpegCommand:
             url = "http://127.0.0.1:%d/cam.ts" % server.server_address[1]
             env = {k: v for k, v in os.environ.items() if not k.lower().endswith("_proxy")}
             out = subprocess.run(
-                _ffmpeg_command(url), stdin=subprocess.DEVNULL, capture_output=True, timeout=60, env=env
+                ["ffmpeg", *_ffmpeg_args(url)], stdin=subprocess.DEVNULL, capture_output=True, timeout=60, env=env
             )
         finally:
             server.shutdown()

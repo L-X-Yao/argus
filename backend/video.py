@@ -69,12 +69,12 @@ def _ffmpeg_available() -> bool:
     return shutil.which("ffmpeg") is not None
 
 
-def _ffmpeg_command(url: str) -> list[str]:
-    """ffmpeg reading the stream at url and writing MJPEG to its stdout."""
+def _ffmpeg_args(url: str) -> list[str]:
+    """What ffmpeg is told to read the stream at url and write MJPEG to its stdout."""
     # An option of the RTSP reader alone. Given it with any other input, ffmpeg stops at
     # "Option rtsp_transport not found": http, https and rtmp streams never played.
     transport = ["-rtsp_transport", "tcp"] if urlparse(url).scheme == "rtsp" else []
-    return ["ffmpeg", *transport, "-i", url, "-f", "mjpeg", "-q:v", "5", "-r", "15", "-an", "pipe:1"]
+    return [*transport, "-i", url, "-f", "mjpeg", "-q:v", "5", "-r", "15", "-an", "pipe:1"]
 
 
 @router.get("/api/video")
@@ -99,7 +99,8 @@ async def video_stream(url: str = ""):
     async def generate():
         global _active_proc  # noqa: PLW0603
         proc = subprocess.Popen(
-            _ffmpeg_command(url),
+            # The program is named here, where a reader and CodeQL can see that no request sets it.
+            ["ffmpeg", *_ffmpeg_args(url)],
             # Its own, or it reads the keys typed into the console the server runs in.
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
@@ -107,7 +108,7 @@ async def video_stream(url: str = ""):
         )
         with _proc_lock:
             _active_proc = proc
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         try:
             buf = b""
             # If the upstream isn't MJPEG (e.g. mis-configured URL), the
