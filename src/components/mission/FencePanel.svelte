@@ -3,6 +3,7 @@
   import { dispatch } from '../../lib/transport';
   import { isSerialConnected, serialClearFence, serialUploadFence } from '../../lib/transport';
   import { t } from '../../lib/i18n.svelte';
+  import { cleanPositions } from '../../lib/missionIO';
   import Button from '$lib/components/ui/button/button.svelte';
   import Badge from '$lib/components/ui/badge/badge.svelte';
 
@@ -81,14 +82,8 @@
       const reader = new FileReader();
       reader.onload = (ev: ProgressEvent<FileReader>) => {
         try {
-          const pts = JSON.parse(ev.target!.result as string);
-          if (!Array.isArray(pts) || pts.length < 3) throw new Error('min 3');
-          for (const p of pts) {
-            const lat = Number(p?.lat),
-              lon = Number(p?.lon);
-            if (!Number.isFinite(lat) || !Number.isFinite(lon)) throw new Error('bad coord');
-            if (lat < -90 || lat > 90 || lon < -180 || lon > 180) throw new Error('bad coord');
-          }
+          const pts = cleanPositions(JSON.parse(ev.target!.result as string));
+          if (pts.length < 3) throw new Error('min 3');
           app.fencePolygon = pts;
           app.fenceUploaded = false;
           addToast(t('fence.loaded').replace('{n}', String(pts.length)), 'success');

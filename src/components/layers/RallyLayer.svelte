@@ -1,5 +1,6 @@
 <script lang="ts">
   import { app } from '../../lib/stores.svelte';
+  import { escHtml } from '../../lib/html';
 
   type CoordFn = (lat: number, lon: number) => [number, number];
   let { map, coord }: { map: L.Map; coord: CoordFn } = $props();
@@ -14,7 +15,7 @@
         weight: 2,
         className: 'rally-point',
       })
-        .bindTooltip(`R${i + 1} · ${p.alt} m`)
+        .bindTooltip(`R${i + 1} · ${escHtml(p.alt)} m`)
         .addTo(map),
     );
     return () => markers.forEach((m) => m.remove());

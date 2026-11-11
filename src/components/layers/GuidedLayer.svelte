@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import { app } from '../../lib/stores.svelte';
+  import { escHtml } from '../../lib/html';
 
   type CoordFn = (lat: number, lon: number) => [number, number];
   let {
@@ -65,7 +66,7 @@
     guidedLabel = L.marker(mid, {
       icon: L.divIcon({
         className: '',
-        html: `<div style="background:rgba(255,167,38,0.9);color:white;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:600;white-space:nowrap">${txt} · ${target.alt}m</div>`,
+        html: `<div style="background:rgba(255,167,38,0.9);color:white;padding:1px 6px;border-radius:3px;font-size:10px;font-weight:600;white-space:nowrap">${escHtml(txt)} · ${escHtml(target.alt)}m</div>`,
         iconAnchor: [0, 0],
       }),
       interactive: false,

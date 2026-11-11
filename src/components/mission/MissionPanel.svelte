@@ -22,6 +22,10 @@
   import { vehicleKind } from '../../lib/vehicleModes';
   import {
     AltitudeFrameError,
+    cleanPositions,
+    cleanRallyPoints,
+    cleanWaypoints,
+    finiteNumber,
     parseQgcWaypoints,
     parseQgcPlan,
     exportKml as buildKml,
@@ -242,9 +246,12 @@
             handleQgcPlan(text);
           } else {
             const d = JSON.parse(text);
+            // Not 0, as before. Below 0 is an altitude too: a submarine's.
+            const alt = finiteNumber(d?.alt) || null;
+            const wps = cleanWaypoints(d?.waypoints, alt ?? app.defaultAlt);
             pushUndo();
-            app.waypoints = d.waypoints || [];
-            if (d.alt) app.defaultAlt = d.alt;
+            app.waypoints = wps;
+            if (alt !== null) app.defaultAlt = alt;
           }
           fitAfterLoad();
         } catch (err) {
@@ -277,11 +284,22 @@
   async function loadFromLibrary(id: string) {
     const m = await dbLoad(id);
     if (!m) return;
+    // The library is browser storage: what comes back is checked like a file.
+    let wps, fence, rally;
+    const defaultAlt = finiteNumber(m.defaultAlt) ?? app.defaultAlt;
+    try {
+      wps = cleanWaypoints(m.waypoints, defaultAlt);
+      fence = cleanPositions(m.fence ?? []);
+      rally = cleanRallyPoints(m.rally ?? [], defaultAlt);
+    } catch {
+      addToast(t('toast.loadFail'), 'error', 8000);
+      return;
+    }
     pushUndo();
-    app.waypoints = m.waypoints;
-    if (m.fence.length > 0) app.fencePolygon = m.fence;
-    if (m.rally.length > 0) app.rallyPoints = m.rally;
-    app.defaultAlt = m.defaultAlt;
+    app.waypoints = wps;
+    if (fence.length > 0) app.fencePolygon = fence;
+    if (rally.length > 0) app.rallyPoints = rally;
+    app.defaultAlt = defaultAlt;
     saveWaypoints();
     saveFence();
     saveRally();
@@ -297,13 +315,15 @@
   }
 
   function handleQgcWaypoints(text: string) {
+    const wps = parseQgcWaypoints(text);
     pushUndo();
-    app.waypoints = parseQgcWaypoints(text);
+    app.waypoints = wps;
   }
 
   function handleQgcPlan(text: string) {
+    const wps = parseQgcPlan(text);
     pushUndo();
-    app.waypoints = parseQgcPlan(text);
+    app.waypoints = wps;
   }
 
   function exportKml() {

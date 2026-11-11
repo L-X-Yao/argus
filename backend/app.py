@@ -26,6 +26,31 @@ DIST_DIR = ROOT_DIR / "dist"
 # build is old, and that shell points at hashed chunks an upgrade has deleted.
 _REVALIDATE = {"Cache-Control": "no-cache"}
 
+# What the page may load and run. Its scripts come from this server and from nowhere else, so
+# markup that gets into the page cannot bring a handler that runs: the map writes icons,
+# tooltips and popups with innerHTML, from mission files, browser storage and telemetry.
+# Sent with the page only: /docs loads its own scripts from a CDN.
+#   style-src 'unsafe-inline'   the map libraries and the components set style attributes
+#   s3.amazonaws.com            elevation for the 3D view, src/components/map/Map3DView.svelte
+#   connect-src ws: wss:        'self' covers a WebSocket to this server in newer browsers only
+CONTENT_POLICY = "; ".join(
+    (
+        "default-src 'self'",
+        "script-src 'self'",
+        "style-src 'self' 'unsafe-inline'",
+        "img-src 'self' data: blob: https://s3.amazonaws.com",
+        "media-src 'self' data: blob:",
+        "font-src 'self' data:",
+        "connect-src 'self' ws: wss: https://s3.amazonaws.com",
+        "worker-src 'self'",
+        "manifest-src 'self'",
+        "object-src 'none'",
+        "base-uri 'self'",
+        "form-action 'self'",
+        "frame-ancestors 'none'",
+    )
+)
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -237,4 +262,5 @@ if DIST_DIR.exists():
 
     @app.get("/")
     async def index():
-        return FileResponse(str(DIST_DIR / "index.html"), headers=_REVALIDATE)
+        headers = {**_REVALIDATE, "Content-Security-Policy": CONTENT_POLICY}
+        return FileResponse(str(DIST_DIR / "index.html"), headers=headers)

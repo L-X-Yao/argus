@@ -1,5 +1,6 @@
 import type { DroneState, DroneEvent, FlightSummary, Waypoint, Toast, RallyPoint } from './types';
 import { defaultState } from './types';
+import { cleanPositions, cleanRallyPoints, cleanWaypoints, finiteNumber } from './missionIO';
 
 class AppState {
   drone: DroneState = $state({ ...defaultState });
@@ -127,29 +128,33 @@ export function clearWaypoints() {
 
 export function loadSettings() {
   try {
+    // Storage is read as a file is: these values reach the map's HTML and the mission upload.
     const s = JSON.parse(localStorage.getItem('argus_settings') || '{}');
-    if (s.alt) app.defaultAlt = s.alt;
-    if (s.speed) app.defaultSpeed = s.speed;
-    if (s.radius) app.geoRadius = s.radius;
-    if (s.dark !== undefined) app.darkTheme = s.dark;
-    if (s.muted !== undefined) app.audioMuted = s.muted;
-    if (s.voice !== undefined) app.voiceEnabled = s.voice;
-    if (s.region) app.mapRegion = s.region;
-    if (s.tileSource) app.tileSource = s.tileSource;
+    // Not 0, as before. Below 0 is an altitude too: a submarine's.
+    const set = (v: unknown) => finiteNumber(v) || null;
+    app.defaultAlt = set(s.alt) ?? app.defaultAlt;
+    app.defaultSpeed = set(s.speed) ?? app.defaultSpeed;
+    app.geoRadius = set(s.radius) ?? app.geoRadius;
+    if (typeof s.dark === 'boolean') app.darkTheme = s.dark;
+    if (typeof s.muted === 'boolean') app.audioMuted = s.muted;
+    if (typeof s.voice === 'boolean') app.voiceEnabled = s.voice;
+    if (s.region === 'china' || s.region === 'global') app.mapRegion = s.region;
+    if (s.tileSource && typeof s.tileSource === 'string') app.tileSource = s.tileSource;
     if (s.mapMode === '2d' || s.mapMode === '3d') app.mapMode = s.mapMode;
     if (s.unitSystem === 'metric' || s.unitSystem === 'imperial') app.unitSystem = s.unitSystem;
   } catch {}
+  // One bad entry discards the list: a route with a point left out is another route.
   try {
-    const wps = JSON.parse(localStorage.getItem('argus_waypoints') || '[]');
-    if (Array.isArray(wps) && wps.length > 0) app.waypoints = wps;
+    const wps = cleanWaypoints(JSON.parse(localStorage.getItem('argus_waypoints') || '[]'), app.defaultAlt);
+    if (wps.length > 0) app.waypoints = wps;
   } catch {}
   try {
-    const fence = JSON.parse(localStorage.getItem('argus_fence') || '[]');
-    if (Array.isArray(fence) && fence.length > 0) app.fencePolygon = fence;
+    const fence = cleanPositions(JSON.parse(localStorage.getItem('argus_fence') || '[]'));
+    if (fence.length > 0) app.fencePolygon = fence;
   } catch {}
   try {
-    const rally = JSON.parse(localStorage.getItem('argus_rally') || '[]');
-    if (Array.isArray(rally) && rally.length > 0) app.rallyPoints = rally;
+    const rally = cleanRallyPoints(JSON.parse(localStorage.getItem('argus_rally') || '[]'), app.defaultAlt);
+    if (rally.length > 0) app.rallyPoints = rally;
   } catch {}
 }
 

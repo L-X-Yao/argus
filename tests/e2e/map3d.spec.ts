@@ -8,6 +8,12 @@ test.use({ launchOptions: { args: ['--use-angle=swiftshader', '--enable-unsafe-s
 // and a saved mode is also what would repeat a boot failure on every load.
 async function open3d(page: Page) {
   await page.addInitScript(() => localStorage.setItem('argus_settings', JSON.stringify({ mapMode: '3d' })));
+  // What the page's content policy refused: see the first test.
+  await page.addInitScript(() => {
+    const seen: string[] = [];
+    (window as unknown as { __refused: string[] }).__refused = seen;
+    document.addEventListener('securitypolicyviolation', (e) => seen.push(`${e.violatedDirective} ${e.blockedURI}`));
+  });
   await page.goto('/');
 }
 
@@ -59,6 +65,12 @@ test.describe('3D map', () => {
         .toBe('object');
     }
     expect(pageErrors).toEqual([]);
+
+    // The 3D view is the part of the page that asks the most of the content policy: a worker,
+    // WebGL, pictures made from fetched bytes, and the one other server the page reads.
+    await overlaysReady(page);
+    await page.waitForTimeout(2000);
+    expect(await page.evaluate(() => (window as unknown as { __refused: string[] }).__refused)).toEqual([]);
   });
 
   test('shows saved waypoints and adds new ones', async ({ page }) => {

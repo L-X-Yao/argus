@@ -115,7 +115,10 @@ def main() -> int:
 
             got = json.loads(request(f"{base}/api/version")[2]).get("version")
             record("version", got == version, got)
-            record("index", request(f"{base}/")[0] == 200)
+            status, headers, _ = request(f"{base}/")
+            record("index", status == 200)
+            policy = headers.get("content-security-policy", headers.get("Content-Security-Policy", ""))
+            record("the page takes scripts from this server only", "script-src 'self';" in policy, policy[:40])
 
             worker = next((root / "dist" / "assets").glob("maplibre-gl-worker*")).name
             status, headers, _ = request(f"{base}/assets/{worker}")

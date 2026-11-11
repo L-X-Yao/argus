@@ -6,7 +6,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
-from backend.app import app
+from backend.app import DIST_DIR, app
 from backend.drone_link import DroneLink
 from backend.ws_manager import WSManager
 
@@ -351,6 +351,48 @@ class TestSecurityHeaders:
         r = client.get("/api/version")
         assert r.headers.get("X-Content-Type-Options") == "nosniff"
         assert r.headers.get("X-Frame-Options") == "DENY"
+
+
+class TestContentPolicy:
+    """What the page may load and run. tests/e2e checks that the page works under it."""
+
+    @staticmethod
+    def _policy() -> dict[str, list[str]]:
+        from backend.app import CONTENT_POLICY
+
+        return {d.split()[0]: d.split()[1:] for d in CONTENT_POLICY.split("; ")}
+
+    def test_scripts_come_from_this_server_only(self):
+        policy = self._policy()
+        assert policy["script-src"] == ["'self'"]
+        assert policy["default-src"] == ["'self'"]
+        assert policy["worker-src"] == ["'self'"]
+        assert policy["object-src"] == ["'none'"]
+        assert policy["base-uri"] == ["'self'"]
+        assert policy["frame-ancestors"] == ["'none'"]
+
+    def test_inline_is_for_styles_and_eval_for_nothing(self):
+        for name, sources in self._policy().items():
+            assert "'unsafe-eval'" not in sources, name
+            assert ("'unsafe-inline'" in sources) == (name == "style-src"), name
+
+    def test_no_directive_is_open_to_every_server(self):
+        for name, sources in self._policy().items():
+            assert not {"*", "http:", "https:"} & set(sources), name
+
+    def test_the_other_server_is_the_one_the_page_reads(self):
+        """Elevation for the 3D view: src/components/map/Map3DView.svelte."""
+        named = {s for sources in self._policy().values() for s in sources if "." in s}
+        assert named == {"https://s3.amazonaws.com"}
+
+    @pytest.mark.skipif(not DIST_DIR.exists(), reason="the page is served from a build: e2e checks it there")
+    def test_it_comes_with_the_page_and_with_nothing_else(self):
+        from backend.app import CONTENT_POLICY
+
+        assert client.get("/").headers["content-security-policy"] == CONTENT_POLICY
+        # /docs loads its scripts from a CDN, and an API answer is no page.
+        assert "content-security-policy" not in client.get("/docs").headers
+        assert "content-security-policy" not in client.get("/api/version").headers
 
 
 class TestWebSocketGuards:

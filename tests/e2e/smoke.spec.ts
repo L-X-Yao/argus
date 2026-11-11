@@ -1,5 +1,42 @@
 import { test, expect } from '@playwright/test';
 
+// The page comes with a content policy (backend/app.py CONTENT_POLICY): its scripts are this
+// server's own files, so markup that gets into it cannot bring a handler that runs.
+test.describe('Content policy', () => {
+  test('markup that gets into the page runs no script', async ({ page }) => {
+    const response = await page.goto('/');
+    expect(response!.headers()['content-security-policy']).toContain("script-src 'self'");
+
+    const refused = await page.evaluate(
+      () =>
+        new Promise<string>((resolve) => {
+          document.addEventListener('securitypolicyviolation', (e) => resolve(e.violatedDirective), { once: true });
+          // What a tooltip or an icon written with innerHTML would do with a hostile name.
+          const box = document.createElement('div');
+          box.innerHTML = '<img src="/no-such-picture.png" onerror="window.__argus_xss=1">';
+          document.body.appendChild(box);
+        }),
+    );
+    expect(refused).toMatch(/^script-src/);
+    expect(await page.evaluate(() => (window as unknown as { __argus_xss?: number }).__argus_xss)).toBeUndefined();
+  });
+
+  test('the page itself stays inside it, on every tab', async ({ page }) => {
+    await page.addInitScript(() => {
+      const seen: string[] = [];
+      (window as unknown as { __refused: string[] }).__refused = seen;
+      document.addEventListener('securitypolicyviolation', (e) => seen.push(`${e.violatedDirective} ${e.blockedURI}`));
+    });
+    await page.goto('/');
+    await expect(page.locator('.leaflet-container')).toBeVisible({ timeout: 8000 });
+    for (const tab of [/规划|Plan/, /监控|Monitor/, /参数|Params/, /飞行|Fly/]) {
+      await page.locator('nav button', { hasText: tab }).first().click();
+      await page.waitForTimeout(700);
+    }
+    expect(await page.evaluate(() => (window as unknown as { __refused: string[] }).__refused)).toEqual([]);
+  });
+});
+
 test.describe('Smoke tests', () => {
   test('homepage loads with app name in header', async ({ page }) => {
     await page.goto('/');

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import { app } from '../../lib/stores.svelte';
+  import { cssNumber } from '../../lib/html';
 
   type CoordFn = (lat: number, lon: number) => [number, number];
   let { map, follow, coord }: { map: L.Map; follow: boolean; coord: CoordFn } = $props();
@@ -27,7 +28,7 @@
     if (!marker) {
       const icon = L.divIcon({
         className: '',
-        html: `<div class="drone-arrow" style="transform:rotate(${rp.yaw}deg)"><svg viewBox="-12 -12 24 24" width="28" height="28"><polygon points="0,-10 -7,8 0,4 7,8" fill="#ffa726" stroke="white" stroke-width="1"/></svg></div>`,
+        html: `<div class="drone-arrow" style="transform:rotate(${cssNumber(rp.yaw)}deg)"><svg viewBox="-12 -12 24 24" width="28" height="28"><polygon points="0,-10 -7,8 0,4 7,8" fill="#ffa726" stroke="white" stroke-width="1"/></svg></div>`,
         iconSize: [28, 28],
         iconAnchor: [14, 14],
       });

@@ -6,6 +6,7 @@
   import { toGcj, toWgs } from '../../lib/gcj02';
   import { isOfflineSource, tileUrl } from '../../lib/backend';
   import { tileAttribution } from '../../lib/tileAttribution';
+  import { escHtml } from '../../lib/html';
   import MapControls from './MapControls.svelte';
   import HudOverlay from './HudOverlay.svelte';
   import { FileUp } from '@lucide/svelte';
@@ -308,7 +309,7 @@
         measureLabel = L.marker(center, {
           icon: L.divIcon({
             className: '',
-            html: `<div style="background:rgba(30,30,30,0.9);color:#ff5252;padding:2px 6px;border-radius:3px;font-size:11px;font-weight:bold;white-space:nowrap">${fmtArea(area)}</div>`,
+            html: `<div style="background:rgba(30,30,30,0.9);color:#ff5252;padding:2px 6px;border-radius:3px;font-size:11px;font-weight:bold;white-space:nowrap">${escHtml(fmtArea(area))}</div>`,
             iconAnchor: [0, 0],
           }),
         }).addTo(map!);
@@ -328,7 +329,7 @@
         measureLabel = L.marker([last.lat, last.lng], {
           icon: L.divIcon({
             className: '',
-            html: `<div style="background:rgba(30,30,30,0.9);color:#ff5252;padding:2px 6px;border-radius:3px;font-size:11px;font-weight:bold;white-space:nowrap">${txt}</div>`,
+            html: `<div style="background:rgba(30,30,30,0.9);color:#ff5252;padding:2px 6px;border-radius:3px;font-size:11px;font-weight:bold;white-space:nowrap">${escHtml(txt)}</div>`,
             iconAnchor: [0, -10],
           }),
         }).addTo(map!);
@@ -404,7 +405,8 @@
               ? L.polygon(pts, { color: '#e040fb', weight: 2, fillOpacity: 0.1 }).addTo(map!)
               : L.polyline(pts, { color: '#e040fb', weight: 2 }).addTo(map!);
             const name = pm.getElementsByTagName('name')[0]?.textContent || '';
-            if (name) layer.bindTooltip(name, { permanent: false });
+            // The name is whatever the file says, and Leaflet writes a tooltip as HTML.
+            if (name) layer.bindTooltip(escHtml(name), { permanent: false });
             kmlLayers.push(layer);
             count++;
           }

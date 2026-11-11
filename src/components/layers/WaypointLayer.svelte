@@ -2,6 +2,7 @@
   import { onDestroy, untrack } from 'svelte';
   import { app, saveWaypoints } from '../../lib/stores.svelte';
   import { t } from '../../lib/i18n.svelte';
+  import { escHtml } from '../../lib/html';
 
   type CoordFn = (lat: number, lon: number) => [number, number];
   let { map, coord, coordInv }: { map: L.Map; coord: CoordFn; coordInv: CoordFn } = $props();
@@ -53,9 +54,9 @@
         ? '<div style="position:absolute;top:-5px;right:-5px;width:8px;height:8px;border-radius:50%;background:#ff5722;border:1px solid white"></div>'
         : '';
       const sub = isLoiter
-        ? `<div style="position:absolute;bottom:-10px;left:50%;transform:translateX(-50%);font-size:8px;color:${color};white-space:nowrap;font-weight:600">${wp.type === 'loiter_turns' ? t('label.turns').replace('{n}', String(wp.loiter_param)) : wp.loiter_param + 's'}</div>`
+        ? `<div style="position:absolute;bottom:-10px;left:50%;transform:translateX(-50%);font-size:8px;color:${color};white-space:nowrap;font-weight:600">${escHtml(wp.type === 'loiter_turns' ? t('label.turns').replace('{n}', String(wp.loiter_param)) : wp.loiter_param + 's')}</div>`
         : wp.delay
-          ? `<div style="position:absolute;bottom:-10px;left:50%;transform:translateX(-50%);font-size:8px;color:#888;white-space:nowrap">+${wp.delay}s</div>`
+          ? `<div style="position:absolute;bottom:-10px;left:50%;transform:translateX(-50%);font-size:8px;color:#888;white-space:nowrap">+${escHtml(wp.delay)}s</div>`
           : '';
       const icon = L.divIcon({
         className: '',
@@ -80,13 +81,13 @@
             dlon2 = (wp.lon - prev.lon) * 111320 * Math.cos((wp.lat * Math.PI) / 180);
           const seg = Math.sqrt(dlat2 * dlat2 + dlon2 * dlon2);
           const segFmt = seg < 1000 ? seg.toFixed(0) + 'm' : (seg / 1000).toFixed(1) + 'km';
-          segInfo = `<br>${t('label.seg')}: <b>${segFmt}</b>`;
+          segInfo = `<br>${escHtml(t('label.seg'))}: <b>${segFmt}</b>`;
         }
         const content = `<div style="font-size:12px;min-width:140px">
-          <b>${t('label.wp')} ${i + 1}</b> ${wp.drop ? `<span style="color:#e65100">${t('label.drop')}</span>` : ''}<br>
-          <span style="color:#888">${wp.lat.toFixed(6)}, ${wp.lon.toFixed(6)}</span><br>
-          ${t('label.alt')}: <b>${wp.alt}m</b>${wp.speed ? ` · ${t('label.spd')}: ${wp.speed}m/s` : ''}
-          ${wp.delay ? `<br>${t('label.delay')}: ${wp.delay}s` : ''}${segInfo}
+          <b>${escHtml(t('label.wp'))} ${i + 1}</b> ${wp.drop ? `<span style="color:#e65100">${escHtml(t('label.drop'))}</span>` : ''}<br>
+          <span style="color:#888">${escHtml(wp.lat.toFixed(6))}, ${escHtml(wp.lon.toFixed(6))}</span><br>
+          ${escHtml(t('label.alt'))}: <b>${escHtml(wp.alt)}m</b>${wp.speed ? ` · ${escHtml(t('label.spd'))}: ${escHtml(wp.speed)}m/s` : ''}
+          ${wp.delay ? `<br>${escHtml(t('label.delay'))}: ${escHtml(wp.delay)}s` : ''}${segInfo}
         </div>`;
         if (wpPopup) map.closePopup(wpPopup);
         wpPopup = L.popup({ closeButton: true, className: 'wp-popup' })
@@ -109,7 +110,7 @@
       const lbl = L.marker(mid, {
         icon: L.divIcon({
           className: '',
-          html: `<div style="background:rgba(21,101,192,0.85);color:white;padding:1px 5px;border-radius:3px;font-size:10px;font-weight:600;white-space:nowrap">${txt}</div>`,
+          html: `<div style="background:rgba(21,101,192,0.85);color:white;padding:1px 5px;border-radius:3px;font-size:10px;font-weight:600;white-space:nowrap">${escHtml(txt)}</div>`,
           iconAnchor: [0, 0],
         }),
         interactive: false,

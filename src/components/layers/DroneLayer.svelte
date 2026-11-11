@@ -2,14 +2,11 @@
   import { onDestroy } from 'svelte';
   import { app } from '../../lib/stores.svelte';
   import { t } from '../../lib/i18n.svelte';
+  import { cssNumber, escHtml } from '../../lib/html';
 
   type CoordFn = (lat: number, lon: number) => [number, number];
   let { map, follow, trail, coord }: { map: L.Map; follow: boolean; trail: [number, number][]; coord: CoordFn } =
     $props();
-
-  function escHtml(s: string): string {
-    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-  }
 
   let droneMarker: L.Marker | null = null;
   let homeMarker: L.Marker | null = null;
@@ -31,7 +28,7 @@
     if (!droneMarker) {
       const icon = L.divIcon({
         className: 'drone-icon',
-        html: `<div class="drone-arrow" style="transform:rotate(${app.drone.yaw}deg)"><svg viewBox="-12 -12 24 24" width="28" height="28"><polygon points="0,-10 -7,8 0,4 7,8" fill="#4fc3f7" stroke="white" stroke-width="1"/></svg></div>`,
+        html: `<div class="drone-arrow" style="transform:rotate(${cssNumber(app.drone.yaw)}deg)"><svg viewBox="-12 -12 24 24" width="28" height="28"><polygon points="0,-10 -7,8 0,4 7,8" fill="#4fc3f7" stroke="white" stroke-width="1"/></svg></div>`,
         iconSize: [28, 28],
         iconAnchor: [14, 14],
       });
@@ -39,14 +36,20 @@
       droneMarker.on('click', () => {
         const d = app.drone;
         const coordStr = `${d.lat.toFixed(6)}, ${d.lon.toFixed(6)}`;
-        const content = `<div style="font-size:12px;min-width:160px">
-          <b>${d.mode}</b> ${d.armed ? `<span style="color:#f44336">${t('label.armed')}</span>` : t('label.disarmed')}<br>
-          <span style="color:#888;cursor:pointer;text-decoration:underline dotted" onclick="navigator.clipboard.writeText('${coordStr}')">${coordStr}</span><br>
-          ${t('label.alt')}: <b>${d.alt_rel.toFixed(1)}m</b> (${t('label.msl')} ${d.alt_msl.toFixed(0)}m)<br>
-          ${t('label.spd')}: <b>${d.gs.toFixed(1)} m/s</b> ${t('label.hdg')} ${d.hdg.toFixed(0)}°<br>
-          ${t('label.home')}: <b>${d.dist_home.toFixed(0)}m</b>
-        </div>`;
-        L.popup({ closeButton: true }).setLatLng([glat, glon]).setContent(content).openOn(map);
+        const content = document.createElement('div');
+        content.style.cssText = 'font-size:12px;min-width:160px';
+        content.innerHTML = `
+          <b>${escHtml(d.mode)}</b> ${d.armed ? `<span style="color:#f44336">${escHtml(t('label.armed'))}</span>` : escHtml(t('label.disarmed'))}<br>
+          <span class="drone-coord" style="color:#888;cursor:pointer;text-decoration:underline dotted">${escHtml(coordStr)}</span><br>
+          ${escHtml(t('label.alt'))}: <b>${escHtml(d.alt_rel.toFixed(1))}m</b> (${escHtml(t('label.msl'))} ${escHtml(d.alt_msl.toFixed(0))}m)<br>
+          ${escHtml(t('label.spd'))}: <b>${escHtml(d.gs.toFixed(1))} m/s</b> ${escHtml(t('label.hdg'))} ${escHtml(d.hdg.toFixed(0))}°<br>
+          ${escHtml(t('label.home'))}: <b>${escHtml(d.dist_home.toFixed(0))}m</b>`;
+        // A listener, not an onclick attribute: the page's content policy runs no inline script.
+        content.querySelector('.drone-coord')!.addEventListener('click', () => {
+          navigator.clipboard?.writeText(coordStr).catch(() => {});
+        });
+        // Where the vehicle is now, not where it was when the marker was made.
+        L.popup({ closeButton: true }).setLatLng(droneMarker!.getLatLng()).setContent(content).openOn(map);
       });
     } else {
       droneMarker.setLatLng([glat, glon]);
@@ -176,7 +179,7 @@
         const color = v.armed ? '#ef4444' : '#888';
         const icon = L.divIcon({
           className: 'drone-icon',
-          html: `<div class="drone-arrow" style="transform:rotate(${v.hdg}deg)"><svg viewBox="-12 -12 24 24" width="22" height="22"><polygon points="0,-8 -5,6 0,3 5,6" fill="${color}" stroke="white" stroke-width="0.8"/></svg><div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);font-size:9px;color:${color};font-weight:bold;white-space:nowrap">V${v.sysid}</div></div>`,
+          html: `<div class="drone-arrow" style="transform:rotate(${cssNumber(v.hdg)}deg)"><svg viewBox="-12 -12 24 24" width="22" height="22"><polygon points="0,-8 -5,6 0,3 5,6" fill="${color}" stroke="white" stroke-width="0.8"/></svg><div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);font-size:9px;color:${color};font-weight:bold;white-space:nowrap">V${escHtml(v.sysid)}</div></div>`,
           iconSize: [22, 22],
           iconAnchor: [11, 11],
         });
@@ -200,14 +203,14 @@
       } else {
         const icon = L.divIcon({
           className: '',
-          html: `<div style="transform:rotate(${a.hdg}deg)"><svg viewBox="-10 -10 20 20" width="20" height="20"><polygon points="0,-8 -5,6 0,3 5,6" fill="#ffc107" stroke="#333" stroke-width="0.5"/></svg></div>
-            <div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-size:8px;color:#ffc107;font-weight:bold;white-space:nowrap">${a.callsign ? escHtml(a.callsign) : a.icao.toString(16)}</div>`,
+          html: `<div style="transform:rotate(${cssNumber(a.hdg)}deg)"><svg viewBox="-10 -10 20 20" width="20" height="20"><polygon points="0,-8 -5,6 0,3 5,6" fill="#ffc107" stroke="#333" stroke-width="0.5"/></svg></div>
+            <div style="position:absolute;top:-14px;left:50%;transform:translateX(-50%);font-size:8px;color:#ffc107;font-weight:bold;white-space:nowrap">${escHtml(a.callsign || a.icao.toString(16))}</div>`,
           iconSize: [20, 20],
           iconAnchor: [10, 10],
         });
         const m = L.marker([glat, glon], { icon, zIndexOffset: 600 }).addTo(map);
         m.bindTooltip(
-          `${a.callsign ? escHtml(a.callsign) : 'ADSB'} | ${a.alt.toFixed(0)}m | ${a.speed.toFixed(0)}m/s`,
+          `${escHtml(a.callsign || 'ADSB')} | ${escHtml(a.alt.toFixed(0))}m | ${escHtml(a.speed.toFixed(0))}m/s`,
           { permanent: false },
         );
         adsbMarkers.set(a.icao, m);

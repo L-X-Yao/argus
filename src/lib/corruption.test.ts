@@ -81,14 +81,56 @@ describe('loadSettings with corrupted argus_settings', () => {
     expect(() => loadSettings()).not.toThrow();
   });
 
-  it('handles wrong types for known keys', () => {
+  it('keeps its own value where a known key has the wrong type', () => {
+    const before = {
+      alt: app.defaultAlt,
+      speed: app.defaultSpeed,
+      radius: app.geoRadius,
+      dark: app.darkTheme,
+      muted: app.audioMuted,
+      region: app.mapRegion,
+      tileSource: app.tileSource,
+    };
     vi.stubGlobal(
       'localStorage',
       makeStorage({
-        argus_settings: '{"alt":"not-a-number","dark":"yes","region":999}',
+        argus_settings: JSON.stringify({
+          alt: '<img src=x onerror=alert(1)>',
+          speed: 'fast',
+          radius: 0,
+          dark: 'yes',
+          muted: 1,
+          region: 999,
+          tileSource: { toString: 'x' },
+        }),
       }),
     );
     expect(() => loadSettings()).not.toThrow();
+    expect({
+      alt: app.defaultAlt,
+      speed: app.defaultSpeed,
+      radius: app.geoRadius,
+      dark: app.darkTheme,
+      muted: app.audioMuted,
+      region: app.mapRegion,
+      tileSource: app.tileSource,
+    }).toEqual(before);
+  });
+
+  it('keeps an altitude below zero: a submarine has one', () => {
+    vi.stubGlobal('localStorage', makeStorage({ argus_settings: '{"alt":-5}' }));
+    loadSettings();
+    expect(app.defaultAlt).toBe(-5);
+    app.defaultAlt = 30;
+  });
+
+  it('reads a number that was stored as text', () => {
+    vi.stubGlobal('localStorage', makeStorage({ argus_settings: '{"alt":"80","speed":"12"}' }));
+    loadSettings();
+    expect(app.defaultAlt).toBe(80);
+    expect(app.defaultSpeed).toBe(12);
+    app.defaultAlt = 30;
+    app.defaultSpeed = 5;
   });
 
   it('handles extremely long JSON string', () => {
@@ -165,5 +207,73 @@ describe('loadSettings with corrupted argus_waypoints', () => {
     );
     expect(() => loadSettings()).not.toThrow();
     expect(app.waypoints).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// loadSettings — stored routes that are not routes
+// ---------------------------------------------------------------------------
+
+// The map writes these fields into HTML, and the panels call number methods on them: a stored
+// list that is restored as it stands breaks the page again at every start.
+describe('loadSettings with stored points of the wrong type', () => {
+  const MARKUP = '<img src=x onerror="window.__argus_xss=1">';
+  const point = { lat: 34.25, lon: 108.94, alt: 50, drop: false, delay: 0, speed: 0, type: 'wp', loiter_param: 0 };
+
+  beforeEach(() => {
+    app.fencePolygon = [];
+    app.rallyPoints = [];
+  });
+
+  it('restores a list that Argus saved', () => {
+    vi.stubGlobal(
+      'localStorage',
+      makeStorage({
+        argus_waypoints: JSON.stringify([point, { ...point, lat: 34.26 }]),
+        argus_fence: JSON.stringify([
+          { lat: 1, lon: 2 },
+          { lat: 3, lon: 4 },
+          { lat: 5, lon: 6 },
+        ]),
+        argus_rally: JSON.stringify([{ lat: 7, lon: 8, alt: 90 }]),
+      }),
+    );
+    loadSettings();
+    expect(app.waypoints).toEqual([point, { ...point, lat: 34.26 }]);
+    expect(app.fencePolygon).toHaveLength(3);
+    expect(app.rallyPoints).toEqual([{ lat: 7, lon: 8, alt: 90 }]);
+  });
+
+  it.each(['lat', 'alt', 'delay', 'speed', 'loiter_param'])('restores no waypoints when %s holds markup', (field) => {
+    vi.stubGlobal(
+      'localStorage',
+      makeStorage({ argus_waypoints: JSON.stringify([point, { ...point, [field]: MARKUP }]) }),
+    );
+    expect(() => loadSettings()).not.toThrow();
+    expect(app.waypoints).toEqual([]);
+  });
+
+  it('restores numbers for waypoint fields stored as text', () => {
+    vi.stubGlobal(
+      'localStorage',
+      makeStorage({ argus_waypoints: JSON.stringify([{ ...point, lat: '34.25', alt: '50' }]) }),
+    );
+    loadSettings();
+    expect(app.waypoints).toEqual([point]);
+  });
+
+  it('restores no fence when a corner is not a point', () => {
+    vi.stubGlobal(
+      'localStorage',
+      makeStorage({ argus_fence: JSON.stringify([{ lat: 1, lon: 2 }, { lat: MARKUP, lon: 4 }, 'x']) }),
+    );
+    expect(() => loadSettings()).not.toThrow();
+    expect(app.fencePolygon).toEqual([]);
+  });
+
+  it('restores no rally points when an altitude holds markup', () => {
+    vi.stubGlobal('localStorage', makeStorage({ argus_rally: JSON.stringify([{ lat: 7, lon: 8, alt: MARKUP }]) }));
+    expect(() => loadSettings()).not.toThrow();
+    expect(app.rallyPoints).toEqual([]);
   });
 });
