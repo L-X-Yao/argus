@@ -292,7 +292,7 @@ bash scripts/changelog.sh v3.5.0   # Changes since v3.5.0
 
 ## Project Status
 
-Argus is in maintenance since November 2026: bugs and security problems get fixed. Two pieces of new work were taken up since, at the maintainer's request: a Windows installer (done) and operation by an AI assistant through MCP, in which every action that changes the vehicle waits for the operator's approval in the page (in progress).
+Argus is in maintenance since November 2026: bugs and security problems get fixed. Two pieces of new work were taken up since, at the maintainer's request: a Windows installer, and operation by an AI assistant through MCP, in which every change waits for the operator's approval in the page. The assistant reads the page and proposes missions and parameter changes; flight commands (arm, takeoff, modes) are not open to it.
 
 **Built**
 
@@ -310,6 +310,7 @@ Argus is in maintenance since November 2026: bugs and security problems get fixe
 - Gimbal pitch/yaw control
 - Tag-triggered release workflow with auto-changelog
 - Windows installer for your account only, without administrator rights
+- AI assistant through MCP: reads the page, proposes missions and parameter changes, and the operator approves each
 
 **No longer planned**
 
