@@ -207,8 +207,11 @@ def build(arch: str = "amd64"):
 
     ver_short = PY_VER.rsplit(".", 1)[0].replace(".", "")
     pth = py_dir / ("python%s._pth" % ver_short)
-    if pth.exists():
-        pth.write_text("python%s.zip\n.\n..\\backend\n..\\.\nLib\\site-packages\nimport site\n" % ver_short)
+    # Without it the packaged Python finds neither the backend nor its libraries.
+    if not pth.exists():
+        print("  ERROR: %s is not in the embedded Python: its layout has changed" % pth.name)
+        sys.exit(1)
+    pth.write_text("python%s.zip\n.\n..\\backend\n..\\.\nLib\\site-packages\nimport site\n" % ver_short)
 
     # ── 3. Download pip wheels ──
     print("[3/5] Downloading dependencies")

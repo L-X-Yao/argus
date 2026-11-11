@@ -19,7 +19,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [python, javascript-typescript]
+        # actions: the workflows themselves, the release one included.
+        language: [python, javascript-typescript, actions]
     steps:
       - uses: actions/checkout@v7
 

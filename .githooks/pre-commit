@@ -41,9 +41,14 @@ fi
 echo "[pre-commit] ruff..."
 ruff check backend/ scripts/ tests/ --quiet
 
+# By exit status. The last line of output is "0 ERRORS" only in the machine-readable form,
+# which svelte-check picks by itself under some tools and not in a plain terminal, and
+# "10 ERRORS" ends in it too.
 echo "[pre-commit] svelte-check..."
-npx svelte-check --tsconfig ./tsconfig.json 2>&1 | tail -1 | grep -q '0 ERRORS' || {
-  echo "svelte-check failed"; exit 1;
-}
+if ! _OUT=$(npx svelte-check --tsconfig ./tsconfig.json 2>&1); then
+  echo "$_OUT" | tail -20
+  echo "svelte-check failed"
+  exit 1
+fi
 
 echo "[pre-commit] OK"

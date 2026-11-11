@@ -16,6 +16,7 @@ permissions:
 jobs:
   check:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
 
@@ -78,7 +79,7 @@ jobs:
           fi
 
       - name: Security audit
-        run: npm audit --audit-level=critical
+        run: npm audit --omit=dev --audit-level=high
 
       # Frozen first, so that this lists what Argus uses and not pip-audit's own needs.
       - name: Python dependency audit
@@ -104,8 +105,12 @@ jobs:
       - name: Install Python deps
         run: pip install -e '.[dev]'
 
+      # The terrain and firmware servers are part of what Argus does. Where one of them has
+      # moved, a test that skips would leave this job green with the feature gone.
       - name: Run integration tests
         run: python -m pytest tests/test_integration.py tests/test_integration_rest.py -q --tb=short
+        env:
+          ARGUS_REQUIRE_NETWORK: '1'
 
   # The oldest Python pyproject.toml allows. Every other job runs on the one the Windows
   # package bundles: PY_VER in scripts/build_package.py.
@@ -229,10 +234,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { vehicle: plane, path: Plane, binary: arduplane, parm: Tools/autotest/models/plane.parm }
-          - { vehicle: quadplane, path: Plane, binary: arduplane, parm: Tools/autotest/default_params/quadplane.parm }
-          - { vehicle: rover, path: Rover, binary: ardurover, parm: Tools/autotest/default_params/rover.parm }
-          - { vehicle: sub, path: Sub, binary: ardusub, parm: Tools/autotest/default_params/sub.parm }
+          # tag: the branch of the stable firmware, so that the parameter file is the one that
+          # firmware was released with. From master it names parameters the release may not have.
+          - { vehicle: plane, path: Plane, binary: arduplane, tag: ArduPlane-stable, parm: Tools/autotest/models/plane.parm }
+          - { vehicle: quadplane, path: Plane, binary: arduplane, tag: ArduPlane-stable, parm: Tools/autotest/default_params/quadplane.parm }
+          - { vehicle: rover, path: Rover, binary: ardurover, tag: APMrover2-stable, parm: Tools/autotest/default_params/rover.parm }
+          - { vehicle: sub, path: Sub, binary: ardusub, tag: ArduSub-stable, parm: Tools/autotest/default_params/sub.parm }
     steps:
       - uses: actions/checkout@v7
 
@@ -246,14 +253,17 @@ jobs:
 
       - name: Probe current stable version
         id: sitl-ver
-        run: echo "ver=$(curl -sf https://firmware.ardupilot.org/${{ matrix.path }}/stable/SITL_x86_64_linux_gnu/firmware-version.txt)" >> "$GITHUB_OUTPUT"
+        run: |
+          ver=$(curl -sf --retry 3 https://firmware.ardupilot.org/${{ matrix.path }}/stable/SITL_x86_64_linux_gnu/firmware-version.txt)
+          test -n "$ver"
+          echo "ver=$ver" >> "$GITHUB_OUTPUT"
 
       - name: Cache SITL binary
         id: sitl-cache
         uses: actions/cache@v6
         with:
           path: ~/sitl
-          key: sitl-${{ matrix.vehicle }}-${{ steps.sitl-ver.outputs.ver }}
+          key: sitl-${{ matrix.vehicle }}-${{ matrix.tag }}-${{ steps.sitl-ver.outputs.ver }}
 
       - name: Download SITL binary + default params
         if: steps.sitl-cache.outputs.cache-hit != 'true'
@@ -261,7 +271,7 @@ jobs:
           mkdir -p ~/sitl
           curl -sfL -o ~/sitl/${{ matrix.binary }} https://firmware.ardupilot.org/${{ matrix.path }}/stable/SITL_x86_64_linux_gnu/${{ matrix.binary }}
           chmod +x ~/sitl/${{ matrix.binary }}
-          curl -sfL -o ~/sitl/${{ matrix.vehicle }}.parm https://raw.githubusercontent.com/ArduPilot/ardupilot/master/${{ matrix.parm }}
+          curl -sfL -o ~/sitl/${{ matrix.vehicle }}.parm https://raw.githubusercontent.com/ArduPilot/ardupilot/${{ matrix.tag }}/${{ matrix.parm }}
 
       - name: Run the vehicle checks
         run: python tests/sitl_vehicles.py ${{ matrix.vehicle }}
@@ -287,7 +297,10 @@ jobs:
 
       - name: Probe current Copter stable version
         id: sitl-ver
-        run: echo "ver=$(curl -sf https://firmware.ardupilot.org/Copter/stable/SITL_x86_64_linux_gnu/firmware-version.txt)" >> "$GITHUB_OUTPUT"
+        run: |
+          ver=$(curl -sf --retry 3 https://firmware.ardupilot.org/Copter/stable/SITL_x86_64_linux_gnu/firmware-version.txt)
+          test -n "$ver"
+          echo "ver=$ver" >> "$GITHUB_OUTPUT"
 
       - name: Cache SITL binary
         id: sitl-cache
@@ -304,7 +317,7 @@ jobs:
           curl -sfL -o ~/sitl/copter.parm https://raw.githubusercontent.com/ArduPilot/ardupilot/ArduCopter-stable/Tools/autotest/default_params/copter.parm
 
       - name: Install socat
-        run: sudo apt-get install -y socat
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends socat
 
       - name: Commands that need a vehicle of their own
         run: |
@@ -355,7 +368,10 @@ jobs:
 
       - name: Probe current Copter stable version
         id: sitl-ver
-        run: echo "ver=$(curl -sf https://firmware.ardupilot.org/Copter/stable/SITL_x86_64_linux_gnu/firmware-version.txt)" >> "$GITHUB_OUTPUT"
+        run: |
+          ver=$(curl -sf --retry 3 https://firmware.ardupilot.org/Copter/stable/SITL_x86_64_linux_gnu/firmware-version.txt)
+          test -n "$ver"
+          echo "ver=$ver" >> "$GITHUB_OUTPUT"
 
       - name: Cache SITL binary
         id: sitl-cache
@@ -426,7 +442,10 @@ jobs:
 
       - name: Probe current Copter stable version
         id: sitl-ver
-        run: echo "ver=$(curl -sf https://firmware.ardupilot.org/Copter/stable/SITL_x86_64_linux_gnu/firmware-version.txt)" >> "$GITHUB_OUTPUT"
+        run: |
+          ver=$(curl -sf --retry 3 https://firmware.ardupilot.org/Copter/stable/SITL_x86_64_linux_gnu/firmware-version.txt)
+          test -n "$ver"
+          echo "ver=$ver" >> "$GITHUB_OUTPUT"
 
       - name: Cache SITL binary
         id: sitl-cache
@@ -460,6 +479,7 @@ jobs:
   # RTL → disarm). Catches protocol regressions unit/contract tests can't.
   sitl-smoke:
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     needs: check
     steps:
       - uses: actions/checkout@v7
@@ -474,7 +494,10 @@ jobs:
 
       - name: Probe current Copter stable version
         id: sitl-ver
-        run: echo "ver=$(curl -sf https://firmware.ardupilot.org/Copter/stable/SITL_x86_64_linux_gnu/firmware-version.txt)" >> "$GITHUB_OUTPUT"
+        run: |
+          ver=$(curl -sf --retry 3 https://firmware.ardupilot.org/Copter/stable/SITL_x86_64_linux_gnu/firmware-version.txt)
+          test -n "$ver"
+          echo "ver=$ver" >> "$GITHUB_OUTPUT"
 
       - name: Cache SITL binary
         id: sitl-cache
@@ -558,6 +581,7 @@ jobs:
 
   e2e:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
     needs: check
     steps:
       - uses: actions/checkout@v7
@@ -619,6 +643,8 @@ jobs:
             curl -sf http://localhost:8100/health && break
             sleep 1
           done
+          # The loop ends either way: this says which.
+          curl -sf http://localhost:8100/health
 
       - name: Run E2E tests (backend-required specs)
         timeout-minutes: 20

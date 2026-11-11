@@ -25,11 +25,14 @@ PIXHAWK1 = 9
 
 
 def needs(url: str) -> None:
+    """Skips where the server cannot be reached, and fails where CI says it must be."""
     try:
         if httpx.head(url, timeout=15, follow_redirects=True).status_code == 200:
             return
     except httpx.HTTPError:
         pass
+    if os.environ.get("ARGUS_REQUIRE_NETWORK"):
+        pytest.fail(f"{url} cannot be reached, and ARGUS_REQUIRE_NETWORK is set")
     pytest.skip(f"{url} cannot be reached")
 
 
