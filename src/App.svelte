@@ -724,9 +724,10 @@
   <!-- On a phone the bar under the status bar is hidden: return and hold sit above the tabs, and
        the controls with them in the fly view. Both take their room in the column, at its bottom
        also while a view is still loading. Fixed, the tabs lay over the bottom of every view, the
-       events bar of the fly view among it. -->
+       events bar of the fly view among it. The bar takes no z-index: a dialog drawn over the bottom
+       of a short screen, the AI assistant's (z 1500) among them, stays above it. -->
   {#if isMobile}
-    <div class="md:hidden mt-auto shrink-0 relative z-[2000]">
+    <div class="md:hidden mt-auto shrink-0">
       {#if app.drone.connected}
         <div
           role="group"
@@ -738,7 +739,9 @@
           {#if view === 'fly'}{@render controlsButton(true)}{/if}
         </div>
       {/if}
-      <nav class="md:hidden bg-card border-t border-border flex items-center justify-around py-1.5 safe-area-bottom">
+      <nav
+        class="md:hidden relative z-[2000] bg-card border-t border-border flex items-center justify-around py-1.5 safe-area-bottom"
+      >
         {#each tabKeys as tab}
           <button
             class="flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg transition-all min-w-[56px]
