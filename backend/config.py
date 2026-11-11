@@ -18,6 +18,10 @@ ROOT_DIR = Path(__file__).resolve().parent.parent
 FAKE_IP_RANGE = ipaddress.ip_network("198.18.0.0/15")
 VERSION = re.search(r'^version = "([^"]+)"', (ROOT_DIR / "pyproject.toml").read_text(), re.MULTILINE).group(1)
 
+# Every server Argus asks is asked under its own name. OpenStreetMap requires it and blocks
+# clients that pose as a browser: https://operations.osmfoundation.org/policies/tiles/ section 3.1.
+USER_AGENT = f"Argus-GCS/{VERSION} (+https://github.com/L-X-Yao/argus)"
+
 
 # Where a cloud host answers for its metadata service on an address that is not link-local:
 # AWS over IPv6, Alibaba Cloud, and the one listed for Oracle Cloud. The usual

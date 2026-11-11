@@ -13,7 +13,7 @@ import urllib.request as urlreq
 
 from fastapi import APIRouter, Request
 
-from .config import ROOT_DIR, aio, aio_download, cfg
+from .config import ROOT_DIR, USER_AGENT, aio, aio_download, cfg
 
 router = APIRouter()
 
@@ -47,7 +47,7 @@ async def _fetch_tile(ns: str, ilat: int, fname: str, cache_file) -> bool:
     # The server only holds them gzipped: a plain .hgt is a 404.
     url = "https://elevation-tiles-prod.s3.amazonaws.com/skadi/%s%02d/%s.gz" % (ns, abs(ilat), fname)
     try:
-        req = urlreq.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        req = urlreq.Request(url, headers={"User-Agent": USER_AGENT})
         data = await aio_download(
             lambda: urlreq.urlopen(req, timeout=cfg.SRTM_DOWNLOAD_TIMEOUT).read(cfg.SRTM_FILE_MAX)
         )

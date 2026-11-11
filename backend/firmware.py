@@ -13,7 +13,7 @@ from urllib.parse import urlparse
 
 from fastapi import APIRouter, Request, UploadFile
 
-from .config import FAKE_IP_RANGE, ROOT_DIR, aio_download, cfg, json_object
+from .config import FAKE_IP_RANGE, ROOT_DIR, USER_AGENT, aio_download, cfg, json_object
 
 router = APIRouter()
 
@@ -72,7 +72,7 @@ async def api_firmware_list():
 
 
 def _read_url(url: str, limit: int) -> str:
-    req = urlreq.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    req = urlreq.Request(url, headers={"User-Agent": USER_AGENT})
     resp = urlreq.urlopen(req, timeout=cfg.FIRMWARE_LIST_TIMEOUT)
     return resp.read(limit).decode("utf-8", errors="replace")
 
@@ -120,7 +120,7 @@ def _download_firmware(fw_url: str, filename: str) -> dict:
         if ip.is_private or ip.is_loopback or ip.is_link_local or ip.is_reserved or ip.is_multicast:
             return {"ok": False, "error": "Refusing to fetch from internal address"}
     try:
-        req = urlreq.Request(fw_url, headers={"User-Agent": "Mozilla/5.0"})
+        req = urlreq.Request(fw_url, headers={"User-Agent": USER_AGENT})
         resp = urlreq.urlopen(req, timeout=cfg.FIRMWARE_DOWNLOAD_TIMEOUT)
         FIRMWARE_DIR.mkdir(exist_ok=True)
         target = (FIRMWARE_DIR / filename).resolve()

@@ -20,7 +20,7 @@ import struct
 import threading
 from typing import TYPE_CHECKING
 
-from ..config import off_limits
+from ..config import VERSION, off_limits
 from ..crc_extras import CRC_EXTRA
 from ..locale_text import lt
 from ..log import logger
@@ -79,7 +79,7 @@ def _ntrip_loop(
         request = (
             f"GET /{mountpoint} HTTP/1.0\r\n"
             f"Host: {host}\r\n"
-            f"User-Agent: NTRIP Argus/3.4.0\r\n"
+            f"User-Agent: NTRIP Argus/{VERSION}\r\n"
             f"Authorization: Basic {auth}\r\n"
             f"Connection: close\r\n"
             f"\r\n"

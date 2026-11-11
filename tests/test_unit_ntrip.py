@@ -99,6 +99,21 @@ class TestNtripLoopEdgeCases:
         event_types = [e["event_type"] for e in link.events]
         assert "ntrip_connected" in event_types
 
+    def test_the_caster_is_told_which_argus_asks(self, monkeypatch):
+        """A caster logs its clients. The request named version 3.4.0 for as long as it existed."""
+        from backend.config import VERSION
+
+        sock = MagicMock()
+        sock.recv.side_effect = [b"HTTP/1.1 200 OK\r\n\r\n", b""]
+        monkeypatch.setattr(socket, "create_connection", lambda *a, **kw: sock)
+        stop = threading.Event()
+        t = threading.Thread(target=_ntrip_loop, args=(make_link(), "h", 1, "M", "u", "p", stop), daemon=True)
+        t.start()
+        t.join(timeout=3)
+        stop.set()
+        request = sock.sendall.call_args.args[0]
+        assert f"User-Agent: NTRIP Argus/{VERSION}\r\n".encode() in request
+
     def test_lf_only_header_separator(self, monkeypatch):
         sock = MagicMock()
         calls = {"n": 0}

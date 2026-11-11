@@ -9,7 +9,7 @@ import urllib.request
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
-from .config import cfg
+from .config import USER_AGENT, cfg
 
 CACHE_DIR = Path(__file__).resolve().parent.parent / "param_cache"
 CACHE_TTL = cfg.PARAM_CACHE_TTL
@@ -45,7 +45,7 @@ def get_metadata(vehicle: str) -> dict:
                 pass  # fall through to re-fetch
 
     try:
-        req = urllib.request.Request(_URLS[vehicle], headers={"User-Agent": "Mozilla/5.0"})
+        req = urllib.request.Request(_URLS[vehicle], headers={"User-Agent": USER_AGENT})
         raw = urllib.request.urlopen(req, timeout=cfg.PARAM_DOWNLOAD_TIMEOUT).read(cfg.PARAM_META_MAX + 1)
         if len(raw) > cfg.PARAM_META_MAX:
             raise ValueError("parameter metadata too large")

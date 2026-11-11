@@ -13,7 +13,7 @@ from pathlib import Path
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse, Response
 
-from .config import ROOT_DIR, aio, aio_download, cfg, json_object
+from .config import ROOT_DIR, USER_AGENT, aio, aio_download, cfg, json_object
 
 router = APIRouter()
 
@@ -127,7 +127,7 @@ def _fetch_tile(style: str, url: str) -> bytes:
     for a while. A 404 is an answer, and says nothing about the server."""
     if time.monotonic() < _server_down_until.get(style, 0):
         raise OSError("map server not answering")
-    req = urlreq.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    req = urlreq.Request(url, headers={"User-Agent": USER_AGENT})
     try:
         return urlreq.urlopen(req, timeout=cfg.TILE_DOWNLOAD_TIMEOUT).read(_TILE_MAX_BYTES + 1)
     except urllib.error.HTTPError:
