@@ -81,6 +81,11 @@ start + mission
 "${PLAYWRIGHT[@]}" tests/e2e/panels-sitl-mission.spec.ts
 stop
 
+# The AI assistant's flight commands: a flight of its own.
+start + assistant
+"${PLAYWRIGHT[@]}" tests/e2e/panels-sitl-assistant.spec.ts
+stop
+
 # One SITL for both: the tools read the log of the flight.
 start + flight
 "${PLAYWRIGHT[@]}" tests/e2e/panels-sitl-flight.spec.ts tests/e2e/panels-sitl-tools.spec.ts

@@ -1177,6 +1177,12 @@ const messages: Record<string, string> = {
   'assistant.loiterTurns': '{n} Runden kreisen',
   'assistant.spline': 'Spline',
   'assistant.onMap': 'In den Ansichten Flug und Planung ist die Route gestrichelt auf der Karte eingezeichnet.',
+  'assistant.commandTitle': 'Flugbefehl senden',
+  'assistant.modeNow': 'Flugmodus jetzt: {mode}',
+  'assistant.slideNote': 'Nach dem Genehmigen sendet ihn erst das Wischen.',
+  'assistant.slideHold': 'Zum Halten wischen',
+  'assistant.slideLand': 'Zum Landen wischen',
+  'assistant.notArmed': 'Nicht gesendet: das Fahrzeug ist nicht scharf',
 };
 
 export default messages;

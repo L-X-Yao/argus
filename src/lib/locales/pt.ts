@@ -1178,6 +1178,12 @@ const messages: Record<string, string> = {
   'assistant.loiterTurns': '{n} voltas em círculo',
   'assistant.spline': 'curva spline',
   'assistant.onMap': 'Nas vistas Voo e Plano, a rota é desenhada a tracejado no mapa.',
+  'assistant.commandTitle': 'Enviar um comando de voo',
+  'assistant.modeNow': 'Modo de voo atual: {mode}',
+  'assistant.slideNote': 'Depois de aprovado, é enviado ao deslizar.',
+  'assistant.slideHold': 'Deslize para manter a posição',
+  'assistant.slideLand': 'Deslize para pousar',
+  'assistant.notArmed': 'Não enviado: o veículo não está armado',
 };
 
 export default messages;

@@ -3,7 +3,8 @@
   // It sits beside the map rather than over it: a proposed route is drawn there while it waits.
   // No key approves it, so that a key meant for something else cannot. Everything the upload
   // does with a waypoint is shown: speed, hold and circling change the flight as much as a place.
-  import { assistant, approve, decline, type Proposal } from '../../lib/assistant.svelte';
+  // A flight command is for a vehicle that is armed, and a slide sends it after the approval.
+  import { assistant, approve, decline, type FlightCommand, type Proposal } from '../../lib/assistant.svelte';
   import type { Waypoint } from '../../lib/types';
   import { totalDist } from '../../lib/missionIO';
   import { t } from '../../lib/i18n.svelte';
@@ -49,6 +50,14 @@
   }
 
   const coord = (v: number) => v.toFixed(6);
+
+  // The names of the page's own buttons.
+  const COMMAND_NAMES: Record<FlightCommand, string> = { rtl: 'nav.rtl', hold: 'nav.pause', land: 'ctrl.land' };
+
+  // A mission or parameters wait for a vehicle that is not armed, a flight command for one that is.
+  let blocked = $derived(
+    !app.drone.connected || (current?.kind === 'propose_command' ? !app.drone.armed : app.drone.armed),
+  );
 </script>
 
 {#if current}
@@ -92,6 +101,16 @@
             {/each}
           </tbody>
         </table>
+      {:else if current.kind === 'propose_command'}
+        <p class="font-semibold text-foreground">{t('assistant.commandTitle')}</p>
+        <p
+          class="text-base font-bold {current.command === 'hold' ? 'text-amber-500' : 'text-red-500'}"
+          data-testid="assistant-command"
+        >
+          {t(COMMAND_NAMES[current.command])}
+        </p>
+        <p class="text-muted-foreground">{t('assistant.modeNow').replace('{mode}', app.drone.mode)}</p>
+        <p class="text-muted-foreground">{t('assistant.slideNote')}</p>
       {:else}
         <p class="font-semibold text-foreground">{t('assistant.paramsTitle')}</p>
         <table class="w-full font-mono text-[11px]">
@@ -136,7 +155,7 @@
       <Button
         size="sm"
         class="flex-1"
-        disabled={!readable || assistant.running || !app.drone.connected || app.drone.armed}
+        disabled={!readable || assistant.running || blocked}
         onclick={() => approve(current!.id)}
         data-testid="assistant-approve">{assistant.running ? t('assistant.running') : t('assistant.approve')}</Button
       >

@@ -1175,6 +1175,12 @@ const messages: Record<string, string> = {
   'assistant.loiterTurns': 'кружить {n} витков',
   'assistant.spline': 'сплайн',
   'assistant.onMap': 'В видах «Полёт» и «План» маршрут показан на карте пунктиром.',
+  'assistant.commandTitle': 'Отправить полётную команду',
+  'assistant.modeNow': 'Полётный режим сейчас: {mode}',
+  'assistant.slideNote': 'После одобрения команда отправляется проведением.',
+  'assistant.slideHold': 'Проведите для удержания',
+  'assistant.slideLand': 'Проведите для посадки',
+  'assistant.notArmed': 'Не отправлено: аппарат не взведён',
 };
 
 export default messages;

@@ -1168,6 +1168,12 @@ const messages: Record<string, string> = {
   'assistant.loiterTurns': '{n}바퀴 선회',
   'assistant.spline': '스플라인',
   'assistant.onMap': '비행 및 계획 화면에서는 경로가 지도에 점선으로 표시됩니다.',
+  'assistant.commandTitle': '비행 명령 보내기',
+  'assistant.modeNow': '현재 비행 모드: {mode}',
+  'assistant.slideNote': '승인한 뒤 밀어야 전송됩니다.',
+  'assistant.slideHold': '밀어서 위치 유지',
+  'assistant.slideLand': '밀어서 착륙',
+  'assistant.notArmed': '전송 안 됨: 기체가 시동되지 않았습니다',
 };
 
 export default messages;
