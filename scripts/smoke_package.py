@@ -34,6 +34,8 @@ TOKEN = "smoke-token-123456"
 
 # The uninstall entry of an install for this user: AppId in scripts/installer.iss, plus "_is1".
 UNINSTALL_KEY = r"Software\Microsoft\Windows\CurrentVersion\Uninstall\{2CDE95AA-A33A-4B5A-9B54-5350EAF7C49D}_is1"
+# What uninstalling leaves: flight logs, map files of the user's own, firmware uploaded or downloaded.
+KEPT = ("logs", "mbtiles", "firmware")
 START_MENU = Path(os.environ.get("APPDATA", "")) / "Microsoft" / "Windows" / "Start Menu" / "Programs" / "Argus GCS"
 
 WS_CHECK = """
@@ -94,19 +96,38 @@ def installed_at() -> Path | None:
         return None
 
 
+def run_setup(setup: Path, folder: Path, log: Path) -> int | None:
+    """The exit code of a silent install into folder, or None when it took too long."""
+    command = [str(setup), "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/CURRENTUSER", f"/DIR={folder}"]
+    try:
+        return subprocess.run([*command, f"/LOG={log}"], timeout=600).returncode
+    except subprocess.TimeoutExpired:
+        return None
+
+
+def refuses_a_folder_of_other_things(setup: Path, other: Path) -> None:
+    """An upgrade clears folders such as python in the folder it installs to: one that holds
+    other things, and no Argus, is refused before anything is touched."""
+    (other / "python").mkdir(parents=True)
+    (other / "python" / "mine.txt").write_text("mine")
+    code = run_setup(setup, other, other.parent / "refused.log")
+    kept = (other / "python" / "mine.txt").is_file()
+    record(
+        "it refuses a folder that holds other things", code not in (0, None) and kept and installed_at() is None, code
+    )
+
+
 def install(setup: Path, root: Path) -> bool:
     if installed_at() is not None:
         raise SystemExit(
             "Argus is installed for this user, and the test would take over its uninstall entry. "
             "Uninstall it first, or run the test on another account."
         )
+    refuses_a_folder_of_other_things(setup, root.parent / "Other things")
     log = root.parent / "install.log"
-    done = subprocess.run(
-        [str(setup), "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART", "/CURRENTUSER", f"/DIR={root}", f"/LOG={log}"],
-        timeout=600,
-    )
-    record("the installer runs", done.returncode == 0, done.returncode)
-    if done.returncode != 0 and log.is_file():
+    code = run_setup(setup, root, log)
+    record("the installer runs", code == 0, "timed out" if code is None else code)
+    if code != 0 and log.is_file():
         print(log.read_text(encoding="utf-8", errors="replace")[-3000:], flush=True)
     where = installed_at()
     record(
@@ -116,16 +137,14 @@ def install(setup: Path, root: Path) -> bool:
     )
     shortcuts = sorted(p.name for p in START_MENU.glob("*.lnk"))
     record("Start menu shortcuts", len(shortcuts) == 3, shortcuts)
-    return done.returncode == 0
+    return code == 0
 
 
 def uninstall(root: Path) -> None:
     # Files of the user's own beside the program, and some that Argus makes as it runs.
-    for keep in ("logs", "mbtiles"):
-        (root / keep).mkdir(exist_ok=True)
-        (root / keep / "smoke.txt").write_text("kept")
-    (root / "tile_cache").mkdir(exist_ok=True)
-    (root / "tile_cache" / "smoke.txt").write_text("cache")
+    for name in (*KEPT, "tile_cache", "param_cache"):
+        (root / name).mkdir(exist_ok=True)
+        (root / name / "smoke.txt").write_text("smoke")
     (root / ".gcs_token").write_text(TOKEN)
     done = subprocess.run([str(root / "unins000.exe"), "/VERYSILENT", "/SUPPRESSMSGBOXES", "/NORESTART"], timeout=600)
     # The uninstaller hands the work to a copy of itself in TEMP, which may still be at it.
@@ -135,13 +154,11 @@ def uninstall(root: Path) -> None:
     record("the uninstaller runs", done.returncode == 0 and not (root / "unins000.exe").exists(), done.returncode)
     left = [
         name
-        for name in ("backend", "dist", "python", "tile_cache", ".gcs_token", "Argus地面站.bat")
+        for name in ("backend", "dist", "python", "tile_cache", "param_cache", ".gcs_token", "Argus地面站.bat")
         if (root / name).exists()
     ]
     record("it removes the program, its caches and the token", not left, left)
-    record(
-        "it keeps flight logs and map files", all((root / keep / "smoke.txt").is_file() for keep in ("logs", "mbtiles"))
-    )
+    record("it keeps flight logs, map files and firmware", all((root / name / "smoke.txt").is_file() for name in KEPT))
     record("no uninstall entry or shortcuts are left", installed_at() is None and not START_MENU.exists())
 
 
@@ -232,10 +249,13 @@ def main() -> int:
         if package.suffix.lower() == ".exe":
             # A space in the name, as in the default folder under Programs.
             root = Path(tmp) / "Argus GCS"
-            if install(package, root):
-                try:
+            try:
+                if install(package, root):
                     check_package(root, version)
-                finally:
+            finally:
+                # Also after a failed or timed-out install that got as far as the uninstaller:
+                # its entry and shortcuts would outlive the folder.
+                if (root / "unins000.exe").exists():
                     uninstall(root)
         else:
             with zipfile.ZipFile(package) as z:

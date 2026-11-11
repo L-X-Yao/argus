@@ -70,9 +70,19 @@ class TestScript:
         assert not re.search(r"^PrivilegesRequiredOverridesAllowed", ISS, re.MULTILINE)
 
     @pytest.mark.parametrize("name", ["InstallDelete", "UninstallDelete"])
-    def test_never_deletes_flight_logs_or_map_files(self, name):
+    def test_never_deletes_flight_logs_map_files_or_firmware(self, name):
+        # firmware holds .apj files uploaded through the page (backend/firmware.py).
         for entry in section(name):
-            assert not re.search(r"\{app\}\\(logs|mbtiles)\b", entry), entry
+            assert not re.search(r"\{app\}\\(logs|mbtiles|firmware)\b", entry), entry
+
+    def test_uninstalling_clears_the_caches(self):
+        cleared = set(re.findall(r'Name: "\{app\}\\([^"]+)"', "\n".join(section("UninstallDelete"))))
+        assert {"tile_cache", "srtm_cache", "param_cache", ".gcs_token"} <= cleared
+
+    def test_the_folder_is_its_own(self):
+        # A folder picked by hand could hold a python or dist of someone else's.
+        assert re.search(r"^DisableDirPage=yes$", ISS, re.MULTILINE)
+        assert "function PrepareToInstall" in ISS and "backend\\server.py" in ISS
 
     def test_an_upgrade_clears_only_program_folders(self):
         cleared = {re.search(r'Name: "\{app\}\\([^"]+)"', entry).group(1) for entry in section("InstallDelete")}

@@ -29,6 +29,9 @@ AppUpdatesURL=https://github.com/L-X-Yao/argus/releases
 ; With PrivilegesRequired=lowest this is %LOCALAPPDATA%\Programs.
 DefaultDirName={autopf}\Argus GCS
 DefaultGroupName=Argus GCS
+; A folder of its own, always: an upgrade clears folders in it and the uninstaller more, so a
+; folder chosen by hand that holds other things could lose them (see PrepareToInstall too).
+DisableDirPage=yes
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
@@ -56,6 +59,8 @@ en.ArgusGcs=Argus Ground Station
 zh.ArgusGcs=Argus 地面站
 en.ArgusSimulator=Argus Simulator
 zh.ArgusSimulator=Argus 仿真器
+en.NotItsOwn=%1 holds other files and no Argus. Argus needs a folder of its own: an upgrade and the uninstaller clear folders in it.
+zh.NotItsOwn=%1 里已有其他文件，且没有 Argus。Argus 需要单独的文件夹：升级和卸载会清理其中的文件夹。
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
@@ -80,13 +85,40 @@ Name: "{autodesktop}\{cm:ArgusGcs}"; Filename: "{app}\Argus地面站.bat"; Worki
 Filename: "{app}\Argus地面站.bat"; WorkingDir: "{app}"; Description: "{cm:LaunchProgram,Argus GCS}"; Flags: postinstall nowait skipifsilent shellexec
 
 [UninstallDelete]
-; What Argus made while it ran: compiled modules, caches, downloaded firmware and the access
-; token. Flight logs (logs) and map files of your own (mbtiles) stay.
+; What Argus made while it ran: compiled modules, caches and the access token. Flight logs
+; (logs), map files of your own (mbtiles) and firmware files, uploaded ones among them
+; (firmware), stay.
 Type: filesandordirs; Name: "{app}\backend"
 Type: filesandordirs; Name: "{app}\dist"
 Type: filesandordirs; Name: "{app}\python"
 Type: filesandordirs; Name: "{app}\tile_cache"
 Type: filesandordirs; Name: "{app}\srtm_cache"
-Type: filesandordirs; Name: "{app}\firmware"
+Type: filesandordirs; Name: "{app}\param_cache"
 Type: files; Name: "{app}\.gcs_token"
 Type: dirifempty; Name: "{app}"
+
+[Code]
+// The folder given with /DIR, or kept from an earlier install, must be Argus's own or empty:
+// [InstallDelete] would clear backend, dist, python and LICENSES in any other.
+function PrepareToInstall(var NeedsRestart: Boolean): String;
+var
+  Dir: String;
+  Found: TFindRec;
+begin
+  Result := '';
+  Dir := AddBackslash(ExpandConstant('{app}'));
+  if FileExists(Dir + 'backend\server.py') then
+    Exit;
+  if FindFirst(Dir + '*', Found) then
+  try
+    repeat
+      if (Found.Name <> '.') and (Found.Name <> '..') then
+      begin
+        Result := FmtMessage(CustomMessage('NotItsOwn'), [RemoveBackslash(Dir)]);
+        Exit;
+      end;
+    until not FindNext(Found);
+  finally
+    FindClose(Found);
+  end;
+end;
