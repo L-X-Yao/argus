@@ -624,6 +624,14 @@
   :global(.leaflet-bottom.leaflet-right) {
     display: flex;
     align-items: flex-end;
+    /* The credit is Latin and Chinese text. In a right-to-left locale it keeps its order, its
+       beginning stays in the box, and the scale keeps its side. */
+    direction: ltr;
+  }
+  /* Over the panels of the fly view while the pointer or a finger is on it, so that all of a
+     long credit can be read. */
+  :global(.leaflet-bottom.leaflet-right:hover) {
+    z-index: 1002;
   }
   /* One line, so that it stays under the panels above it. A credit longer than that shows in
      full under the pointer. */

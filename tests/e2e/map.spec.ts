@@ -62,6 +62,36 @@ test.describe('Map credit', () => {
     expect(await uncovered(credit)).toBe(true);
   });
 
+  test('a right-to-left locale leaves the credit in its own order and in its box', async ({ page }) => {
+    // The page direction reversed the row and the text: "©" ended up behind the name, the
+    // scale changed sides, and a long credit lost its beginning.
+    await page.addInitScript(() => {
+      localStorage.setItem('argus_locale', 'ar');
+      localStorage.setItem('argus_settings', JSON.stringify({ tileSource: 'osm' }));
+    });
+    await page.goto('/');
+    await expect(page.locator('html')).toHaveAttribute('dir', 'rtl');
+    const credit = page.locator('.leaflet-control-attribution');
+    await expect(credit).toContainText('Powered by Esri');
+    await expect(credit).toHaveCSS('direction', 'ltr');
+    const layout = await credit.evaluate((el) => {
+      const box = el.getBoundingClientRect();
+      const first = document.createTreeWalker(el, NodeFilter.SHOW_TEXT).nextNode()!;
+      const range = document.createRange();
+      range.setStart(first, 0);
+      range.setEnd(first, 1);
+      const scale = document.querySelector('.leaflet-control-scale')!.getBoundingClientRect();
+      return {
+        firstLetter: range.getBoundingClientRect().left - box.left,
+        scaleRight: scale.right,
+        creditLeft: box.left,
+      };
+    });
+    expect(layout.firstLetter).toBeGreaterThanOrEqual(0);
+    expect(layout.firstLetter).toBeLessThan(20);
+    expect(layout.scaleRight).toBeLessThanOrEqual(layout.creditLeft + 1);
+  });
+
   test('a source without a label layer shows its street layer, and that layer its credit', async ({ page }) => {
     // Handing Leaflet the missing label layer threw, and left the map blank until v3.7.9.
     const pageErrors: string[] = [];

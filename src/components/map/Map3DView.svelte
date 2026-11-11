@@ -956,6 +956,14 @@
     bottom: 26px;
     display: flex;
     align-items: flex-end;
+    /* The credit is Latin and Chinese text. In a right-to-left locale it keeps its order, its
+       beginning stays in the box, and the scale keeps its side. */
+    direction: ltr;
+  }
+  /* Over the panels of the fly view while the pointer or a finger is on it, so that all of a
+     long credit can be read. */
+  .above-events-bar :global(.maplibregl-ctrl-bottom-right:hover) {
+    z-index: 1002;
   }
   .above-events-bar :global(.maplibregl-ctrl-bottom-left) {
     bottom: 26px;
