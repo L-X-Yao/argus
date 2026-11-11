@@ -298,6 +298,21 @@ export function completeSlide() {
   fn?.();
 }
 
+/**
+ * Slid to the end: what it confirms runs now, and the slide, showing "OK", goes a moment later.
+ * It ran 300 ms after the slide before, and the 8 s time-out, or a tap on the backdrop, could
+ * fall in between: the slide said OK and nothing was sent.
+ */
+export function finishSlide(showOkMs = 300) {
+  const fn = slideState._onConfirm;
+  slideState._onConfirm = null;
+  setTimeout(() => {
+    // Unless another slide has been asked for meanwhile.
+    if (!slideState._onConfirm) slideState.visible = false;
+  }, showOkMs);
+  fn?.();
+}
+
 export function cancelSlide() {
   slideState.visible = false;
   slideState._onConfirm = null;
