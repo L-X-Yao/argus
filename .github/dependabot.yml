@@ -1,11 +1,17 @@
 version: 2
 updates:
+  # Argus is in maintenance: one grouped pull request a month. Security updates do not wait for
+  # the schedule, they come as their own pull requests.
   - package-ecosystem: npm
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
     open-pull-requests-limit: 5
     labels: ["dependencies"]
+    groups:
+      npm:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
     ignore:
       # svelte-check 4 crashes on TypeScript 7.
       - dependency-name: typescript
@@ -14,9 +20,13 @@ updates:
   - package-ecosystem: pip
     directory: /
     schedule:
-      interval: weekly
+      interval: monthly
     open-pull-requests-limit: 3
     labels: ["dependencies"]
+    groups:
+      pip:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
 
   - package-ecosystem: github-actions
     directory: /
