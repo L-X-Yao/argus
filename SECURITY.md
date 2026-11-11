@@ -4,6 +4,8 @@
 
 If you discover a security vulnerability in Argus GCS, please report it responsibly.
 
+**On GitHub, in private (preferred):** open the [Security tab](https://github.com/L-X-Yao/argus/security) and choose "Report a vulnerability", or go straight to the [report form](https://github.com/L-X-Yao/argus/security/advisories/new). Only the maintainer sees the report.
+
 **Email:** lsc1476907630@gmail.com
 
 **What to include:**
@@ -17,6 +19,8 @@ If you discover a security vulnerability in Argus GCS, please report it responsi
 **Please do NOT:**
 - Open a public GitHub issue for security vulnerabilities
 - Exploit the vulnerability beyond what is necessary to demonstrate it
+
+Fixed vulnerabilities are published as [security advisories](https://github.com/L-X-Yao/argus/security/advisories).
 
 ## Scope
 
