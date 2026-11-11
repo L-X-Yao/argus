@@ -4,19 +4,30 @@ on:
   push:
     tags:
       - 'v*'
+  # A rehearsal: everything below except the publishing. Run it after a change to this file,
+  # with `gh workflow run release.yml`.
+  workflow_dispatch:
 
 permissions:
-  contents: write
-  id-token: write
-  attestations: write
+  contents: read
 
 jobs:
-  release:
+  # A release goes out from a commit on which every check has passed: the jobs of a push to
+  # main, run on the tagged commit itself. The run on main ends a quarter of an hour after the
+  # tag is pushed, and v3.7.7 and v3.7.8 were both out before theirs failed.
+  ci:
+    uses: ./.github/workflows/ci.yml
+
+  # Read access only. What pip and npm install here is the newest of the day, and none of it
+  # runs in the job that may publish.
+  build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Set up Python
         uses: actions/setup-python@v7
@@ -29,20 +40,22 @@ jobs:
           node-version: '24'
           cache: npm
 
-      - name: Install deps
+      - name: The tag names the version of this tree, on main
+        if: github.event_name == 'push'
         run: |
-          pip install -e '.[dev]'
-          npm ci
+          VERSION=$(python -c "import tomllib; print(tomllib.load(open('pyproject.toml', 'rb'))['project']['version'])")
+          if [ "v$VERSION" != "$GITHUB_REF_NAME" ]; then
+            echo "::error::tag $GITHUB_REF_NAME is on a tree of version $VERSION"
+            exit 1
+          fi
+          git fetch --no-tags origin main
+          if ! git merge-base --is-ancestor "$GITHUB_SHA" FETCH_HEAD; then
+            echo "::error::$GITHUB_REF_NAME is not a commit of main"
+            exit 1
+          fi
 
-      # Smoke test only — full test suite already ran in make-release.sh
-      # before the tag was pushed. Re-running the full suite here would
-      # double CI minutes for zero safety gain.
-      - name: Smoke test
-        run: |
-          ruff check backend/ scripts/ tests/ --quiet
-          npx svelte-check --tsconfig ./tsconfig.json
-          python -m pytest tests/test_unit_*.py tests/test_contract_*.py -q --tb=line -x
-          npx vitest run --bail 1 --reporter=dot
+      - name: Install Node deps
+        run: npm ci
 
       - name: Build Windows package (amd64)
         run: python scripts/build_package.py --arch amd64
@@ -57,26 +70,80 @@ jobs:
       - name: Checksum the package
         run: cd release && sha256sum *.zip > SHA256SUMS.txt
 
+      - name: Generate release notes
+        run: |
+          PREV_TAG=$(git tag --sort=-v:refname | sed -n '2p')
+          if [ -n "$PREV_TAG" ]; then
+            bash scripts/changelog.sh "$PREV_TAG" > release/RELEASE_NOTES.md
+          else
+            bash scripts/changelog.sh > release/RELEASE_NOTES.md
+          fi
+          cat release/RELEASE_NOTES.md
+
+      - name: Hand the package to the next jobs
+        uses: actions/upload-artifact@v7
+        with:
+          name: package
+          path: |
+            release/*.zip
+            release/SHA256SUMS.txt
+            release/RELEASE_NOTES.md
+          if-no-files-found: error
+          retention-days: 7
+
+  # The zip that will be published, started on Windows: step 2 of Releases in CONTRIBUTING.md.
+  # CI smoke-tests a zip of its own, built on Windows, where pip resolves differently.
+  smoke:
+    needs: build
+    runs-on: windows-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.14'
+
+      - uses: actions/download-artifact@v8
+        with:
+          name: package
+          path: release
+
+      - name: Smoke-test the package
+        shell: bash
+        run: python scripts/smoke_package.py release/Argus_GCS_v*_amd64.zip
+
+  publish:
+    if: github.event_name == 'push'
+    needs: [ci, build, smoke]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: package
+          path: release
+
+      - name: The package is the one that was checksummed
+        run: cd release && sha256sum -c SHA256SUMS.txt
+
       - name: Attest where the package came from
         uses: actions/attest-build-provenance@v4
         with:
           subject-path: release/*.zip
 
-      - name: Generate release notes
-        run: |
-          PREV_TAG=$(git tag --sort=-v:refname | sed -n '2p')
-          if [ -n "$PREV_TAG" ]; then
-            bash scripts/changelog.sh "$PREV_TAG" > RELEASE_NOTES.md
-          else
-            bash scripts/changelog.sh > RELEASE_NOTES.md
-          fi
-          cat RELEASE_NOTES.md
-
       - name: Create GitHub Release
         # Not GitHub's own, and it runs with this job's write access: held to one commit.
         uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3 # v3.0.4
         with:
-          body_path: RELEASE_NOTES.md
+          body_path: release/RELEASE_NOTES.md
           files: |
             release/*.zip
             release/SHA256SUMS.txt

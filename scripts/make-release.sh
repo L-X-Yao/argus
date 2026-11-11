@@ -31,6 +31,14 @@ if git rev-parse "v$NEW_VER" >/dev/null 2>&1; then
     exit 1
 fi
 
+# A merge on GitHub since the last pull would have the push of main refused, and the release
+# then built from a commit that main does not have.
+git fetch --quiet origin main
+if [ "$(git rev-parse HEAD)" != "$(git rev-parse FETCH_HEAD)" ]; then
+    echo "ERROR: main is not where origin/main is. Pull or push first."
+    exit 1
+fi
+
 # Bump version across all files
 bash scripts/bump_version.sh "$NEW_VER"
 
@@ -61,10 +69,11 @@ if [ -n "$(git status --porcelain)" ]; then
 fi
 git tag -a "v$NEW_VER" -m "Release v$NEW_VER"
 
-# Push commit + tag
-git push origin main --tags
+# Push commit + tag: both or neither, and this tag only.
+git push --atomic origin main "v$NEW_VER"
 
 echo ""
 echo "Released v$NEW_VER"
-echo "GitHub Actions will build artifacts and create the Release."
+echo "GitHub Actions runs every check on the tagged commit, builds the package, starts it"
+echo "on Windows, and only then creates the Release: about 20 minutes."
 echo "Watch: https://github.com/L-X-Yao/argus/actions"

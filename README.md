@@ -213,7 +213,7 @@ npm run test:e2e -- --project=chromium
 bash scripts/make-release.sh X.Y.Z
 ```
 
-This command bumps the version everywhere it is stored, runs the frontend, unit and contract tests, commits, tags, and pushes. GitHub Actions then repeats lint and those tests, builds the Windows package, generates a changelog, and publishes a GitHub Release with artifacts. The Windows package is also checked by hand before and after: see [CONTRIBUTING.md](CONTRIBUTING.md#releases).
+This command bumps the version everywhere it is stored, runs the frontend, unit and contract tests, commits, tags, and pushes. GitHub Actions then runs every CI check on the tagged commit, builds the Windows package, starts it on Windows, and only if all of that passes publishes a GitHub Release with the package and a changelog. The Windows package is also checked by hand before and after: see [CONTRIBUTING.md](CONTRIBUTING.md#releases).
 
 Alternatively, to generate a changelog preview locally:
 

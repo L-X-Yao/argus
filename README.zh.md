@@ -213,7 +213,7 @@ npm run test:e2e -- --project=chromium
 bash scripts/make-release.sh X.Y.Z
 ```
 
-这条命令会同步所有版本号，运行前端、单元和契约测试，然后提交、打 tag、推送。GitHub Actions 随后重复 lint 和这些测试，构建 Windows 安装包，生成 changelog，发布 GitHub Release 并上传产物。Windows 安装包在发布前后还要人工检查，步骤见 [CONTRIBUTING.md](CONTRIBUTING.md#releases)。
+这条命令会同步所有版本号，运行前端、单元和契约测试，然后提交、打 tag、推送。GitHub Actions 随后在打了 tag 的提交上跑完整的 CI，构建 Windows 安装包并在 Windows 上启动它，全部通过后才发布 GitHub Release，附安装包和 changelog。Windows 安装包在发布前后还要人工检查，步骤见 [CONTRIBUTING.md](CONTRIBUTING.md#releases)。
 
 本地预览 changelog：
 
