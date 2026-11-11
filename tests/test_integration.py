@@ -25,7 +25,7 @@ async def recv_until(ws, predicate, timeout=10):
             msg = json.loads(raw)
             if predicate(msg):
                 return msg
-        except asyncio.TimeoutError:
+        except TimeoutError:
             continue
     raise TimeoutError("predicate not met within %ds" % timeout)
 
@@ -764,7 +764,7 @@ class TestOnboardLog:
                     try:
                         raw = await asyncio.wait_for(ws.recv(), timeout=2)
                         m = json.loads(raw)
-                    except asyncio.TimeoutError:
+                    except TimeoutError:
                         continue
                     if m.get("type") == "log_chunk":
                         chunks[m["ofs"]] = base64.b64decode(m["data"])

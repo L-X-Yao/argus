@@ -20,6 +20,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tomllib
 import urllib.request
 import zipfile
 from pathlib import Path
@@ -87,8 +88,6 @@ def allowed_versions() -> list[str]:
     """What pyproject.toml allows of each dependency, as pip constraints: the package ships
     what the tests ran against, and none of the versions it rules out. Without the extras,
     which a constraint cannot carry."""
-    import tomllib  # here, so that Python 3.10 can still import this file for its tests
-
     project = tomllib.loads((SCRIPT_DIR / "pyproject.toml").read_text(encoding="utf-8"))["project"]
     return [re.sub(r"\[[^\]]*\]", "", dep) for dep in project["dependencies"]]
 

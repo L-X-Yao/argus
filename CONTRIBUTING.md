@@ -115,7 +115,7 @@ All user-visible strings use `t('key')` from `src/lib/i18n.svelte.ts`. Add new k
 
 ## Releases
 
-Versions are `MAJOR.MINOR.PATCH`: PATCH for fixes, MINOR for new features, MAJOR for changes that break existing setups.
+Versions are `MAJOR.MINOR.PATCH`: PATCH for fixes, MINOR for new features and for leaving behind a Python that has reached its end of life, MAJOR for other changes that break existing setups.
 
 Release from `main`, on a commit whose CI run is green. `scripts/make-release.sh` checks the branch, a clean tree and that `main` is where `origin/main` is, but not CI: the release workflow runs every check again on the tagged commit, and publishes nothing unless all of them pass.
 

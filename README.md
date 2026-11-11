@@ -74,7 +74,7 @@ For Windows 10 and 11, x64. Python and every library are inside the zip, and not
 
 ### From source
 
-For Linux, macOS and Windows. Needs Python 3.10 or newer and Node.js. CI runs on Node 24 and Python 3.14, which is also the Python the Windows package bundles. Video needs `ffmpeg` on the PATH.
+For Linux, macOS and Windows. Needs Python 3.11 or newer and Node.js. CI runs on Node 24 and Python 3.14, which is also the Python the Windows package bundles. Video needs `ffmpeg` on the PATH.
 
 ```bash
 git clone https://github.com/L-X-Yao/argus && cd argus

@@ -269,7 +269,7 @@ async def wait_event(ws, pred, timeout=30.0):
     while time.monotonic() < deadline:
         try:
             m = json.loads(await asyncio.wait_for(ws.recv(), 0.5))
-        except asyncio.TimeoutError:
+        except TimeoutError:
             continue
         if m.get("type") == "event" and pred(m):
             return m

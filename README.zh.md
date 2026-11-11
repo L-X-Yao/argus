@@ -74,7 +74,7 @@ Argus 是面向 ArduPilot 的 **Web 地面站**：一个浏览器界面，支持
 
 ### 从源码运行
 
-适用于 Linux、macOS 和 Windows。需要 Python 3.10 或更高版本，以及 Node.js。CI 运行在 Node 24 和 Python 3.14 上，Windows 发布包内置的也是 Python 3.14。视频功能需要 PATH 里有 `ffmpeg`。
+适用于 Linux、macOS 和 Windows。需要 Python 3.11 或更高版本，以及 Node.js。CI 运行在 Node 24 和 Python 3.14 上，Windows 发布包内置的也是 Python 3.14。视频功能需要 PATH 里有 `ffmpeg`。
 
 ```bash
 git clone https://github.com/L-X-Yao/argus && cd argus

@@ -103,10 +103,9 @@ class TestLicenseTexts:
         ]
 
 
-@pytest.mark.skipif(sys.version_info < (3, 11), reason="tomllib")
 def test_package_ships_inside_what_pyproject_allows():
     allowed = allowed_versions()
-    assert "websockets>=14.0,<17.0" in allowed
+    assert "websockets>=14.0,<18.0" in allowed
     # pip refuses a constraint with extras, and uvicorn[standard] asks for uvloop: no Windows build.
     assert not any("[" in line for line in allowed)
     constrained = {re.split(r"[<>=!~ ]", line, maxsplit=1)[0] for line in allowed}
