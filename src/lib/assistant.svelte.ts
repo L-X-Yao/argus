@@ -41,7 +41,16 @@ export interface AssistantReply {
   error?: string;
 }
 
-type Outcome = { ok: true; result: unknown } | { ok: false; error: string };
+/** Where a proposal stands before its answer: before the operator, or approved and running. */
+export interface AssistantStateMsg {
+  type: 'assistant_state';
+  id: string;
+  state: 'waiting' | 'running';
+}
+
+/** How a proposal ended other than done: backend/mcp_server.py tells the model by it. */
+type Ending = 'declined' | 'withdrawn' | 'refused' | 'failed';
+type Outcome = { ok: true; result: unknown } | { ok: false; error: string; ending?: Ending };
 type Fields = Record<string, unknown>;
 
 class AssistantState {
@@ -53,6 +62,9 @@ class AssistantState {
   running: boolean = $state(false);
 }
 
+/** The proposal approved and running now: no withdrawal stops it. */
+let runningId: string | null = null;
+
 export const assistant = new AssistantState();
 
 // The only fields a proposed waypoint may have: no relay drop, servo, camera or other command.
@@ -60,7 +72,10 @@ const WAYPOINT_FIELDS = new Set(['lat', 'lon', 'alt', 'type', 'loiter_param', 'd
 const MAX_VALUES = 200;
 const MAX_CHANGES = 50;
 const REASON_MAX = 500;
+// The backend allows an upload 30 s for each item (config MISSION_ITEM_TIMEOUT), and a slow
+// radio needs several seconds for a long one: the wait grows with the mission.
 const UPLOAD_WAIT_MS = 15000;
+const UPLOAD_WAIT_PER_WAYPOINT_MS = 1000;
 const PARAM_WAIT_MS = 10000;
 
 const OFF_THE_MAP = 'A waypoint is off the map: latitude within ±90, longitude within ±180.';
@@ -72,17 +87,26 @@ const MISSION_ERRORS: Record<string, string> = {
     'A waypoint is off the map: latitude within ±90 and not 0, longitude within ±180, altitude from -500 to 100000 m.',
 };
 
-let send: (msg: AssistantReply) => void = () => {};
+let send: (msg: AssistantReply | AssistantStateMsg) => void = () => {};
 
 /** Where answers go: the websocket the requests came in on (ws.ts). */
-export function answerThrough(sender: (msg: AssistantReply) => void): void {
+export function answerThrough(sender: (msg: AssistantReply | AssistantStateMsg) => void): void {
   send = sender;
 }
 
 const isFields = (v: unknown): v is Fields => typeof v === 'object' && v !== null && !Array.isArray(v);
 
+/** The one answer each request gets. An ending other than done travels as result.outcome. */
 function answer(id: string, outcome: Outcome): void {
-  send({ type: 'assistant_reply', id, ...outcome });
+  if (outcome.ok) send({ type: 'assistant_reply', id, ok: true, result: outcome.result });
+  else
+    send({
+      type: 'assistant_reply',
+      id,
+      ok: false,
+      error: outcome.error,
+      result: { outcome: outcome.ending ?? 'failed' },
+    });
 }
 
 export function handleAssistantRequest(msg: unknown): void {
@@ -103,8 +127,12 @@ export function handleAssistantRequest(msg: unknown): void {
       case 'propose_mission':
       case 'propose_parameters': {
         const proposal = msg.kind === 'propose_mission' ? proposeMission(id, args) : proposeParameters(id, args);
-        if ('error' in proposal) answer(id, { ok: false, error: proposal.error });
-        else assistant.queue.push(proposal);
+        if ('error' in proposal) {
+          answer(id, { ok: false, error: proposal.error, ending: 'refused' });
+        } else {
+          assistant.queue.push(proposal);
+          send({ type: 'assistant_state', id, state: 'waiting' });
+        }
         return;
       }
       default:
@@ -157,6 +185,19 @@ function mission() {
 function byName(): Map<string, number> {
   return new Map(paramState.list.map((p) => [p.name, p.value]));
 }
+
+// MAV_PARAM_TYPE of the integer kinds, and the values each holds. ArduPilot reports AP_PARAM_INT8,
+// INT16 and INT32 as these (libraries/GCS_MAVLink/GCS_MAVLink.cpp:119, mav_param_type), and stores
+// a value set for one of them with 0.01 added, cut to its range and truncated
+// (libraries/AP_Param/AP_Param.cpp:2299, set_float): 1.5 becomes 1 and 300 in an INT8 becomes 127.
+const WHOLE: Record<number, [number, number]> = {
+  1: [0, 255],
+  2: [-128, 127],
+  3: [0, 65535],
+  4: [-32768, 32767],
+  5: [0, 4294967295],
+  6: [-2147483648, 2147483647],
+};
 
 const NOT_READ = 'The page has not read the parameters. Ask the operator to read them: Params view, Read All.';
 
@@ -252,13 +293,18 @@ function proposeParameters(id: string, args: Fields): ParameterProposal | { erro
   if (!isFields(values) || Object.keys(values).length === 0) return { error: 'values: parameter names and numbers.' };
   if (Object.keys(values).length > MAX_CHANGES) return { error: `At most ${MAX_CHANGES} parameters at a time.` };
   if (paramState.list.length === 0) return { error: NOT_READ };
-  const known = byName();
+  const known = new Map(paramState.list.map((p) => [p.name, p]));
   const unknown = Object.keys(values).filter((n) => !known.has(n));
   if (unknown.length > 0) return { error: `The page has no parameter called ${unknown.join(', ')}.` };
   const changes: ParameterProposal['changes'] = [];
   for (const [name, to] of Object.entries(values)) {
     if (typeof to !== 'number' || !Number.isFinite(to)) return { error: `${name}: a finite number.` };
-    changes.push({ name, from: known.get(name)!, to });
+    const row = known.get(name)!;
+    const range = WHOLE[row.type];
+    if (range && !(Number.isInteger(to) && to >= range[0] && to <= range[1])) {
+      return { error: `${name} holds whole numbers from ${range[0]} to ${range[1]}.` };
+    }
+    changes.push({ name, from: row.value, to });
   }
   return { id, kind: 'propose_parameters', changes, reason: reasonOf(args) };
 }
@@ -280,11 +326,14 @@ export async function approve(id: string): Promise<void> {
   // It may have waited a while: the vehicle can be armed by now.
   const refused = refusal();
   if (refused) {
-    finish(proposal, { ok: false, error: refused });
+    finish(proposal, { ok: false, error: refused, ending: 'refused' });
     addToast(t('assistant.refusedNow'), 'error', 5000);
     return;
   }
   assistant.running = true;
+  runningId = proposal.id;
+  // From here a withdrawal no longer stops it, and the assistant hears so.
+  send({ type: 'assistant_state', id: proposal.id, state: 'running' });
   try {
     const outcome = proposal.kind === 'propose_mission' ? await runMission(proposal) : await runParameters(proposal);
     finish(proposal, outcome);
@@ -292,17 +341,22 @@ export async function approve(id: string): Promise<void> {
     else addToast(`${t('assistant.failed')}: ${outcome.error}`, 'error', 6000);
   } finally {
     assistant.running = false;
+    runningId = null;
   }
 }
 
 export function decline(id: string): void {
   const proposal = assistant.queue.find((p) => p.id === id);
-  if (proposal) finish(proposal, { ok: false, error: 'The operator declined it.' });
+  if (proposal && proposal.id !== runningId)
+    finish(proposal, { ok: false, error: 'The operator declined it.', ending: 'declined' });
 }
 
-/** The assistant withdrew it, or stopped waiting: no answer is due. */
+/** The assistant takes it back, or has gone. One still waiting is withdrawn and answered so; the
+ * one running goes on, and its answer is its result. */
 export function withdraw(id: unknown): void {
-  if (typeof id === 'string') remove(id);
+  if (typeof id !== 'string' || id === runningId) return;
+  const proposal = assistant.queue.find((p) => p.id === id);
+  if (proposal) finish(proposal, { ok: false, error: 'Withdrawn by the assistant.', ending: 'withdrawn' });
 }
 
 /** The websocket closed: the backend has told the assistant, and the requests are gone. */
@@ -323,15 +377,16 @@ async function runMission(proposal: MissionProposal): Promise<Outcome> {
     const res = await serialUploadMission(app.waypoints, proposal.takeoffAlt);
     return res.ok ? done : { ok: false, error: `The upload failed: ${res.error}` };
   }
-  const mark = lastSeq();
+  const mark = app.events[app.events.length - 1];
   dispatch('mission_upload', undefined, { waypoints: app.waypoints, takeoff_alt: proposal.takeoffAlt });
-  const ack = await nextEvent(mark, ['mission_ack_ok', 'mission_ack_fail'], UPLOAD_WAIT_MS);
+  const wait = UPLOAD_WAIT_MS + UPLOAD_WAIT_PER_WAYPOINT_MS * proposal.waypoints.length;
+  const ack = await nextEvent(mark, ['mission_ack_ok', 'mission_ack_fail'], wait);
   if (ack?.event_type === 'mission_ack_ok') return done;
   return {
     ok: false,
     error: ack
       ? `The flight controller refused the mission: ${ack.text}`
-      : 'No answer from the flight controller to the upload.',
+      : 'No answer from the flight controller to the upload. It may still be going on: read the mission back before anything else.',
   };
 }
 
@@ -354,17 +409,18 @@ async function runParameters(proposal: ParameterProposal): Promise<Outcome> {
   return { ok: false, error: `The flight controller did not confirm ${names}. Values now: ${JSON.stringify(values)}` };
 }
 
-function lastSeq(): number {
-  const last = app.events[app.events.length - 1];
-  return last?.seq ?? -1;
-}
-
-/** The first event of these types after the one numbered mark, or null after ms. */
-function nextEvent(mark: number, types: string[], ms: number): Promise<DroneEvent | null> {
+/**
+ * The first event of these types that came after mark, the newest event when the wait began, or
+ * null after ms. By the event itself, not its number: the backend numbers its events from 0 each
+ * time it starts, and the page keeps those of before across a reconnect. Trimming takes the
+ * oldest first, so when mark is gone, every event left came after it.
+ */
+function nextEvent(mark: DroneEvent | undefined, types: string[], ms: number): Promise<DroneEvent | null> {
   return new Promise((resolve) => {
     const started = Date.now();
     const timer = setInterval(() => {
-      const found = app.events.find((e) => (e.seq ?? -1) > mark && types.includes(e.event_type));
+      const after = mark === undefined ? app.events : app.events.slice(app.events.lastIndexOf(mark) + 1);
+      const found = after.find((e) => types.includes(e.event_type));
       if (found || Date.now() - started >= ms) {
         clearInterval(timer);
         resolve(found ?? null);

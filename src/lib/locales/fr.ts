@@ -1160,7 +1160,6 @@ const messages: Record<string, string> = {
     "{n} points de passage, {dist}, au plus {alt} m. D'abord décollage à {takeoff} m, retour au départ à la fin.",
   'assistant.missionSummarySub':
     '{n} points de passage, {dist}, au plus profond {alt} m. Ni décollage ni retour à la fin.',
-  'assistant.onMap': 'La route est tracée en pointillés sur la carte.',
   'assistant.paramsTitle': 'Modifier des paramètres du contrôleur de vol',
   'assistant.param': 'Paramètre',
   'assistant.now': 'Actuel',
@@ -1175,6 +1174,12 @@ const messages: Record<string, string> = {
   'assistant.done': "La demande de l'assistant a été exécutée",
   'assistant.failed': "La demande de l'assistant n'a pas abouti",
   'assistant.unchanged': 'inchangé',
+  'assistant.hold': 'attente {n} s',
+  'assistant.speed': '{n} m/s à partir d’ici',
+  'assistant.loiterTime': 'cercles {n} s',
+  'assistant.loiterTurns': '{n} tours de cercle',
+  'assistant.spline': 'courbe spline',
+  'assistant.onMap': 'Dans les vues Vol et Plan, la route est tracée en pointillés sur la carte.',
 };
 
 export default messages;

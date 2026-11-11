@@ -1157,7 +1157,6 @@ const messages: Record<string, string> = {
   'assistant.missionSummary':
     '{n} puntos de ruta, {dist}, máximo {alt} m. Primero despegue a {takeoff} m y regreso al inicio al final.',
   'assistant.missionSummarySub': '{n} puntos de ruta, {dist}, mínimo {alt} m. Sin despegue y sin regreso al final.',
-  'assistant.onMap': 'La ruta aparece discontinua en el mapa.',
   'assistant.paramsTitle': 'Cambiar parámetros del controlador de vuelo',
   'assistant.param': 'Parámetro',
   'assistant.now': 'Actual',
@@ -1171,6 +1170,12 @@ const messages: Record<string, string> = {
   'assistant.done': 'Se ejecutó la solicitud del asistente',
   'assistant.failed': 'La solicitud del asistente no se completó',
   'assistant.unchanged': 'sin cambios',
+  'assistant.hold': 'espera {n} s',
+  'assistant.speed': '{n} m/s desde aquí',
+  'assistant.loiterTime': 'círculos {n} s',
+  'assistant.loiterTurns': '{n} vueltas en círculo',
+  'assistant.spline': 'curva spline',
+  'assistant.onMap': 'En las vistas Vuelo y Plan, la ruta aparece discontinua en el mapa.',
 };
 
 export default messages;

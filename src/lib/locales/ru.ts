@@ -1155,7 +1155,6 @@ const messages: Record<string, string> = {
   'assistant.missionSummary':
     '{n} точек маршрута, {dist}, максимум {alt} м. Сначала взлёт на {takeoff} м, в конце возврат домой.',
   'assistant.missionSummarySub': '{n} точек маршрута, {dist}, глубже всего {alt} м. Без взлёта и без возврата в конце.',
-  'assistant.onMap': 'Маршрут показан на карте пунктиром.',
   'assistant.paramsTitle': 'Изменить параметры полётного контроллера',
   'assistant.param': 'Параметр',
   'assistant.now': 'Сейчас',
@@ -1170,6 +1169,12 @@ const messages: Record<string, string> = {
   'assistant.done': 'Запрос ассистента выполнен',
   'assistant.failed': 'Запрос ассистента не выполнен',
   'assistant.unchanged': 'без изменений',
+  'assistant.hold': 'ждать {n} с',
+  'assistant.speed': 'дальше {n} м/с',
+  'assistant.loiterTime': 'кружить {n} с',
+  'assistant.loiterTurns': 'кружить {n} витков',
+  'assistant.spline': 'сплайн',
+  'assistant.onMap': 'В видах «Полёт» и «План» маршрут показан на карте пунктиром.',
 };
 
 export default messages;

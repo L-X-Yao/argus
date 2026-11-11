@@ -16,18 +16,22 @@ import {
   handleAssistantRequest,
   withdraw,
   type AssistantReply,
+  type AssistantStateMsg,
 } from './assistant.svelte';
 import { app } from './stores.svelte';
 import { paramState } from './paramStore.svelte';
 import { defaultState } from './types';
 
-let replies: AssistantReply[];
+let sent: (AssistantReply | AssistantStateMsg)[];
+
+const replies = () => sent.filter((m): m is AssistantReply => m.type === 'assistant_reply');
+const states = (id = 'k1') =>
+  sent.filter((m) => m.type === 'assistant_state' && m.id === id).map((m) => (m as AssistantStateMsg).state);
+const reply = (id = 'k1') => replies().find((r) => r.id === id);
 
 function ask(kind: string, args: Record<string, unknown> = {}, id = 'k1') {
   handleAssistantRequest({ type: 'assistant_request', id, kind, args });
 }
-
-const reply = (id = 'k1') => replies.find((r) => r.id === id);
 
 const MISSION = {
   waypoints: [
@@ -38,23 +42,25 @@ const MISSION = {
   reason: 'Survey the north field',
 };
 
-function event(seq: number, event_type: string, text = event_type) {
+function event(event_type: string, text = event_type, seq?: number) {
   app.events.push({ type: 'event', time: '12:00:00', text, event_type, seq });
 }
 
 beforeEach(() => {
-  replies = [];
-  answerThrough((r) => replies.push(r));
+  sent = [];
+  answerThrough((m) => sent.push(m));
   app.drone = { ...defaultState, connected: true, mode: 'LOITER', lat: 34.25, lon: 108.94 };
   app.activeTransport = 'ws';
   app.waypoints = [];
   app.undoStack = [];
   app.events = [];
   app.defaultAlt = 30;
+  // Types as ArduPilot reports them: 9 a float, 2 an INT8, 4 an INT16.
   paramState.list = [
-    { name: 'BATT_CAPACITY', value: 5200, type: 9, index: 0 },
-    { name: 'BATT_MONITOR', value: 4, type: 9, index: 1 },
+    { name: 'BATT_CAPACITY', value: 5200, type: 6, index: 0 },
+    { name: 'BATT_MONITOR', value: 4, type: 2, index: 1 },
     { name: 'WPNAV_SPEED', value: 500, type: 9, index: 2 },
+    { name: 'RC1_TRIM', value: 1500, type: 4, index: 3 },
   ];
   forgetAssistant();
   vi.mocked(dispatch).mockClear();
@@ -71,9 +77,8 @@ describe('reads', () => {
     app.drone.lat = 0;
     app.drone.lon = 0;
     ask('status');
-    const status = reply()!.result as Record<string, unknown>;
     expect(reply()!.ok).toBe(true);
-    expect(status).toMatchObject({
+    expect(reply()!.result).toMatchObject({
       link: 'backend',
       connected: true,
       mode: 'LOITER',
@@ -121,16 +126,16 @@ describe('reads', () => {
   it('an unknown request is answered, and one without an id is not', () => {
     ask('arm');
     handleAssistantRequest({ type: 'assistant_request', kind: 'status', args: {} });
-    expect(replies).toHaveLength(1);
+    expect(replies()).toHaveLength(1);
     expect(reply()!.ok).toBe(false);
   });
 });
 
 describe('proposals wait for the operator', () => {
-  it('a mission is queued and nothing is sent', () => {
+  it('a mission is queued, said to be waiting, and nothing is sent', () => {
     ask('propose_mission', MISSION);
-    expect(replies).toEqual([]);
-    expect(assistant.queue).toHaveLength(1);
+    expect(replies()).toEqual([]);
+    expect(states()).toEqual(['waiting']);
     expect(assistant.queue[0]).toMatchObject({
       kind: 'propose_mission',
       takeoffAlt: 15,
@@ -147,20 +152,22 @@ describe('proposals wait for the operator', () => {
 
   it('parameter changes are queued with the values they replace', () => {
     ask('propose_parameters', { values: { WPNAV_SPEED: 800 }, reason: 'faster' });
-    expect(replies).toEqual([]);
+    expect(replies()).toEqual([]);
     expect(assistant.queue[0]).toMatchObject({ changes: [{ name: 'WPNAV_SPEED', from: 500, to: 800 }] });
   });
 
   it.each([
     ['no vehicle', () => (app.drone.connected = false), 'No vehicle'],
     ['an armed vehicle', () => (app.drone.armed = true), 'armed'],
-  ])('nothing is taken with %s', (_, setUp, words) => {
+  ])('nothing is taken with %s, and the ending says refused', (_, setUp, words) => {
     setUp();
     ask('propose_mission', MISSION);
     ask('propose_parameters', { values: { WPNAV_SPEED: 800 } }, 'k2');
     expect(assistant.queue).toEqual([]);
-    expect(reply('k1')!.error).toContain(words);
-    expect(reply('k2')!.error).toContain(words);
+    for (const id of ['k1', 'k2']) {
+      expect(reply(id)!.error).toContain(words);
+      expect(reply(id)!.result).toEqual({ outcome: 'refused' });
+    }
   });
 
   it.each([
@@ -193,35 +200,60 @@ describe('proposals wait for the operator', () => {
     expect(reply('k2')!.error).toContain('finite');
     expect(assistant.queue).toEqual([]);
   });
+
+  // ArduPilot would store 1 for 1.5 and 127 for 300 in an INT8 (AP_Param.cpp set_float).
+  it.each([
+    [{ BATT_MONITOR: 1.5 }, 'BATT_MONITOR holds whole numbers from -128 to 127'],
+    [{ BATT_MONITOR: 300 }, 'BATT_MONITOR holds whole numbers from -128 to 127'],
+    [{ RC1_TRIM: 40000 }, 'RC1_TRIM holds whole numbers from -32768 to 32767'],
+  ])('a value an integer parameter cannot hold: %o', (values, words) => {
+    ask('propose_parameters', { values });
+    expect(reply()!.error).toBe(`${words}.`);
+    expect(assistant.queue).toEqual([]);
+  });
+
+  it('a float parameter takes a fraction, an integer one a whole number in range', () => {
+    ask('propose_parameters', { values: { WPNAV_SPEED: 512.5, BATT_MONITOR: -5, BATT_CAPACITY: 2_000_000 } });
+    expect(replies()).toEqual([]);
+    expect(assistant.queue).toHaveLength(1);
+  });
 });
 
 describe("the operator's decision", () => {
   it('declined: answered so, and nothing sent', () => {
     ask('propose_mission', MISSION);
     decline('k1');
-    expect(reply()).toEqual({ type: 'assistant_reply', id: 'k1', ok: false, error: 'The operator declined it.' });
+    expect(reply()).toEqual({
+      type: 'assistant_reply',
+      id: 'k1',
+      ok: false,
+      error: 'The operator declined it.',
+      result: { outcome: 'declined' },
+    });
     expect(assistant.queue).toEqual([]);
     expect(dispatch).not.toHaveBeenCalled();
   });
 
-  it('withdrawn by the assistant: gone, and no answer due', () => {
+  it('withdrawn by the assistant while it waits: gone, and answered withdrawn', () => {
     ask('propose_mission', MISSION);
     withdraw('k1');
     expect(assistant.queue).toEqual([]);
-    expect(replies).toEqual([]);
+    expect(reply()).toMatchObject({ ok: false, result: { outcome: 'withdrawn' } });
+    expect(dispatch).not.toHaveBeenCalled();
   });
 
   it('a mission approved over the backend replaces the plan, uploads it and waits for the ack', async () => {
-    event(7, 'connected');
+    event('connected');
     ask('propose_mission', MISSION);
     const done = approve('k1');
+    expect(states()).toEqual(['waiting', 'running']);
     expect(app.undoStack).toHaveLength(1);
     expect(app.waypoints).toHaveLength(2);
     expect(dispatch).toHaveBeenCalledWith('mission_upload', undefined, {
       waypoints: app.waypoints,
       takeoff_alt: 15,
     });
-    event(8, 'mission_ack_ok', 'Mission ack: success');
+    event('mission_ack_ok', 'Mission ack: success');
     await done;
     expect(reply()).toEqual({
       type: 'assistant_reply',
@@ -232,23 +264,48 @@ describe("the operator's decision", () => {
     expect(assistant.queue).toEqual([]);
   });
 
-  it('an ack from before the upload is not its answer', async () => {
-    vi.useFakeTimers();
-    event(7, 'mission_ack_ok');
+  it('a withdrawal once approved does not stop it, and the result still comes', async () => {
     ask('propose_mission', MISSION);
     const done = approve('k1');
-    await vi.advanceTimersByTimeAsync(16000);
+    withdraw('k1');
+    expect(reply()).toBeUndefined();
+    event('mission_ack_ok');
+    await done;
+    expect(reply()!.ok).toBe(true);
+  });
+
+  it('an ack from before the upload is not its answer, whatever its number', async () => {
+    vi.useFakeTimers();
+    // From a backend before a restart: numbered higher than anything the new one sends.
+    event('mission_ack_ok', 'old', 120);
+    ask('propose_mission', MISSION);
+    const done = approve('k1');
+    event('connected', 'new backend', 1);
+    await vi.advanceTimersByTimeAsync(18000);
     await done;
     expect(reply()!.ok).toBe(false);
     expect(reply()!.error).toContain('No answer');
   });
 
+  it('a long mission is given longer to upload', async () => {
+    vi.useFakeTimers();
+    const waypoints = Array.from({ length: 30 }, (_, i) => ({ lat: 34.25 + i * 0.001, lon: 108.94, alt: 30 }));
+    ask('propose_mission', { waypoints });
+    const done = approve('k1');
+    await vi.advanceTimersByTimeAsync(40000);
+    expect(reply()).toBeUndefined();
+    event('mission_ack_ok');
+    await vi.advanceTimersByTimeAsync(200);
+    await done;
+    expect(reply()!.ok).toBe(true);
+  });
+
   it('a mission the flight controller refuses', async () => {
     ask('propose_mission', MISSION);
     const done = approve('k1');
-    event(1, 'mission_ack_fail', 'Mission ack: failed(1)');
+    event('mission_ack_fail', 'Mission ack: failed(1)');
     await done;
-    expect(reply()!.ok).toBe(false);
+    expect(reply()).toMatchObject({ ok: false, result: { outcome: 'failed' } });
     expect(reply()!.error).toContain('failed(1)');
   });
 
@@ -265,7 +322,9 @@ describe("the operator's decision", () => {
     ask('propose_mission', MISSION);
     app.drone.armed = true;
     await approve('k1');
+    expect(reply()).toMatchObject({ ok: false, result: { outcome: 'refused' } });
     expect(reply()!.error).toContain('armed');
+    expect(states()).toEqual(['waiting']);
     expect(dispatch).not.toHaveBeenCalled();
     expect(app.waypoints).toEqual([]);
   });
@@ -288,7 +347,7 @@ describe("the operator's decision", () => {
     const done = approve('k1');
     await vi.advanceTimersByTimeAsync(11000);
     await done;
-    expect(reply()!.ok).toBe(false);
+    expect(reply()).toMatchObject({ ok: false, result: { outcome: 'failed' } });
     expect(reply()!.error).toContain('did not confirm WPNAV_SPEED');
   });
 

@@ -13,7 +13,7 @@ from fastapi import WebSocketDisconnect
 
 from backend.drone_link import DroneLink
 from backend.locale_text import lt
-from backend.ws_manager import _MAX_WAITING, _NO_PAGE, _PAGE_CLOSED, WSManager
+from backend.ws_manager import _CLOSED_RUNNING, _MAX_WAITING, _NO_PAGE, _PAGE_CLOSED, WSManager
 
 pytestmark = pytest.mark.asyncio
 
@@ -177,7 +177,8 @@ class TestAskingThePage:
         await settle()
         assert [m["result"] for m in ai.of("assistant_reply")] == ["first"]
 
-    async def test_a_cancelled_request_is_withdrawn_from_the_page(self, mgr):
+    async def test_a_withdrawal_goes_to_the_page_which_answers_it(self, mgr):
+        # Withdrawn if it still waits; its result if the operator has approved it.
         page = await mgr.join()
         ai = await assistant(mgr)
         ai.say(type="assistant_request", id="r", kind="propose_mission", args={"waypoints": []})
@@ -186,9 +187,62 @@ class TestAskingThePage:
         ai.say(type="assistant_cancel", id="r")
         await settle()
         assert page.of("assistant_cancel") == [{"type": "assistant_cancel", "id": key}]
-        page.say(type="assistant_reply", id=key, ok=True)
+        page.say(type="assistant_reply", id=key, ok=False, error="Withdrawn", result={"outcome": "withdrawn"})
         await settle()
-        assert not ai.of("assistant_reply")
+        assert ai.of("assistant_reply") == [
+            {
+                "type": "assistant_reply",
+                "id": "r",
+                "ok": False,
+                "error": "Withdrawn",
+                "result": {"outcome": "withdrawn"},
+            }
+        ]
+
+    async def test_where_a_request_stands_reaches_the_assistant(self, mgr):
+        page = await mgr.join()
+        other = await mgr.join()
+        ai = await assistant(mgr)
+        ai.say(type="assistant_request", id="r", kind="propose_mission", args={})
+        await settle()
+        key = page.of("assistant_request")[0]["id"]
+        page.say(type="assistant_state", id=key, state="waiting")
+        other.say(type="assistant_state", id=key, state="running")  # not the page asked
+        page.say(type="assistant_state", id=key, state="done")  # no such state
+        page.say(type="assistant_state", id=key, state="running")
+        await settle()
+        assert [m["state"] for m in ai.of("assistant_state")] == ["waiting", "running"]
+        assert {m["id"] for m in ai.of("assistant_state")} == {"r"}
+
+    async def test_a_page_that_closes_while_the_change_runs_says_it_may_be_made(self, mgr):
+        page = await mgr.join()
+        ai = await assistant(mgr)
+        ai.say(type="assistant_request", id="r", kind="propose_mission", args={})
+        await settle()
+        key = page.of("assistant_request")[0]["id"]
+        page.say(type="assistant_state", id=key, state="running")
+        await settle()
+        page.leave()
+        await settle()
+        assert ai.of("assistant_reply") == [
+            {"type": "assistant_reply", "id": "r", "ok": False, "error": _CLOSED_RUNNING}
+        ]
+
+    async def test_keys_differ_from_one_backend_to_the_next(self):
+        # A page keeps its requests across a restart of the backend: an answer to one of before
+        # must not land on a new one.
+        pages = [Client(), Client()]
+        keys = []
+        for page in pages:
+            manager = WSManager(DroneLink())
+            manager._clients.add(page)
+            manager._order.append(page)
+            ai = Client()
+            manager._clients.add(ai)
+            manager._assistants.add(ai)
+            await manager._from_assistant(ai, "assistant_request", {"id": "r", "kind": "status", "args": {}})
+            keys.append(page.of("assistant_request")[0]["id"])
+        assert keys[0] != keys[1]
 
     async def test_requests_of_an_assistant_that_left_are_withdrawn(self, mgr):
         page = await mgr.join()

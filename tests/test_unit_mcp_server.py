@@ -10,35 +10,63 @@ import uvicorn
 from websockets.sync.client import connect
 
 from backend import mcp_server as mcp
-from backend.mcp_server import DECISION_TIMEOUT, LEGACY, MODERN, READ_TIMEOUT, Backend, Server, Unreachable
+from backend.mcp_server import LEGACY, MODERN, Backend, Request, Server, Unreachable
 
 META = "io.modelcontextprotocol/protocolVersion"
 CAPS = "io.modelcontextprotocol/clientCapabilities"
+TOOL_NAMES = [
+    "get_status",
+    "get_mission",
+    "get_parameters",
+    "propose_mission",
+    "propose_parameters",
+    "check_proposal",
+    "withdraw_proposal",
+]
+WITHDRAWN = {"ok": False, "error": "Withdrawn by the assistant.", "result": {"outcome": "withdrawn"}}
 
 
-class FakeBackend:
-    """The backend as the server sees it. With hold set, a request waits until it is released."""
+class FakeBackend(Backend):
+    """The backend as the server sees it, with the page played by the test: respond() says how
+    the page takes each request, and settle() moves one on. Waiting is the real Backend's."""
 
-    def __init__(self, reply=None):
-        self.reply = {"ok": True, "result": {"mode": "LOITER"}} if reply is None else reply
-        self.asked: list[tuple] = []
-        self.hold = threading.Event()
-        self.release = threading.Event()
-        self.withdrawn = threading.Event()
+    def __init__(self):
+        super().__init__("ws://fake")
+        self.asked: list[tuple[str, dict]] = []
+        self.withdrawn: list[str] = []
+        self.unreachable: str | None = None
 
-    def ask(self, kind, args, timeout, cancelled, note=None):
-        self.asked.append((kind, args, timeout))
-        if self.hold.is_set():
-            while not self.release.is_set():
-                if cancelled.is_set():
-                    self.withdrawn.set()
-                    return None
-                if note:
-                    note(12.0)
-                time.sleep(0.01)
-        if isinstance(self.reply, Exception):
-            raise self.reply
-        return self.reply
+        def respond(kind, args):
+            if kind.startswith("propose_"):
+                return {"state": "waiting"}
+            return {"answer": {"ok": True, "result": {"mode": "LOITER"}}}
+
+        self.respond = respond
+
+    def ask(self, kind, args):
+        if self.unreachable:
+            raise Unreachable(self.unreachable)
+        rid = f"p{len(self.asked) + 1}"
+        self.asked.append((kind, args))
+        with self._changed:
+            self._requests[rid] = Request(kind, time.monotonic())
+        self.settle(rid, **self.respond(kind, args))
+        return rid
+
+    def settle(self, rid, state=None, answer=None):
+        with self._changed:
+            request = self._requests[rid]
+            if state:
+                request.state = state
+            if answer is not None:
+                request.state, request.answer = "answered", answer
+            self._changed.notify_all()
+
+    def withdraw(self, rid):
+        self.withdrawn.append(rid)
+        # As the page does: a proposal still waiting is answered withdrawn, a running one goes on.
+        if self.get(rid).state == "waiting":
+            self.settle(rid, answer=WITHDRAWN)
 
 
 class Wire:
@@ -115,6 +143,12 @@ def call(server: Server, wire: Wire, rid, name: str, arguments=None, params: dic
     return wire.answer(rid)
 
 
+def outcome(response: dict) -> dict:
+    result = response["result"]
+    assert result["isError"] is False, result
+    return result["structuredContent"]
+
+
 class TestLegacyEra:
     def test_initialize_takes_a_version_it_knows(self, server, wire):
         result = initialize(server, wire, "2025-03-26")
@@ -130,13 +164,7 @@ class TestLegacyEra:
         initialize(server, wire)
         send(server, 1, "tools/list")
         tools = wire.answer(1)["result"]["tools"]
-        assert [t["name"] for t in tools] == [
-            "get_status",
-            "get_mission",
-            "get_parameters",
-            "propose_mission",
-            "propose_parameters",
-        ]
+        assert [t["name"] for t in tools] == TOOL_NAMES
         for tool in tools:
             assert tool["description"] and tool["inputSchema"]["type"] == "object"
 
@@ -168,7 +196,7 @@ class TestModernEra:
     def test_a_request_carries_its_own_version_with_no_handshake(self, server, wire):
         send(server, 1, "tools/list", modern())
         result = wire.answer(1)["result"]
-        assert result["resultType"] == "complete" and len(result["tools"]) == 5
+        assert result["resultType"] == "complete" and len(result["tools"]) == len(TOOL_NAMES)
         result = call(server, wire, 2, "get_status", params={"_meta": modern()["_meta"]})["result"]
         assert result["resultType"] == "complete" and result["structuredContent"] == {"mode": "LOITER"}
 
@@ -226,7 +254,7 @@ class TestMessages:
         assert len(lines) == 1 and lines[0].count(b"\n") == 1 and lines[0].endswith(b"\n")
 
 
-class TestTools:
+class TestArguments:
     @pytest.mark.parametrize(
         ("name", "arguments", "problem"),
         [
@@ -238,12 +266,15 @@ class TestTools:
             ("propose_mission", {"waypoints": [{"lat": 30, "lon": 120, "alt": 10, "drop": True}]}, "not an argument"),
             ("propose_mission", {"waypoints": [{"lat": 30, "lon": 120, "alt": 10, "type": "land"}]}, "one of"),
             ("propose_mission", {"waypoints": [{"lat": 30, "lon": 120, "alt": 10}], "takeoff_alt": 0}, "more than 0"),
-            ("propose_parameters", {"values": {"WPNAV_SPEED": "fast"}}, "must be a number"),
+            ("propose_parameters", {"values": {"BATT_CAPACITY": "large"}}, "must be a number"),
             ("propose_parameters", {"values": {}}, "has 0 entries"),
             ("propose_parameters", {"values": {"X": 1}, "reason": "x" * 501}, "longer than 500"),
+            ("check_proposal", {"proposal": ""}, "is empty"),
+            ("check_proposal", {"proposal": "p1", "wait_seconds": 120}, "at most 50"),
+            ("withdraw_proposal", {}, "proposal is missing"),
         ],
     )
-    def test_arguments_are_checked_before_the_page_is_asked(self, server, wire, page, name, arguments, problem):
+    def test_checked_before_the_page_is_asked(self, server, wire, page, name, arguments, problem):
         result = call(server, wire, 1, name, arguments)["result"]
         assert result["isError"] is True and problem in result["content"][0]["text"]
         assert not page.asked
@@ -255,69 +286,183 @@ class TestTools:
         assert wire.answer(1)["result"]["isError"] is True
         assert not page.asked
 
+
+class TestReads:
     @pytest.mark.parametrize(
-        ("name", "kind", "timeout"),
-        [
-            ("get_status", "status", READ_TIMEOUT),
-            ("get_mission", "mission", READ_TIMEOUT),
-            ("get_parameters", "parameters", READ_TIMEOUT),
-            ("propose_mission", "propose_mission", DECISION_TIMEOUT),
-            ("propose_parameters", "propose_parameters", DECISION_TIMEOUT),
-        ],
+        ("name", "kind"), [("get_status", "status"), ("get_mission", "mission"), ("get_parameters", "parameters")]
     )
-    def test_what_each_tool_asks_the_page(self, server, wire, page, name, kind, timeout):
-        arguments = {
-            "get_parameters": {"names": ["BATT_*"]},
-            "propose_mission": {"waypoints": [{"lat": 30.5, "lon": 120.1, "alt": 20}], "reason": "survey"},
-            "propose_parameters": {"values": {"WPNAV_SPEED": 500}},
-        }.get(name, {})
+    def test_what_each_asks_the_page(self, server, wire, page, name, kind):
+        arguments = {"names": ["BATT_*"]} if name == "get_parameters" else {}
         call(server, wire, 1, name, arguments)
-        assert page.asked == [(kind, arguments, timeout)]
+        assert page.asked == [(kind, arguments)]
 
     def test_a_refusal_of_the_page_is_an_error_the_model_can_read(self, server, wire, page):
-        page.reply = {"ok": False, "error": "The vehicle is armed: proposals wait until it is disarmed."}
-        result = call(server, wire, 1, "propose_parameters", {"values": {"X": 1}})["result"]
-        assert result["isError"] is True and "armed" in result["content"][0]["text"]
+        page.respond = lambda kind, args: {"answer": {"ok": False, "error": "The page has not read the parameters."}}
+        result = call(server, wire, 1, "get_parameters", {"names": ["X"]})["result"]
+        assert result["isError"] is True and "not read" in result["content"][0]["text"]
 
     def test_no_argus_is_an_error_that_says_what_to_do(self, server, wire, page):
-        page.reply = Unreachable("No Argus at ws://127.0.0.1:8100/ws: refused. Start Argus")
+        page.unreachable = "No Argus at ws://127.0.0.1:8100/ws: refused. Start Argus"
         result = call(server, wire, 1, "get_status")["result"]
         assert result["isError"] is True and "Start Argus" in result["content"][0]["text"]
 
-    def test_a_cancelled_call_is_withdrawn_and_answered_no_more(self, server, wire, page):
-        page.hold.set()
-        send(server, 7, "tools/call", {"name": "propose_parameters", "arguments": {"values": {"X": 1}}})
-        time.sleep(0.05)
-        send(server, None, "notifications/cancelled", {"requestId": 7, "reason": "user stopped"})
-        assert page.withdrawn.wait(2)
-        time.sleep(0.1)
-        assert not [m for m in wire.out if m.get("id") == 7]
 
-    def test_a_long_wait_sends_progress_to_a_client_that_asked_for_it(self, server, wire, page):
-        page.hold.set()
-        send(server, 3, "tools/call", {"name": "get_status", "arguments": {}, "_meta": {"progressToken": "p3"}})
-        time.sleep(0.1)
-        page.release.set()
-        wire.answer(3)
+class TestProposals:
+    def propose(self, server, wire, rid=1):
+        return outcome(call(server, wire, rid, "propose_parameters", {"values": {"BATT_CAPACITY": 4000}}))
+
+    def test_a_proposal_returns_its_id_at_once(self, server, wire, page):
+        proposed = self.propose(server, wire)
+        assert proposed["proposal"] == "p1" and proposed["state"] == "waiting"
+        assert page.asked == [("propose_parameters", {"values": {"BATT_CAPACITY": 4000}})]
+
+    def test_one_the_page_refuses_at_once_is_an_error(self, server, wire, page):
+        page.respond = lambda kind, args: {
+            "answer": {"ok": False, "error": "The vehicle is armed.", "result": {"outcome": "refused"}}
+        }
+        result = call(server, wire, 1, "propose_parameters", {"values": {"X": 1}})["result"]
+        assert result["isError"] is True and "armed" in result["content"][0]["text"]
+
+    def test_one_the_page_never_takes_is_withdrawn(self, server, wire, page, monkeypatch):
+        monkeypatch.setattr(mcp, "TAKEN_TIMEOUT", 0.2)
+        page.respond = lambda kind, args: {}
+        result = call(server, wire, 1, "propose_parameters", {"values": {"X": 1}})["result"]
+        assert result["isError"] is True and "did not take" in result["content"][0]["text"]
+        assert page.withdrawn == ["p1"]
+
+    @pytest.mark.parametrize(
+        ("answer", "expected"),
+        [
+            (
+                {"ok": True, "result": {"values": {"BATT_CAPACITY": 4000}}},
+                {"state": "done", "result": {"values": {"BATT_CAPACITY": 4000}}},
+            ),
+            (
+                {"ok": False, "error": "The operator declined it.", "result": {"outcome": "declined"}},
+                {"state": "declined"},
+            ),
+            ({"ok": False, "error": "did not confirm", "result": {"outcome": "failed"}}, {"state": "failed"}),
+            (
+                {"ok": False, "error": "The Argus page closed while the approved change was running"},
+                {"state": "failed"},
+            ),
+        ],
+    )
+    def test_check_gives_the_decision(self, server, wire, page, answer, expected):
+        self.propose(server, wire)
+        page.settle("p1", answer=answer)
+        checked = outcome(call(server, wire, 2, "check_proposal", {"proposal": "p1", "wait_seconds": 0}))
+        assert checked["proposal"] == "p1"
+        assert {k: checked[k] for k in expected} == expected
+
+    def test_check_waits_for_the_operator_and_returns_when_they_decide(self, server, wire, page):
+        self.propose(server, wire)
+        threading.Timer(0.2, page.settle, args=("p1",), kwargs={"answer": {"ok": True, "result": {}}}).start()
+        started = time.monotonic()
+        checked = outcome(call(server, wire, 2, "check_proposal", {"proposal": "p1", "wait_seconds": 10}))
+        assert checked["state"] == "done" and time.monotonic() - started < 3
+
+    def test_check_while_it_waits_or_runs(self, server, wire, page):
+        self.propose(server, wire)
+        assert (
+            outcome(call(server, wire, 2, "check_proposal", {"proposal": "p1", "wait_seconds": 0}))["state"]
+            == "waiting"
+        )
+        page.settle("p1", state="running")
+        assert (
+            outcome(call(server, wire, 3, "check_proposal", {"proposal": "p1", "wait_seconds": 0}))["state"]
+            == "running"
+        )
+
+    @pytest.mark.parametrize("tool", ["check_proposal", "withdraw_proposal"])
+    def test_a_proposal_it_does_not_know(self, server, wire, page, tool):
+        call(server, wire, 1, "get_status")  # a read is no proposal
+        for proposal in ("nope", "p1"):
+            result = call(server, wire, proposal, tool, {"proposal": proposal})["result"]
+            assert result["isError"] is True and "No proposal" in result["content"][0]["text"]
+
+    def test_withdrawing_one_that_waits(self, server, wire, page):
+        self.propose(server, wire)
+        withdrawn = outcome(call(server, wire, 2, "withdraw_proposal", {"proposal": "p1"}))
+        assert withdrawn["state"] == "withdrawn" and page.withdrawn == ["p1"]
+
+    def test_one_already_approved_goes_on(self, server, wire, page):
+        self.propose(server, wire)
+        page.settle("p1", state="running")
+        withdrawn = outcome(call(server, wire, 2, "withdraw_proposal", {"proposal": "p1"}))
+        assert withdrawn["state"] == "running" and page.withdrawn == []
+        page.settle("p1", answer={"ok": True, "result": {"values": {"BATT_CAPACITY": 4000}}})
+        assert outcome(call(server, wire, 3, "check_proposal", {"proposal": "p1"}))["state"] == "done"
+
+    def test_a_long_check_sends_progress_to_a_client_that_asked_for_it(self, server, wire, page, monkeypatch):
+        monkeypatch.setattr(mcp, "PROGRESS_EVERY", 0.05)
+        self.propose(server, wire)
+        call(
+            server,
+            wire,
+            2,
+            "check_proposal",
+            {"proposal": "p1", "wait_seconds": 0.3},
+            {"_meta": {"progressToken": "t2"}},
+        )
         notes = wire.notifications()
         assert notes and all(n["method"] == "notifications/progress" for n in notes)
-        assert {n["params"]["progressToken"] for n in notes} == {"p3"}
+        assert {n["params"]["progressToken"] for n in notes} == {"t2"}
 
-    def test_no_progress_without_a_token(self, server, wire, page):
-        page.hold.set()
-        send(server, 3, "tools/call", {"name": "get_status", "arguments": {}})
-        time.sleep(0.1)
-        page.release.set()
-        wire.answer(3)
+    def test_no_progress_without_a_token(self, server, wire, page, monkeypatch):
+        monkeypatch.setattr(mcp, "PROGRESS_EVERY", 0.05)
+        self.propose(server, wire)
+        call(server, wire, 2, "check_proposal", {"proposal": "p1", "wait_seconds": 0.3})
         assert wire.notifications() == []
 
-    def test_the_end_of_input_withdraws_what_waits(self, server, wire, page):
-        page.hold.set()
-        send(server, 4, "tools/call", {"name": "propose_parameters", "arguments": {"values": {"X": 1}}})
+    def test_a_cancelled_check_gets_no_answer_and_leaves_the_proposal(self, server, wire, page):
+        self.propose(server, wire)
+        send(server, 7, "tools/call", {"name": "check_proposal", "arguments": {"proposal": "p1", "wait_seconds": 20}})
+        time.sleep(0.1)
+        send(server, None, "notifications/cancelled", {"requestId": 7, "reason": "user stopped"})
+        time.sleep(0.8)
+        assert not [m for m in wire.out if m.get("id") == 7]
+        assert page.withdrawn == []
+
+    def test_a_propose_call_cancelled_before_the_page_took_it_is_withdrawn(self, server, wire, page):
+        page.respond = lambda kind, args: {}
+        send(server, 7, "tools/call", {"name": "propose_parameters", "arguments": {"values": {"X": 1}}})
+        time.sleep(0.1)
+        send(server, None, "notifications/cancelled", {"requestId": 7})
+        time.sleep(0.8)
+        assert page.withdrawn == ["p1"]
+        assert not [m for m in wire.out if m.get("id") == 7]
+
+    def test_the_end_of_input_stops_the_waits(self, server, wire, page):
+        self.propose(server, wire)
+        send(server, 4, "tools/call", {"name": "check_proposal", "arguments": {"proposal": "p1", "wait_seconds": 30}})
         time.sleep(0.05)
+        started = time.monotonic()
         server.close(grace=2)
-        assert page.withdrawn.is_set()
+        assert time.monotonic() - started < 2
         assert not [m for m in wire.out if m.get("id") == 4]
+
+
+class TestToken:
+    def test_the_token_goes_in_the_address_and_never_in_messages(self, monkeypatch):
+        monkeypatch.setenv("ARGUS_URL", "https://gcs.example:8443/")
+        monkeypatch.setenv("GCS_AUTH_TOKEN", "a b&c")
+        assert mcp.backend_url() == "wss://gcs.example:8443/ws?token=a%20b%26c"
+        assert mcp.redact(mcp.backend_url()) == "wss://gcs.example:8443/ws"
+
+    def test_for_this_install_the_file_the_page_made_comes_first(self, monkeypatch, tmp_path):
+        # As backend/auth.py reads them.
+        token_file = tmp_path / ".gcs_token"
+        token_file.write_text("from-the-page\n")
+        monkeypatch.setattr(mcp, "TOKEN_FILE", token_file)
+        monkeypatch.delenv("ARGUS_URL", raising=False)
+        monkeypatch.setenv("GCS_AUTH_TOKEN", "from-the-environment")
+        assert mcp.access_token() == "from-the-page"
+        monkeypatch.setenv("ARGUS_URL", "http://10.0.0.7:8100")
+        assert mcp.access_token() == "from-the-environment"
+        token_file.unlink()
+        monkeypatch.delenv("ARGUS_URL")
+        assert mcp.access_token() == "from-the-environment"
 
 
 def free_port() -> int:
@@ -348,7 +493,7 @@ def argus(monkeypatch):
 
 
 def open_page(url: str, answer):
-    """A page on the websocket that answers each request with answer(request)."""
+    """A page on the websocket. answer(request, ws) answers each request, or not."""
     ws = connect(url, proxy=None, open_timeout=5)
     asked: list[dict] = []
 
@@ -359,9 +504,7 @@ def open_page(url: str, answer):
                 if msg.get("type") in ("assistant_request", "assistant_cancel"):
                     asked.append(msg)
                     if msg["type"] == "assistant_request":
-                        reply = answer(msg)
-                        if reply is not None:
-                            ws.send(json.dumps({"type": "assistant_reply", "id": msg["id"], **reply}))
+                        answer(msg, ws)
         except Exception:
             pass
 
@@ -370,32 +513,79 @@ def open_page(url: str, answer):
     return ws, asked
 
 
+def reply(ws, msg, **fields):
+    ws.send(json.dumps({"type": "assistant_reply", "id": msg["id"], **fields}))
+
+
+def state(ws, msg, value):
+    ws.send(json.dumps({"type": "assistant_state", "id": msg["id"], "state": value}))
+
+
 class TestThroughTheBackend:
+    def tools(self, url):
+        wire = Wire()
+        return Server(Backend(url), wire.write), wire
+
     def test_the_page_answers_through_argus(self, argus):
-        page, asked = open_page(argus, lambda m: {"ok": True, "result": {"kind": m["kind"], "args": m["args"]}})
-        reply = Backend(argus).ask("parameters", {"names": ["BATT_*"]}, 5, threading.Event())
-        assert reply["ok"] is True
-        assert reply["result"] == {"kind": "parameters", "args": {"names": ["BATT_*"]}}
+        page, _ = open_page(argus, lambda m, ws: reply(ws, m, ok=True, result={"kind": m["kind"], "args": m["args"]}))
+        server, wire = self.tools(argus)
+        result = outcome(call(server, wire, 1, "get_parameters", {"names": ["BATT_*"]}))
+        assert result == {"kind": "parameters", "args": {"names": ["BATT_*"]}}
         page.close()
 
     def test_with_no_page_open_the_answer_says_so(self, argus):
-        reply = Backend(argus).ask("status", {}, 5, threading.Event())
-        assert reply["ok"] is False and "No Argus page is open" in reply["error"]
+        server, wire = self.tools(argus)
+        result = call(server, wire, 1, "get_status")["result"]
+        assert result["isError"] is True and "No Argus page is open" in result["content"][0]["text"]
 
-    def test_a_proposal_that_waits_too_long_is_withdrawn_from_the_page(self, argus):
-        page, asked = open_page(argus, lambda m: None)
-        reply = Backend(argus).ask("propose_parameters", {"values": {"X": 1}}, 0.5, threading.Event())
-        assert reply["ok"] is False and "withdrawn" in reply["error"]
-        time.sleep(0.3)
-        assert [m["type"] for m in asked] == ["assistant_request", "assistant_cancel"]
+    def test_a_proposal_decided_later_is_found_by_check(self, argus):
+        taken: list[tuple] = []
+        page, _ = open_page(argus, lambda m, ws: (state(ws, m, "waiting"), taken.append((m, ws))))
+        server, wire = self.tools(argus)
+        proposed = outcome(call(server, wire, 1, "propose_parameters", {"values": {"BATT_CAPACITY": 4000}}))
+        assert proposed["state"] == "waiting"
+        msg, ws = taken[0]
+        state(ws, msg, "running")
+        threading.Timer(
+            0.2, reply, args=(ws, msg), kwargs={"ok": True, "result": {"values": {"BATT_CAPACITY": 4000}}}
+        ).start()
+        checked = outcome(
+            call(server, wire, 2, "check_proposal", {"proposal": proposed["proposal"], "wait_seconds": 5})
+        )
+        assert checked == {
+            "proposal": proposed["proposal"],
+            "state": "done",
+            "result": {"values": {"BATT_CAPACITY": 4000}},
+        }
         page.close()
 
-    def test_a_page_that_closes_ends_the_wait(self, argus):
-        page, asked = open_page(argus, lambda m: None)
-        backend = Backend(argus)
-        threading.Timer(0.3, page.close).start()
-        reply = backend.ask("propose_parameters", {"values": {"X": 1}}, 10, threading.Event())
-        assert reply["ok"] is False and "closed" in reply["error"]
+    def test_a_withdrawal_reaches_the_page_and_its_answer_comes_back(self, argus):
+        def answer(m, ws):
+            state(ws, m, "waiting")
+
+        page, asked = open_page(argus, answer)
+        server, wire = self.tools(argus)
+        rid = outcome(call(server, wire, 1, "propose_parameters", {"values": {"X": 1}}))["proposal"]
+
+        def on_cancel():
+            cancel = next(m for m in asked if m["type"] == "assistant_cancel")
+            reply(page, cancel, ok=False, error="Withdrawn by the assistant.", result={"outcome": "withdrawn"})
+
+        threading.Timer(0.3, on_cancel).start()
+        assert outcome(call(server, wire, 2, "withdraw_proposal", {"proposal": rid}))["state"] == "withdrawn"
+        page.close()
+
+    def test_a_page_that_closes_while_it_runs_says_the_change_may_be_made(self, argus):
+        taken: list[tuple] = []
+        page, _ = open_page(argus, lambda m, ws: (state(ws, m, "waiting"), taken.append((m, ws))))
+        server, wire = self.tools(argus)
+        rid = outcome(call(server, wire, 1, "propose_parameters", {"values": {"X": 1}}))["proposal"]
+        msg, ws = taken[0]
+        state(ws, msg, "running")
+        time.sleep(0.2)
+        page.close()
+        checked = outcome(call(server, wire, 2, "check_proposal", {"proposal": rid, "wait_seconds": 5}))
+        assert checked["state"] == "failed" and "may have been made" in checked["error"]
 
     def test_the_page_learns_an_assistant_is_there_before_it_asks_anything(self, argus):
         page = connect(argus, proxy=None, open_timeout=5)
@@ -408,10 +598,4 @@ class TestThroughTheBackend:
 
     def test_no_argus_at_the_address(self):
         with pytest.raises(Unreachable, match="No Argus at ws://127.0.0.1:"):
-            Backend(f"ws://127.0.0.1:{free_port()}/ws").ask("status", {}, 1, threading.Event())
-
-    def test_the_token_goes_in_the_address_and_never_in_messages(self, monkeypatch):
-        monkeypatch.setenv("ARGUS_URL", "https://gcs.example:8443/")
-        monkeypatch.setenv("GCS_AUTH_TOKEN", "a b&c")
-        assert mcp.backend_url() == "wss://gcs.example:8443/ws?token=a%20b%26c"
-        assert mcp.redact(mcp.backend_url()) == "wss://gcs.example:8443/ws"
+            Backend(f"ws://127.0.0.1:{free_port()}/ws").ask("status", {})

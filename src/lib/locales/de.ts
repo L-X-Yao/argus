@@ -1157,7 +1157,6 @@ const messages: Record<string, string> = {
   'assistant.missionSummary':
     '{n} Wegpunkte, {dist}, höchstens {alt} m. Zuerst Start auf {takeoff} m, am Ende Rückkehr zum Startpunkt.',
   'assistant.missionSummarySub': '{n} Wegpunkte, {dist}, tiefstens {alt} m. Kein Start und keine Rückkehr am Ende.',
-  'assistant.onMap': 'Die Route ist gestrichelt auf der Karte eingezeichnet.',
   'assistant.paramsTitle': 'Parameter des Flugcontrollers ändern',
   'assistant.param': 'Parametername',
   'assistant.now': 'Jetzt',
@@ -1172,6 +1171,12 @@ const messages: Record<string, string> = {
   'assistant.done': 'Die Anfrage des Assistenten wurde ausgeführt',
   'assistant.failed': 'Die Anfrage des Assistenten wurde nicht abgeschlossen',
   'assistant.unchanged': 'unverändert',
+  'assistant.hold': '{n} s warten',
+  'assistant.speed': 'ab hier {n} m/s',
+  'assistant.loiterTime': '{n} s kreisen',
+  'assistant.loiterTurns': '{n} Runden kreisen',
+  'assistant.spline': 'Spline',
+  'assistant.onMap': 'In den Ansichten Flug und Planung ist die Route gestrichelt auf der Karte eingezeichnet.',
 };
 
 export default messages;

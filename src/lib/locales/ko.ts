@@ -1149,7 +1149,6 @@ const messages: Record<string, string> = {
   'assistant.missionSummary':
     '웨이포인트 {n}개, {dist}, 최고 {alt} m. 먼저 {takeoff} m까지 이륙하고 마지막에 귀환합니다.',
   'assistant.missionSummarySub': '웨이포인트 {n}개, {dist}, 최심 {alt} m. 이륙하지 않고 마지막 귀환도 없습니다.',
-  'assistant.onMap': '경로가 지도에 점선으로 표시되어 있습니다.',
   'assistant.paramsTitle': '비행 컨트롤러 파라미터 변경',
   'assistant.param': '파라미터',
   'assistant.now': '현재',
@@ -1163,6 +1162,12 @@ const messages: Record<string, string> = {
   'assistant.done': '어시스턴트의 요청을 실행했습니다',
   'assistant.failed': '어시스턴트의 요청이 완료되지 않았습니다',
   'assistant.unchanged': '변경 없음',
+  'assistant.hold': '{n}초 대기',
+  'assistant.speed': '여기부터 {n} m/s',
+  'assistant.loiterTime': '{n}초 선회',
+  'assistant.loiterTurns': '{n}바퀴 선회',
+  'assistant.spline': '스플라인',
+  'assistant.onMap': '비행 및 계획 화면에서는 경로가 지도에 점선으로 표시됩니다.',
 };
 
 export default messages;

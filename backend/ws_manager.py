@@ -4,6 +4,8 @@ import asyncio
 import json
 import logging
 import math
+import uuid
+from dataclasses import dataclass
 
 from fastapi import WebSocket, WebSocketDisconnect
 
@@ -65,6 +67,24 @@ _NO_PAGE = (
     "and the operator approves changes there."
 )
 _PAGE_CLOSED = "The Argus page that was asked has closed."
+_CLOSED_RUNNING = (
+    "The Argus page closed while the approved change was running: it may have been made. "
+    "Read get_status and get_mission before anything else."
+)
+# What a page says of a request before its answer: queued for the operator, or approved and on
+# its way to the vehicle. Only the answer ends it.
+_STATES = ("waiting", "running")
+
+
+@dataclass
+class _Asked:
+    """A request on its way: who asked it, its id there, the page asked, and whether the
+    operator has approved it."""
+
+    assistant: WebSocket
+    rid: str
+    page: WebSocket
+    running: bool = False
 
 
 def sanitize_baud(baud) -> int:
@@ -86,9 +106,11 @@ class WSManager:
         self._pilot_ws: WebSocket | None = None
         self._roles: dict[int, str] = {}
         self._assistants: set[WebSocket] = set()
-        # A request on its way: key -> (the assistant, its own id for it, the page asked).
-        self._asked: dict[str, tuple[WebSocket, str, WebSocket]] = {}
+        self._asked: dict[str, _Asked] = {}
         self._asked_total = 0
+        # In every key: a page keeps its requests across a restart of the backend, and an
+        # answer to one of before must not land on a new one with the same number.
+        self._session = uuid.uuid4().hex[:8]
 
     @property
     def client_count(self) -> int:
@@ -153,13 +175,17 @@ class WSManager:
         """What was asked by or of a client that has gone."""
         was_assistant = ws in self._assistants
         self._assistants.discard(ws)
-        for key, (assistant, rid, page) in list(self._asked.items()):
-            if assistant is ws:
+        for key, asked in list(self._asked.items()):
+            if asked.assistant is ws:
+                # Nobody to answer: a change still waiting is withdrawn, one running goes on.
                 del self._asked[key]
-                await self._send(page, {"type": "assistant_cancel", "id": key})
-            elif page is ws:
+                await self._send(asked.page, {"type": "assistant_cancel", "id": key})
+            elif asked.page is ws:
                 del self._asked[key]
-                await self._send(assistant, {"type": "assistant_reply", "id": rid, "ok": False, "error": _PAGE_CLOSED})
+                error = _CLOSED_RUNNING if asked.running else _PAGE_CLOSED
+                await self._send(
+                    asked.assistant, {"type": "assistant_reply", "id": asked.rid, "ok": False, "error": error}
+                )
         if was_assistant:
             await self._presence()
 
@@ -191,16 +217,16 @@ class WSManager:
         if not isinstance(rid, str) or not 0 < len(rid) <= 100:
             return  # nothing to answer to
         if msg_type == "assistant_cancel":
-            for key, (assistant, own, page) in list(self._asked.items()):
-                if assistant is ws and own == rid:
-                    del self._asked[key]
-                    await self._send(page, {"type": "assistant_cancel", "id": key})
+            # The page answers it: withdrawn if it still waits, its result if it was approved.
+            for key, asked in list(self._asked.items()):
+                if asked.assistant is ws and asked.rid == rid:
+                    await self._send(asked.page, {"type": "assistant_cancel", "id": key})
             return
         kind, args = msg.get("kind"), msg.get("args", {})
         if not isinstance(kind, str) or not isinstance(args, dict):
             await self._send(ws, {"type": "assistant_reply", "id": rid, "ok": False, "error": "kind and args"})
             return
-        if sum(1 for assistant, _, _ in self._asked.values() if assistant is ws) >= _MAX_WAITING:
+        if sum(1 for asked in self._asked.values() if asked.assistant is ws) >= _MAX_WAITING:
             error = f"{_MAX_WAITING} requests are already waiting for the page"
             await self._send(ws, {"type": "assistant_reply", "id": rid, "ok": False, "error": error})
             return
@@ -209,24 +235,39 @@ class WSManager:
             await self._send(ws, {"type": "assistant_reply", "id": rid, "ok": False, "error": _NO_PAGE})
             return
         self._asked_total += 1
-        key = f"a{self._asked_total}"
-        self._asked[key] = (ws, rid, page)
+        key = f"{self._session}-{self._asked_total}"
+        self._asked[key] = _Asked(ws, rid, page)
         await self._send(page, {"type": "assistant_request", "id": key, "kind": kind, "args": args})
+
+    def _asked_of(self, page: WebSocket, msg: dict) -> tuple[str, _Asked] | None:
+        key = msg.get("id")
+        asked = self._asked.get(key) if isinstance(key, str) else None
+        return (key, asked) if asked is not None and asked.page is page else None
 
     async def _to_assistant(self, page: WebSocket, msg: dict) -> None:
         """A page's answer, passed on to the assistant that asked, if it asked this page."""
-        key = msg.get("id")
-        asked = self._asked.get(key) if isinstance(key, str) else None
-        if asked is None or asked[2] is not page:
+        found = self._asked_of(page, msg)
+        if found is None:
             return
+        key, asked = found
         del self._asked[key]
-        assistant, rid, _ = asked
-        reply = {"type": "assistant_reply", "id": rid, "ok": msg.get("ok") is True}
+        reply = {"type": "assistant_reply", "id": asked.rid, "ok": msg.get("ok") is True}
         if "result" in msg:
             reply["result"] = msg["result"]
         if isinstance(msg.get("error"), str):
             reply["error"] = msg["error"][:2000]
-        await self._send(assistant, reply)
+        await self._send(asked.assistant, reply)
+
+    async def _state_to_assistant(self, page: WebSocket, msg: dict) -> None:
+        """Where a request stands before its answer: waiting for the operator, or running."""
+        found = self._asked_of(page, msg)
+        state = msg.get("state")
+        if found is None or state not in _STATES:
+            return
+        _, asked = found
+        if state == "running":
+            asked.running = True
+        await self._send(asked.assistant, {"type": "assistant_state", "id": asked.rid, "state": state})
 
     async def _receive_loop(self, ws: WebSocket) -> None:
         try:
@@ -244,6 +285,9 @@ class WSManager:
                     continue
                 if msg_type == "assistant_reply":
                     await self._to_assistant(ws, msg)
+                    continue
+                if msg_type == "assistant_state":
+                    await self._state_to_assistant(ws, msg)
                     continue
                 if msg_type == "connect":
                     port = msg.get("port", "tcp:localhost:5770")
@@ -408,9 +452,6 @@ class WSManager:
                                         "time": ev["time"],
                                         "text": ev["text"],
                                         "event_type": ev.get("event_type", ""),
-                                        # What came after a given moment, for a page waiting on
-                                        # an answer of the FC (src/lib/assistant.svelte.ts).
-                                        "seq": ev.get("seq", 0),
                                     }
                                 )
                             )

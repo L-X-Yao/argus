@@ -1144,7 +1144,6 @@ const messages: Record<string, string> = {
   'assistant.missionTitle': '设为计划航线并上传到飞控',
   'assistant.missionSummary': '{n} 个航点，全长 {dist}，最高 {alt} m。先起飞到 {takeoff} m，最后返航。',
   'assistant.missionSummarySub': '{n} 个航点，全长 {dist}，最深 {alt} m。不起飞，最后也不返航。',
-  'assistant.onMap': '航线已用虚线画在地图上。',
   'assistant.paramsTitle': '修改飞控参数',
   'assistant.param': '参数',
   'assistant.now': '当前',
@@ -1158,6 +1157,12 @@ const messages: Record<string, string> = {
   'assistant.done': '已执行 AI 助手的请求',
   'assistant.failed': 'AI 助手的请求未完成',
   'assistant.unchanged': '不变',
+  'assistant.hold': '停留 {n} 秒',
+  'assistant.speed': '此后 {n} m/s',
+  'assistant.loiterTime': '盘旋 {n} 秒',
+  'assistant.loiterTurns': '盘旋 {n} 圈',
+  'assistant.spline': '样条',
+  'assistant.onMap': '在飞行和规划视图里，航线以虚线画在地图上。',
 };
 
 export default messages;

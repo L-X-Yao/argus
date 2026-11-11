@@ -1149,7 +1149,6 @@ const messages: Record<string, string> = {
   'assistant.missionSummary':
     '{n} نقاط مسار، {dist}، أعلى ارتفاع {alt} م. إقلاع أولاً إلى {takeoff} م ثم عودة إلى نقطة الانطلاق في النهاية.',
   'assistant.missionSummarySub': '{n} نقاط مسار، {dist}، أعمق نقطة {alt} م. لا إقلاع ولا عودة في النهاية.',
-  'assistant.onMap': 'المسار مرسوم بخط متقطع على الخريطة.',
   'assistant.paramsTitle': 'تغيير معاملات وحدة التحكم في الطيران',
   'assistant.param': 'المعامل',
   'assistant.now': 'الحالي',
@@ -1163,6 +1162,12 @@ const messages: Record<string, string> = {
   'assistant.done': 'نُفّذ طلب المساعد',
   'assistant.failed': 'لم يكتمل طلب المساعد',
   'assistant.unchanged': 'دون تغيير',
+  'assistant.hold': 'انتظار {n} ث',
+  'assistant.speed': '{n} م/ث من هنا',
+  'assistant.loiterTime': 'دوران {n} ث',
+  'assistant.loiterTurns': 'دوران {n} لفات',
+  'assistant.spline': 'منحنى',
+  'assistant.onMap': 'في عرضي الطيران والتخطيط يُرسم المسار بخط متقطع على الخريطة.',
 };
 
 export default messages;

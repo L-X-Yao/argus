@@ -42,7 +42,15 @@ try {
   check(
     'the tools, as the SDK reads them',
     JSON.stringify(names) ===
-      JSON.stringify(['get_status', 'get_mission', 'get_parameters', 'propose_mission', 'propose_parameters']),
+      JSON.stringify([
+        'get_status',
+        'get_mission',
+        'get_parameters',
+        'propose_mission',
+        'propose_parameters',
+        'check_proposal',
+        'withdraw_proposal',
+      ]),
     names.join(', '),
   );
 
@@ -50,7 +58,10 @@ try {
   check('a call with no Argus is a tool error the model reads', status.isError === true, status.content?.[0]?.text);
   check('which says what to do', /Start Argus/.test(status.content?.[0]?.text ?? ''));
 
-  const bad = await client.callTool({ name: 'propose_parameters', arguments: { values: { WPNAV_SPEED: 'fast' } } });
+  const none = await client.callTool({ name: 'check_proposal', arguments: { proposal: 'p-none' } });
+  check('a proposal this server never made', none.isError === true && /No proposal/.test(none.content?.[0]?.text ?? ''));
+
+  const bad = await client.callTool({ name: 'propose_parameters', arguments: { values: { BATT_CAPACITY: 'large' } } });
   check('arguments are checked before anything is asked', bad.isError === true && /must be a number/.test(bad.content?.[0]?.text ?? ''));
 
   let unknown = null;

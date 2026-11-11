@@ -35,6 +35,7 @@ EXCLUDED_TYPES = {
     "assistant_welcome",
     "assistant_error",
     "assistant_reply",
+    "assistant_state",
 }
 
 # Not websocket emitters: the MCP server writes JSON-RPC to its client on stdio, and its

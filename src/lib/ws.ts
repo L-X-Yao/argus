@@ -13,6 +13,7 @@ import {
   handleAssistantRequest,
   withdraw,
   type AssistantReply,
+  type AssistantStateMsg,
 } from './assistant.svelte';
 
 let socket: WebSocket | null = null;
@@ -263,7 +264,8 @@ type OutgoingMessage =
   | { type: 'command'; cmd: string; param?: number; [key: string]: unknown }
   | { type: 'request_handoff' }
   | { type: 'handoff_accept' }
-  | AssistantReply;
+  | AssistantReply
+  | AssistantStateMsg;
 
 export function sendMessage(msg: OutgoingMessage): void {
   if (socket && socket.readyState === WebSocket.OPEN) {

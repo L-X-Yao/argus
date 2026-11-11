@@ -1,8 +1,10 @@
 <script lang="ts">
   // A change the AI assistant asks for, waiting for the operator (src/lib/assistant.svelte.ts).
   // It sits beside the map rather than over it: a proposed route is drawn there while it waits.
-  // No key approves it, so that a key meant for something else cannot.
+  // No key approves it, so that a key meant for something else cannot. Everything the upload
+  // does with a waypoint is shown: speed, hold and circling change the flight as much as a place.
   import { assistant, approve, decline, type Proposal } from '../../lib/assistant.svelte';
+  import type { Waypoint } from '../../lib/types';
   import { totalDist } from '../../lib/missionIO';
   import { t } from '../../lib/i18n.svelte';
   import { app } from '../../lib/stores.svelte';
@@ -11,6 +13,29 @@
   import { Bot } from '@lucide/svelte';
 
   let current: Proposal | undefined = $derived(assistant.queue[0]);
+
+  // When another proposal takes the place of the one shown (withdrawn, timed out), a click
+  // already on its way must not approve what nobody has read. Approve waits a moment.
+  const READ_FIRST_MS = 1500;
+  let readable = $state(false);
+  $effect(() => {
+    if (!current?.id) return;
+    readable = false;
+    const timer = setTimeout(() => (readable = true), READ_FIRST_MS);
+    return () => clearTimeout(timer);
+  });
+
+  /** What the upload does at a waypoint besides flying to it. */
+  function details(wp: Waypoint): string {
+    const parts: string[] = [];
+    const n = (key: string, value: number) => t(key).replace('{n}', String(value));
+    if (wp.type === 'loiter_time') parts.push(n('assistant.loiterTime', wp.loiter_param));
+    if (wp.type === 'loiter_turns') parts.push(n('assistant.loiterTurns', wp.loiter_param));
+    if (wp.type === 'spline') parts.push(t('assistant.spline'));
+    if (wp.delay > 0) parts.push(n('assistant.hold', wp.delay));
+    if (wp.speed > 0) parts.push(n('assistant.speed', wp.speed));
+    return parts.join(' · ');
+  }
 
   function summary(p: Proposal): string {
     if (p.kind !== 'propose_mission') return '';
@@ -52,7 +77,7 @@
             <tr
               ><th class="text-left">#</th><th class="text-left">lat</th><th class="text-left">lon</th><th
                 class="text-right">m</th
-              ><th class="text-right"></th></tr
+              ><th class="text-left"></th></tr
             >
           </thead>
           <tbody>
@@ -62,7 +87,7 @@
                 <td>{coord(wp.lat)}</td>
                 <td>{coord(wp.lon)}</td>
                 <td class="text-right">{wp.alt}</td>
-                <td class="text-right text-muted-foreground">{wp.type === 'wp' ? '' : wp.type}</td>
+                <td class="pl-2 text-warning">{details(wp)}</td>
               </tr>
             {/each}
           </tbody>
@@ -111,7 +136,7 @@
       <Button
         size="sm"
         class="flex-1"
-        disabled={assistant.running || !app.drone.connected || app.drone.armed}
+        disabled={!readable || assistant.running || !app.drone.connected || app.drone.armed}
         onclick={() => approve(current!.id)}
         data-testid="assistant-approve">{assistant.running ? t('assistant.running') : t('assistant.approve')}</Button
       >

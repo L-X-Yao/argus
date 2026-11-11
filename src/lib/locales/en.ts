@@ -1151,7 +1151,6 @@ const messages: Record<string, string> = {
   'assistant.missionSummary':
     '{n} waypoints, {dist}, highest {alt} m. Takeoff to {takeoff} m first and return to launch at the end.',
   'assistant.missionSummarySub': '{n} waypoints, {dist}, deepest {alt} m. No takeoff and no return at the end.',
-  'assistant.onMap': 'The route is drawn dashed on the map.',
   'assistant.paramsTitle': 'Change flight controller parameters',
   'assistant.param': 'Parameter',
   'assistant.now': 'Now',
@@ -1166,6 +1165,12 @@ const messages: Record<string, string> = {
   'assistant.done': 'The request of the AI assistant was carried out',
   'assistant.failed': 'The request of the AI assistant did not complete',
   'assistant.unchanged': 'unchanged',
+  'assistant.hold': 'hold {n} s',
+  'assistant.speed': '{n} m/s from here',
+  'assistant.loiterTime': 'circle {n} s',
+  'assistant.loiterTurns': 'circle {n} turns',
+  'assistant.spline': 'spline',
+  'assistant.onMap': 'In the Fly and Plan views the route is drawn dashed on the map.',
 };
 
 export default messages;

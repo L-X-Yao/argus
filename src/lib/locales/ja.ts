@@ -1152,7 +1152,6 @@ const messages: Record<string, string> = {
   'assistant.missionSummary':
     'ウェイポイント {n} 個、{dist}、最高 {alt} m。まず {takeoff} m まで離陸し、最後に帰還します。',
   'assistant.missionSummarySub': 'ウェイポイント {n} 個、{dist}、最深 {alt} m。離陸せず、最後の帰還もありません。',
-  'assistant.onMap': 'ルートは地図に破線で表示されています。',
   'assistant.paramsTitle': 'フライトコントローラのパラメータを変更',
   'assistant.param': 'パラメータ',
   'assistant.now': '現在',
@@ -1167,6 +1166,12 @@ const messages: Record<string, string> = {
   'assistant.done': 'アシスタントの依頼を実行しました',
   'assistant.failed': 'アシスタントの依頼は完了しませんでした',
   'assistant.unchanged': '変更なし',
+  'assistant.hold': '{n} 秒停止',
+  'assistant.speed': 'ここから {n} m/s',
+  'assistant.loiterTime': '{n} 秒旋回',
+  'assistant.loiterTurns': '{n} 周旋回',
+  'assistant.spline': 'スプライン',
+  'assistant.onMap': '飛行と計画のビューでは、ルートが地図に破線で表示されます。',
 };
 
 export default messages;
