@@ -33,7 +33,7 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 | Messages, WebSerial | 35 | 17 | 13 | 0 | 4 | 0 | 1 |
 | REST routes | 28 | 6 | 5 | 17 | 0 | 0 | 0 |
 | Panels | 80 | 14 | 33 | 17 | 14 | 2 | 0 |
-| Platform | 47 | 8 | 13 | 11 | 10 | 2 | 3 |
+| Platform | 48 | 8 | 13 | 12 | 10 | 2 | 3 |
 
 ## Commands / 飞控命令
 
@@ -283,6 +283,7 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 | 3D map | 3D 地图 | Simulator | e2e, and real Edge on Windows with a real GPU 2026-11-06. e2e 2026-11-11: the credit of the map and terrain servers shows unfolded |
 | PWA and offline use | PWA 和离线 | Simulator | e2e, and real Edge on Windows 2026-11-06 |
 | Several browser clients | 多浏览器客户端 | Simulator | Integration tests |
+| A phone or tablet on the network | 局域网里的手机或平板 | Simulator | A phone-sized touch browser on a network address 2026-11-11: token login, live telemetry and a parameter read upright, a mode change on its side. e2e: a page the backend does not list is told so at the login. No real phone |
 | Video and AR overlay | 视频和 AR 叠加 | Simulator | Integration tests, and real ffmpeg on an HTTP test stream 2026-11-10. No real camera |
 | Token login | Token 登录 | Simulator | e2e, real Windows each release |
 | Windows package | Windows 发布包 | Simulator | CI builds and smoke-tests it on every push. The release workflow starts the zip it is about to publish on a Windows runner, and publishes nothing if that fails. Real Windows each release |
@@ -326,6 +327,7 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 7. **Four panels nobody can open.** Scripts, scheduler, AI planner and AI annotation exist in code only.
 8. **The backend's serial link on Windows since the package bundles Python 3.14 (v3.7.8).** It ran on a real FC on the Python 3.10 of earlier packages. On 3.14 a COM port was opened and closed 2026-11-10, with no FC on it. WebSerial does not use that Python.
 9. **Video from a real camera.** ffmpeg turned an HTTP test stream into frames 2026-11-10. No RTSP camera has been on it, and before v3.7.8 only `rtsp://` addresses could play at all.
+10. **A real phone or tablet.** A phone-sized touch browser opened Argus at a network address 2026-11-11. No real phone has, and neither Safari on iOS nor the browser inside a chat app has been tried.
 
 1. **真实飞行。** 没有飞过。下面都只是台架或仿真结果。
 2. **真机上的解锁、起飞、返航、开始任务。** 只在 SITL 跑过。这些需要接电池，要单独安排。
@@ -336,6 +338,7 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 7. **4 个打不开的面板。** 脚本、定时任务、AI 规划、AI 标注只存在于代码中。
 8. **发布包改用 Python 3.14（v3.7.8）之后，Windows 上的后端串口。** 之前的发布包内置 Python 3.10，在真实飞控上跑过。3.14 上只在 2026-11-10 打开并关闭过一个 COM 口，没有接飞控。WebSerial 不经过这个 Python。
 9. **真实相机的视频。** 2026-11-10 用 ffmpeg 把一路 HTTP 测试流转成了画面。没有接过 RTSP 相机，而且 v3.7.8 之前只有 `rtsp://` 地址能播放。
+10. **真实的手机或平板。** 2026-11-11 用手机尺寸的触屏浏览器在局域网地址上打开过 Argus。没有用过真实手机，iOS 上的 Safari 和聊天软件内置的浏览器也都没有试过。
 
 ## Known limits / 已知限制
 
@@ -343,11 +346,13 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 - A compass calibration is saved only by the session that started it. After Disconnect and Connect during a run, the result is reported as not saved, and the run has to be repeated.
 - Roles are a courtesy between operators, not access control: everyone who holds the token can command the vehicle.
 - Arming and fence terms in German, Arabic and Russian have not been checked by a native speaker.
+- On a screen narrower than 768 px, such as a phone held upright, the row with RTL, hold, logs, calibration and the button for the flight controls (arming, modes) is hidden. Flight controls opened on a wider screen stay open when the phone is turned upright, and the button that closes them is in the hidden row. Most phones turned on their side are wider than that and get the desktop layout.
 
 - 模式列表来自 Argus 内置的表，每种机型一张。固件编译时去掉的模式仍会显示，选择时由飞控拒绝。
 - 罗盘校准只能由发起它的那次会话保存。校准途中断开再连接，结果会报告为未保存，需要重新校准。
 - 角色只是操作员之间的约定，不是访问控制：持有 Token 的人都能指挥飞行器。
 - 德语、阿拉伯语和俄语里的解锁与围栏术语没有经过母语者校对。
+- 屏幕宽度小于 768 px 时（例如竖着拿的手机），返航、暂停、日志、校准和飞行操控（解锁、切换模式）按钮所在的那一排会隐藏。在更宽的屏幕上打开的飞行操控面板，手机竖过来后仍会显示，而关闭它的按钮在被隐藏的那一排里。多数手机横过来宽于 768 px，会变成电脑版布局。
 
 ## Keeping this file honest / 维护规则
 

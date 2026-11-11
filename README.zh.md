@@ -85,7 +85,7 @@ python run.py                  # 在 http://127.0.0.1:8100 提供全部服务
 
 ## 连接
 
-Argus 只监听本机。要从其他设备访问，先读 [SECURITY.md](SECURITY.md)：那需要设置令牌。
+Argus 只监听本机。要从其他设备访问，先读 [SECURITY.md](SECURITY.md)：那需要设置令牌。步骤见[从手机或平板打开](#从手机或平板打开)。
 
 ### 真实硬件
 
@@ -111,6 +111,39 @@ python run.py --sim            # 同时启动后端 + simulator.py
 ### WebSerial（USB 直连）
 
 用 Chrome/Edge 打开 Argus，点击 **USB** 按钮，选择飞控。遥测、解锁/锁定/模式/RTL、参数读写、航线上传/下载/清除、围栏上传、日志列表/下载、全部 5 种校准类型均通过 WebSerial 和内置 TypeScript MAVLink v2 编解码器直连。地图瓦片、地形剖面、参数说明、视频和固件文件存储仍依赖 Python 后端，没有后端时新的地图瓦片无法加载。RTK（NTRIP）和 MAVLink 控制台需要飞控通过后端连接，WebSerial 直连时不可用。
+
+### 从手机或平板打开
+
+没有 APP。手机或平板只是第二块屏幕：Argus 运行在电脑上，飞控接在这台电脑上，手机浏览器打开电脑的地址。
+
+1. 带令牌启动 Argus，并让它监听局域网。以电脑地址 `192.168.1.5` 为例：
+
+   ```bash
+   # 从源码运行
+   GCS_AUTH_TOKEN=change-me-to-a-long-random-value \
+   ARGUS_CORS_ORIGINS=http://localhost:8100,http://127.0.0.1:8100,http://192.168.1.5:8100 \
+     python run.py --host 0.0.0.0
+   ```
+
+   ```bat
+   :: Windows 发布包，在它的文件夹里打开命令提示符
+   set GCS_AUTH_TOKEN=change-me-to-a-long-random-value
+   set ARGUS_CORS_ORIGINS=http://localhost:8100,http://127.0.0.1:8100,http://192.168.1.5:8100
+   python\python.exe backend\server.py --host 0.0.0.0
+   ```
+
+   启动时，Argus 会打印它估计其他设备该打开的地址；`ARGUS_CORS_ORIGINS` 里没有这个地址时，还会打印应设置的值。从未列出的地址打开的页面照样能加载，但登录会被拒绝，并提示要添加的地址。如果这台电脑开着热点、连着 VPN 或有第二块网卡，手机访问它的地址可能和打印的不同。Windows 可能会询问是否允许 Python 接受连接。
+
+2. 在手机上打开 `http://192.168.1.5:8100`，输入令牌。
+
+实际效果：
+
+- 屏幕宽度小于 768 px 时（例如竖着拿的手机），页面只有飞行、规划、监控、参数四个视图，并隐藏返航、暂停、日志、校准和飞行操控（解锁、切换模式）按钮所在的那一排。多数手机横过来宽于 768 px，会变成电脑版布局，功能齐全，只是屏幕小。
+- 最先连上的浏览器指挥飞行器，后连上的只能观看。要让手机指挥，先关掉电脑上的页面。
+- 手机直接接 USB（WebSerial）和离线使用需要 `https` 或 `localhost`，在普通的 `http` 局域网地址上不可用。
+- 链路是明文 HTTP：令牌和每条指令在途中都能被读到。只在信任的网络里使用，并阅读 [SECURITY.md](SECURITY.md)。
+
+以上在局域网地址上用手机尺寸的触屏浏览器检查过（2026-11-11），没有在真实手机上检查过。
 
 ### 地图数据
 

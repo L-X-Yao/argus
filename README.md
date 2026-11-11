@@ -85,7 +85,7 @@ python run.py                  # serves everything at http://127.0.0.1:8100
 
 ## Connect
 
-Argus listens on this machine only. To reach it from another device, read [SECURITY.md](SECURITY.md) first: that needs a token.
+Argus listens on this machine only. To reach it from another device, read [SECURITY.md](SECURITY.md) first: that needs a token. [From a phone or tablet](#from-a-phone-or-tablet) has the steps.
 
 ### Real hardware
 
@@ -111,6 +111,39 @@ The simulator (`scripts/simulator.py`) emits realistic telemetry (GPS, attitude,
 ### WebSerial (direct USB)
 
 Open Argus in Chrome/Edge, click the **USB** button, pick your flight controller. Telemetry, arm/disarm/mode/RTL, param read+write, mission upload/download/clear, fence upload, log list/download, and all 5 calibration types flow directly via WebSerial and the built-in TypeScript MAVLink v2 codec. Map tiles, terrain profiles, parameter descriptions, video, and firmware file storage still use the Python backend; without it, new map tiles cannot load. RTK (NTRIP) and the MAVLink console need the FC connected through the backend, so they are unavailable over WebSerial.
+
+### From a phone or tablet
+
+There is no app. A phone or tablet is a second screen: Argus runs on a computer, the flight controller stays connected to that computer, and the browser on the phone opens the computer's address.
+
+1. Start Argus with a token and on the network. For a computer at `192.168.1.5`:
+
+   ```bash
+   # from source
+   GCS_AUTH_TOKEN=change-me-to-a-long-random-value \
+   ARGUS_CORS_ORIGINS=http://localhost:8100,http://127.0.0.1:8100,http://192.168.1.5:8100 \
+     python run.py --host 0.0.0.0
+   ```
+
+   ```bat
+   :: Windows package, in a command prompt opened in its folder
+   set GCS_AUTH_TOKEN=change-me-to-a-long-random-value
+   set ARGUS_CORS_ORIGINS=http://localhost:8100,http://127.0.0.1:8100,http://192.168.1.5:8100
+   python\python.exe backend\server.py --host 0.0.0.0
+   ```
+
+   At start, Argus prints the address it expects the other device to open and, when `ARGUS_CORS_ORIGINS` leaves it out, the value to set. A page opened at an address that is not listed still loads, and its login is refused with the address to add. With a hotspot this computer provides, a VPN or a second network card, the phone may reach the computer at another address than the one printed. Windows may ask whether Python may accept connections.
+
+2. On the phone, open `http://192.168.1.5:8100` and type the token.
+
+What to expect:
+
+- On a screen narrower than 768 px, such as a phone held upright, the page shows its four views (Fly, Plan, Monitor, Params) and hides the row with RTL, hold, logs, calibration and the button for the flight controls (arming, modes). Most phones turned on their side are wider than that and get the desktop layout, with everything in it, on a small screen.
+- The browser that connected first commands the vehicle, and later ones watch. Close the page on the computer if the phone is to command.
+- USB from the phone (WebSerial) and offline use need `https` or `localhost`, so they do not work at a plain `http` network address.
+- The link is plain HTTP: the token and every command can be read on the way. Use a network you trust, and read [SECURITY.md](SECURITY.md).
+
+This was checked in a phone-sized touch browser on a network address (2026-11-11), not on a real phone.
 
 ### Map data
 
