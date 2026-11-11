@@ -7,7 +7,15 @@ import sys
 import pytest
 
 from backend.config import VERSION
-from scripts.build_package import _VERSION, PIP_DEPS, allowed_versions, copy_app_files
+from scripts.build_package import (
+    _VERSION,
+    OWN_LICENSE_TEXT,
+    PIP_DEPS,
+    SCRIPT_DIR,
+    allowed_versions,
+    copy_app_files,
+    unlicensed,
+)
 from scripts.package_requirements import bundled
 
 
@@ -25,6 +33,65 @@ def test_packaged_backend_imports_without_the_repo(tmp_path):
     )
     assert result.returncode == 0, result.stderr
     assert result.stdout.strip() == VERSION
+
+
+class TestLicenseTexts:
+    """The licenses of Argus and of the work inside it ask for their text in every copy.
+    Until v3.7.9 the package held neither Argus's own license nor any notice of the rest."""
+
+    def test_the_package_carries_them(self, tmp_path):
+        copy_app_files(tmp_path)
+        for name in [
+            "LICENSE",
+            "THIRD_PARTY_NOTICES.md",
+            "LICENSES/Apache-2.0.txt",
+            "LICENSES/BSD-2-Clause-Leaflet.txt",
+        ]:
+            assert (tmp_path / name).is_file(), name
+        for name in OWN_LICENSE_TEXT.values():
+            assert (tmp_path / "LICENSES" / name).is_file(), name
+
+    def test_the_package_says_how_to_start_it_in_a_form_notepad_reads(self, tmp_path):
+        copy_app_files(tmp_path)
+        raw = (tmp_path / "README.txt").read_bytes()
+        assert raw.startswith(b"\xef\xbb\xbf")
+        text = raw.decode("utf-8-sig")
+        assert f"Argus GCS v{VERSION}" in text and "Argus地面站.bat" in text
+        assert "\r\n" in text and "\n" not in text.replace("\r\n", "")
+
+    def test_a_library_without_a_license_text_is_named(self, tmp_path):
+        (tmp_path / "fastapi-0.1.dist-info" / "licenses").mkdir(parents=True)
+        (tmp_path / "fastapi-0.1.dist-info" / "licenses" / "LICENSE").write_text("MIT")
+        (tmp_path / "old_style-2.0.dist-info").mkdir()
+        (tmp_path / "old_style-2.0.dist-info" / "LICENSE.txt").write_text("BSD")
+        (tmp_path / "python_nothing-1.2.3.dist-info").mkdir()
+        (tmp_path / "python_nothing-1.2.3.dist-info" / "METADATA").write_text("License: MIT")
+        assert unlicensed(tmp_path) == ["python-nothing"]
+
+    def test_a_library_whose_text_the_repo_keeps_is_covered(self, tmp_path):
+        (tmp_path / "pyserial-3.5.dist-info").mkdir()
+        (tmp_path / "pyserial-3.5.dist-info" / "METADATA").write_text("License: BSD")
+        assert unlicensed(tmp_path) == []
+
+    def test_the_notices_name_what_the_repo_holds_of_others(self):
+        notices = (SCRIPT_DIR / "THIRD_PARTY_NOTICES.md").read_text(encoding="utf-8")
+        vendored = [f"public/lib/{d.name}/" for d in (SCRIPT_DIR / "public" / "lib").iterdir() if d.is_dir()]
+        for path in [*vendored, "public/images/cal/"]:
+            assert path in notices, path
+        for text in (SCRIPT_DIR / "LICENSES").iterdir():
+            assert f"LICENSES/{text.name}" in notices, text.name
+
+    def test_the_calibration_pictures_are_the_ones_the_notices_credit(self):
+        """A picture added to the folder would carry a credit that is not its own."""
+        pictures = sorted(p.name for p in (SCRIPT_DIR / "public" / "images" / "cal").iterdir())
+        assert pictures == [
+            "VehicleDown.png",
+            "VehicleLeft.png",
+            "VehicleNoseDown.png",
+            "VehicleRight.png",
+            "VehicleTailDown.png",
+            "VehicleUpsideDown.png",
+        ]
 
 
 @pytest.mark.skipif(sys.version_info < (3, 11), reason="tomllib")

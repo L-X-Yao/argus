@@ -55,6 +55,30 @@ PIP_DEPS = [
     "colorama",
 ]
 
+# What the licenses of Argus and of the work in it ask to go along with every copy.
+LICENSE_FILES = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
+# A wheel brings its license text in its .dist-info. This one does not, so LICENSES/ holds it.
+OWN_LICENSE_TEXT = {"pyserial": "BSD-3-Clause-pyserial.txt"}
+
+README_TXT = """Argus GCS v{version}
+https://github.com/L-X-Yao/argus
+
+Start:      double-click "Argus地面站.bat". A browser opens http://127.0.0.1:8100
+Simulator:  double-click "启动仿真器.bat", then connect to tcp:localhost:5770
+Stop:       close the window, or press Ctrl+C in it
+
+Argus has not been flight tested. Read docs/VERIFICATION.md and SECURITY.md
+in the repository before you fly with it.
+
+启动：双击"Argus地面站.bat"，浏览器会打开 http://127.0.0.1:8100
+仿真器：双击"启动仿真器.bat"，然后在地面站里连接 tcp:localhost:5770
+停止：关闭窗口，或在窗口里按 Ctrl+C
+
+Argus 没有经过飞行测试。飞行前请先看仓库里的 docs/VERIFICATION.md 和 SECURITY.md。
+
+Licenses: LICENSE (Argus, MIT). THIRD_PARTY_NOTICES.md and LICENSES/ (work of others).
+"""
+
 
 def allowed_versions() -> list[str]:
     """What pyproject.toml allows of each dependency, as pip constraints: the package ships
@@ -112,6 +136,24 @@ def copy_app_files(build_dir: Path) -> None:
     # the zip.
     shutil.copy2(SCRIPT_DIR / "scripts" / "simulator.py", build_dir / "simulator.py")
 
+    for name in LICENSE_FILES:
+        shutil.copy2(SCRIPT_DIR / name, build_dir / name)
+    shutil.copytree(SCRIPT_DIR / "LICENSES", build_dir / "LICENSES")
+    # utf-8-sig and CRLF: Notepad on an older Windows reads Chinese wrongly without the mark.
+    (build_dir / "README.txt").write_text(README_TXT.format(version=_VERSION), encoding="utf-8-sig", newline="\r\n")
+
+
+def unlicensed(site_packages: Path) -> list[str]:
+    """Libraries in the package that come with no license text: none in their wheel, and none
+    kept in LICENSES/. Their licenses ask for the text to go along with every copy."""
+    missing = []
+    for info in sorted(site_packages.glob("*.dist-info")):
+        name = re.split(r"-\d", info.name)[0].lower().replace("_", "-")
+        texts = [p for p in info.rglob("*") if p.is_file() and re.search(r"licen[cs]e|copying|notice", p.name, re.I)]
+        if not texts and name not in OWN_LICENSE_TEXT:
+            missing.append(name)
+    return missing
+
 
 def build(arch: str = "amd64"):
     pip_platform = f"win_{arch}"
@@ -134,6 +176,9 @@ def build(arch: str = "amd64"):
     dist_src = SCRIPT_DIR / "dist"
     if not dist_src.exists():
         print("  ERROR: dist/ not found after build")
+        sys.exit(1)
+    if not (dist_src / "THIRD-PARTY-LICENSES.txt").exists():
+        print("  ERROR: the build wrote no dist/THIRD-PARTY-LICENSES.txt (see vite.config.ts)")
         sys.exit(1)
     shutil.copytree(dist_src, build_dir / "dist")
     print("  Frontend built")
@@ -187,6 +232,10 @@ def build(arch: str = "amd64"):
         with zipfile.ZipFile(whl) as zf:
             zf.extractall(site_pkg)
     shutil.rmtree(wheels_dir)
+    missing = unlicensed(site_pkg)
+    if missing:
+        print("  ERROR: no license text for %s: add it to LICENSES/ and OWN_LICENSE_TEXT" % ", ".join(missing))
+        sys.exit(1)
 
     # ── 4. Copy backend + protocol ──
     print("[4/5] Copying application files")

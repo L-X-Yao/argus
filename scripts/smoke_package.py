@@ -87,6 +87,18 @@ def main() -> int:
             z.extractall(tmp)
         root = next(Path(tmp).iterdir())
         python = str(root / "python" / "python.exe")
+        texts = [
+            "LICENSE",
+            "THIRD_PARTY_NOTICES.md",
+            "README.txt",
+            "LICENSES/Apache-2.0.txt",
+            "LICENSES/BSD-2-Clause-Leaflet.txt",
+            "LICENSES/BSD-3-Clause-pyserial.txt",
+            "dist/THIRD-PARTY-LICENSES.txt",
+            "python/LICENSE.txt",
+        ]
+        missing = [name for name in texts if not (root / name).is_file()]
+        record("license texts are in the package", not missing, missing or "")
         server = [python, r"backend\server.py", "--host", "127.0.0.1", "--no-browser", "--port"]
         env = {k: v for k, v in os.environ.items() if k.upper() != "GCS_AUTH_TOKEN"}
         procs = [
