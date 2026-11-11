@@ -614,6 +614,29 @@ class TestPushLoop:
         assert len(event_msgs) >= 1
         assert event_msgs[0]["text"] == "test event"
         assert event_msgs[0]["event_type"] == "info"
+        assert "cmd" not in event_msgs[0]
+
+    @pytest.mark.asyncio
+    async def test_an_acknowledgement_carries_its_command(self):
+        """The page matches an answer by its command: its text is in the UI language."""
+        link = DroneLink()
+        mgr = WSManager(link)
+        ws = make_ws()
+        call_count = 0
+
+        async def fake_sleep(_interval):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                link.add_event("Set mode: accepted", "cmd_ack_ok", cmd=176)
+            if call_count >= 2:
+                raise WebSocketDisconnect()
+
+        with patch("backend.ws_manager.asyncio.sleep", side_effect=fake_sleep):
+            await mgr._push_loop(ws)
+
+        events = [m for m in (json.loads(c[0][0]) for c in ws.send_text.call_args_list) if m.get("type") == "event"]
+        assert events[0]["cmd"] == 176 and events[0]["event_type"] == "cmd_ack_ok"
 
     @pytest.mark.asyncio
     async def test_mission_dl_push(self):

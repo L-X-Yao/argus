@@ -70,8 +70,14 @@ function metersBetween(lat1: number, lon1: number, lat2: number, lon2: number): 
   return Math.hypot(dLat, dLon);
 }
 
-const event = (text: string, event_type: string) =>
-  addEvent({ type: 'event', time: new Date().toLocaleTimeString(), text, event_type });
+const event = (text: string, event_type: string, cmd?: number) =>
+  addEvent({
+    type: 'event',
+    time: new Date().toLocaleTimeString(),
+    text,
+    event_type,
+    ...(cmd === undefined ? {} : { cmd }),
+  });
 
 // Flight bookkeeping, twin of what the backend keeps on DroneLink. It outlives
 // buildSerialHandlers on purpose: a USB link that drops mid-flight and comes back is the
@@ -424,7 +430,7 @@ export function buildSerialHandlers(): SerialHandlers {
         .replace('{cmd}', cmdKey ? t(cmdKey) : String(msg.command))
         .replace('{result}', resultKey ? t(resultKey) : t('ack.result.unknown').replace('{n}', String(msg.result)));
       const ok = msg.result === 0;
-      event(text, ok ? 'cmd_ack_ok' : 'cmd_ack_fail');
+      event(text, ok ? 'cmd_ack_ok' : 'cmd_ack_fail', msg.command);
       if (!ok) addToast(text, 'error', 5000);
     },
     onCommandNoAnswer: (command) => {
@@ -432,7 +438,7 @@ export function buildSerialHandlers(): SerialHandlers {
       const text = t('ack.text')
         .replace('{cmd}', cmdKey ? t(cmdKey) : String(command))
         .replace('{result}', t('ack.result.noAnswer'));
-      event(text, 'cmd_ack_fail');
+      event(text, 'cmd_ack_fail', command);
       addToast(text, 'error', 5000);
     },
     onStatusText: (msg) => {

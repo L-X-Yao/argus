@@ -111,6 +111,8 @@ export interface DroneEvent {
   // that watches new events can use a high-water-mark cursor instead of array
   // index, which would shift on trim.
   seq?: number;
+  // The MAV_CMD a cmd_ack_ok or cmd_ack_fail answers, on both links: the text is in the UI language.
+  cmd?: number;
 }
 
 export interface ConnectResult {

@@ -1177,6 +1177,9 @@ const messages: Record<string, string> = {
   'assistant.slideHold': 'Slide to hold position',
   'assistant.slideLand': 'Slide to land',
   'assistant.notArmed': 'Not sent: the vehicle is not armed',
+  'assistant.withdrawnNow': 'The AI assistant took its request back: nothing was sent',
+  'assistant.otherFlight': 'Not sent: the request was for an earlier flight',
+  'assistant.noMode': 'Not sent: this vehicle has no such mode',
 };
 
 export default messages;

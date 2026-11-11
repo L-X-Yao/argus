@@ -188,19 +188,22 @@ class DroneLink:
         if len(self._ws_queue) > 2000:
             self._ws_queue = self._ws_queue[-1000:]
 
-    def add_event(self, text: str, event_type: str = "") -> None:
+    def add_event(self, text: str, event_type: str = "", cmd: int | None = None) -> None:
+        """cmd: the MAV_CMD an acknowledgement answers, which the page can match without
+        reading the text, written in the UI language."""
         # Monotonic counter — ws_manager uses this rather than the array index
         # so a trim (100 → 50 below) doesn't shift the cursor and cause
         # duplicate-event spam to every connected client.
         self._events_emitted_total += 1
-        self.events.append(
-            {
-                "time": time.strftime("%H:%M:%S"),
-                "text": text,
-                "event_type": event_type,
-                "seq": self._events_emitted_total,
-            }
-        )
+        event = {
+            "time": time.strftime("%H:%M:%S"),
+            "text": text,
+            "event_type": event_type,
+            "seq": self._events_emitted_total,
+        }
+        if cmd is not None:
+            event["cmd"] = cmd
+        self.events.append(event)
         if len(self.events) > 100:
             self.events = self.events[-50:]
 

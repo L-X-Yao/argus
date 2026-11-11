@@ -131,7 +131,7 @@ test('hold: approved, but a slide let go sends nothing, and a whole one does', a
   await approve();
   await slide();
   await expect.poll(() => probe.mode).toBe(LOITER);
-  expect(await check(proposal)).toMatchObject({ proposal, state: 'done', result: { mode: expect.any(String) } });
+  expect(await check(proposal)).toMatchObject({ proposal, state: 'done', result: { mode_number: LOITER } });
   await expect(page.getByTestId('assistant-dialog')).toHaveCount(0);
 });
 
@@ -154,7 +154,7 @@ test('rtl brings it back', async () => {
   await approve();
   await slide();
   await expect.poll(() => probe.mode).toBe(RTL);
-  expect(await check(proposal)).toMatchObject({ proposal, state: 'done' });
+  expect(await check(proposal)).toMatchObject({ proposal, state: 'done', result: { mode_number: RTL } });
 });
 
 test('land puts it down where it is, on its way back, and it disarms', async () => {
@@ -162,7 +162,7 @@ test('land puts it down where it is, on its way back, and it disarms', async () 
   await approve();
   await slide();
   await expect.poll(() => probe.mode).toBe(LAND);
-  expect(await check(proposal)).toMatchObject({ proposal, state: 'done' });
+  expect(await check(proposal)).toMatchObject({ proposal, state: 'done', result: { mode_number: LAND } });
   await expect.poll(() => probe.armed, { timeout: 180000 }).toBe(false);
   clearInterval(pilot);
   expect(probe.altitude).toBeLessThan(1);

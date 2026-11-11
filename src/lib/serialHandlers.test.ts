@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 const H = vi.hoisted(() => ({
   drone: {} as Record<string, unknown>,
-  events: [] as { event_type: string; text: string }[],
+  events: [] as { event_type: string; text: string; cmd?: number }[],
   toasts: [] as { text: string; level: string }[],
   flights: [] as Record<string, unknown>[],
 }));
@@ -369,5 +369,18 @@ describe('no answer', () => {
     H.events.length = 0;
     (buildSerialHandlers() as SerialHandlers).onCommandNoAnswer!(176);
     expect(H.events.map((e) => e.event_type)).toEqual(['cmd_ack_fail']);
+    // The command it answers, as on the backend link: the text is in the UI language.
+    expect(H.events[0].cmd).toBe(176);
+  });
+
+  it('notes which command an answer is for', () => {
+    H.events.length = 0;
+    (buildSerialHandlers() as SerialHandlers).onCommandAck!(
+      { command: 176, result: 0 } as never,
+      {
+        payloadLen: 3,
+      } as MavFrame,
+    );
+    expect(H.events.at(-1)).toMatchObject({ event_type: 'cmd_ack_ok', cmd: 176 });
   });
 });

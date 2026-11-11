@@ -217,10 +217,12 @@ TOOLS = [
             "Ask the operator to send the vehicle one of these: rtl, return to launch; hold, stop and "
             "hold where it is (Loiter on a copter, the vehicle's own hold mode on others); land, land "
             "where it is (a submarine surfaces). A plane without VTOL motors and a rover cannot land "
-            "this way, and a submarine has no return to launch. Only while the vehicle is armed. The "
-            "page shows it with the flight mode now, and the operator approves it and confirms it "
-            "with a slide. It returns at once with a proposal id: check_proposal gives the decision "
-            "and the flight mode the flight controller reported after it."
+            "this way, and a submarine has no return to launch. Only while the vehicle is armed, and "
+            "only in the flight it was asked in: after a disarm it is refused. The page shows it "
+            "with the flight mode now, and the operator approves it and confirms it with a slide. "
+            "It returns at once with a proposal id: check_proposal gives the decision, then the "
+            "flight mode (mode_number is ArduPilot's) once the flight controller reported it or "
+            "accepted the change."
         ),
         "inputSchema": {
             "type": "object",

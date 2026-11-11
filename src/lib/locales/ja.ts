@@ -1178,6 +1178,9 @@ const messages: Record<string, string> = {
   'assistant.slideHold': 'スライドしてホールド',
   'assistant.slideLand': 'スライドして着陸',
   'assistant.notArmed': '未送信: 機体がアームされていません',
+  'assistant.withdrawnNow': 'AI アシスタントが依頼を取り下げました。何も送信していません',
+  'assistant.otherFlight': '未送信: 以前の飛行のための依頼です',
+  'assistant.noMode': '未送信: この機体にはそのモードがありません',
 };
 
 export default messages;

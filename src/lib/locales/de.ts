@@ -1183,6 +1183,9 @@ const messages: Record<string, string> = {
   'assistant.slideHold': 'Zum Halten wischen',
   'assistant.slideLand': 'Zum Landen wischen',
   'assistant.notArmed': 'Nicht gesendet: das Fahrzeug ist nicht scharf',
+  'assistant.withdrawnNow': 'Der KI-Assistent hat seine Anfrage zurückgezogen: nichts gesendet',
+  'assistant.otherFlight': 'Nicht gesendet: die Anfrage galt einem früheren Flug',
+  'assistant.noMode': 'Nicht gesendet: dieses Fahrzeug hat keinen solchen Modus',
 };
 
 export default messages;
