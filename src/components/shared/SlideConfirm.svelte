@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { slideState, completeSlide, cancelSlide } from '../../lib/stores.svelte';
+  import { slideState, finishSlide, cancelSlide } from '../../lib/stores.svelte';
   import { ChevronRight, Check } from '@lucide/svelte';
 
   let trackEl: HTMLDivElement = $state(null!);
@@ -37,7 +37,7 @@
       done = true;
       dragging = false;
       progress = 1;
-      setTimeout(() => completeSlide(), 300);
+      finishSlide();
     }
   }
 

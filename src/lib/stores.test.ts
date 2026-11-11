@@ -18,6 +18,7 @@ import {
   confirmState,
   showSlide,
   completeSlide,
+  finishSlide,
   cancelSlide,
   slideState,
   loadDownloadedMission,
@@ -317,6 +318,42 @@ describe('slide confirm', () => {
     cancelSlide();
     expect(fn).not.toHaveBeenCalled();
     expect(slideState.visible).toBe(false);
+  });
+
+  it('a finished slide sends at once, and neither the time-out nor a tap just after takes it back', () => {
+    vi.useFakeTimers();
+    try {
+      const fn = vi.fn();
+      showSlide('test', 'red', fn);
+      finishSlide();
+      expect(fn).toHaveBeenCalledTimes(1);
+      expect(slideState.visible).toBe(true); // "OK" for a moment
+      cancelSlide(); // the 8 s time-out, or a tap on the backdrop, in that moment
+      expect(fn).toHaveBeenCalledTimes(1);
+      showSlide('test', 'red', fn);
+      finishSlide();
+      vi.advanceTimersByTime(300);
+      expect(slideState.visible).toBe(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('a slide asked for in that moment stays, and is not run', () => {
+    vi.useFakeTimers();
+    try {
+      showSlide('first', 'red', vi.fn());
+      finishSlide();
+      const second = vi.fn();
+      showSlide('second', 'orange', second);
+      vi.advanceTimersByTime(300);
+      expect(slideState.visible).toBe(true);
+      expect(slideState.text).toBe('second');
+      expect(second).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+      cancelSlide();
+    }
   });
 });
 
