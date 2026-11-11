@@ -62,6 +62,8 @@
           style,
         }),
       });
+      // A refusal is an answer too, and it is not a finished download.
+      if (!r.ok) throw new Error(t('fw.downloadFailed'));
       result = await r.json();
       addToast(t('offmap.done'), 'success');
       fetch(apiUrl('/api/tile_cache'))
@@ -169,7 +171,6 @@
         <select bind:value={style} class="h-7 px-1 bg-input border border-border rounded text-xs">
           <option value="6">{t('label.satellite')}</option>
           <option value="7">{t('label.vector')}</option>
-          <option value="osm">OSM</option>
         </select>
       </div>
       <div class="text-xs text-muted-foreground">

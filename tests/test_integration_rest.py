@@ -122,12 +122,21 @@ class TestTileBulkDownload:
             "lon_max": 108.91,
             "z_min": 3,
             "z_max": 3,
-            "style": "osm",  # the default is a server in China, and a hosted runner is not
+            # The default is a server in China, and a hosted runner is not. Not "osm": its
+            # server forbids bulk download, and Argus refuses it.
+            "style": "carto_light",
         }
         r = httpx.post(f"{backend_url}/api/tile_bulk_download", json=body, timeout=120)
         data = r.json()
         assert data["total"] == 1
         assert data["truncated"] is False
+
+    def test_openstreetmap_is_refused(self, backend_url):
+        r = httpx.post(
+            f"{backend_url}/api/tile_bulk_download", json={"style": "osm", "z_min": 3, "z_max": 3}, timeout=30
+        )
+        assert r.status_code == 400
+        assert "OpenStreetMap" in r.json()["error"]
 
     def test_a_style_that_does_not_exist_downloads_nothing(self, backend_url):
         r = httpx.post(f"{backend_url}/api/tile_bulk_download", json={"style": "nope"}, timeout=30)

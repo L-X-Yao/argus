@@ -400,7 +400,7 @@ class TestTileBulkDownload:
                     "lon_max": 120.001,
                     "z_min": -5,
                     "z_max": 25,
-                    "style": "osm",
+                    "style": "carto_light",
                 },
             )
             assert r.status_code == 200
@@ -425,7 +425,7 @@ class TestTileBulkDownload:
                     "lon_max": 130.0,
                     "z_min": 12,
                     "z_max": 18,
-                    "style": "osm",
+                    "style": "carto_light",
                 },
             )
             assert r.status_code == 200
@@ -436,7 +436,7 @@ class TestTileBulkDownload:
     def test_bulk_download_skips_cached_tiles(self, tile_cache_dir):
         """Already-cached tiles are skipped (counted as 'skipped')."""
         # Pre-create a cached tile at z=10, x=854, y=420
-        cache_dir = tile_cache_dir / "osm" / "10" / "854"
+        cache_dir = tile_cache_dir / "carto_light" / "10" / "854"
         cache_dir.mkdir(parents=True)
         (cache_dir / "420.png").write_bytes(b"\x89PNG" + b"\x00" * 10)
 
@@ -461,7 +461,7 @@ class TestTileBulkDownload:
                     "lon_max": lon_max,
                     "z_min": 10,
                     "z_max": 10,
-                    "style": "osm",
+                    "style": "carto_light",
                 },
             )
             assert r.status_code == 200
@@ -496,11 +496,28 @@ class TestTileBulkDownload:
         assert r.json() == {"total": 0, "downloaded": 0, "skipped": 0, "truncated": False}
         assert not fetch.called
 
+    def test_openstreetmap_is_not_downloaded_in_bulk(self, tile_cache_dir):
+        """Its tile server forbids fetching tiles nobody is looking at, and keeping them for
+        offline use: https://operations.osmfoundation.org/policies/tiles/ section 4."""
+        with patch("backend.tiles.urlreq.urlopen") as fetch:
+            r = client.post("/api/tile_bulk_download", json={**self.BOX, "style": "osm"})
+        assert r.status_code == 400
+        assert "OpenStreetMap" in r.json()["error"]
+        assert not fetch.called
+
+    def test_a_tile_on_screen_still_comes_from_openstreetmap(self, tile_cache_dir):
+        response = MagicMock()
+        response.read.return_value = b"\x89PNG"
+        with patch("backend.tiles.urlreq.urlopen", return_value=response) as fetch:
+            r = client.get("/api/tile/osm/3/4/2")
+        assert r.status_code == 200
+        assert fetch.call_args.args[0].full_url == "https://tile.openstreetmap.org/3/4/2.png"
+
     def test_a_silent_map_server_is_asked_once(self, tile_cache_dir):
         """Each tile used to wait for its own timeout: 5000 of them held the request for hours."""
         box = {"lat_min": 30.0, "lat_max": 30.5, "lon_min": 120.0, "lon_max": 120.5, "z_min": 12, "z_max": 12}
         with patch("backend.tiles.urlreq.urlopen", side_effect=TimeoutError("timed out")) as fetch:
-            r = client.post("/api/tile_bulk_download", json={**box, "style": "osm"})
+            r = client.post("/api/tile_bulk_download", json={**box, "style": "carto_light"})
         data = r.json()
         assert data["total"] > 20 and data["downloaded"] == 0
         assert fetch.call_count == 1
@@ -516,9 +533,9 @@ class TestTileBulkDownload:
 
         box = {"lat_min": -85.06, "lat_max": -85.0, "lon_min": 179.9, "lon_max": 180.0, "z_min": 2, "z_max": 2}
         with patch("backend.tiles.urlreq.urlopen", side_effect=fetch):
-            r = client.post("/api/tile_bulk_download", json={**box, "style": "osm"})
+            r = client.post("/api/tile_bulk_download", json={**box, "style": "carto_light"})
         assert r.json()["downloaded"] == 1
-        assert asked == ["https://tile.openstreetmap.org/2/3/3.png"]
+        assert asked == ["https://a.basemaps.cartocdn.com/light_all/2/3/3.png"]
 
 
 class TestTileCacheClear:

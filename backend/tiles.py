@@ -24,6 +24,9 @@ _TILE_MAX = cfg.TILE_CACHE_MAX
 _TILE_MAX_BYTES = 2 * 1024 * 1024
 _tile_count = -1
 _server_down_until: dict[str, float] = {}
+# tile.openstreetmap.org forbids fetching tiles nobody is looking at, and keeping them for offline
+# use: https://operations.osmfoundation.org/policies/tiles/ section 4. It serves a map on screen.
+_NO_BULK = frozenset({"osm"})
 
 
 TILE_URLS = {
@@ -204,6 +207,10 @@ async def api_tile_bulk_download(request: Request):
     style = body.get("style", "6")
     if not isinstance(style, str) or style not in TILE_URLS or (style.startswith("tdt_") and not cfg.TIANDITU_KEY):
         return {"total": 0, "downloaded": 0, "skipped": 0, "truncated": False}
+    if style in _NO_BULK:
+        return JSONResponse(
+            status_code=400, content={"error": "OpenStreetMap does not allow bulk download from its tile server"}
+        )
     total = downloaded = skipped = 0
     for z in range(z_min, z_max + 1):
         n = 2**z
