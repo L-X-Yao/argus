@@ -1151,6 +1151,26 @@ const messages: Record<string, string> = {
   'mission.err.fenceMax': 'Geocerca demasiado grande (máx. 200 vértices)',
   'mission.err.noRally': 'No hay puntos de reunión',
   'mission.err.badRally': 'Punto de reunión no válido',
+  'assistant.title': 'Solicitud del asistente de IA',
+  'assistant.more': '{n} más en espera',
+  'assistant.missionTitle': 'Convertirla en la misión planificada y subirla',
+  'assistant.missionSummary':
+    '{n} puntos de ruta, {dist}, máximo {alt} m. Primero despegue a {takeoff} m y regreso al inicio al final.',
+  'assistant.missionSummarySub': '{n} puntos de ruta, {dist}, mínimo {alt} m. Sin despegue y sin regreso al final.',
+  'assistant.onMap': 'La ruta aparece discontinua en el mapa.',
+  'assistant.paramsTitle': 'Cambiar parámetros del controlador de vuelo',
+  'assistant.param': 'Parámetro',
+  'assistant.now': 'Actual',
+  'assistant.new': 'Nuevo',
+  'assistant.reason': 'Nota del asistente',
+  'assistant.approve': 'Aprobar',
+  'assistant.decline': 'Rechazar',
+  'assistant.running': 'Enviando…',
+  'assistant.present': 'Hay un asistente de IA conectado. Lee esta página y pide cambios, que esperan su aprobación.',
+  'assistant.refusedNow': 'El vehículo está armado: se rechazó la solicitud del asistente',
+  'assistant.done': 'Se ejecutó la solicitud del asistente',
+  'assistant.failed': 'La solicitud del asistente no se completó',
+  'assistant.unchanged': 'sin cambios',
 };
 
 export default messages;

@@ -1143,6 +1143,26 @@ const messages: Record<string, string> = {
   'mission.err.fenceMax': 'السياج الجغرافي كبير جدًا (200 رأس كحد أقصى)',
   'mission.err.noRally': 'لا توجد نقاط تجمع',
   'mission.err.badRally': 'نقطة تجمع غير صالحة',
+  'assistant.title': 'طلب من مساعد الذكاء الاصطناعي',
+  'assistant.more': '{n} طلبات أخرى بالانتظار',
+  'assistant.missionTitle': 'اجعلها المهمة المخططة وارفعها',
+  'assistant.missionSummary':
+    '{n} نقاط مسار، {dist}، أعلى ارتفاع {alt} م. إقلاع أولاً إلى {takeoff} م ثم عودة إلى نقطة الانطلاق في النهاية.',
+  'assistant.missionSummarySub': '{n} نقاط مسار، {dist}، أعمق نقطة {alt} م. لا إقلاع ولا عودة في النهاية.',
+  'assistant.onMap': 'المسار مرسوم بخط متقطع على الخريطة.',
+  'assistant.paramsTitle': 'تغيير معاملات وحدة التحكم في الطيران',
+  'assistant.param': 'المعامل',
+  'assistant.now': 'الحالي',
+  'assistant.new': 'الجديد',
+  'assistant.reason': 'ملاحظة المساعد',
+  'assistant.approve': 'موافقة',
+  'assistant.decline': 'رفض',
+  'assistant.running': 'جارٍ الإرسال…',
+  'assistant.present': 'مساعد ذكاء اصطناعي متصل. يقرأ هذه الصفحة ويطلب تغييرات تنتظر موافقتك.',
+  'assistant.refusedNow': 'المركبة مسلّحة الآن: رُفض طلب المساعد',
+  'assistant.done': 'نُفّذ طلب المساعد',
+  'assistant.failed': 'لم يكتمل طلب المساعد',
+  'assistant.unchanged': 'دون تغيير',
 };
 
 export default messages;

@@ -240,6 +240,25 @@ export interface ConsoleOutputMsg {
   text: string;
 }
 
+// The AI assistant (backend/mcp_server.py) asks the page with command authority through the
+// backend (backend/ws_manager.py). See src/lib/assistant.svelte.ts.
+export interface AssistantRequestMsg {
+  type: 'assistant_request';
+  id: string;
+  kind: string;
+  args: Record<string, unknown>;
+}
+
+export interface AssistantCancelMsg {
+  type: 'assistant_cancel';
+  id: string;
+}
+
+export interface AssistantPresenceMsg {
+  type: 'assistant_presence';
+  count: number;
+}
+
 export type WSMessage =
   | DroneState
   | DroneEvent
@@ -254,7 +273,10 @@ export type WSMessage =
   | LogChunkMsg
   | LogCompleteMsg
   | InspectorMsg
-  | ConsoleOutputMsg;
+  | ConsoleOutputMsg
+  | AssistantRequestMsg
+  | AssistantCancelMsg
+  | AssistantPresenceMsg;
 
 export const defaultState: DroneState = {
   type: 'state',

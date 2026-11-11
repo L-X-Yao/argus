@@ -1153,6 +1153,28 @@ const messages: Record<string, string> = {
   'mission.err.fenceMax': 'Géoclôture trop grande (200 sommets max.)',
   'mission.err.noRally': 'Aucun point de ralliement',
   'mission.err.badRally': 'Point de ralliement non valide',
+  'assistant.title': "Demande de l'assistant IA",
+  'assistant.more': '{n} autres en attente',
+  'assistant.missionTitle': 'En faire la mission prévue et la téléverser',
+  'assistant.missionSummary':
+    "{n} points de passage, {dist}, au plus {alt} m. D'abord décollage à {takeoff} m, retour au départ à la fin.",
+  'assistant.missionSummarySub':
+    '{n} points de passage, {dist}, au plus profond {alt} m. Ni décollage ni retour à la fin.',
+  'assistant.onMap': 'La route est tracée en pointillés sur la carte.',
+  'assistant.paramsTitle': 'Modifier des paramètres du contrôleur de vol',
+  'assistant.param': 'Paramètre',
+  'assistant.now': 'Actuel',
+  'assistant.new': 'Nouveau',
+  'assistant.reason': "Note de l'assistant",
+  'assistant.approve': 'Approuver',
+  'assistant.decline': 'Refuser',
+  'assistant.running': 'Envoi…',
+  'assistant.present':
+    'Un assistant IA est connecté. Il lit cette page et demande des modifications, qui attendent votre approbation.',
+  'assistant.refusedNow': "Le véhicule est armé : la demande de l'assistant a été refusée",
+  'assistant.done': "La demande de l'assistant a été exécutée",
+  'assistant.failed': "La demande de l'assistant n'a pas abouti",
+  'assistant.unchanged': 'inchangé',
 };
 
 export default messages;

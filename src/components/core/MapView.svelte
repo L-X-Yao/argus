@@ -18,6 +18,7 @@
   import RallyLayer from '../layers/RallyLayer.svelte';
   import SurveyLayer from '../layers/SurveyLayer.svelte';
   import ReplayLayer from '../layers/ReplayLayer.svelte';
+  import AssistantPreviewLayer from '../layers/AssistantPreviewLayer.svelte';
   import {
     Layers,
     Ruler,
@@ -474,6 +475,7 @@
     <FenceLayer {map} coord={toMap} />
     <SurveyLayer {map} coord={toMap} />
     <ReplayLayer {map} {follow} coord={toMap} />
+    <AssistantPreviewLayer {map} coord={toMap} />
   {/if}
 
   <div class="absolute top-2.5 left-2.5 z-[1000] flex gap-1">

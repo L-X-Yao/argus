@@ -1149,6 +1149,27 @@ const messages: Record<string, string> = {
   'mission.err.fenceMax': 'Геозабор слишком большой (не более 200 вершин)',
   'mission.err.noRally': 'Нет точек сбора',
   'mission.err.badRally': 'Недопустимая точка сбора',
+  'assistant.title': 'Запрос ИИ-ассистента',
+  'assistant.more': 'Ещё {n} в ожидании',
+  'assistant.missionTitle': 'Сделать миссией плана и загрузить',
+  'assistant.missionSummary':
+    '{n} точек маршрута, {dist}, максимум {alt} м. Сначала взлёт на {takeoff} м, в конце возврат домой.',
+  'assistant.missionSummarySub': '{n} точек маршрута, {dist}, глубже всего {alt} м. Без взлёта и без возврата в конце.',
+  'assistant.onMap': 'Маршрут показан на карте пунктиром.',
+  'assistant.paramsTitle': 'Изменить параметры полётного контроллера',
+  'assistant.param': 'Параметр',
+  'assistant.now': 'Сейчас',
+  'assistant.new': 'Новое',
+  'assistant.reason': 'Пояснение ассистента',
+  'assistant.approve': 'Одобрить',
+  'assistant.decline': 'Отклонить',
+  'assistant.running': 'Отправка…',
+  'assistant.present':
+    'Подключён ИИ-ассистент. Он читает эту страницу и просит изменений, которые ждут вашего одобрения.',
+  'assistant.refusedNow': 'Аппарат взведён: запрос ассистента отклонён',
+  'assistant.done': 'Запрос ассистента выполнен',
+  'assistant.failed': 'Запрос ассистента не выполнен',
+  'assistant.unchanged': 'без изменений',
 };
 
 export default messages;

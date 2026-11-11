@@ -1151,6 +1151,27 @@ const messages: Record<string, string> = {
   'mission.err.fenceMax': 'Geofence zu groß (max. 200 Eckpunkte)',
   'mission.err.noRally': 'Keine Sammelpunkte',
   'mission.err.badRally': 'Ungültiger Sammelpunkt',
+  'assistant.title': 'Anfrage des KI-Assistenten',
+  'assistant.more': '{n} weitere warten',
+  'assistant.missionTitle': 'Als geplante Mission übernehmen und hochladen',
+  'assistant.missionSummary':
+    '{n} Wegpunkte, {dist}, höchstens {alt} m. Zuerst Start auf {takeoff} m, am Ende Rückkehr zum Startpunkt.',
+  'assistant.missionSummarySub': '{n} Wegpunkte, {dist}, tiefstens {alt} m. Kein Start und keine Rückkehr am Ende.',
+  'assistant.onMap': 'Die Route ist gestrichelt auf der Karte eingezeichnet.',
+  'assistant.paramsTitle': 'Parameter des Flugcontrollers ändern',
+  'assistant.param': 'Parametername',
+  'assistant.now': 'Jetzt',
+  'assistant.new': 'Neu',
+  'assistant.reason': 'Notiz des Assistenten',
+  'assistant.approve': 'Genehmigen',
+  'assistant.decline': 'Ablehnen',
+  'assistant.running': 'Wird gesendet…',
+  'assistant.present':
+    'Ein KI-Assistent ist verbunden. Er liest diese Seite und bittet um Änderungen, die auf Ihre Genehmigung warten.',
+  'assistant.refusedNow': 'Das Fahrzeug ist jetzt scharf: die Anfrage des Assistenten wurde abgelehnt',
+  'assistant.done': 'Die Anfrage des Assistenten wurde ausgeführt',
+  'assistant.failed': 'Die Anfrage des Assistenten wurde nicht abgeschlossen',
+  'assistant.unchanged': 'unverändert',
 };
 
 export default messages;

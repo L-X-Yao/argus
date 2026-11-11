@@ -15,6 +15,7 @@
   import MissionProgress from './components/mission/MissionProgress.svelte';
   import TelemetryOverlay from './components/telemetry/TelemetryOverlay.svelte';
   import ConfirmDialog from './components/shared/ConfirmDialog.svelte';
+  import AssistantDialog from './components/shared/AssistantDialog.svelte';
   import SlideConfirm from './components/shared/SlideConfirm.svelte';
   import { showConfirm, showSlide, undo } from './lib/stores.svelte';
   import { startScheduler } from './lib/scheduler.svelte';
@@ -654,6 +655,7 @@
   {/if}
   <ConfirmDialog />
   <SlideConfirm />
+  <AssistantDialog />
   {#if showCmdPalette && CmdPaletteMod}
     <CmdPaletteMod
       onclose={() => (showCmdPalette = false)}

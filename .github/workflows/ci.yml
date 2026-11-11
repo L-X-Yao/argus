@@ -58,6 +58,18 @@ jobs:
         env:
           ARGUS_REQUIRE_FFMPEG: '1'
 
+      # backend/mcp_server.py against the client of the official SDK, which Claude Desktop and
+      # Claude Code are built on. Installed beside the repository, not in package.json: some 95
+      # packages for one check. Pinned, and not updated by Dependabot: raise it by hand.
+      - name: MCP server against the official TypeScript SDK client
+        run: |
+          mkdir -p "$RUNNER_TEMP/mcp-sdk"
+          cp tests/mcp_sdk_check.mjs "$RUNNER_TEMP/mcp-sdk/"
+          cd "$RUNNER_TEMP/mcp-sdk"
+          npm init -y > /dev/null
+          npm install --no-audit --no-fund --loglevel=error @modelcontextprotocol/sdk@1.32.2
+          node mcp_sdk_check.mjs "$GITHUB_WORKSPACE" python
+
       - name: TypeScript check
         run: npx svelte-check --tsconfig ./tsconfig.json
 
@@ -666,6 +678,7 @@ jobs:
           tests/e2e/params.spec.ts
           tests/e2e/websocket.spec.ts
           tests/e2e/memory.spec.ts
+          tests/e2e/assistant.spec.ts
         env:
           ARGUS_NO_BROWSER: '1'
 

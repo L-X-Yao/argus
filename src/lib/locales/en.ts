@@ -1145,6 +1145,27 @@ const messages: Record<string, string> = {
   'rally.clearFc': 'Clear rally points on FC',
   'rally.clearFcDone': 'Rally points cleared on the FC',
   'fltmode.noSwitch': 'This firmware has no mode switch parameters',
+  'assistant.title': 'Request from the AI assistant',
+  'assistant.more': '{n} more waiting',
+  'assistant.missionTitle': 'Make this the planned mission and upload it',
+  'assistant.missionSummary':
+    '{n} waypoints, {dist}, highest {alt} m. Takeoff to {takeoff} m first and return to launch at the end.',
+  'assistant.missionSummarySub': '{n} waypoints, {dist}, deepest {alt} m. No takeoff and no return at the end.',
+  'assistant.onMap': 'The route is drawn dashed on the map.',
+  'assistant.paramsTitle': 'Change flight controller parameters',
+  'assistant.param': 'Parameter',
+  'assistant.now': 'Now',
+  'assistant.new': 'New',
+  'assistant.reason': 'Note from the assistant',
+  'assistant.approve': 'Approve',
+  'assistant.decline': 'Decline',
+  'assistant.running': 'Sending…',
+  'assistant.present':
+    'An AI assistant is connected. It reads this page and asks for changes, which wait for your approval.',
+  'assistant.refusedNow': 'Declined: the vehicle is armed now',
+  'assistant.done': 'The request of the AI assistant was carried out',
+  'assistant.failed': 'The request of the AI assistant did not complete',
+  'assistant.unchanged': 'unchanged',
 };
 
 export default messages;

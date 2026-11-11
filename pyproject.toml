@@ -28,6 +28,10 @@ Homepage = "https://github.com/L-X-Yao/argus"
 Repository = "https://github.com/L-X-Yao/argus"
 Issues = "https://github.com/L-X-Yao/argus/issues"
 
+[project.scripts]
+# The AI assistant's way in: an MCP server on stdio (backend/mcp_server.py).
+argus-mcp = "backend.mcp_server:main"
+
 [project.optional-dependencies]
 dev = [
     "pytest>=8.0",

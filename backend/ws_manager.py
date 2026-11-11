@@ -54,6 +54,19 @@ def validate_port(port) -> bool:
     return isinstance(port, str) and len(port) <= 200 and "\x00" not in port
 
 
+# An assistant (backend/mcp_server.py, the AI's way in) is a client of its own kind. It reads
+# what the operator's page answers, and asks that page for changes, which the operator approves
+# or declines there. It never holds command authority: nothing it sends reaches the vehicle.
+_FROM_ASSISTANT = frozenset(("assistant_hello", "assistant_request", "assistant_cancel"))
+# Requests of one assistant waiting for the page at once: an AI in a loop floods nobody.
+_MAX_WAITING = 20
+_NO_PAGE = (
+    "No Argus page is open. Open Argus in a browser: the page answers for the vehicle, "
+    "and the operator approves changes there."
+)
+_PAGE_CLOSED = "The Argus page that was asked has closed."
+
+
 def sanitize_baud(baud) -> int:
     try:
         baud = int(baud)
@@ -72,10 +85,25 @@ class WSManager:
         self._order: list[WebSocket] = []
         self._pilot_ws: WebSocket | None = None
         self._roles: dict[int, str] = {}
+        self._assistants: set[WebSocket] = set()
+        # A request on its way: key -> (the assistant, its own id for it, the page asked).
+        self._asked: dict[str, tuple[WebSocket, str, WebSocket]] = {}
+        self._asked_total = 0
 
     @property
     def client_count(self) -> int:
-        return len(self._clients)
+        """Pages, not assistants: what the pages show as the number of operators and viewers."""
+        return len(self._clients - self._assistants)
+
+    @property
+    def assistant_count(self) -> int:
+        return len(self._assistants & self._clients)
+
+    def operator(self) -> WebSocket | None:
+        """The page with command authority: the pilot, or else the page that connected first."""
+        if self._pilot_ws is not None and self._pilot_ws in self._clients:
+            return self._pilot_ws
+        return next((c for c in self._order if c in self._clients and c not in self._assistants), None)
 
     async def broadcast(self, msg: dict) -> None:
         text = dumps(msg)
@@ -94,6 +122,8 @@ class WSManager:
         await ws.accept()
         self._clients.add(ws)
         self._order.append(ws)
+        if self.assistant_count:
+            await ws.send_text(dumps({"type": "assistant_presence", "count": self.assistant_count}))
         try:
             recv_task = asyncio.create_task(self._receive_loop(ws))
             push_task = asyncio.create_task(self._push_loop(ws))
@@ -117,6 +147,86 @@ class WSManager:
             self._roles.pop(id(ws), None)
             if self._pilot_ws is ws:
                 self._pilot_ws = None
+            await self._forget(ws)
+
+    async def _forget(self, ws: WebSocket) -> None:
+        """What was asked by or of a client that has gone."""
+        was_assistant = ws in self._assistants
+        self._assistants.discard(ws)
+        for key, (assistant, rid, page) in list(self._asked.items()):
+            if assistant is ws:
+                del self._asked[key]
+                await self._send(page, {"type": "assistant_cancel", "id": key})
+            elif page is ws:
+                del self._asked[key]
+                await self._send(assistant, {"type": "assistant_reply", "id": rid, "ok": False, "error": _PAGE_CLOSED})
+        if was_assistant:
+            await self._presence()
+
+    @staticmethod
+    async def _send(ws: WebSocket, msg: dict) -> None:
+        try:
+            await ws.send_text(dumps(msg))
+        except Exception:
+            pass  # gone: its own receive loop cleans up
+
+    async def _presence(self) -> None:
+        for page in list(self._clients - self._assistants):
+            await self._send(page, {"type": "assistant_presence", "count": self.assistant_count})
+
+    async def _from_assistant(self, ws: WebSocket, msg_type: str, msg: dict) -> None:
+        if msg_type == "assistant_hello":
+            if ws not in self._assistants:
+                self._assistants.add(ws)
+                self._roles.pop(id(ws), None)
+                if self._pilot_ws is ws:
+                    self._pilot_ws = None
+                await self._presence()
+            await self._send(ws, {"type": "assistant_welcome"})
+            return
+        if msg_type not in _FROM_ASSISTANT:
+            await self._send(ws, {"type": "assistant_error", "error": f"{msg_type!r} is not open to an assistant"})
+            return
+        rid = msg.get("id")
+        if not isinstance(rid, str) or not 0 < len(rid) <= 100:
+            return  # nothing to answer to
+        if msg_type == "assistant_cancel":
+            for key, (assistant, own, page) in list(self._asked.items()):
+                if assistant is ws and own == rid:
+                    del self._asked[key]
+                    await self._send(page, {"type": "assistant_cancel", "id": key})
+            return
+        kind, args = msg.get("kind"), msg.get("args", {})
+        if not isinstance(kind, str) or not isinstance(args, dict):
+            await self._send(ws, {"type": "assistant_reply", "id": rid, "ok": False, "error": "kind and args"})
+            return
+        if sum(1 for assistant, _, _ in self._asked.values() if assistant is ws) >= _MAX_WAITING:
+            error = f"{_MAX_WAITING} requests are already waiting for the page"
+            await self._send(ws, {"type": "assistant_reply", "id": rid, "ok": False, "error": error})
+            return
+        page = self.operator()
+        if page is None:
+            await self._send(ws, {"type": "assistant_reply", "id": rid, "ok": False, "error": _NO_PAGE})
+            return
+        self._asked_total += 1
+        key = f"a{self._asked_total}"
+        self._asked[key] = (ws, rid, page)
+        await self._send(page, {"type": "assistant_request", "id": key, "kind": kind, "args": args})
+
+    async def _to_assistant(self, page: WebSocket, msg: dict) -> None:
+        """A page's answer, passed on to the assistant that asked, if it asked this page."""
+        key = msg.get("id")
+        asked = self._asked.get(key) if isinstance(key, str) else None
+        if asked is None or asked[2] is not page:
+            return
+        del self._asked[key]
+        assistant, rid, _ = asked
+        reply = {"type": "assistant_reply", "id": rid, "ok": msg.get("ok") is True}
+        if "result" in msg:
+            reply["result"] = msg["result"]
+        if isinstance(msg.get("error"), str):
+            reply["error"] = msg["error"][:2000]
+        await self._send(assistant, reply)
 
     async def _receive_loop(self, ws: WebSocket) -> None:
         try:
@@ -126,7 +236,15 @@ class WSManager:
                     msg = json.loads(raw)
                 except json.JSONDecodeError:
                     continue
+                if not isinstance(msg, dict):
+                    continue
                 msg_type = msg.get("type", "")
+                if ws in self._assistants or msg_type == "assistant_hello":
+                    await self._from_assistant(ws, msg_type, msg)
+                    continue
+                if msg_type == "assistant_reply":
+                    await self._to_assistant(ws, msg)
+                    continue
                 if msg_type == "connect":
                     port = msg.get("port", "tcp:localhost:5770")
                     baud = msg.get("baud", cfg.SERIAL_BAUD)
@@ -216,7 +334,7 @@ class WSManager:
                     # "one operator, rest observe" default with zero UI wiring.
                     # Fallback (operator is None): tests populate _clients
                     # directly, bypassing _order — a lone client still commands.
-                    operator = next((c for c in self._order if c in self._clients), None)
+                    operator = next((c for c in self._order if c in self._clients and c not in self._assistants), None)
                     if operator is None:
                         operator = ws if self.client_count == 1 else None
                     is_implicit_pilot = self._pilot_ws is None and role is None and operator is ws
@@ -255,6 +373,10 @@ class WSManager:
         push_count = 0
         try:
             while True:
+                if ws in self._assistants:
+                    # It asks the page and reads its answers, not the stream.
+                    await asyncio.sleep(1.0)
+                    continue
                 state = self.link.get_state()
                 push_count += 1
                 if push_count % 10 == 1:
@@ -286,6 +408,9 @@ class WSManager:
                                         "time": ev["time"],
                                         "text": ev["text"],
                                         "event_type": ev.get("event_type", ""),
+                                        # What came after a given moment, for a page waiting on
+                                        # an answer of the FC (src/lib/assistant.svelte.ts).
+                                        "seq": ev.get("seq", 0),
                                     }
                                 )
                             )

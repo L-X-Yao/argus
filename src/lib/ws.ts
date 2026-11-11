@@ -6,6 +6,14 @@ import { updateInspector, appendConsole } from './inspectorStore.svelte';
 import { saveFlightRecord } from './flightDb';
 import { getWsUrl } from './backend';
 import { onLocaleChange, getLocale, t } from './i18n.svelte';
+import {
+  assistant,
+  answerThrough,
+  forgetAssistant,
+  handleAssistantRequest,
+  withdraw,
+  type AssistantReply,
+} from './assistant.svelte';
 
 let socket: WebSocket | null = null;
 let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
@@ -201,6 +209,15 @@ export function connectWs(): void {
         case 'console_output':
           appendConsole(msg.text);
           break;
+        case 'assistant_request':
+          handleAssistantRequest(msg);
+          break;
+        case 'assistant_cancel':
+          withdraw(msg.id);
+          break;
+        case 'assistant_presence':
+          assistant.present = typeof msg.count === 'number' ? msg.count : 0;
+          break;
       }
     } catch (e) {
       // Said out loud either way: a handler that throws would otherwise drop its message, and
@@ -213,6 +230,8 @@ export function connectWs(): void {
   ws.onclose = () => {
     setWsConnected(false);
     socket = null;
+    // The backend answers the assistant for what was asked of this connection.
+    forgetAssistant();
     if (staleCheckTimer) {
       clearInterval(staleCheckTimer);
       staleCheckTimer = null;
@@ -243,7 +262,8 @@ type OutgoingMessage =
   | { type: 'set_role'; role: string }
   | { type: 'command'; cmd: string; param?: number; [key: string]: unknown }
   | { type: 'request_handoff' }
-  | { type: 'handoff_accept' };
+  | { type: 'handoff_accept' }
+  | AssistantReply;
 
 export function sendMessage(msg: OutgoingMessage): void {
   if (socket && socket.readyState === WebSocket.OPEN) {
@@ -252,6 +272,8 @@ export function sendMessage(msg: OutgoingMessage): void {
     addToast(t('toast.cmdNotSent'), 'error');
   }
 }
+
+answerThrough((reply) => sendMessage(reply));
 
 export function sendConnect(port: string, baud: number): void {
   sendMessage({ type: 'connect', port, baud });

@@ -1146,6 +1146,27 @@ const messages: Record<string, string> = {
   'mission.err.fenceMax': 'ジオフェンスが大きすぎます（最大 200 頂点）',
   'mission.err.noRally': 'ラリーポイントがありません',
   'mission.err.badRally': 'ラリーポイントが無効です',
+  'assistant.title': 'AI アシスタントからの依頼',
+  'assistant.more': 'ほかに {n} 件待機中',
+  'assistant.missionTitle': '計画ミッションにしてアップロード',
+  'assistant.missionSummary':
+    'ウェイポイント {n} 個、{dist}、最高 {alt} m。まず {takeoff} m まで離陸し、最後に帰還します。',
+  'assistant.missionSummarySub': 'ウェイポイント {n} 個、{dist}、最深 {alt} m。離陸せず、最後の帰還もありません。',
+  'assistant.onMap': 'ルートは地図に破線で表示されています。',
+  'assistant.paramsTitle': 'フライトコントローラのパラメータを変更',
+  'assistant.param': 'パラメータ',
+  'assistant.now': '現在',
+  'assistant.new': '新しい値',
+  'assistant.reason': 'アシスタントのメモ',
+  'assistant.approve': '承認',
+  'assistant.decline': '拒否',
+  'assistant.running': '送信中…',
+  'assistant.present':
+    'AI アシスタントが接続しています。このページを読み取り、変更を依頼します。変更はあなたの承認を待ちます。',
+  'assistant.refusedNow': '機体がアームされたため、アシスタントの依頼は拒否されました',
+  'assistant.done': 'アシスタントの依頼を実行しました',
+  'assistant.failed': 'アシスタントの依頼は完了しませんでした',
+  'assistant.unchanged': '変更なし',
 };
 
 export default messages;

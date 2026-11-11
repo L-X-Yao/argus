@@ -1143,6 +1143,26 @@ const messages: Record<string, string> = {
   'mission.err.fenceMax': '지오펜스가 너무 큽니다 (최대 꼭짓점 200개)',
   'mission.err.noRally': '랠리 포인트가 없습니다',
   'mission.err.badRally': '랠리 포인트가 잘못되었습니다',
+  'assistant.title': 'AI 어시스턴트의 요청',
+  'assistant.more': '{n}개 더 대기 중',
+  'assistant.missionTitle': '계획 미션으로 설정하고 업로드',
+  'assistant.missionSummary':
+    '웨이포인트 {n}개, {dist}, 최고 {alt} m. 먼저 {takeoff} m까지 이륙하고 마지막에 귀환합니다.',
+  'assistant.missionSummarySub': '웨이포인트 {n}개, {dist}, 최심 {alt} m. 이륙하지 않고 마지막 귀환도 없습니다.',
+  'assistant.onMap': '경로가 지도에 점선으로 표시되어 있습니다.',
+  'assistant.paramsTitle': '비행 컨트롤러 파라미터 변경',
+  'assistant.param': '파라미터',
+  'assistant.now': '현재',
+  'assistant.new': '새 값',
+  'assistant.reason': '어시스턴트의 메모',
+  'assistant.approve': '승인',
+  'assistant.decline': '거부',
+  'assistant.running': '전송 중…',
+  'assistant.present': 'AI 어시스턴트가 연결되어 있습니다. 이 페이지를 읽고 변경을 요청하며, 변경은 승인을 기다립니다.',
+  'assistant.refusedNow': '기체가 시동되어 어시스턴트의 요청이 거부되었습니다',
+  'assistant.done': '어시스턴트의 요청을 실행했습니다',
+  'assistant.failed': '어시스턴트의 요청이 완료되지 않았습니다',
+  'assistant.unchanged': '변경 없음',
 };
 
 export default messages;

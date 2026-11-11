@@ -2,6 +2,7 @@
   import { app, saveSettings, isPlane } from '../../lib/stores.svelte';
   import { t } from '../../lib/i18n.svelte';
   import { apiUrl } from '../../lib/backend';
+  import { assistant } from '../../lib/assistant.svelte';
   import { worst } from '../../lib/worst';
   import ConnectionForm from './ConnectionForm.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
@@ -245,6 +246,13 @@
       </span>
     {/if}
 
+    {#if assistant.present > 0}
+      <span
+        class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-primary/15 text-primary"
+        title={t('assistant.present')}
+        data-testid="assistant-present">AI</span
+      >
+    {/if}
     <Button
       variant="ghost"
       size="icon-xs"

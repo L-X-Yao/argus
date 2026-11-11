@@ -31,7 +31,15 @@ EXCLUDED_TYPES = {
     "handoff_request",  # pilot handoff protocol
     "handoff_granted",  # pilot handoff protocol
     "handoff_released",  # pilot handoff protocol
+    # Between the backend and an assistant (backend/mcp_server.py), never sent to a page.
+    "assistant_welcome",
+    "assistant_error",
+    "assistant_reply",
 }
+
+# Not websocket emitters: the MCP server writes JSON-RPC to its client on stdio, and its
+# JSON Schema "type" keys are no message types. Its websocket messages go to the backend.
+NOT_EMITTERS = {"mcp_server.py"}
 
 # Regex: 'type': 'some_type' or "type": "some_type" — captures the type name
 _BACKEND_TYPE_RE = re.compile(r"""['"]type['"]\s*:\s*['"]([a-z_]+)['"]""")
@@ -43,6 +51,8 @@ _FRONTEND_CASE_RE = re.compile(r"case\s+'([a-z_]+)'")
 def _scan_backend_types() -> set[str]:
     types: set[str] = set()
     for py in BACKEND.rglob("*.py"):
+        if py.name in NOT_EMITTERS:
+            continue
         text = py.read_text(encoding="utf-8")
         types.update(_BACKEND_TYPE_RE.findall(text))
     # param_value is an internal type batched into param_batch by ws_manager

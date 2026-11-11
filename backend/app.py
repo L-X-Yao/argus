@@ -108,6 +108,7 @@ async def api_session(request: Request):
     mgr = request.app.state.ws_mgr
     return {
         "clients": mgr.client_count,
+        "assistants": mgr.assistant_count,
         "connected": link.connected,
         "armed": link.vehicle.armed,
         "sysid": link.vehicle.sysid,
