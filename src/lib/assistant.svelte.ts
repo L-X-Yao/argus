@@ -149,7 +149,9 @@ function status() {
   const d = app.drone;
   const at = (lat: number, lon: number) => (lat !== 0 || lon !== 0 ? { lat, lon } : null);
   return {
-    link: app.activeTransport === 'serial' ? 'usb' : app.activeTransport === 'ws' ? 'backend' : 'none',
+    // activeTransport says which link this page started. A page opened on a backend that some
+    // other page connected never started one, and sees the vehicle all the same.
+    link: app.activeTransport === 'serial' ? 'usb' : d.connected ? 'backend' : 'none',
     connected: d.connected,
     vehicle: d.connected ? vehicleKind() : null,
     autopilot: d.autopilot === 3 ? 'ArduPilot' : d.autopilot === 0 ? 'not known yet' : `MAV_AUTOPILOT ${d.autopilot}`,

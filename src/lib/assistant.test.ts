@@ -88,6 +88,12 @@ describe('reads', () => {
     });
   });
 
+  it('a page that did not connect the backend itself still reports its link', () => {
+    app.activeTransport = 'none';
+    ask('status');
+    expect(reply()!.result).toMatchObject({ link: 'backend', connected: true });
+  });
+
   it('the planned mission, numbered from 1, with its takeoff altitude', () => {
     app.waypoints = [{ lat: 1.5, lon: 2.5, alt: 20, drop: false, delay: 0, speed: 0, type: 'wp', loiter_param: 0 }];
     ask('mission');
