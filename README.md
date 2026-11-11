@@ -51,6 +51,7 @@ To fly real missions today, use QGroundControl or Mission Planner: both are flig
 | **i18n** | 10 languages (zh, en, ja, ko, de, fr, es, pt, ru, ar) + RTL |
 | **Offline** | PWA with service worker, mbtiles support, tile caching (5000 tiles, the oldest dropped first) |
 | **Desktop** | A Windows installer: for your account only, without administrator rights, with Start menu shortcuts and an uninstaller. It installs the program the zip holds, which opens in your browser. The Tauri v2 config in `src-tauri/` has never been built and is not used |
+| **AI assistant** | An MCP server for AI clients such as Claude Desktop or Claude Code: it reads what the page shows and proposes missions and parameter changes, which the operator approves in the page |
 | **Security** | Token auth, cross-site and DNS-rebinding request blocking, SSRF + path-traversal guards, statustext filtering |
 
 ## Install
@@ -150,6 +151,31 @@ What to expect:
 - The link is plain HTTP: the token and every command can be read on the way. Use a network you trust, and read [SECURITY.md](SECURITY.md).
 
 This was checked in a phone-sized touch browser on a network address (2026-11-11), not on a real phone.
+
+### AI assistant (MCP)
+
+An AI client that speaks the [Model Context Protocol](https://modelcontextprotocol.io), such as Claude Desktop or Claude Code, can read Argus and ask it for changes. It never commands the vehicle: each change it asks for waits in the Argus page, where the operator approves or declines it, and the route of a proposed mission is drawn dashed on the map meanwhile.
+
+| Tool | What it does |
+|---|---|
+| `get_status` | What the page shows about the vehicle: link, mode, armed, position, altitudes, speeds, battery, GPS, home, recent messages |
+| `get_mission` | The mission planned in the page |
+| `get_parameters` | Parameter values the page has read, by name or prefix |
+| `propose_mission` | A mission for the operator: uploaded only if approved |
+| `propose_parameters` | Parameter changes for the operator, with old and new values: written only if approved |
+
+Proposals are refused while the vehicle is armed. The assistant cannot arm, take off, change mode or start a mission.
+
+Set it up with Argus running and its page open, which answers for the vehicle:
+
+- Claude Code, in this repository after `pip install -e .`: `claude mcp add argus -- argus-mcp`
+- Claude Desktop, in `claude_desktop_config.json`, with the Python of the Windows package:
+
+  ```json
+  {"mcpServers": {"argus": {"command": "C:\\path\\to\\Argus\\python\\python.exe", "args": ["-m", "backend.mcp_server"]}}}
+  ```
+
+The server reaches Argus at `ARGUS_URL` (`http://127.0.0.1:8100` when unset) and sends `GCS_AUTH_TOKEN` when that is set. The page shows "AI" in the status bar while an assistant is connected. What the tools return, positions and parameters included, goes to the AI client and its provider.
 
 ### Map data
 
