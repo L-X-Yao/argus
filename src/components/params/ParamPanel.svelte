@@ -300,7 +300,7 @@
           const parts = trimmed.split(/[\t,\s]+/);
           if (parts.length < 2) continue;
           const val = parseFloat(parts[1]);
-          if (!isNaN(val)) map.set(parts[0], val);
+          if (Number.isFinite(val)) map.set(parts[0], val);
         }
         compareMap = map;
         const diffCount = paramState.list.filter(p => {
@@ -337,7 +337,8 @@
           const parts = trimmed.split(/[\t,\s]+/);
           if (parts.length < 2) continue;
           const name = parts[0], val = parseFloat(parts[1]);
-          if (isNaN(val)) continue;
+          // 1e999 reads as Infinity, which is no value for a parameter.
+          if (!Number.isFinite(val)) continue;
           const cur = existing.get(name);
           if (cur !== undefined && Math.abs(cur - val) > 1e-6) {
             dispatch('param_set', undefined, { name, value: val });

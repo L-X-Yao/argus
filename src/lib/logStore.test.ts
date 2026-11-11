@@ -18,6 +18,18 @@ describe('logStore', () => {
     expect(logState.list.length).toBe(0);
   });
 
+  it('setLogList keeps one row for an id the link delivered twice', () => {
+    setLogList([
+      { id: 3, size: 10, time_utc: 1 },
+      { id: 1, size: 20, time_utc: 2 },
+      { id: 3, size: 30, time_utc: 3 },
+    ]);
+    expect(logState.list).toEqual([
+      { id: 3, size: 30, time_utc: 3 },
+      { id: 1, size: 20, time_utc: 2 },
+    ]);
+  });
+
   it('setLogList with multiple entries', () => {
     setLogList([
       { id: 1, size: 1024, time_utc: 1000 },

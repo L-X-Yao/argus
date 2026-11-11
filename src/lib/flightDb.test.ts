@@ -141,3 +141,12 @@ describe('flightDb', () => {
     expect(ids).not.toContain(1);
   });
 });
+
+describe('flight records that are not records', () => {
+  it('are left out, and the next flight is still saved', () => {
+    localStorage.setItem('argus_flights', JSON.stringify([null, 7, { id: 'x' }, { ...SAMPLE, id: 3 }, { id: null }]));
+    expect(loadFlightRecords().map((r) => r.id)).toEqual([3]);
+    expect(() => saveFlightRecord(SAMPLE)).not.toThrow();
+    expect(loadFlightRecords().map((r) => r.id)).toEqual([3, 4]);
+  });
+});

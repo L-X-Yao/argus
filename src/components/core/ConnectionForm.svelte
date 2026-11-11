@@ -27,13 +27,17 @@
   onMount(() => {
     try {
       const saved = JSON.parse(localStorage.getItem('argus_port_history') || '[]');
-      if (Array.isArray(saved)) portHistory = saved;
+      if (Array.isArray(saved)) portHistory = saved.filter((p) => typeof p === 'string');
       const lastPort = localStorage.getItem('argus_last_port');
       if (lastPort) port = lastPort;
       const lastBaud = localStorage.getItem('argus_last_baud');
-      if (lastBaud) baud = parseInt(lastBaud);
+      if (lastBaud && Number.isFinite(parseInt(lastBaud))) baud = parseInt(lastBaud);
       const profs = JSON.parse(localStorage.getItem('argus_profiles') || '[]');
-      if (Array.isArray(profs)) profiles = profs;
+      if (Array.isArray(profs)) {
+        profiles = profs.filter(
+          (p) => p && typeof p.name === 'string' && typeof p.port === 'string' && typeof p.baud === 'number',
+        );
+      }
     } catch {}
     fetchPorts();
   });

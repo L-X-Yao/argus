@@ -381,3 +381,52 @@ describe('computeFFT', () => {
     expect(freq.length).toBe(31);
   });
 });
+
+/* ── A log that is damaged ── */
+
+describe('parseDFLog on a damaged log', () => {
+  /** An FMT record that declares message `type` with the given total length. */
+  function fmt(type: number, length: number, name: string, format: string, columns: string): Uint8Array {
+    const rec = new Uint8Array(89);
+    rec.set([0xa3, 0x95, 128, type, length]);
+    for (let i = 0; i < name.length; i++) rec[5 + i] = name.charCodeAt(i);
+    for (let i = 0; i < format.length; i++) rec[9 + i] = format.charCodeAt(i);
+    for (let i = 0; i < columns.length; i++) rec[25 + i] = columns.charCodeAt(i);
+    return rec;
+  }
+  const join = (...parts: Uint8Array[]) => {
+    const out = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
+    let at = 0;
+    for (const p of parts) {
+      out.set(p, at);
+      at += p.length;
+    }
+    return out.buffer;
+  };
+
+  // The length counts the 3-byte header, so 0, 1 and 2 step backwards. Without the check this
+  // test does not fail: it never ends, and takes the page down the same way.
+  it.each([0, 1, 2])('ends on a format that declares a length of %i', (length) => {
+    const log = parseDFLog(join(fmt(1, length, 'BAD', '', ''), new Uint8Array([0xa3, 0x95, 1, 0, 0])));
+    expect(log.messages).toEqual([]);
+  });
+
+  it('reads a message that has a header and nothing else', () => {
+    const log = parseDFLog(join(fmt(1, 3, 'EMP', '', ''), new Uint8Array([0xa3, 0x95, 1, 0xa3, 0x95, 1, 0, 0, 0])));
+    expect(log.messages.map((m) => m.type)).toEqual(['EMP', 'EMP']);
+  });
+
+  it('stops at a format that lists more fields than the file has left', () => {
+    // Four bytes declared, eight read: the second field runs past the end of the file.
+    const log = parseDFLog(join(fmt(1, 7, 'LIE', 'II', 'A,B'), new Uint8Array([0xa3, 0x95, 1, 1, 0, 0, 0])));
+    expect(log.messages).toEqual([]);
+  });
+
+  it('keeps what came before the damage', () => {
+    const good = new Uint8Array([0xa3, 0x95, 2, 7, 0, 0, 0]);
+    const log = parseDFLog(
+      join(fmt(2, 7, 'OK', 'I', 'A'), good, fmt(1, 7, 'LIE', 'II', 'A,B'), new Uint8Array([0xa3, 0x95, 1, 1, 0, 0, 0])),
+    );
+    expect(log.messages).toEqual([{ type: 'OK', timestamp: 0, fields: { A: 7 } }]);
+  });
+});

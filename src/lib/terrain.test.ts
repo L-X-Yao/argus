@@ -370,6 +370,34 @@ describe('missing terrain data', () => {
     fetchMock.mockResolvedValue({ ok: true, json: async () => ({ elevations: [300, 310] }) });
     await expect(getElevationProfile(points)).resolves.toEqual([300, 310]);
   });
+
+  // An altitude is worked out from each value, and NaN would go up with the mission.
+  it.each([
+    ['one value short', [300]],
+    ['one value long', [300, 310, 320]],
+    ['text for a height', [300, '310']],
+    ['not a list', { 0: 300, 1: 310 }],
+    ['nothing', undefined],
+  ])('is an error too when the answer is %s', async (_name, elevations) => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({ ok: true, json: async () => ({ elevations }) })),
+    );
+    const points = [
+      { lat: 62.1, lon: 8.1 },
+      { lat: 62.2, lon: 8.2 },
+    ];
+    await expect(getElevationProfile(points)).rejects.toThrow('No terrain data');
+    await expect(
+      adjustWaypointsForTerrain(
+        [
+          { ...points[0], alt: 30 },
+          { ...points[1], alt: 30 },
+        ],
+        50,
+      ),
+    ).rejects.toThrow('No terrain data');
+  });
 });
 
 describe('requests in turn', () => {

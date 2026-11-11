@@ -32,8 +32,14 @@ function inTurn(url: string): Promise<(number | null)[]> {
 
 // The backend answers null where it has no data. Reading that as 0 would be sea level, and
 // terrain following would then send a route into the ground: callers show "no data" instead.
-function known(elevations: (number | null)[]): number[] {
-  if (elevations.some((e) => e === null || e === undefined)) throw new Error('No terrain data');
+// The same for an answer that is short of a point or holds something that is no number: a
+// waypoint's altitude is worked out from each of these, and NaN would go up with the mission.
+function known(elevations: unknown, count: number): number[] {
+  const complete =
+    Array.isArray(elevations) &&
+    elevations.length === count &&
+    elevations.every((e) => typeof e === 'number' && Number.isFinite(e));
+  if (!complete) throw new Error('No terrain data');
   return elevations as number[];
 }
 
@@ -46,7 +52,7 @@ export async function getElevation(lat: number, lon: number): Promise<number> {
   if (elevationCache.has(key)) return elevationCache.get(key)!;
 
   const url = apiUrl(`/api/terrain/elevation?points=${lat.toFixed(6)},${lon.toFixed(6)}`);
-  const [elev] = known(await inTurn(url));
+  const [elev] = known(await inTurn(url), 1);
   elevationCache.set(key, elev);
   return elev;
 }
@@ -67,7 +73,7 @@ export async function getElevationProfile(points: { lat: number; lon: number }[]
   // Build query string (semicolon-separated lat,lon pairs)
   const pairs = points.map((p) => `${p.lat.toFixed(6)},${p.lon.toFixed(6)}`).join(';');
   const url = apiUrl(`/api/terrain/elevation?points=${pairs}`);
-  const elevations = known(await inTurn(url));
+  const elevations = known(await inTurn(url), points.length);
 
   // Populate cache
   for (let i = 0; i < points.length; i++) {

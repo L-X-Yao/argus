@@ -113,3 +113,55 @@ test.describe('Command palette', () => {
     await page.waitForTimeout(500);
   });
 });
+
+test.describe('Annotations', () => {
+  async function openAnnotations(page: import('@playwright/test').Page) {
+    await page.keyboard.press('Control+k');
+    await page.waitForTimeout(500);
+    await page.locator('input[placeholder]').last().fill('地图标注');
+    await page.waitForTimeout(300);
+    await page.keyboard.press('Enter');
+    await expect(page.getByRole('heading', { name: '地图标注' })).toBeVisible();
+  }
+
+  test('one stored without a position does not keep the panel shut', async ({ page }) => {
+    const errors: string[] = [];
+    page.on('pageerror', (e) => errors.push(e.message));
+    await page.goto('/');
+    // What v3.7.10 stored when the latitude box had been emptied.
+    await page.evaluate(() =>
+      localStorage.setItem(
+        'argus_annotations',
+        JSON.stringify([
+          { id: 1, name: 'pad', note: '', lat: 34.25, lon: 108.94 },
+          { id: 2, name: 'no place', note: '', lat: null, lon: 108.94 },
+        ]),
+      ),
+    );
+    await page.reload();
+    await page.waitForTimeout(1000);
+    await openAnnotations(page);
+    await expect(page.getByText('34.250000, 108.940000')).toBeVisible();
+    await expect(page.getByText('no place')).toHaveCount(0);
+    expect(errors).toEqual([]);
+  });
+
+  test('one without a position is not saved', async ({ page }) => {
+    await page.goto('/');
+    await page.evaluate(() => localStorage.removeItem('argus_annotations'));
+    await page.reload();
+    await page.waitForTimeout(1000);
+    await openAnnotations(page);
+    await page.getByRole('button', { name: /添加标注/ }).click();
+    await page.locator('#ann-name').fill('gate');
+    await page.locator('#ann-lat').fill('');
+    await page.getByRole('button', { name: '保存', exact: true }).click();
+    await expect(page.getByText('坐标无效')).toBeVisible();
+    expect(await page.evaluate(() => localStorage.getItem('argus_annotations'))).toBeNull();
+
+    await page.locator('#ann-lat').fill('34.26');
+    await page.locator('#ann-lon').fill('108.95');
+    await page.getByRole('button', { name: '保存', exact: true }).click();
+    await expect(page.getByText('34.260000, 108.950000')).toBeVisible();
+  });
+});

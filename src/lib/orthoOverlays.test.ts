@@ -63,3 +63,30 @@ describe('ortho overlays', () => {
     expect(validOrthoBounds(b)).toBe(false);
   });
 });
+
+describe('stored overlays of another shape', () => {
+  it('are left out when the page starts', async () => {
+    const good = { id: 5, ...overlay };
+    localStorage.setItem(
+      'argus_ortho_overlays',
+      JSON.stringify([
+        {},
+        null,
+        good,
+        { ...good, id: 6, nwLat: 'north' },
+        { ...good, id: 7, dataUrl: 'https://example.com/x.png' },
+        { ...good, id: 8, opacity: null },
+        { ...good, id: '9' },
+      ]),
+    );
+    vi.resetModules();
+    const fresh = await import('./orthoOverlays.svelte');
+    expect(fresh.ortho.overlays).toEqual([good]);
+  });
+
+  it('are an empty list when the store holds no list', async () => {
+    localStorage.setItem('argus_ortho_overlays', '{"0":{}}');
+    vi.resetModules();
+    expect((await import('./orthoOverlays.svelte')).ortho.overlays).toEqual([]);
+  });
+});

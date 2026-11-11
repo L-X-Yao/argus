@@ -1,6 +1,7 @@
 <script lang="ts">
   import { addToast } from '../../lib/stores.svelte';
   import { t } from '../../lib/i18n.svelte';
+  import { finiteNumber } from '../../lib/missionIO';
   import { X, MapPin, Trash2 } from '@lucide/svelte';
   import Button from '$lib/components/ui/button/button.svelte';
 
@@ -20,16 +21,28 @@
   let showForm = $state(false);
   let formName = $state('');
   let formNote = $state('');
-  let formLat = $state(0);
-  let formLon = $state(0);
+  // An emptied number box holds null.
+  let formLat: number | null = $state(0);
+  let formLon: number | null = $state(0);
 
+  /** A place on the globe, or null for anything else a box or storage can hold. */
+  function place(lat: unknown, lon: unknown): { lat: number; lon: number } | null {
+    const at = { lat: finiteNumber(lat), lon: finiteNumber(lon) };
+    if (at.lat === null || at.lon === null || Math.abs(at.lat) > 90 || Math.abs(at.lon) > 180) return null;
+    return { lat: at.lat, lon: at.lon };
+  }
+
+  // An entry without a position is left out: the list calls number methods on it, and one
+  // such entry kept this panel from ever opening again.
   function loadAnnotations(): Annotation[] {
     try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        if (Array.isArray(parsed)) return parsed;
-      }
+      const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+      if (!Array.isArray(parsed)) return [];
+      return parsed.flatMap((a, i) => {
+        const at = place(a?.lat, a?.lon);
+        if (!at) return [];
+        return [{ id: finiteNumber(a.id) ?? -i - 1, name: String(a.name ?? ''), note: String(a.note ?? ''), ...at }];
+      });
     } catch {}
     return [];
   }
@@ -45,13 +58,17 @@
       addToast(t('annotation.name'), 'warn');
       return;
     }
+    const at = place(formLat, formLon);
+    if (!at) {
+      addToast(t('mission.err.badCoords'), 'warn');
+      return;
+    }
     const id = Date.now();
     annotations.push({
       id,
       name: formName.trim(),
       note: formNote.trim(),
-      lat: formLat,
-      lon: formLon,
+      ...at,
     });
     persist();
     formName = '';

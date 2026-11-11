@@ -11,13 +11,22 @@ export interface OrthoOverlay {
 
 const STORAGE_KEY = 'argus_ortho_overlays';
 
+// An entry of another shape is left out. The map layer reads its numbers at every start, and
+// so does the panel that could delete it: one such entry would keep the map from drawing.
 function load(): OrthoOverlay[] {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) return parsed;
-    }
+    const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter(
+      (o) =>
+        o &&
+        typeof o.id === 'number' &&
+        typeof o.dataUrl === 'string' &&
+        o.dataUrl.startsWith('data:image/') &&
+        typeof o.opacity === 'number' &&
+        Number.isFinite(o.opacity) &&
+        validOrthoBounds(o),
+    );
   } catch {}
   return [];
 }

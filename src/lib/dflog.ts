@@ -108,10 +108,13 @@ export function parseDFLog(buffer: ArrayBuffer): DFLog {
       const colBytes = data.slice(pos + 22, pos + 86);
       const colStr = String.fromCharCode(...colBytes).replace(/\0/g, '');
       const columns = colStr.split(',').filter((c) => c);
+      pos += 86;
+      // The length counts the 3-byte header. A shorter one, from a damaged log, would step
+      // backwards onto the same header for ever.
+      if (length < 3) continue;
       const def = { type, length, name, format, columns };
       formats.set(type, def);
       formatsByName.set(name, def);
-      pos += 86;
       continue;
     }
 
@@ -126,10 +129,15 @@ export function parseDFLog(buffer: ArrayBuffer): DFLog {
 
     const fields: Record<string, number | string> = {};
     let fpos = pos;
-    for (let i = 0; i < fmt.format.length && i < fmt.columns.length; i++) {
-      const [val, size] = readField(dv, fpos, fmt.format[i]);
-      fields[fmt.columns[i]] = val;
-      fpos += size;
+    try {
+      for (let i = 0; i < fmt.format.length && i < fmt.columns.length; i++) {
+        const [val, size] = readField(dv, fpos, fmt.format[i]);
+        fields[fmt.columns[i]] = val;
+        fpos += size;
+      }
+    } catch {
+      // A format that lists more fields than its length holds, read at the end of the file.
+      break;
     }
 
     // FMTU gives each column of a type a unit, and '#' is the instance

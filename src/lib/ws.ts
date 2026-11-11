@@ -203,7 +203,10 @@ export function connectWs(): void {
           break;
       }
     } catch (e) {
+      // Said out loud either way: a handler that throws would otherwise drop its message, and
+      // every one like it, without a trace.
       if (e instanceof SyntaxError) console.warn('[WS] parse error:', e.message);
+      else console.error('[WS] message not handled:', e);
     }
   };
 

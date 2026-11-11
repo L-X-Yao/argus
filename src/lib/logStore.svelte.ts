@@ -21,8 +21,10 @@ class LogState {
 
 export const logState = new LogState();
 
+// The panel keys its rows by id, and a list with two rows of one id does not render. A link can
+// deliver an entry twice: a second request for the list while the first is still arriving.
 export function setLogList(logs: LogEntry[]) {
-  logState.list = logs;
+  logState.list = [...new Map(logs.map((log) => [log.id, log])).values()];
 }
 
 export function startDownload(id: number, size: number) {

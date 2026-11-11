@@ -65,7 +65,7 @@
   function curSource(): TileSourceDef {
     const id = app.tileSource;
     if (isOfflineSource(id)) return { name: id, sat: id, gcj02: false } as TileSourceDef;
-    return SOURCES[id] || SOURCES['osm'];
+    return Object.hasOwn(SOURCES, id) ? SOURCES[id] : SOURCES['osm'];
   }
   let useGcj = $derived(curSource().gcj02);
   function toMap(lat: number, lon: number): [number, number] {

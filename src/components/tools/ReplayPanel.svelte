@@ -31,6 +31,10 @@
 
   let { onposition }: { onposition: (lat: number, lon: number, yaw: number) => void } = $props();
 
+  // A log names the type of each of its own columns, and a CSV cell can hold anything: what
+  // is not a finite number is 0 here. The map and the readout below call number methods on a row.
+  const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
+
   let rows: LogRow[] = $state([]);
   let playing = $state(false);
   let cursor = $state(0);
@@ -82,26 +86,26 @@
       const g = gps[gi] || { fields: {} };
       const b = bat[bi] || { fields: {} };
       parsed.push({
-        t: a.timestamp - t0,
-        roll: (a.fields['Roll'] as number) || 0,
-        pitch: (a.fields['Pitch'] as number) || 0,
-        yaw: (a.fields['Yaw'] as number) || 0,
-        lat: (g.fields['Lat'] as number) || 0,
-        lon: (g.fields['Lng'] as number) || 0,
-        alt_rel: (g.fields['Alt'] as number) || 0,
-        alt_msl: (g.fields['Alt'] as number) || 0,
-        gs: (g.fields['Spd'] as number) || 0,
+        t: num(a.timestamp - t0),
+        roll: num(a.fields['Roll']),
+        pitch: num(a.fields['Pitch']),
+        yaw: num(a.fields['Yaw']),
+        lat: num(g.fields['Lat']),
+        lon: num(g.fields['Lng']),
+        alt_rel: num(g.fields['Alt']),
+        alt_msl: num(g.fields['Alt']),
+        gs: num(g.fields['Spd']),
         vz: 0,
-        voltage: (b.fields['Volt'] as number) || 0,
-        current: (b.fields['Curr'] as number) || 0,
-        remaining: (b.fields['CurrTot'] as number) || -1,
+        voltage: num(b.fields['Volt']),
+        current: num(b.fields['Curr']),
+        remaining: num(b.fields['CurrTot']) || -1,
         mode: 0,
         mode_name: '',
         armed: 0,
-        gps_fix: (g.fields['Status'] as number) || 0,
-        sats: (g.fields['NSats'] as number) || 0,
+        gps_fix: num(g.fields['Status']),
+        sats: num(g.fields['NSats']),
         wp: 0,
-        hdg: (g.fields['GCrs'] as number) || 0,
+        hdg: num(g.fields['GCrs']),
         dist: 0,
         bat_time: -1,
       });
@@ -123,28 +127,28 @@
       const cols = lines[i].split(',');
       if (cols.length < 20) continue;
       parsed.push({
-        t: parseFloat(cols[0]),
-        roll: parseFloat(cols[1]),
-        pitch: parseFloat(cols[2]),
-        yaw: parseFloat(cols[3]),
-        lat: parseFloat(cols[4]),
-        lon: parseFloat(cols[5]),
-        alt_rel: parseFloat(cols[6]),
-        alt_msl: parseFloat(cols[7]),
-        gs: parseFloat(cols[8]),
-        vz: parseFloat(cols[9]),
-        voltage: parseFloat(cols[10]),
-        current: parseFloat(cols[11]),
-        remaining: parseInt(cols[12]),
-        mode: parseInt(cols[13]),
+        t: num(parseFloat(cols[0])),
+        roll: num(parseFloat(cols[1])),
+        pitch: num(parseFloat(cols[2])),
+        yaw: num(parseFloat(cols[3])),
+        lat: num(parseFloat(cols[4])),
+        lon: num(parseFloat(cols[5])),
+        alt_rel: num(parseFloat(cols[6])),
+        alt_msl: num(parseFloat(cols[7])),
+        gs: num(parseFloat(cols[8])),
+        vz: num(parseFloat(cols[9])),
+        voltage: num(parseFloat(cols[10])),
+        current: num(parseFloat(cols[11])),
+        remaining: num(parseInt(cols[12])),
+        mode: num(parseInt(cols[13])),
         mode_name: cols[14] || '',
-        armed: parseInt(cols[15]),
-        gps_fix: parseInt(cols[16]),
-        sats: parseInt(cols[17]),
-        wp: parseInt(cols[18]),
-        hdg: parseFloat(cols[19]),
-        dist: parseFloat(cols[20]) || 0,
-        bat_time: parseInt(cols[21]) || -1,
+        armed: num(parseInt(cols[15])),
+        gps_fix: num(parseInt(cols[16])),
+        sats: num(parseInt(cols[17])),
+        wp: num(parseInt(cols[18])),
+        hdg: num(parseFloat(cols[19])),
+        dist: num(parseFloat(cols[20])),
+        bat_time: num(parseInt(cols[21])) || -1,
       });
     }
     rows = parsed;
@@ -206,7 +210,9 @@
 
   function emitPosition() {
     const r = rows[cursor];
-    if (r && Math.abs(r.lat) > 0.001) onposition(r.lat, r.lon, r.yaw);
+    if (r && Math.abs(r.lat) > 0.001 && Math.abs(r.lat) <= 90 && Math.abs(r.lon) <= 180) {
+      onposition(r.lat, r.lon, r.yaw);
+    }
   }
 
   function close() {

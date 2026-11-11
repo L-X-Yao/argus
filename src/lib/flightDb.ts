@@ -26,7 +26,8 @@ export function saveFlightRecord(record: Omit<FlightRecord, 'id'>): void {
 export function loadFlightRecords(): FlightRecord[] {
   try {
     const data = JSON.parse(localStorage.getItem(DB_KEY) || '[]');
-    return Array.isArray(data) ? data : [];
+    // The next id is worked out from these, on the way in of a state message from the backend.
+    return Array.isArray(data) ? data.filter((r) => r && typeof r.id === 'number' && Number.isFinite(r.id)) : [];
   } catch {
     return [];
   }

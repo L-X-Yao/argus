@@ -19,8 +19,8 @@
 
   function loadConfig(): Record<string, boolean> {
     try {
-      const raw = localStorage.getItem(CONFIG_KEY);
-      if (raw) return JSON.parse(raw);
+      const cfg = JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}');
+      if (cfg && typeof cfg === 'object' && !Array.isArray(cfg)) return cfg;
     } catch {}
     return {};
   }

@@ -106,7 +106,7 @@
   function curSource(): TileSourceDef {
     const id = app.tileSource;
     if (isOfflineSource(id)) return { name: id, sat: id, vec: id, label: null, gcj02: false, region: 'global' };
-    return SOURCES[id] || SOURCES['amap'];
+    return Object.hasOwn(SOURCES, id) ? SOURCES[id] : SOURCES['amap'];
   }
 
   let useGcj = $derived(curSource().gcj02);

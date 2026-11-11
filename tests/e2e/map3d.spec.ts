@@ -134,6 +134,32 @@ test.describe('3D map', () => {
     await expect(page.locator('.maplibregl-marker')).toHaveCount(1);
   });
 
+  test('a replay row that is not numbers does not take the page down', async ({ page }) => {
+    const errors: string[] = [];
+    page.on('pageerror', (e) => errors.push(e.message));
+    await open3d(page);
+    await overlaysReady(page);
+
+    // Text for the longitude and the heading, and a latitude off the globe.
+    const row = (t: number, lat: string, lon: string, yaw: string) =>
+      `${t},0,0,${yaw},${lat},${lon},50,450,5,0,25,5,90,5,Loiter,1,3,14,0,90,0,-1`;
+    const csv = ['header', row(0, '34.258', 'east', 'north'), row(1, '534.2', '108.942', '90'), row(2, '34.259', '108.942', '90')].join(
+      '\n',
+    );
+    const chooser = page.waitForEvent('filechooser');
+    await page.getByText(/加载飞行日志|Load Flight Log/).click();
+    await (await chooser).setFiles({ name: 'flight.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) });
+
+    for (const at of ['0', '1', '2']) {
+      await page.locator('input[type="range"]').first().fill(at);
+      await page.waitForTimeout(300);
+    }
+    // The readout under the slider is still there, and the last row, a good one, is on the map.
+    await expect(page.getByText(/R:0 P:0 Y:90/)).toBeVisible();
+    await expect(page.locator('.maplibregl-marker')).toHaveCount(1);
+    expect(errors).toEqual([]);
+  });
+
   test('falls back to the 2D map without WebGL2', async ({ page }) => {
     await page.addInitScript(() => {
       const real = HTMLCanvasElement.prototype.getContext;
