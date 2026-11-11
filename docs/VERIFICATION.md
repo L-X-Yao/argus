@@ -279,7 +279,7 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 | Plane and VTOL | 固定翼和 VTOL | SITL | CI: a plain plane and a QuadPlane fly a whole mission on SITL, the QuadPlane with VTOL takeoff, transition and VTOL landing. Real telemetry 2026-05 |
 | Rover | 地面车 | SITL | CI: drives a whole mission and comes back on SITL |
 | Sub | 水下机器人 | SITL | CI: dives, runs a whole mission and surfaces on SITL |
-| 2D map | 2D 地图 | Simulator | e2e, and real Edge on Windows 2026-11-06. Every source answered with a real tile 2026-11-06, except Tianditu, which needs a key of your own. e2e 2026-11-11: the credit of the map server shows clear of the events bar, and the street layer of a source without a label layer shows (it was blank through v3.7.9) |
+| 2D map | 2D 地图 | Simulator | e2e, and real Edge on Windows 2026-11-06. Every source answered with a real tile 2026-11-06, except Tianditu, which needs a key of your own. e2e 2026-11-11: the credit of the map server shows clear of the events bar, and the street layer of a source without a label layer shows (it was blank through v3.7.9). 2026-11-11 with a map server that cannot be reached, behind a proxy that answers 502 after 5 s: a panel opens 11 s after the first page shows its map and in under a second on later visits, where v3.7.11 took 31 s every time |
 | 3D map | 3D 地图 | Simulator | e2e, and real Edge on Windows with a real GPU 2026-11-06. e2e 2026-11-11: the credit of the map and terrain servers shows unfolded |
 | PWA and offline use | PWA 和离线 | Simulator | e2e, and real Edge on Windows 2026-11-06 |
 | Several browser clients | 多浏览器客户端 | Simulator | Integration tests |
