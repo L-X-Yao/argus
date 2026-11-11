@@ -80,3 +80,71 @@ test.describe('Drone control (connected)', () => {
     await expect(page.locator('body')).toContainText(/事件|Event/i);
   });
 });
+
+test.describe('On a phone, upright (connected)', () => {
+  // Pixel 7. Under 768 px the bar under the status bar is hidden (max-md), RTL and Hold with it.
+  test.use({ viewport: { width: 412, height: 915 } });
+
+  test.afterEach(async ({ page }) => {
+    await disconnectIfConnected(page);
+  });
+
+  test('return, hold and the controls sit above the tabs, and nothing lies over the events bar', async ({ page }) => {
+    // Hold is a mode change, and every spec after this one shares the simulator: the command is
+    // noted here and never reaches it.
+    const held: string[] = [];
+    await page.routeWebSocket(/\/ws/, (ws) => {
+      const server = ws.connectToServer();
+      ws.onMessage((message) => {
+        const text = String(message);
+        if (text.includes('"cmd":"mode"')) held.push(text);
+        else server.send(message);
+      });
+    });
+    await connectSimulator(page);
+
+    // The tabs were fixed over the bottom of every view, the events bar of the fly view among it.
+    const events = page.getByRole('button', { name: /^(事件|Events) \(\d+\)/ });
+    await expect(events).toBeVisible();
+    const covered = await events.evaluate((el) => {
+      const r = el.getBoundingClientRect();
+      const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      return !top || !el.contains(top);
+    });
+    expect(covered).toBe(false);
+
+    const bar = page.getByRole('toolbar', { name: /飞行控制|Flight Control/ });
+    await expect(bar).toBeVisible();
+    const tabs = page.locator('nav.md\\:hidden');
+    const barBox = (await bar.boundingBox())!;
+    const tabsBox = (await tabs.boundingBox())!;
+    expect(barBox.y + barBox.height).toBeLessThanOrEqual(tabsBox.y + 1);
+    expect(tabsBox.y + tabsBox.height).toBeLessThanOrEqual(915 + 1);
+
+    // RTL asks for the slide, as it does on a wide screen. Not slid: the slide is SlideConfirm's.
+    await bar.getByRole('button', { name: /返航|RTL/ }).click();
+    const slide = page.getByRole('slider', { name: /滑动切换返航|Slide to return home/ });
+    await expect(slide).toBeVisible();
+    await page.keyboard.press('Escape');
+    await expect(slide).toBeHidden();
+
+    await bar.getByRole('button', { name: /悬停|Hold/ }).click();
+    await expect.poll(() => held.length).toBe(1);
+    expect(JSON.parse(held[0])).toMatchObject({ type: 'command', cmd: 'mode' });
+
+    await bar.getByRole('button', { name: /操控|Controls/ }).click();
+    const arm = page.getByRole('button', { name: /解锁电机|Arm Motors/ });
+    await expect(arm).toBeVisible();
+    await bar.getByRole('button', { name: /收起|Collapse/ }).click();
+    await expect(arm).toBeHidden();
+
+    // The controls belong to the fly view; return and hold go along to every view.
+    await tabs.getByRole('button', { name: /参数|Params/ }).click();
+    await expect(bar.getByRole('button')).toHaveCount(2);
+
+    // On a wide screen the bar under the status bar has them again.
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await expect(bar).toBeHidden();
+    await expect(page.locator('nav.max-md\\:hidden').getByRole('button', { name: /返航|RTL/ })).toBeVisible();
+  });
+});
