@@ -378,13 +378,50 @@
   });
 </script>
 
+<!-- The quick actions: in the bar under the status bar, and on a phone above the tabs. -->
+{#snippet rtlButton(phone: boolean)}
+  <Button
+    size={phone ? 'lg' : 'sm'}
+    class="bg-red-600 hover:bg-red-700 text-white font-bold gap-1 {phone ? 'flex-1 h-11' : ''}"
+    onclick={() => showSlide(t('slide.rtl'), 'red', () => dispatch('rtl'))}
+    title="{t('ctrl.rtl')} (R)"
+  >
+    <CornerDownLeft size={phone ? 18 : 13} />{t('nav.rtl')}
+  </Button>
+{/snippet}
+
+{#snippet holdButton(phone: boolean)}
+  <Button
+    size={phone ? 'lg' : 'sm'}
+    class="bg-amber-600 hover:bg-amber-700 text-white font-bold gap-1 {phone ? 'flex-1 h-11' : ''}"
+    onclick={() => dispatch('mode', specialModes().hold)}
+    title="{t('ctrl.pause')} (Space)"
+  >
+    <Pause size={phone ? 18 : 13} />{t('nav.pause')}
+  </Button>
+{/snippet}
+
+{#snippet controlsButton(phone: boolean)}
+  <Button
+    variant={controlsOpen ? 'default' : 'secondary'}
+    size={phone ? 'lg' : 'sm'}
+    class="gap-1 {phone ? 'flex-1 h-11' : ''}"
+    onclick={() => (controlsOpen = !controlsOpen)}
+    title={t('nav.controls')}
+  >
+    {#if controlsOpen}<PanelLeftClose size={phone ? 18 : 13} />{t('nav.collapse')}{:else}<SlidersHorizontal
+        size={phone ? 18 : 13}
+      />{t('nav.controls')}{/if}
+  </Button>
+{/snippet}
+
 <a
   href="#main-content"
   class="sr-only focus:not-sr-only focus:absolute focus:z-[99999] focus:bg-primary focus:text-primary-foreground focus:p-2 focus:rounded-md focus:top-2 focus:left-2"
 >
   {t('ui.skipToContent')}
 </a>
-<div class="flex flex-col h-screen overflow-hidden" role="application">
+<div class="flex flex-col h-viewport overflow-hidden" role="application">
   {#if authReady}
     <StatusBar {toggleTheme} onSettings={() => (app.showSettings = !app.showSettings)} />
   {/if}
@@ -418,22 +455,8 @@
 
     {#if app.drone.connected}
       <div class="ml-auto flex items-center gap-1.5 shrink-0">
-        <Button
-          size="sm"
-          class="bg-red-600 hover:bg-red-700 text-white font-bold gap-1"
-          onclick={() => showSlide(t('slide.rtl'), 'red', () => dispatch('rtl'))}
-          title="{t('ctrl.rtl')} (R)"
-        >
-          <CornerDownLeft size={13} />{t('nav.rtl')}
-        </Button>
-        <Button
-          size="sm"
-          class="bg-amber-600 hover:bg-amber-700 text-white font-bold gap-1"
-          onclick={() => dispatch('mode', specialModes().hold)}
-          title="{t('ctrl.pause')} (Space)"
-        >
-          <Pause size={13} />{t('nav.pause')}
-        </Button>
+        {@render rtlButton(false)}
+        {@render holdButton(false)}
         <Button variant="secondary" size="sm" class="gap-1" onclick={() => p.open('logPanel')} title={t('nav.logs')}>
           <HardDrive size={13} />{t('nav.logs')}
         </Button>
@@ -465,17 +488,7 @@
           >
             <Video size={13} />{t('nav.video')}
           </Button>
-          <Button
-            variant={controlsOpen ? 'default' : 'secondary'}
-            size="sm"
-            class="gap-1"
-            onclick={() => (controlsOpen = !controlsOpen)}
-            title={t('nav.controls')}
-          >
-            {#if controlsOpen}<PanelLeftClose size={13} />{t('nav.collapse')}{:else}<SlidersHorizontal size={13} />{t(
-                'nav.controls',
-              )}{/if}
-          </Button>
+          {@render controlsButton(false)}
         {/if}
       </div>
     {/if}
@@ -562,7 +575,7 @@
             <MissionProgress />
             {#if app.drone.connected && !app.drone.armed && PreflightMod}
               <div
-                class="absolute bottom-12 right-3 z-[1001] w-[400px] max-h-56 overflow-auto bg-popover/95 backdrop-blur border border-border rounded-xl shadow-lg"
+                class="absolute bottom-12 right-3 z-[1001] w-[400px] max-w-[calc(100%-1.5rem)] max-h-56 overflow-auto bg-popover/95 backdrop-blur border border-border rounded-xl shadow-lg"
               >
                 <PreflightMod />
               </div>
@@ -705,10 +718,23 @@
     </div>
   {/if}
 
-  <!-- Mobile bottom navigation -->
+  <!-- On a phone the bar under the status bar is hidden: return and hold sit above the tabs, and
+       the controls with them in the fly view. Both take their room in the column. Fixed, the tabs
+       lay over the bottom of every view, the events bar of the fly view among it. -->
   {#if isMobile}
+    {#if app.drone.connected}
+      <div
+        role="toolbar"
+        aria-label={t('cmd.catFlight')}
+        class="md:hidden shrink-0 flex items-center gap-2 px-2 py-1.5 bg-card border-t border-border"
+      >
+        {@render rtlButton(true)}
+        {@render holdButton(true)}
+        {#if view === 'fly'}{@render controlsButton(true)}{/if}
+      </div>
+    {/if}
     <nav
-      class="md:hidden fixed bottom-0 left-0 right-0 z-[2000] bg-card border-t border-border flex items-center justify-around py-1.5 safe-area-bottom"
+      class="md:hidden shrink-0 relative z-[2000] bg-card border-t border-border flex items-center justify-around py-1.5 safe-area-bottom"
     >
       {#each tabKeys as tab}
         <button
