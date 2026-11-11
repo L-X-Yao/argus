@@ -35,3 +35,24 @@ export async function disconnectIfConnected(page: Page) {
     await page.waitForTimeout(2000);
   }
 }
+
+/**
+ * The command palette, opened and searched. Its keys are App's, attached once the page has
+ * mounted, and the palette is a chunk of its own, loaded at the first Ctrl+K. A fixed wait and
+ * the last input of the page typed into the connection form whenever that chunk came late, and
+ * the panel asked for never opened.
+ */
+export async function openPalette(page: Page) {
+  await expect(page.locator('header').first()).toBeVisible({ timeout: 15000 });
+  await page.keyboard.press('Control+k');
+  const palette = page.getByRole('dialog', { name: /搜索命令|Search commands/ });
+  await expect(palette.locator('input')).toBeVisible({ timeout: 15000 });
+  return palette;
+}
+
+export async function searchPalette(page: Page, query: string) {
+  const palette = await openPalette(page);
+  await palette.locator('input').fill(query);
+  await page.waitForTimeout(300);
+  return palette;
+}

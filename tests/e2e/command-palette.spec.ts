@@ -1,46 +1,34 @@
 import { test, expect } from '@playwright/test';
+import { openPalette, searchPalette } from './helpers';
 
 test.describe('Command palette', () => {
   test('opens with Ctrl+K', async ({ page }) => {
     await page.goto('/');
-    await page.waitForTimeout(1000);
-
-    await page.keyboard.press('Control+k');
-    await page.waitForTimeout(500);
-    await expect(page.locator('input[placeholder]').last()).toBeVisible();
+    await openPalette(page);
   });
 
   test('shows navigation commands', async ({ page }) => {
     await page.goto('/');
     await page.waitForTimeout(1000);
 
-    await page.keyboard.press('Control+k');
-    await page.waitForTimeout(500);
-
-    await expect(page.locator('body')).toContainText(/Fly|Plan|Monitor|Params|飞行|计划|监控|参数/);
+    // In the palette: the page has these words in its tabs anyway.
+    const palette = await openPalette(page);
+    await expect(palette).toContainText(/Fly|Plan|Monitor|Params|飞行|计划|监控|参数/);
   });
 
   test('typing filters results', async ({ page }) => {
     await page.goto('/');
     await page.waitForTimeout(1000);
 
-    await page.keyboard.press('Control+k');
-    await page.waitForTimeout(500);
-
-    const searchInput = page.locator('input[placeholder]').last();
-    await searchInput.fill('plan');
-    await page.waitForTimeout(300);
+    const palette = await searchPalette(page, 'plan');
+    await expect(palette.getByRole('option').first()).toBeVisible();
   });
 
   test('an ortho overlay reaches the map and survives a reload', async ({ page }) => {
     const png =
       'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
     await page.goto('/');
-    await page.waitForTimeout(1000);
-    await page.keyboard.press('Control+k');
-    await page.waitForTimeout(500);
-    await page.locator('input[placeholder]').last().fill('正射叠加');
-    await page.waitForTimeout(300);
+    await searchPalette(page, '正射叠加');
     await page.keyboard.press('Enter');
     await page
       .locator('input[type=file]')
@@ -62,11 +50,7 @@ test.describe('Command palette', () => {
     const png =
       'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==';
     await page.goto('/');
-    await page.waitForTimeout(1000);
-    await page.keyboard.press('Control+k');
-    await page.waitForTimeout(500);
-    await page.locator('input[placeholder]').last().fill('正射叠加');
-    await page.waitForTimeout(300);
+    await searchPalette(page, '正射叠加');
     await page.keyboard.press('Enter');
     await page
       .locator('input[type=file]')
@@ -91,13 +75,10 @@ test.describe('Command palette', () => {
   ] as const) {
     test(`opens the ${query} panel`, async ({ page }) => {
       await page.goto('/');
-      await page.waitForTimeout(1000);
-      await page.keyboard.press('Control+k');
-      await page.waitForTimeout(500);
-      await page.locator('input[placeholder]').last().fill(query);
-      await page.waitForTimeout(300);
+      await searchPalette(page, query);
       await page.keyboard.press('Enter');
-      await expect(page.getByRole('heading', { name: title })).toBeVisible({ timeout: 5000 });
+      // The panel is a chunk of its own too.
+      await expect(page.getByRole('heading', { name: title })).toBeVisible({ timeout: 15000 });
     });
   }
 
@@ -105,23 +86,17 @@ test.describe('Command palette', () => {
     await page.goto('/');
     await page.waitForTimeout(1000);
 
-    await page.keyboard.press('Control+k');
-    await page.waitForTimeout(500);
-    await expect(page.locator('input[placeholder]').last()).toBeVisible();
-
+    const palette = await openPalette(page);
     await page.keyboard.press('Escape');
-    await page.waitForTimeout(500);
+    await expect(palette).toBeHidden();
   });
 });
 
 test.describe('Annotations', () => {
   async function openAnnotations(page: import('@playwright/test').Page) {
-    await page.keyboard.press('Control+k');
-    await page.waitForTimeout(500);
-    await page.locator('input[placeholder]').last().fill('地图标注');
-    await page.waitForTimeout(300);
+    await searchPalette(page, '地图标注');
     await page.keyboard.press('Enter');
-    await expect(page.getByRole('heading', { name: '地图标注' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '地图标注' })).toBeVisible({ timeout: 15000 });
   }
 
   test('one stored without a position does not keep the panel shut', async ({ page }) => {
@@ -177,11 +152,7 @@ test.describe('Advanced commands', () => {
       localStorage.setItem('argus_waypoints', JSON.stringify([wp]));
     });
     await page.reload();
-    await page.waitForTimeout(1000);
-    await page.keyboard.press('Control+k');
-    await page.waitForTimeout(500);
-    await page.locator('input[placeholder]').last().fill('高级指令');
-    await page.waitForTimeout(300);
+    await searchPalette(page, '高级指令');
     await page.keyboard.press('Enter');
 
     await page.getByRole('button', { name: '相机触发间隔' }).click();
