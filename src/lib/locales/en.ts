@@ -557,6 +557,8 @@ const messages: Record<string, string> = {
   'auth.login': 'Login',
   'auth.error': 'Invalid token',
   'auth.connFailed': 'Cannot connect to server',
+  'auth.originRefused':
+    'This server does not accept pages opened from {origin}. Add that address to ARGUS_CORS_ORIGINS on the server, then restart it.',
   'prearm.title': 'Prearm Checks',
   'prearm.pass': 'Pass',
   'prearm.fail': 'Fail',

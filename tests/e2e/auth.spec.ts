@@ -157,3 +157,55 @@ test.describe('Token authentication', () => {
     expect(await page.evaluate(() => localStorage.getItem('argus_auth_token'))).toBeNull();
   });
 });
+
+// What a phone on the network meets when Argus was started with a token and a network
+// address and nothing else: the page loads, and the backend turns its login away because the
+// address it was opened from is not in ARGUS_CORS_ORIGINS. Up to v3.8.0 the dialog then said
+// "invalid token" to someone who had typed the right one.
+test.describe('A page opened from an address the backend does not list', () => {
+  const OTHER_PORT = 8132;
+  let other: ChildProcess;
+
+  test.use({ baseURL: `http://localhost:${OTHER_PORT}` });
+
+  test.beforeAll(async () => {
+    // A list of one's own replaces the default one, so this server's own page is not on it.
+    other = spawn('python', ['run.py', '--port', String(OTHER_PORT)], {
+      cwd: repoRoot,
+      env: { ...process.env, ARGUS_NO_BROWSER: '1', GCS_AUTH_TOKEN: TOKEN, ARGUS_CORS_ORIGINS: 'http://localhost:5173' },
+      stdio: 'ignore',
+    });
+    await expect
+      .poll(
+        () =>
+          fetch(`http://127.0.0.1:${OTHER_PORT}/health`).then(
+            (r) => r.status,
+            () => 0,
+          ),
+        { timeout: 15000 },
+      )
+      .toBe(200);
+  });
+
+  test.afterAll(() => {
+    other.kill();
+  });
+
+  test('is told what to add on the server, not that the token is wrong', async ({ page }) => {
+    await page.goto('/');
+    await signIn(page);
+
+    const dialog = page.getByRole('dialog');
+    await expect(dialog).toContainText('ARGUS_CORS_ORIGINS');
+    await expect(dialog).toContainText(`http://localhost:${OTHER_PORT}`);
+    await expect(dialog).not.toContainText(/令牌无效|Invalid token/i);
+    await expect(page.locator('.leaflet-container')).toHaveCount(0);
+  });
+
+  test('keeps a saved token: it is not what was refused', async ({ page }) => {
+    await page.addInitScript((token) => localStorage.setItem('argus_auth_token', token), TOKEN);
+    await page.goto('/');
+    await expect(page.locator('#auth-token-input')).toBeVisible({ timeout: 8000 });
+    expect(await page.evaluate(() => localStorage.getItem('argus_auth_token'))).toBe(TOKEN);
+  });
+});

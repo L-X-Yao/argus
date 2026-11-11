@@ -36,11 +36,19 @@ export function apiUrl(path: string): string {
 }
 
 /**
- * Exchange the access token for the session cookie that REST, tile and video
- * requests rely on. Resolves false for a rejected token, and rejects when the
- * backend cannot be reached.
+ * 'rejected' is a wrong token. 'refused' is the backend turning this page away whatever the
+ * token is: the address the page was opened from is not in its ARGUS_CORS_ORIGINS
+ * (auth_middleware in backend/auth.py answers 403 "origin not allowed" before it looks at the
+ * token). A 403 from anything else, a proxy in between, is not that.
  */
-export async function login(token: string): Promise<boolean> {
+export type LoginResult = 'ok' | 'rejected' | 'refused';
+const ORIGIN_REFUSED = 'origin not allowed';
+
+/**
+ * Exchange the access token for the session cookie that REST, tile and video
+ * requests rely on. Rejects when the backend cannot be reached.
+ */
+export async function login(token: string): Promise<LoginResult> {
   const res = await fetch(apiUrl('/api/auth/login'), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -48,7 +56,8 @@ export async function login(token: string): Promise<boolean> {
     signal: AbortSignal.timeout(5000),
   });
   const data = await res.json();
-  return data.ok === true;
+  if (res.status === 403 && data?.error === ORIGIN_REFUSED) return 'refused';
+  return data?.ok === true ? 'ok' : 'rejected';
 }
 
 // A map source for an .mbtiles file in the backend's mbtiles/ folder.

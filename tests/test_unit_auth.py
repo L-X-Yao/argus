@@ -20,7 +20,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import backend.auth as auth_module
 from backend.app import app
-from backend.auth import TOKEN_FILE, auth_required, generate_token, verify_token
+from backend.auth import TOKEN_FILE, auth_required, generate_token, note_for_other_devices, verify_token
 from backend.drone_link import DroneLink
 from backend.ws_manager import WSManager
 
@@ -486,3 +486,30 @@ class TestConcurrentAuth:
 
         assert len(errors) == 0
         assert all(r is False for r in results)
+
+
+class TestPageFromAnotherDevice:
+    """A phone on the network: the page loads from this server, and its login is a POST that
+    carries the address the phone opened as Origin."""
+
+    PHONE = "http://192.168.1.5:8100"
+
+    def test_login_is_refused_before_the_token_is_looked_at(self, client):
+        token = generate_token()
+        r = client.post("/api/auth/login", json={"token": token}, headers={"origin": self.PHONE})
+        assert r.status_code == 403
+        assert r.json() == {"error": "origin not allowed"}
+
+    def test_the_line_the_start_note_gives_lets_it_in(self, client):
+        token = generate_token()
+        with patch("backend.auth._address_on_the_network", return_value="192.168.1.5"):
+            note = note_for_other_devices("0.0.0.0", 8100, app.state.cors_origins)
+        listed = next(line for line in note.splitlines() if line.startswith("  ")).strip().split(",")
+        assert self.PHONE in listed
+        # Not monkeypatch.setattr: see test_host_of_a_configured_origin_passes.
+        with patch.object(app.state, "cors_origins", listed):
+            r = client.post("/api/auth/login", json={"token": token}, headers={"origin": self.PHONE})
+            assert r.status_code == 200
+            assert r.json() == {"ok": True}
+            wrong = client.post("/api/auth/login", json={"token": "x"}, headers={"origin": self.PHONE})
+            assert wrong.status_code == 401

@@ -960,6 +960,8 @@ const messages: Record<string, string> = {
   'auth.login': '로그인',
   'auth.error': '유효하지 않은 토큰',
   'auth.connFailed': '서버에 연결할 수 없습니다',
+  'auth.originRefused':
+    '이 서버는 {origin}에서 연 페이지를 받지 않습니다. 서버의 ARGUS_CORS_ORIGINS에 이 주소를 추가한 뒤 다시 시작하세요.',
   'error.retry': '재시도 ({n}회 남음)',
   'error.close': '닫기',
   'label.armed': '시동 걸림',

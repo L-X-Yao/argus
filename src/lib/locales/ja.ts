@@ -962,6 +962,8 @@ const messages: Record<string, string> = {
   'auth.login': 'ログイン',
   'auth.error': '無効なトークン',
   'auth.connFailed': 'サーバーに接続できません',
+  'auth.originRefused':
+    'このサーバーは {origin} から開いたページを受け付けません。サーバーの ARGUS_CORS_ORIGINS にこのアドレスを追加して、再起動してください。',
   'error.retry': 'リトライ（残り{n}回）',
   'error.close': '閉じる',
   'label.armed': 'アーム済み',

@@ -43,7 +43,8 @@ def parse_args(argv=None):
 
 def main():
     args = parse_args()
-    from backend.auth import refuse_if_exposed
+    from backend.auth import note_for_other_devices, refuse_if_exposed
+    from backend.config import allowed_origins
 
     refuse_if_exposed(args.host)
 
@@ -78,6 +79,9 @@ def main():
         print('  Simulator: tcp:localhost:5770')
     print('  Ctrl+C to stop')
     print('=' * 50)
+    note = note_for_other_devices(args.host, args.port, allowed_origins(args.port))
+    if note:
+        print(note)
 
     import os
     if not (ROOT_DIR / 'dist' / 'index.html').exists():

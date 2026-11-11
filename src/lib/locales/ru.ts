@@ -964,6 +964,8 @@ const messages: Record<string, string> = {
   'auth.login': 'Войти',
   'auth.error': 'Недействительный токен',
   'auth.connFailed': 'Не удаётся подключиться к серверу',
+  'auth.originRefused':
+    'Этот сервер не принимает страницы, открытые с адреса {origin}. Добавьте этот адрес в ARGUS_CORS_ORIGINS на сервере и перезапустите его.',
   'error.retry': 'Повторить ({n} осталось)',
   'error.close': 'Закрыть',
   'label.armed': 'ВЗВЕДЁН',

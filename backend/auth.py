@@ -7,6 +7,7 @@ import hmac
 import ipaddress
 import os
 import re
+import socket
 from pathlib import Path
 
 from fastapi import Request, Response, WebSocket
@@ -171,6 +172,72 @@ def refuse_if_exposed(host: str) -> None:
             f"Refusing to listen on {host or 'every interface'} without a token: anyone who can "
             "reach it could arm the vehicle. Set GCS_AUTH_TOKEN, or listen on 127.0.0.1."
         )
+
+
+def _address_on_the_network() -> str | None:
+    """This machine's address as another device sees it. Connecting a UDP socket sends
+    nothing: it only asks the system which of its addresses leads outward."""
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as probe:
+            probe.connect(("192.0.2.1", 9))
+            address = probe.getsockname()[0]
+    except OSError:
+        return None
+    return None if _is_this_machine(address) else address
+
+
+def _origin(address: str, port: int) -> str:
+    """The Origin header a browser sends for a page at http://address:port. _from_own_page
+    compares it with ARGUS_CORS_ORIGINS as text, so it has to be written the browser's way: a
+    name in lower case, an IPv6 address short and in brackets, and no port when it is 80."""
+    try:
+        ip = ipaddress.ip_address(address)
+    except ValueError:
+        host = address.lower()
+    else:
+        host = f"[{ip.compressed}]" if ip.version == 6 else ip.compressed
+    return f"http://{host}" if port == 80 else f"http://{host}:{port}"
+
+
+def note_for_other_devices(host: str, port: int, origins: list[str]) -> str | None:
+    """What to say at start when Argus listens beyond this machine. A page opened from another
+    device is let in only under an address in ARGUS_CORS_ORIGINS (see _from_own_page), and on
+    that device the refusal shows up at the login, where nobody can tell what is missing."""
+    if _is_this_machine(host):
+        return None
+    try:
+        ip = ipaddress.ip_address(host) if host else None
+    except ValueError:
+        ip = None
+    if ip is not None and ip.is_unspecified and ip.version == 6:
+        # asyncio binds "::" for IPv6 only, so no IPv4 address reaches it.
+        return (
+            "Listening on every IPv6 interface. A page opened from another device needs its "
+            f"address in ARGUS_CORS_ORIGINS, for example {_origin('fd00::5', port)}."
+        )
+    guessed = not host or (ip is not None and ip.is_unspecified)
+    address = _address_on_the_network() if guessed else host
+    if address is None:
+        return (
+            "Listening on every interface. A page opened from another device needs its address "
+            f"in ARGUS_CORS_ORIGINS, for example {_origin('192.168.1.5', port)}."
+        )
+    origin = _origin(address, port)
+    # The address on the default route: a hotspot this machine provides, a VPN or a second
+    # network card can each put the other device on another one.
+    lines = [
+        f"From another device, open {origin}" + (", this machine's address on its main network." if guessed else ".")
+    ]
+    if origin not in origins:
+        lines += [
+            "ARGUS_CORS_ORIGINS does not list it, so the login of a page opened there is refused. "
+            "Set ARGUS_CORS_ORIGINS to",
+            "  " + ",".join([*origins, origin]),
+            "and start Argus again.",
+        ]
+    if guessed:
+        lines.append("A page opened at another address and refused at login names the address to add.")
+    return "\n".join(lines)
 
 
 def verify_ws_token(ws: WebSocket) -> bool:

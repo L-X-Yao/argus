@@ -556,6 +556,8 @@ const messages: Record<string, string> = {
   'auth.login': '登录',
   'auth.error': '令牌无效',
   'auth.connFailed': '无法连接服务器',
+  'auth.originRefused':
+    '服务器不接受从 {origin} 打开的页面。请把这个地址加入服务器的 ARGUS_CORS_ORIGINS，然后重启服务器。',
   'prearm.title': '解锁前检查',
   'prearm.pass': '通过',
   'prearm.fail': '未通过',

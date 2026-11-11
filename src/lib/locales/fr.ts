@@ -967,6 +967,8 @@ const messages: Record<string, string> = {
   'auth.login': 'Connexion',
   'auth.error': 'Jeton invalide',
   'auth.connFailed': 'Impossible de se connecter au serveur',
+  'auth.originRefused':
+    "Ce serveur n'accepte pas les pages ouvertes depuis {origin}. Ajoutez cette adresse à ARGUS_CORS_ORIGINS sur le serveur, puis redémarrez-le.",
   'error.retry': 'Réessayer ({n} restant)',
   'error.close': 'Fermer',
   'label.armed': 'ARMÉ',

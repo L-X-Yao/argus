@@ -959,6 +959,8 @@ const messages: Record<string, string> = {
   'auth.login': 'تسجيل الدخول',
   'auth.error': 'رمز غير صالح',
   'auth.connFailed': 'تعذر الاتصال بالخادم',
+  'auth.originRefused':
+    'هذا الخادم لا يقبل الصفحات المفتوحة من {origin}. أضف هذا العنوان إلى ARGUS_CORS_ORIGINS على الخادم ثم أعد تشغيله.',
   'error.retry': 'إعادة المحاولة ({n} متبقية)',
   'error.close': 'إغلاق',
   'label.armed': 'مُسلّح',

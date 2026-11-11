@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import glob
-import os
 import sys
 from contextlib import asynccontextmanager
 from urllib.parse import urlsplit
@@ -12,7 +11,7 @@ from fastapi.responses import FileResponse, JSONResponse, Response, StreamingRes
 from fastapi.staticfiles import StaticFiles
 
 from .auth import auth_middleware, auth_required, generate_token, set_session_cookie, verify_token, verify_ws_token
-from .config import ROOT_DIR, VERSION, aio, aio_download, cfg, json_object
+from .config import ROOT_DIR, VERSION, aio, aio_download, allowed_origins, cfg, json_object
 from .drone_link import DroneLink
 from .firmware import router as firmware_router
 from .param_meta import get_metadata
@@ -69,14 +68,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-_cors_origins = [
-    s.strip()
-    for s in os.environ.get(
-        "ARGUS_CORS_ORIGINS",
-        "http://localhost:5173,http://localhost:%d,http://127.0.0.1:5173,http://127.0.0.1:%d" % (cfg.PORT, cfg.PORT),
-    ).split(",")
-    if s.strip()
-]
+_cors_origins = allowed_origins(cfg.PORT)
 app.state.cors_origins = _cors_origins
 # The names a browser may know this server by: see auth._asked_by_our_name.
 app.state.own_hosts = {urlsplit(origin).hostname for origin in _cors_origins} - {None}

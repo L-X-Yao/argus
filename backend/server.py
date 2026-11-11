@@ -20,8 +20,8 @@ sys.path.insert(0, str(_root))
 
 import uvicorn
 
-from backend.auth import refuse_if_exposed
-from backend.config import cfg
+from backend.auth import note_for_other_devices, refuse_if_exposed
+from backend.config import allowed_origins, cfg
 
 
 def _open_browser(port: int):
@@ -47,6 +47,9 @@ def main():
     # backend.app is imported later by uvicorn and allows this port's own origin.
     cfg.HOST, cfg.PORT = args.host, args.port
     refuse_if_exposed(args.host)
+    note = note_for_other_devices(args.host, args.port, allowed_origins(args.port))
+    if note:
+        print(note)
 
     if not args.no_browser:
         threading.Thread(target=_open_browser, args=(args.port,), daemon=True).start()

@@ -96,6 +96,13 @@ def _env(key: str, default, cast=None):
         return default
 
 
+def allowed_origins(port: int) -> list[str]:
+    """The pages that may log in and send commands. ARGUS_CORS_ORIGINS replaces the default
+    list: the built page on this port and the Vite dev server, under their loopback names."""
+    default = "http://localhost:5173,http://localhost:%d,http://127.0.0.1:5173,http://127.0.0.1:%d" % (port, port)
+    return [s.strip() for s in os.environ.get("ARGUS_CORS_ORIGINS", default).split(",") if s.strip()]
+
+
 class Config:
     HOST: str = _env("ARGUS_HOST", "127.0.0.1")
     PORT: int = _env("ARGUS_PORT", 8100)

@@ -189,8 +189,10 @@
     const saved = localStorage.getItem('argus_auth_token');
     if (!saved) return false;
     try {
-      if (await login(saved)) return true;
-      localStorage.removeItem('argus_auth_token');
+      const result = await login(saved);
+      if (result === 'ok') return true;
+      // A refusal is about where this page was opened from, not about the token: keep it.
+      if (result === 'rejected') localStorage.removeItem('argus_auth_token');
     } catch {
       /* no answer: keep the token for the next start */
     }

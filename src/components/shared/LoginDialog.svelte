@@ -23,9 +23,13 @@
     loading = true;
     error = '';
     try {
-      if (await login(token.trim())) {
+      const result = await login(token.trim());
+      if (result === 'ok') {
         localStorage.setItem('argus_auth_token', token.trim());
         onlogin();
+      } else if (result === 'refused') {
+        // Not the token's fault, and the cure is on the server: name the address to add there.
+        error = t('auth.originRefused').replace('{origin}', window.location.origin);
       } else {
         error = t('auth.error');
       }
@@ -72,7 +76,7 @@
       disabled={loading}
     />
     {#if error}
-      <p class="text-xs text-destructive mt-2">{error}</p>
+      <p class="text-xs text-destructive mt-2 break-words">{error}</p>
     {/if}
     <Button class="w-full mt-4" size="sm" onclick={submit} disabled={loading || !token.trim()}>
       {loading ? '...' : t('auth.login')}

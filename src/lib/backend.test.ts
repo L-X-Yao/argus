@@ -73,18 +73,36 @@ describe('backend URL resolver', () => {
       const fetchMock = vi.fn().mockResolvedValue({ json: async () => ({ ok: true }) });
       vi.stubGlobal('fetch', fetchMock);
       const { login } = await import('./backend');
-      await expect(login('secret')).resolves.toBe(true);
+      await expect(login('secret')).resolves.toBe('ok');
       expect(fetchMock).toHaveBeenCalledWith(
         '/api/auth/login',
         expect.objectContaining({ method: 'POST', body: JSON.stringify({ token: 'secret' }) }),
       );
     });
 
-    it('resolves false for a rejected token', async () => {
+    it('tells a rejected token', async () => {
       vi.stubGlobal('window', page);
-      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ json: async () => ({ ok: false }) }));
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ status: 401, json: async () => ({ ok: false }) }));
       const { login } = await import('./backend');
-      await expect(login('wrong')).resolves.toBe(false);
+      await expect(login('wrong')).resolves.toBe('rejected');
+    });
+
+    // backend/auth.py answers 403 before it looks at the token: the page was opened from an
+    // address that is not in ARGUS_CORS_ORIGINS. The right token changes nothing there.
+    it('tells a page the backend turns away from a rejected token', async () => {
+      vi.stubGlobal('window', page);
+      const refusal = { status: 403, json: async () => ({ error: 'origin not allowed' }) };
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(refusal));
+      const { login } = await import('./backend');
+      await expect(login('secret')).resolves.toBe('refused');
+    });
+
+    it('does not read a 403 from something else as that refusal', async () => {
+      vi.stubGlobal('window', page);
+      const proxy = { status: 403, json: async () => ({ error: 'forbidden' }) };
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(proxy));
+      const { login } = await import('./backend');
+      await expect(login('secret')).resolves.not.toBe('refused');
     });
 
     it('rejects when the backend cannot be reached', async () => {
