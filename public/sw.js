@@ -1,4 +1,4 @@
-const CACHE_NAME = 'argus-gcs-v3.7';
+const CACHE_NAME = 'argus-gcs-v3.8';
 const TILE_CACHE = 'argus-tiles-v1';
 const MAX_TILE_ENTRIES = 5000;
 
