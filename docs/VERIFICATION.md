@@ -285,7 +285,7 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 | Several browser clients | 多浏览器客户端 | Simulator | Integration tests |
 | Video and AR overlay | 视频和 AR 叠加 | Simulator | Integration tests, and real ffmpeg on an HTTP test stream 2026-11-10. No real camera |
 | Token login | Token 登录 | Simulator | e2e, real Windows each release |
-| Windows package | Windows 发布包 | Simulator | CI builds and smoke-tests it on every push, real Windows each release |
+| Windows package | Windows 发布包 | Simulator | CI builds and smoke-tests it on every push. The release workflow starts the zip it is about to publish on a Windows runner, and publishes nothing if that fails. Real Windows each release |
 | UDP | UDP 连接 | SITL | CI: a whole session on real firmware |
 | Telemetry radio | 数传电台 | SITL | CI through a stand-in: 57600 baud, 3% of frames lost, 1.5% corrupted, a whole session. 2026-11-11 at 38400 baud and 5% lost: all 1369 parameters in 68 s, where v3.7.8 stopped at 1349. No real radio |
 | Linux tty | Linux tty | SITL | CI: a whole session through a pty on real firmware, which reads differently from a socket |
