@@ -2,7 +2,7 @@
 
 Web-based MAVLink ground control station. ArduPilot only (PX4 unwired — see below).
 
-**Maintenance only since 2026-11.** Fix bugs and security problems. Do not add features, and do not start what the README lists under "No longer planned", unless the maintainer asks for it.
+**Maintenance only since 2026-11.** Fix bugs and security problems. Do not add features, and do not start what the README lists under "No longer planned", unless the maintainer asks for it. Asked for since: a Windows installer (`scripts/installer.iss`) and operation by an AI assistant through MCP, where every action that changes the vehicle waits for the operator's approval in the page.
 
 ## Build & Test
 

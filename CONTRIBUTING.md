@@ -121,10 +121,10 @@ Versions are `MAJOR.MINOR.PATCH`: PATCH for fixes, MINOR for new features and fo
 Release from `main`, on a commit whose CI run is green. `scripts/make-release.sh` checks the branch, a clean tree and that `main` is where `origin/main` is, but not CI: the release workflow runs every check again on the tagged commit, and publishes nothing unless all of them pass.
 
 1. Build the Windows package with `python scripts/build_package.py`, on Python 3.11 or newer. It writes a zip to `release/`. The package bundles the Python named by `PY_VER`: move it to a version python.org still builds for Windows when the current one stops getting them.
-2. On a real Windows machine, run `python scripts/smoke_package.py release/<zip>`. It extracts the zip and checks the license texts, the REST API, the WebSocket, that a request from another origin or under another host name is rejected, and token login. CI runs the same on a hosted runner.
+2. On a real Windows machine, run `python scripts/smoke_package.py release/<zip>`. It extracts the zip and checks the license texts, the REST API, the WebSocket, that a request from another origin or under another host name is rejected, and token login. CI runs the same on a hosted runner, and also builds the installer from that zip with `scripts/build_installer.py` (Inno Setup 6) and runs `smoke_package.py` on it: it installs for the current user into a folder of its own, runs the same checks there, uninstalls, and checks what is left. It refuses to run where Argus is already installed for that user.
 3. Run `bash scripts/make-release.sh X.Y.Z`. It bumps the version, runs the frontend, unit and contract tests, commits, tags and pushes.
-4. The tag starts `.github/workflows/release.yml`. It runs the whole of CI on the tagged commit, builds the zip, starts that zip on Windows with `scripts/smoke_package.py`, and only then attests it and publishes the GitHub Release with `SHA256SUMS.txt`: about 20 minutes. A failed job publishes nothing. Rerun it from the Actions page if the failure was not the code's.
-5. Repeat step 2 on the published zip.
+4. The tag starts `.github/workflows/release.yml`. It runs the whole of CI on the tagged commit, builds the zip, starts that zip on Windows with `scripts/smoke_package.py`, builds the installer from it and tests that the same way, and only then attests both and publishes the GitHub Release with `SHA256SUMS.txt`: about 30 minutes. A failed job publishes nothing. Rerun it from the Actions page if the failure was not the code's.
+5. Repeat step 2 on the published zip and installer.
 
 After a change to `release.yml`, rehearse it with `gh workflow run release.yml`: every job runs except the publishing.
 

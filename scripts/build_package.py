@@ -67,14 +67,14 @@ WEB_LIBRARIES = ["svelte", "maplibre-gl"]
 README_TXT = """Argus GCS v{version}
 https://github.com/L-X-Yao/argus
 
-Start:      double-click "Argus地面站.bat". A browser opens http://127.0.0.1:8100
+Start:      double-click "Argus地面站.bat". A browser opens http://localhost:8100
 Simulator:  double-click "启动仿真器.bat", then connect to tcp:localhost:5770
 Stop:       close the window, or press Ctrl+C in it
 
 Argus has not been flight tested. Read docs/VERIFICATION.md and SECURITY.md
 in the repository before you fly with it.
 
-启动：双击"Argus地面站.bat"，浏览器会打开 http://127.0.0.1:8100
+启动：双击"Argus地面站.bat"，浏览器会打开 http://localhost:8100
 仿真器：双击"启动仿真器.bat"，然后在地面站里连接 tcp:localhost:5770
 停止：关闭窗口，或在窗口里按 Ctrl+C
 

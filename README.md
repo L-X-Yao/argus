@@ -14,11 +14,11 @@
 
 ## What & Why
 
-Argus is a **web GCS** for ArduPilot: one browser interface on desktop, tablet and phone, in 10 languages. There is no hosted version: run the Python backend yourself, or unzip the Windows package (Python included), then open it in a browser.
+Argus is a **web GCS** for ArduPilot: one browser interface on desktop, tablet and phone, in 10 languages. There is no hosted version: run the Python backend yourself, or install or unzip the Windows package (Python included), then open it in a browser.
 
 > **Status**: ArduPilot is verified on ArduCopter SITL in CI and on a real flight controller on the bench, but Argus has not been through proper flight testing. [docs/VERIFICATION.md](docs/VERIFICATION.md) lists what has been tested and how, feature by feature. PX4 is not supported: a command for a PX4 vehicle is refused with an error.
 >
-> **Maintenance only since November 2026**: bugs and security problems get fixed, and no new features are planned. See [Project Status](#project-status).
+> **Maintenance since November 2026**: bugs and security problems get fixed. Two pieces of new work were taken up since, at the maintainer's request: a Windows installer and operation by an AI assistant. See [Project Status](#project-status).
 
 Why another GCS: Argus runs in a browser tab, so the device in your hand needs nothing installed, and it can reach a flight controller straight over USB (WebSerial).
 
@@ -50,27 +50,33 @@ To fly real missions today, use QGroundControl or Mission Planner: both are flig
 | **Audio** | Localized voice callouts (mode, battery, altitude, waypoints) in all 10 languages |
 | **i18n** | 10 languages (zh, en, ja, ko, de, fr, es, pt, ru, ar) + RTL |
 | **Offline** | PWA with service worker, mbtiles support, tile caching (5000 tiles, the oldest dropped first) |
-| **Desktop** | A Tauri v2 config is in `src-tauri/`. It has never been built: no icons, no CI job, and none planned |
+| **Desktop** | A Windows installer: for your account only, without administrator rights, with Start menu shortcuts and an uninstaller. It installs the program the zip holds, which opens in your browser. The Tauri v2 config in `src-tauri/` has never been built and is not used |
 | **Security** | Token auth, cross-site and DNS-rebinding request blocking, SSRF + path-traversal guards, statustext filtering |
 
 ## Install
 
 ### Windows package
 
-For Windows 10 and 11, x64. Python and every library are inside the zip, and nothing is installed.
+For Windows 10 and 11, x64. Python and every library come with Argus. A release offers two downloads that hold the same program:
 
-1. Download `Argus_GCS_vX.Y.Z_amd64.zip` and `SHA256SUMS.txt` from the [latest release](https://github.com/L-X-Yao/argus/releases/latest).
-2. Check the download, because the zip is not code-signed:
+- `Argus_GCS_vX.Y.Z_amd64_setup.exe`, an installer. It installs for your account only, without administrator rights, into `%LOCALAPPDATA%\Programs\Argus GCS`, with Start menu shortcuts and an uninstaller.
+- `Argus_GCS_vX.Y.Z_amd64.zip`, which installs nothing: unzip it anywhere.
+
+1. Download one of them and `SHA256SUMS.txt` from the [latest release](https://github.com/L-X-Yao/argus/releases/latest).
+2. Check the download, because neither is code-signed. For the same reason Windows may warn that the publisher is unknown.
 
    ```powershell
-   $want = (Get-Content SHA256SUMS.txt).Split(' ')[0]
-   (Get-FileHash Argus_GCS_vX.Y.Z_amd64.zip -Algorithm SHA256).Hash -eq $want   # True when the download is intact
-   gh attestation verify Argus_GCS_vX.Y.Z_amd64.zip --repo L-X-Yao/argus       # optional, needs the GitHub CLI, signed in
+   $file = 'Argus_GCS_vX.Y.Z_amd64_setup.exe'   # or the .zip
+   $want = (@(Get-Content SHA256SUMS.txt) -match [regex]::Escape($file)).Split(' ')[0]
+   (Get-FileHash $file -Algorithm SHA256).Hash -eq $want   # True when the download is intact
+   gh attestation verify $file --repo L-X-Yao/argus      # optional, needs the GitHub CLI, signed in
    ```
 
-3. Unzip it and double-click `Argus地面站.bat` ("Argus ground station"). A browser opens `http://127.0.0.1:8100`.
+3. Start Argus from the Start menu ("Argus Ground Station"), or double-click `Argus地面站.bat` ("Argus ground station") in the unzipped folder. A browser opens `http://localhost:8100`.
 
-`启动仿真器.bat` ("start simulator") starts the built-in simulator. `README.txt` in the zip repeats these steps.
+The simulator shortcut, or `启动仿真器.bat` ("start simulator"), starts the built-in simulator. `README.txt` beside the program repeats these steps.
+
+Uninstalling removes the program, its caches and its access token. It keeps the flight logs (`logs`) and your own map files (`mbtiles`) in the install folder.
 
 ### From source
 
@@ -246,7 +252,7 @@ npm run test:e2e -- --project=chromium
 bash scripts/make-release.sh X.Y.Z
 ```
 
-This command bumps the version everywhere it is stored, runs the frontend, unit and contract tests, commits, tags, and pushes. GitHub Actions then runs every CI check on the tagged commit, builds the Windows package, starts it on Windows, and only if all of that passes publishes a GitHub Release with the package and a changelog. The Windows package is also checked by hand before and after: see [CONTRIBUTING.md](CONTRIBUTING.md#releases).
+This command bumps the version everywhere it is stored, runs the frontend, unit and contract tests, commits, tags, and pushes. GitHub Actions then runs every CI check on the tagged commit, builds the Windows package and from it the installer, starts both on Windows, and only if all of that passes publishes a GitHub Release with both, their checksums and a changelog. The Windows package is also checked by hand before and after: see [CONTRIBUTING.md](CONTRIBUTING.md#releases).
 
 Alternatively, to generate a changelog preview locally:
 
@@ -256,7 +262,7 @@ bash scripts/changelog.sh v3.5.0   # Changes since v3.5.0
 
 ## Project Status
 
-Argus is in maintenance since November 2026. Bugs and security problems get fixed. No new features are planned.
+Argus is in maintenance since November 2026: bugs and security problems get fixed. Two pieces of new work were taken up since, at the maintainer's request: a Windows installer (done) and operation by an AI assistant through MCP, in which every action that changes the vehicle waits for the operator's approval in the page (in progress).
 
 **Built**
 
@@ -273,6 +279,7 @@ Argus is in maintenance since November 2026. Bugs and security problems get fixe
 - Dual-transport mutex (WS backend / WebSerial)
 - Gimbal pitch/yaw control
 - Tag-triggered release workflow with auto-changelog
+- Windows installer for your account only, without administrator rights
 
 **No longer planned**
 

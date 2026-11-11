@@ -14,11 +14,11 @@
 
 ## 定位
 
-Argus 是面向 ArduPilot 的 **Web 地面站**：一个浏览器界面，支持桌面、平板和手机，内置 10 种语言。没有托管版本：自己运行 Python 后端，或解压 Windows 发布包（已内置 Python），再用浏览器打开。
+Argus 是面向 ArduPilot 的 **Web 地面站**：一个浏览器界面，支持桌面、平板和手机，内置 10 种语言。没有托管版本：自己运行 Python 后端，或安装、解压 Windows 发布包（已内置 Python），再用浏览器打开。
 
 > **当前状态**：ArduPilot 已通过 CI 中的 ArduCopter SITL 和真实飞控台架验证，尚未经过正式飞行测试。每项功能验证到什么程度，见 [docs/VERIFICATION.md](docs/VERIFICATION.md)。不支持 PX4：发给 PX4 飞控的命令会被拒绝并报错。
 >
-> **2026 年 11 月起仅做维护**：修复缺陷和安全问题，不再计划新功能。见[项目状态](#项目状态)。
+> **2026 年 11 月起进入维护阶段**：修复缺陷和安全问题。此后应维护者要求新增了两项工作：Windows 安装程序，以及由 AI 助手操作。见[项目状态](#项目状态)。
 
 为什么还需要一个 GCS：Argus 运行在浏览器标签页里，手上的设备不用安装任何东西，还能通过 USB 直连飞控（WebSerial）。
 
@@ -50,27 +50,33 @@ Argus 是面向 ArduPilot 的 **Web 地面站**：一个浏览器界面，支持
 | **语音** | 10 语言本地化语音播报（模式、电量、高度、航点） |
 | **多语言** | 10 种语言（中/英/日/韩/德/法/西/葡/俄/阿）+ RTL |
 | **离线** | PWA + Service Worker，mbtiles 支持，瓦片缓存（5000 张，先存的先清） |
-| **桌面** | `src-tauri/` 里有一份 Tauri v2 配置，从未构建过：没有图标，没有 CI 任务，也不再计划 |
+| **桌面** | Windows 安装程序：只为当前用户安装，不需要管理员权限，带开始菜单快捷方式和卸载程序。装的是 zip 里的同一个程序，在浏览器里打开。`src-tauri/` 里的 Tauri v2 配置从未构建过，也不使用 |
 | **安全** | Token 认证，跨站与 DNS 重绑定请求拦截，SSRF + 路径穿越防护，statustext 过滤 |
 
 ## 安装
 
 ### Windows 发布包
 
-适用于 Windows 10 和 11（x64）。Python 和所有依赖库都在 zip 里，不需要安装任何东西。
+适用于 Windows 10 和 11（x64）。Python 和所有依赖库都随 Argus 提供。每个版本有两个下载，里面是同一个程序：
 
-1. 从[最新发布](https://github.com/L-X-Yao/argus/releases/latest)下载 `Argus_GCS_vX.Y.Z_amd64.zip` 和 `SHA256SUMS.txt`。
-2. 校验下载的文件，因为 zip 没有代码签名：
+- `Argus_GCS_vX.Y.Z_amd64_setup.exe`：安装程序。只为当前用户安装，不需要管理员权限，装到 `%LOCALAPPDATA%\Programs\Argus GCS`，带开始菜单快捷方式和卸载程序。
+- `Argus_GCS_vX.Y.Z_amd64.zip`：不安装任何东西，解压到任意位置即可。
+
+1. 从[最新发布](https://github.com/L-X-Yao/argus/releases/latest)下载其中一个，以及 `SHA256SUMS.txt`。
+2. 校验下载的文件，因为两者都没有代码签名。也因为这个原因，Windows 可能提示发布者未知。
 
    ```powershell
-   $want = (Get-Content SHA256SUMS.txt).Split(' ')[0]
-   (Get-FileHash Argus_GCS_vX.Y.Z_amd64.zip -Algorithm SHA256).Hash -eq $want   # 文件完好时输出 True
-   gh attestation verify Argus_GCS_vX.Y.Z_amd64.zip --repo L-X-Yao/argus       # 可选，需要已登录的 GitHub CLI
+   $file = 'Argus_GCS_vX.Y.Z_amd64_setup.exe'   # 或者 .zip
+   $want = (@(Get-Content SHA256SUMS.txt) -match [regex]::Escape($file)).Split(' ')[0]
+   (Get-FileHash $file -Algorithm SHA256).Hash -eq $want   # 文件完好时输出 True
+   gh attestation verify $file --repo L-X-Yao/argus      # 可选，需要已登录的 GitHub CLI
    ```
 
-3. 解压后双击 `Argus地面站.bat`，浏览器会打开 `http://127.0.0.1:8100`。
+3. 从开始菜单启动（“Argus 地面站”），或在解压出的文件夹里双击 `Argus地面站.bat`，浏览器会打开 `http://localhost:8100`。
 
-`启动仿真器.bat` 启动内置模拟器。zip 里的 `README.txt` 写有同样的步骤。
+仿真器快捷方式或 `启动仿真器.bat` 启动内置模拟器。程序旁边的 `README.txt` 写有同样的步骤。
+
+卸载会删除程序、缓存和访问令牌，保留安装文件夹里的飞行日志（`logs`）和你自己的地图文件（`mbtiles`）。
 
 ### 从源码运行
 
@@ -246,7 +252,7 @@ npm run test:e2e -- --project=chromium
 bash scripts/make-release.sh X.Y.Z
 ```
 
-这条命令会同步所有版本号，运行前端、单元和契约测试，然后提交、打 tag、推送。GitHub Actions 随后在打了 tag 的提交上跑完整的 CI，构建 Windows 安装包并在 Windows 上启动它，全部通过后才发布 GitHub Release，附安装包和 changelog。Windows 安装包在发布前后还要人工检查，步骤见 [CONTRIBUTING.md](CONTRIBUTING.md#releases)。
+这条命令会同步所有版本号，运行前端、单元和契约测试，然后提交、打 tag、推送。GitHub Actions 随后在打了 tag 的提交上跑完整的 CI，构建 Windows 发布包并用它构建安装程序，在 Windows 上启动这两者，全部通过后才发布 GitHub Release，附这两个文件、校验和与 changelog。Windows 发布包在发布前后还要人工检查，步骤见 [CONTRIBUTING.md](CONTRIBUTING.md#releases)。
 
 本地预览 changelog：
 
@@ -256,7 +262,7 @@ bash scripts/changelog.sh v3.5.0   # 查看 v3.5.0 以来的变更
 
 ## 项目状态
 
-Argus 自 2026 年 11 月起进入维护阶段：修复缺陷和安全问题，不再计划新功能。
+Argus 自 2026 年 11 月起进入维护阶段：修复缺陷和安全问题。此后应维护者要求新增了两项工作：Windows 安装程序（已完成），以及经 MCP 由 AI 助手操作，其中每个会改变飞行器状态的操作都要操作员在页面上批准（进行中）。
 
 **已完成**
 
@@ -273,6 +279,7 @@ Argus 自 2026 年 11 月起进入维护阶段：修复缺陷和安全问题，�
 - 双传输互斥锁（WS 后端 / WebSerial）
 - 云台俯仰/偏航控制
 - Tag 触发的发布流程，自动生成 changelog
+- Windows 安装程序，只为当前用户安装，不需要管理员权限
 
 **不再计划**
 
