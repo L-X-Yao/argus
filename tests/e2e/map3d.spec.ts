@@ -150,10 +150,13 @@ test.describe('3D map', () => {
     await page.getByText(/加载飞行日志|Load Flight Log/).click();
     await (await chooser).setFiles({ name: 'flight.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) });
 
-    for (const at of ['0', '1', '2']) {
+    // Neither bad row is shown anywhere: read as 0, the first would sit on the Greenwich meridian.
+    for (const at of ['0', '1']) {
       await page.locator('input[type="range"]').first().fill(at);
       await page.waitForTimeout(300);
+      await expect(page.locator('.maplibregl-marker')).toHaveCount(0);
     }
+    await page.locator('input[type="range"]').first().fill('2');
     // The readout under the slider is still there, and the last row, a good one, is on the map.
     await expect(page.getByText(/R:0 P:0 Y:90/)).toBeVisible();
     await expect(page.locator('.maplibregl-marker')).toHaveCount(1);

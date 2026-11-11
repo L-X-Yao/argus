@@ -1,6 +1,7 @@
 import type { DroneState, DroneEvent, FlightSummary, Waypoint, Toast, RallyPoint } from './types';
 import { defaultState } from './types';
 import { cleanPositions, cleanRallyPoints, cleanWaypoints, finiteNumber } from './missionIO';
+import { t } from './i18n.svelte';
 
 class AppState {
   drone: DroneState = $state({ ...defaultState });
@@ -143,19 +144,28 @@ export function loadSettings() {
     if (s.mapMode === '2d' || s.mapMode === '3d') app.mapMode = s.mapMode;
     if (s.unitSystem === 'metric' || s.unitSystem === 'imperial') app.unitSystem = s.unitSystem;
   } catch {}
-  // One bad entry discards the list: a route with a point left out is another route.
-  try {
-    const wps = cleanWaypoints(JSON.parse(localStorage.getItem('argus_waypoints') || '[]'), app.defaultAlt);
+  // One bad entry discards the list: a route with a point left out is another route. Said out
+  // loud, or the route would just be gone at the next start.
+  const stored = (key: string, restore: (raw: unknown) => void) => {
+    try {
+      restore(JSON.parse(localStorage.getItem(key) || '[]'));
+    } catch (err) {
+      console.warn(`[storage] ${key} not restored:`, err);
+      addToast(`${t('toast.loadFail')} (${key})`, 'error', 8000);
+    }
+  };
+  stored('argus_waypoints', (raw) => {
+    const wps = cleanWaypoints(raw, app.defaultAlt);
     if (wps.length > 0) app.waypoints = wps;
-  } catch {}
-  try {
-    const fence = cleanPositions(JSON.parse(localStorage.getItem('argus_fence') || '[]'));
+  });
+  stored('argus_fence', (raw) => {
+    const fence = cleanPositions(raw);
     if (fence.length > 0) app.fencePolygon = fence;
-  } catch {}
-  try {
-    const rally = cleanRallyPoints(JSON.parse(localStorage.getItem('argus_rally') || '[]'), app.defaultAlt);
+  });
+  stored('argus_rally', (raw) => {
+    const rally = cleanRallyPoints(raw, app.defaultAlt);
     if (rally.length > 0) app.rallyPoints = rally;
-  } catch {}
+  });
 }
 
 export function saveSettings() {

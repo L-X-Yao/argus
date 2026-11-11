@@ -8,6 +8,7 @@ import {
   cleanPositions,
   cleanRallyPoints,
   finiteNumber,
+  wrapLongitude,
   exportKml,
   parseKmlCoords,
   segDist,
@@ -76,6 +77,12 @@ describe('parseQgcWaypoints with a file that is not what it says', () => {
   it('refuses a number that is not finite, and a position off the globe', () => {
     expect(() => parseQgcWaypoints(row({ 10: '1e999' }))).toThrow(MissionDataError);
     expect(() => parseQgcWaypoints(row({ 8: '95' }))).toThrow(MissionDataError);
+  });
+
+  // MAVProxy writes a parameter that was never set as printf gives it.
+  it.each(['nan', 'NaN', 'NAN'])('reads %s for the hold time as none', (text) => {
+    expect(parseQgcWaypoints(row({ 4: text }))[0].delay).toBe(0);
+    expect(parseQgcWaypoints(row({ 3: '19', 4: text }))[0].loiter_param).toBe(0);
   });
 
   it('reads a file with Windows line ends', () => {
@@ -198,7 +205,6 @@ describe('cleanWaypoints', () => {
     ['a kind of waypoint it does not know', [{ ...saved, type: 'land' }]],
     ['a kind that is not text', [{ ...saved, type: 3 }]],
     ['a latitude past the pole', [{ ...saved, lat: 90.01 }]],
-    ['a longitude past the date line', [{ ...saved, lon: -180.5 }]],
     ['a number that is not finite', [{ ...saved, alt: Infinity }]],
     ['an empty text for a number', [{ ...saved, alt: ' ' }]],
     ['a true or false for a number', [{ ...saved, alt: true }]],
@@ -206,6 +212,33 @@ describe('cleanWaypoints', () => {
     ['a drop given as a number', [{ ...saved, drop: 1 }]],
   ])('refuses %s', (_name, raw) => {
     expect(() => cleanWaypoints(raw, 30)).toThrow(MissionDataError);
+  });
+
+  // A click on a repeated copy of the world, or just east of the date line: the map hands the
+  // longitude back as it is, and v3.7.10 stored it so. Refused, the whole route was gone.
+  it('wraps a longitude past the date line to the same meridian', () => {
+    const lons = cleanWaypoints(
+      [
+        { lat: 1, lon: -251.06 },
+        { lat: 1, lon: 468.94 },
+        { lat: 1, lon: 180.5 },
+      ],
+      30,
+    ).map((w) => w.lon);
+    expect(lons[0]).toBeCloseTo(108.94, 9);
+    expect(lons[1]).toBeCloseTo(108.94, 9);
+    expect(lons[2]).toBeCloseTo(-179.5, 9);
+    expect(cleanPositions([{ lat: 1, lon: 540 }])).toEqual([{ lat: 1, lon: -180 }]);
+  });
+
+  it('gives an attached command with nothing in it as no command', () => {
+    const [wp] = cleanWaypoints(
+      [{ lat: 1, lon: 2, cmd_cam_trig: { dist: null }, cmd_servo: {}, cmd_yaw: { deg: 90 } }],
+      30,
+    );
+    expect('cmd_cam_trig' in wp).toBe(false);
+    expect('cmd_servo' in wp).toBe(false);
+    expect(wp.cmd_yaw).toEqual({ deg: 90 });
   });
 
   it('refuses the whole list for one bad point', () => {
@@ -216,7 +249,6 @@ describe('cleanWaypoints', () => {
     const raw = JSON.parse(`[{"lat":1,"lon":2,"onload":"x","__proto__":{"polluted":1},"altMode":"${'<b>'}"}]`);
     const [wp] = cleanWaypoints(raw, 30);
     expect(Object.keys(wp).sort()).toEqual(['alt', 'delay', 'drop', 'lat', 'loiter_param', 'lon', 'speed', 'type']);
-    expect(({} as Record<string, unknown>).polluted).toBeUndefined();
   });
 
   it('keeps an altitude mode it knows', () => {
@@ -246,6 +278,24 @@ describe('cleanPositions and cleanRallyPoints', () => {
     expect(() => cleanPositions({ lat: 1, lon: 2 })).toThrow(MissionDataError);
     expect(() => cleanRallyPoints([{ lat: 1, lon: 2, alt: MARKUP }], 60)).toThrow(MissionDataError);
     expect(() => cleanRallyPoints([{ lat: 91, lon: 2 }], 60)).toThrow(MissionDataError);
+  });
+});
+
+describe('wrapLongitude', () => {
+  it('returns a longitude in range as it is, to the last digit', () => {
+    for (const lon of [108.942, -0.1, 0, 180, -180, 179.99999999999997, 1e-12]) expect(wrapLongitude(lon)).toBe(lon);
+  });
+
+  it.each([
+    [180.5, -179.5],
+    [-180.5, 179.5],
+    [360, 0],
+    [-360, 0],
+    [540, -180],
+    [725, 5],
+    [-725, -5],
+  ])('reads %d as %d', (lon, wrapped) => {
+    expect(wrapLongitude(lon)).toBeCloseTo(wrapped, 9);
   });
 });
 

@@ -1,6 +1,7 @@
 """Tests for backend/app.py — HTTP route coverage via TestClient."""
 
 import subprocess
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -10,6 +11,7 @@ from backend.app import DIST_DIR, app
 from backend.drone_link import DroneLink
 from backend.ws_manager import WSManager
 
+ROOT = Path(__file__).resolve().parent.parent
 client = TestClient(app, base_url="http://localhost", raise_server_exceptions=False)
 
 
@@ -380,19 +382,26 @@ class TestContentPolicy:
         for name, sources in self._policy().items():
             assert not {"*", "http:", "https:"} & set(sources), name
 
-    def test_the_other_server_is_the_one_the_page_reads(self):
-        """Elevation for the 3D view: src/components/map/Map3DView.svelte."""
+    def test_the_other_server_is_the_bucket_the_page_reads(self):
+        """Elevation for the 3D view. The host alone would admit every bucket on it."""
         named = {s for sources in self._policy().values() for s in sources if "." in s}
-        assert named == {"https://s3.amazonaws.com"}
+        assert named == {"https://s3.amazonaws.com/elevation-tiles-prod/"}
+        source = (ROOT / "src" / "components" / "map" / "Map3DView.svelte").read_text(encoding="utf-8")
+        assert "'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'" in source
 
-    @pytest.mark.skipif(not DIST_DIR.exists(), reason="the page is served from a build: e2e checks it there")
-    def test_it_comes_with_the_page_and_with_nothing_else(self):
+    def test_it_goes_with_nothing_but_the_page(self):
+        """/docs loads its scripts from a CDN, and an API answer is no page."""
+        assert client.get("/docs").status_code == 200
+        assert "content-security-policy" not in client.get("/docs").headers
+        assert "content-security-policy" not in client.get("/api/version").headers
+
+    # CI runs these tests before it builds: tests/e2e/smoke.spec.ts and scripts/smoke_package.py
+    # are where the header on the page is checked there.
+    @pytest.mark.skipif(not DIST_DIR.exists(), reason="the page is served from a build")
+    def test_it_comes_with_the_page(self):
         from backend.app import CONTENT_POLICY
 
         assert client.get("/").headers["content-security-policy"] == CONTENT_POLICY
-        # /docs loads its scripts from a CDN, and an API answer is no page.
-        assert "content-security-policy" not in client.get("/docs").headers
-        assert "content-security-policy" not in client.get("/api/version").headers
 
 
 class TestWebSocketGuards:

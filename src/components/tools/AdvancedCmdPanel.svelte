@@ -38,6 +38,21 @@
       return;
     }
 
+    // An emptied number box holds null, and a command without its number is none: the two
+    // links would not even agree on what to send for it.
+    const given: Record<CmdType, unknown[]> = {
+      servo: [servoNum, servoPwm],
+      roi: [roiLat, roiLon, roiAlt],
+      cam_trig: [camDist],
+      delay: [delaySec],
+      yaw: [yawDeg],
+      vtol_transition: [],
+    };
+    if (!given[selected].every((v) => typeof v === 'number' && Number.isFinite(v))) {
+      addToast(t('toast.invalidValue'), 'warn');
+      return;
+    }
+
     const idx = Math.min(insertAfter, app.waypoints.length - 1);
     const targetWp = app.waypoints[idx];
 

@@ -6,6 +6,7 @@
   import { t } from '../../lib/i18n.svelte';
   import { isOfflineSource, tileUrl } from '../../lib/backend';
   import { TERRAIN_ATTRIBUTION, tileAttribution } from '../../lib/tileAttribution';
+  import { cssNumber } from '../../lib/html';
   import { Ruler, Square, ShieldAlert, Grid3x3, X as XIcon } from '@lucide/svelte';
   import { segDist } from '../../lib/missionIO';
   import { polygonArea } from '../../lib/survey';
@@ -830,7 +831,7 @@
       el.title = title;
       const arrow = document.createElement('div');
       arrow.className = 'adsb-arrow';
-      arrow.style.cssText = `transform:rotate(${a.hdg}deg);transform-origin:center`;
+      arrow.style.cssText = `transform:rotate(${cssNumber(a.hdg)}deg);transform-origin:center`;
       const svg = createSvgElement(
         '<svg xmlns="http://www.w3.org/2000/svg" viewBox="-10 -10 20 20" width="20" height="20">' +
           '<polygon points="0,-8 -5,6 0,3 5,6" fill="#ffc107" stroke="#333" stroke-width="0.5"/></svg>',

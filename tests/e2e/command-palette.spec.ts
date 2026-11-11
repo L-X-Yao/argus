@@ -165,3 +165,34 @@ test.describe('Annotations', () => {
     await expect(page.getByText('34.260000, 108.950000')).toBeVisible();
   });
 });
+
+test.describe('Advanced commands', () => {
+  test('a command without its number is not attached to a waypoint', async ({ page }) => {
+    const stored = () =>
+      page.evaluate(() => JSON.parse(localStorage.getItem('argus_waypoints') || '[]')[0] as Record<string, unknown>);
+    await page.goto('/');
+    await page.evaluate(() => {
+      localStorage.clear();
+      const wp = { lat: 34.251, lon: 108.931, alt: 40, drop: false, delay: 0, speed: 0, type: 'wp', loiter_param: 0 };
+      localStorage.setItem('argus_waypoints', JSON.stringify([wp]));
+    });
+    await page.reload();
+    await page.waitForTimeout(1000);
+    await page.keyboard.press('Control+k');
+    await page.waitForTimeout(500);
+    await page.locator('input[placeholder]').last().fill('高级指令');
+    await page.waitForTimeout(300);
+    await page.keyboard.press('Enter');
+
+    await page.getByRole('button', { name: '相机触发间隔' }).click();
+    // An emptied number box holds null, and v3.7.10 stored a trigger with a distance of null.
+    await page.locator('#ac-cam-dist').fill('');
+    await page.getByRole('button', { name: '在航点后插入' }).click();
+    await expect(page.getByText('无效数值')).toBeVisible();
+    expect(await stored()).not.toHaveProperty('cmd_cam_trig');
+
+    await page.locator('#ac-cam-dist').fill('25');
+    await page.getByRole('button', { name: '在航点后插入' }).click();
+    await expect.poll(stored).toHaveProperty('cmd_cam_trig', { dist: 25 });
+  });
+});

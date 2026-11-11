@@ -13,6 +13,7 @@
   } from '../../lib/stores.svelte';
   import { t } from '../../lib/i18n.svelte';
   import { groundAboveHome, adjustWaypointsForTerrain, interpolateRoute, routeKey } from '../../lib/terrain';
+  import type { Waypoint } from '../../lib/types';
 
   function fitAfterLoad() {
     requestAnimationFrame(() => app.fitRouteFlag++);
@@ -22,6 +23,7 @@
   import { vehicleKind } from '../../lib/vehicleModes';
   import {
     AltitudeFrameError,
+    MissionDataError,
     cleanPositions,
     cleanRallyPoints,
     cleanWaypoints,
@@ -248,14 +250,16 @@
             const d = JSON.parse(text);
             // Not 0, as before. Below 0 is an altitude too: a submarine's.
             const alt = finiteNumber(d?.alt) || null;
-            const wps = cleanWaypoints(d?.waypoints, alt ?? app.defaultAlt);
+            const wps = withRoute(cleanWaypoints(d?.waypoints, alt ?? app.defaultAlt));
             pushUndo();
             app.waypoints = wps;
             if (alt !== null) app.defaultAlt = alt;
           }
           fitAfterLoad();
         } catch (err) {
-          addToast(t(err instanceof AltitudeFrameError ? 'wp.frameRefused' : 'toast.loadFail'), 'error', 8000);
+          // Which field it was, for whoever has to mend the file.
+          const what = err instanceof MissionDataError ? `: ${err.message}` : '';
+          addToast(t(err instanceof AltitudeFrameError ? 'wp.frameRefused' : 'toast.loadFail') + what, 'error', 8000);
         }
       };
       reader.readAsText(file);
@@ -291,8 +295,8 @@
       wps = cleanWaypoints(m.waypoints, defaultAlt);
       fence = cleanPositions(m.fence ?? []);
       rally = cleanRallyPoints(m.rally ?? [], defaultAlt);
-    } catch {
-      addToast(t('toast.loadFail'), 'error', 8000);
+    } catch (err) {
+      addToast(t('toast.loadFail') + (err instanceof MissionDataError ? `: ${err.message}` : ''), 'error', 8000);
       return;
     }
     pushUndo();
@@ -314,14 +318,21 @@
     libraryList = await listMissions();
   }
 
+  // A file with nothing to fly in it (a fence, a structure scan, a takeoff and nothing else)
+  // is refused: loaded, it would put an empty route in the place of the one on the map.
+  function withRoute(wps: Waypoint[]): Waypoint[] {
+    if (wps.length === 0) throw new MissionDataError('no waypoints');
+    return wps;
+  }
+
   function handleQgcWaypoints(text: string) {
-    const wps = parseQgcWaypoints(text);
+    const wps = withRoute(parseQgcWaypoints(text));
     pushUndo();
     app.waypoints = wps;
   }
 
   function handleQgcPlan(text: string) {
-    const wps = parseQgcPlan(text);
+    const wps = withRoute(parseQgcPlan(text));
     pushUndo();
     app.waypoints = wps;
   }

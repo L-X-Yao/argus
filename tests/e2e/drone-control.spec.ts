@@ -10,6 +10,20 @@ test.describe('Drone control (connected)', () => {
     await disconnectIfConnected(page);
   });
 
+  test('the vehicle marker opens a popup, and a click on the position copies it', async ({ page, context }) => {
+    await context.grantPermissions(['clipboard-read', 'clipboard-write']);
+    const marker = page.locator('.drone-icon');
+    await expect(marker).toBeVisible({ timeout: 15000 });
+    await marker.click();
+
+    const position = page.locator('.leaflet-popup-content .drone-coord');
+    await expect(position).toHaveText(/^-?\d+\.\d{6}, -?\d+\.\d{6}$/);
+    const shown = await position.innerText();
+    // The page's content policy runs no onclick attribute: this is a listener.
+    await position.click();
+    await expect.poll(() => page.evaluate(() => navigator.clipboard.readText())).toBe(shown);
+  });
+
   test('control panel opens via Controls button', async ({ page }) => {
     const ctrlBtn = page.locator('button', { hasText: /操控|控制|Controls/ }).first();
     if (await ctrlBtn.isVisible()) {

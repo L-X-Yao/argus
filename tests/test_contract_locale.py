@@ -93,7 +93,6 @@ KNOWN_ORPHAN_LOCALE_KEYS: set[str] = {
     "settings.zhLabel",
     "toast.armFail",
     "toast.arming",
-    "toast.invalidValue",
     "toast.missionStart",
     "toast.outOfRange",
     "toast.takeoffFail",

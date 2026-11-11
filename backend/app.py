@@ -31,17 +31,19 @@ _REVALIDATE = {"Cache-Control": "no-cache"}
 # tooltips and popups with innerHTML, from mission files, browser storage and telemetry.
 # Sent with the page only: /docs loads its own scripts from a CDN.
 #   style-src 'unsafe-inline'   the map libraries and the components set style attributes
-#   s3.amazonaws.com            elevation for the 3D view, src/components/map/Map3DView.svelte
-#   connect-src ws: wss:        'self' covers a WebSocket to this server in newer browsers only
+#   ELEVATION                   the one other server the page reads, for the 3D view
+#                               (src/components/map/Map3DView.svelte): that bucket, not the host
+#   connect-src ws: wss:        'self' covers a WebSocket to this server in newer browsers only,
+#                               and behind a proxy the Host header is not the page's address
+ELEVATION = "https://s3.amazonaws.com/elevation-tiles-prod/"
 CONTENT_POLICY = "; ".join(
     (
         "default-src 'self'",
         "script-src 'self'",
         "style-src 'self' 'unsafe-inline'",
-        "img-src 'self' data: blob: https://s3.amazonaws.com",
-        "media-src 'self' data: blob:",
+        f"img-src 'self' data: blob: {ELEVATION}",
         "font-src 'self' data:",
-        "connect-src 'self' ws: wss: https://s3.amazonaws.com",
+        f"connect-src 'self' ws: wss: {ELEVATION}",
         "worker-src 'self'",
         "manifest-src 'self'",
         "object-src 'none'",

@@ -47,12 +47,25 @@ function optional(v: unknown, fallback: number, field: string): number {
 
 function position(raw: Fields): { lat: number; lon: number } {
   const lat = required(raw.lat, 'lat');
-  const lon = required(raw.lon, 'lon');
-  if (Math.abs(lat) > 90 || Math.abs(lon) > 180) throw new MissionDataError('position');
-  return { lat, lon };
+  if (Math.abs(lat) > 90) throw new MissionDataError('position');
+  return { lat, lon: wrapLongitude(required(raw.lon, 'lon')) };
 }
 
-/** The numbers of one attached command. A field left out stays out: the upload has the default. */
+/**
+ * The same meridian between -180 and 180. A point set on a repeated copy of the world, or just
+ * east of the date line, comes back from the map with a longitude past 180 and is stored that
+ * way: the upload refuses it, and so would a check here, with the whole route. A longitude in
+ * range is returned as it is, to the last digit.
+ */
+export function wrapLongitude(lon: number): number {
+  return Math.abs(lon) <= 180 ? lon : ((((lon + 180) % 360) + 360) % 360) - 180;
+}
+
+/**
+ * The numbers of one attached command. A field left out stays out: the upload has the default,
+ * the same on both links. With every field left out there is no command: the backend passes
+ * over an empty one, and the page would send it over USB with defaults alone.
+ */
 function command<K extends string>(raw: unknown, keys: readonly K[], field: string): Record<K, number> | undefined {
   if (raw === undefined || raw === null) return undefined;
   if (!isFields(raw)) throw new MissionDataError(field);
@@ -60,7 +73,7 @@ function command<K extends string>(raw: unknown, keys: readonly K[], field: stri
   for (const key of keys) {
     if (raw[key] !== undefined && raw[key] !== null) out[key] = required(raw[key], `${field}.${key}`);
   }
-  return out;
+  return Object.keys(out).length > 0 ? out : undefined;
 }
 
 function list(raw: unknown, field: string): Fields[] {
@@ -128,7 +141,8 @@ export function parseQgcWaypoints(text: string): Waypoint[] {
     // nothing at all.
     const at = position({ lat: cols[8], lon: cols[9] });
     if (Math.abs(at.lat) < 0.001) continue;
-    const p1 = required(cols[4], 'param1');
+    // "nan" is how a parameter that was never set gets written, by printf.
+    const p1 = /^nan$/i.test(cols[4].trim()) ? 0 : required(cols[4], 'param1');
     const type: Waypoint['type'] =
       cmd === 18 ? 'loiter_turns' : cmd === 19 ? 'loiter_time' : cmd === 82 ? 'spline' : 'wp';
     wps.push({

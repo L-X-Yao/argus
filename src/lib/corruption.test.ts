@@ -249,8 +249,29 @@ describe('loadSettings with stored points of the wrong type', () => {
       'localStorage',
       makeStorage({ argus_waypoints: JSON.stringify([point, { ...point, [field]: MARKUP }]) }),
     );
+    app.toasts = [];
     expect(() => loadSettings()).not.toThrow();
     expect(app.waypoints).toEqual([]);
+    // And says so: a route that is just gone at the next start is the worse surprise.
+    expect(app.toasts.map((toast) => [toast.level, toast.text.includes('argus_waypoints')])).toEqual([['error', true]]);
+  });
+
+  it('says nothing when there is nothing wrong', () => {
+    vi.stubGlobal('localStorage', makeStorage({ argus_waypoints: JSON.stringify([point]) }));
+    app.toasts = [];
+    loadSettings();
+    expect(app.toasts).toEqual([]);
+  });
+
+  // What v3.7.10 stored for a point set on a repeated copy of the world.
+  it('restores a route with a longitude past the date line, on the same meridian', () => {
+    vi.stubGlobal(
+      'localStorage',
+      makeStorage({ argus_waypoints: JSON.stringify([point, { ...point, lon: -251.06 }]) }),
+    );
+    loadSettings();
+    expect(app.waypoints).toHaveLength(2);
+    expect(app.waypoints[1].lon).toBeCloseTo(108.94, 9);
   });
 
   it('restores numbers for waypoint fields stored as text', () => {

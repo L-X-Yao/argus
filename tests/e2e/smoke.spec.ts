@@ -6,6 +6,8 @@ test.describe('Content policy', () => {
   test('markup that gets into the page runs no script', async ({ page }) => {
     const response = await page.goto('/');
     expect(response!.headers()['content-security-policy']).toContain("script-src 'self'");
+    // It goes with the page and with nothing else: the API's own pages load scripts from a CDN.
+    expect((await page.request.get('/docs')).headers()['content-security-policy']).toBeUndefined();
 
     const refused = await page.evaluate(
       () =>

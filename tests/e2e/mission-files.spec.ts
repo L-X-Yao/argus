@@ -134,14 +134,38 @@ for (const field of ['delay', 'alt', 'loiter_param']) {
   });
 }
 
-test('a mission file that holds no route changes nothing', async ({ page }) => {
+// Loaded, each of these put an empty route in the place of the one on the map.
+const NO_ROUTE: [string, string, string][] = [
+  ['a fence file picked by mistake', 'fence.json', JSON.stringify([{ lat: 1, lon: 2 }])],
+  ['a mission with no waypoints', 'empty.json', JSON.stringify({ waypoints: [], alt: 30 })],
+  ['a plan with a takeoff and nothing else', 'takeoff.plan', JSON.stringify({ mission: { items: [simple(22, 34.25, 30)] } })],
+  ['a waypoints file with its home row and nothing else', 'home.waypoints', WAYPOINTS.split('\r\n').slice(0, 2).join('\r\n')],
+];
+for (const [what, name, text] of NO_ROUTE) {
+  test(`${what} changes nothing`, async ({ page }) => {
+    await openPlan(page);
+    await pick(page, /^加载$|^Load$/, 'mission.waypoints', WAYPOINTS);
+    await expect(rows(page)).toHaveCount(3);
+    await pick(page, /^加载$|^Load$/, name, text);
+    await expect(page.getByText(/任务加载失败|Mission load failed/)).toBeVisible();
+    await expect(rows(page)).toHaveCount(3);
+  });
+}
+
+// A point set on a repeated copy of the world is stored with a longitude past 180. Refused, the
+// file Argus itself had saved would not load, and the stored route was gone at the next start.
+test('a mission with a longitude past the date line loads on the same meridian', async ({ page }) => {
   await openPlan(page);
-  await pick(page, /^加载$|^Load$/, 'mission.waypoints', WAYPOINTS);
-  await expect(rows(page)).toHaveCount(3);
-  // A fence file, picked by mistake.
-  await pick(page, /^加载$|^Load$/, 'fence.json', JSON.stringify([{ lat: 1, lon: 2 }]));
-  await expect(page.getByText(/任务加载失败|Mission load failed/)).toBeVisible();
-  await expect(rows(page)).toHaveCount(3);
+  const mission = { waypoints: [point(), point({ lat: 34.252, lon: -251.069 })], alt: 40 };
+  await pick(page, /^加载$|^Load$/, 'mission.json', JSON.stringify(mission));
+  await expect(rows(page)).toHaveCount(2);
+  await expect(rows(page).nth(1)).toContainText('34.25200,108.93100');
+});
+
+test('a refused file names the field that was wrong', async ({ page }) => {
+  await openPlan(page);
+  await pick(page, /^加载$|^Load$/, 'mission.json', JSON.stringify({ waypoints: [point({ speed: 'fast' })] }));
+  await expect(page.getByText(/(任务加载失败|Mission load failed): speed/)).toBeVisible();
 });
 
 test('a .plan file with markup as a parameter is refused', async ({ page }) => {

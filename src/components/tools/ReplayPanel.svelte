@@ -34,6 +34,9 @@
   // A log names the type of each of its own columns, and a CSV cell can hold anything: what
   // is not a finite number is 0 here. The map and the readout below call number methods on a row.
   const num = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
+  // A coordinate that did not parse stays out of range, so that emitPosition passes the row
+  // over: as 0 it would put the marker on the Greenwich meridian.
+  const coordinate = (v: unknown): number => (typeof v === 'number' && Number.isFinite(v) ? v : Number.NaN);
 
   let rows: LogRow[] = $state([]);
   let playing = $state(false);
@@ -90,8 +93,8 @@
         roll: num(a.fields['Roll']),
         pitch: num(a.fields['Pitch']),
         yaw: num(a.fields['Yaw']),
-        lat: num(g.fields['Lat']),
-        lon: num(g.fields['Lng']),
+        lat: coordinate(g.fields['Lat']),
+        lon: coordinate(g.fields['Lng']),
         alt_rel: num(g.fields['Alt']),
         alt_msl: num(g.fields['Alt']),
         gs: num(g.fields['Spd']),
@@ -131,8 +134,8 @@
         roll: num(parseFloat(cols[1])),
         pitch: num(parseFloat(cols[2])),
         yaw: num(parseFloat(cols[3])),
-        lat: num(parseFloat(cols[4])),
-        lon: num(parseFloat(cols[5])),
+        lat: coordinate(parseFloat(cols[4])),
+        lon: coordinate(parseFloat(cols[5])),
         alt_rel: num(parseFloat(cols[6])),
         alt_msl: num(parseFloat(cols[7])),
         gs: num(parseFloat(cols[8])),

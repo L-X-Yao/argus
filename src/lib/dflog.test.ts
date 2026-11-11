@@ -404,8 +404,9 @@ describe('parseDFLog on a damaged log', () => {
     return out.buffer;
   };
 
-  // The length counts the 3-byte header, so 0, 1 and 2 step backwards. Without the check this
-  // test does not fail: it never ends, and takes the page down the same way.
+  // The length counts the 3-byte header, so 0, 1 and 2 step backwards: 0 onto the same header
+  // for ever, 1 and 2 into it, which reads the header as a message. Without the check the first
+  // of these does not fail: it never ends, and takes the page down the same way.
   it.each([0, 1, 2])('ends on a format that declares a length of %i', (length) => {
     const log = parseDFLog(join(fmt(1, length, 'BAD', '', ''), new Uint8Array([0xa3, 0x95, 1, 0, 0])));
     expect(log.messages).toEqual([]);
