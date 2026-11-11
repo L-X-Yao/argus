@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "argus-gcs"
 version = "3.7.9"
-description = "Universal web-based ground control station for MAVLink drones"
+description = "Web-based ground control station for ArduPilot vehicles"
 readme = "README.md"
 license = "MIT"
 authors = [{name = "L-X-Yao", email = "lsc1476907630@gmail.com"}]

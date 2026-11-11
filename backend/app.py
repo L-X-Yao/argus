@@ -37,7 +37,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Argus GCS API",
-    description="Universal Web Ground Control Station — REST API for MAVLink vehicle control",
+    description="Web ground control station for ArduPilot vehicles: REST API",
     version=VERSION,
     lifespan=lifespan,
 )

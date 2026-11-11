@@ -165,7 +165,7 @@ Real FC here means the route was in use during a session with a real flight cont
 | `GET /api/video` | Video stream | 视频流 | Simulator | Integration tests. 2026-11-10: real ffmpeg, an HTTP test stream at a private address came out as MJPEG. RTSP by its command line only, no real camera |
 | `GET /api/video/stop` | Stop video | 停止视频 | Simulator | Integration tests, no real camera |
 | `POST /api/auth/generate` | Generate a token | 生成 Token | Simulator | Integration tests |
-| `POST /api/tile_bulk_download` | Download tiles for offline use | 批量下载瓦片 | Simulator | Integration tests: counts tiles. Whether a map server answers is up to it |
+| `POST /api/tile_bulk_download` | Download tiles for offline use | 批量下载瓦片 | Simulator | Integration tests: counts tiles, and refuses OpenStreetMap, whose server forbids bulk download. Whether a map server answers is up to it |
 | `GET /api/mbtiles/list` | Offline map list | 离线地图列表 | Simulator | Integration tests with a real file |
 | `GET /api/mbtiles/{name}/{z}/{x}/{y}` | Offline map tiles | 离线地图瓦片 | Simulator | Integration tests with a real file |
 | `GET /api/terrain/elevation` | Terrain height | 地形高度 | Simulator | Integration tests against the real terrain server |
@@ -279,8 +279,8 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 | Plane and VTOL | 固定翼和 VTOL | SITL | CI: a plain plane and a QuadPlane fly a whole mission on SITL, the QuadPlane with VTOL takeoff, transition and VTOL landing. Real telemetry 2026-05 |
 | Rover | 地面车 | SITL | CI: drives a whole mission and comes back on SITL |
 | Sub | 水下机器人 | SITL | CI: dives, runs a whole mission and surfaces on SITL |
-| 2D map | 2D 地图 | Simulator | e2e, and real Edge on Windows 2026-11-06. Every source answered with a real tile 2026-11-06, except Tianditu, which needs a key of your own |
-| 3D map | 3D 地图 | Simulator | e2e, and real Edge on Windows with a real GPU 2026-11-06 |
+| 2D map | 2D 地图 | Simulator | e2e, and real Edge on Windows 2026-11-06. Every source answered with a real tile 2026-11-06, except Tianditu, which needs a key of your own. e2e 2026-11-11: the credit of the map server shows clear of the events bar, and the street layer of a source without a label layer shows (it was blank until v3.7.9) |
+| 3D map | 3D 地图 | Simulator | e2e, and real Edge on Windows with a real GPU 2026-11-06. e2e 2026-11-11: the credit of the map and terrain servers shows unfolded |
 | PWA and offline use | PWA 和离线 | Simulator | e2e, and real Edge on Windows 2026-11-06 |
 | Several browser clients | 多浏览器客户端 | Simulator | Integration tests |
 | Video and AR overlay | 视频和 AR 叠加 | Simulator | Integration tests, and real ffmpeg on an HTTP test stream 2026-11-10. No real camera |

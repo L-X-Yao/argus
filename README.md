@@ -2,42 +2,42 @@
 
 [中文](README.zh.md) | **English**
 
-> Universal web-based ground control station for MAVLink drones.
+> Web-based ground control station for ArduPilot vehicles.
 
 [![CI](https://github.com/L-X-Yao/argus/actions/workflows/ci.yml/badge.svg)](https://github.com/L-X-Yao/argus/actions/workflows/ci.yml)
 ![Version](https://img.shields.io/github/v/tag/L-X-Yao/argus?label=version&color=blue)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-![Tests](https://img.shields.io/badge/tests-2500%2B%20passing-brightgreen.svg)
+![Tests](https://img.shields.io/badge/tests-3000%2B%20passing-brightgreen.svg)
 ![i18n](https://img.shields.io/badge/i18n-10%20languages-orange.svg)
 
 <p align="center"><img src="docs/screenshots/hero.png" alt="Argus GCS — map, HUD, and telemetry" width="900"></p>
 
 ## What & Why
 
-Argus is a universal **web GCS** — one browser interface for MAVLink drones, on any platform (desktop, tablet, mobile), in 10 languages. There is no hosted version yet: run the Python backend, or unzip the Windows package (Python included), then open it in a browser.
+Argus is a **web GCS** for ArduPilot: one browser interface on desktop, tablet and phone, in 10 languages. There is no hosted version: run the Python backend yourself, or unzip the Windows package (Python included), then open it in a browser.
 
-> **Status**: ArduPilot is verified on ArduCopter SITL in CI and on a real flight controller on the bench, but Argus has not been through proper flight testing. [docs/VERIFICATION.md](docs/VERIFICATION.md) lists what has been tested and how, feature by feature. PX4 has frontend adapter scaffolding in `src/lib/fc/` and the backend reads `HEARTBEAT.autopilot`, but end-to-end wiring is incomplete — see `CLAUDE.md ## PX4 Status`.
+> **Status**: ArduPilot is verified on ArduCopter SITL in CI and on a real flight controller on the bench, but Argus has not been through proper flight testing. [docs/VERIFICATION.md](docs/VERIFICATION.md) lists what has been tested and how, feature by feature. PX4 is not supported: Argus sends a PX4 vehicle no commands.
 >
 > **Maintenance only since November 2026**: bugs and security problems get fixed, and no new features are planned. See [Project Status](#project-status).
 
-Why another GCS:
+Why another GCS: Argus runs in a browser tab, so the device in your hand needs nothing installed, and it can reach a flight controller straight over USB (WebSerial).
 
-| Existing GCS | Limitation |
+| Existing GCS | How it differs |
 |---|---|
-| QGroundControl | Native app, heavy install, no first-class web build |
-| Mission Planner | Windows-only, legacy UI |
-| Cloud platforms (FlytBase, ADOS) | Vendor lock-in, closed source |
+| [QGroundControl](https://qgroundcontrol.com/) | A native application to install on each device |
+| [Mission Planner](https://ardupilot.org/planner/) | A Windows application |
+| Cloud platforms such as FlytBase | Closed source, tied to one vendor |
 
-Argus fills the gap: **open-source + web-native**.
+To fly real missions today, use QGroundControl or Mission Planner: both are flight proven and actively developed, and Argus is neither.
 
 ## Features
 
 | Category | Features |
 |---|---|
 | **Connections** | TCP / UDP / Serial / WebSerial (browser-direct USB, no backend needed for telemetry + basic control) |
-| **Protocols** | MAVLink v2 (ArduPilot verified on SITL and on the bench, not flight-tested; PX4 adapter scaffolded, unwired) |
+| **Protocols** | MAVLink v2, ArduPilot only (verified on SITL and on the bench, not flight-tested) |
 | **Vehicles** | Copter, Plane, VTOL, Rover, Sub |
-| **Map** | 8 tile sources (Amap, Google, OSM, Esri, CartoDB; Tianditu with a key of your own) + 3D terrain (MapLibre GL) + offline mbtiles |
+| **Map** | 8 tile sources (Amap, Google, OSM, Esri, CartoDB; Tianditu with a key of your own), each under [its own terms](#map-data) + 3D terrain (MapLibre GL) + offline mbtiles |
 | **Mission** | WP / Spline / Loiter / Survey grid / Crosshatch / Spiral / Orbit + terrain profile with clearance check |
 | **Formats** | `.waypoints` (MP) / `.plan` (QGC) / `.gpx` / `.kml` import & export |
 | **Parameters** | Metadata-driven UI (desc/range/units/enum/bitmask), tree view, diff export, default reset |
@@ -50,34 +50,47 @@ Argus fills the gap: **open-source + web-native**.
 | **Audio** | Localized voice callouts (mode, battery, altitude, waypoints) in all 10 languages |
 | **i18n** | 10 languages (zh, en, ja, ko, de, fr, es, pt, ru, ar) + RTL |
 | **Offline** | PWA with service worker, mbtiles support, tile caching (5000-entry LRU) |
-| **Desktop** | Tauri v2 config included; app icons are not committed yet and no CI job builds it |
+| **Desktop** | A Tauri v2 config is in `src-tauri/`. It has never been built: no icons, no CI job, and none planned |
 | **Security** | Token auth, cross-site and DNS-rebinding request blocking, SSRF + path-traversal guards, statustext filtering |
 
-## Quick Start
+## Install
 
-One-time setup:
+### Windows package
+
+For Windows 10 and 11, x64. Python and every library are inside the zip, and nothing is installed.
+
+1. Download `Argus_GCS_vX.Y.Z_amd64.zip` and `SHA256SUMS.txt` from the [latest release](https://github.com/L-X-Yao/argus/releases/latest).
+2. Check the download, because the zip is not code-signed:
+
+   ```powershell
+   (Get-FileHash Argus_GCS_vX.Y.Z_amd64.zip -Algorithm SHA256).Hash   # the same as in SHA256SUMS.txt
+   gh attestation verify Argus_GCS_vX.Y.Z_amd64.zip --repo L-X-Yao/argus   # optional, needs the GitHub CLI
+   ```
+
+3. Unzip it and double-click `Argus地面站.bat` ("Argus ground station"). A browser opens `http://127.0.0.1:8100`.
+
+`启动仿真器.bat` ("start simulator") starts the built-in simulator. `README.txt` in the zip repeats these steps.
+
+### From source
+
+For Linux, macOS and Windows. Needs Python 3.10 or newer and Node.js. CI runs on Node 24 and Python 3.14, which is also the Python the Windows package bundles. Video needs `ffmpeg` on the PATH.
 
 ```bash
-npm install        # Frontend dependencies
-pip install -e .   # Backend (uses pyproject.toml — pulls all required deps)
+git clone https://github.com/L-X-Yao/argus && cd argus
+npm install && npm run build   # the web interface, into dist/
+pip install -e .               # the backend and its dependencies
+python run.py                  # serves everything at http://127.0.0.1:8100
 ```
 
-Needs Python 3.10 or newer. CI runs on 3.14, which is also what the Windows package bundles.
+## Connect
 
-> **Windows / recent Node note**: Node ≥17 may resolve `localhost` to IPv6 `::1`, while the backend binds IPv4-only `127.0.0.1` — use `127.0.0.1` in dev URLs.
+Argus listens on this machine only. To reach it from another device, read [SECURITY.md](SECURITY.md) first: that needs a token.
 
-### Option 1 — Real hardware (USB to Pixhawk)
+### Real hardware
 
-```bash
-python run.py                  # Backend at http://127.0.0.1:8100
-# In another shell:
-npm run dev                    # Dev server at http://127.0.0.1:5173
-# Open the URL, plug in USB, pick your serial port from the dropdown
-```
+Plug the flight controller in, open `http://127.0.0.1:8100`, and pick the serial port from the dropdown. A network link takes an address instead, such as `tcp:192.168.1.10:5760` or `udp:14550`.
 
-For production: `npm run build` builds the bundle into `dist/`, then `python run.py` serves it on `:8100`.
-
-### Option 2 — ArduPilot SITL
+### ArduPilot SITL
 
 ```bash
 sim_vehicle.py -v ArduCopter --out=udp:127.0.0.1:14550
@@ -85,7 +98,7 @@ python run.py
 # Open the UI, click the "SITL" quick-connect button
 ```
 
-### Option 3 — Built-in MAVLink simulator (no FC, no SITL)
+### Built-in simulator (no FC, no SITL)
 
 ```bash
 python run.py --sim            # Starts backend + simulator.py together
@@ -97,6 +110,14 @@ The simulator (`scripts/simulator.py`) emits realistic telemetry (GPS, attitude,
 ### WebSerial (direct USB)
 
 Open Argus in Chrome/Edge, click the **USB** button, pick your flight controller. Telemetry, arm/disarm/mode/RTL, param read+write, mission upload/download/clear, fence upload, log list/download, and all 5 calibration types flow directly via WebSerial and the built-in TypeScript MAVLink v2 codec. Map tiles, terrain profiles, parameter descriptions, video, and firmware file storage still use the Python backend; without it, new map tiles cannot load. RTK (NTRIP) and the MAVLink console need the FC connected through the backend, so they are unavailable over WebSerial.
+
+### Map data
+
+Map tiles, terrain heights and ArduPilot's firmware and parameter lists are not part of Argus. The backend fetches them from other parties' servers when you use the feature, under the terms of each server: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) lists them.
+
+- The map shows the credit of the server it comes from, and Argus names itself to every server (`Argus-GCS/<version>`).
+- The AutoNavi (Amap) source, which is the default, and the Google sources are not published APIs: they are the addresses those companies' own web maps read. Choose another source in Settings if that matters to you.
+- OpenStreetMap forbids bulk download from its tile server, so the Offline Maps panel does not offer it. A map file of your own (`.mbtiles` in `mbtiles/`) works without any server.
 
 ## Architecture
 
@@ -118,7 +139,7 @@ Open Argus in Chrome/Edge, click the **USB** button, pick your flight controller
 |          MAVLink v2                      |
 |  TCP / UDP / Serial                      |
 +------------------------------------------+
-|  Flight Controller (ArduPilot / PX4)     |
+|  Flight Controller (ArduPilot)           |
 +------------------------------------------+
 ```
 
@@ -139,6 +160,10 @@ Open Argus in Chrome/Edge, click the **USB** button, pick your flight controller
 | `backend/config.py` | Centralized configuration (all timeouts/ports/rates) |
 
 ## Development
+
+Install the development tools with `pip install -e '.[dev]'`. `npm run dev` serves the interface at `http://127.0.0.1:5173` with hot reload and passes API calls on to a backend started with `python run.py`.
+
+> **Windows / recent Node note**: Node ≥17 may resolve `localhost` to IPv6 `::1`, while the backend binds IPv4-only `127.0.0.1` — use `127.0.0.1` in dev URLs.
 
 ```bash
 # Backend unit + contract tests
@@ -175,6 +200,8 @@ npm run test:e2e -- --project=chromium
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — development rules: CI limits, both links, tests, review, releases
 - [`CLAUDE.md`](CLAUDE.md) — project conventions, PX4 status, protocol-coupling discipline
 - [`docs/VERIFICATION.md`](docs/VERIFICATION.md) — how far every feature has been verified
+- [`SECURITY.md`](SECURITY.md) — how to run it safely, and how to report a vulnerability
+- [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) — work of others in the repository and the package, and the servers Argus reads
 - [`docs/FEATURE_CHECKLIST.md`](docs/FEATURE_CHECKLIST.md) — feature snapshot from v3.4, frozen
 - [`docs/protocol_design.md`](docs/protocol_design.md) — load-bearing design decisions
 - [`docs/audits/`](docs/audits/) — archived audit reports
@@ -233,7 +260,7 @@ Bug reports and fixes are welcome. A feature request is unlikely to be picked up
 1. Tests pass locally: `npx vitest run && python -m pytest tests/test_unit_*.py tests/test_contract_*.py`
 2. Type check is clean: `npx svelte-check` (0 errors, 0 warnings)
 3. Python lint is clean: `ruff check backend/ scripts/ tests/`
-4. Commit convention: `<type>: <imperative description>` (types: `feat`, `fix`, `refactor`, `test`, `docs`, `ci`, `chore`)
+4. Commit convention: `<type>: <imperative description>` (types: `feat`, `fix`, `perf`, `refactor`, `test`, `docs`, `ci`, `chore`)
 5. For FC-coupled code (MAVLink commands, ACK handling, calibration), cite upstream ArduPilot/PX4 source `file:line` in a comment — see `CLAUDE.md ## Protocol Code Discipline`
 
 ## Acknowledgments
@@ -244,8 +271,9 @@ Argus stands on the shoulders of:
 - [pymavlink](https://github.com/ArduPilot/pymavlink) — reference MAVLink codec used to validate our pure-TS implementation
 - [MAVLink](https://mavlink.io/) — the messaging protocol itself
 - [Svelte](https://svelte.dev/), [FastAPI](https://fastapi.tiangolo.com/), [Leaflet](https://leafletjs.com/), [MapLibre GL](https://maplibre.org/), [Tauri](https://tauri.app/) — the application stack
+- [QGroundControl](https://github.com/mavlink/qgroundcontrol) — the six calibration pictures come from it (Apache-2.0)
 - QGroundControl, Mission Planner, MAVProxy — for showing what's possible
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+MIT — see [LICENSE](LICENSE). Work of others in the repository and in the Windows package keeps its own license: see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

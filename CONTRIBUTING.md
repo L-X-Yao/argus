@@ -118,12 +118,25 @@ Versions are `MAJOR.MINOR.PATCH`: PATCH for fixes, MINOR for new features, MAJOR
 Release from `main`, on a commit whose CI run is green. `scripts/make-release.sh` checks the branch and a clean tree, but not CI.
 
 1. Build the Windows package with `python scripts/build_package.py`, on Python 3.11 or newer. It writes a zip to `release/`. The package bundles the Python named by `PY_VER`: move it to a version python.org still builds for Windows when the current one stops getting them.
-2. On a real Windows machine, run `python scripts/smoke_package.py release/<zip>`. It extracts the zip and checks the REST API, the WebSocket, that a request from another origin or under another host name is rejected, and token login. CI runs the same on a hosted runner.
+2. On a real Windows machine, run `python scripts/smoke_package.py release/<zip>`. It extracts the zip and checks the license texts, the REST API, the WebSocket, that a request from another origin or under another host name is rejected, and token login. CI runs the same on a hosted runner.
 3. Run `bash scripts/make-release.sh X.Y.Z`. It bumps the version, runs the frontend, unit and contract tests, commits, tags and pushes.
 4. The tag starts `.github/workflows/release.yml`, which builds the zip, attests it, and publishes the GitHub Release with `SHA256SUMS.txt`.
 5. Repeat step 2 on the published zip.
 
+## Work of Others
+
+A contribution goes under the MIT license of this repository. Code, pictures and data that someone else made keep their own license: say where they come from in the PR, and list them in `THIRD_PARTY_NOTICES.md` with the license text in `LICENSES/`.
+
+| What | Kept current by |
+| --- | --- |
+| Libraries in the web build | The build, which writes `dist/THIRD-PARTY-LICENSES.txt` from the bundle (`vite.config.ts`) |
+| Libraries in the Windows package | `scripts/build_package.py`, which stops when a library has no license text |
+| Credit of a map server | `src/lib/tileAttribution.ts`. `tests/test_contract_tile_attribution.py` fails when a tile source in `backend/tiles.py` has none |
+
+A new server that Argus reads goes in the table of `THIRD_PARTY_NOTICES.md`, and is asked under `USER_AGENT` from `backend/config.py`.
+
 ## Reporting Issues
 
-- Bugs and feature requests: [GitHub Issues](https://github.com/L-X-Yao/argus/issues)
+- Bugs: [GitHub Issues](https://github.com/L-X-Yao/argus/issues)
+- Feature requests: unlikely to be picked up, see Project Status in the README
 - Security vulnerabilities: see `SECURITY.md`
