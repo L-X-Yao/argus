@@ -145,7 +145,7 @@ There is no app. A phone or tablet is a second screen: Argus runs on a computer,
 
 What to expect:
 
-- On a screen narrower than 768 px, such as a phone held upright, the four views (Fly, Plan, Monitor, Params) are tabs at the bottom. While a vehicle is connected, RTL and hold sit above them, and in the Fly view the button for the flight controls (arming, modes) too. Logs and calibration are in the wide layout only. Most phones turned on their side are wider than 768 px and get the desktop layout, with everything in it, on a small screen.
+- On a screen narrower than 768 px, such as a phone held upright, the four views (Fly, Plan, Monitor, Params) are tabs at the bottom. While a vehicle is connected, RTL and hold sit above them, and in the Fly view the button for the flight controls (arming, modes) too. Logs, calibration, the 2D/3D switch and video are in the wide layout only. Most phones turned on their side are wider than 768 px and get the desktop layout, with everything in it, on a small screen.
 - The browser that connected first commands the vehicle, and later ones watch. Close the page on the computer if the phone is to command.
 - USB from the phone (WebSerial) and offline use need `https` or `localhost`, so they do not work at a plain `http` network address.
 - The link is plain HTTP: the token and every command can be read on the way. Use a network you trust, and read [SECURITY.md](SECURITY.md).

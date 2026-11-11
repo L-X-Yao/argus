@@ -367,14 +367,17 @@
   );
   let planCount = $derived(app.waypoints.length);
   let paramProgress = $derived(app.drone.param_fetching);
+  // The md breakpoint of the classes (48rem), not a pixel count: with a larger default text size in
+  // the browser, a width of 800 px hid the wide bar (max-md) and rendered no phone bar either.
   let isMobile = $state(false);
   onMount(() => {
+    const wide = window.matchMedia('(min-width: 48rem)');
     const check = () => {
-      isMobile = window.innerWidth < 768;
+      isMobile = !wide.matches;
     };
     check();
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
+    wide.addEventListener('change', check);
+    return () => wide.removeEventListener('change', check);
   });
 </script>
 
@@ -421,7 +424,7 @@
 >
   {t('ui.skipToContent')}
 </a>
-<div class="flex flex-col h-viewport overflow-hidden" role="application">
+<div class="flex flex-col h-dvh overflow-hidden" role="application">
   {#if authReady}
     <StatusBar {toggleTheme} onSettings={() => (app.showSettings = !app.showSettings)} />
   {/if}
@@ -719,33 +722,34 @@
   {/if}
 
   <!-- On a phone the bar under the status bar is hidden: return and hold sit above the tabs, and
-       the controls with them in the fly view. Both take their room in the column. Fixed, the tabs
-       lay over the bottom of every view, the events bar of the fly view among it. -->
+       the controls with them in the fly view. Both take their room in the column, at its bottom
+       also while a view is still loading. Fixed, the tabs lay over the bottom of every view, the
+       events bar of the fly view among it. -->
   {#if isMobile}
-    {#if app.drone.connected}
-      <div
-        role="toolbar"
-        aria-label={t('cmd.catFlight')}
-        class="md:hidden shrink-0 flex items-center gap-2 px-2 py-1.5 bg-card border-t border-border"
-      >
-        {@render rtlButton(true)}
-        {@render holdButton(true)}
-        {#if view === 'fly'}{@render controlsButton(true)}{/if}
-      </div>
-    {/if}
-    <nav
-      class="md:hidden shrink-0 relative z-[2000] bg-card border-t border-border flex items-center justify-around py-1.5 safe-area-bottom"
-    >
-      {#each tabKeys as tab}
-        <button
-          class="flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg transition-all min-w-[56px]
-          {view === tab.id ? 'text-primary' : 'text-muted-foreground'}"
-          onclick={() => (view = tab.id)}
+    <div class="md:hidden mt-auto shrink-0 relative z-[2000]">
+      {#if app.drone.connected}
+        <div
+          role="group"
+          aria-label={t('cmd.catFlight')}
+          class="flex items-center gap-2 px-2 py-1.5 bg-card border-t border-border"
         >
-          <tab.icon size={20} />
-          <span class="text-[9px] font-semibold">{t(tab.key)}</span>
-        </button>
-      {/each}
-    </nav>
+          {@render rtlButton(true)}
+          {@render holdButton(true)}
+          {#if view === 'fly'}{@render controlsButton(true)}{/if}
+        </div>
+      {/if}
+      <nav class="md:hidden bg-card border-t border-border flex items-center justify-around py-1.5 safe-area-bottom">
+        {#each tabKeys as tab}
+          <button
+            class="flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg transition-all min-w-[56px]
+          {view === tab.id ? 'text-primary' : 'text-muted-foreground'}"
+            onclick={() => (view = tab.id)}
+          >
+            <tab.icon size={20} />
+            <span class="text-[9px] font-semibold">{t(tab.key)}</span>
+          </button>
+        {/each}
+      </nav>
+    </div>
   {/if}
 </div>

@@ -172,7 +172,12 @@
     const invalidateTimer = setTimeout(() => {
       if (map) map.invalidateSize();
     }, 100);
+    // Leaflet measures again on a window resize only. The controls opening beside the map, or a
+    // phone's bar above the tabs, change the map's size and not the window's.
+    const resized = new ResizeObserver(() => map?.invalidateSize());
+    resized.observe(mapEl);
     return () => {
+      resized.disconnect();
       clearTimeout(invalidateTimer);
       window.removeEventListener('keydown', onKeyDown);
       if (map) {
