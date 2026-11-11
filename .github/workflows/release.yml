@@ -101,7 +101,7 @@ jobs:
   smoke:
     needs: build
     runs-on: windows-latest
-    timeout-minutes: 20
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v7
         with:
@@ -121,6 +121,39 @@ jobs:
         shell: bash
         run: python scripts/smoke_package.py release/Argus_GCS_v*_amd64.zip
 
+      # From that zip, so the program that gets installed is the one tested above. Inno Setup
+      # 6 is on the runner image; Linux has no compiler for it, so it is built here.
+      - name: Build the installer
+        shell: bash
+        run: python scripts/build_installer.py release/Argus_GCS_v*_amd64.zip
+
+      - name: Install, smoke-test and uninstall it
+        shell: bash
+        run: python scripts/smoke_package.py release/Argus_GCS_v*_amd64_setup.exe
+
+      # Written by Python with LF endings: print() on Windows ends lines with CRLF, and
+      # sha256sum on the publishing job would read the CR as part of the file name.
+      - name: Checksum the installer
+        shell: bash
+        run: |
+          cd release
+          python - <<'EOF'
+          import glob, hashlib, pathlib
+          sums = "".join(f"{hashlib.sha256(pathlib.Path(f).read_bytes()).hexdigest()}  {f}\n" for f in sorted(glob.glob("*_setup.exe")))
+          pathlib.Path("SHA256SUMS-setup.txt").write_text(sums, newline="\n")
+          EOF
+          cat SHA256SUMS-setup.txt
+
+      - name: Hand the installer to the publishing job
+        uses: actions/upload-artifact@v7
+        with:
+          name: installer
+          path: |
+            release/*_setup.exe
+            release/SHA256SUMS-setup.txt
+          if-no-files-found: error
+          retention-days: 7
+
   publish:
     if: github.event_name == 'push'
     needs: [ci, build, smoke]
@@ -136,13 +169,25 @@ jobs:
           name: package
           path: release
 
-      - name: The package is the one that was checksummed
-        run: cd release && sha256sum -c SHA256SUMS.txt
+      - uses: actions/download-artifact@v8
+        with:
+          name: installer
+          path: release
 
-      - name: Attest where the package came from
+      - name: The files are the ones that were checksummed
+        run: |
+          cd release
+          sha256sum -c SHA256SUMS.txt SHA256SUMS-setup.txt
+          cat SHA256SUMS-setup.txt >> SHA256SUMS.txt
+          rm SHA256SUMS-setup.txt
+          cat SHA256SUMS.txt
+
+      - name: Attest where the files came from
         uses: actions/attest-build-provenance@v4
         with:
-          subject-path: release/*.zip
+          subject-path: |
+            release/*.zip
+            release/*_setup.exe
 
       - name: Create GitHub Release
         # Not GitHub's own, and it runs with this job's write access: held to one commit.
@@ -151,4 +196,5 @@ jobs:
           body_path: release/RELEASE_NOTES.md
           files: |
             release/*.zip
+            release/*_setup.exe
             release/SHA256SUMS.txt

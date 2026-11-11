@@ -174,7 +174,7 @@ jobs:
   windows:
     runs-on: windows-latest
     needs: check
-    timeout-minutes: 25
+    timeout-minutes: 35
     defaults:
       run:
         shell: bash
@@ -209,6 +209,13 @@ jobs:
 
       - name: Smoke-test the package
         run: python scripts/smoke_package.py release/Argus_GCS_v*_amd64.zip
+
+      # Inno Setup 6 is on the runner image. The installer holds what the zip holds.
+      - name: Build the installer
+        run: python scripts/build_installer.py release/Argus_GCS_v*_amd64.zip
+
+      - name: Install, smoke-test and uninstall it
+        run: python scripts/smoke_package.py release/Argus_GCS_v*_amd64_setup.exe
 
       # The check job audits what pip installs here. The package brings its own wheels.
       - name: Audit what the package bundles
