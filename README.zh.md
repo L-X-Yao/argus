@@ -65,7 +65,7 @@ Argus 是面向 ArduPilot 的 **Web 地面站**：一个浏览器界面，支持
    ```powershell
    $want = (Get-Content SHA256SUMS.txt).Split(' ')[0]
    (Get-FileHash Argus_GCS_vX.Y.Z_amd64.zip -Algorithm SHA256).Hash -eq $want   # 文件完好时输出 True
-   gh attestation verify Argus_GCS_vX.Y.Z_amd64.zip --repo L-X-Yao/argus       # 可选，需要 GitHub CLI
+   gh attestation verify Argus_GCS_vX.Y.Z_amd64.zip --repo L-X-Yao/argus       # 可选，需要已登录的 GitHub CLI
    ```
 
 3. 解压后双击 `Argus地面站.bat`，浏览器会打开 `http://127.0.0.1:8100`。

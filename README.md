@@ -65,7 +65,7 @@ For Windows 10 and 11, x64. Python and every library are inside the zip, and not
    ```powershell
    $want = (Get-Content SHA256SUMS.txt).Split(' ')[0]
    (Get-FileHash Argus_GCS_vX.Y.Z_amd64.zip -Algorithm SHA256).Hash -eq $want   # True when the download is intact
-   gh attestation verify Argus_GCS_vX.Y.Z_amd64.zip --repo L-X-Yao/argus       # optional, needs the GitHub CLI
+   gh attestation verify Argus_GCS_vX.Y.Z_amd64.zip --repo L-X-Yao/argus       # optional, needs the GitHub CLI, signed in
    ```
 
 3. Unzip it and double-click `Argus地面站.bat` ("Argus ground station"). A browser opens `http://127.0.0.1:8100`.
