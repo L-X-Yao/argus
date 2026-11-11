@@ -1171,6 +1171,12 @@ const messages: Record<string, string> = {
   'assistant.loiterTurns': 'circle {n} turns',
   'assistant.spline': 'spline',
   'assistant.onMap': 'In the Fly and Plan views the route is drawn dashed on the map.',
+  'assistant.commandTitle': 'Send a flight command',
+  'assistant.modeNow': 'Flight mode now: {mode}',
+  'assistant.slideNote': 'After the approval, a slide sends it.',
+  'assistant.slideHold': 'Slide to hold position',
+  'assistant.slideLand': 'Slide to land',
+  'assistant.notArmed': 'Not sent: the vehicle is not armed',
 };
 
 export default messages;

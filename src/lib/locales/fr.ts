@@ -1180,6 +1180,12 @@ const messages: Record<string, string> = {
   'assistant.loiterTurns': '{n} tours de cercle',
   'assistant.spline': 'courbe spline',
   'assistant.onMap': 'Dans les vues Vol et Plan, la route est tracée en pointillés sur la carte.',
+  'assistant.commandTitle': 'Envoyer une commande de vol',
+  'assistant.modeNow': 'Mode de vol actuel : {mode}',
+  'assistant.slideNote': 'Après l’approbation, un glissement l’envoie.',
+  'assistant.slideHold': 'Glisser pour maintenir la position',
+  'assistant.slideLand': 'Glisser pour atterrir',
+  'assistant.notArmed': 'Non envoyé : le véhicule n’est pas armé',
 };
 
 export default messages;

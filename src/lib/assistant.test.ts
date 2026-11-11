@@ -18,7 +18,7 @@ import {
   type AssistantReply,
   type AssistantStateMsg,
 } from './assistant.svelte';
-import { app } from './stores.svelte';
+import { app, slideState, completeSlide, cancelSlide } from './stores.svelte';
 import { paramState } from './paramStore.svelte';
 import { defaultState } from './types';
 
@@ -373,5 +373,142 @@ describe("the operator's decision", () => {
     forgetAssistant();
     expect(assistant.queue).toEqual([]);
     expect(assistant.present).toBe(0);
+  });
+});
+
+describe('flight commands', () => {
+  // A copter in flight, in Loiter (5): RTL is 6, land 9.
+  beforeEach(() => {
+    app.drone.armed = true;
+    app.drone.mode_id = 5;
+    cancelSlide();
+  });
+
+  it('wait for the operator, and only for a vehicle that is armed', () => {
+    app.drone.armed = false;
+    ask('propose_command', { command: 'rtl' });
+    expect(reply()).toMatchObject({ ok: false, result: { outcome: 'refused' } });
+    expect(reply()!.error).toContain('not armed');
+
+    app.drone.armed = true;
+    ask('propose_command', { command: 'rtl', reason: 'Battery at 20%' }, 'k2');
+    expect(states('k2')).toEqual(['waiting']);
+    expect(assistant.queue).toMatchObject([
+      { id: 'k2', kind: 'propose_command', command: 'rtl', reason: 'Battery at 20%' },
+    ]);
+  });
+
+  it('only rtl, hold and land', () => {
+    for (const command of ['arm', 'takeoff', 'mission_start', 'RTL', 5, undefined]) {
+      sent = [];
+      ask('propose_command', { command });
+      expect(reply()!.error).toBe('command: rtl, hold or land.');
+    }
+    expect(assistant.queue).toEqual([]);
+  });
+
+  it('not one the vehicle has no mode for', () => {
+    app.drone.vtype_raw = 1; // a plane, no VTOL motors
+    ask('propose_command', { command: 'land' });
+    expect(reply()!.error).toBe('This plane has no landing mode in Argus.');
+    app.drone.vtype_raw = 12; // a submarine
+    ask('propose_command', { command: 'rtl' }, 'k2');
+    expect(reply('k2')!.error).toBe('This sub has no return to launch in Argus.');
+  });
+
+  it('the approval asks for the slide, and the slide sends it', async () => {
+    vi.useFakeTimers();
+    ask('propose_command', { command: 'rtl' });
+    await approve('k1');
+    expect(slideState.visible).toBe(true);
+    expect(dispatch).not.toHaveBeenCalled();
+    expect(states()).toEqual(['waiting']);
+
+    completeSlide();
+    expect(dispatch).toHaveBeenCalledWith('rtl');
+    expect(states()).toEqual(['waiting', 'running']);
+    app.drone.mode_id = 6;
+    app.drone.mode = 'RTL';
+    await vi.advanceTimersByTimeAsync(400);
+    expect(reply()).toEqual({ type: 'assistant_reply', id: 'k1', ok: true, result: { mode: 'RTL' } });
+    expect(assistant.queue).toEqual([]);
+  });
+
+  it('hold and land go as a mode change, as the buttons send them', async () => {
+    vi.useFakeTimers();
+    ask('propose_command', { command: 'hold' });
+    await approve('k1');
+    completeSlide();
+    expect(dispatch).toHaveBeenLastCalledWith('mode', 5);
+    await vi.advanceTimersByTimeAsync(400);
+    expect(reply()!.ok).toBe(true);
+
+    ask('propose_command', { command: 'land' }, 'k2');
+    await approve('k2');
+    completeSlide();
+    expect(dispatch).toHaveBeenLastCalledWith('mode', 9);
+    app.drone.mode_id = 9;
+    await vi.advanceTimersByTimeAsync(400);
+    expect(reply('k2')!.ok).toBe(true);
+  });
+
+  it('a slide let go sends nothing, and the proposal waits on', async () => {
+    ask('propose_command', { command: 'land' });
+    await approve('k1');
+    cancelSlide();
+    expect(dispatch).not.toHaveBeenCalled();
+    expect(assistant.queue).toHaveLength(1);
+    expect(reply()).toBeUndefined();
+  });
+
+  it('taken back while the slide is open, the slide sends nothing', async () => {
+    ask('propose_command', { command: 'rtl' });
+    await approve('k1');
+    withdraw('k1');
+    completeSlide();
+    expect(dispatch).not.toHaveBeenCalled();
+    expect(reply()).toMatchObject({ ok: false, result: { outcome: 'withdrawn' } });
+  });
+
+  it('a vehicle that disarmed meanwhile gets nothing', async () => {
+    ask('propose_command', { command: 'rtl' });
+    app.drone.armed = false;
+    await approve('k1');
+    expect(slideState.visible).toBe(false);
+    expect(reply()).toMatchObject({ ok: false, result: { outcome: 'refused' } });
+
+    app.drone.armed = true;
+    ask('propose_command', { command: 'hold' }, 'k2');
+    await approve('k2');
+    app.drone.armed = false; // landed and disarmed while the slide was open
+    completeSlide();
+    expect(dispatch).not.toHaveBeenCalled();
+    expect(reply('k2')).toMatchObject({ ok: false, result: { outcome: 'refused' } });
+  });
+
+  it('no mode change in time: failed, with the mode it is in and what the flight controller said', async () => {
+    vi.useFakeTimers();
+    ask('propose_command', { command: 'rtl' });
+    event('mode', 'before');
+    await approve('k1');
+    completeSlide();
+    event('cmd_ack_fail', 'Command: Set mode — denied');
+    await vi.advanceTimersByTimeAsync(10400);
+    expect(reply()!.ok).toBe(false);
+    expect(reply()!.error).toBe(
+      'The flight controller did not report the mode in 10 s: it is in LOITER. It answered: Command: Set mode — denied',
+    );
+  });
+
+  it('a QuadPlane that goes on from RTL to QRTL did what it was asked', async () => {
+    vi.useFakeTimers();
+    app.drone.vtype_raw = 20; // VTOL quadrotor
+    ask('propose_command', { command: 'rtl' });
+    await approve('k1');
+    completeSlide();
+    app.drone.mode_id = 21;
+    app.drone.mode = 'QRTL';
+    await vi.advanceTimersByTimeAsync(400);
+    expect(reply()).toMatchObject({ ok: true, result: { mode: 'QRTL' } });
   });
 });

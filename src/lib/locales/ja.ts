@@ -1172,6 +1172,12 @@ const messages: Record<string, string> = {
   'assistant.loiterTurns': '{n} 周旋回',
   'assistant.spline': 'スプライン',
   'assistant.onMap': '飛行と計画のビューでは、ルートが地図に破線で表示されます。',
+  'assistant.commandTitle': '飛行コマンドを送信',
+  'assistant.modeNow': '現在のフライトモード: {mode}',
+  'assistant.slideNote': '承認後、スライドで送信されます。',
+  'assistant.slideHold': 'スライドしてホールド',
+  'assistant.slideLand': 'スライドして着陸',
+  'assistant.notArmed': '未送信: 機体がアームされていません',
 };
 
 export default messages;

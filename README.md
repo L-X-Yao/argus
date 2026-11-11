@@ -51,7 +51,7 @@ To fly real missions today, use QGroundControl or Mission Planner: both are flig
 | **i18n** | 10 languages (zh, en, ja, ko, de, fr, es, pt, ru, ar) + RTL |
 | **Offline** | PWA with service worker, mbtiles support, tile caching (5000 tiles, the oldest dropped first) |
 | **Desktop** | A Windows installer: for your account only, without administrator rights, with Start menu shortcuts and an uninstaller. It installs the program the zip holds, which opens in your browser. The Tauri v2 config in `src-tauri/` has never been built and is not used |
-| **AI assistant** | An MCP server for AI clients such as Claude Desktop or Claude Code: it reads what the page shows and proposes missions and parameter changes, which the operator approves in the page |
+| **AI assistant** | An MCP server for AI clients such as Claude Desktop or Claude Code: it reads what the page shows and proposes missions, parameter changes, and return, hold or land in flight, which the operator approves in the page |
 | **Security** | Token auth, cross-site and DNS-rebinding request blocking, SSRF + path-traversal guards, statustext filtering |
 
 ## Install
@@ -163,10 +163,11 @@ An AI client that speaks the [Model Context Protocol](https://modelcontextprotoc
 | `get_parameters` | Parameter values the page has read, by name or prefix |
 | `propose_mission` | A mission for the operator, shown waypoint by waypoint with every speed, hold and circling: uploaded only if approved |
 | `propose_parameters` | Parameter changes for the operator, with old and new values: written only if approved |
+| `propose_flight_command` | Return to launch, hold or land, for a vehicle that is armed: sent only if approved and then confirmed with a slide, as the RTL button is |
 | `check_proposal` | Whether the operator has decided, and the result |
 | `withdraw_proposal` | Takes back a proposal not yet decided |
 
-A proposal returns its id at once, and `check_proposal` waits up to 50 s a call for the decision, so the operator can take minutes. Proposals are refused while the vehicle is armed. The tools cannot arm, take off, change mode or start a mission.
+A proposal returns its id at once, and `check_proposal` waits up to 50 s a call for the decision, so the operator can take minutes. A mission or parameter changes are refused while the vehicle is armed, and a flight command while it is not. The tools cannot arm, take off, start a mission or change to any other mode.
 
 These limits are those of the tools. A client that can also run commands on this computer, as Claude Code can, could reach Argus and the vehicle in other ways, as any program here could: keep it asking before each command, which is its default.
 
@@ -292,7 +293,7 @@ bash scripts/changelog.sh v3.5.0   # Changes since v3.5.0
 
 ## Project Status
 
-Argus is in maintenance since November 2026: bugs and security problems get fixed. Two pieces of new work were taken up since, at the maintainer's request: a Windows installer, and operation by an AI assistant through MCP, in which every change waits for the operator's approval in the page. The assistant reads the page and proposes missions and parameter changes; flight commands (arm, takeoff, modes) are not open to it.
+Argus is in maintenance since November 2026: bugs and security problems get fixed. Two pieces of new work were taken up since, at the maintainer's request: a Windows installer, and operation by an AI assistant through MCP, in which every change waits for the operator's approval in the page. The assistant reads the page and proposes missions, parameter changes, and return, hold or land; arming, takeoff and starting a mission are not open to it.
 
 **Built**
 
@@ -310,7 +311,7 @@ Argus is in maintenance since November 2026: bugs and security problems get fixe
 - Gimbal pitch/yaw control
 - Tag-triggered release workflow with auto-changelog
 - Windows installer for your account only, without administrator rights
-- AI assistant through MCP: reads the page, proposes missions and parameter changes, and the operator approves each
+- AI assistant through MCP: reads the page, proposes missions, parameter changes, and return, hold or land, and the operator approves each
 
 **No longer planned**
 

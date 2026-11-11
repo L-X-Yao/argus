@@ -20,6 +20,7 @@ TOOL_NAMES = [
     "get_parameters",
     "propose_mission",
     "propose_parameters",
+    "propose_flight_command",
     "check_proposal",
     "withdraw_proposal",
 ]
@@ -269,6 +270,10 @@ class TestArguments:
             ("propose_parameters", {"values": {"BATT_CAPACITY": "large"}}, "must be a number"),
             ("propose_parameters", {"values": {}}, "has 0 entries"),
             ("propose_parameters", {"values": {"X": 1}, "reason": "x" * 501}, "longer than 500"),
+            ("propose_flight_command", {}, "command is missing"),
+            ("propose_flight_command", {"command": "arm"}, "must be one of rtl, hold, land"),
+            ("propose_flight_command", {"command": "takeoff"}, "must be one of"),
+            ("propose_flight_command", {"command": "rtl", "altitude": 30}, "not an argument"),
             ("check_proposal", {"proposal": ""}, "is empty"),
             ("check_proposal", {"proposal": "p1", "wait_seconds": 120}, "at most 50"),
             ("withdraw_proposal", {}, "proposal is missing"),
@@ -315,6 +320,21 @@ class TestProposals:
         proposed = self.propose(server, wire)
         assert proposed["proposal"] == "p1" and proposed["state"] == "waiting"
         assert page.asked == [("propose_parameters", {"values": {"BATT_CAPACITY": 4000}})]
+
+    def test_a_flight_command_is_a_proposal_like_the_others(self, server, wire, page):
+        proposed = outcome(call(server, wire, 1, "propose_flight_command", {"command": "rtl", "reason": "Low battery"}))
+        assert proposed["proposal"] == "p1" and proposed["state"] == "waiting"
+        assert page.asked == [("propose_command", {"command": "rtl", "reason": "Low battery"})]
+        page.settle("p1", answer={"ok": True, "result": {"mode": "RTL"}})
+        checked = outcome(call(server, wire, 2, "check_proposal", {"proposal": "p1", "wait_seconds": 0}))
+        assert checked == {"proposal": "p1", "state": "done", "result": {"mode": "RTL"}}
+
+    def test_the_instructions_tell_a_flight_command_from_a_change(self):
+        assert "mission or parameters are refused while the vehicle is armed" in mcp.INSTRUCTIONS
+        assert "flight command" in mcp.INSTRUCTIONS and "slide" in mcp.INSTRUCTIONS
+        tool = next(t for t in mcp.TOOLS if t["name"] == "propose_flight_command")
+        assert tool["inputSchema"]["properties"]["command"]["enum"] == ["rtl", "hold", "land"]
+        assert "Refused while the vehicle is armed" not in tool["description"]
 
     def test_one_the_page_refuses_at_once_is_an_error(self, server, wire, page):
         page.respond = lambda kind, args: {

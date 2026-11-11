@@ -48,6 +48,7 @@ try {
         'get_parameters',
         'propose_mission',
         'propose_parameters',
+        'propose_flight_command',
         'check_proposal',
         'withdraw_proposal',
       ]),

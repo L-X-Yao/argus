@@ -1168,6 +1168,12 @@ const messages: Record<string, string> = {
   'assistant.loiterTurns': 'دوران {n} لفات',
   'assistant.spline': 'منحنى',
   'assistant.onMap': 'في عرضي الطيران والتخطيط يُرسم المسار بخط متقطع على الخريطة.',
+  'assistant.commandTitle': 'إرسال أمر طيران',
+  'assistant.modeNow': 'وضع الطيران الحالي: {mode}',
+  'assistant.slideNote': 'بعد الموافقة، يُرسل بالسحب.',
+  'assistant.slideHold': 'اسحب لتثبيت الموضع',
+  'assistant.slideLand': 'اسحب للهبوط',
+  'assistant.notArmed': 'لم يُرسل: المركبة غير مسلّحة',
 };
 
 export default messages;

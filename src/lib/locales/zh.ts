@@ -1163,6 +1163,12 @@ const messages: Record<string, string> = {
   'assistant.loiterTurns': '盘旋 {n} 圈',
   'assistant.spline': '样条',
   'assistant.onMap': '在飞行和规划视图里，航线以虚线画在地图上。',
+  'assistant.commandTitle': '发送飞行指令',
+  'assistant.modeNow': '当前飞行模式：{mode}',
+  'assistant.slideNote': '批准后还需滑动确认才会发送。',
+  'assistant.slideHold': '滑动切换悬停',
+  'assistant.slideLand': '滑动立即着陆',
+  'assistant.notArmed': '未发送：飞行器未解锁',
 };
 
 export default messages;

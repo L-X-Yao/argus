@@ -1176,6 +1176,12 @@ const messages: Record<string, string> = {
   'assistant.loiterTurns': '{n} vueltas en círculo',
   'assistant.spline': 'curva spline',
   'assistant.onMap': 'En las vistas Vuelo y Plan, la ruta aparece discontinua en el mapa.',
+  'assistant.commandTitle': 'Enviar una orden de vuelo',
+  'assistant.modeNow': 'Modo de vuelo actual: {mode}',
+  'assistant.slideNote': 'Tras aprobarla, se envía al deslizar.',
+  'assistant.slideHold': 'Deslice para mantener posición',
+  'assistant.slideLand': 'Deslice para aterrizar',
+  'assistant.notArmed': 'No enviado: el vehículo no está armado',
 };
 
 export default messages;
