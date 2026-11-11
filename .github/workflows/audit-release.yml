@@ -1,0 +1,56 @@
+name: Audit the published package
+
+# The Windows package brings its own Python and libraries, as they were on the day it was
+# built. They are not updated in place, and nobody is told when one of them turns out to have
+# a hole. This looks at the newest release once a week and fails when it does: GitHub then
+# mails the maintainer, and the answer is a new release.
+#
+# GitHub stops scheduled workflows in a public repository after 60 days without activity:
+# see "What CI Checks" in CONTRIBUTING.md.
+on:
+  schedule:
+    - cron: '41 5 * * 3'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.14'
+
+      - name: Download the newest release
+        id: release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          tag=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName)
+          echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          gh release download "$tag" --repo "$GITHUB_REPOSITORY" --dir release \
+            --pattern 'Argus_GCS_v*_amd64.zip' --pattern 'SHA256SUMS.txt'
+          cd release && sha256sum -c SHA256SUMS.txt
+
+      - name: Known holes in the libraries it bundles
+        run: |
+          python scripts/package_requirements.py release/*.zip > bundled.txt
+          cat bundled.txt
+          pip install pip-audit
+          pip-audit -r bundled.txt --no-deps --disable-pip
+
+      # Both are worth knowing, so this one runs whatever the step above found.
+      - name: The Python it bundles is the newest of its line
+        if: ${{ !cancelled() }}
+        run: |
+          git fetch --no-tags --depth 1 origin "refs/tags/${{ steps.release.outputs.tag }}"
+          git show FETCH_HEAD:scripts/build_package.py > published_build_package.py
+          python scripts/check_bundled_python.py published_build_package.py

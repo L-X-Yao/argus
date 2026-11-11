@@ -41,6 +41,7 @@ CI runs on every push to `main` and every PR. On top of the five checks above, i
 | pip-audit | No known vulnerability in the Python dependencies |
 | Oldest Python | Unit and contract tests on the oldest Python `pyproject.toml` allows. Every other job runs on the version the Windows package bundles, `PY_VER` in `scripts/build_package.py` |
 | CodeQL | `.github/workflows/codeql.yml`, on every push and weekly |
+| Published package | `.github/workflows/audit-release.yml`, weekly: pip-audit on the wheels inside the newest release's zip, and whether the Python it bundles is still the newest of its line. A failure means a new release is due |
 | Integration tests | `tests/test_integration.py`: real backend and simulator over WebSocket. `tests/test_integration_rest.py`: REST routes with real files and the real terrain and firmware servers. Locally a server that cannot be reached skips its test; in CI it fails it (`ARGUS_REQUIRE_NETWORK`) |
 | macOS | Unit and contract tests on `macos-latest`, then the app itself in a browser. SITL ships as a Linux binary, so the SITL jobs stay on Linux |
 | Windows | The same on `windows-latest`, and the zip built and smoke-tested by `scripts/smoke_package.py`. pip-audit then runs on the wheels inside the zip, as it does before a release is published |
