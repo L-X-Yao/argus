@@ -1169,6 +1169,9 @@ const messages: Record<string, string> = {
   'assistant.slideHold': '滑动切换悬停',
   'assistant.slideLand': '滑动立即着陆',
   'assistant.notArmed': '未发送：飞行器未解锁',
+  'assistant.withdrawnNow': 'AI 助手已撤回请求，未发送任何指令',
+  'assistant.otherFlight': '未发送：该请求属于之前的一次飞行',
+  'assistant.noMode': '未发送：该飞行器没有这个模式',
 };
 
 export default messages;

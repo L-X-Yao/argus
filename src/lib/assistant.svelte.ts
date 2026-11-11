@@ -8,7 +8,7 @@
  *
  * What goes back to the assistant is English written for the model, and is not shown here.
  */
-import { app, pushUndo, saveWaypoints, addToast, showSlide } from './stores.svelte';
+import { app, pushUndo, saveWaypoints, addToast, showSlide, cancelSlide, slideState } from './stores.svelte';
 import { paramState } from './paramStore.svelte';
 import { cleanWaypoints, MissionDataError } from './missionIO';
 import { validateMissionWaypoints } from './missionUpload';
@@ -40,6 +40,8 @@ export interface CommandProposal {
   kind: 'propose_command';
   command: FlightCommand;
   reason: string;
+  /** The newest event when it was asked for: a disarm after it ends the flight it was for. */
+  mark: DroneEvent | undefined;
 }
 
 export type Proposal = MissionProposal | ParameterProposal | CommandProposal;
@@ -90,6 +92,10 @@ const UPLOAD_WAIT_PER_WAYPOINT_MS = 1000;
 const PARAM_WAIT_MS = 10000;
 // A mode change shows in the next heartbeat, about one a second, also over a slow radio.
 const COMMAND_WAIT_MS = 10000;
+// After the flight controller has accepted the mode, how long to wait for a heartbeat to show it.
+const ACCEPTED_WAIT_MS = 2500;
+// MAV_CMD_DO_SET_MODE, as both links send a mode (backend send_set_mode, transport serialSendMode).
+const DO_SET_MODE = 176;
 
 const OFF_THE_MAP = 'A waypoint is off the map: latitude within ±90, longitude within ±180.';
 
@@ -149,7 +155,7 @@ export function handleAssistantRequest(msg: unknown): void {
         if ('error' in proposal) {
           answer(id, { ok: false, error: proposal.error, ending: 'refused' });
         } else {
-          assistant.queue.push(proposal);
+          enqueue(proposal);
           send({ type: 'assistant_state', id, state: 'waiting' });
         }
         return;
@@ -175,6 +181,8 @@ function status() {
     vehicle: d.connected ? vehicleKind() : null,
     autopilot: d.autopilot === 3 ? 'ArduPilot' : d.autopilot === 0 ? 'not known yet' : `MAV_AUTOPILOT ${d.autopilot}`,
     mode: d.mode,
+    // The name is in the page's language; the number is ArduPilot's, per vehicle.
+    mode_number: d.mode_id,
     armed: d.armed,
     landed: d.landed,
     position: at(d.lat, d.lon),
@@ -337,11 +345,34 @@ const NO_MODE: Record<FlightCommand, string> = {
   land: 'no landing mode',
 };
 
-/** Why this flight command cannot be asked for or sent now, or null. */
-function commandRefusal(command: FlightCommand): string | null {
-  if (!app.drone.connected) return 'No vehicle is connected to Argus.';
-  if (!app.drone.armed) return 'The vehicle is not armed: a flight command is for a vehicle that is.';
-  if (specialModes()[command] === null) return `This ${vehicleKind()} has ${NO_MODE[command]} in Argus.`;
+/** Events after mark, the newest event at some moment. By the event itself, as nextEvent does. */
+function eventsAfter(mark: DroneEvent | undefined): DroneEvent[] {
+  return mark === undefined ? app.events : app.events.slice(app.events.lastIndexOf(mark) + 1);
+}
+
+/** Why this flight command cannot be asked for or sent now, with the operator's toast, or null.
+ * since: when it was asked for. A disarm after that ended the flight it was for, even if the
+ * vehicle is armed again. */
+function commandRefusal(
+  command: FlightCommand,
+  since?: { mark: DroneEvent | undefined },
+): { error: string; toast: string } | null {
+  if (!app.drone.connected) return { error: 'No vehicle is connected to Argus.', toast: 'err.noLink' };
+  if (!app.drone.armed) {
+    return {
+      error: 'The vehicle is not armed: a flight command is for a vehicle that is.',
+      toast: 'assistant.notArmed',
+    };
+  }
+  if (since && eventsAfter(since.mark).some((e) => e.event_type === 'disarmed')) {
+    return {
+      error: 'The vehicle has disarmed since it was asked for: it was for that flight.',
+      toast: 'assistant.otherFlight',
+    };
+  }
+  if (specialModes()[command] === null) {
+    return { error: `This ${vehicleKind()} has ${NO_MODE[command]} in Argus.`, toast: 'assistant.noMode' };
+  }
   return null;
 }
 
@@ -349,14 +380,42 @@ function proposeCommand(id: string, args: Fields): CommandProposal | { error: st
   const command = args.command;
   if (typeof command !== 'string' || !COMMANDS.includes(command)) return { error: 'command: rtl, hold or land.' };
   const refused = commandRefusal(command as FlightCommand);
-  if (refused) return { error: refused };
-  return { id, kind: 'propose_command', command: command as FlightCommand, reason: reasonOf(args) };
+  if (refused) return { error: refused.error };
+  const mark = app.events[app.events.length - 1];
+  return { id, kind: 'propose_command', command: command as FlightCommand, reason: reasonOf(args), mark };
+}
+
+/** In the order asked for, but a flight command before a mission or parameters: those wait for a
+ * vehicle that is not armed, and the command for one that is. */
+function enqueue(proposal: Proposal): void {
+  if (proposal.kind !== 'propose_command') {
+    assistant.queue.push(proposal);
+    return;
+  }
+  const at = assistant.queue.findIndex((p) => p.kind !== 'propose_command');
+  if (at < 0) assistant.queue.push(proposal);
+  else assistant.queue.splice(at, 0, proposal);
 }
 
 // ---- the operator's decision ------------------------------------------------------------
 
 function remove(id: string): void {
   assistant.queue = assistant.queue.filter((p) => p.id !== id);
+  closeSlideOf(id);
+}
+
+/** The slide open for a flight command: its proposal, and what the slide runs. */
+let sliding: { id: string; confirm: () => void } | null = null;
+
+/** Its proposal left the queue (taken back, the assistant gone): a slide finished now would send
+ * nothing, and must not seem to. Only the slide opened here, and only while it is still open. */
+function closeSlideOf(id?: string): void {
+  if (!sliding || (id !== undefined && sliding.id !== id)) return;
+  if (slideState.visible && slideState._onConfirm === sliding.confirm) {
+    cancelSlide();
+    addToast(t('assistant.withdrawnNow'), 'warn', 5000);
+  }
+  sliding = null;
 }
 
 function finish(proposal: Proposal, outcome: Outcome): void {
@@ -378,12 +437,15 @@ export async function approve(id: string): Promise<void> {
   if (proposal.kind === 'propose_command') {
     if (refuseCommand(proposal)) return;
     const [text, color] = SLIDES[proposal.command];
-    showSlide(t(text), color, () => {
-      // The slide takes seconds: by its end the assistant may have taken the proposal back, or
-      // the vehicle landed.
+    const confirm = () => {
+      sliding = null;
+      // The slide takes seconds: by its end the vehicle may have landed. A proposal taken back
+      // meanwhile has closed the slide (closeSlideOf).
       if (!waiting(proposal.id) || assistant.running || refuseCommand(proposal)) return;
       void run(proposal);
-    });
+    };
+    sliding = { id: proposal.id, confirm };
+    showSlide(t(text), color, confirm);
     return;
   }
   // It may have waited a while: the vehicle can be armed by now.
@@ -398,10 +460,10 @@ export async function approve(id: string): Promise<void> {
 
 /** Refuses it when it cannot be sent now, and says so to both; whether it did. */
 function refuseCommand(proposal: CommandProposal): boolean {
-  const refused = commandRefusal(proposal.command);
+  const refused = commandRefusal(proposal.command, { mark: proposal.mark });
   if (!refused) return false;
-  finish(proposal, { ok: false, error: refused, ending: 'refused' });
-  addToast(t(app.drone.connected ? 'assistant.notArmed' : 'err.noLink'), 'error', 5000);
+  finish(proposal, { ok: false, error: refused.error, ending: 'refused' });
+  addToast(t(refused.toast), 'error', 5000);
   return true;
 }
 
@@ -444,6 +506,7 @@ export function withdraw(id: unknown): void {
 export function forgetAssistant(): void {
   assistant.queue = [];
   assistant.present = 0;
+  closeSlideOf();
 }
 
 async function runMission(proposal: MissionProposal): Promise<Outcome> {
@@ -498,24 +561,45 @@ function answers(command: FlightCommand, mode: number): boolean {
   return mode === specialModes()[command];
 }
 
+/**
+ * Sent, and done once the vehicle reports the mode, or once the flight controller has accepted it:
+ * a vehicle may go on from that mode before a heartbeat shows it, as a plane's RTL does to AUTO
+ * for its landing (RTL_AUTOLAND: ArduPlane/mode_rtl.cpp:106-114), a QuadPlane's to QLAND
+ * (mode_rtl.cpp:15-18), and a submarine at the surface from SURFACE (ArduSub/mode_surface.cpp:40).
+ * Failed when the flight controller refuses it, or says nothing in 10 s.
+ */
 async function runCommand(proposal: CommandProposal): Promise<Outcome> {
   const mode = specialModes()[proposal.command]!;
+  const already = answers(proposal.command, app.drone.mode_id);
   const mark = app.events[app.events.length - 1];
   // As the page's own buttons send them: RTL through the rtl command, the others as a mode.
   if (proposal.command === 'rtl') dispatch('rtl');
   else dispatch('mode', mode);
+  const now = (accepted: boolean): Outcome => ({
+    ok: true,
+    result: {
+      mode: app.drone.mode,
+      mode_number: app.drone.mode_id,
+      ...(already ? { already_in_mode: true } : {}),
+      ...(accepted ? { accepted: true } : {}),
+    },
+  });
   const deadline = Date.now() + COMMAND_WAIT_MS;
+  let acceptedAt = 0;
   while (Date.now() < deadline) {
-    if (answers(proposal.command, app.drone.mode_id)) return { ok: true, result: { mode: app.drone.mode } };
+    if (answers(proposal.command, app.drone.mode_id) && (!already || acceptedAt)) return now(acceptedAt > 0);
+    const ack = eventsAfter(mark).find((e) => e.cmd === DO_SET_MODE);
+    if (ack?.event_type === 'cmd_ack_fail') {
+      return { ok: false, error: `The flight controller answered: ${ack.text}. It is in ${app.drone.mode}.` };
+    }
+    if (ack?.event_type === 'cmd_ack_ok' && !acceptedAt) acceptedAt = Date.now();
+    if (acceptedAt && Date.now() - acceptedAt >= ACCEPTED_WAIT_MS) return now(true);
     await new Promise((resolve) => setTimeout(resolve, 200));
   }
-  const after = mark === undefined ? app.events : app.events.slice(app.events.lastIndexOf(mark) + 1);
-  const refused = after.filter((e) => e.event_type === 'cmd_ack_fail').map((e) => e.text);
+  if (already) return now(false);
   return {
     ok: false,
-    error:
-      `The flight controller did not report the mode in ${COMMAND_WAIT_MS / 1000} s: it is in ${app.drone.mode}.` +
-      (refused.length > 0 ? ` It answered: ${refused.join('; ')}` : ''),
+    error: `No answer from the flight controller in ${COMMAND_WAIT_MS / 1000} s: it is in ${app.drone.mode}.`,
   };
 }
 

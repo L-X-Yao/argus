@@ -1181,6 +1181,9 @@ const messages: Record<string, string> = {
   'assistant.slideHold': 'Проведите для удержания',
   'assistant.slideLand': 'Проведите для посадки',
   'assistant.notArmed': 'Не отправлено: аппарат не взведён',
+  'assistant.withdrawnNow': 'ИИ-ассистент отозвал запрос: ничего не отправлено',
+  'assistant.otherFlight': 'Не отправлено: запрос относился к прошлому полёту',
+  'assistant.noMode': 'Не отправлено: у этого аппарата нет такого режима',
 };
 
 export default messages;

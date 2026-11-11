@@ -1186,6 +1186,9 @@ const messages: Record<string, string> = {
   'assistant.slideHold': 'Glisser pour maintenir la position',
   'assistant.slideLand': 'Glisser pour atterrir',
   'assistant.notArmed': 'Non envoyé : le véhicule n’est pas armé',
+  'assistant.withdrawnNow': 'L’assistant IA a retiré sa demande : rien n’a été envoyé',
+  'assistant.otherFlight': 'Non envoyé : la demande concernait un vol précédent',
+  'assistant.noMode': 'Non envoyé : ce véhicule n’a pas ce mode',
 };
 
 export default messages;

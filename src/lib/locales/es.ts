@@ -1182,6 +1182,9 @@ const messages: Record<string, string> = {
   'assistant.slideHold': 'Deslice para mantener posición',
   'assistant.slideLand': 'Deslice para aterrizar',
   'assistant.notArmed': 'No enviado: el vehículo no está armado',
+  'assistant.withdrawnNow': 'El asistente de IA retiró su solicitud: no se envió nada',
+  'assistant.otherFlight': 'No enviado: la solicitud era para un vuelo anterior',
+  'assistant.noMode': 'No enviado: este vehículo no tiene ese modo',
 };
 
 export default messages;

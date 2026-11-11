@@ -103,8 +103,8 @@ class FakeLink:
     def send(self, frame: bytes) -> None:
         self.captured.append(frame)
 
-    def add_event(self, text: str, event_type: str = "") -> None:
-        self.events.append({"text": text, "event_type": event_type})
+    def add_event(self, text: str, event_type: str = "", cmd: int | None = None) -> None:
+        self.events.append({"text": text, "event_type": event_type, "cmd": cmd})
 
     def _get_vehicle_info(self):
         return ({}, [], "Multirotor")
@@ -536,6 +536,8 @@ class TestIncomingHandlers:
         payload, pl = _encode_payload(msg)
         handle_command_ack(payload, pl, link)
         assert any("解锁/锁定" in e["text"] or "Arm" in e["text"] for e in link.events)
+        # The page matches an acknowledgement by its command, not by text in the UI language.
+        assert link.events[-1]["cmd"] == 400
 
     def test_mission_count(self):
         link = FakeLink()

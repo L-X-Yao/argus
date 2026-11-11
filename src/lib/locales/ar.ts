@@ -1174,6 +1174,9 @@ const messages: Record<string, string> = {
   'assistant.slideHold': 'اسحب لتثبيت الموضع',
   'assistant.slideLand': 'اسحب للهبوط',
   'assistant.notArmed': 'لم يُرسل: المركبة غير مسلّحة',
+  'assistant.withdrawnNow': 'سحب مساعد الذكاء الاصطناعي طلبه: لم يُرسل شيء',
+  'assistant.otherFlight': 'لم يُرسل: كان الطلب لرحلة سابقة',
+  'assistant.noMode': 'لم يُرسل: لا تملك هذه المركبة هذا الوضع',
 };
 
 export default messages;

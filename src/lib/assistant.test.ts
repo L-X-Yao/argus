@@ -21,6 +21,7 @@ import {
 import { app, slideState, completeSlide, cancelSlide } from './stores.svelte';
 import { paramState } from './paramStore.svelte';
 import { defaultState } from './types';
+import { t } from './i18n.svelte';
 
 let sent: (AssistantReply | AssistantStateMsg)[];
 
@@ -377,12 +378,25 @@ describe("the operator's decision", () => {
 });
 
 describe('flight commands', () => {
-  // A copter in flight, in Loiter (5): RTL is 6, land 9.
+  // A copter in flight, in GUIDED (4): Loiter, its hold, is 5, RTL 6 and land 9.
   beforeEach(() => {
     app.drone.armed = true;
-    app.drone.mode_id = 5;
+    app.drone.mode_id = 4;
+    app.drone.mode = 'GUIDED';
+    app.toasts = [];
     cancelSlide();
   });
+
+  const toasted = (key: string) => app.toasts.some((toast) => toast.text === t(key));
+  /** The flight controller's answer to the mode change, as both links note it. */
+  const ack = (ok: boolean, text = ok ? 'Set mode: accepted' : 'Set mode: denied', cmd = 176) =>
+    app.events.push({ type: 'event', time: '12:00:01', text, event_type: ok ? 'cmd_ack_ok' : 'cmd_ack_fail', cmd });
+
+  async function approveAndSlide(id = 'k1') {
+    await approve(id);
+    expect(slideState.visible).toBe(true);
+    completeSlide();
+  }
 
   it('wait for the operator, and only for a vehicle that is armed', () => {
     app.drone.armed = false;
@@ -416,6 +430,15 @@ describe('flight commands', () => {
     expect(reply('k2')!.error).toBe('This sub has no return to launch in Argus.');
   });
 
+  it('go before a mission that waits for the vehicle to be disarmed', () => {
+    app.drone.armed = false;
+    ask('propose_mission', MISSION, 'm1');
+    app.drone.armed = true;
+    ask('propose_command', { command: 'rtl' }, 'c1');
+    ask('propose_command', { command: 'land' }, 'c2');
+    expect(assistant.queue.map((p) => p.id)).toEqual(['c1', 'c2', 'm1']);
+  });
+
   it('the approval asks for the slide, and the slide sends it', async () => {
     vi.useFakeTimers();
     ask('propose_command', { command: 'rtl' });
@@ -430,26 +453,74 @@ describe('flight commands', () => {
     app.drone.mode_id = 6;
     app.drone.mode = 'RTL';
     await vi.advanceTimersByTimeAsync(400);
-    expect(reply()).toEqual({ type: 'assistant_reply', id: 'k1', ok: true, result: { mode: 'RTL' } });
+    expect(reply()).toEqual({ type: 'assistant_reply', id: 'k1', ok: true, result: { mode: 'RTL', mode_number: 6 } });
     expect(assistant.queue).toEqual([]);
   });
 
   it('hold and land go as a mode change, as the buttons send them', async () => {
     vi.useFakeTimers();
     ask('propose_command', { command: 'hold' });
-    await approve('k1');
-    completeSlide();
+    await approveAndSlide();
     expect(dispatch).toHaveBeenLastCalledWith('mode', 5);
+    app.drone.mode_id = 5;
     await vi.advanceTimersByTimeAsync(400);
-    expect(reply()!.ok).toBe(true);
+    expect(reply()).toMatchObject({ ok: true, result: { mode_number: 5 } });
 
     ask('propose_command', { command: 'land' }, 'k2');
-    await approve('k2');
-    completeSlide();
+    await approveAndSlide('k2');
     expect(dispatch).toHaveBeenLastCalledWith('mode', 9);
     app.drone.mode_id = 9;
     await vi.advanceTimersByTimeAsync(400);
-    expect(reply('k2')!.ok).toBe(true);
+    expect(reply('k2')).toMatchObject({ ok: true, result: { mode_number: 9 } });
+  });
+
+  it('accepted and gone on to another mode before a heartbeat showed it: done', async () => {
+    // A QuadPlane's RTL may turn to QLAND at once (ArduPlane/mode_rtl.cpp:15-18).
+    vi.useFakeTimers();
+    app.drone.vtype_raw = 20;
+    app.drone.mode_id = 15;
+    ask('propose_command', { command: 'rtl' });
+    await approveAndSlide();
+    ack(true);
+    app.drone.mode_id = 20;
+    app.drone.mode = 'QLAND';
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(reply()).toBeUndefined();
+    await vi.advanceTimersByTimeAsync(1000);
+    expect(reply()).toMatchObject({ ok: true, result: { mode: 'QLAND', mode_number: 20, accepted: true } });
+  });
+
+  it('refused by the flight controller: failed at once, with its answer', async () => {
+    vi.useFakeTimers();
+    ask('propose_command', { command: 'land' });
+    await approveAndSlide();
+    ack(false, 'Command: other — denied', 400); // not the mode change: no answer to it
+    ack(false);
+    await vi.advanceTimersByTimeAsync(400);
+    expect(reply()).toMatchObject({ ok: false, result: { outcome: 'failed' } });
+    expect(reply()!.error).toBe('The flight controller answered: Set mode: denied. It is in GUIDED.');
+  });
+
+  it('no answer at all: failed after 10 s, with the mode it is in', async () => {
+    vi.useFakeTimers();
+    ask('propose_command', { command: 'rtl' });
+    await approveAndSlide();
+    await vi.advanceTimersByTimeAsync(9800);
+    expect(reply()).toBeUndefined();
+    await vi.advanceTimersByTimeAsync(600);
+    expect(reply()!.error).toBe('No answer from the flight controller in 10 s: it is in GUIDED.');
+  });
+
+  it('already in that mode: sent all the same, and said so', async () => {
+    vi.useFakeTimers();
+    app.drone.mode_id = 5;
+    app.drone.mode = 'LOITER';
+    ask('propose_command', { command: 'hold' });
+    await approveAndSlide();
+    expect(dispatch).toHaveBeenLastCalledWith('mode', 5);
+    ack(true);
+    await vi.advanceTimersByTimeAsync(400);
+    expect(reply()).toMatchObject({ ok: true, result: { mode_number: 5, already_in_mode: true, accepted: true } });
   });
 
   it('a slide let go sends nothing, and the proposal waits on', async () => {
@@ -461,13 +532,36 @@ describe('flight commands', () => {
     expect(reply()).toBeUndefined();
   });
 
-  it('taken back while the slide is open, the slide sends nothing', async () => {
+  it('taken back while the slide is open: the slide closes, and the operator is told', async () => {
     ask('propose_command', { command: 'rtl' });
     await approve('k1');
     withdraw('k1');
+    expect(slideState.visible).toBe(false);
+    expect(toasted('assistant.withdrawnNow')).toBe(true);
     completeSlide();
     expect(dispatch).not.toHaveBeenCalled();
     expect(reply()).toMatchObject({ ok: false, result: { outcome: 'withdrawn' } });
+  });
+
+  it('the assistant gone while the slide is open: the same', async () => {
+    ask('propose_command', { command: 'rtl' });
+    await approve('k1');
+    forgetAssistant();
+    expect(slideState.visible).toBe(false);
+    expect(toasted('assistant.withdrawnNow')).toBe(true);
+  });
+
+  it('a slide of the operator that took its place is left alone', async () => {
+    ask('propose_command', { command: 'rtl' });
+    await approve('k1');
+    const own = vi.fn();
+    const { showSlide } = await import('./stores.svelte');
+    showSlide('Slide to arm', 'orange', own);
+    withdraw('k1');
+    expect(slideState.visible).toBe(true);
+    expect(toasted('assistant.withdrawnNow')).toBe(false);
+    completeSlide();
+    expect(own).toHaveBeenCalled();
   });
 
   it('a vehicle that disarmed meanwhile gets nothing', async () => {
@@ -476,6 +570,7 @@ describe('flight commands', () => {
     await approve('k1');
     expect(slideState.visible).toBe(false);
     expect(reply()).toMatchObject({ ok: false, result: { outcome: 'refused' } });
+    expect(toasted('assistant.notArmed')).toBe(true);
 
     app.drone.armed = true;
     ask('propose_command', { command: 'hold' }, 'k2');
@@ -486,29 +581,22 @@ describe('flight commands', () => {
     expect(reply('k2')).toMatchObject({ ok: false, result: { outcome: 'refused' } });
   });
 
-  it('no mode change in time: failed, with the mode it is in and what the flight controller said', async () => {
-    vi.useFakeTimers();
-    ask('propose_command', { command: 'rtl' });
+  it('one asked for in an earlier flight is not for this one', async () => {
     event('mode', 'before');
+    ask('propose_command', { command: 'land' });
+    event('disarmed', 'Disarmed');
+    event('armed', 'Armed');
     await approve('k1');
-    completeSlide();
-    event('cmd_ack_fail', 'Command: Set mode — denied');
-    await vi.advanceTimersByTimeAsync(10400);
-    expect(reply()!.ok).toBe(false);
-    expect(reply()!.error).toBe(
-      'The flight controller did not report the mode in 10 s: it is in LOITER. It answered: Command: Set mode — denied',
-    );
+    expect(slideState.visible).toBe(false);
+    expect(reply()!.error).toBe('The vehicle has disarmed since it was asked for: it was for that flight.');
+    expect(toasted('assistant.otherFlight')).toBe(true);
   });
 
-  it('a QuadPlane that goes on from RTL to QRTL did what it was asked', async () => {
-    vi.useFakeTimers();
-    app.drone.vtype_raw = 20; // VTOL quadrotor
-    ask('propose_command', { command: 'rtl' });
+  it('the refusal the operator sees names its reason', async () => {
+    ask('propose_command', { command: 'land' });
+    app.drone.vtype_raw = 10; // became known as a rover meanwhile
     await approve('k1');
-    completeSlide();
-    app.drone.mode_id = 21;
-    app.drone.mode = 'QRTL';
-    await vi.advanceTimersByTimeAsync(400);
-    expect(reply()).toMatchObject({ ok: true, result: { mode: 'QRTL' } });
+    expect(toasted('assistant.noMode')).toBe(true);
+    expect(toasted('assistant.notArmed')).toBe(false);
   });
 });

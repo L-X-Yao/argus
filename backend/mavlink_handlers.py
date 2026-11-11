@@ -323,13 +323,15 @@ def handle_command_ack(p: bytes, pl: int, link: DroneLink) -> None:
     if cmd_id in (511, 512):
         return
     etype = "cmd_ack_ok" if result == 0 else "cmd_ack_fail"
-    link.add_event(lt("cmd_ack", link.locale) % (cmd_name, result_text), etype)
+    link.add_event(lt("cmd_ack", link.locale) % (cmd_name, result_text), etype, cmd=cmd_id)
 
 
 def report_no_answer(link: DroneLink, cmd_id: int) -> None:
     en = link.locale != "zh"
     cmd_name = (_CMD_NAMES_EN if en else _CMD_NAMES_ZH).get(cmd_id, str(cmd_id))
-    link.add_event(lt("cmd_ack", link.locale) % (cmd_name, lt("cmd_no_answer", link.locale)), "cmd_ack_fail")
+    link.add_event(
+        lt("cmd_ack", link.locale) % (cmd_name, lt("cmd_no_answer", link.locale)), "cmd_ack_fail", cmd=cmd_id
+    )
 
 
 # ArduPilot: libraries/AP_Compass/AP_Compass_Calibration.cpp:270 — Compass::send_mag_cal_progress

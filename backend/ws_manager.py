@@ -445,16 +445,16 @@ class WSManager:
                 if events_total > event_seq_cursor:
                     for ev in events:
                         if ev.get("seq", 0) > event_seq_cursor:
-                            await ws.send_text(
-                                dumps(
-                                    {
-                                        "type": "event",
-                                        "time": ev["time"],
-                                        "text": ev["text"],
-                                        "event_type": ev.get("event_type", ""),
-                                    }
-                                )
-                            )
+                            out = {
+                                "type": "event",
+                                "time": ev["time"],
+                                "text": ev["text"],
+                                "event_type": ev.get("event_type", ""),
+                            }
+                            # The command an acknowledgement answers (DroneLink.add_event).
+                            if "cmd" in ev:
+                                out["cmd"] = ev["cmd"]
+                            await ws.send_text(dumps(out))
                     event_seq_cursor = events_total
                 if dl_cursor > len(dlmsg):
                     dl_cursor = 0
