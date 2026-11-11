@@ -16,7 +16,7 @@
 
 Argus is a **web GCS** for ArduPilot: one browser interface on desktop, tablet and phone, in 10 languages. There is no hosted version: run the Python backend yourself, or unzip the Windows package (Python included), then open it in a browser.
 
-> **Status**: ArduPilot is verified on ArduCopter SITL in CI and on a real flight controller on the bench, but Argus has not been through proper flight testing. [docs/VERIFICATION.md](docs/VERIFICATION.md) lists what has been tested and how, feature by feature. PX4 is not supported: Argus sends a PX4 vehicle no commands.
+> **Status**: ArduPilot is verified on ArduCopter SITL in CI and on a real flight controller on the bench, but Argus has not been through proper flight testing. [docs/VERIFICATION.md](docs/VERIFICATION.md) lists what has been tested and how, feature by feature. PX4 is not supported: a command for a PX4 vehicle is refused with an error.
 >
 > **Maintenance only since November 2026**: bugs and security problems get fixed, and no new features are planned. See [Project Status](#project-status).
 
@@ -63,8 +63,9 @@ For Windows 10 and 11, x64. Python and every library are inside the zip, and not
 2. Check the download, because the zip is not code-signed:
 
    ```powershell
-   (Get-FileHash Argus_GCS_vX.Y.Z_amd64.zip -Algorithm SHA256).Hash   # the same as in SHA256SUMS.txt
-   gh attestation verify Argus_GCS_vX.Y.Z_amd64.zip --repo L-X-Yao/argus   # optional, needs the GitHub CLI
+   $want = (Get-Content SHA256SUMS.txt).Split(' ')[0]
+   (Get-FileHash Argus_GCS_vX.Y.Z_amd64.zip -Algorithm SHA256).Hash -eq $want   # True when the download is intact
+   gh attestation verify Argus_GCS_vX.Y.Z_amd64.zip --repo L-X-Yao/argus       # optional, needs the GitHub CLI
    ```
 
 3. Unzip it and double-click `Argus地面站.bat` ("Argus ground station"). A browser opens `http://127.0.0.1:8100`.
@@ -113,9 +114,9 @@ Open Argus in Chrome/Edge, click the **USB** button, pick your flight controller
 
 ### Map data
 
-Map tiles, terrain heights and ArduPilot's firmware and parameter lists are not part of Argus. The backend fetches them from other parties' servers when you use the feature, under the terms of each server: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) lists them.
+Map tiles, terrain heights and ArduPilot's firmware and parameter lists are not part of Argus. Argus fetches them from other parties' servers when you use the feature, under the terms of each server: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) lists them.
 
-- The map shows the credit of the server it comes from, and Argus names itself to every server (`Argus-GCS/<version>`).
+- The map shows the credit of the server it comes from. The backend names itself to the servers it asks (`Argus-GCS/<version>`). The terrain of the 3D view is read by the browser itself.
 - The AutoNavi (Amap) source, which is the default, and the Google sources are not published APIs: they are the addresses those companies' own web maps read. Choose another source in Settings if that matters to you.
 - OpenStreetMap forbids bulk download from its tile server, so the Offline Maps panel does not offer it. A map file of your own (`.mbtiles` in `mbtiles/`) works without any server.
 

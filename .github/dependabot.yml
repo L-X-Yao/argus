@@ -1,7 +1,8 @@
 version: 2
 updates:
-  # Argus is in maintenance: one grouped pull request a month. Security updates do not wait for
-  # the schedule, they come as their own pull requests.
+  # Argus is in maintenance: minor and patch updates come as one pull request a month for npm and
+  # one for pip. A major update comes on its own. A security update does not wait for the
+  # schedule.
   - package-ecosystem: npm
     directory: /
     schedule:

@@ -22,13 +22,13 @@ Argus is under the MIT license, see [LICENSE](LICENSE). It contains work of othe
 | pyserial, whose wheel holds no license file | `LICENSES/BSD-3-Clause-pyserial.txt` |
 | The web build | `dist/THIRD-PARTY-LICENSES.txt` |
 
-`scripts/build_package.py` stops when a library in the package has no license text.
+`scripts/build_package.py` stops when a Python library in the package has no license text, and when the list of the web build lacks a library that is always in it. For a web library that ships no license file the list names its license and its source.
 
 pymavlink (LGPL-3.0) is used by the tests only. It is in no package.
 
 ## Servers Argus reads at run time
 
-Nothing below is included in Argus. The backend fetches it when you use the feature, under the terms of each server. Argus sends `Argus-GCS/<version>` as its User-Agent and shows the credit of the map server on the map.
+Nothing below is included in Argus. It is fetched when you use the feature, under the terms of each server. The backend sends `Argus-GCS/<version>` as its User-Agent, and the map shows the credit of its server. The terrain of the 3D view is the one thing the browser reads itself.
 
 | Server | Used for | Terms |
 | --- | --- | --- |
@@ -38,7 +38,7 @@ Nothing below is included in Argus. The backend fetches it when you use the feat
 | `t0.tianditu.gov.cn` | Tianditu, with a key of your own | The terms of your Tianditu key |
 | `webst01.is.autonavi.com`, `wprd01.is.autonavi.com` | AutoNavi (Amap) maps, the default source | Not a published API: these are the addresses AutoNavi's own web map reads. AutoNavi publishes no terms that allow other software to read them |
 | `mt1.google.com` | Google maps | Not a published API: this is the address Google's own web map reads. Google's terms ask that its services are used through the interfaces it provides |
-| `elevation-tiles-prod.s3.amazonaws.com`, `s3.amazonaws.com/elevation-tiles-prod` | Terrain height for missions and the 3D view | [Terrain Tiles](https://registry.opendata.aws/terrain-tiles/) open data, [attribution](https://github.com/tilezen/joerd/blob/master/docs/attribution.md) |
+| `elevation-tiles-prod.s3.amazonaws.com` (backend), `s3.amazonaws.com/elevation-tiles-prod` (browser) | Terrain height for missions, and for the 3D view | [Terrain Tiles](https://registry.opendata.aws/terrain-tiles/) open data, [attribution](https://github.com/tilezen/joerd/blob/master/docs/attribution.md) |
 | `firmware.ardupilot.org`, `autotest.ardupilot.org` | Firmware list, firmware files and parameter descriptions | ArduPilot, GPL-3.0 |
 
 The offline map download (Offline Maps panel) stores tiles of the AutoNavi layers. Whether you may keep tiles of a server offline is for its terms to say. A map file of your own (`.mbtiles`, put in `mbtiles/`) needs no server.

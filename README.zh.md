@@ -16,7 +16,7 @@
 
 Argus 是面向 ArduPilot 的 **Web 地面站**：一个浏览器界面，支持桌面、平板和手机，内置 10 种语言。没有托管版本：自己运行 Python 后端，或解压 Windows 发布包（已内置 Python），再用浏览器打开。
 
-> **当前状态**：ArduPilot 已通过 CI 中的 ArduCopter SITL 和真实飞控台架验证，尚未经过正式飞行测试。每项功能验证到什么程度，见 [docs/VERIFICATION.md](docs/VERIFICATION.md)。不支持 PX4：Argus 不会向 PX4 飞控发送任何命令。
+> **当前状态**：ArduPilot 已通过 CI 中的 ArduCopter SITL 和真实飞控台架验证，尚未经过正式飞行测试。每项功能验证到什么程度，见 [docs/VERIFICATION.md](docs/VERIFICATION.md)。不支持 PX4：发给 PX4 飞控的命令会被拒绝并报错。
 >
 > **2026 年 11 月起仅做维护**：修复缺陷和安全问题，不再计划新功能。见[项目状态](#项目状态)。
 
@@ -63,8 +63,9 @@ Argus 是面向 ArduPilot 的 **Web 地面站**：一个浏览器界面，支持
 2. 校验下载的文件，因为 zip 没有代码签名：
 
    ```powershell
-   (Get-FileHash Argus_GCS_vX.Y.Z_amd64.zip -Algorithm SHA256).Hash   # 应与 SHA256SUMS.txt 一致
-   gh attestation verify Argus_GCS_vX.Y.Z_amd64.zip --repo L-X-Yao/argus   # 可选，需要 GitHub CLI
+   $want = (Get-Content SHA256SUMS.txt).Split(' ')[0]
+   (Get-FileHash Argus_GCS_vX.Y.Z_amd64.zip -Algorithm SHA256).Hash -eq $want   # 文件完好时输出 True
+   gh attestation verify Argus_GCS_vX.Y.Z_amd64.zip --repo L-X-Yao/argus       # 可选，需要 GitHub CLI
    ```
 
 3. 解压后双击 `Argus地面站.bat`，浏览器会打开 `http://127.0.0.1:8100`。
@@ -113,9 +114,9 @@ python run.py --sim            # 同时启动后端 + simulator.py
 
 ### 地图数据
 
-地图瓦片、地形高程以及 ArduPilot 的固件和参数列表都不属于 Argus。使用相应功能时，后端从第三方服务器获取这些数据，并受各服务器条款约束，清单见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+地图瓦片、地形高程以及 ArduPilot 的固件和参数列表都不属于 Argus。使用相应功能时，Argus 从第三方服务器获取这些数据，并受各服务器条款约束，清单见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
 
-- 地图上会显示图源的署名，Argus 向每个服务器表明自己的身份（`Argus-GCS/<版本号>`）。
+- 地图上会显示图源的署名。后端向它请求的服务器表明自己的身份（`Argus-GCS/<版本号>`）。3D 视图的地形由浏览器直接读取。
 - 默认的高德图源和 Google 图源都不是公开发布的 API，而是这两家公司自己的网页地图读取的地址。介意的话请在设置里换用其他图源。
 - OpenStreetMap 禁止从它的瓦片服务器批量下载，所以离线地图面板不提供这一项。自备的地图文件（放在 `mbtiles/` 下的 `.mbtiles`）不依赖任何服务器。
 

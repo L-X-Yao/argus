@@ -130,7 +130,7 @@ A contribution goes under the MIT license of this repository. Code, pictures and
 | What | Kept current by |
 | --- | --- |
 | Libraries in the web build | The build, which writes `dist/THIRD-PARTY-LICENSES.txt` from the bundle (`vite.config.ts`) |
-| Libraries in the Windows package | `scripts/build_package.py`, which stops when a library has no license text |
+| Libraries in the Windows package | `scripts/build_package.py`, which stops when a Python library has no license text |
 | Credit of a map server | `src/lib/tileAttribution.ts`. `tests/test_contract_tile_attribution.py` fails when a tile source in `backend/tiles.py` has none |
 
 A new server that Argus reads goes in the table of `THIRD_PARTY_NOTICES.md`, and is asked under `USER_AGENT` from `backend/config.py`.
