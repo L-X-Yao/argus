@@ -5,6 +5,7 @@ as a browser: https://operations.osmfoundation.org/policies/tiles/ section 3.1. 
 "Mozilla/5.0" to every server until v3.7.9.
 """
 
+import ast
 import re
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -30,10 +31,40 @@ def test_a_map_tile_is_asked_for_under_that_name(tmp_path):
     assert fetch.call_args.args[0].get_header("User-agent") == USER_AGENT
 
 
+def _calls(tree: ast.AST, name: str) -> list[ast.Call]:
+    return [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute) and node.func.attr == name
+    ]
+
+
 @pytest.mark.parametrize("module", [tiles, terrain, firmware, param_meta])
-def test_every_download_uses_the_same_name(module):
-    source = Path(module.__file__).read_text(encoding="utf-8")
-    assert '"User-Agent": USER_AGENT' in source
+def test_every_request_of_a_module_carries_the_name(module):
+    """Read from the code of each request: one of two reverted would pass a search for the text."""
+    tree = ast.parse(Path(module.__file__).read_text(encoding="utf-8"))
+    requests = _calls(tree, "Request")
+    assert requests
+    for call in requests:
+        headers = next((kw.value for kw in call.keywords if kw.arg == "headers"), None)
+        assert headers is not None, f"line {call.lineno}: a request without headers"
+        assert ast.unparse(headers) == "{'User-Agent': USER_AGENT}", f"line {call.lineno}"
+    # A bare urlopen(url) would go out as "Python-urllib": every one takes a prepared request.
+    opened = _calls(tree, "urlopen")
+    assert len(opened) == len(requests)
+    for call in opened:
+        assert isinstance(call.args[0], ast.Name) and call.args[0].id == "req", f"line {call.lineno}"
+
+
+def test_no_other_module_asks_a_server():
+    """A new download elsewhere would be missed by the test above. The start-up script asks
+    only its own /health."""
+    asking = sorted(
+        str(path.relative_to(BACKEND))
+        for path in BACKEND.rglob("*.py")
+        if _calls(ast.parse(path.read_text(encoding="utf-8")), "urlopen")
+    )
+    assert asking == ["firmware.py", "param_meta.py", "server.py", "terrain.py", "tiles.py"]
 
 
 def test_no_request_poses_as_a_browser():
