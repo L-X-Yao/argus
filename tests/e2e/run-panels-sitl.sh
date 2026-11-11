@@ -86,5 +86,15 @@ start + flight
 "${PLAYWRIGHT[@]}" tests/e2e/panels-sitl-flight.spec.ts tests/e2e/panels-sitl-tools.spec.ts
 stop
 
+# The firmware's own fit on simulated samples can fail on a busy runner. The backend then
+# reports the failure and accepts nothing, which is right, the offsets stay as they were, and
+# the spec fails on that. A user would run the calibration again, and so does this, once, on a
+# fresh vehicle: tests/e2e/webserial-sitl-cal.spec.ts does the same inside its test.
 start calibration compass
-"${PLAYWRIGHT[@]}" tests/e2e/panels-sitl-compass.spec.ts
+if ! "${PLAYWRIGHT[@]}" tests/e2e/panels-sitl-compass.spec.ts; then
+  echo "=== the compass spec failed: once more on a fresh vehicle. What the first one logged last:"
+  tail -n 15 "$SITL_RUN_DIR/sitl.log" || true
+  stop
+  start calibration compass-again
+  "${PLAYWRIGHT[@]}" tests/e2e/panels-sitl-compass.spec.ts
+fi
