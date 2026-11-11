@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import asyncio
 import math
 import shutil
 import sqlite3
+import threading
 import time
 import urllib.error
 import urllib.request as urlreq
@@ -23,7 +25,21 @@ MBTILES_DIR = ROOT_DIR / "mbtiles"
 _TILE_MAX = cfg.TILE_CACHE_MAX
 _TILE_MAX_BYTES = 2 * 1024 * 1024
 _tile_count = -1
+# A style is in here from the first time its server did not answer until it answers again:
+# the time is when it may next be asked. _asking_again holds the styles with that one request
+# out. See _fetch_tile.
 _server_down_until: dict[str, float] = {}
+_asking_again: set[str] = set()
+_server_lock = threading.Lock()
+# What a tile may take over TILE_DOWNLOAD_TIMEOUT, which covers the connection and each read
+# but not the lookup of the name: that one can hang for half a minute behind a router with
+# no uplink.
+_TILE_GRACE = 2.0
+# Answers that say nothing about the tile: what a proxy on the way gives when it cannot reach
+# the map server, and what a server gives when it will not serve for now. Such a proxy takes
+# its own time before it says so, five seconds on the machine this was found on, and it says so
+# for every tile.
+_NOT_SERVING = frozenset({429, 502, 503, 504})
 # tile.openstreetmap.org forbids fetching tiles nobody is looking at, and keeping them for offline
 # use: https://operations.osmfoundation.org/policies/tiles/ section 4. It serves a map on screen.
 _NO_BULK = frozenset({"osm"})
@@ -123,21 +139,68 @@ async def api_tile_sources():
     return {name: source for name, source in TILE_SOURCES.items() if name != "tianditu" or cfg.TIANDITU_KEY}
 
 
+def _silent(style: str) -> bool:
+    """True while the server of this style is not to be asked: it did not answer, and either
+    the wait is not over or one request is out asking again."""
+    down_until = _server_down_until.get(style)
+    return down_until is not None and (time.monotonic() < down_until or style in _asking_again)
+
+
 def _fetch_tile(style: str, url: str) -> bytes:
     """A map server that does not answer costs a download worker TILE_DOWNLOAD_TIMEOUT per
     tile, and a view asks for dozens: with no internet in the field the queue would last
     minutes, with terrain and firmware downloads behind it. One silence stops the asking
-    for a while. A 404 is an answer, and says nothing about the server."""
-    if time.monotonic() < _server_down_until.get(style, 0):
-        raise OSError("map server not answering")
+    for a while. A 404 is an answer, and says nothing about the server. A 502 from a proxy
+    is no answer of the server's at all: see _NOT_SERVING.
+
+    When the while is over, one request asks again and the rest are still told at once.
+    All of them used to ask, and waited together on a server that was still silent: a page
+    has six connections to this backend, tiles took every one, and its own files, a panel's
+    code among them, stood behind them, again at every TILE_RETRY_AFTER."""
+    with _server_lock:
+        again = style in _server_down_until
+        if _silent(style):
+            raise OSError("map server not answering")
+        if again:
+            _asking_again.add(style)
     req = urlreq.Request(url, headers={"User-Agent": USER_AGENT})
     try:
-        return urlreq.urlopen(req, timeout=cfg.TILE_DOWNLOAD_TIMEOUT).read(_TILE_MAX_BYTES + 1)
-    except urllib.error.HTTPError:
+        data = urlreq.urlopen(req, timeout=cfg.TILE_DOWNLOAD_TIMEOUT).read(_TILE_MAX_BYTES + 1)
+    except urllib.error.HTTPError as answer:
+        with _server_lock:
+            if answer.code in _NOT_SERVING:
+                _server_down_until[style] = time.monotonic() + cfg.TILE_RETRY_AFTER
+            else:
+                _server_down_until.pop(style, None)
         raise
     except OSError:
-        _server_down_until[style] = time.monotonic() + cfg.TILE_RETRY_AFTER
+        with _server_lock:
+            _server_down_until[style] = time.monotonic() + cfg.TILE_RETRY_AFTER
         raise
+    finally:
+        if again:
+            with _server_lock:
+                _asking_again.discard(style)
+    with _server_lock:
+        _server_down_until.pop(style, None)
+    return data
+
+
+async def _download_tile(style: str, url: str) -> bytes:
+    """_fetch_tile on a download worker, for no longer than a tile may take.
+
+    Asked here first, without a worker: with every worker held by a name lookup that hangs,
+    a request would wait for one only to be told that the server is silent. And answered
+    here after the limit, whatever the worker is still doing: the page gets its connection
+    back, and the server counts as silent from then on."""
+    if _silent(style):
+        raise OSError("map server not answering")
+    try:
+        return await asyncio.wait_for(aio_download(_fetch_tile, style, url), cfg.TILE_DOWNLOAD_TIMEOUT + _TILE_GRACE)
+    except TimeoutError:
+        with _server_lock:
+            _server_down_until[style] = time.monotonic() + cfg.TILE_RETRY_AFTER
+        raise OSError("map server not answering") from None
 
 
 @router.get("/api/tile/{style}/{z}/{x}/{y}")
@@ -152,7 +215,7 @@ async def api_tile(style: str, z: int, x: int, y: int):
         return Response(content=data, media_type="image/png", headers={"Cache-Control": "public, max-age=604800"})
     url = TILE_URLS.get(style, TILE_URLS["6"]).format(x=x, y=y, z=z)
     try:
-        data = await aio_download(_fetch_tile, style, url)
+        data = await _download_tile(style, url)
         if len(data) > _TILE_MAX_BYTES:
             return Response(status_code=502, content="Tile too large")
         if _tile_count < 0:
@@ -234,7 +297,7 @@ async def api_tile_bulk_download(request: Request):
                 try:
                     # Through _fetch_tile, so that a map server that does not answer costs one
                     # timeout and not one per tile: 5000 of them held this request for hours.
-                    data = await aio_download(_fetch_tile, style, url)
+                    data = await _download_tile(style, url)
                     if len(data) > _TILE_MAX_BYTES:
                         continue
                     cache_file.parent.mkdir(parents=True, exist_ok=True)

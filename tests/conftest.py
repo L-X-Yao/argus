@@ -109,6 +109,7 @@ def _reset_backend_globals():
 
     _tiles._tile_count = -1
     _tiles._server_down_until.clear()
+    _tiles._asking_again.clear()
     _terrain._tile_failed_until.clear()
 
     import backend.auth as _auth

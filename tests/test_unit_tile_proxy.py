@@ -589,3 +589,132 @@ class TestSilentServer:
         with patch("backend.tiles.urlreq.urlopen") as urlopen:
             urlopen.return_value.read.return_value = b"tile"
             assert tiles._fetch_tile("osm", "https://tiles.invalid/1/0/0.png") == b"tile"
+
+    def test_after_the_wait_one_request_asks_and_the_rest_are_told_at_once(self):
+        """All of them used to ask, and waited together on a server that was still silent:
+        a page has six connections to the backend, and tiles took every one."""
+        import threading
+        import urllib.error
+
+        from backend import tiles
+
+        tiles._server_down_until["osm"] = 0.0  # it was silent, and the wait is over
+        asked, answer = threading.Event(), threading.Event()
+
+        def still_silent(*_args, **_kwargs):
+            asked.set()
+            answer.wait(10)
+            raise urllib.error.URLError("timed out")
+
+        def the_one_that_asks():
+            with pytest.raises(OSError):
+                tiles._fetch_tile("osm", "https://tiles.invalid/1/0/0.png")
+
+        with patch("backend.tiles.urlreq.urlopen", side_effect=still_silent) as urlopen:
+            first = threading.Thread(target=the_one_that_asks)
+            first.start()
+            assert asked.wait(10)
+            for _ in range(5):
+                with pytest.raises(OSError):
+                    tiles._fetch_tile("osm", "https://tiles.invalid/1/0/0.png")
+            assert urlopen.call_count == 1
+            answer.set()
+            first.join(10)
+            assert not first.is_alive()
+            # Still silent: the wait has begun again, and nobody is left asking.
+            assert tiles._silent("osm")
+            assert "osm" not in tiles._asking_again
+            with pytest.raises(OSError):
+                tiles._fetch_tile("osm", "https://tiles.invalid/1/0/0.png")
+            assert urlopen.call_count == 1
+
+    def test_an_answer_ends_the_silence_for_every_request(self):
+        from backend import tiles
+
+        tiles._server_down_until["osm"] = 0.0
+        with patch("backend.tiles.urlreq.urlopen") as urlopen:
+            urlopen.return_value.read.return_value = b"tile"
+            for _ in range(3):
+                assert tiles._fetch_tile("osm", "https://tiles.invalid/1/0/0.png") == b"tile"
+            assert urlopen.call_count == 3
+        assert "osm" not in tiles._server_down_until
+        assert not tiles._asking_again
+
+    def test_a_missing_tile_from_a_server_that_was_silent_ends_the_silence_too(self):
+        import urllib.error
+
+        from backend import tiles
+
+        tiles._server_down_until["osm"] = 0.0
+        missing = urllib.error.HTTPError("https://tiles.invalid", 404, "Not Found", None, None)
+        with patch("backend.tiles.urlreq.urlopen", side_effect=missing), pytest.raises(urllib.error.HTTPError):
+            tiles._fetch_tile("osm", "https://tiles.invalid/1/0/0.png")
+        assert "osm" not in tiles._server_down_until
+        assert not tiles._asking_again
+
+    @pytest.mark.parametrize("status", [502, 503, 504, 429])
+    def test_a_proxy_that_cannot_reach_the_server_counts_as_silence(self, status):
+        """Behind a proxy an unreachable map server is a 502 after the proxy's own timeout,
+        for every tile. Taken for an answer, each tile cost that time, and the page waited."""
+        import urllib.error
+
+        from backend import tiles
+
+        refused = urllib.error.HTTPError("https://tiles.invalid", status, "Bad Gateway", None, None)
+        with patch("backend.tiles.urlreq.urlopen", side_effect=refused) as urlopen:
+            for _ in range(5):
+                with pytest.raises(OSError):
+                    tiles._fetch_tile("osm", "https://tiles.invalid/1/0/0.png")
+        assert urlopen.call_count == 1
+        assert tiles._silent("osm")
+
+    @pytest.mark.parametrize("status", [400, 403, 404, 410, 500])
+    def test_an_answer_about_the_tile_does_not(self, status):
+        import urllib.error
+
+        from backend import tiles
+
+        answer = urllib.error.HTTPError("https://tiles.invalid", status, "No", None, None)
+        with patch("backend.tiles.urlreq.urlopen", side_effect=answer) as urlopen:
+            for _ in range(3):
+                with pytest.raises(urllib.error.HTTPError):
+                    tiles._fetch_tile("osm", "https://tiles.invalid/1/0/0.png")
+        assert urlopen.call_count == 3
+        assert not tiles._silent("osm")
+
+    def test_a_tile_that_takes_too_long_is_answered_anyway(self, tile_cache_dir):
+        """The lookup of the server's name is outside urlopen's timeout, and behind a router
+        with no uplink it can hang for half a minute. The page gets its connection back at
+        the limit, and the next tile does not even wait for a worker."""
+        import threading
+        import time
+
+        from backend import tiles
+
+        release = threading.Event()
+
+        def hangs(_style, _url):
+            release.wait(10)
+            raise OSError("the lookup gave up at last")
+
+        with (
+            patch.object(tiles.cfg, "TILE_DOWNLOAD_TIMEOUT", 0.2),
+            patch.object(tiles, "_TILE_GRACE", 0.1),
+            patch("backend.tiles._fetch_tile", side_effect=hangs) as fetch,
+        ):
+            try:
+                started = time.monotonic()
+                assert client.get("/api/tile/osm/5/10/15").status_code == 404
+                assert time.monotonic() - started < 3
+                assert tiles._silent("osm")
+                assert client.get("/api/tile/osm/5/10/16").status_code == 404
+                assert fetch.call_count == 1
+            finally:
+                release.set()
+
+    def test_a_tile_in_good_time_is_passed_on(self, tile_cache_dir):
+        with patch("backend.tiles.urlreq.urlopen") as urlopen:
+            urlopen.return_value.read.return_value = b"\x89PNG tile"
+            r = client.get("/api/tile/osm/5/10/15")
+        assert r.status_code == 200
+        assert r.content == b"\x89PNG tile"
