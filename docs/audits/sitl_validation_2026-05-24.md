@@ -79,8 +79,8 @@ NTRIP (which still wants a real GPS receiver, not a USB issue):
 
 ### Migration provenance
 
-- `docs/MIGRATION_TO_WSL.md` — full Phase 1–6 runbook
-- `scripts/wsl_first_run.sh` — idempotent WSL bootstrap
+- `docs/MIGRATION_TO_WSL.md` — full Phase 1–6 runbook (removed 2026-11: `docs/DEV_WORKFLOW.md` has what is still needed)
+- `scripts/wsl_first_run.sh` — idempotent WSL bootstrap (removed 2026-11)
 - FC BUSID on this host: `2-1` (re-check with `usbipd list` if it moves
   after replug). Attach each session with `usbipd attach --wsl --busid=2-1`
   from Windows admin PowerShell.

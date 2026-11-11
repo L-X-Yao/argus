@@ -1,5 +1,9 @@
 # Panel Reality Map — 2026-07-13 static audit
 
+> **A snapshot of 2026-07-13, not kept up to date.** The counts, the list of panels and what is
+> said about tests have changed since. The current status of every panel, and which four cannot
+> be opened, is in [VERIFICATION.md](VERIFICATION.md).
+
 Every component under `src/components/` cross-referenced against the backend
 ws command set (52 commands), REST routes (27), the WebSerial transport
 dispatch table, and the store/telemetry fields the backend actually pushes.

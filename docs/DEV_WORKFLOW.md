@@ -16,7 +16,7 @@ All development happens in one checkout inside WSL2. Windows provides the browse
 
 ## WSL2 — development environment
 
-Already set up. See `docs/MIGRATION_TO_WSL.md` for the bootstrap.
+WSL2 with Ubuntu, and [usbipd-win](https://github.com/dorssel/usbipd-win) on Windows for the routes below that forward the FC. Setup inside WSL is the same as on any Linux machine: see Build & Test in `CLAUDE.md`. Keep the checkout on the WSL file system, not under `/mnt/c`: crossing into NTFS makes every file access several times slower.
 
 **Daily commands**:
 
@@ -32,6 +32,7 @@ ruff check backend/ scripts/ tests/
 python -m pytest tests/test_unit_*.py tests/test_contract_*.py -v
 npx vitest run
 npx svelte-check --tsconfig ./tsconfig.json
+npm run format:check
 npm run build                                # only when shipping
 ```
 
@@ -43,9 +44,10 @@ Every live connection automatically records every **validated** MAVLink frame
 (both directions) to `logs/argus_*.tlog` alongside the telemetry CSV. The
 format is standard tlog (8-byte big-endian µs timestamp per message) —
 readable by pymavlink `mavlogdump.py` and Mission Planner. Frames that fail
-CRC or carry unknown msg ids are dropped before recording (they surface in
-`parse_errors` / the unknown-id log instead) — the tlog captures exactly what
-drove state, not the raw wire noise.
+CRC or carry unknown msg ids are dropped before recording: a bad CRC counts
+in `parse_errors`, the `E:` figure of the status bar, and an unknown id is
+counted per id in `DroneLink._unknown_msg_ids`, which nothing displays. The
+tlog captures exactly what drove state, not the raw wire noise.
 
 This shrinks the code→hardware→observe loop: an FC quirk captured once on real
 hardware replays forever, no hardware attached.
@@ -107,7 +109,9 @@ usbipd list                                  # find the busid
 usbipd attach --wsl --busid=<busid>
 ```
 
-Detach it afterwards so WebSerial can see the device again: `usbipd detach --busid=<busid>`. See `docs/MIGRATION_TO_WSL.md` Phase 4 for first-time setup.
+Detach it afterwards so WebSerial can see the device again: `usbipd detach --busid=<busid>`.
+
+The first time, share the device once with `usbipd bind --busid=<busid>`, and in WSL add yourself to the group that may open serial ports: `sudo usermod -aG dialout $USER`, then `wsl --shutdown` from PowerShell and open WSL again.
 
 ## ArduPilot fork — WSL only
 

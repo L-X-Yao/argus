@@ -34,7 +34,7 @@ CI runs on every push to `main` and every PR. On top of the five checks above, i
 | --- | --- |
 | Generated files | `scripts/sync_modes.py` and `scripts/sync_crc.py` leave no diff |
 | Backend coverage | At least 95% |
-| Frontend coverage | At least 85% of lines |
+| Frontend coverage | At least 85% of lines, of the files under `src/lib/` that a unit test imports. The Svelte components have no unit tests: the e2e specs drive them |
 | Build | `npm run build` succeeds |
 | Bundle size | `dist/assets/` is at most 3 MiB |
 | npm audit | No critical issues |

@@ -14,6 +14,10 @@ Pairs with:
 
 ## Load-bearing oddities
 
+The changes behind these entries were made on 2026-05-23. The public history starts three days
+later, at the first commit of v3.6.0, so each entry names its change by subject and date: there
+is no hash to look up.
+
 ### 1. `cmd_cal_accel_next` sends `command=0, result=1`
 
 **Looks wrong because:** Every MAVLink reference shows COMMAND_ACK fields as
@@ -37,8 +41,9 @@ via the `encodeCommandAck(0, 1)` helper in `src/lib/mavlink/messages.ts`.
 Both call sites carry the citation comment; both call sites must stay in
 sync if the AP handler ever changes.
 
-**Cited:** Commit `2f93a6d`, `6a42c47`, and the Phase F WebSerial accel
-calibration commit that added the frontend mirror.
+**From:** "fix: accel cal ACK protocol + reorder orientation grid" and "fix: accel cal advance +
+quiet parser + static handler↔CRC contract" (both 2026-05-23), and the WebSerial accel calibration
+change that added the frontend mirror.
 
 ---
 
@@ -59,7 +64,7 @@ rejected legitimate trimmed frames. Each handler's check is now the
 *minimum* `pl` for which any work is meaningful (e.g., `if pl < 1` rather
 than `if pl < 25` for PARAM_VALUE).
 
-**Cited:** Commit `102a05e`.
+**From:** "fix: MAVLink 2 zero-trim across all handlers + 2 protocol bugs" (2026-05-23).
 
 ---
 
@@ -77,7 +82,7 @@ clients. The monotonic counter survives the trim — when the next push
 runs, `events_emitted_total > cursor` correctly identifies new events
 and we look them up by `seq` field, not by index.
 
-**Cited:** Commit `7d50700`. The bug it fixes: drone_link audit C5.
+**From:** "fix: drone_link + ws_manager + app.py audit findings" (2026-05-23). The bug it fixes: C5 in `docs/audits/audit_drone_link.md`.
 
 ---
 
@@ -93,7 +98,7 @@ called from inside an `async def receive_loop`, so a sync sleep freezes
 the asyncio event loop for that whole window — heartbeats stop, other
 clients hang, LINK_LOST_TIMEOUT trips.
 
-**Cited:** Commit `f278b75`.
+**From:** "fix: 8 more audit findings — TS decoders, log/param state machines" (2026-05-23).
 
 ---
 
@@ -110,7 +115,7 @@ on cancel, and either (a) wait for the next accel-cal step ACK to advance
 through and complete it, or (b) reboot the FC. Documented inline in
 `backend/commands/_setup.py:cmd_cal_cancel`.
 
-**Cited:** Commit `c69f684`.
+**From:** "docs: note that cal_cancel only cancels mag cal, not accel" (2026-05-23).
 
 ---
 
@@ -126,7 +131,8 @@ real-hardware session) and flooded the operator's log. The "handler
 exists without CRC_EXTRA" bug class is now caught statically by
 `tests/test_contract_handlers_crc.py`. Runtime is silent and clean.
 
-**Cited:** Commit `f278b75`. Tried-and-reverted in `9b6276a`.
+**From:** "fix: 8 more audit findings — TS decoders, log/param state machines" (2026-05-23), which took back
+"fix: surface unknown MAVLink msg ids via fail-loud parse + add 191/192" of the same day.
 
 ---
 
@@ -140,7 +146,7 @@ derived-from-store binding would re-fire on every batch, clobbering any
 edit the operator made before the fetch finished. The `_loaded` flag
 seeds values once at first availability and lets the user edit freely.
 
-**Cited:** Commit `f96b5c6`.
+**From:** "fix: param config panels stop clobbering operator edits mid-stream" (2026-05-23).
 
 ---
 
@@ -156,7 +162,7 @@ pymavlink. The `tests/test_contract_pymavlink.py::TestCrcExtraMatchesPymavlink`
 test enforces that every entry in `_CRC_EXTRA` (backend) and `CRC_EXTRA`
 (frontend `crc.ts`) matches pymavlink byte-for-byte. Do NOT "round" them.
 
-**Cited:** Commit `bd3afb9`.
+**From:** "fix: 4 protocol bugs surfaced by pymavlink-oracle byte-level audit" (2026-05-23).
 
 ---
 
@@ -170,7 +176,7 @@ that could be one shared field.
 (the FC tracks them as separate `mission_type` slots). A unified timer
 would incorrectly abort one when a sibling protocol's REQUEST arrived.
 
-**Cited:** Commit `689d636`.
+**From:** "fix: mission upload watchdog + log armed-guard + param gap recovery" (2026-05-23).
 
 ---
 
@@ -218,25 +224,30 @@ answer is whatever pymavlink produces for the equivalent logical message.
 
 ### Static contract tests over runtime warnings
 
-When tempted to add a runtime log_warning for "this shouldn't happen",
-prefer a startup-time contract test instead. Runtime warnings either
-spam the operator log (and get ignored) or are silent in the happy path
-(and don't actually catch the bug class they're meant to). Contract
-tests fail loud in CI exactly when they should.
+When tempted to add a runtime log_warning for "this shouldn't happen"
+between two parts of our own code, prefer a contract test instead.
+Runtime warnings either spam the operator log (and get ignored) or are
+silent in the happy path (and don't actually catch the bug class they're
+meant to). Contract tests fail loud in CI exactly when they should.
+
+Input from outside is another matter. A frame, a file or a stored value
+can be wrong at any time, and no test in CI will see it: check it where
+it comes in and drop it, as Tests in `CONTRIBUTING.md` says.
 
 ---
 
 ## Current feature & verification status
 
-See **`docs/FEATURE_CHECKLIST.md`** for the canonical per-feature status
-(✅ real-hardware verified / ✅ᵗ test-verified / ⚠️ partial / 🔒 blocked /
-❌ broken or not-implemented). It tracks ~500 numbered features and
-gets updated as the codebase changes. Don't duplicate that table here —
-this document is for **design rationale**, not status.
+See **`docs/VERIFICATION.md`** for the current status of every command,
+message, route, panel and platform feature, and how far each has been
+tested. `tests/test_contract_verification_doc.py` keeps it complete.
+`docs/FEATURE_CHECKLIST.md` is a snapshot frozen on 2026-05-24. Don't
+duplicate either table here — this document is for **design rationale**,
+not status.
 
 The orphan / deferred items also live in test allowlists with explanatory
 comments:
-- Frontend → backend command orphans (NTRIP etc.): `tests/test_contract_commands.py::KNOWN_FRONTEND_ORPHANS`
+- Frontend → backend command orphans (none today): `tests/test_contract_commands.py::KNOWN_FRONTEND_ORPHANS`
 - Backend dispatch entries with no frontend caller: `tests/test_contract_commands.py::KNOWN_BACKEND_ORPHANS`
 - Locale keys defined but unreferenced: `tests/test_contract_locale.py::KNOWN_ORPHAN_LOCALE_KEYS`
 

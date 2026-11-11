@@ -39,7 +39,7 @@ To fly real missions today, use QGroundControl or Mission Planner: both are flig
 | **Vehicles** | Copter, Plane, VTOL, Rover, Sub |
 | **Map** | 8 tile sources (Amap, Google, OSM, Esri, CartoDB; Tianditu with a key of your own), each under [its own terms](#map-data) + 3D terrain (MapLibre GL) + offline mbtiles |
 | **Mission** | WP / Spline / Loiter / Survey grid / Crosshatch / Spiral / Orbit + terrain profile with clearance check |
-| **Formats** | `.waypoints` (MP) / `.plan` (QGC) / `.gpx` / `.kml` import & export |
+| **Formats** | Reads `.waypoints` (Mission Planner) and `.plan` (QGroundControl); reads and writes `.kml` and its own `.json` |
 | **Parameters** | Metadata-driven UI (desc/range/units/enum/bitmask), tree view, diff export, default reset |
 | **Calibration** | Compass, accel, gyro, level, baro wizards with real-time progress |
 | **RTK** | NTRIP client with HTTP/1.0 + ICY-200 negotiation, streaming RTCM injection |
@@ -49,7 +49,7 @@ To fly real missions today, use QGroundControl or Mission Planner: both are flig
 | **HUD** | PFD (attitude/speed/altitude/compass/wind), real-time charts, EKF status |
 | **Audio** | Localized voice callouts (mode, battery, altitude, waypoints) in all 10 languages |
 | **i18n** | 10 languages (zh, en, ja, ko, de, fr, es, pt, ru, ar) + RTL |
-| **Offline** | PWA with service worker, mbtiles support, tile caching (5000-entry LRU) |
+| **Offline** | PWA with service worker, mbtiles support, tile caching (5000 tiles, the oldest dropped first) |
 | **Desktop** | A Tauri v2 config is in `src-tauri/`. It has never been built: no icons, no CI job, and none planned |
 | **Security** | Token auth, cross-site and DNS-rebinding request blocking, SSRF + path-traversal guards, statustext filtering |
 
@@ -149,11 +149,11 @@ Map tiles, terrain heights and ArduPilot's firmware and parameter lists are not 
 | Module | Description |
 |---|---|
 | `src/lib/mavlink/` | Pure TypeScript MAVLink v2 encoder/decoder with CRC validation |
-| `src/lib/fc/` | Flight controller adapter (ArduPilot wired; PX4 mode tables exist, not imported in production) |
+| `src/lib/fc/` | Flight controller adapter with ArduPilot and PX4 mode tables. Only its own tests use it: the app does not import it |
 | `src/lib/transport.ts` | Dual-mode transport (WebSocket backend vs WebSerial direct) |
 | `src/lib/serial.ts` | Web Serial API wrapper with FC USB vendor filters |
 | `src/lib/terrain.ts` | SRTM elevation queries for terrain-following missions |
-| `src/lib/missionIO.ts` | Mission import/export (`.waypoints` / `.plan` / `.gpx`) |
+| `src/lib/missionIO.ts` | Mission import/export (`.waypoints` / `.plan` / `.kml`), and the checks on what a file or browser storage holds |
 | `src/lib/survey.ts` | Survey patterns (grid, crosshatch, spiral, orbit) |
 | `src/lib/i18n.svelte.ts` | 10-language i18n with RTL support |
 | `backend/drone_link.py` | MAVLink connection, frame parsing, state management |
@@ -261,8 +261,9 @@ Bug reports and fixes are welcome. A feature request is unlikely to be picked up
 1. Tests pass locally: `npx vitest run && python -m pytest tests/test_unit_*.py tests/test_contract_*.py`
 2. Type check is clean: `npx svelte-check` (0 errors, 0 warnings)
 3. Python lint is clean: `ruff check backend/ scripts/ tests/`
-4. Commit convention: `<type>: <imperative description>` (types: `feat`, `fix`, `perf`, `refactor`, `test`, `docs`, `ci`, `chore`)
-5. For FC-coupled code (MAVLink commands, ACK handling, calibration), cite upstream ArduPilot/PX4 source `file:line` in a comment — see `CLAUDE.md ## Protocol Code Discipline`
+4. Formatting is clean: `npm run format:check`
+5. Commit convention: `<type>: <imperative description>` (types: `feat`, `fix`, `perf`, `refactor`, `test`, `docs`, `ci`, `chore`)
+6. For FC-coupled code (MAVLink commands, ACK handling, calibration), cite upstream ArduPilot/PX4 source `file:line` in a comment — see `CLAUDE.md ## Protocol Code Discipline`
 
 ## Acknowledgments
 

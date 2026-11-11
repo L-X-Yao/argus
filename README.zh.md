@@ -39,7 +39,7 @@ Argus 是面向 ArduPilot 的 **Web 地面站**：一个浏览器界面，支持
 | **机型** | 多旋翼、固定翼、VTOL、地面车、水下潜航器 |
 | **地图** | 8 种图源（高德、Google、OSM、Esri、CartoDB；天地图需自备密钥），各自受[其服务条款](#地图数据)约束 + 3D 地形（MapLibre GL）+ 离线 mbtiles |
 | **航线** | 航点 / 曲线 / 盘旋 / 测绘网格 / 交叉 / 螺旋 / 环绕 + 地形剖面与净空检查 |
-| **格式** | `.waypoints` (MP) / `.plan` (QGC) / `.gpx` / `.kml` 导入导出 |
+| **格式** | 读取 `.waypoints`（Mission Planner）和 `.plan`（QGroundControl）；读写 `.kml` 和自有的 `.json` |
 | **参数** | 元数据驱动 UI（描述/范围/单位/枚举/位掩码），树形视图，差异导出，恢复默认 |
 | **校准** | 罗盘、加速度计、陀螺仪、水平、气压计向导，实时进度 |
 | **RTK** | NTRIP 客户端，HTTP/1.0 + ICY-200 协商，RTCM 流式注入 |
@@ -49,7 +49,7 @@ Argus 是面向 ArduPilot 的 **Web 地面站**：一个浏览器界面，支持
 | **HUD** | PFD（姿态/速度/高度/罗盘/风向），实时图表，EKF 状态 |
 | **语音** | 10 语言本地化语音播报（模式、电量、高度、航点） |
 | **多语言** | 10 种语言（中/英/日/韩/德/法/西/葡/俄/阿）+ RTL |
-| **离线** | PWA + Service Worker，mbtiles 支持，瓦片缓存（5000 条 LRU） |
+| **离线** | PWA + Service Worker，mbtiles 支持，瓦片缓存（5000 张，先存的先清） |
 | **桌面** | `src-tauri/` 里有一份 Tauri v2 配置，从未构建过：没有图标，没有 CI 任务，也不再计划 |
 | **安全** | Token 认证，跨站与 DNS 重绑定请求拦截，SSRF + 路径穿越防护，statustext 过滤 |
 
@@ -149,11 +149,11 @@ python run.py --sim            # 同时启动后端 + simulator.py
 | 模块 | 说明 |
 |---|---|
 | `src/lib/mavlink/` | 纯 TypeScript MAVLink v2 编解码器，含 CRC 校验 |
-| `src/lib/fc/` | 飞控适配器（ArduPilot 已接入；PX4 模式表存在但未在生产代码中引入） |
+| `src/lib/fc/` | 飞控适配器，含 ArduPilot 和 PX4 模式表。只有它自己的测试在用：应用没有引入它 |
 | `src/lib/transport.ts` | 双模式传输（WebSocket 后端 / WebSerial 直连） |
 | `src/lib/serial.ts` | Web Serial API 封装，含飞控 USB 厂商过滤器 |
 | `src/lib/terrain.ts` | SRTM 高程查询，用于地形跟随航线 |
-| `src/lib/missionIO.ts` | 航线导入导出（`.waypoints` / `.plan` / `.gpx`） |
+| `src/lib/missionIO.ts` | 航线导入导出（`.waypoints` / `.plan` / `.kml`），以及对文件和浏览器存储内容的检查 |
 | `src/lib/survey.ts` | 测绘图案生成（网格、交叉、螺旋、环绕） |
 | `src/lib/i18n.svelte.ts` | 10 语言国际化，支持 RTL |
 | `backend/drone_link.py` | MAVLink 连接、帧解析、状态管理 |
@@ -261,8 +261,9 @@ Argus 不做什么、哪些从未测试过，见 [docs/VERIFICATION.md](docs/VER
 1. 本地测试通过：`npx vitest run && python -m pytest tests/test_unit_*.py tests/test_contract_*.py`
 2. 类型检查清洁：`npx svelte-check`（0 错误，0 警告）
 3. Python 代码检查清洁：`ruff check backend/ scripts/ tests/`
-4. 提交规范：`<type>: <祈使句描述>`（type：`feat`、`fix`、`perf`、`refactor`、`test`、`docs`、`ci`、`chore`）
-5. 飞控耦合代码（MAVLink 命令、ACK 处理、校准握手）须在注释中引用上游 ArduPilot/PX4 源码 `file:line` —— 详见 `CLAUDE.md ## Protocol Code Discipline`
+4. 格式检查清洁：`npm run format:check`
+5. 提交规范：`<type>: <祈使句描述>`（type：`feat`、`fix`、`perf`、`refactor`、`test`、`docs`、`ci`、`chore`）
+6. 飞控耦合代码（MAVLink 命令、ACK 处理、校准握手）须在注释中引用上游 ArduPilot/PX4 源码 `file:line` —— 详见 `CLAUDE.md ## Protocol Code Discipline`
 
 ## 致谢
 

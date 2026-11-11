@@ -33,7 +33,7 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 | Messages, WebSerial | 35 | 17 | 13 | 0 | 4 | 0 | 1 |
 | REST routes | 28 | 6 | 5 | 17 | 0 | 0 | 0 |
 | Panels | 80 | 14 | 33 | 17 | 14 | 2 | 0 |
-| Platform | 47 | 8 | 14 | 10 | 10 | 2 | 3 |
+| Platform | 47 | 8 | 13 | 11 | 10 | 2 | 3 |
 
 ## Commands / 飞控命令
 
@@ -223,7 +223,7 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 | `PowerCalPanel` | params | 校准电压电流 | SITL | CI by clicks on firmware: voltage and current scale on the FC |
 | `AiAnnotationPanel` | planning | 标注图像缺陷 | None | No test. Auto-detect is a stub. No way to open it |
 | `AiPlannerPanel` | planning | 文字生成航线 | None | No test. Rule-based parser, not an LLM. No way to open it |
-| `AnnotationPanel` | planning | 记录地图标注点 | Tests only | Browser test: opens without an error |
+| `AnnotationPanel` | planning | 记录地图标注点 | Tests only | Browser test: opens, refuses an entry without a position, and leaves out one that was stored without it |
 | `CustomDashboard` | planning | 自定义仪表 | SITL | WebSerial CI, live values |
 | `OverlapCalcPanel` | planning | 计算相机重叠率 | Tests only | Browser test: opens without an error |
 | `SchedulerPanel` | planning | 定时执行任务 | Tests only | Logic: scheduler. No way to open it |
@@ -258,7 +258,7 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 | `LogPanel` | tools | 下载机载日志 | Real FC | 2026-11-06 on both links on Windows |
 | `LogViewerPanel` | tools | 绘图查看日志 | SITL | CI on a real .BIN, compared with pymavlink |
 | `RemotePanel` | tools | 查看会话复制链接 | SITL | CI: client count from the backend |
-| `ReplayPanel` | tools | 加载并回放飞行日志 | Simulator | e2e: map3d |
+| `ReplayPanel` | tools | 加载并回放飞行日志 | Simulator | e2e: map3d, a file with rows that are not numbers included |
 | `FleetDashboard` | vehicle | 查看并切换多机 | Tests only | Logic: ws |
 | `GimbalPanel` | vehicle | 控制云台相机 | Simulator | e2e: command-palette. Opens; no gimbal |
 | `VideoOverlay` | vehicle | 观看视频流 | Simulator | e2e: memory. No real camera |
@@ -279,7 +279,7 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 | Plane and VTOL | 固定翼和 VTOL | SITL | CI: a plain plane and a QuadPlane fly a whole mission on SITL, the QuadPlane with VTOL takeoff, transition and VTOL landing. Real telemetry 2026-05 |
 | Rover | 地面车 | SITL | CI: drives a whole mission and comes back on SITL |
 | Sub | 水下机器人 | SITL | CI: dives, runs a whole mission and surfaces on SITL |
-| 2D map | 2D 地图 | Simulator | e2e, and real Edge on Windows 2026-11-06. Every source answered with a real tile 2026-11-06, except Tianditu, which needs a key of your own. e2e 2026-11-11: the credit of the map server shows clear of the events bar, and the street layer of a source without a label layer shows (it was blank until v3.7.9) |
+| 2D map | 2D 地图 | Simulator | e2e, and real Edge on Windows 2026-11-06. Every source answered with a real tile 2026-11-06, except Tianditu, which needs a key of your own. e2e 2026-11-11: the credit of the map server shows clear of the events bar, and the street layer of a source without a label layer shows (it was blank through v3.7.9) |
 | 3D map | 3D 地图 | Simulator | e2e, and real Edge on Windows with a real GPU 2026-11-06. e2e 2026-11-11: the credit of the map and terrain servers shows unfolded |
 | PWA and offline use | PWA 和离线 | Simulator | e2e, and real Edge on Windows 2026-11-06 |
 | Several browser clients | 多浏览器客户端 | Simulator | Integration tests |
@@ -290,11 +290,11 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 | Telemetry radio | 数传电台 | SITL | CI through a stand-in: 57600 baud, 3% of frames lost, 1.5% corrupted, a whole session. 2026-11-11 at 38400 baud and 5% lost: all 1369 parameters in 68 s, where v3.7.8 stopped at 1349. No real radio |
 | Linux tty | Linux tty | SITL | CI: a whole session through a pty on real firmware, which reads differently from a socket |
 | Long sessions | 长时间运行 | SITL | 2026-11-06: 60 minutes at 5x, 189 flights, 900,000 frames: browser heap flat at 7 MB, backend memory not growing. tests/e2e/run-soak.sh, not in CI |
-| Submarine | 水下潜航器 | SITL | CI. No dive in CI |
 | Several vehicles at once | 多机同屏 | SITL | CI: two vehicles on one link, each flown from the other through the switch |
 | Offline mbtiles maps | 离线 mbtiles 地图 | Simulator | e2e: a real file picked in Settings shows on the map |
 | Survey and pattern planning | 测绘和图案规划 | SITL | CI: drawn in the panel, read back from the firmware, and the grid flown |
-| Mission file formats | 航线文件格式 | Simulator | e2e: .waypoints, .plan and .kml as other ground stations write them |
+| Mission file formats | 航线文件格式 | Simulator | e2e: .waypoints, .plan and .kml as other ground stations write them. e2e 2026-11-11: a file, or a route kept in the browser, with markup or text where a number belongs is refused whole, and a KML overlay shows the name of a shape as text |
+| Content policy of the page | 页面内容安全策略 | Simulator | e2e 2026-11-11: markup put into the page runs no script, and the four tabs and the 3D view stay inside the policy. Real Windows each release |
 | Terrain profile | 地形剖面 | SITL | CI: clearance from home on real firmware, heights from the real terrain server |
 | Voice and audio alerts | 语音和声音告警 | SITL | CI: the armed message on real firmware, with speech stubbed. Sound itself not checked |
 | Gamepad | 手柄 | SITL | CI: a stubbed pad moves channel 1 on real firmware. No real pad |
@@ -325,7 +325,7 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 6. **Chrome itself on Windows.** Edge on Windows ran through the real port chooser 2026-11-06. Chrome was not on that machine.
 7. **Four panels nobody can open.** Scripts, scheduler, AI planner and AI annotation exist in code only.
 8. **The backend's serial link on Windows since the package bundles Python 3.14 (v3.7.8).** It ran on a real FC on the Python 3.10 of earlier packages. On 3.14 a COM port was opened and closed 2026-11-10, with no FC on it. WebSerial does not use that Python.
-9. **Video from a real camera.** ffmpeg turned an HTTP test stream into frames 2026-11-10. No RTSP camera has been on it, and until v3.7.8 only `rtsp://` addresses could play at all.
+9. **Video from a real camera.** ffmpeg turned an HTTP test stream into frames 2026-11-10. No RTSP camera has been on it, and before v3.7.8 only `rtsp://` addresses could play at all.
 
 1. **真实飞行。** 没有飞过。下面都只是台架或仿真结果。
 2. **真机上的解锁、起飞、返航、开始任务。** 只在 SITL 跑过。这些需要接电池，要单独安排。
