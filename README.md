@@ -154,28 +154,32 @@ This was checked in a phone-sized touch browser on a network address (2026-11-11
 
 ### AI assistant (MCP)
 
-An AI client that speaks the [Model Context Protocol](https://modelcontextprotocol.io), such as Claude Desktop or Claude Code, can read Argus and ask it for changes. It never commands the vehicle: each change it asks for waits in the Argus page, where the operator approves or declines it, and the route of a proposed mission is drawn dashed on the map meanwhile.
+An AI client that speaks the [Model Context Protocol](https://modelcontextprotocol.io), such as Claude Desktop or Claude Code, can read Argus and propose changes to it. Each change waits in the Argus page, where the operator approves or declines it, and in the Fly and Plan views the route of a proposed mission is drawn dashed on the map meanwhile.
 
 | Tool | What it does |
 |---|---|
 | `get_status` | What the page shows about the vehicle: link, mode, armed, position, altitudes, speeds, battery, GPS, home, recent messages |
 | `get_mission` | The mission planned in the page |
 | `get_parameters` | Parameter values the page has read, by name or prefix |
-| `propose_mission` | A mission for the operator: uploaded only if approved |
+| `propose_mission` | A mission for the operator, shown waypoint by waypoint with every speed, hold and circling: uploaded only if approved |
 | `propose_parameters` | Parameter changes for the operator, with old and new values: written only if approved |
+| `check_proposal` | Whether the operator has decided, and the result |
+| `withdraw_proposal` | Takes back a proposal not yet decided |
 
-Proposals are refused while the vehicle is armed. The assistant cannot arm, take off, change mode or start a mission.
+A proposal returns its id at once, and `check_proposal` waits up to 50 s a call for the decision, so the operator can take minutes. Proposals are refused while the vehicle is armed. The tools cannot arm, take off, change mode or start a mission.
+
+These limits are those of the tools. A client that can also run commands on this computer, as Claude Code can, could reach Argus and the vehicle in other ways, as any program here could: keep it asking before each command, which is its default.
 
 Set it up with Argus running and its page open, which answers for the vehicle:
 
-- Claude Code, in this repository after `pip install -e .`: `claude mcp add argus -- argus-mcp`
+- Claude Code, after `pip install -e .` in this repository: `claude mcp add argus -- argus-mcp`
 - Claude Desktop, in `claude_desktop_config.json`, with the Python of the Windows package:
 
   ```json
   {"mcpServers": {"argus": {"command": "C:\\path\\to\\Argus\\python\\python.exe", "args": ["-m", "backend.mcp_server"]}}}
   ```
 
-The server reaches Argus at `ARGUS_URL` (`http://127.0.0.1:8100` when unset) and sends `GCS_AUTH_TOKEN` when that is set. The page shows "AI" in the status bar while an assistant is connected. What the tools return, positions and parameters included, goes to the AI client and its provider.
+The server reaches Argus at `ARGUS_URL` (`http://127.0.0.1:8100` when unset). When Argus has a token, the server uses the one generated in the page for this install, or else `GCS_AUTH_TOKEN`: give that one to Claude Code with `claude mcp add argus -e GCS_AUTH_TOKEN=<token> -- argus-mcp`, and to Claude Desktop with `"env": {"GCS_AUTH_TOKEN": "<token>"}` beside `"args"`. The page shows "AI" in the status bar while an assistant is connected. What the tools return, positions and parameters included, goes to the AI client and its provider.
 
 ### Map data
 

@@ -154,17 +154,21 @@ python run.py --sim            # 同时启动后端 + simulator.py
 
 ### AI 助手（MCP）
 
-支持 [Model Context Protocol](https://modelcontextprotocol.io) 的 AI 客户端（例如 Claude Desktop、Claude Code）可以读取 Argus 并请求修改。它从不直接指挥飞行器：它请求的每项修改都在 Argus 页面上等待，由操作员批准或拒绝；提议的航线在等待期间以虚线画在地图上。
+支持 [Model Context Protocol](https://modelcontextprotocol.io) 的 AI 客户端（例如 Claude Desktop、Claude Code）可以读取 Argus 并提出修改。每项修改都在 Argus 页面上等待，由操作员批准或拒绝；等待期间，在飞行和规划视图里，提议的航线以虚线画在地图上。
 
 | 工具 | 作用 |
 |---|---|
 | `get_status` | 页面显示的飞行器状态：链路、模式、是否解锁、位置、高度、速度、电池、GPS、家点、最近消息 |
 | `get_mission` | 页面上的计划航线 |
 | `get_parameters` | 页面已读取的参数值，按名称或前缀 |
-| `propose_mission` | 提交给操作员的航线：批准后才上传 |
+| `propose_mission` | 提交给操作员的航线，逐个航点显示速度、停留和盘旋：批准后才上传 |
 | `propose_parameters` | 提交给操作员的参数修改，显示原值和新值：批准后才写入 |
+| `check_proposal` | 操作员是否已决定，以及执行结果 |
+| `withdraw_proposal` | 撤回尚未决定的提议 |
 
-飞行器解锁时一律拒绝提议。AI 助手不能解锁、起飞、切换模式或开始任务。
+提议会立即返回编号，`check_proposal` 每次最多等 50 秒，所以操作员可以花几分钟再决定。飞行器解锁时一律拒绝提议。这些工具不能解锁、起飞、切换模式或开始任务。
+
+以上限制只针对这些工具。能在本机执行命令的客户端（例如 Claude Code）也能像本机任何程序一样，通过别的途径访问 Argus 和飞行器：请保持它每次执行命令前都先询问（这是它的默认设置）。
 
 配置时 Argus 要在运行，且页面要打开（由页面应答飞行器的状态）：
 
@@ -175,7 +179,7 @@ python run.py --sim            # 同时启动后端 + simulator.py
   {"mcpServers": {"argus": {"command": "C:\\path\\to\\Argus\\python\\python.exe", "args": ["-m", "backend.mcp_server"]}}}
   ```
 
-服务通过 `ARGUS_URL`（未设置时为 `http://127.0.0.1:8100`）连接 Argus，设置了 `GCS_AUTH_TOKEN` 时会带上它。连接期间页面状态栏显示 “AI”。工具返回的内容（包括位置和参数）会交给 AI 客户端及其服务商。
+服务通过 `ARGUS_URL`（未设置时为 `http://127.0.0.1:8100`）连接 Argus。Argus 设了令牌时，服务使用本安装在页面上生成的令牌，否则使用 `GCS_AUTH_TOKEN`：Claude Code 用 `claude mcp add argus -e GCS_AUTH_TOKEN=<令牌> -- argus-mcp` 传入，Claude Desktop 在 `"args"` 旁加 `"env": {"GCS_AUTH_TOKEN": "<令牌>"}`。连接期间页面状态栏显示 “AI”。工具返回的内容（包括位置和参数）会交给 AI 客户端及其服务商。
 
 ### 地图数据
 
