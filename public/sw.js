@@ -26,13 +26,35 @@ self.addEventListener('activate', (e) => {
           .filter((k) => k !== CACHE_NAME && k !== TILE_CACHE)
           .map((k) => caches.delete(k))
       )
-    )
+    ).then(dropForeignEntries)
   );
   self.clients.claim();
 });
 
+// Up to v3.7.10 the answers of other servers went into the app cache: every elevation tile
+// the 3D view asked for, with no limit. They belong in the tile cache, which has one.
+async function dropForeignEntries() {
+  const cache = await caches.open(CACHE_NAME);
+  const requests = await cache.keys();
+  await Promise.all(
+    requests
+      .filter((r) => new URL(r.url).origin !== self.location.origin)
+      .map((r) => cache.delete(r))
+  );
+}
+
 self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
+
+  // The one other server the page reads: elevation for the 3D view (Map3DView.svelte). Its
+  // tiles are kept like map tiles and under the same limit, so that a visited area still has
+  // its relief with no network. Anything else from elsewhere is the browser's own business.
+  if (url.origin !== self.location.origin) {
+    if (url.hostname === 's3.amazonaws.com' && url.pathname.startsWith('/elevation-tiles-prod/')) {
+      e.respondWith(handleTileRequest(e.request, fetch));
+    }
+    return;
+  }
 
   if (url.pathname.startsWith('/ws') ||
       (url.pathname.startsWith('/api/') && !url.pathname.startsWith('/api/tile/'))) {
@@ -101,12 +123,12 @@ async function fetchTile(request) {
   }
 }
 
-async function handleTileRequest(request) {
+async function handleTileRequest(request, get = fetchTile) {
   const cache = await caches.open(TILE_CACHE);
   const cached = await cache.match(request);
   if (cached) return cached;
   try {
-    const resp = await fetchTile(request);
+    const resp = await get(request);
     if (resp.ok) {
       await cache.put(request, resp.clone());
       evictOldTiles(cache);
