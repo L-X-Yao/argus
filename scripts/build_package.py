@@ -60,6 +60,9 @@ LICENSE_FILES = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
 # A wheel brings its license text in its .dist-info. This one does not, so LICENSES/ holds it.
 OWN_LICENSE_TEXT = {"pyserial": "BSD-3-Clause-pyserial.txt"}
 
+# In every web build. A list without them means the build no longer sees what it bundles.
+WEB_LIBRARIES = ["svelte", "maplibre-gl"]
+
 README_TXT = """Argus GCS v{version}
 https://github.com/L-X-Yao/argus
 
@@ -143,6 +146,11 @@ def copy_app_files(build_dir: Path) -> None:
     (build_dir / "README.txt").write_text(README_TXT.format(version=_VERSION), encoding="utf-8-sig", newline="\r\n")
 
 
+def web_libraries_missing(notices: str) -> list[str]:
+    """Libraries every web build bundles that dist/THIRD-PARTY-LICENSES.txt does not list."""
+    return [name for name in WEB_LIBRARIES if f"\n{name}@" not in notices]
+
+
 def unlicensed(site_packages: Path) -> list[str]:
     """Libraries in the package that come with no license text: none in their wheel, and none
     kept in LICENSES/. Their licenses ask for the text to go along with every copy."""
@@ -177,8 +185,13 @@ def build(arch: str = "amd64"):
     if not dist_src.exists():
         print("  ERROR: dist/ not found after build")
         sys.exit(1)
-    if not (dist_src / "THIRD-PARTY-LICENSES.txt").exists():
+    notices = dist_src / "THIRD-PARTY-LICENSES.txt"
+    if not notices.exists():
         print("  ERROR: the build wrote no dist/THIRD-PARTY-LICENSES.txt (see vite.config.ts)")
+        sys.exit(1)
+    missing = web_libraries_missing(notices.read_text(encoding="utf-8"))
+    if missing:
+        print("  ERROR: dist/THIRD-PARTY-LICENSES.txt does not list %s (see vite.config.ts)" % ", ".join(missing))
         sys.exit(1)
     shutil.copytree(dist_src, build_dir / "dist")
     print("  Frontend built")

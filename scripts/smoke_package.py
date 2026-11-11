@@ -99,6 +99,9 @@ def main() -> int:
         ]
         missing = [name for name in texts if not (root / name).is_file()]
         record("license texts are in the package", not missing, missing or "")
+        web = root / "dist" / "THIRD-PARTY-LICENSES.txt"
+        listed = web.read_text(encoding="utf-8") if web.is_file() else ""
+        record("the web build lists its libraries", all(f"\n{name}@" in listed for name in ("svelte", "maplibre-gl")))
         server = [python, r"backend\server.py", "--host", "127.0.0.1", "--no-browser", "--port"]
         env = {k: v for k, v in os.environ.items() if k.upper() != "GCS_AUTH_TOKEN"}
         procs = [

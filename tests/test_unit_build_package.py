@@ -15,6 +15,7 @@ from scripts.build_package import (
     allowed_versions,
     copy_app_files,
     unlicensed,
+    web_libraries_missing,
 )
 from scripts.package_requirements import bundled
 
@@ -72,6 +73,14 @@ class TestLicenseTexts:
         (tmp_path / "pyserial-3.5.dist-info").mkdir()
         (tmp_path / "pyserial-3.5.dist-info" / "METADATA").write_text("License: BSD")
         assert unlicensed(tmp_path) == []
+
+    def test_a_list_of_web_libraries_without_the_ones_always_bundled_is_caught(self):
+        """The build reads the list from the bundle. A bundler that reports its modules another
+        way would leave a list with the stylesheet entry alone, and a file that exists."""
+        whole = "header\n\n---\n\nmaplibre-gl@6.16.0\nLicense: BSD-3-Clause\n\n---\n\nsvelte@5.57.3\nLicense: MIT\n"
+        assert web_libraries_missing(whole) == []
+        assert web_libraries_missing("header\n\n---\n\ntailwindcss@4.3.4\nLicense: MIT\n") == ["svelte", "maplibre-gl"]
+        assert web_libraries_missing(whole.replace("svelte@", "svelte-toolbelt@")) == ["svelte"]
 
     def test_the_notices_name_what_the_repo_holds_of_others(self):
         notices = (SCRIPT_DIR / "THIRD_PARTY_NOTICES.md").read_text(encoding="utf-8")
