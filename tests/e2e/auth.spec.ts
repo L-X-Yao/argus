@@ -67,8 +67,10 @@ test.describe('Token authentication', () => {
     await expect(page.locator('#auth-token-input')).toHaveCount(0);
     await expect(page.locator('.leaflet-container')).toBeVisible();
     // A style that does not exist gets past the token and no further: a real tile would wait on
-    // a map server, which has gone silent for minutes on end from CI.
-    expect(await restStatus(page, '/api/tile/none/0/0/0')).toBe(404);
+    // a map server, which has gone silent for minutes on end from CI. Asked beside the page,
+    // with its cookie: inside it the service worker puts every tile request in one queue, and
+    // this one then waits behind the map's own tiles for that same server.
+    expect((await page.request.get('/api/tile/none/0/0/0')).status()).toBe(404);
     expect(await restStatus(page, '/api/ports')).toBe(200);
     expect(denied).toEqual([]);
   });
