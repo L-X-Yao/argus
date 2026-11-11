@@ -8,6 +8,7 @@ Argus is under the MIT license, see [LICENSE](LICENSE). It contains work of othe
 | --- | --- | --- | --- |
 | Six calibration pictures | `public/images/cal/` | [QGroundControl](https://github.com/mavlink/qgroundcontrol), `src/AutoPilotPlugins/PX4/Images/`, unchanged | Apache-2.0: [LICENSES/Apache-2.0.txt](LICENSES/Apache-2.0.txt). QGroundControl is offered under Apache-2.0 or GPL-3.0, and Argus takes these files under Apache-2.0 |
 | Leaflet 1.9.4 | `public/lib/leaflet/` | [leafletjs.com](https://leafletjs.com) | BSD-2-Clause: [LICENSES/BSD-2-Clause-Leaflet.txt](LICENSES/BSD-2-Clause-Leaflet.txt) |
+| Simplified Chinese messages of Inno Setup, by Zhenghan Yang | `scripts/inno/ChineseSimplified.isl` | [Inno Setup](https://github.com/jrsoftware/issrc) source, tag `is-6_7_1`, `Files/Languages/Unofficial/`, unchanged | Inno Setup License: [LICENSES/InnoSetup.txt](LICENSES/InnoSetup.txt) |
 
 ## Libraries in the web build
 
@@ -25,6 +26,10 @@ Argus is under the MIT license, see [LICENSE](LICENSE). It contains work of othe
 `scripts/build_package.py` stops when a Python library in the package has no license text, and when the list of the web build lacks a library that is always in it. For a web library that ships no license file the list names its license and its source.
 
 pymavlink (LGPL-3.0) is used by the tests only. It is in no package.
+
+## The Windows installer
+
+The installer holds the Windows package and is made with [Inno Setup](https://jrsoftware.org/isinfo.php), whose own code it carries: Copyright (C) 1997-2026 Jordan Russell, portions Copyright (C) 2000-2026 Martijn Laan, under the Inno Setup License, [LICENSES/InnoSetup.txt](LICENSES/InnoSetup.txt).
 
 ## Servers Argus reads at run time
 

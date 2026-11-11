@@ -48,7 +48,8 @@ VersionInfoVersion={#AppVersion}
 
 [Languages]
 Name: "en"; MessagesFile: "compiler:Default.isl"
-Name: "zh"; MessagesFile: "compiler:Languages\ChineseSimplified.isl"
+; Inno Setup 6.7, as on the GitHub runners, has no Chinese of its own: the file is kept here.
+Name: "zh"; MessagesFile: "inno\ChineseSimplified.isl"
 
 [CustomMessages]
 en.ArgusGcs=Argus Ground Station

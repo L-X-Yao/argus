@@ -83,3 +83,10 @@ class TestScript:
         assert targets
         for target in targets:
             assert f'"{target}"' in BUILD_PACKAGE, target
+
+    def test_its_chinese_is_the_file_kept_here_and_credited(self):
+        files = re.findall(r'MessagesFile: "([^"]+)"', ISS)
+        assert files == ["compiler:Default.isl", "inno\\ChineseSimplified.isl"]
+        assert (SCRIPT.parent / "inno" / "ChineseSimplified.isl").is_file()
+        notices = (SCRIPT.parent.parent / "THIRD_PARTY_NOTICES.md").read_text(encoding="utf-8")
+        assert "scripts/inno/ChineseSimplified.isl" in notices
