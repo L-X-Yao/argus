@@ -285,7 +285,7 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 | 3D map | 3D 地图 | Simulator | e2e, and real Edge on Windows with a real GPU 2026-11-06. e2e 2026-11-11: the credit of the map and terrain servers shows unfolded |
 | PWA and offline use | PWA 和离线 | Simulator | e2e, and real Edge on Windows 2026-11-06 |
 | Several browser clients | 多浏览器客户端 | Simulator | Integration tests |
-| A phone or tablet on the network | 局域网里的手机或平板 | Simulator | A phone-sized touch browser on a network address 2026-11-11: token login, live telemetry and a parameter read upright, a mode change on its side. e2e: a page the backend does not list is told so at the login; upright, RTL asks for the slide, hold sends the mode change, the flight controls open and close, and nothing lies over the events bar. No real phone |
+| A phone or tablet on the network | 局域网里的手机或平板 | Simulator | A phone-sized touch browser on a network address 2026-11-11: token login, live telemetry and a parameter read upright, a mode change on its side. e2e: a page the backend does not list is told so at the login; upright, RTL asks for the slide, hold sends the mode command, the flight controls open and close, and nothing lies over the events bar. No real phone |
 | AI assistant (MCP) | AI 助手（MCP） | Simulator | Unit tests of the MCP server in both protocol eras, and through the real backend over its websocket. e2e: an MCP client starts the server, the page answers it, and an operator approves a mission and a parameter against the built-in simulator, declines one, and one is withdrawn. No AI client tried by hand, no real FC |
 | Video and AR overlay | 视频和 AR 叠加 | Simulator | Integration tests, and real ffmpeg on an HTTP test stream 2026-11-10. No real camera |
 | Token login | Token 登录 | Simulator | e2e, real Windows each release |
@@ -353,14 +353,14 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 - Roles are a courtesy between operators, not access control: everyone who holds the token can command the vehicle.
 - Arming and fence terms in German, Arabic and Russian have not been checked by a native speaker.
 - The AI assistant reads and proposes only. Its tools cannot arm, take off, change mode or start a mission, and its proposals are refused while the vehicle is armed. An AI client that can also run commands on the computer, as Claude Code can, is not held to the tools.
-- On a screen narrower than 768 px, such as a phone held upright, logs and calibration are not shown. RTL, hold and the button for the flight controls (arming, modes) sit above the tabs. Most phones turned on their side are wider than that and get the desktop layout.
+- On a screen narrower than 768 px, such as a phone held upright, logs, calibration, the 2D/3D switch and video are not shown. While a vehicle is connected, RTL and hold sit above the tabs, and in the Fly view the button for the flight controls (arming, modes) too. Most phones turned on their side are wider than that and get the desktop layout.
 
 - 模式列表来自 Argus 内置的表，每种机型一张。固件编译时去掉的模式仍会显示，选择时由飞控拒绝。
 - 罗盘校准只能由发起它的那次会话保存。校准途中断开再连接，结果会报告为未保存，需要重新校准。
 - 角色只是操作员之间的约定，不是访问控制：持有 Token 的人都能指挥飞行器。
 - 德语、阿拉伯语和俄语里的解锁与围栏术语没有经过母语者校对。
 - AI 助手只能读取和提议，它的工具不能解锁、起飞、切换模式或开始任务；飞行器解锁时它的提议一律被拒绝。能在本机执行命令的 AI 客户端（例如 Claude Code）不受这些工具的限制。
-- 屏幕宽度小于 768 px 时（例如竖着拿的手机），不显示日志和校准。返航、悬停和飞行操控（解锁、切换模式）按钮在底部标签的上方。多数手机横过来宽于 768 px，会变成电脑版布局。
+- 屏幕宽度小于 768 px 时（例如竖着拿的手机），不显示日志、校准、2D/3D 切换和视频。连上飞行器后，返航和悬停按钮在底部标签的上方，飞行视图里还有飞行操控（解锁、切换模式）按钮。多数手机横过来宽于 768 px，会变成电脑版布局。
 
 ## Keeping this file honest / 维护规则
 

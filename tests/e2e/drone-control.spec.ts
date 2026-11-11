@@ -113,7 +113,7 @@ test.describe('On a phone, upright (connected)', () => {
     });
     expect(covered).toBe(false);
 
-    const bar = page.getByRole('toolbar', { name: /飞行控制|Flight Control/ });
+    const bar = page.getByRole('group', { name: /飞行控制|Flight Control/ });
     await expect(bar).toBeVisible();
     const tabs = page.locator('nav.md\\:hidden');
     const barBox = (await bar.boundingBox())!;
@@ -130,7 +130,8 @@ test.describe('On a phone, upright (connected)', () => {
 
     await bar.getByRole('button', { name: /悬停|Hold/ }).click();
     await expect.poll(() => held.length).toBe(1);
-    expect(JSON.parse(held[0])).toMatchObject({ type: 'command', cmd: 'mode' });
+    // Loiter, the hold of a copter (src/lib/modeStore.ts, SPECIAL_MODES).
+    expect(JSON.parse(held[0])).toMatchObject({ type: 'command', cmd: 'mode', param: 5 });
 
     await bar.getByRole('button', { name: /操控|Controls/ }).click();
     const arm = page.getByRole('button', { name: /解锁电机|Arm Motors/ });

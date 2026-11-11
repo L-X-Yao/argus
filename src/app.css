@@ -107,12 +107,6 @@
   .safe-area-bottom {
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
-  /* What the browser shows. On a phone 100vh counts the toolbar the browser shows or hides as
-     the page scrolls, and the bottom of the page lay behind it. Older browsers keep 100vh. */
-  .h-viewport {
-    height: 100vh;
-    height: 100dvh;
-  }
 }
 
 @layer base {
