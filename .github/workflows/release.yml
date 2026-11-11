@@ -54,6 +54,24 @@ jobs:
             exit 1
           fi
 
+      # The package brings a Python of its own, named by PY_VER in scripts/build_package.py,
+      # and nothing else says when a newer one of its line is out. setup-python above has the
+      # newest that GitHub offers.
+      - name: The bundled Python is the newest of its line
+        run: |
+          python - <<'EOF'
+          import platform, re, sys
+
+          source = open("scripts/build_package.py").read()
+          bundled = re.search(r'^PY_VER = "(\d+)\.(\d+)\.(\d+)"', source, re.M).groups()
+          newest = re.match(r"(\d+)\.(\d+)\.(\d+)", platform.python_version()).groups()
+          bundled, newest = tuple(map(int, bundled)), tuple(map(int, newest))
+          print("bundles %d.%d.%d, the newest here is %d.%d.%d" % (bundled + newest))
+          if bundled[:2] == newest[:2] and bundled < newest:
+              print("::error::move PY_VER and PY_SHA256 in scripts/build_package.py to %d.%d.%d" % newest)
+              sys.exit(1)
+          EOF
+
       - name: Install Node deps
         run: npm ci
 

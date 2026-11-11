@@ -53,6 +53,8 @@ CI runs on every push to `main` and every PR. On top of the five checks above, i
 
 `make test-integration` runs the integration tests locally, in about 3 minutes.
 
+GitHub turns two things off in a public repository where nothing happens. Scheduled workflows, here the weekly CodeQL run, stop after 60 days without activity. Dependabot stops opening pull requests, the security ones included, once one of its pull requests has been open for more than 90 days and nobody has merged or closed one in that time. Merging or closing the monthly Dependabot pull request keeps both running.
+
 CI only runs the specs named in `.github/workflows/ci.yml`, so add a new spec to that list. The specs that need SITL are named in their run scripts, `tests/e2e/run-webserial-sitl.sh` and `tests/e2e/run-panels-sitl.sh`.
 
 ## Commit Messages
