@@ -28,7 +28,7 @@
   },
   "devDependencies": {
     "@internationalized/date": "^3.12.1",
-    "@lucide/svelte": "^1.69.0",
+    "@lucide/svelte": "^1.70.0",
     "@playwright/test": "^1.65.0",
     "@sveltejs/vite-plugin-svelte": "^7.1.2",
     "@tsconfig/svelte": "^5.0.0",
@@ -46,11 +46,11 @@
     "vitest": "^5.1.0"
   },
   "dependencies": {
-    "@tailwindcss/vite": "^4.3.0",
+    "@tailwindcss/vite": "^4.3.5",
     "bits-ui": "^2.18.1",
     "clsx": "^2.1.1",
     "leaflet": "^1.9.4",
-    "maplibre-gl": "^6.16.0",
+    "maplibre-gl": "^6.17.0",
     "tailwind-merge": "^3.6.0",
     "tailwindcss": "^4.3.0"
   }
