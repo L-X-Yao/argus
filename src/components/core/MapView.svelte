@@ -5,6 +5,7 @@
   import { fmtDist } from '../../lib/units';
   import { toGcj, toWgs } from '../../lib/gcj02';
   import { isOfflineSource, tileUrl } from '../../lib/backend';
+  import { tileAttribution } from '../../lib/tileAttribution';
   import MapControls from './MapControls.svelte';
   import HudOverlay from './HudOverlay.svelte';
   import { FileUp } from '@lucide/svelte';
@@ -116,21 +117,27 @@
     return useGcj ? toWgs(mlat, mlon) : [mlat, mlon];
   }
 
+  function tileLayer(style: string): L.TileLayer {
+    return L.tileLayer(tileUrl(style), { maxZoom: 18, attribution: tileAttribution(style) });
+  }
+
   function applyTileSource() {
     if (!map) return;
     const src = curSource();
     if (satLayer) map!.removeLayer(satLayer!);
     if (labelLayer) map!.removeLayer(labelLayer!);
     if (vecLayer) map!.removeLayer(vecLayer!);
-    satLayer = L.tileLayer(tileUrl(src.sat), { maxZoom: 18 });
-    vecLayer = L.tileLayer(tileUrl(src.vec), { maxZoom: 18 });
-    labelLayer = src.label ? L.tileLayer(tileUrl(src.label), { maxZoom: 18 }) : null;
-    if (isSat) {
-      satLayer.addTo(map!);
-      if (labelLayer) labelLayer.addTo(map!);
-    } else {
-      vecLayer.addTo(map!);
-    }
+    satLayer = tileLayer(src.sat);
+    vecLayer = tileLayer(src.vec);
+    labelLayer = src.label ? tileLayer(src.label) : null;
+    showLayers();
+  }
+
+  /** Puts the satellite or the street layers on the map. Only Amap and Tianditu have a label
+   *  layer: handing Leaflet the missing one of another source threw, and left the map blank. */
+  function showLayers() {
+    for (const layer of [satLayer, labelLayer, vecLayer]) if (layer) map!.removeLayer(layer);
+    for (const layer of isSat ? [satLayer, labelLayer] : [vecLayer]) if (layer) map!.addLayer(layer);
   }
 
   let prevTileSource = '';
@@ -146,9 +153,12 @@
     const src = curSource();
     prevTileSource = app.tileSource;
     map = L.map(mapEl, { zoomControl: true, attributionControl: false }).setView([34.258, 108.942], 15);
-    satLayer = L.tileLayer(tileUrl(src.sat), { maxZoom: 18 }).addTo(map!);
-    labelLayer = src.label ? L.tileLayer(tileUrl(src.label), { maxZoom: 18 }).addTo(map) : null;
-    vecLayer = L.tileLayer(tileUrl(src.vec), { maxZoom: 18 });
+    // The map servers' credit, which their terms want on the map. Leaflet lists the layers
+    // that are shown, so it follows the source and the satellite/vector switch by itself.
+    L.control.attribution({ prefix: false, position: 'bottomright' }).addTo(map!);
+    satLayer = tileLayer(src.sat).addTo(map!);
+    labelLayer = src.label ? tileLayer(src.label).addTo(map) : null;
+    vecLayer = tileLayer(src.vec);
     L.control.scale({ metric: true, imperial: false, position: 'bottomright' }).addTo(map!);
     map.on('click', onMapClick);
     map.on('contextmenu', onRightClick);
@@ -415,15 +425,7 @@
 
   function toggleMapType() {
     isSat = !isSat;
-    if (isSat) {
-      map!.removeLayer(vecLayer!);
-      map!.addLayer(satLayer!);
-      map!.addLayer(labelLayer!);
-    } else {
-      map!.removeLayer(satLayer!);
-      map!.removeLayer(labelLayer!);
-      map!.addLayer(vecLayer!);
-    }
+    showLayers();
   }
 
   function fitRoute() {
@@ -459,7 +461,7 @@
 </script>
 
 <div class="relative flex-1 min-w-0">
-  <div bind:this={mapEl} class="h-full rounded-lg border border-border"></div>
+  <div bind:this={mapEl} class="h-full rounded-lg border border-border" class:above-events-bar={showHud}></div>
 
   {#if map}
     <DroneLayer {map} {follow} trail={droneTrail} coord={toMap} />
@@ -613,6 +615,33 @@
   }
   :global(.dark .leaflet-tile-pane) {
     filter: brightness(0.75) contrast(1.1) saturate(0.85);
+  }
+  /* The fly view lays its events bar over the bottom edge of the map. The scale and the map
+     servers' credit stay above it, and side by side, so that neither ends up behind a panel. */
+  .above-events-bar :global(.leaflet-bottom) {
+    bottom: 26px;
+  }
+  :global(.leaflet-bottom.leaflet-right) {
+    display: flex;
+    align-items: flex-end;
+  }
+  /* One line, so that it stays under the panels above it. A credit longer than that shows in
+     full under the pointer. */
+  :global(.leaflet-container .leaflet-control-attribution) {
+    max-width: min(45vw, 420px);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  :global(.leaflet-container .leaflet-control-attribution:hover) {
+    white-space: normal;
+  }
+  :global(.dark .leaflet-container .leaflet-control-attribution) {
+    background: hsl(var(--card) / 0.85);
+    color: hsl(var(--muted-foreground));
+  }
+  :global(.dark .leaflet-control-attribution a) {
+    color: hsl(var(--primary));
   }
   :global(.dark .leaflet-control-zoom a) {
     background: hsl(var(--card));

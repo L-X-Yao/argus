@@ -26,6 +26,16 @@ function overlaysReady(page: Page) {
 }
 
 test.describe('3D map', () => {
+  test('names the servers its picture and its terrain come from', async ({ page }) => {
+    await open3d(page);
+    const credit = page.locator('.maplibregl-ctrl-attrib');
+    await expect(credit).toContainText('AutoNavi', { timeout: 30000 });
+    await expect(credit).toContainText('Terrain');
+    await expect(credit).toContainText('MapLibre');
+    // Folded behind its button it would not be readable.
+    await expect(credit).not.toHaveClass(/maplibregl-compact/);
+  });
+
   test('boots with a running worker and its controls', async ({ page }) => {
     const pageErrors: string[] = [];
     page.on('pageerror', (e) => pageErrors.push(e.message));

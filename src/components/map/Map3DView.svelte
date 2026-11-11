@@ -5,6 +5,7 @@
   import { toGcj, toWgs } from '../../lib/gcj02';
   import { t } from '../../lib/i18n.svelte';
   import { isOfflineSource, tileUrl } from '../../lib/backend';
+  import { TERRAIN_ATTRIBUTION, tileAttribution } from '../../lib/tileAttribution';
   import { Ruler, Square, ShieldAlert, Grid3x3, X as XIcon } from '@lucide/svelte';
   import { segDist } from '../../lib/missionIO';
   import { polygonArea } from '../../lib/survey';
@@ -57,6 +58,9 @@
     osm: { name: 'OpenStreetMap', sat: 'osm_sat', vec: 'osm', label: null, gcj02: false, region: 'global' },
     esri: { name: 'Esri Topo', sat: 'osm_sat', vec: 'esri_topo', label: null, gcj02: false, region: 'global' },
   };
+
+  // MapLibre names itself by default, and stops when the control is given options of its own.
+  const MAPLIBRE_CREDIT = '<a href="https://maplibre.org/" target="_blank" rel="noopener noreferrer">MapLibre</a>';
 
   function curSource(): TileSourceDef {
     const id = app.tileSource;
@@ -147,6 +151,7 @@
               tiles: [url],
               tileSize: 256,
               maxzoom: 18,
+              attribution: tileAttribution(src.sat),
             },
             'terrain-dem': {
               type: 'raster-dem',
@@ -154,6 +159,7 @@
               tileSize: 256,
               maxzoom: 15,
               encoding: 'terrarium',
+              attribution: TERRAIN_ATTRIBUTION,
             },
           },
           layers: [{ id: 'raster', type: 'raster', source: 'raster-tiles' }],
@@ -167,6 +173,8 @@
             'fog-ground-blend': 0.5,
           },
         },
+        // Never folded behind its button: the map servers' credit is to stay readable.
+        attributionControl: { compact: false, customAttribution: MAPLIBRE_CREDIT },
         center: [108.942, 34.258],
         zoom: 14,
         pitch: 50,
@@ -867,6 +875,7 @@
       tiles: [url],
       tileSize: 256,
       maxzoom: 18,
+      attribution: tileAttribution(src.sat),
     });
     // Insert raster BELOW all overlays so waypoint/fence/measure stay visible.
     const firstOverlay = map.getLayer('waypoint-line') ? 'waypoint-line' : undefined;
@@ -875,7 +884,11 @@
 </script>
 
 <div class="relative flex-1 min-w-0">
-  <div bind:this={mapEl} data-overlays-ready={overlaysReady} class="h-full rounded-lg border border-border"></div>
+  <div
+    bind:this={mapEl}
+    data-overlays-ready={overlaysReady}
+    class="above-events-bar h-full rounded-lg border border-border"
+  ></div>
 
   <div class="absolute top-2.5 left-2.5 z-10 flex gap-1">
     <div class="map-btn">
@@ -937,6 +950,39 @@
 </div>
 
 <style>
+  /* The fly view lays its events bar over the bottom edge of the map. The scale and the map
+     servers' credit stay above it, and side by side, so that neither ends up behind a panel. */
+  .above-events-bar :global(.maplibregl-ctrl-bottom-right) {
+    bottom: 26px;
+    display: flex;
+    align-items: flex-end;
+  }
+  .above-events-bar :global(.maplibregl-ctrl-bottom-left) {
+    bottom: 26px;
+  }
+  .above-events-bar :global(.maplibregl-ctrl-bottom-right .maplibregl-ctrl) {
+    margin-bottom: 2px;
+  }
+  /* One line, so that it stays under the panels above it. A credit longer than that shows in
+     full under the pointer. */
+  .above-events-bar :global(.maplibregl-ctrl-attrib:not(.maplibregl-compact)) {
+    max-width: min(45vw, 420px);
+  }
+  .above-events-bar :global(.maplibregl-ctrl-attrib:not(.maplibregl-compact) .maplibregl-ctrl-attrib-inner) {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .above-events-bar :global(.maplibregl-ctrl-attrib:not(.maplibregl-compact):hover .maplibregl-ctrl-attrib-inner) {
+    white-space: normal;
+  }
+  :global(.dark) .above-events-bar :global(.maplibregl-ctrl-attrib) {
+    background: hsl(var(--card) / 0.85);
+    color: hsl(var(--muted-foreground));
+  }
+  :global(.dark) .above-events-bar :global(.maplibregl-ctrl-attrib a) {
+    color: hsl(var(--primary));
+  }
   .map-btn {
     display: inline-flex;
     align-items: center;
