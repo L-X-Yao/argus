@@ -12,7 +12,7 @@ import { app, pushUndo, saveWaypoints, addToast, showSlide, cancelSlide, slideSt
 import { paramState } from './paramStore.svelte';
 import { cleanWaypoints, MissionDataError } from './missionIO';
 import { validateMissionWaypoints } from './missionUpload';
-import { dispatch, isSerialConnected, serialUploadMission } from './transport';
+import { dispatch, isSerialConnected, modeRequestCount, serialUploadMission } from './transport';
 import { specialModes, vehicleKind } from './vehicleModes';
 import { t } from './i18n.svelte';
 import type { DroneEvent, Waypoint } from './types';
@@ -350,28 +350,53 @@ function eventsAfter(mark: DroneEvent | undefined): DroneEvent[] {
   return mark === undefined ? app.events : app.events.slice(app.events.lastIndexOf(mark) + 1);
 }
 
+/** What ends the flight a command was asked for: a disarm, or a link that dropped. The page can
+ * miss the disarm itself (the link or its websocket was down: ws_manager starts the cursor at
+ * the total, and the trim takes the oldest first), so a drop is taken with it. */
+const FLIGHT_ENDS = new Set(['disarmed', 'disconnected', 'link_lost']);
+
 /** Why this flight command cannot be asked for or sent now, with the operator's toast, or null.
- * since: when it was asked for. A disarm after that ended the flight it was for, even if the
- * vehicle is armed again. */
+ * since: when it was asked for. A disarm or a link that dropped after that ended the flight it
+ * was for, even if the vehicle is armed again. The toast is the text to show. */
 function commandRefusal(
   command: FlightCommand,
   since?: { mark: DroneEvent | undefined },
 ): { error: string; toast: string } | null {
-  if (!app.drone.connected) return { error: 'No vehicle is connected to Argus.', toast: 'err.noLink' };
+  if (!app.drone.connected) return { error: 'No vehicle is connected to Argus.', toast: t('err.noLink') };
   if (!app.drone.armed) {
     return {
       error: 'The vehicle is not armed: a flight command is for a vehicle that is.',
-      toast: 'assistant.notArmed',
+      toast: t('assistant.notArmed'),
     };
   }
-  if (since && eventsAfter(since.mark).some((e) => e.event_type === 'disarmed')) {
+  if (since) {
+    // The mark anchors the flight. Gone from the list, what happened after it cannot be told:
+    // the trim takes the oldest first, and an event older than the ones left may hide a disarm.
+    if (since.mark !== undefined && app.events.lastIndexOf(since.mark) < 0) {
+      return {
+        error: 'The page no longer holds the event this was asked at: ask again.',
+        toast: t('assistant.otherFlight'),
+      };
+    }
+    if (eventsAfter(since.mark).some((e) => FLIGHT_ENDS.has(e.event_type))) {
+      return {
+        error: 'The vehicle has disarmed, or the link to it dropped, since it was asked for: it was for that flight.',
+        toast: t('assistant.otherFlight'),
+      };
+    }
+  }
+  // Mirrors transport.dispatch, which refuses the same vehicles: a command sent nowhere would
+  // otherwise wait its 10 s and report a silence that is not the flight controller's.
+  const ap = app.drone.autopilot;
+  if (ap != null && ap !== 0 && ap !== 3) {
+    const fcName = ap === 12 ? 'PX4' : `autopilot=${ap}`;
     return {
-      error: 'The vehicle has disarmed since it was asked for: it was for that flight.',
-      toast: 'assistant.otherFlight',
+      error: `Argus does not send commands to ${fcName}.`,
+      toast: t('conn.unsupportedFc').replace('{fc}', fcName),
     };
   }
   if (specialModes()[command] === null) {
-    return { error: `This ${vehicleKind()} has ${NO_MODE[command]} in Argus.`, toast: 'assistant.noMode' };
+    return { error: `This ${vehicleKind()} has ${NO_MODE[command]} in Argus.`, toast: t('assistant.noMode') };
   }
   return null;
 }
@@ -463,7 +488,7 @@ function refuseCommand(proposal: CommandProposal): boolean {
   const refused = commandRefusal(proposal.command, { mark: proposal.mark });
   if (!refused) return false;
   finish(proposal, { ok: false, error: refused.error, ending: 'refused' });
-  addToast(t(refused.toast), 'error', 5000);
+  addToast(refused.toast, 'error', 5000);
   return true;
 }
 
@@ -554,7 +579,7 @@ async function runParameters(proposal: ParameterProposal): Promise<Outcome> {
 }
 
 /** Modes that answer the command. A QuadPlane may go on from RTL to QRTL at once, or near home
- * (Q_RTL_MODE: ArduPlane/mode_rtl.cpp:22 and :33, ModeReason::QRTL_INSTEAD_OF_RTL), and RTL is 11,
+ * (Q_RTL_MODE: ArduPlane/mode_rtl.cpp:23 and :33, ModeReason::QRTL_INSTEAD_OF_RTL), and RTL is 11,
  * QRTL 21 (ArduPlane/mode.h:49 and :60, enum class Number). */
 function answers(command: FlightCommand, mode: number): boolean {
   if (command === 'rtl' && vehicleKind() === 'plane' && mode === 21) return true;
@@ -575,6 +600,10 @@ async function runCommand(proposal: CommandProposal): Promise<Outcome> {
   // As the page's own buttons send them: RTL through the rtl command, the others as a mode.
   if (proposal.command === 'rtl') dispatch('rtl');
   else dispatch('mode', mode);
+  // A COMMAND_ACK carries no request id: an acknowledgement answers the page's latest mode
+  // command. One the operator sends meanwhile is not this one's, and its refusal is not this
+  // command's answer.
+  const requests = modeRequestCount();
   const now = (accepted: boolean): Outcome => ({
     ok: true,
     result: {
@@ -588,7 +617,7 @@ async function runCommand(proposal: CommandProposal): Promise<Outcome> {
   let acceptedAt = 0;
   while (Date.now() < deadline) {
     if (answers(proposal.command, app.drone.mode_id) && (!already || acceptedAt)) return now(acceptedAt > 0);
-    const ack = eventsAfter(mark).find((e) => e.cmd === DO_SET_MODE);
+    const ack = modeRequestCount() === requests ? eventsAfter(mark).find((e) => e.cmd === DO_SET_MODE) : undefined;
     if (ack?.event_type === 'cmd_ack_fail') {
       return { ok: false, error: `The flight controller answered: ${ack.text}. It is in ${app.drone.mode}.` };
     }
@@ -613,8 +642,7 @@ function nextEvent(mark: DroneEvent | undefined, types: string[], ms: number): P
   return new Promise((resolve) => {
     const started = Date.now();
     const timer = setInterval(() => {
-      const after = mark === undefined ? app.events : app.events.slice(app.events.lastIndexOf(mark) + 1);
-      const found = after.find((e) => types.includes(e.event_type));
+      const found = eventsAfter(mark).find((e) => types.includes(e.event_type));
       if (found || Date.now() - started >= ms) {
         clearInterval(timer);
         resolve(found ?? null);

@@ -688,7 +688,16 @@ const _serialDispatch: Record<string, CmdHandler> = {
  */
 const _NO_VEHICLE_NEEDED = new Set(['cal_cancel', 'log_cancel']);
 
+// COMMAND_ACK carries no request id (mavlink common.xml: COMMAND_ACK has command and result
+// only), so an acknowledgement answers the latest mode command sent. The assistant's flight
+// commands read their answer from that: a mode the operator asks for meanwhile is not theirs.
+let _modeRequests = 0;
+export function modeRequestCount(): number {
+  return _modeRequests;
+}
+
 export function dispatch(name: string, param?: number, data?: Record<string, unknown>): void {
+  if (name === 'mode' || name === 'rtl') _modeRequests++;
   if (isSerialConnected()) {
     // Mirror backend commands.execute (commands/__init__.py:153-155): once a
     // non-ArduPilot autopilot is latched (0 = not yet known, 3 = ArduPilot),

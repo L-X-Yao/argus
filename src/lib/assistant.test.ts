@@ -3,10 +3,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 vi.mock('./transport', () => ({
   dispatch: vi.fn(),
   isSerialConnected: vi.fn(() => false),
+  modeRequestCount: vi.fn(() => 0),
   serialUploadMission: vi.fn(async () => ({ ok: true })),
 }));
 
-import { dispatch, isSerialConnected, serialUploadMission } from './transport';
+import { dispatch, isSerialConnected, modeRequestCount, serialUploadMission } from './transport';
 import {
   assistant,
   answerThrough,
@@ -66,6 +67,7 @@ beforeEach(() => {
   forgetAssistant();
   vi.mocked(dispatch).mockClear();
   vi.mocked(isSerialConnected).mockReturnValue(false);
+  vi.mocked(modeRequestCount).mockReturnValue(0);
   vi.mocked(serialUploadMission).mockClear();
 });
 
@@ -523,6 +525,48 @@ describe('flight commands', () => {
     expect(reply()).toMatchObject({ ok: true, result: { mode_number: 5, already_in_mode: true, accepted: true } });
   });
 
+  it('an answer that belongs to a mode the operator asks for meanwhile is not taken', async () => {
+    vi.useFakeTimers();
+    ask('propose_command', { command: 'rtl' });
+    await approveAndSlide();
+    // The page sends another mode command: the acknowledgement answers that one, not this.
+    vi.mocked(modeRequestCount).mockReturnValue(1);
+    ack(false, 'Set mode: denied');
+    await vi.advanceTimersByTimeAsync(600);
+    expect(reply()).toBeUndefined();
+    await vi.advanceTimersByTimeAsync(10000);
+    expect(reply()!.error).toBe('No answer from the flight controller in 10 s: it is in GUIDED.');
+  });
+
+  it('a link that dropped since it was asked for: refused', async () => {
+    app.events.push({ type: 'event', time: '12:00:01', text: 'connected', event_type: 'connected' });
+    ask('propose_command', { command: 'rtl' });
+    app.events.push({ type: 'event', time: '12:00:02', text: 'Link lost', event_type: 'link_lost' });
+    await approve('k1');
+    expect(slideState.visible).toBe(false);
+    expect(dispatch).not.toHaveBeenCalled();
+    expect(reply()).toMatchObject({ ok: false, result: { outcome: 'refused' } });
+    expect(reply()!.error).toContain('link');
+    expect(toasted('assistant.otherFlight')).toBe(true);
+  });
+
+  it('the event it was asked at is gone from the list: refused, ask again', async () => {
+    app.events.push({ type: 'event', time: '12:00:01', text: 'connected', event_type: 'connected' });
+    ask('propose_command', { command: 'rtl' });
+    // The trim (100 → 50, oldest first) took it while the proposal waited.
+    app.events = [{ type: 'event', time: '12:00:02', text: 'armed', event_type: 'armed' }];
+    await approve('k1');
+    expect(dispatch).not.toHaveBeenCalled();
+    expect(reply()!.error).toContain('ask again');
+  });
+
+  it('a vehicle Argus does not command: refused at once, not after 10 s', () => {
+    app.drone.autopilot = 12; // PX4
+    ask('propose_command', { command: 'rtl' });
+    expect(reply()).toMatchObject({ ok: false, result: { outcome: 'refused' } });
+    expect(reply()!.error).toContain('PX4');
+  });
+
   it('a slide let go sends nothing, and the proposal waits on', async () => {
     ask('propose_command', { command: 'land' });
     await approve('k1');
@@ -588,7 +632,9 @@ describe('flight commands', () => {
     event('armed', 'Armed');
     await approve('k1');
     expect(slideState.visible).toBe(false);
-    expect(reply()!.error).toBe('The vehicle has disarmed since it was asked for: it was for that flight.');
+    expect(reply()!.error).toBe(
+      'The vehicle has disarmed, or the link to it dropped, since it was asked for: it was for that flight.',
+    );
     expect(toasted('assistant.otherFlight')).toBe(true);
   });
 
