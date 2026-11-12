@@ -12,7 +12,7 @@ import { app, pushUndo, saveWaypoints, addToast, showSlide, cancelSlide, slideSt
 import { paramState } from './paramStore.svelte';
 import { cleanWaypoints, MissionDataError } from './missionIO';
 import { validateMissionWaypoints } from './missionUpload';
-import { dispatch, isSerialConnected, modeRequestCount, serialUploadMission } from './transport';
+import { dispatch, isSerialConnected, linkLossCount, modeRequestCount, serialUploadMission } from './transport';
 import { specialModes, vehicleKind } from './vehicleModes';
 import { t } from './i18n.svelte';
 import type { DroneEvent, Waypoint } from './types';
@@ -42,6 +42,8 @@ export interface CommandProposal {
   reason: string;
   /** The newest event when it was asked for: a disarm after it ends the flight it was for. */
   mark: DroneEvent | undefined;
+  /** The page's link drops when it was asked for: the WebSerial link notes none as an event. */
+  linkLosses: number;
 }
 
 export type Proposal = MissionProposal | ParameterProposal | CommandProposal;
@@ -94,7 +96,8 @@ const PARAM_WAIT_MS = 10000;
 const COMMAND_WAIT_MS = 10000;
 // After the flight controller has accepted the mode, how long to wait for a heartbeat to show it.
 const ACCEPTED_WAIT_MS = 2500;
-// MAV_CMD_DO_SET_MODE, as both links send a mode (backend send_set_mode, transport serialSendMode).
+// MAV_CMD_DO_SET_MODE, as both links send a mode (backend send_set_mode, transport serialSendMode):
+// ArduPilot libraries/GCS_MAVLink/GCS_Common.cpp:5741 routes it to handle_command_do_set_mode.
 const DO_SET_MODE = 176;
 
 const OFF_THE_MAP = 'A waypoint is off the map: latitude within ±90, longitude within ±180.';
@@ -360,7 +363,7 @@ const FLIGHT_ENDS = new Set(['disarmed', 'disconnected', 'link_lost']);
  * was for, even if the vehicle is armed again. The toast is the text to show. */
 function commandRefusal(
   command: FlightCommand,
-  since?: { mark: DroneEvent | undefined },
+  since?: { mark: DroneEvent | undefined; linkLosses: number },
 ): { error: string; toast: string } | null {
   if (!app.drone.connected) return { error: 'No vehicle is connected to Argus.', toast: t('err.noLink') };
   if (!app.drone.armed) {
@@ -378,7 +381,7 @@ function commandRefusal(
         toast: t('assistant.otherFlight'),
       };
     }
-    if (eventsAfter(since.mark).some((e) => FLIGHT_ENDS.has(e.event_type))) {
+    if (linkLossCount() !== since.linkLosses || eventsAfter(since.mark).some((e) => FLIGHT_ENDS.has(e.event_type))) {
       return {
         error: 'The vehicle has disarmed, or the link to it dropped, since it was asked for: it was for that flight.',
         toast: t('assistant.otherFlight'),
@@ -407,7 +410,14 @@ function proposeCommand(id: string, args: Fields): CommandProposal | { error: st
   const refused = commandRefusal(command as FlightCommand);
   if (refused) return { error: refused.error };
   const mark = app.events[app.events.length - 1];
-  return { id, kind: 'propose_command', command: command as FlightCommand, reason: reasonOf(args), mark };
+  return {
+    id,
+    kind: 'propose_command',
+    command: command as FlightCommand,
+    reason: reasonOf(args),
+    mark,
+    linkLosses: linkLossCount(),
+  };
 }
 
 /** In the order asked for, but a flight command before a mission or parameters: those wait for a
@@ -485,7 +495,7 @@ export async function approve(id: string): Promise<void> {
 
 /** Refuses it when it cannot be sent now, and says so to both; whether it did. */
 function refuseCommand(proposal: CommandProposal): boolean {
-  const refused = commandRefusal(proposal.command, { mark: proposal.mark });
+  const refused = commandRefusal(proposal.command, { mark: proposal.mark, linkLosses: proposal.linkLosses });
   if (!refused) return false;
   finish(proposal, { ok: false, error: refused.error, ending: 'refused' });
   addToast(refused.toast, 'error', 5000);
@@ -617,7 +627,10 @@ async function runCommand(proposal: CommandProposal): Promise<Outcome> {
   let acceptedAt = 0;
   while (Date.now() < deadline) {
     if (answers(proposal.command, app.drone.mode_id) && (!already || acceptedAt)) return now(acceptedAt > 0);
-    const ack = modeRequestCount() === requests ? eventsAfter(mark).find((e) => e.cmd === DO_SET_MODE) : undefined;
+    // The mark evicted (the list trims the oldest first), events after it cannot be told apart:
+    // as in commandRefusal, stop reading them and let the mode the vehicle reports decide.
+    const mine = modeRequestCount() === requests && (mark === undefined || app.events.lastIndexOf(mark) >= 0);
+    const ack = mine ? eventsAfter(mark).find((e) => e.cmd === DO_SET_MODE) : undefined;
     if (ack?.event_type === 'cmd_ack_fail') {
       return { ok: false, error: `The flight controller answered: ${ack.text}. It is in ${app.drone.mode}.` };
     }

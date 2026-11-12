@@ -330,7 +330,7 @@ class TestProposals:
         assert checked == {"proposal": "p1", "state": "done", "result": {"mode": "RTL"}}
 
     def test_the_instructions_tell_a_flight_command_from_a_change(self):
-        assert "mission or parameters are refused while the vehicle is armed" in mcp.INSTRUCTIONS
+        assert "mission or parameter change is refused while the vehicle is armed" in mcp.INSTRUCTIONS
         assert "flight command" in mcp.INSTRUCTIONS and "slide" in mcp.INSTRUCTIONS
         tool = next(t for t in mcp.TOOLS if t["name"] == "propose_flight_command")
         assert tool["inputSchema"]["properties"]["command"]["enum"] == ["rtl", "hold", "land"]

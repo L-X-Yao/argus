@@ -3,11 +3,12 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 vi.mock('./transport', () => ({
   dispatch: vi.fn(),
   isSerialConnected: vi.fn(() => false),
+  linkLossCount: vi.fn(() => 0),
   modeRequestCount: vi.fn(() => 0),
   serialUploadMission: vi.fn(async () => ({ ok: true })),
 }));
 
-import { dispatch, isSerialConnected, modeRequestCount, serialUploadMission } from './transport';
+import { dispatch, isSerialConnected, linkLossCount, modeRequestCount, serialUploadMission } from './transport';
 import {
   assistant,
   answerThrough,
@@ -67,6 +68,7 @@ beforeEach(() => {
   forgetAssistant();
   vi.mocked(dispatch).mockClear();
   vi.mocked(isSerialConnected).mockReturnValue(false);
+  vi.mocked(linkLossCount).mockReturnValue(0);
   vi.mocked(modeRequestCount).mockReturnValue(0);
   vi.mocked(serialUploadMission).mockClear();
 });
@@ -548,6 +550,37 @@ describe('flight commands', () => {
     expect(reply()).toMatchObject({ ok: false, result: { outcome: 'refused' } });
     expect(reply()!.error).toContain('link');
     expect(toasted('assistant.otherFlight')).toBe(true);
+  });
+
+  it('a WebSerial link that dropped and came back since it was asked for: refused', async () => {
+    app.events.push({ type: 'event', time: '12:00:01', text: 'connected', event_type: 'connected' });
+    ask('propose_command', { command: 'rtl' });
+    // The serial link notes no event when it drops; the page counts the drop itself.
+    vi.mocked(linkLossCount).mockReturnValue(1);
+    await approve('k1');
+    expect(dispatch).not.toHaveBeenCalled();
+    expect(reply()!.error).toContain('link');
+    expect(toasted('assistant.otherFlight')).toBe(true);
+  });
+
+  it('the mark trimmed while the wait runs: an older ack is not taken for this answer', async () => {
+    vi.useFakeTimers();
+    app.events.push({ type: 'event', time: '12:00:00', text: 'Armed', event_type: 'armed' });
+    ask('propose_command', { command: 'rtl' });
+    await approveAndSlide();
+    // The trim takes the mark away; a denial of some earlier command is all that is left.
+    app.events.push({
+      type: 'event',
+      time: '12:00:01',
+      text: 'Set mode: denied',
+      event_type: 'cmd_ack_fail',
+      cmd: 176,
+    });
+    app.events = app.events.slice(-1);
+    await vi.advanceTimersByTimeAsync(600);
+    expect(reply()).toBeUndefined();
+    await vi.advanceTimersByTimeAsync(10000);
+    expect(reply()!.error).toBe('No answer from the flight controller in 10 s: it is in GUIDED.');
   });
 
   it('the event it was asked at is gone from the list: refused, ask again', async () => {

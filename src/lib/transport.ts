@@ -293,6 +293,7 @@ export async function connectSerial(baudRate: number, handlers: SerialHandlers):
 // The WS path learns this from a backend push. Without this the UI kept showing
 // a live link after the session ended, for good when no backend was running.
 function _clearSerialLink(): void {
+  _linkLosses++;
   if (serial.hbInterval) {
     clearInterval(serial.hbInterval);
     serial.hbInterval = null;
@@ -691,13 +692,24 @@ const _NO_VEHICLE_NEEDED = new Set(['cal_cancel', 'log_cancel']);
 // COMMAND_ACK carries no request id (mavlink common.xml: COMMAND_ACK has command and result
 // only), so an acknowledgement answers the latest mode command sent. The assistant's flight
 // commands read their answer from that: a mode the operator asks for meanwhile is not theirs.
+// Takeoff, a mission start and a guided goto switch mode as well (backend/commands/_flight.py,
+// _hardware.py; serialSendMode below), so they count too.
+const MODE_COMMANDS = new Set(['mode', 'rtl', 'takeoff', 'mission_start', 'guided_goto']);
 let _modeRequests = 0;
 export function modeRequestCount(): number {
   return _modeRequests;
 }
 
+// The WebSerial link notes no event when it drops; the backend link does (drone_link.py:370 and
+// :752). A flight command reads this as well as those events, so a disarm the page never saw
+// still ends the flight the command was asked for.
+let _linkLosses = 0;
+export function linkLossCount(): number {
+  return _linkLosses;
+}
+
 export function dispatch(name: string, param?: number, data?: Record<string, unknown>): void {
-  if (name === 'mode' || name === 'rtl') _modeRequests++;
+  if (MODE_COMMANDS.has(name)) _modeRequests++;
   if (isSerialConnected()) {
     // Mirror backend commands.execute (commands/__init__.py:153-155): once a
     // non-ArduPilot autopilot is latched (0 = not yet known, 3 = ArduPilot),
