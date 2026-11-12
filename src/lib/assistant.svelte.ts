@@ -262,6 +262,12 @@ function parameters(args: Fields): Outcome {
 /** Why no change can be asked for or made now, or null. */
 function refusal(): string | null {
   if (!app.drone.connected) return 'No vehicle is connected to Argus.';
+  // As transport.dispatch refuses them: a proposal accepted on such a vehicle would wait for
+  // an upload that was never sent, and report a silence instead of the reason.
+  const ap = app.drone.autopilot;
+  if (ap != null && ap !== 0 && ap !== 3) {
+    return `Argus does not send commands to ${ap === 12 ? 'PX4' : `autopilot=${ap}`}.`;
+  }
   if (app.drone.armed) return 'The vehicle is armed: Argus takes no changes from the assistant while it is armed.';
   return null;
 }
@@ -353,10 +359,12 @@ function eventsAfter(mark: DroneEvent | undefined): DroneEvent[] {
   return mark === undefined ? app.events : app.events.slice(app.events.lastIndexOf(mark) + 1);
 }
 
-/** What ends the flight a command was asked for: a disarm, or a link that dropped. The page can
- * miss the disarm itself (the link or its websocket was down: ws_manager starts the cursor at
- * the total, and the trim takes the oldest first), so a drop is taken with it. */
-const FLIGHT_ENDS = new Set(['disarmed', 'disconnected', 'link_lost']);
+/** What ends the flight a command was asked for: a disarm, a link that dropped, or another
+ * vehicle taken over (its armed state comes from the fleet list, so a switch can look like the
+ * same flight). The page can miss the disarm itself (the link or its websocket was down:
+ * ws_manager starts the cursor at the total, and the trim takes the oldest first), so a drop is
+ * taken with it. */
+const FLIGHT_ENDS = new Set(['disarmed', 'disconnected', 'link_lost', 'vehicle_switch']);
 
 /** Why this flight command cannot be asked for or sent now, with the operator's toast, or null.
  * since: when it was asked for. A disarm or a link that dropped after that ended the flight it
@@ -612,7 +620,8 @@ async function runCommand(proposal: CommandProposal): Promise<Outcome> {
   else dispatch('mode', mode);
   // A COMMAND_ACK carries no request id: an acknowledgement answers the page's latest mode
   // command. One the operator sends meanwhile is not this one's, and its refusal is not this
-  // command's answer.
+  // command's answer. A command sent just before, whose answer had not come yet, still cannot
+  // be told apart: MAVLink has nothing to match on.
   const requests = modeRequestCount();
   const now = (accepted: boolean): Outcome => ({
     ok: true,

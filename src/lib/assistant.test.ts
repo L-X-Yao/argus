@@ -170,6 +170,7 @@ describe('proposals wait for the operator', () => {
   it.each([
     ['no vehicle', () => (app.drone.connected = false), 'No vehicle'],
     ['an armed vehicle', () => (app.drone.armed = true), 'armed'],
+    ['a vehicle Argus does not command', () => (app.drone.autopilot = 12), 'PX4'],
   ])('nothing is taken with %s, and the ending says refused', (_, setUp, words) => {
     setUp();
     ask('propose_mission', MISSION);
@@ -549,6 +550,18 @@ describe('flight commands', () => {
     expect(dispatch).not.toHaveBeenCalled();
     expect(reply()).toMatchObject({ ok: false, result: { outcome: 'refused' } });
     expect(reply()!.error).toContain('link');
+    expect(toasted('assistant.otherFlight')).toBe(true);
+  });
+
+  it('another vehicle taken over since it was asked for: refused', async () => {
+    app.events.push({ type: 'event', time: '12:00:01', text: 'connected', event_type: 'connected' });
+    ask('propose_command', { command: 'rtl' });
+    // A switch to another armed vehicle: its armed state comes from the fleet list.
+    app.events.push({ type: 'event', time: '12:00:02', text: 'Switch control: sysid=2', event_type: 'vehicle_switch' });
+    await approve('k1');
+    expect(slideState.visible).toBe(false);
+    expect(dispatch).not.toHaveBeenCalled();
+    expect(reply()).toMatchObject({ ok: false, result: { outcome: 'refused' } });
     expect(toasted('assistant.otherFlight')).toBe(true);
   });
 
