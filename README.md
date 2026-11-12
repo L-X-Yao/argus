@@ -167,7 +167,7 @@ An AI client that speaks the [Model Context Protocol](https://modelcontextprotoc
 | `check_proposal` | Whether the operator has decided, and the result |
 | `withdraw_proposal` | Takes back a proposal not yet decided |
 
-A proposal returns its id at once, and `check_proposal` waits up to 50 s a call for the decision, so the operator can take minutes. A mission or parameter changes are refused while the vehicle is armed, and a flight command while it is not. The tools cannot arm, take off, start a mission or change to any other mode.
+A proposal returns its id at once, and `check_proposal` waits up to 50 s a call for the decision, so the operator can take minutes. A mission or parameter change is refused while the vehicle is armed, and a flight command while it is not. The tools cannot arm, take off, start a mission or change to any other mode.
 
 These limits are those of the tools. A client that can also run commands on this computer, as Claude Code can, could reach Argus and the vehicle in other ways, as any program here could: keep it asking before each command, which is its default.
 

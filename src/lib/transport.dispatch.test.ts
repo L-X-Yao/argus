@@ -68,7 +68,7 @@ vi.mock('./ws', () => ({
 }));
 
 // Import AFTER mocks
-import { connectSerial, disconnectSerial, dispatch } from './transport';
+import { connectSerial, disconnectSerial, dispatch, linkLossCount, modeRequestCount } from './transport';
 import { app } from './stores.svelte';
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -604,5 +604,27 @@ describe('_serialDispatch calibration + gimbal + RC wire bytes', () => {
     expect(cmd.p1).toBe(1);
     expect(cmd.p3).toBe(0); // no throttle
     expect(cmd.p4).toBe(0); // a timeout of 0 ends it at the next output
+  });
+});
+
+describe('counters the flight commands read', () => {
+  it('counts every command that can send MAV_CMD_DO_SET_MODE', () => {
+    const before = modeRequestCount();
+    dispatch('mode', 5);
+    dispatch('rtl');
+    dispatch('takeoff', undefined, { alt: 30 });
+    dispatch('mission_start');
+    dispatch('guided_goto', undefined, { lat: 34.25, lon: 108.94, alt: 30 });
+    expect(modeRequestCount() - before).toBe(5);
+    // Not one: an arm is no mode change, and its acknowledgement is not another command's.
+    dispatch('arm');
+    expect(modeRequestCount() - before).toBe(5);
+  });
+
+  it('counts a serial link that ends', async () => {
+    const before = linkLossCount();
+    await disconnectSerial();
+    expect(linkLossCount()).toBe(before + 1);
+    await connectSerial(115200, {}); // the afterEach disconnects again
   });
 });
