@@ -104,7 +104,12 @@ class FakeLink:
         self.captured.append(frame)
 
     def add_event(self, text: str, event_type: str = "", cmd: int | None = None) -> None:
-        self.events.append({"text": text, "event_type": event_type, "cmd": cmd})
+        # As DroneLink.add_event (backend/drone_link.py): the key is written only when there is
+        # a command, which ws_manager's "cmd" in ev and the page's e.cmd read.
+        event = {"text": text, "event_type": event_type}
+        if cmd is not None:
+            event["cmd"] = cmd
+        self.events.append(event)
 
     def _get_vehicle_info(self):
         return ({}, [], "Multirotor")
