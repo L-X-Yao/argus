@@ -106,9 +106,14 @@ test.describe('Rally points', () => {
     await openRallyPanel(page);
     await page.getByRole('button', { name: '添加备降点' }).click();
 
+    // Away from the middle: the simulator's vehicle stands there, and its icon takes a click meant
+    // for the map (a Leaflet marker does not bubble). The map re-centres when the panel opens, so
+    // the icon stays in the middle whatever the panel's width.
     const map = (await page.locator('.leaflet-container').first().boundingBox())!;
-    await page.mouse.click(map.x + map.width / 2, map.y + map.height / 2);
-    await page.mouse.click(map.x + map.width / 2 + 60, map.y + map.height / 2 + 40);
+    const x = map.x + map.width * 0.3;
+    const y = map.y + map.height * 0.65;
+    await page.mouse.click(x, y);
+    await page.mouse.click(x + 60, y + 40);
     await expect(page.locator('path.rally-point')).toHaveCount(2);
 
     await page.reload();
@@ -122,7 +127,7 @@ test.describe('Rally points', () => {
     await openFromPalette(page, 'nav-plan');
 
     const map = (await page.locator('.leaflet-container').first().boundingBox())!;
-    await page.mouse.click(map.x + map.width / 2, map.y + map.height / 2);
+    await page.mouse.click(map.x + map.width * 0.3, map.y + map.height * 0.65);
     await page.waitForTimeout(300);
     await expect(page.locator('path.rally-point')).toHaveCount(0);
   });
