@@ -208,6 +208,7 @@ const messages: Record<string, string> = {
   'check.vibe': 'Vibrationscheck',
   'check.rc': 'RC-Signal',
   'check.mission': 'Auftragscheck',
+  'check.hideCritical': 'Eine kritische Prüfung ausblenden? Sie schützt den Flug dann nicht mehr.',
   'check.local': 'Lokal',
   'check.vtype': 'Fahrzeugtyp',
   'check.notArmed': 'Nicht entsichert',

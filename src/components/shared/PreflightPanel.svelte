@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { app } from '../../lib/stores.svelte';
+  import { app, showConfirm } from '../../lib/stores.svelte';
+  import { getParam } from '../../lib/paramStore.svelte';
   import { t } from '../../lib/i18n.svelte';
   import { worst } from '../../lib/worst';
   import { Check, X as XIcon, Settings2 } from '@lucide/svelte';
@@ -38,11 +39,26 @@
     return customConfig[key] !== false;
   }
 
+  /** Applies the toggle. A critical check asks first: hidden, it stops guarding the flight. */
   function toggleCheck(key: string) {
+    if (isCheckEnabled(key) && allChecks.find((c) => c.key === key)?.critical) {
+      void showConfirm(t('check.hideCritical')).then((ok) => {
+        if (ok) applyToggle(key);
+      });
+      return;
+    }
+    applyToggle(key);
+  }
+
+  function applyToggle(key: string) {
     customConfig[key] = !isCheckEnabled(key);
     customConfig = { ...customConfig };
     saveConfig(customConfig);
   }
+
+  // BATT_ARM_VOLT is the voltage ArduPilot itself refuses to arm below.
+  let battArmVolt = $derived(getParam('BATT_ARM_VOLT', -1));
+  let minBatV = $derived(battArmVolt > 0 ? battArmVolt : 22);
 
   /* ── All available checks ── */
   let allChecks = $derived.by((): CheckItem[] => {
@@ -50,7 +66,15 @@
     return [
       { key: 'gps', name: t('check.gps'), ok: gpsOk, detail: `${d.gps_fix}`, critical: true },
       { key: 'sats', name: t('check.sats'), ok: d.gps_sats >= 10, detail: `${d.gps_sats} (>=10)`, critical: true },
-      { key: 'batV', name: t('check.batV'), ok: d.voltage > 22, detail: `${d.voltage.toFixed(1)}V`, critical: true },
+      {
+        key: 'batV',
+        name: t('check.batV'),
+        // ArduPilot's own arm threshold when a parameter read has it; the fixed 22 V otherwise
+        // (the old check read every vehicle as a 6S one).
+        ok: d.voltage >= minBatV,
+        detail: `${d.voltage.toFixed(1)}V (>=${minBatV.toFixed(1)})`,
+        critical: true,
+      },
       {
         key: 'batPct',
         name: t('check.batPct'),
