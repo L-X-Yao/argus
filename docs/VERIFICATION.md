@@ -243,7 +243,7 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 | `ConfirmDialog` | shared | 确认危险操作 | Real FC | 2026-11-05 |
 | `FlightSummary` | shared | 查看飞行总结 | SITL | CI by clicks on firmware: matches the flight the FC reported. 2026-11-13: the history stores a flight once when two pages receive its summary (unit test) |
 | `LoginDialog` | shared | 输入令牌登录 | Simulator | e2e: auth |
-| `PreflightPanel` | shared | 查看起飞前检查 | Real FC | 2026-11-05 on both links. 2026-11-13: the mission item says the route is the local one, not the vehicle's (the vehicle's count is unknown without a download) |
+| `PreflightPanel` | shared | 查看起飞前检查 | Real FC | 2026-11-05 on both links. 2026-11-13: the mission item says the route is the local one, not the vehicle's (the vehicle's count is unknown without a download); the battery threshold is ArduPilot's BATT_ARM_VOLT when a parameter read has it, the old 22 V otherwise, and hiding a critical check asks first |
 | `RolePanel` | shared | 切换操作角色 | Tests only | Browser test: opens without an error. Demo, not wired to roles |
 | `SettingsPanel` | shared | 修改应用设置 | Simulator | e2e: settings, mobile. 2026-11-13: the footer shows the version `package.json` has, and the test reads that file; a stored 0 (a submarine's altitude, a fence radius) is kept, not replaced by the default (unit test) |
 | `SlideConfirm` | shared | 滑动确认关键指令 | SITL | CI by clicks on firmware: an early release arms nothing |

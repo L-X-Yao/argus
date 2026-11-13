@@ -208,6 +208,7 @@ const messages: Record<string, string> = {
   'check.vibe': 'Вибрация',
   'check.rc': 'RC сигнал',
   'check.mission': 'Миссия',
+  'check.hideCritical': 'Скрыть критическую проверку? Она перестанет охранять полёт.',
   'check.local': 'Локально',
   'check.vtype': 'Тип аппарата',
   'check.notArmed': 'Не взведён',
