@@ -286,7 +286,7 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 | PWA and offline use | PWA 和离线 | Simulator | e2e, and real Edge on Windows 2026-11-06 |
 | Several browser clients | 多浏览器客户端 | Simulator | Integration tests. 2026-11-13: a page without command authority can no longer connect or disconnect the shared vehicle link, a mission download's model goes to the page that asked for it only, and a value another tab saved is applied here instead of being written back over (unit tests). The backend text's language is the operator's: another page's locale is ignored, and two pages record one flight once (unit tests) |
 | A phone or tablet on the network | 局域网里的手机或平板 | Simulator | A phone-sized touch browser on a network address 2026-11-11: token login, live telemetry and a parameter read upright, a mode change on its side. e2e: a page the backend does not list is told so at the login; upright, RTL asks for the slide, hold sends the mode command, the flight controls open and close, and nothing lies over the events bar. No real phone |
-| AI assistant (MCP) | AI 助手（MCP） | SITL | Unit tests of the MCP server in both protocol eras, and through the real backend over its websocket. e2e: an MCP client starts the server, the page answers it, and an operator approves a mission and a parameter against the built-in simulator, declines one, and one is withdrawn. panels-sitl: the flight commands on ArduCopter SITL, refused on the ground, then hold, RTL and land in flight, each approved and slid, read back from the firmware's heartbeat. No AI client tried by hand, no real FC |
+| AI assistant (MCP) | AI 助手（MCP） | SITL | Unit tests of the MCP server in both protocol eras, and through the real backend over its websocket. e2e: an MCP client starts the server, the page answers it, and an operator approves a mission and a parameter against the built-in simulator, declines one, and one is withdrawn. panels-sitl: the flight commands on ArduCopter SITL, refused on the ground, then hold, RTL and land in flight, each approved and slid, read back from the firmware's heartbeat. By hand 2026-11-13: Claude Code, a real MCP client, read the status, proposed a mission, had it approved in the page, and got done with 1 waypoint on the built-in simulator. No real FC |
 | Video and AR overlay | 视频和 AR 叠加 | Simulator | Integration tests, and real ffmpeg on an HTTP test stream 2026-11-10. No real camera |
 | Token login | Token 登录 | Simulator | e2e, real Windows each release |
 | Windows package | Windows 发布包 | Simulator | CI builds and smoke-tests it on every push. The release workflow starts the zip it is about to publish on a Windows runner, and publishes nothing if that fails. Real Windows each release |
@@ -332,7 +332,7 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 8. **The backend's serial link on Windows since the package bundles Python 3.14 (v3.7.8).** It ran on a real FC on the Python 3.10 of earlier packages. On 3.14 a COM port was opened and closed 2026-11-10, with no FC on it. WebSerial does not use that Python.
 9. **Video from a real camera.** ffmpeg turned an HTTP test stream into frames 2026-11-10. No RTSP camera has been on it, and before v3.7.8 only `rtsp://` addresses could play at all.
 10. **A real phone or tablet.** A phone-sized touch browser opened Argus at a network address 2026-11-11. No real phone has, and neither Safari on iOS nor the browser inside a chat app has been tried.
-11. **The AI assistant with a real AI client and a real FC.** Its tests use a plain MCP client, the built-in simulator and ArduCopter SITL. Neither Claude Desktop nor Claude Code has driven it yet, and no proposal has reached a real flight controller.
+11. **The AI assistant with a real AI client and a real FC.** Its tests use a plain MCP client, the built-in simulator and ArduCopter SITL. Claude Code, a real MCP client, drove it by hand on 2026-11-13: status read, a proposed mission approved in the page and uploaded to the built-in simulator. Claude Desktop has not been tried, and no proposal has reached a real flight controller.
 
 1. **真实飞行。** 没有飞过。下面都只是台架或仿真结果。
 2. **真机上的解锁、起飞、返航、开始任务。** 只在 SITL 跑过。这些需要接电池，要单独安排。
@@ -344,7 +344,7 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 8. **发布包改用 Python 3.14（v3.7.8）之后，Windows 上的后端串口。** 之前的发布包内置 Python 3.10，在真实飞控上跑过。3.14 上只在 2026-11-10 打开并关闭过一个 COM 口，没有接飞控。WebSerial 不经过这个 Python。
 9. **真实相机的视频。** 2026-11-10 用 ffmpeg 把一路 HTTP 测试流转成了画面。没有接过 RTSP 相机，而且 v3.7.8 之前只有 `rtsp://` 地址能播放。
 10. **真实的手机或平板。** 2026-11-11 用手机尺寸的触屏浏览器在局域网地址上打开过 Argus。没有用过真实手机，iOS 上的 Safari 和聊天软件内置的浏览器也都没有试过。
-11. **用真实的 AI 客户端和真实飞控运行 AI 助手。** 测试用的是一个最简单的 MCP 客户端、内置模拟器和 ArduCopter SITL。Claude Desktop 和 Claude Code 都还没有驱动过它，也没有提议到达过真实飞控。
+11. **用真实飞控运行 AI 助手，以及用 Claude Desktop。** 测试用的是一个最简单的 MCP 客户端、内置模拟器和 ArduCopter SITL。2026-11-13 已用 Claude Code（真实 MCP 客户端）手工跑通一次：读取状态、在页面批准一条提议航线并上传到内置模拟器。Claude Desktop 尚未试过，提议也还没有到达过真实飞控。
 
 ## Known limits / 已知限制
 
