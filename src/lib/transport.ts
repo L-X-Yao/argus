@@ -277,10 +277,22 @@ export async function connectSerial(baudRate: number, handlers: SerialHandlers):
         // Tear down any in-flight log operation so its watchdog doesn't
         // fire spuriously after disconnect.
         if (logSession.listPending) _resolveLogList({ ok: false, error: t('serial.err.linkLost') });
-        if (logSession.dlPending) _abortLogDownload(t('serial.err.linkLost'));
+        // Deliver what arrived, flagged — twin of backend _reset_session_state,
+        // which sends log_complete truncated rather than discarding the bytes.
+        if (logSession.dlPending) _finishLogDownload(true, 'Link lost before the log finished');
         // Param fetch: stop the gap-fill ticker; link-lost toast already
-        // shown above, so no second toast.
+        // shown above, so no second toast. A link that took a read with it
+        // still says so in the event log — twin of backend param_timeout.
+        const paramCut = paramFetch.active && wasRunning;
         _abortParamFetch(false);
+        if (paramCut) {
+          addEvent({
+            type: 'event',
+            time: new Date().toLocaleTimeString(),
+            text: t('param.timeout'),
+            event_type: 'param_timeout',
+          });
+        }
       });
 
     return true;
@@ -1450,6 +1462,9 @@ interface LogSessionState {
   listResolve: ((r: { ok: boolean; error?: string }) => void) | null;
   listTimer: ReturnType<typeof setTimeout> | null;
   listEntries: LogEntryShape[];
+  // List requests re-sent after a silent window (twin of backend
+  // LogState._log_list_tries; check_log_list_stall).
+  listTries: number;
 
   dlPending: boolean;
   dlResolve: ((r: { ok: boolean; error?: string }) => void) | null;
@@ -1478,6 +1493,7 @@ const logSession: LogSessionState = {
   listResolve: null,
   listTimer: null,
   listEntries: [],
+  listTries: 0,
   dlPending: false,
   dlResolve: null,
   dlTimer: null,
@@ -1552,6 +1568,7 @@ function _requestNextLogGap(): boolean {
 function _resolveLogList(result: { ok: boolean; error?: string }): void {
   if (!logSession.listPending) return;
   logSession.listPending = false;
+  logSession.listTries = 0;
   if (logSession.listTimer) {
     clearTimeout(logSession.listTimer);
     logSession.listTimer = null;
@@ -1559,6 +1576,28 @@ function _resolveLogList(result: { ok: boolean; error?: string }): void {
   const r = logSession.listResolve;
   logSession.listResolve = null;
   if (r) r(result);
+}
+
+// A lost LOG_REQUEST_LIST leaves an idle FC silent, so re-ask after this long,
+// a bounded number of times — twin of backend check_log_list_stall.
+const LOG_LIST_RETRY_MS = 5000; // the existing per-entry window; backend re-asks every 3 s
+const LOG_LIST_TRIES = 3; // matches backend LOG_LIST_TRIES
+
+function _armLogListWatchdog(): void {
+  if (logSession.listTimer) clearTimeout(logSession.listTimer);
+  logSession.listTimer = setTimeout(() => {
+    if (!logSession.listPending) return;
+    if (logSession.listTries >= LOG_LIST_TRIES) {
+      _resolveLogList({ ok: false, error: t('serial.err.logListTimeout') });
+      return;
+    }
+    logSession.listTries += 1;
+    // AP answers a list request from the first entry again; keeping what the
+    // stalled attempt collected would append duplicates (backend clears too).
+    logSession.listEntries = [];
+    sendSerialFrame(117, encodeLogRequestList(serial.targetSysId, serial.targetCompId, 0, 0xffff));
+    _armLogListWatchdog();
+  }, LOG_LIST_RETRY_MS);
 }
 
 function _onLogEntry(p: DataView): void {
@@ -1571,13 +1610,18 @@ function _onLogEntry(p: DataView): void {
     // what we actually check.
   };
   const lastLogNum = p.getUint16(12, true);
+  // AP answers an empty log store with one dummy entry: id 0, last 0, size 0
+  // (AP_Logger_MAVLinkLogTransfer.cpp:82-84, 262-273). Show an empty list, not a
+  // "#0" whose download saves nothing — twin of backend handle_log_entry.
+  if (entry.id === 0 && lastLogNum === 0 && entry.size === 0) {
+    setLogList([]);
+    _resolveLogList({ ok: true });
+    return;
+  }
   logSession.listEntries.push(entry);
   // Reset the watchdog every time a new entry shows up — slow FCs can take
   // tens of seconds to list 100+ logs.
-  if (logSession.listTimer) clearTimeout(logSession.listTimer);
-  logSession.listTimer = setTimeout(() => {
-    _resolveLogList({ ok: false, error: t('serial.err.logListTimeout') });
-  }, 5000);
+  _armLogListWatchdog();
   if (entry.id === lastLogNum) {
     setLogList([...logSession.listEntries]);
     _resolveLogList({ ok: true });
@@ -1740,9 +1784,8 @@ export async function serialLogList(): Promise<{ ok: boolean; error?: string }> 
     logSession.listPending = true;
     logSession.listResolve = resolve;
     logSession.listEntries = [];
-    logSession.listTimer = setTimeout(() => {
-      _resolveLogList({ ok: false, error: t('serial.err.logListTimeout') });
-    }, 5000);
+    logSession.listTries = 0;
+    _armLogListWatchdog();
     sendSerialFrame(117, encodeLogRequestList(serial.targetSysId, serial.targetCompId, 0, 0xffff));
   });
 }

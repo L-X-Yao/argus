@@ -192,7 +192,9 @@ describe('dual-stack parity dump', () => {
           case 'log_list': {
             const p = serialLogList();
             dump[op.id] = toHex(H.writes);
-            await vi.advanceTimersByTimeAsync(6000); // let the watchdog resolve
+            // 4 windows: initial request + 3 re-asks, then the timeout error
+            // (twin of backend check_log_list_stall).
+            await vi.advanceTimersByTimeAsync(21000);
             await p;
             continue;
           }

@@ -73,8 +73,8 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 | `cal_accel` | Accelerometer calibration | 加速度计校准 | Real FC | SITL | Backend 2026-05, WebSerial CI, SITL recording replayed in CI |
 | `cal_accel_next` | Next calibration pose | 校准下一姿态 | Real FC | SITL | Backend 2026-05, WebSerial CI, SITL recording replayed in CI |
 | `cal_cancel` | Cancel calibration | 取消校准 | Real FC | Real FC | Both 2026-11-06 on Windows, CI on both links |
-| `log_list` | List logs | 日志列表 | Real FC | Real FC | Both 2026-11-06 on Windows. 2026-11-13: a lost last LOG_ENTRY is asked for again (3 s, 3 tries) and then reported, where the request waited forever (unit test); an empty log store (AP's dummy id 0, last 0, size 0) shows an empty list instead of a "#0" whose download saved nothing (contract test) |
-| `log_download` | Download a log | 下载日志 | Real FC | Real FC | Both 2026-11-06 on Windows, same sha256 on both links. 2026-11-13: a link that drops mid-download reports it as incomplete, where the panel sat at the last percentage (unit test) |
+| `log_list` | List logs | 日志列表 | Real FC | Real FC | Both 2026-11-06 on Windows. 2026-11-13: a lost last LOG_ENTRY is asked for again (3 s, 3 tries) and then reported, where the request waited forever (unit test); an empty log store (AP's dummy id 0, last 0, size 0) shows an empty list instead of a "#0" whose download saved nothing (contract test). The WebSerial link does all three too (vitest, 2026-11-13) |
+| `log_download` | Download a log | 下载日志 | Real FC | Real FC | Both 2026-11-06 on Windows, same sha256 on both links. 2026-11-13: a link that drops mid-download reports it as incomplete, where the panel sat at the last percentage (unit test); the WebSerial link delivers the bytes it received, flagged, instead of discarding them (vitest) |
 | `log_cancel` | Cancel a download | 取消下载 | SITL | SITL | CI on both links |
 | `reboot` | Reboot the FC | 重启飞控 | Real FC | Real FC | Both 2026-11-06 on Windows, disarmed. WebSerial comes back by the USB button, the backend by itself |
 | `reboot_bootloader` | Reboot to bootloader | 重启到 Bootloader | SITL | SITL | CI on both links |

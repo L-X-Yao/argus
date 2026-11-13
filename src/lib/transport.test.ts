@@ -509,6 +509,18 @@ describe('serialLogList + serialLogDownload', () => {
     expect(entries[1].size).toBe(2048);
   });
 
+  it('an empty store (dummy entry id 0, last 0, size 0) lists nothing, not a #0 log', async () => {
+    // AP answers an empty log store with one dummy entry
+    // (AP_Logger_MAVLinkLogTransfer.cpp:82-84, 262-273). The backend already
+    // turns it into an empty list; WebSerial used to show a "#0" whose
+    // download saved an empty file.
+    const promise = serialLogList();
+    inject(fcFrame(118, mkLogEntry(0, 0, 0, 0)));
+    const res = await promise;
+    expect(res.ok).toBe(true);
+    expect(logStoreMock.setLogList).toHaveBeenCalledWith([]);
+  });
+
   it('download truncates on count=0 sentinel (AP_Logger EOF / unreadable log)', async () => {
     // Pre-seed the list mock with a 90-byte log.
     (logStoreMock.logState as unknown as { list: Array<{ id: number; size: number; time_utc: number }> }).list = [
@@ -697,6 +709,60 @@ describe('serialLogList + serialLogDownload', () => {
     expect((call[2] as Uint8Array).length).toBe(90);
     serialLogCancel();
     await promise;
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────
+// Log list watchdog (fake-timers) — twin of backend check_log_list_stall:
+// a lost LOG_REQUEST_LIST left an idle FC with nothing to answer for ever.
+// ─────────────────────────────────────────────────────────────────────────
+
+describe('log list watchdog', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('re-asks after a silent window, then names the timeout after 3 re-asks', async () => {
+    const promise = serialLogList();
+    expect(countWrites(117)).toBe(1); // initial request
+    await vi.advanceTimersByTimeAsync(5001);
+    expect(countWrites(117)).toBe(2);
+    await vi.advanceTimersByTimeAsync(5001);
+    expect(countWrites(117)).toBe(3);
+    await vi.advanceTimersByTimeAsync(5001);
+    expect(countWrites(117)).toBe(4);
+    await vi.advanceTimersByTimeAsync(5001); // tries exhausted
+    const res = await promise;
+    expect(res.ok).toBe(false);
+    expect(res.error).toBe('serial.err.logListTimeout');
+  });
+
+  it('a re-ask drops the partial list — AP sends it from the first entry again', async () => {
+    const promise = serialLogList();
+    inject(fcFrame(118, mkLogEntry(1, 10, 0, 2))); // first entry, then silence
+    await vi.advanceTimersByTimeAsync(5001); // re-ask
+    // AP answers the whole list again, including entry 1.
+    inject(fcFrame(118, mkLogEntry(1, 10, 0, 2)));
+    inject(fcFrame(118, mkLogEntry(2, 20, 0, 2)));
+    const res = await promise;
+    expect(res.ok).toBe(true);
+    const entries = (logStoreMock.setLogList as unknown as ReturnType<typeof vi.fn>).mock.calls.at(-1)![0];
+    expect(entries.map((e: { id: number }) => e.id)).toEqual([1, 2]);
+  });
+
+  it('a slow listing that keeps answering is never re-asked', async () => {
+    const promise = serialLogList();
+    // Entry every 4 s: each resets the watchdog, so no retry goes out.
+    inject(fcFrame(118, mkLogEntry(1, 10, 0, 2)));
+    await vi.advanceTimersByTimeAsync(4001);
+    inject(fcFrame(118, mkLogEntry(2, 20, 0, 2)));
+    await vi.advanceTimersByTimeAsync(4001);
+    const res = await promise;
+    expect(res.ok).toBe(true);
+    expect(countWrites(117)).toBe(1);
   });
 });
 
@@ -1269,6 +1335,35 @@ describe('disconnect cleanup', () => {
     const res = await promise;
     expect(res.ok).toBe(false);
     expect(res.error).toMatch(/lost|disconnect/i);
+  });
+
+  it('a link lost mid-param-read says so in the event log, as the backend does', async () => {
+    dispatch('param_request_all');
+    // The stream closes on its own (link lost), not by the reader's own hand.
+    const r = readLoopResolve;
+    readLoopResolve = null;
+    r?.();
+    await new Promise<void>((res) => setTimeout(res, 0));
+    expect(events.some((e) => e.event_type === 'param_timeout')).toBe(true);
+  });
+
+  it('a log download cut by the link delivers the bytes received, flagged, not discarded', async () => {
+    // Backend _reset_session_state sends log_complete truncated and keeps the
+    // bytes; WebSerial used to abort the promise and throw the chunks away.
+    (logStoreMock.logState as unknown as { list: Array<{ id: number; size: number; time_utc: number }> }).list = [
+      { id: 9, size: 400, time_utc: 0 },
+    ];
+    const promise = serialLogDownload(9);
+    inject(fcFrame(120, mkLogData(0, 9, 90, new Uint8Array(90).fill(1))));
+    await disconnectSerial();
+    const r = readLoopResolve;
+    readLoopResolve = null;
+    r?.(); // the stream closes
+    const res = await promise;
+    expect(res.ok).toBe(false);
+    expect(res.error).toMatch(/link lost/i);
+    expect(logStoreMock.completeDownload).toHaveBeenCalled();
+    expect(logStoreMock.cancelDownload).not.toHaveBeenCalled();
   });
 });
 
