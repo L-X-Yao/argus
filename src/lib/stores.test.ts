@@ -374,4 +374,35 @@ describe('loadDownloadedMission', () => {
     ]);
     expect(app.undoStack.length).toBeGreaterThan(0);
   });
+
+  it('keeps what the download carried of a waypoint', () => {
+    loadDownloadedMission([
+      {
+        lat: 30,
+        lon: 120,
+        alt: 50,
+        drop: false,
+        delay: 0,
+        speed: 0,
+        type: 'wp',
+        loiter_param: 0,
+        p3: 30,
+        p4: 45,
+        cmd_servo: { num: 9, pwm: 1100 },
+        cmd_roi: { lat: 34.26, lon: 108.95, alt: 50 },
+        cmd_cam_trig: { dist: 25 },
+        cmd_yaw: { deg: 90, dir: 1 },
+        cmd_vtol: { mode: 4 },
+      },
+    ]);
+    expect(app.waypoints[0]).toMatchObject({
+      p3: 30,
+      p4: 45,
+      cmd_servo: { num: 9, pwm: 1100 },
+      cmd_roi: { lat: 34.26, lon: 108.95, alt: 50 },
+      cmd_cam_trig: { dist: 25 },
+      cmd_yaw: { deg: 90, dir: 1 },
+      cmd_vtol: { mode: 4 },
+    });
+  });
 });

@@ -219,6 +219,48 @@ describe('missionItemsToWaypoints', () => {
     expect(out[1].loiter_param).toBe(5);
   });
 
+  it('keeps the per-waypoint commands and p3/p4 a download carried', () => {
+    const input: Waypoint[] = [
+      baseWp({
+        lat: 30,
+        lon: 120,
+        p3: 30,
+        p4: 45,
+        cmd_servo: { num: 9, pwm: 1100 },
+        cmd_roi: { lat: 34.26, lon: 108.95, alt: 50 },
+        cmd_cam_trig: { dist: 25 },
+        cmd_yaw: { deg: 90, dir: 1 },
+        cmd_vtol: { mode: 4 },
+      }),
+    ];
+    const built = buildMissionItems(input, 30);
+    const raw: RawMissionItem[] = built.map((m) => ({
+      seq: m.seq,
+      cmd: m.command,
+      lat: m.x / 1e7,
+      lon: m.y / 1e7,
+      alt: m.z,
+      p1: m.p1,
+      p2: m.p2,
+      p3: m.p3,
+      p4: m.p4,
+      frame: m.frame,
+      current: m.current,
+      autocontinue: m.autocontinue,
+    }));
+    const out = missionItemsToWaypoints(raw);
+    expect(out).toHaveLength(1);
+    expect(out[0]).toMatchObject({
+      p3: 30,
+      p4: 45,
+      cmd_servo: { num: 9, pwm: 1100 },
+      cmd_roi: { lat: 34.26, lon: 108.95, alt: 50 },
+      cmd_cam_trig: { dist: 25 },
+      cmd_yaw: { deg: 90, dir: 1 },
+      cmd_vtol: { mode: 4 },
+    });
+  });
+
   it('skips HOME (seq=0 cmd=16) and TAKEOFF (cmd=22) and RTL (cmd=20)', () => {
     const raw: RawMissionItem[] = [
       rawItem({ seq: 0, cmd: 16 }), // HOME — skipped

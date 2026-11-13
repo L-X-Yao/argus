@@ -82,7 +82,8 @@ export function buildMissionItems(waypoints: Waypoint[], takeoffAlt: number, end
     }
     const { cmd: navCmd, p1Source, defaultP1 } = navCmdFor(wp.type);
     const navP1 = p1Source === 'loiter_param' ? Number(wp.loiter_param ?? defaultP1) : Number(wp.delay ?? 0);
-    push(navCmd, navP1, 0, 0, 0, wp.lat, wp.lon, wp.alt ?? takeoffAlt);
+    // p3/p4 as a download preserved them (radius, yaw): a fresh waypoint sends 0, as before.
+    push(navCmd, navP1, 0, Number(wp.p3 ?? 0), Number(wp.p4 ?? 0), wp.lat, wp.lon, wp.alt ?? takeoffAlt);
 
     if (wp.cmd_servo) {
       push(183, Number(wp.cmd_servo.num ?? 1), Number(wp.cmd_servo.pwm ?? 1500), 0, 0, 0, 0, 0);
@@ -255,12 +256,28 @@ export function missionItemsToWaypoints(items: RawMissionItem[]): Waypoint[] {
         speed: pendingSpeed,
         type: wtype,
         loiter_param: item.cmd === 18 || item.cmd === 19 ? item.p1 : 0,
+        // Kept as the backend's download keeps them: a download then upload used to reset
+        // ArduPilot's radius and yaw to 0.
+        p3: item.p3,
+        p4: item.p4,
       });
       pendingSpeed = 0;
     } else if (item.cmd === 181 && wps.length > 0) {
       // DO_SET_RELAY immediately after a WP → backend marks that WP's
-      // drop=true on download to round-trip the upload-side attachment.
+      // drop=true on round-tripping the upload-side attachment.
       wps[wps.length - 1].drop = true;
+    } else if (item.cmd === 183 && wps.length > 0) {
+      // The per-waypoint commands an upload writes right after their waypoint; the download
+      // dropped them, and the next upload then deleted them from the vehicle.
+      wps[wps.length - 1].cmd_servo = { num: Math.trunc(item.p1), pwm: item.p2 };
+    } else if (item.cmd === 201 && wps.length > 0) {
+      wps[wps.length - 1].cmd_roi = { lat: item.lat, lon: item.lon, alt: item.alt };
+    } else if (item.cmd === 206 && wps.length > 0) {
+      wps[wps.length - 1].cmd_cam_trig = { dist: item.p1 };
+    } else if (item.cmd === 115 && wps.length > 0) {
+      wps[wps.length - 1].cmd_yaw = { deg: item.p1, dir: item.p3 };
+    } else if (item.cmd === 3000 && wps.length > 0) {
+      wps[wps.length - 1].cmd_vtol = { mode: Math.trunc(item.p1) };
     }
   }
   return wps;

@@ -141,6 +141,9 @@ export interface Waypoint {
   type: 'wp' | 'loiter_turns' | 'loiter_time' | 'spline';
   loiter_param: number;
   altMode?: AltMode;
+  /** ArduPilot's per-item params 3 and 4 (radius, yaw), kept across a download and upload. */
+  p3?: number;
+  p4?: number;
   cmd_servo?: { num: number; pwm: number };
   cmd_roi?: { lat: number; lon: number; alt: number };
   cmd_cam_trig?: { dist: number };

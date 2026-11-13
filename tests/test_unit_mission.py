@@ -308,10 +308,16 @@ class TestUploadMissionWaypointTypes:
                 "cmd_yaw": {"deg": 90, "dir": 1},
                 "cmd_vtol": {"mode": 4},
                 "drop": True,
+                "p3": 30.0,
+                "p4": 45.0,
             }
         ]
         _upload_mission(link, wps, 50.0)
         items = link.mission._mission_items
+        nav = [it for it in items if it["cmd"] == 16 and it["seq"] > 0][0]
+        # ArduPilot's per-item radius and yaw: a download preserved them, and an upload that
+        # dropped them reset the vehicle's values.
+        assert nav["p3"] == 30.0 and nav["p4"] == 45.0
         cmds = [it["cmd"] for it in items]
         # Should include: 16(home), 22(takeoff), 16(wp), 183(servo), 201(roi),
         # 206(cam), 115(yaw), 3000(vtol), 181(drop), 20(RTL)
