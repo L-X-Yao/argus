@@ -863,7 +863,9 @@ const messages: Record<string, string> = {
   'airspace.title': 'Airspace',
   'airspace.airport': 'Airport',
   'airspace.noFly': 'No-Fly Zone',
-  'airspace.restricted': 'Restricted',
+  'airspace.noFlyZone': 'Drone is within an airport no-fly zone!',
+  'airspace.enableHint':
+    'Enable the airspace check to see airport no-fly proximity warnings in this panel (demo airport data; not a map overlay).',
   'airspace.enabled': 'Show Airspace',
   'annotation.title': 'Map Annotations',
   'annotation.add': 'Add Annotation',

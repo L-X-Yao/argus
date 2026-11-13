@@ -784,7 +784,9 @@ const messages: Record<string, string> = {
   'airspace.title': 'المجال الجوي',
   'airspace.airport': 'مطار',
   'airspace.noFly': 'منطقة محظورة',
-  'airspace.restricted': 'منطقة مقيدة',
+  'airspace.noFlyZone': 'الطائرة داخل منطقة حظر طيران تابعة للمطار!',
+  'airspace.enableHint':
+    'فعّل فحص المجال الجوي لترى تحذيرات الاقتراب من مناطق حظر طيران المطارات في هذه اللوحة (بيانات مطارات تجريبية، وليست طبقة على الخريطة).',
   'airspace.enabled': 'عرض المجال الجوي',
   'annotation.title': 'تعليقات الخريطة',
   'annotation.add': 'إضافة تعليق',

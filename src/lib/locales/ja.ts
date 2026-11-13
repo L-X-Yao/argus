@@ -786,7 +786,9 @@ const messages: Record<string, string> = {
   'airspace.title': '空域',
   'airspace.airport': '空港',
   'airspace.noFly': '飛行禁止区域',
-  'airspace.restricted': '制限区域',
+  'airspace.noFlyZone': '機体は空港の飛行禁止区域に入っています。',
+  'airspace.enableHint':
+    '空域チェックを有効にすると、このパネルに空港の飛行禁止区域への接近警告が表示されます（デモ用の空港データ。地図には重ねません）。',
   'airspace.enabled': '空域表示',
   'annotation.title': '地図アノテーション',
   'annotation.add': 'アノテーション追加',

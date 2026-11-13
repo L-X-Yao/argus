@@ -4,7 +4,7 @@
   import { dispatch } from '../../lib/transport';
   import { paramState, getParam } from '../../lib/paramStore.svelte';
   import { getModeName, getModeEntries } from '../../lib/modeStore';
-  import { t } from '../../lib/i18n.svelte';
+  import { getLocale, t } from '../../lib/i18n.svelte';
   import { X, Plane } from '@lucide/svelte';
   import Button from '$lib/components/ui/button/button.svelte';
 
@@ -18,7 +18,10 @@
   /* ── Helpers ── */
 
   let vtype = $derived(vehicleKind());
-  let modeEntries = $derived(getModeEntries(vtype));
+  // The mode tables here hold Chinese and English, as the backend's own text does: a Chinese
+  // page shows its names, any other page the English ones (the rest of the page does the same).
+  let modeLocale = $derived<'en' | 'zh'>(getLocale() === 'zh' ? 'zh' : 'en');
+  let modeEntries = $derived(getModeEntries(vtype, modeLocale));
   // Rover names these MODE1-6 (Rover/Parameters.cpp:159); Sub has FLTMODE1-6 like the
   // rest (ArduSub/Parameters.cpp:121), so ask the parameter list, not the vehicle type.
   let prefix = $derived(vtype === 'rover' ? 'MODE' : 'FLTMODE');
@@ -119,7 +122,7 @@
           <Plane size={14} class="text-primary shrink-0" />
           <span class="text-xs font-medium text-foreground">{t('fltmode.current')}:</span>
           <span class="text-xs font-bold text-primary">
-            {getModeName(vtype, app.drone.mode_id)}
+            {getModeName(vtype, app.drone.mode_id, modeLocale)}
           </span>
         </div>
 

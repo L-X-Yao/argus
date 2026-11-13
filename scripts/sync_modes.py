@@ -152,10 +152,10 @@ def generate() -> str:
     lines.append("    .sort((a, b) => a.id - b.id);")
     lines.append("}")
     lines.append("")
-    lines.append("export function getModeEntries(vtype: VehicleType): [number, string][] {")
+    lines.append("export function getModeEntries(vtype: VehicleType, locale: 'en' | 'zh' = 'en'): [number, string][] {")
     lines.append("  const table = MODE_TABLES[vtype] ?? {};")
     lines.append("  return Object.entries(table)")
-    lines.append("    .map(([id, m]) => [Number(id), m.en] as [number, string])")
+    lines.append("    .map(([id, m]) => [Number(id), m[locale]] as [number, string])")
     lines.append("    .sort((a, b) => a[0] - b[0]);")
     lines.append("}")
 

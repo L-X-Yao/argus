@@ -201,7 +201,7 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 | `ReplayLayer` | layers | 地图上看回放位置 | Tests only | Browser test: draws from its state |
 | `SurveyLayer` | layers | 地图上看测绘区域 | Tests only | Browser test: draws from its state |
 | `WaypointLayer` | layers | 地图上拖改航点 | SITL | CI by clicks on firmware: clicks land where aimed |
-| `AirspacePanel` | map | 查看机场限飞区 | Tests only | Logic: units. Demo data |
+| `AirspacePanel` | map | 查看机场限飞区 | Tests only | Logic: units. Demo data. 2026-11-13: the warning and the hint follow the page's language; the airport names in the demo data stay Chinese with their IATA code |
 | `Compass3DPanel` | map | 校准罗盘看磁场球 | SITL | CI by clicks on firmware: three compass offsets saved |
 | `Map3DView` | map | 三维地图查看编辑 | Simulator | e2e: map3d |
 | `Mission3DPanel` | map | 三维预览航线 | SITL | CI by clicks on firmware: waypoint count matches the FC |
@@ -217,7 +217,7 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 | `TerrainProfilePanel` | mission | 查看航线地形剖面 | SITL | CI by clicks on firmware: clearance from home. Skips without the terrain server |
 | `AutoTunePanel` | params | 启动自动调参 | SITL | CI by clicks on firmware, on the ground only: refusal, axes written. Not run in the air |
 | `FailsafeConfigPanel` | params | 配置失控保护 | SITL | CI by clicks on firmware: every section written and read back |
-| `FlightModePanel` | params | 配置六档飞行模式 | SITL | CI by clicks on firmware: six slots read, FLTMODE written |
+| `FlightModePanel` | params | 配置六档飞行模式 | SITL | CI by clicks on firmware: six slots read, FLTMODE written. 2026-11-13: the mode names are Chinese on a Chinese page, as the rest of the page's mode names are (the tables hold zh/en, like the backend's text) |
 | `ParamDiffPanel` | params | 对比参数文件差异 | SITL | CI by clicks on firmware: export, compare, apply |
 | `ParamPanel` | params | 读取编辑飞控参数 | Real FC | 2026-11-06 on both links on Windows: 1028 parameters in about 4 s. Writes 2026-11-05 used the same dispatch, not the row editor. Unit tests 2026-11-13: a decimal comma ("1,5") reads as 1.5 in the edit box and in an imported file, and a CSV header is skipped |
 | `PidPanel` | params | 调节PID参数 | SITL | CI by clicks on firmware: typed and slider gains reach the FC |

@@ -787,7 +787,9 @@ const messages: Record<string, string> = {
   'airspace.title': 'Espaço aéreo',
   'airspace.airport': 'Aeroporto',
   'airspace.noFly': 'Zona de exclusão',
-  'airspace.restricted': 'Restrito',
+  'airspace.noFlyZone': 'O drone está dentro de uma zona de exclusão aérea do aeroporto.',
+  'airspace.enableHint':
+    'Ative a verificação do espaço aéreo para ver avisos de proximidade a zonas de exclusão de aeroportos neste painel (dados de aeroporto de demonstração; não é uma camada do mapa).',
   'airspace.enabled': 'Mostrar espaço aéreo',
   'annotation.title': 'Anotações do mapa',
   'annotation.add': 'Adicionar anotação',
