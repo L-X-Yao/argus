@@ -2,7 +2,7 @@
   import { onMount } from 'svelte';
   import { connectWs, sendCommand } from './lib/ws';
   import { dispatch, isSerialConnected } from './lib/transport';
-  import { app, loadSettings, saveSettings, addToast } from './lib/stores.svelte';
+  import { app, loadSettings, saveSettings, startStorageSync, addToast } from './lib/stores.svelte';
   import { specialModes } from './lib/vehicleModes';
   import { checkAlerts, beep, speak } from './lib/audio';
   import { t, loadLocale, i18nState } from './lib/i18n.svelte';
@@ -238,6 +238,7 @@
   onMount(() => {
     loadLocale();
     loadSettings();
+    startStorageSync();
     checkAuth();
     startScheduler();
     window.addEventListener('keydown', onKey);

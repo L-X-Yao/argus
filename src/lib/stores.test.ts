@@ -22,6 +22,7 @@ import {
   cancelSlide,
   slideState,
   loadDownloadedMission,
+  reloadFromStorage,
 } from './stores.svelte';
 
 function makeStorage(): Storage {
@@ -404,5 +405,22 @@ describe('loadDownloadedMission', () => {
       cmd_yaw: { deg: 90, dir: 1 },
       cmd_vtol: { mode: 4 },
     });
+  });
+});
+
+describe('a value another tab saved', () => {
+  it('is taken as it is, so this tab does not write its stale copy back over it', () => {
+    localStorage.setItem(
+      'argus_waypoints',
+      JSON.stringify([{ lat: 30, lon: 120, alt: 50, drop: false, delay: 0, speed: 0, type: 'wp', loiter_param: 0 }]),
+    );
+    expect(reloadFromStorage('argus_waypoints')).toBe(true);
+    expect(app.waypoints).toHaveLength(1);
+
+    localStorage.setItem('argus_settings', JSON.stringify({ alt: 60 }));
+    expect(reloadFromStorage('argus_settings')).toBe(true);
+    expect(app.defaultAlt).toBe(60);
+
+    expect(reloadFromStorage('some_other_key')).toBe(false);
   });
 });
