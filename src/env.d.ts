@@ -19,6 +19,7 @@ declare global {
     export type LeafletEvent = LeafletTypes.LeafletEvent;
   }
   const __BUILD_DATE__: string;
+  const __APP_VERSION__: string;
 
   interface SerialPortFilter {
     usbVendorId?: number;

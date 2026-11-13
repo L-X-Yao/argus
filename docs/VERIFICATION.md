@@ -245,7 +245,7 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 | `LoginDialog` | shared | 输入令牌登录 | Simulator | e2e: auth |
 | `PreflightPanel` | shared | 查看起飞前检查 | Real FC | 2026-11-05 on both links |
 | `RolePanel` | shared | 切换操作角色 | Tests only | Browser test: opens without an error. Demo, not wired to roles |
-| `SettingsPanel` | shared | 修改应用设置 | Simulator | e2e: settings, mobile |
+| `SettingsPanel` | shared | 修改应用设置 | Simulator | e2e: settings, mobile. 2026-11-13: the footer shows the version `package.json` has, and the test reads that file |
 | `SlideConfirm` | shared | 滑动确认关键指令 | SITL | CI by clicks on firmware: an early release arms nothing |
 | `EkfPanel` | telemetry | 查看导航滤波状态 | Simulator | e2e: connected-flow, navigation |
 | `RcPanel` | telemetry | 查看遥控通道 | Simulator | e2e: connected-flow, navigation |

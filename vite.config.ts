@@ -73,9 +73,15 @@ function thirdPartyLicenses(): Plugin {
   };
 }
 
+// The version the page shows is the one the package has: scripts/bump_version.sh keeps
+// package.json in step with the other files, and a copy written into the panel was left at
+// 3.4.0 while the releases moved on.
+const pkgVersion = JSON.parse(fs.readFileSync(new URL('./package.json', import.meta.url), 'utf-8')).version;
+
 export default defineConfig({
   define: {
     __BUILD_DATE__: JSON.stringify(new Date().toISOString().slice(0, 10)),
+    __APP_VERSION__: JSON.stringify(pkgVersion),
   },
   test: {
     include: ['src/**/*.test.ts'],
