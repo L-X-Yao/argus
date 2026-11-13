@@ -60,7 +60,7 @@ To fly real missions today, use QGroundControl or Mission Planner: both are flig
 
 For Windows 10 and 11, x64. Python and every library come with Argus. A release offers two downloads that hold the same program:
 
-- `Argus_GCS_vX.Y.Z_amd64_setup.exe`, an installer. It installs for your account only, without administrator rights, into `%LOCALAPPDATA%\Programs\Argus GCS`, with Start menu shortcuts and an uninstaller.
+- `Argus_GCS_vX.Y.Z_amd64_setup.exe`, an installer. It installs for your account only, without administrator rights, into `%LOCALAPPDATA%\Programs\Argus GCS` by default; any empty folder, or an earlier Argus folder, can be chosen instead. It adds Start menu shortcuts and an uninstaller.
 - `Argus_GCS_vX.Y.Z_amd64.zip`, which installs nothing: unzip it anywhere.
 
 1. Download one of them and `SHA256SUMS.txt` from the [latest release](https://github.com/L-X-Yao/argus/releases/latest).

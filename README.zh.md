@@ -60,7 +60,7 @@ Argus 是面向 ArduPilot 的 **Web 地面站**：一个浏览器界面，支持
 
 适用于 Windows 10 和 11（x64）。Python 和所有依赖库都随 Argus 提供。每个版本有两个下载，里面是同一个程序：
 
-- `Argus_GCS_vX.Y.Z_amd64_setup.exe`：安装程序。只为当前用户安装，不需要管理员权限，装到 `%LOCALAPPDATA%\Programs\Argus GCS`，带开始菜单快捷方式和卸载程序。
+- `Argus_GCS_vX.Y.Z_amd64_setup.exe`：安装程序。只为当前用户安装，不需要管理员权限，默认装到 `%LOCALAPPDATA%\Programs\Argus GCS`，也可以选空目录或先前的 Argus 目录，带开始菜单快捷方式和卸载程序。
 - `Argus_GCS_vX.Y.Z_amd64.zip`：不安装任何东西，解压到任意位置即可。
 
 1. 从[最新发布](https://github.com/L-X-Yao/argus/releases/latest)下载其中一个，以及 `SHA256SUMS.txt`。

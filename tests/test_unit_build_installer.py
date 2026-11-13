@@ -80,8 +80,10 @@ class TestScript:
         assert {"tile_cache", "srtm_cache", "param_cache", ".gcs_token"} <= cleared
 
     def test_the_folder_is_its_own(self):
-        # A folder picked by hand could hold a python or dist of someone else's.
-        assert re.search(r"^DisableDirPage=yes$", ISS, re.MULTILINE)
+        # A folder picked by hand could hold a python or dist of someone else's: the page may be
+        # shown (auto: skipped when an earlier install's folder is known), but PrepareToInstall
+        # takes only an empty folder or an earlier Argus one.
+        assert re.search(r"^DisableDirPage=auto$", ISS, re.MULTILINE)
         assert "function PrepareToInstall" in ISS and "backend\\server.py" in ISS
 
     def test_an_upgrade_clears_only_program_folders(self):
