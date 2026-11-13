@@ -29,9 +29,11 @@ AppUpdatesURL=https://github.com/L-X-Yao/argus/releases
 ; With PrivilegesRequired=lowest this is %LOCALAPPDATA%\Programs.
 DefaultDirName={autopf}\Argus GCS
 DefaultGroupName=Argus GCS
-; A folder of its own, always: an upgrade clears folders in it and the uninstaller more, so a
-; folder chosen by hand that holds other things could lose them (see PrepareToInstall too).
-DisableDirPage=yes
+; The folder can be chosen, but only an empty one or an earlier Argus folder is taken: an
+; upgrade clears folders in it and the uninstaller more, so a folder that holds other things
+; could lose them (see PrepareToInstall). auto: the page is skipped when an earlier install's
+; folder is known, so an upgrade goes where it was.
+DisableDirPage=auto
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
 ArchitecturesAllowed=x64compatible
