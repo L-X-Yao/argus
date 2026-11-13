@@ -328,6 +328,7 @@ class DroneLink:
             self.mission._mission_ul_start_time = 0.0
             self.mission._fence_ul_start_time = 0.0
             self.mission._rally_ul_start_time = 0.0
+            cut_log = (self.log_dl._log_download_id, self.log_dl._log_download_ofs)
             self.log_dl._log_download_id = -1
             self.log_dl._log_download_size = 0
             self.log_dl._log_download_data = bytearray()
@@ -338,15 +339,30 @@ class DroneLink:
             self.log_dl._log_stall_retries = 0
             self.log_dl._log_last_data_time = 0.0
             self.log_dl._log_last_progress_time = 0.0
+            self.log_dl._log_list_start = 0.0
+            self.log_dl._log_list_tries = 0
             self.log_dl._log_messages = []
+            # A download the link took with it: the page sat at the last percentage forever,
+            # with no file and no error. Say it ended, and as incomplete.
+            if cut_log[0] != -1:
+                self.log_dl._log_messages.append(
+                    {"type": "log_complete", "id": cut_log[0], "size": cut_log[1], "truncated": True}
+                )
+                self.add_event(
+                    lt("log_dl_done_part", self.locale) % (cut_log[0], cut_log[1] // 1024), "log_dl_done_part"
+                )
             self._prearm_messages = []
         # param_mgr's `fetching` flag could otherwise stay True forever if a
         # PARAM_REQUEST_LIST was in flight when the link dropped (auditor W2)
-        # — drops the pending state without re-clearing the params cache.
+        # — drops the pending state without re-clearing the params cache. The page has a
+        # flag of its own and clears it only on an answer, so it needs one.
         if self.param_mgr.fetching:
+            n_missing = max(0, (self.param_mgr.total_count or 0) - len(self.param_mgr._received_indices))
             self.param_mgr.fetching = False
             self.param_mgr._fetch_start = 0.0
             self.param_mgr._complete_emitted = False
+            self.param_mgr._messages.append({"type": "param_timeout", "missing": n_missing})
+            self.add_event(lt("param_timeout", self.locale), "param_timeout")
 
     def disconnect(self) -> None:
         self._running = False
@@ -801,6 +817,7 @@ class DroneLink:
             self._check_mission_dl_timeout()
             cmd_module.check_commands(self)
             self._check_log_dl_stall()
+            self._check_log_list_stall()
             # Every read above already blocks up to its port timeout, so a pause
             # only matters when nothing arrived. A Linux tty hands over about
             # 4 KB per read and a UDP read one datagram: pausing after each read
@@ -828,6 +845,11 @@ class DroneLink:
         from .mavlink_handlers import check_log_dl_stall
 
         check_log_dl_stall(self)
+
+    def _check_log_list_stall(self) -> None:
+        from .mavlink_handlers import check_log_list_stall
+
+        check_log_list_stall(self)
 
     def get_inspector_data(self) -> list[dict]:
         # _msg_stats is mutated by _process() under _state_lock; iterating it

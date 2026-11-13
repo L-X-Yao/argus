@@ -999,6 +999,8 @@ class TestIncomingHandlers:
         link.mission._dl_pending = True
         handle_mission_count(struct.pack("<H", 0), 2, link)
         assert link.mission._seq_to_wp == {}
+        # The page clears its route on this: an empty vehicle left the old route on screen.
+        assert link.mission._dl_messages[-1] == {"type": "mission_downloaded", "waypoints": []}
         link.mission._seq_to_wp = {3: 0}
         cmd_mission_download(link, None, {})
         assert link.mission._seq_to_wp == {}

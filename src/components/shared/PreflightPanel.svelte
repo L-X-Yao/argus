@@ -119,7 +119,10 @@
         key: 'mission',
         name: t('check.mission'),
         ok: app.waypoints.length > 0,
-        detail: app.waypoints.length > 0 ? `${app.waypoints.length} WP` : '---',
+        // The route kept in this page, not the vehicle's: nothing tells the vehicle's count
+        // without a download. The detail says which one it is, so the green tick is not read
+        // as "the vehicle has this mission" when it never was uploaded.
+        detail: app.waypoints.length > 0 ? `${app.waypoints.length} WP · ${t('check.local')}` : '---',
         critical: false,
       },
       {

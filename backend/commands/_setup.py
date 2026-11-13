@@ -135,6 +135,10 @@ def cmd_log_list(link: DroneLink, param, data: dict):
     if link.log_dl._log_download_id != -1:
         return {"ok": False, "error": lt("err_log_busy", link.locale)}
     link.log_dl._log_list = []
+    # A lost LOG_ENTRY leaves the request waiting for a last entry that never comes:
+    # check_log_list_stall asks again, then says the list never arrived.
+    link.log_dl._log_list_start = time.time()
+    link.log_dl._log_list_tries = 1
     link.send(bm(117, struct.pack("<HHBB", 0, 0xFFFF, link.vehicle.sysid, 1), link.sq, CRC_EXTRA[117]))
     link.add_event(lt("log_list_req", link.locale), "log_list_req")
 

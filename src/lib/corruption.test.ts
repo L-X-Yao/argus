@@ -97,7 +97,7 @@ describe('loadSettings with corrupted argus_settings', () => {
         argus_settings: JSON.stringify({
           alt: '<img src=x onerror=alert(1)>',
           speed: 'fast',
-          radius: 0,
+          radius: 'x', // 0 is a value now (see stores.test.ts), a string still is not
           dark: 'yes',
           muted: 1,
           region: 999,

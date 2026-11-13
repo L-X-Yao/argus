@@ -1372,6 +1372,49 @@ class TestVehicleTypes:
         assert link.param_mgr.params == {}
         assert link.param_mgr.received_count == 0
 
+    def test_a_link_drop_mid_param_read_tells_the_page(self):
+        """The page has a fetching flag of its own and clears it only on an answer: the
+        backend dropped the read silently and the panel sat at the last percentage."""
+        link = make_link()
+        link.param_mgr.fetching = True
+        link.param_mgr.total_count = 10
+        link._reset_session_state()
+        assert any(m.get("type") == "param_timeout" for m in link.param_mgr._messages)
+        assert any(e["event_type"] == "param_timeout" for e in link.events)
+
+    def test_a_link_drop_mid_log_download_reports_it_incomplete(self):
+        """The page showed "downloading 62%" forever: the backend cleared the download
+        without a completion message, and no file and no error ever came."""
+        link = make_link()
+        link.log_dl._log_download_id = 3
+        link.log_dl._log_download_ofs = 4096
+        link._reset_session_state()
+        assert [m for m in link.log_dl._log_messages if m.get("type") == "log_complete"] == [
+            {"type": "log_complete", "id": 3, "size": 4096, "truncated": True}
+        ]
+        assert any(e["event_type"] == "log_dl_done_part" for e in link.events)
+
+    def test_a_lost_log_list_is_asked_again_and_then_reported(self):
+        """One lost LOG_ENTRY left the list request waiting forever; the panel kept the
+        old list as if it were current, and nothing said otherwise."""
+        import time as _time
+
+        from backend.commands._setup import cmd_log_list
+        from backend.mavlink_handlers import LOG_LIST_TRIES, check_log_list_stall
+
+        link = make_link_connected()
+        cmd_log_list(link, None, {})
+        assert link.log_dl._log_list_start > 0 and link.log_dl._log_list_tries == 1
+        link.log_dl._log_list_start = _time.time() - 10
+        check_log_list_stall(link)
+        assert link.log_dl._log_list_tries == 2
+        # The last try, then the report.
+        link.log_dl._log_list_tries = LOG_LIST_TRIES
+        link.log_dl._log_list_start = _time.time() - 10
+        check_log_list_stall(link)
+        assert link.log_dl._log_list_start == 0
+        assert any(e["event_type"] == "log_list_failed" for e in link.events)
+
     def test_connecting_forgets_the_last_choice(self):
         link = make_link()
         link.active_sysid = 7

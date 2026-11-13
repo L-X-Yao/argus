@@ -22,6 +22,7 @@ import {
   cancelSlide,
   slideState,
   loadDownloadedMission,
+  loadSettings,
   reloadFromStorage,
 } from './stores.svelte';
 
@@ -422,5 +423,14 @@ describe('a value another tab saved', () => {
     expect(app.defaultAlt).toBe(60);
 
     expect(reloadFromStorage('some_other_key')).toBe(false);
+  });
+});
+
+describe('stored values that are zero', () => {
+  it('come back as zero, not as the default', () => {
+    localStorage.setItem('argus_settings', JSON.stringify({ alt: 0, radius: 0 }));
+    loadSettings();
+    expect(app.defaultAlt).toBe(0);
+    expect(app.geoRadius).toBe(0);
   });
 });

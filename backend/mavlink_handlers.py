@@ -607,6 +607,9 @@ def handle_mission_count(p: bytes, pl: int, link: DroneLink) -> None:
     else:
         m._dl_pending = False
         m._seq_to_wp = {}
+        # The vehicle has no mission: the page must clear its route, not keep the one it
+        # showed before (a cleared mission looked like the old one, still on the screen).
+        m._dl_messages.append({"type": "mission_downloaded", "waypoints": []})
         link.add_event(lt("mission_dl_none", link.locale), "mission_dl_none")
 
 
@@ -832,8 +835,35 @@ def handle_log_entry(p: bytes, pl: int, link: DroneLink) -> None:
     lg = link.log_dl
     lg._log_list.append({"id": log_id, "size": size, "time_utc": time_utc})
     if log_id == last_log_num:
+        lg._log_list_start = 0.0
+        lg._log_list_tries = 0
         lg._log_messages.append({"type": "log_list", "logs": list(lg._log_list)})
         link.add_event(lt("log_list_n", link.locale) % len(lg._log_list), "log_list_n")
+
+
+# A lost LOG_ENTRY left the list request waiting forever: ask again after this long, and
+# after the last try say that the list never came.
+LOG_LIST_RETRY_S = 3.0
+LOG_LIST_TRIES = 3
+
+
+def check_log_list_stall(link: DroneLink) -> None:
+    lg = link.log_dl
+    if not lg._log_list_start:
+        return
+    if time.time() - lg._log_list_start < LOG_LIST_RETRY_S:
+        return
+    from .mavlink_frame import bm
+
+    if lg._log_list_tries < LOG_LIST_TRIES:
+        lg._log_list_tries += 1
+        lg._log_list_start = time.time()
+        lg._log_list.clear()
+        link.send(bm(117, struct.pack("<HHBB", 0, 0xFFFF, link.vehicle.sysid, 1), link.sq, CRC_EXTRA[117]))
+        return
+    lg._log_list_start = 0.0
+    lg._log_list_tries = 0
+    link.add_event(lt("log_list_failed", link.locale), "log_list_failed")
 
 
 # ArduPilot: libraries/GCS_MAVLink/GCS_Common.cpp:304 — GCS_MAVLINK::send_battery_status
