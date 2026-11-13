@@ -221,6 +221,7 @@ class TestReceiveLoop:
         link = DroneLink()
         mgr = WSManager(link)
         ws = make_ws()
+        mgr._clients.add(ws)  # a page that is connected; one client is the operator
         msg = json.dumps({"type": "set_locale", "locale": "en"})
         ws.receive_text.side_effect = [msg, WebSocketDisconnect()]
         await mgr._receive_loop(ws)
@@ -233,6 +234,7 @@ class TestReceiveLoop:
         link.locale = "en"
         mgr = WSManager(link)
         ws = make_ws()
+        mgr._clients.add(ws)
         msg = json.dumps({"type": "set_locale"})
         ws.receive_text.side_effect = [msg, WebSocketDisconnect()]
         await mgr._receive_loop(ws)
@@ -399,6 +401,21 @@ class TestReceiveLoop:
             mock_exec.assert_not_called()
         sent = json.loads(ws_observer.send_text.call_args[0][0])
         assert sent["type"] == "cmd_result" and sent["ok"] is False
+
+    @pytest.mark.asyncio
+    async def test_an_observer_cannot_change_the_event_language(self):
+        """One link has one language for its own text: the operator's. A second page opened
+        in another language turned the operator's events over."""
+        link = DroneLink()
+        mgr = WSManager(link)
+        ws_observer, ws_pilot = make_ws(), make_ws()
+        mgr._clients.update({ws_observer, ws_pilot})
+        mgr._pilot_ws = ws_pilot
+        mgr._roles[id(ws_pilot)] = "pilot"
+        msg = json.dumps({"type": "set_locale", "locale": "en"})
+        ws_observer.receive_text.side_effect = [msg, WebSocketDisconnect()]
+        await mgr._receive_loop(ws_observer)
+        assert link.locale != "en"
 
     @pytest.mark.asyncio
     async def test_observer_connect_rejected(self):

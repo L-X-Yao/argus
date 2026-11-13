@@ -156,6 +156,9 @@ def cmd_log_download(link: DroneLink, param, data: dict):
     log_entry = next((l for l in lg._log_list if l["id"] == log_id), None)
     if not log_entry:
         return {"ok": False, "error": lt("err_log_not_found", link.locale)}
+    # As the WebSerial path refuses one: a download of nothing "succeeded" with no file.
+    if log_entry["size"] <= 0:
+        return {"ok": False, "error": lt("err_log_empty", link.locale)}
     lg._log_download_id = log_id
     lg._log_download_size = log_entry["size"]
     lg._log_download_data = bytearray(log_entry["size"])
