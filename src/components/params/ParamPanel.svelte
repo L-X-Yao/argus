@@ -3,6 +3,7 @@
   import { app, addToast } from '../../lib/stores.svelte';
   import { dispatch } from '../../lib/transport';
   import { t } from '../../lib/i18n.svelte';
+  import { paramLine, parseParamNumber } from '../../lib/paramText';
   import { apiUrl } from '../../lib/backend';
   import type { Param } from '../../lib/types';
   import Button from '$lib/components/ui/button/button.svelte';
@@ -197,7 +198,8 @@
 
   function submitEdit() {
     if (!editName) return;
-    const val = parseFloat(editValue);
+    // As the operator's locale writes it: "1,5" is 1.5, not 1 (which parseFloat read it as).
+    const val = parseParamNumber(editValue);
     if (isNaN(val)) { addToast(t('param.invalidNum'), 'error'); return; }
     const r = getMeta()[editName]?.range;
     if (r && (val < r[0] || val > r[1])) {
@@ -295,12 +297,8 @@
         const text = ev.target!.result as string;
         const map = new Map<string, number>();
         for (const line of text.split('\n')) {
-          const trimmed = line.trim();
-          if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith('Name,')) continue;
-          const parts = trimmed.split(/[\t,\s]+/);
-          if (parts.length < 2) continue;
-          const val = parseFloat(parts[1]);
-          if (Number.isFinite(val)) map.set(parts[0], val);
+          const parsed = paramLine(line);
+          if (parsed) map.set(parsed[0], parsed[1]);
         }
         compareMap = map;
         const diffCount = paramState.list.filter(p => {
@@ -332,13 +330,10 @@
         const existing = new Map(paramState.list.map(p => [p.name, p.value]));
         let changed = 0;
         for (const line of text.split('\n')) {
-          const trimmed = line.trim();
-          if (!trimmed || trimmed.startsWith('#')) continue;
-          const parts = trimmed.split(/[\t,\s]+/);
-          if (parts.length < 2) continue;
-          const name = parts[0], val = parseFloat(parts[1]);
-          // 1e999 reads as Infinity, which is no value for a parameter.
-          if (!Number.isFinite(val)) continue;
+          // As a spreadsheet in a comma-decimal locale writes it, and as the edit box reads it.
+          const parsed = paramLine(line);
+          if (!parsed) continue;
+          const [name, val] = parsed;
           const cur = existing.get(name);
           if (cur !== undefined && Math.abs(cur - val) > 1e-6) {
             dispatch('param_set', undefined, { name, value: val });

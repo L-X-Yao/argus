@@ -39,6 +39,25 @@ test.describe('Keyboard shortcuts', () => {
     await expect(page.locator('[role="dialog"] input, .fixed input[placeholder]').first()).toBeVisible({ timeout: 3000 });
   });
 
+  test('a shortcut is no shortcut while typing in a note', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForTimeout(1000);
+
+    await page.keyboard.press('Control+k');
+    await page.locator('[role="dialog"] input, .fixed input[placeholder]').first().fill('tool-report');
+    await page.waitForTimeout(300);
+    await page.keyboard.press('Enter');
+
+    // The flight report's notes: a textarea, where "l" was the theme shortcut and "d" a disarm.
+    const notes = page.locator('textarea').first();
+    await expect(notes).toBeVisible({ timeout: 3000 });
+    await notes.click();
+    const theme = await page.locator('html').getAttribute('class');
+    await page.keyboard.type('l d');
+    expect(await page.locator('html').getAttribute('class')).toBe(theme);
+    await expect(notes).toHaveValue('l d');
+  });
+
   test('M toggles map expand', async ({ page }) => {
     await page.goto('/');
     await page.waitForTimeout(1000);

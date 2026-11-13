@@ -274,6 +274,12 @@
     app.drawingRally = false;
   });
 
+  // Guided clicks are the fly view's: in Plan a left click adds a waypoint, and a guided mode
+  // left on would send the vehicle to it instead.
+  $effect(() => {
+    if (view !== 'fly') app.guidedMode = false;
+  });
+
   $effect(() => {
     if (view === 'monitor') app.chartsOpen = true;
   });
@@ -306,7 +312,16 @@
 
   function onKey(e: KeyboardEvent) {
     if (!authReady) return;
-    if ((e.target as HTMLElement).tagName === 'INPUT' || (e.target as HTMLElement).tagName === 'SELECT') return;
+    // Typing somewhere is not a command: a space in a notes box was a mode change, and a "d" a
+    // disarm. TEXTAREA and contenteditable too, not only the one-line inputs.
+    const target = e.target as HTMLElement;
+    if (
+      target.tagName === 'INPUT' ||
+      target.tagName === 'SELECT' ||
+      target.tagName === 'TEXTAREA' ||
+      target.isContentEditable
+    )
+      return;
     const k = e.key.toLowerCase();
     if (k === ' ') {
       e.preventDefault();
@@ -614,7 +629,7 @@
         {#if PlanMods}
           <div class="flex-1 flex flex-col overflow-auto">
             <div class="flex max-md:flex-col gap-2 p-2 flex-1 min-h-72">
-              <MapView showHud={false} />
+              <MapView showHud={false} plan />
               <PlanMods.Mission />
             </div>
             {#if app.showSurvey}<PlanMods.Survey />{/if}

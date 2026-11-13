@@ -3,6 +3,7 @@
   import { dispatch } from '../../lib/transport';
   import { paramState } from '../../lib/paramStore.svelte';
   import { t } from '../../lib/i18n.svelte';
+  import { paramLine } from '../../lib/paramText';
   import { X, Upload, ArrowRight, Check } from '@lucide/svelte';
   import Button from '$lib/components/ui/button/button.svelte';
 
@@ -19,13 +20,8 @@
   function parseParamFile(text: string): Map<string, number> {
     const map = new Map<string, number>();
     for (const line of text.split('\n')) {
-      const trimmed = line.trim();
-      if (!trimmed || trimmed.startsWith('#')) continue;
-      const parts = trimmed.split(/[\t,\s]+/);
-      if (parts.length >= 2) {
-        const name = parts[0], val = parseFloat(parts[1]);
-        if (!isNaN(val)) map.set(name, val);
-      }
+      const parsed = paramLine(line);
+      if (parsed) map.set(parsed[0], parsed[1]);
     }
     return map;
   }
