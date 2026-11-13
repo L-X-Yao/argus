@@ -295,6 +295,16 @@
       }}
       title={t('tip.sitl')}>SITL</Button
     >
+    <Button
+      variant="outline"
+      size="sm"
+      class="text-[10px] px-2 opacity-60 hover:opacity-100"
+      onclick={() => {
+        port = 'tcp:localhost:5770';
+        toggle();
+      }}
+      title={t('tip.sim')}>SIM</Button
+    >
     {#if webSerialAvailable()}
       <Button
         variant="outline"

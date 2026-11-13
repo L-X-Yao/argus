@@ -495,6 +495,7 @@ const messages: Record<string, string> = {
   'tip.parseErrors': '解析错误',
   'tip.theme': '主题',
   'tip.sitl': '快速连接 SITL (udp:14550)',
+  'tip.sim': '连接内置仿真器 (tcp:localhost:5770)',
   'tip.copyCoord': '点击复制',
   'tip.resetDefault': '恢复默认值: {v}',
   'tip.screenshot': '截图',

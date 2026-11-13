@@ -445,6 +445,7 @@ const messages: Record<string, string> = {
   'tip.parseErrors': 'أخطاء التحليل',
   'tip.theme': 'السمة',
   'tip.sitl': 'اتصال سريع بـ SITL (udp:14550)',
+  'tip.sim': 'الاتصال بالمحاكي المدمج (tcp:localhost:5770)',
   'tip.copyCoord': 'انقر للنسخ',
   'tip.resetDefault': 'إعادة إلى الافتراضي: {v}',
   'tip.screenshot': 'لقطة شاشة',

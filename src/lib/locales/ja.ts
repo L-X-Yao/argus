@@ -447,6 +447,7 @@ const messages: Record<string, string> = {
   'tip.parseErrors': 'パースエラー',
   'tip.theme': 'テーマ',
   'tip.sitl': 'SITLにクイック接続 (udp:14550)',
+  'tip.sim': '内蔵シミュレータに接続 (tcp:localhost:5770)',
   'tip.copyCoord': 'クリックしてコピー',
   'tip.resetDefault': 'デフォルトにリセット: {v}',
   'tip.screenshot': 'スクリーンショット',

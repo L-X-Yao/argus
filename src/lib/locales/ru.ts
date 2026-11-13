@@ -447,6 +447,7 @@ const messages: Record<string, string> = {
   'tip.parseErrors': 'Ошибки разбора',
   'tip.theme': 'Тема',
   'tip.sitl': 'Быстрое подключение к SITL (udp:14550)',
+  'tip.sim': 'Подключиться к встроенному симулятору (tcp:localhost:5770)',
   'tip.copyCoord': 'Нажмите для копирования',
   'tip.resetDefault': 'Сбросить к значению по умолчанию: {v}',
   'tip.screenshot': 'Снимок экрана',

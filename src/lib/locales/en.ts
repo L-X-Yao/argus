@@ -496,6 +496,7 @@ const messages: Record<string, string> = {
   'tip.parseErrors': 'Parse errors',
   'tip.theme': 'Theme',
   'tip.sitl': 'Quick connect to SITL (udp:14550)',
+  'tip.sim': 'Connect the built-in simulator (tcp:localhost:5770)',
   'tip.copyCoord': 'Click to copy',
   'tip.resetDefault': 'Reset to default: {v}',
   'tip.screenshot': 'Screenshot',
