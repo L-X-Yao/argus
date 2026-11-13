@@ -219,7 +219,7 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 | `FailsafeConfigPanel` | params | 配置失控保护 | SITL | CI by clicks on firmware: every section written and read back |
 | `FlightModePanel` | params | 配置六档飞行模式 | SITL | CI by clicks on firmware: six slots read, FLTMODE written |
 | `ParamDiffPanel` | params | 对比参数文件差异 | SITL | CI by clicks on firmware: export, compare, apply |
-| `ParamPanel` | params | 读取编辑飞控参数 | Real FC | 2026-11-06 on both links on Windows: 1028 parameters in about 4 s. Writes 2026-11-05 used the same dispatch, not the row editor |
+| `ParamPanel` | params | 读取编辑飞控参数 | Real FC | 2026-11-06 on both links on Windows: 1028 parameters in about 4 s. Writes 2026-11-05 used the same dispatch, not the row editor. Unit tests 2026-11-13: a decimal comma ("1,5") reads as 1.5 in the edit box and in an imported file, and a CSV header is skipped |
 | `PidPanel` | params | 调节PID参数 | SITL | CI by clicks on firmware: typed and slider gains reach the FC |
 | `PowerCalPanel` | params | 校准电压电流 | SITL | CI by clicks on firmware: voltage and current scale on the FC |
 | `AiAnnotationPanel` | planning | 标注图像缺陷 | None | No test. Auto-detect is a stub. No way to open it |
@@ -281,7 +281,7 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 | Plane and VTOL | 固定翼和 VTOL | SITL | CI: a plain plane and a QuadPlane fly a whole mission on SITL, the QuadPlane with VTOL takeoff, transition and VTOL landing. Real telemetry 2026-05 |
 | Rover | 地面车 | SITL | CI: drives a whole mission and comes back on SITL |
 | Sub | 水下机器人 | SITL | CI: dives, runs a whole mission and surfaces on SITL |
-| 2D map | 2D 地图 | Simulator | e2e, and real Edge on Windows 2026-11-06. Every source answered with a real tile 2026-11-06, except Tianditu, which needs a key of your own. e2e 2026-11-11: the credit of the map server shows clear of the events bar, and the street layer of a source without a label layer shows (it was blank through v3.7.9). 2026-11-11 with a map server that cannot be reached, behind a proxy that answers 502 after 5 s: a panel opens 11 s after the first page shows its map and in under a second on later visits, where v3.7.11 took 31 s every time |
+| 2D map | 2D 地图 | Simulator | e2e, and real Edge on Windows 2026-11-06. Every source answered with a real tile 2026-11-06, except Tianditu, which needs a key of your own. e2e 2026-11-11: the credit of the map server shows clear of the events bar, and the street layer of a source without a label layer shows (it was blank through v3.7.9). 2026-11-11 with a map server that cannot be reached, behind a proxy that answers 502 after 5 s: a panel opens 11 s after the first page shows its map and in under a second on later visits, where v3.7.11 took 31 s every time. e2e 2026-11-13: a click in the fly view adds no waypoint, and the same click in the plan view does; guided clicks are the fly view's |
 | 3D map | 3D 地图 | Simulator | e2e, and real Edge on Windows with a real GPU 2026-11-06. e2e 2026-11-11: the credit of the map and terrain servers shows unfolded |
 | PWA and offline use | PWA 和离线 | Simulator | e2e, and real Edge on Windows 2026-11-06 |
 | Several browser clients | 多浏览器客户端 | Simulator | Integration tests |
@@ -302,7 +302,7 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 | Content policy of the page | 页面内容安全策略 | Simulator | e2e 2026-11-11: markup put into the page runs no script, and the four tabs and the 3D view stay inside the policy. Real Windows each release |
 | Terrain profile | 地形剖面 | SITL | CI: clearance from home on real firmware, heights from the real terrain server |
 | Voice and audio alerts | 语音和声音告警 | SITL | CI: the armed message on real firmware, with speech stubbed. Sound itself not checked |
-| Gamepad | 手柄 | SITL | CI: a stubbed pad moves channel 1 on real firmware. No real pad |
+| Gamepad | 手柄 | SITL | CI: a stubbed pad moves channel 1 on real firmware. No real pad. Since 2026-11-13 the status bar names the gamepad while it overrides; the badge itself has no test |
 | 10 languages | 10 种语言 | Tests only | Key completeness only, not reviewed by native speakers |
 | Plugins and scripts | 插件和脚本 | Tests only | Unit tests |
 | RTK through NTRIP | NTRIP RTK | Tests only | No real base station |

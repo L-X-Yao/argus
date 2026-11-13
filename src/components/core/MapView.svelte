@@ -33,7 +33,7 @@
   } from '@lucide/svelte';
   import { t } from '../../lib/i18n.svelte';
 
-  let { showHud = true }: { showHud?: boolean } = $props();
+  let { showHud = true, plan = false }: { showHud?: boolean; plan?: boolean } = $props();
 
   let mapEl: HTMLDivElement;
   let map = $state<L.Map | null>(null);
@@ -210,13 +210,17 @@
       saveRally();
       return;
     }
-    if (app.guidedMode && app.drone.connected && app.drone.armed) {
+    // A guided click sends the vehicle there: the fly view's, where a click is meant for it.
+    if (!plan && app.guidedMode && app.drone.connected && app.drone.armed) {
       const [wlat, wlon] = fromMap(ll.lat, ll.lng);
       dispatch('guided_goto', undefined, { lat: wlat, lon: wlon, alt: app.defaultAlt });
       guidedTarget = { lat: wlat, lon: wlon, alt: app.defaultAlt };
       addToast(`${t('map.guided')} → ${wlat.toFixed(5)}, ${wlon.toFixed(5)}`, 'info');
       return;
     }
+    // Planning is the plan view's: in the fly view a stray click used to add a waypoint to the
+    // stored mission, with no confirmation and no sign of it.
+    if (!plan) return;
     const [wlat, wlon] = fromMap(ll.lat, ll.lng);
     addWaypoint({
       lat: wlat,
@@ -264,7 +268,7 @@
       app.drawingRally = false;
       map?.closePopup();
     }
-    if (e.key === 'g' && (e.target as HTMLElement).tagName !== 'INPUT') {
+    if (e.key === 'g' && (e.target as HTMLElement).tagName !== 'INPUT' && !plan) {
       if (app.drone.connected && app.drone.armed) app.guidedMode = !app.guidedMode;
     }
   }
@@ -501,7 +505,7 @@
     >
       □ {measuring && measureMode === 'area' ? t('map.cancel') : t('map.area')}
     </button>
-    {#if app.drone.connected && app.drone.armed}
+    {#if !plan && app.drone.connected && app.drone.armed}
       <button
         class="map-btn {app.guidedMode ? '!text-warning !border-warning' : ''}"
         onclick={() => (app.guidedMode = !app.guidedMode)}

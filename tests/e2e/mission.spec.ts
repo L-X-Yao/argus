@@ -23,6 +23,25 @@ test.describe('Mission planning', () => {
     }
   });
 
+  test('a click in the fly view adds no waypoint', async ({ page }) => {
+    const count = page.locator('h2', { hasText: /航点|Waypoints/i }).locator('xpath=..').locator('span').first();
+
+    await page.locator('nav button', { hasText: /飞行|Fly/ }).first().click();
+    await page.waitForTimeout(500);
+    const flyBox = (await page.locator('.leaflet-container').first().boundingBox())!;
+    await page.mouse.click(flyBox.x + flyBox.width / 2, flyBox.y + flyBox.height / 2);
+    await page.waitForTimeout(500);
+
+    await page.locator('nav button', { hasText: /规划|Plan/ }).first().click();
+    await page.waitForTimeout(1000);
+    await expect(count).toHaveText('(0)');
+
+    // The same click here does add one, so the check above means something.
+    const planBox = (await page.locator('.leaflet-container').first().boundingBox())!;
+    await page.mouse.click(planBox.x + planBox.width * 0.4, planBox.y + planBox.height * 0.6);
+    await expect(count).toHaveText('(1)', { timeout: 3000 });
+  });
+
   test('add multiple waypoints shows distance', async ({ page }) => {
     const map = page.locator('.leaflet-container').first();
     const box = await map.boundingBox();

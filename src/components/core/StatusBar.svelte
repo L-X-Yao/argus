@@ -3,6 +3,7 @@
   import { t } from '../../lib/i18n.svelte';
   import { apiUrl } from '../../lib/backend';
   import { assistant } from '../../lib/assistant.svelte';
+  import { gamepad } from '../../lib/gamepad.svelte';
   import { worst } from '../../lib/worst';
   import ConnectionForm from './ConnectionForm.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
@@ -118,6 +119,16 @@
       <Badge variant={modeVariant} class="text-xs font-bold">{app.drone.mode}</Badge>
       {#if app.drone.armed}
         <Badge variant="destructive" class="text-[10px] font-bold animate-pulse">{t('status.armed')}</Badge>
+      {/if}
+      {#if gamepad.enabled && app.drone.connected && app.drone.armed}
+        <!-- It sends RC overrides every 50 ms while this holds: the operator has to see it. -->
+        <Badge
+          variant="outline"
+          class="text-[10px] font-bold text-warning border-warning/60"
+          title={t('settings.gamepad')}
+        >
+          {t('settings.gamepad')}
+        </Badge>
       {/if}
 
       <span
