@@ -446,6 +446,7 @@ const messages: Record<string, string> = {
   'tip.parseErrors': '파싱 오류',
   'tip.theme': '테마',
   'tip.sitl': 'SITL 빠른 연결 (udp:14550)',
+  'tip.sim': '내장 시뮬레이터에 연결 (tcp:localhost:5770)',
   'tip.copyCoord': '클릭하여 복사',
   'tip.resetDefault': '기본값으로 초기화: {v}',
   'tip.screenshot': '스크린샷',

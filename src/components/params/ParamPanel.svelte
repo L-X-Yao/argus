@@ -2,7 +2,7 @@
   import { paramState } from '../../lib/paramStore.svelte';
   import { app, addToast } from '../../lib/stores.svelte';
   import { dispatch } from '../../lib/transport';
-  import { t } from '../../lib/i18n.svelte';
+  import { getLocale, t } from '../../lib/i18n.svelte';
   import { paramLine, parseParamNumber } from '../../lib/paramText';
   import { apiUrl } from '../../lib/backend';
   import type { Param } from '../../lib/types';
@@ -404,7 +404,13 @@
     {#if isExpanded && metaLoaded}
       <div class="px-3 py-2 bg-muted/30 border-b border-border/50 text-[11px] space-y-1.5">
         {#if getMeta()[p.name]?.desc}
-          <p class="text-muted-foreground leading-relaxed">{getMeta()[p.name]!.desc}</p>
+          <p class="text-muted-foreground leading-relaxed">
+            <!-- The descriptions come from ArduPilot's apm.pdef.xml in English and do not follow
+                 the page's language: they say so rather than look like a missing translation. -->
+            {#if getLocale() !== 'en'}<span class="text-[9px] font-bold text-muted-foreground/60 mr-1 align-top"
+                >EN</span
+              >{/if}{getMeta()[p.name]!.desc}
+          </p>
         {/if}
         <div class="flex flex-wrap gap-x-4 gap-y-1 text-[10px]">
           {#if getMeta()[p.name]?.group}<span class="text-muted-foreground/60">{t('meta.group')}: <span class="text-foreground">{getMeta()[p.name]!.group}</span></span>{/if}

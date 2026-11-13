@@ -514,27 +514,31 @@
         <Navigation size={13} />{app.guidedMode ? t('map.guidedActive') : t('map.guided')}
       </button>
     {/if}
-    <button
-      class="map-btn {app.showSurvey || app.drawingPolygon ? '!text-purple-400 !border-purple-400' : ''}"
-      onclick={() => (app.showSurvey = !app.showSurvey)}
-      title={t('map.survey')}
-    >
-      <Grid3x3 size={13} />{t('map.survey')}
-    </button>
-    <button
-      class="map-btn {app.showFence || app.drawingFence ? '!text-destructive !border-destructive' : ''}"
-      onclick={() => (app.showFence = !app.showFence)}
-      title={t('map.fence')}
-    >
-      <ShieldAlert size={13} />{t('map.fence')}
-    </button>
-    <button
-      class="map-btn {app.showRally || app.drawingRally ? '!text-primary !border-primary' : ''}"
-      onclick={() => (app.showRally = !app.showRally)}
-      title={t('rally.title')}
-    >
-      <Flag size={13} />{t('rally.title')}
-    </button>
+    <!-- The planning tools open panels that only the plan view holds: in the fly view the
+         buttons flipped state and nothing appeared. -->
+    {#if plan}
+      <button
+        class="map-btn {app.showSurvey || app.drawingPolygon ? '!text-purple-400 !border-purple-400' : ''}"
+        onclick={() => (app.showSurvey = !app.showSurvey)}
+        title={t('map.survey')}
+      >
+        <Grid3x3 size={13} />{t('map.survey')}
+      </button>
+      <button
+        class="map-btn {app.showFence || app.drawingFence ? '!text-destructive !border-destructive' : ''}"
+        onclick={() => (app.showFence = !app.showFence)}
+        title={t('map.fence')}
+      >
+        <ShieldAlert size={13} />{t('map.fence')}
+      </button>
+      <button
+        class="map-btn {app.showRally || app.drawingRally ? '!text-primary !border-primary' : ''}"
+        onclick={() => (app.showRally = !app.showRally)}
+        title={t('rally.title')}
+      >
+        <Flag size={13} />{t('rally.title')}
+      </button>
+    {/if}
     {#if droneTrail.length > 10}
       <button class="map-btn" onclick={exportTrack} title={t('map.track')}>
         <Download size={13} />{t('map.track')}
