@@ -4,6 +4,7 @@ import asyncio
 import json
 import logging
 import math
+import time
 import uuid
 from dataclasses import dataclass
 
@@ -108,6 +109,8 @@ class WSManager:
         self._assistants: set[WebSocket] = set()
         self._asked: dict[str, _Asked] = {}
         self._asked_total = 0
+        # The page that asked for a mission download: its model goes to that page only.
+        self._dl_requester: tuple[WebSocket, float] | None = None
         # In every key: a page keeps its requests across a restart of the backend, and an
         # answer to one of before must not land on a new one with the same number.
         self._session = uuid.uuid4().hex[:8]
@@ -126,6 +129,26 @@ class WSManager:
         if self._pilot_ws is not None and self._pilot_ws in self._clients:
             return self._pilot_ws
         return next((c for c in self._order if c in self._clients and c not in self._assistants), None)
+
+    def _may_command(self, ws: WebSocket) -> bool:
+        """Whether this page holds command authority (the command branch below reads the same
+        rule). One vehicle link serves every page: a page without it may watch, not connect or
+        disconnect the vehicle, and not command it."""
+        role = self._roles.get(id(ws))
+        operator = next((c for c in self._order if c in self._clients and c not in self._assistants), None)
+        if operator is None:
+            operator = ws if self.client_count == 1 else None
+        is_implicit_pilot = self._pilot_ws is None and role is None and operator is ws
+        return role == "pilot" or is_implicit_pilot
+
+    # Long enough for a slow radio to deliver a mission; short enough that a requester gone
+    # before its answer does not hold the next download of another page back.
+    _DL_REQUEST_TTL = 120.0
+
+    def _dl_is_mine(self, ws: WebSocket) -> bool:
+        """Whether this page asked for the mission download whose model is being pushed."""
+        req = self._dl_requester
+        return req is not None and req[0] is ws and time.time() - req[1] < self._DL_REQUEST_TTL
 
     async def broadcast(self, msg: dict) -> None:
         text = dumps(msg)
@@ -290,6 +313,20 @@ class WSManager:
                     await self._state_to_assistant(ws, msg)
                     continue
                 if msg_type == "connect":
+                    # The link belongs to the operator: another page pressing Connect on
+                    # its own copy of the page cut the operator's vehicle off (or moved
+                    # it to another port) with no sign on the operator's page.
+                    if not self._may_command(ws):
+                        await ws.send_text(
+                            dumps(
+                                {
+                                    "type": "connect_result",
+                                    "ok": False,
+                                    "error": lt("err_observer_no_cmd", self.link.locale),
+                                }
+                            )
+                        )
+                        continue
                     port = msg.get("port", "tcp:localhost:5770")
                     baud = msg.get("baud", cfg.SERIAL_BAUD)
                     if not validate_port(port):
@@ -315,6 +352,17 @@ class WSManager:
                         )
                     )
                 elif msg_type == "disconnect":
+                    if not self._may_command(ws):
+                        await ws.send_text(
+                            dumps(
+                                {
+                                    "type": "connect_result",
+                                    "ok": False,
+                                    "error": lt("err_observer_no_cmd", self.link.locale),
+                                }
+                            )
+                        )
+                        continue
                     await asyncio.to_thread(self.link.disconnect)
                     await ws.send_text(
                         dumps(
@@ -359,30 +407,10 @@ class WSManager:
                             await ws.send_text(dumps({"type": "handoff_released"}))
                             break
                 elif msg_type == "command":
-                    # Observer clients must not be able to control the
-                    # vehicle. Auditor finding: previously every connected
-                    # client could call commands.execute() — meaning a
-                    # passive viewer could arm/takeoff. Reject unless this ws
-                    # holds the pilot role (the implicit-pilot fallback
-                    # below covers the single-client case where no role has
-                    # been set yet).
-                    role = self._roles.get(id(ws))
-                    # With no explicit pilot assigned, command authority belongs
-                    # to the earliest-connected client (the session operator);
-                    # later joiners observe. The previous `client_count == 1`
-                    # gate stripped the operator's authority the instant ANY
-                    # second client connected — an observer opening the page
-                    # silently disabled the operator's commands, with no way to
-                    # reclaim them (nothing in the frontend sends set_role /
-                    # request_handoff). Earliest-connected preserves the GCS
-                    # "one operator, rest observe" default with zero UI wiring.
-                    # Fallback (operator is None): tests populate _clients
-                    # directly, bypassing _order — a lone client still commands.
-                    operator = next((c for c in self._order if c in self._clients and c not in self._assistants), None)
-                    if operator is None:
-                        operator = ws if self.client_count == 1 else None
-                    is_implicit_pilot = self._pilot_ws is None and role is None and operator is ws
-                    if role != "pilot" and not is_implicit_pilot:
+                    # A page without command authority may watch, not command: it used to be
+                    # able to arm and take off (auditor 2026-05-28). _may_command holds the
+                    # rule: the pilot, or the page that connected first when nobody is named.
+                    if not self._may_command(ws):
                         await ws.send_text(
                             dumps(
                                 {
@@ -395,6 +423,10 @@ class WSManager:
                         continue
                     cmd = msg.get("cmd", "")
                     param = msg.get("param")
+                    if cmd == "mission_download":
+                        # The model is this page's answer: every other page keeps its own
+                        # route, which the broadcast was replacing with the vehicle's.
+                        self._dl_requester = (ws, time.time())
                     result = commands.execute(cmd, param, self.link, data=msg)
                     if result:
                         await ws.send_text(dumps({"type": "cmd_result", **result}))
@@ -460,6 +492,10 @@ class WSManager:
                     dl_cursor = 0
                 if len(dlmsg) > dl_cursor:
                     for msg in dlmsg[dl_cursor:]:
+                        # A mission download's model is the requester's answer, not news for
+                        # every page: it replaced another operator's unsaved route.
+                        if msg.get("type") == "mission_downloaded" and not self._dl_is_mine(ws):
+                            continue
                         await ws.send_text(dumps(msg))
                     dl_cursor = len(dlmsg)
                 if log_cursor > len(logmsg):

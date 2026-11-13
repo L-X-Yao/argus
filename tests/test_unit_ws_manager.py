@@ -173,6 +173,7 @@ class TestReceiveLoop:
         link = DroneLink()
         mgr = WSManager(link)
         ws = make_ws()
+        mgr._clients.add(ws)  # a page that is connected; one client is the operator
         msg = json.dumps({"type": "connect", "port": "tcp:localhost:5770", "baud": 57600})
         ws.receive_text.side_effect = [msg, WebSocketDisconnect()]
         with patch.object(link, "connect", return_value=True) as mock_conn:
@@ -189,6 +190,7 @@ class TestReceiveLoop:
         link = DroneLink()
         mgr = WSManager(link)
         ws = make_ws()
+        mgr._clients.add(ws)
         msg = json.dumps({"type": "connect", "port": "/dev/ttyUSB0"})
         ws.receive_text.side_effect = [msg, WebSocketDisconnect()]
         with patch.object(link, "connect", return_value=False):
@@ -203,6 +205,7 @@ class TestReceiveLoop:
         link = DroneLink()
         mgr = WSManager(link)
         ws = make_ws()
+        mgr._clients.add(ws)
         msg = json.dumps({"type": "disconnect"})
         ws.receive_text.side_effect = [msg, WebSocketDisconnect()]
         with patch.object(link, "disconnect") as mock_disc:
@@ -396,6 +399,62 @@ class TestReceiveLoop:
             mock_exec.assert_not_called()
         sent = json.loads(ws_observer.send_text.call_args[0][0])
         assert sent["type"] == "cmd_result" and sent["ok"] is False
+
+    @pytest.mark.asyncio
+    async def test_observer_connect_rejected(self):
+        """The vehicle link belongs to the operator: another page pressing Connect must not
+        move or cut it under the operator."""
+        link = DroneLink()
+        mgr = WSManager(link)
+        ws_observer, ws_pilot = make_ws(), make_ws()
+        mgr._clients.update({ws_observer, ws_pilot})
+        mgr._pilot_ws = ws_pilot
+        mgr._roles[id(ws_pilot)] = "pilot"
+        msg = json.dumps({"type": "connect", "port": "tcp:localhost:5770", "baud": 115200})
+        ws_observer.receive_text.side_effect = [msg, WebSocketDisconnect()]
+        with patch.object(link, "connect") as mock_connect:
+            await mgr._receive_loop(ws_observer)
+            mock_connect.assert_not_called()
+        sent = json.loads(ws_observer.send_text.call_args[0][0])
+        assert sent["type"] == "connect_result" and sent["ok"] is False
+
+    @pytest.mark.asyncio
+    async def test_observer_disconnect_rejected(self):
+        """And pressing Disconnect must not cut the operator's link either."""
+        link = DroneLink()
+        mgr = WSManager(link)
+        ws_observer, ws_pilot = make_ws(), make_ws()
+        mgr._clients.update({ws_observer, ws_pilot})
+        mgr._pilot_ws = ws_pilot
+        mgr._roles[id(ws_pilot)] = "pilot"
+        msg = json.dumps({"type": "disconnect"})
+        ws_observer.receive_text.side_effect = [msg, WebSocketDisconnect()]
+        with patch.object(link, "disconnect") as mock_disconnect:
+            await mgr._receive_loop(ws_observer)
+            mock_disconnect.assert_not_called()
+        sent = json.loads(ws_observer.send_text.call_args[0][0])
+        assert sent["type"] == "connect_result" and sent["ok"] is False
+
+    @pytest.mark.asyncio
+    async def test_a_mission_download_is_the_requesters(self):
+        """The model of a download goes to the page that asked: broadcasting it replaced
+        another page's unsaved route with the vehicle's."""
+        import time as _time
+
+        link = DroneLink()
+        mgr = WSManager(link)
+        ws_a, ws_b = make_ws(), make_ws()
+        mgr._clients.update({ws_a, ws_b})
+        mgr._order.extend([ws_a, ws_b])
+        msg = json.dumps({"type": "command", "cmd": "mission_download", "param": None})
+        ws_a.receive_text.side_effect = [msg, WebSocketDisconnect()]
+        with patch("backend.ws_manager.commands.execute", return_value=None):
+            await mgr._receive_loop(ws_a)
+        assert mgr._dl_is_mine(ws_a) is True
+        assert mgr._dl_is_mine(ws_b) is False
+        # A requester that went away does not hold the next page's download back.
+        mgr._dl_requester = (ws_a, _time.time() - mgr._DL_REQUEST_TTL - 1)
+        assert mgr._dl_is_mine(ws_a) is False
 
     @pytest.mark.asyncio
     async def test_command_returns_none(self):

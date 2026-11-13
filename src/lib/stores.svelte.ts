@@ -127,22 +127,37 @@ export function clearWaypoints() {
   saveWaypoints();
 }
 
+function applySettings(s: Record<string, unknown>) {
+  // Not 0, as before. Below 0 is an altitude too: a submarine's.
+  const set = (v: unknown) => finiteNumber(v) || null;
+  app.defaultAlt = set(s.alt) ?? app.defaultAlt;
+  app.defaultSpeed = set(s.speed) ?? app.defaultSpeed;
+  app.geoRadius = set(s.radius) ?? app.geoRadius;
+  if (typeof s.dark === 'boolean') app.darkTheme = s.dark;
+  if (typeof s.muted === 'boolean') app.audioMuted = s.muted;
+  if (typeof s.voice === 'boolean') app.voiceEnabled = s.voice;
+  if (s.region === 'china' || s.region === 'global') app.mapRegion = s.region;
+  if (s.tileSource && typeof s.tileSource === 'string') app.tileSource = s.tileSource;
+  if (s.mapMode === '2d' || s.mapMode === '3d') app.mapMode = s.mapMode;
+  if (s.unitSystem === 'metric' || s.unitSystem === 'imperial') app.unitSystem = s.unitSystem;
+}
+
+function applyWaypoints(raw: unknown) {
+  app.waypoints = cleanWaypoints(raw, app.defaultAlt);
+}
+
+function applyFence(raw: unknown) {
+  app.fencePolygon = cleanPositions(raw);
+}
+
+function applyRally(raw: unknown) {
+  app.rallyPoints = cleanRallyPoints(raw, app.defaultAlt);
+}
+
 export function loadSettings() {
   try {
     // Storage is read as a file is: these values reach the map's HTML and the mission upload.
-    const s = JSON.parse(localStorage.getItem('argus_settings') || '{}');
-    // Not 0, as before. Below 0 is an altitude too: a submarine's.
-    const set = (v: unknown) => finiteNumber(v) || null;
-    app.defaultAlt = set(s.alt) ?? app.defaultAlt;
-    app.defaultSpeed = set(s.speed) ?? app.defaultSpeed;
-    app.geoRadius = set(s.radius) ?? app.geoRadius;
-    if (typeof s.dark === 'boolean') app.darkTheme = s.dark;
-    if (typeof s.muted === 'boolean') app.audioMuted = s.muted;
-    if (typeof s.voice === 'boolean') app.voiceEnabled = s.voice;
-    if (s.region === 'china' || s.region === 'global') app.mapRegion = s.region;
-    if (s.tileSource && typeof s.tileSource === 'string') app.tileSource = s.tileSource;
-    if (s.mapMode === '2d' || s.mapMode === '3d') app.mapMode = s.mapMode;
-    if (s.unitSystem === 'metric' || s.unitSystem === 'imperial') app.unitSystem = s.unitSystem;
+    applySettings(JSON.parse(localStorage.getItem('argus_settings') || '{}'));
   } catch {}
   // One bad entry discards the list: a route with a point left out is another route. Said out
   // loud, or the route would just be gone at the next start.
@@ -154,18 +169,52 @@ export function loadSettings() {
       addToast(`${t('toast.loadFail')} (${key})`, 'error', 8000);
     }
   };
-  stored('argus_waypoints', (raw) => {
-    const wps = cleanWaypoints(raw, app.defaultAlt);
-    if (wps.length > 0) app.waypoints = wps;
-  });
-  stored('argus_fence', (raw) => {
-    const fence = cleanPositions(raw);
-    if (fence.length > 0) app.fencePolygon = fence;
-  });
-  stored('argus_rally', (raw) => {
-    const rally = cleanRallyPoints(raw, app.defaultAlt);
-    if (rally.length > 0) app.rallyPoints = rally;
-  });
+  stored('argus_waypoints', applyWaypoints);
+  stored('argus_fence', applyFence);
+  stored('argus_rally', applyRally);
+}
+
+/** Applies one stored key again, for a value another tab saved. True when the key is one of
+ * ours. Storage has no merging: a tab that kept a stale copy wrote it back whole, over the
+ * value the other tab had just saved. */
+export function reloadFromStorage(key: string): boolean {
+  try {
+    if (key === 'argus_settings') {
+      applySettings(JSON.parse(localStorage.getItem(key) || '{}'));
+      return true;
+    }
+    if (key === 'argus_waypoints') {
+      applyWaypoints(JSON.parse(localStorage.getItem(key) || '[]'));
+      return true;
+    }
+    if (key === 'argus_fence') {
+      applyFence(JSON.parse(localStorage.getItem(key) || '[]'));
+      return true;
+    }
+    if (key === 'argus_rally') {
+      applyRally(JSON.parse(localStorage.getItem(key) || '[]'));
+      return true;
+    }
+  } catch (err) {
+    console.warn(`[storage] ${key} not applied:`, err);
+  }
+  return false;
+}
+
+let storageSyncOn = false;
+
+/** Another tab saved one of the app's keys: take its value. Called once, from the page's
+ * start; the writing tab gets no event, only the others. */
+export function startStorageSync(): void {
+  if (storageSyncOn) return;
+  try {
+    window.addEventListener('storage', (e) => {
+      if (e.key) reloadFromStorage(e.key);
+    });
+    storageSyncOn = true;
+  } catch {
+    /* non-browser test env */
+  }
 }
 
 export function saveSettings() {
