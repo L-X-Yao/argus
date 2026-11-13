@@ -166,9 +166,9 @@ export function getAllModes(vtype: VehicleType): { id: number; name: string; cat
     .sort((a, b) => a.id - b.id);
 }
 
-export function getModeEntries(vtype: VehicleType): [number, string][] {
+export function getModeEntries(vtype: VehicleType, locale: 'en' | 'zh' = 'en'): [number, string][] {
   const table = MODE_TABLES[vtype] ?? {};
   return Object.entries(table)
-    .map(([id, m]) => [Number(id), m.en] as [number, string])
+    .map(([id, m]) => [Number(id), m[locale]] as [number, string])
     .sort((a, b) => a[0] - b[0]);
 }

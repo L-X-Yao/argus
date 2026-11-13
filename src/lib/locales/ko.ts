@@ -786,7 +786,9 @@ const messages: Record<string, string> = {
   'airspace.title': '공역',
   'airspace.airport': '공항',
   'airspace.noFly': '비행 금지 구역',
-  'airspace.restricted': '제한 구역',
+  'airspace.noFlyZone': '기체가 공항 비행금지구역 안에 있습니다.',
+  'airspace.enableHint':
+    '공역 확인을 켜면 이 패널에 공항 비행금지구역 접근 경고가 표시됩니다 (데모 공항 데이터, 지도에 겹치지 않음).',
   'airspace.enabled': '공역 표시',
   'annotation.title': '지도 주석',
   'annotation.add': '주석 추가',

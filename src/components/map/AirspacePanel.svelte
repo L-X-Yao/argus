@@ -154,9 +154,7 @@
       {#if violation && enabled}
         <div class="p-3 rounded-lg bg-destructive/10 border border-destructive/30 flex items-center gap-2">
           <AlertTriangle size={16} class="text-destructive shrink-0" />
-          <span class="text-xs font-semibold text-destructive"
-            >{t('airspace.noFly')} — Drone is within an airport no-fly zone!</span
-          >
+          <span class="text-xs font-semibold text-destructive">{t('airspace.noFlyZone')}</span>
         </div>
       {/if}
 
@@ -211,10 +209,7 @@
       <!-- Hint -->
       {#if !enabled}
         <div class="p-3 rounded-lg bg-primary/5 border border-primary/20">
-          <p class="text-xs text-muted-foreground leading-relaxed">
-            {t('airspace.restricted')} — Enable the airspace check to see airport no-fly proximity warnings in this panel
-            (demo airport data; not a map overlay).
-          </p>
+          <p class="text-xs text-muted-foreground leading-relaxed">{t('airspace.enableHint')}</p>
         </div>
       {/if}
     </div>

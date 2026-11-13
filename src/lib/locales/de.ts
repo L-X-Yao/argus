@@ -788,7 +788,9 @@ const messages: Record<string, string> = {
   'airspace.title': 'Luftraum',
   'airspace.airport': 'Flughafen',
   'airspace.noFly': 'Flugverbotszone',
-  'airspace.restricted': 'Beschränkt',
+  'airspace.noFlyZone': 'Die Drohne ist in einer Flugverbotszone des Flughafens!',
+  'airspace.enableHint':
+    'Schalte die Luftraumprüfung ein, um Warnungen vor Flughafen-Flugverbotszonen in diesem Panel zu sehen (Demo-Flughafendaten; keine Karten-Überlagerung).',
   'airspace.enabled': 'Luftraum anzeigen',
   'annotation.title': 'Kartenannotationen',
   'annotation.add': 'Annotation hinzufügen',

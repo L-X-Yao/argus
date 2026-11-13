@@ -60,8 +60,9 @@ test.describe('Flight modes', () => {
   test('a mode picked by name is the one the FC flies on that switch position', async () => {
     const dialog = await tool(page, 'tool-modes', label('fltmode.title'));
     const slots = dialog.locator('select');
-    await slots.nth(1).selectOption({ label: 'Drift' });
-    await slots.nth(3).selectOption({ label: 'PosHold' });
+    // By mode number: the names follow the page's language (Chinese on a Chinese page).
+    await slots.nth(1).selectOption('11'); // Drift
+    await slots.nth(3).selectOption('16'); // PosHold
     await dialog.getByRole('button', { name: label('fltmode.save') }).click();
     await onFc('FLTMODE2').toBe(11);
     await onFc('FLTMODE4').toBe(16);
