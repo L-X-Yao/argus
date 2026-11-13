@@ -374,6 +374,10 @@ class WSManager:
                         )
                     )
                 elif msg_type == "set_locale":
+                    # One link, one language for its own text (events, acks): the operator's.
+                    # A phone opened in English turned the desktop operator's events English.
+                    if not self._may_command(ws):
+                        continue
                     locale = msg.get("locale", "zh")
                     if locale in _VALID_LOCALES:
                         self.link.locale = locale

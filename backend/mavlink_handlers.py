@@ -833,6 +833,16 @@ def handle_log_entry(p: bytes, pl: int, link: DroneLink) -> None:
     p = _pad(p, 14)
     time_utc, size, log_id, num_logs, last_log_num = struct.unpack_from("<IIHHH", p, 0)
     lg = link.log_dl
+    # AP answers an empty log store with one dummy entry: id 0, last 0, size 0
+    # (AP_Logger_MAVLinkLogTransfer.cpp:82-84, 262-273). Listed, it offered a "#0" whose
+    # download saved nothing and reported success.
+    if log_id == 0 and last_log_num == 0 and size == 0:
+        lg._log_list = []
+        lg._log_list_start = 0.0
+        lg._log_list_tries = 0
+        lg._log_messages.append({"type": "log_list", "logs": []})
+        link.add_event(lt("log_list_n", link.locale) % 0, "log_list_n")
+        return
     lg._log_list.append({"id": log_id, "size": size, "time_utc": time_utc})
     if log_id == last_log_num:
         lg._log_list_start = 0.0

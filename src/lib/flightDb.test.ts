@@ -130,7 +130,7 @@ describe('flightDb', () => {
 
   it('id auto-increments from max existing id', () => {
     saveFlightRecord(SAMPLE);
-    saveFlightRecord(SAMPLE);
+    saveFlightRecord({ ...SAMPLE, duration: 301 }); // another flight, not the same one again
     // Delete id=1, then add another — should get id=3 (max of existing is 2)
     deleteFlightRecord(1);
     saveFlightRecord({ ...SAMPLE, date: '2026-06-01' });
@@ -146,7 +146,25 @@ describe('flight records that are not records', () => {
   it('are left out, and the next flight is still saved', () => {
     localStorage.setItem('argus_flights', JSON.stringify([null, 7, { id: 'x' }, { ...SAMPLE, id: 3 }, { id: null }]));
     expect(loadFlightRecords().map((r) => r.id)).toEqual([3]);
-    expect(() => saveFlightRecord(SAMPLE)).not.toThrow();
+    expect(() => saveFlightRecord({ ...SAMPLE, duration: 301 })).not.toThrow();
     expect(loadFlightRecords().map((r) => r.id)).toEqual([3, 4]);
+  });
+});
+
+describe('one flight seen by two pages', () => {
+  it('is stored once', () => {
+    saveFlightRecord({ ...SAMPLE, date: new Date('2026-05-21T10:00:00Z').toISOString() });
+    saveFlightRecord({ ...SAMPLE, date: new Date('2026-05-21T10:00:02Z').toISOString() });
+    expect(loadFlightRecords().length).toBe(1);
+  });
+
+  it('and another flight with other numbers is kept', () => {
+    saveFlightRecord({ ...SAMPLE, date: new Date('2026-05-21T10:00:00Z').toISOString() });
+    saveFlightRecord({
+      ...SAMPLE,
+      date: new Date('2026-05-21T10:30:00Z').toISOString(),
+      duration: 600,
+    });
+    expect(loadFlightRecords().length).toBe(2);
   });
 });

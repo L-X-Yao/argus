@@ -1072,6 +1072,23 @@ class TestIncomingHandlers:
         assert link.log_dl._log_list[0]["id"] == 5
         assert link.log_dl._log_list[0]["size"] == 102400
 
+    def test_an_empty_log_store_is_no_log_to_download(self):
+        """AP answers an empty store with one dummy entry (id 0, last 0, size 0). The panel
+        offered a "#0" whose download saved nothing and reported success."""
+        from backend.commands._setup import cmd_log_download
+        from backend.mavlink_handlers import handle_log_entry
+
+        link = FakeLink()
+        msg = mavlink.MAVLink_log_entry_message(id=0, num_logs=1, last_log_num=0, time_utc=0, size=0)
+        payload, pl = _encode_payload(msg)
+        handle_log_entry(payload, pl, link)
+        assert link.log_dl._log_list == []
+        assert link.log_dl._log_messages[-1] == {"type": "log_list", "logs": []}
+
+        link.log_dl._log_list = [{"id": 0, "size": 0, "time_utc": 0}]
+        result = cmd_log_download(link, None, {"id": 0})
+        assert result and result["ok"] is False
+
     def test_log_data(self):
         from backend.mavlink_handlers import handle_log_data
 
