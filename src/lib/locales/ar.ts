@@ -207,6 +207,7 @@ const messages: Record<string, string> = {
   'check.vibe': 'الاهتزاز',
   'check.rc': 'إشارة RC',
   'check.mission': 'المهمة',
+  'check.local': 'محلي',
   'check.vtype': 'نوع المركبة',
   'check.notArmed': 'غير مسلّح',
   'check.compass': 'انحراف البوصلة',

@@ -128,8 +128,10 @@ export function clearWaypoints() {
 }
 
 function applySettings(s: Record<string, unknown>) {
-  // Not 0, as before. Below 0 is an altitude too: a submarine's.
-  const set = (v: unknown) => finiteNumber(v) || null;
+  // 0 is a value: a submarine's home is the surface, and a fence radius of 0 is a choice.
+  // `|| null` read it as "none stored" and put the default back at the next start. Text that
+  // holds a number is still read as one (finiteNumber): an older file may store it so.
+  const set = (v: unknown) => finiteNumber(v);
   app.defaultAlt = set(s.alt) ?? app.defaultAlt;
   app.defaultSpeed = set(s.speed) ?? app.defaultSpeed;
   app.geoRadius = set(s.radius) ?? app.geoRadius;

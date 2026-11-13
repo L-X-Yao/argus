@@ -61,7 +61,7 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 | `fence_clear` | Clear fence on the FC | 清除飞控上的围栏 | Real FC | Real FC | Both 2026-11-05, read back with pymavlink |
 | `rally_upload` | Upload rally points | 上传备降点 | SITL | SITL | CI on both links. WebSerial reads the coordinates back from the FC |
 | `rally_clear` | Clear rally points on the FC | 清除飞控上的备降点 | SITL | SITL | CI on both links. WebSerial reads the count back from the FC |
-| `param_request_all` | Read all parameters | 读全部参数 | Real FC | Real FC | Both 2026-11-05, 1028 parameters |
+| `param_request_all` | Read all parameters | 读全部参数 | Real FC | Real FC | Both 2026-11-05, 1028 parameters. 2026-11-13: a link that drops mid-read tells the page (param_timeout), which used to sit at the last percentage with Read disabled (unit test) |
 | `param_set` | Write a parameter | 写参数 | Real FC | Real FC | WebSerial 2026-11-05 with 4 types, backend 2026-05, CI |
 | `param_save` | Back up to a file | 备份参数到文件 | Real FC | n/a | Backend 2026-05, CI |
 | `param_load` | Restore from a file | 从文件恢复参数 | SITL | n/a | CI |
@@ -73,8 +73,8 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 | `cal_accel` | Accelerometer calibration | 加速度计校准 | Real FC | SITL | Backend 2026-05, WebSerial CI, SITL recording replayed in CI |
 | `cal_accel_next` | Next calibration pose | 校准下一姿态 | Real FC | SITL | Backend 2026-05, WebSerial CI, SITL recording replayed in CI |
 | `cal_cancel` | Cancel calibration | 取消校准 | Real FC | Real FC | Both 2026-11-06 on Windows, CI on both links |
-| `log_list` | List logs | 日志列表 | Real FC | Real FC | Both 2026-11-06 on Windows |
-| `log_download` | Download a log | 下载日志 | Real FC | Real FC | Both 2026-11-06 on Windows, same sha256 on both links |
+| `log_list` | List logs | 日志列表 | Real FC | Real FC | Both 2026-11-06 on Windows. 2026-11-13: a lost last LOG_ENTRY is asked for again (3 s, 3 tries) and then reported, where the request waited forever (unit test) |
+| `log_download` | Download a log | 下载日志 | Real FC | Real FC | Both 2026-11-06 on Windows, same sha256 on both links. 2026-11-13: a link that drops mid-download reports it as incomplete, where the panel sat at the last percentage (unit test) |
 | `log_cancel` | Cancel a download | 取消下载 | SITL | SITL | CI on both links |
 | `reboot` | Reboot the FC | 重启飞控 | Real FC | Real FC | Both 2026-11-06 on Windows, disarmed. WebSerial comes back by the USB button, the backend by itself |
 | `reboot_bootloader` | Reboot to bootloader | 重启到 Bootloader | SITL | SITL | CI on both links |
@@ -243,9 +243,9 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 | `ConfirmDialog` | shared | 确认危险操作 | Real FC | 2026-11-05 |
 | `FlightSummary` | shared | 查看飞行总结 | SITL | CI by clicks on firmware: matches the flight the FC reported |
 | `LoginDialog` | shared | 输入令牌登录 | Simulator | e2e: auth |
-| `PreflightPanel` | shared | 查看起飞前检查 | Real FC | 2026-11-05 on both links |
+| `PreflightPanel` | shared | 查看起飞前检查 | Real FC | 2026-11-05 on both links. 2026-11-13: the mission item says the route is the local one, not the vehicle's (the vehicle's count is unknown without a download) |
 | `RolePanel` | shared | 切换操作角色 | Tests only | Browser test: opens without an error. Demo, not wired to roles |
-| `SettingsPanel` | shared | 修改应用设置 | Simulator | e2e: settings, mobile. 2026-11-13: the footer shows the version `package.json` has, and the test reads that file |
+| `SettingsPanel` | shared | 修改应用设置 | Simulator | e2e: settings, mobile. 2026-11-13: the footer shows the version `package.json` has, and the test reads that file; a stored 0 (a submarine's altitude, a fence radius) is kept, not replaced by the default (unit test) |
 | `SlideConfirm` | shared | 滑动确认关键指令 | SITL | CI by clicks on firmware: an early release arms nothing |
 | `EkfPanel` | telemetry | 查看导航滤波状态 | Simulator | e2e: connected-flow, navigation |
 | `RcPanel` | telemetry | 查看遥控通道 | Simulator | e2e: connected-flow, navigation |

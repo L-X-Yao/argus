@@ -207,6 +207,7 @@ const messages: Record<string, string> = {
   'check.vibe': 'Vibración',
   'check.rc': 'Señal RC',
   'check.mission': 'Misión',
+  'check.local': 'Aquí',
   'check.vtype': 'Tipo de vehículo',
   'check.notArmed': 'No armado',
   'check.compass': 'Desviación de brújula',

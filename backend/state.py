@@ -150,6 +150,9 @@ class RcServoState:
 @dataclass
 class LogState:
     _log_list: list[dict] = field(default_factory=list)
+    # A lost LOG_ENTRY used to leave the list request waiting forever: retried, then told.
+    _log_list_start: float = 0.0
+    _log_list_tries: int = 0
     _log_download_id: int = -1
     _log_download_data: bytearray = field(default_factory=bytearray)
     _log_download_size: int = 0

@@ -257,6 +257,7 @@ const messages: Record<string, string> = {
   'check.vibe': '振动水平',
   'check.rc': '遥控信号',
   'check.mission': '任务航线',
+  'check.local': '本机',
   'check.vtype': '机型识别',
   'check.notArmed': '未解锁',
   'check.compass': '罗盘偏差',
