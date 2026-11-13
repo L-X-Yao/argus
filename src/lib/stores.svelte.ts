@@ -239,6 +239,15 @@ export function loadDownloadedMission(wps: Waypoint[]) {
     speed: w.speed || 0,
     type: w.type || 'wp',
     loiter_param: w.loiter_param || 0,
+    // What a download preserved of the item, so the next upload sends it back: the camera,
+    // servo, ROI and yaw commands, and ArduPilot's radius and yaw params.
+    ...(w.p3 !== undefined ? { p3: w.p3 } : {}),
+    ...(w.p4 !== undefined ? { p4: w.p4 } : {}),
+    ...(w.cmd_servo ? { cmd_servo: w.cmd_servo } : {}),
+    ...(w.cmd_roi ? { cmd_roi: w.cmd_roi } : {}),
+    ...(w.cmd_cam_trig ? { cmd_cam_trig: w.cmd_cam_trig } : {}),
+    ...(w.cmd_yaw ? { cmd_yaw: w.cmd_yaw } : {}),
+    ...(w.cmd_vtol ? { cmd_vtol: w.cmd_vtol } : {}),
   }));
   saveWaypoints();
   requestAnimationFrame(() => app.fitRouteFlag++);

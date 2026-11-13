@@ -47,7 +47,7 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 | `takeoff` | Take off | 起飞 | SITL | SITL | CI on both links |
 | `guided_goto` | Fly to a point | 引导飞行 | SITL | SITL | WebSerial CI, backend manual SITL 2026-05 |
 | `mission_start` | Start the mission | 开始任务 | SITL | SITL | CI on both links |
-| `mission_set_current` | Jump to a waypoint | 跳到指定航点 | SITL | SITL | CI on both links |
+| `mission_set_current` | Jump to a waypoint | 跳到指定航点 | SITL | SITL | CI on both links. 2026-11-13: the seq comes from the map a download builds; with a speed insert the old `index + 2` jumped to an earlier waypoint (contract test) |
 | `drop` | Release payload | 投放 | SITL | SITL | CI on both links |
 | `drop_stop` | Stop release | 停止投放 | SITL | SITL | CI on both links |
 | `do_set_roi` | Set region of interest | 设置兴趣点 | SITL | SITL | CI on both links |
@@ -55,7 +55,7 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 | `motor_test` | Motor test | 电机测试 | Real FC | SITL | Backend 2026-05, WebSerial CI |
 | `motor_test_stop` | Stop motor test | 停止电机测试 | SITL | SITL | CI on both links |
 | `mission_upload` | Upload mission | 上传航线 | Real FC | Real FC | WebSerial 2026-11-05, backend 2026-05, CI |
-| `mission_download` | Download mission | 下载航线 | Real FC | Real FC | Both 2026-11-05 |
+| `mission_download` | Download mission | 下载航线 | Real FC | Real FC | Both 2026-11-05. 2026-11-13: the rebuilt list maps every waypoint to its MAVLink seq, and keeps the camera, servo, ROI, yaw and VTOL items and p3/p4, which a download then upload used to delete (contract tests) |
 | `mission_clear` | Clear mission | 清除航线 | Real FC | Real FC | WebSerial 2026-11-05, backend 2026-05, CI |
 | `fence_upload` | Upload fence | 上传围栏 | Real FC | Real FC | Both 2026-11-05, read back with pymavlink |
 | `fence_clear` | Clear fence on the FC | 清除飞控上的围栏 | Real FC | Real FC | Both 2026-11-05, read back with pymavlink |
@@ -210,7 +210,7 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 | `CorridorPanel` | mission | 生成走廊扫描航线 | SITL | CI by clicks on firmware: parallel lines on the FC |
 | `RallyPanel` | mission | 添加并上传备降点 | SITL | CI by clicks on firmware: points on the FC, clear works |
 | `FencePanel` | mission | 绘制上传地理围栏 | Real FC | 2026-11-05, Clear on FC through the panel on WebSerial |
-| `MissionPanel` | mission | 编辑上传任务航点 | SITL | CI by clicks on firmware: upload and download match the FC store |
+| `MissionPanel` | mission | 编辑上传任务航点 | SITL | CI by clicks on firmware: upload and download match the FC store. 2026-11-13: contract tests of the download's seq map and of the per-waypoint commands it carries back into the upload |
 | `MissionProgress` | mission | 看任务执行进度 | SITL | CI by clicks on firmware: tracks the FC mission sequence |
 | `PoiPanel` | mission | 设置相机兴趣点 | SITL | CI by clicks on firmware: the vehicle turns, clear reaches the FC |
 | `SurveyPanel` | mission | 生成测绘网格航线 | SITL | CI by clicks on firmware: spacing and heading on the FC, and the grid flown |

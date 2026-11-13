@@ -944,6 +944,115 @@ class TestIncomingHandlers:
         assert wp["lon"] == pytest.approx(-118.4, abs=1e-5)
         assert wp["type"] == "wp"
 
+    def test_a_download_maps_waypoints_to_their_seqs(self):
+        """A jump goes by MAVLink seq, not by index. An inserted DO_CHANGE_SPEED moves the
+        waypoints' seqs away from i + 2, and MISSION_SET_CURRENT read index + 2: it flew to an
+        earlier waypoint. The map is built from the downloaded items themselves."""
+        from backend.commands._mission import cmd_mission_download, cmd_mission_set_current
+        from backend.mavlink_handlers import handle_mission_count, handle_mission_item_int
+
+        link = FakeLink()
+        link.mission._dl_pending = True
+        link.mission._dl_total = 6
+        link.mission._dl_items = [None] * 6
+
+        def item(seq, cmd, param2=0.0, lat=0, lon=0):
+            return mavlink.MAVLink_mission_item_int_message(
+                target_system=255,
+                target_component=1,
+                seq=seq,
+                frame=3,
+                command=cmd,
+                current=1 if seq == 0 else 0,
+                autocontinue=1,
+                param1=0,
+                param2=param2,
+                param3=0,
+                param4=0,
+                x=lat,
+                y=lon,
+                z=30.0,
+                mission_type=0,
+            )
+
+        for msg in (
+            item(0, 16),  # HOME
+            item(1, 22),  # TAKEOFF
+            item(2, 178, param2=5.0),  # DO_CHANGE_SPEED before the first waypoint
+            item(3, 16, lat=340000000, lon=1089000000),
+            item(4, 178, param2=6.0),
+            item(5, 16, lat=341000000, lon=1089100000),
+        ):
+            payload, pl = _encode_payload(msg)
+            handle_mission_item_int(payload, pl, link)
+
+        assert link.mission._seq_to_wp == {3: 0, 5: 1}
+
+        link.captured.clear()
+        cmd_mission_set_current(link, None, {"wp_index": 1})
+        sent = _decode_one(link.captured[0])
+        assert sent.get_type() == "MISSION_SET_CURRENT"
+        assert sent.seq == 5  # not 1 + 2
+
+        # An empty mission takes the map with it, and a download starts without one.
+        link.mission._seq_to_wp = {2: 0}
+        link.mission._dl_pending = True
+        handle_mission_count(struct.pack("<H", 0), 2, link)
+        assert link.mission._seq_to_wp == {}
+        link.mission._seq_to_wp = {3: 0}
+        cmd_mission_download(link, None, {})
+        assert link.mission._seq_to_wp == {}
+
+    def test_a_download_keeps_the_per_waypoint_commands(self):
+        """An upload writes camera, servo, ROI, yaw and VTOL items right after their waypoint.
+        The download dropped them, so the next upload deleted them from the vehicle."""
+        from backend.mavlink_handlers import handle_mission_item_int
+
+        link = FakeLink()
+        link.mission._dl_pending = True
+        link.mission._dl_total = 8
+        link.mission._dl_items = [None] * 8
+
+        def item(seq, cmd, p1=0.0, p2=0.0, p3=0.0, lat=0, lon=0):
+            return mavlink.MAVLink_mission_item_int_message(
+                target_system=255,
+                target_component=1,
+                seq=seq,
+                frame=3,
+                command=cmd,
+                current=1 if seq == 0 else 0,
+                autocontinue=1,
+                param1=p1,
+                param2=p2,
+                param3=p3,
+                param4=0,
+                x=lat,
+                y=lon,
+                z=30.0,
+                mission_type=0,
+            )
+
+        for msg in (
+            item(0, 16),  # HOME
+            item(1, 22),  # TAKEOFF
+            item(2, 16, p3=30.0, lat=340000000, lon=1089000000),  # a nav waypoint, radius 30
+            item(3, 183, p1=9, p2=1100),  # DO_SET_SERVO
+            item(4, 201, lat=342600000, lon=1089500000),  # DO_SET_ROI
+            item(5, 206, p1=25),  # DO_DIGICAM_CONTROL distance
+            item(6, 115, p1=90, p3=1),  # CONDITION_YAW deg/dir
+            item(7, 3000, p1=4),  # VTOL transition
+        ):
+            payload, pl = _encode_payload(msg)
+            handle_mission_item_int(payload, pl, link)
+
+        wp = link.mission._dl_messages[-1]["waypoints"][0]
+        assert wp["p3"] == 30.0
+        assert wp["cmd_servo"] == {"num": 9, "pwm": 1100}
+        assert wp["cmd_roi"]["lat"] == pytest.approx(34.26, abs=1e-5)
+        assert wp["cmd_cam_trig"] == {"dist": 25.0}
+        assert wp["cmd_yaw"] == {"deg": 90.0, "dir": 1}
+        assert wp["cmd_vtol"] == {"mode": 4}
+
     def test_log_entry(self):
         from backend.mavlink_handlers import handle_log_entry
 

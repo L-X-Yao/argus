@@ -606,6 +606,7 @@ def handle_mission_count(p: bytes, pl: int, link: DroneLink) -> None:
         link.add_event(lt("mission_dl_n", link.locale) % count, "mission_dl_n")
     else:
         m._dl_pending = False
+        m._seq_to_wp = {}
         link.add_event(lt("mission_dl_none", link.locale), "mission_dl_none")
 
 
@@ -667,6 +668,7 @@ def handle_mission_item_int(p: bytes, pl: int, link: DroneLink) -> None:
         m._dl_pending = False
         items = [i for i in m._dl_items if i is not None]
         wps = []
+        wp_seqs = []
         pending_speed = 0.0
         for item in items:
             if item["cmd"] == 178:
@@ -697,9 +699,28 @@ def handle_mission_item_int(p: bytes, pl: int, link: DroneLink) -> None:
                         "autocontinue": item.get("autocontinue", 1),
                     }
                 )
+                wp_seqs.append(item["seq"])
                 pending_speed = 0.0
             elif item["cmd"] == 181 and wps:
                 wps[-1]["drop"] = True
+            # The per-waypoint commands an upload writes right after their waypoint. They were
+            # dropped on download, and a download then upload deleted them from the vehicle: a
+            # survey lost its camera triggers, servo moves, ROI and yaw. Field shapes as
+            # _upload_mission writes them.
+            elif item["cmd"] == 183 and wps:
+                wps[-1]["cmd_servo"] = {"num": int(item.get("p1", 1)), "pwm": item.get("p2", 1500)}
+            elif item["cmd"] == 201 and wps:
+                wps[-1]["cmd_roi"] = {"lat": item["lat"], "lon": item["lon"], "alt": item["alt"]}
+            elif item["cmd"] == 206 and wps:
+                wps[-1]["cmd_cam_trig"] = {"dist": item.get("p1", 0)}
+            elif item["cmd"] == 115 and wps:
+                wps[-1]["cmd_yaw"] = {"deg": item.get("p1", 0), "dir": item.get("p3", 1)}
+            elif item["cmd"] == 3000 and wps:
+                wps[-1]["cmd_vtol"] = {"mode": int(item.get("p1", 4))}
+        # Waypoint i of the page sits at this MAVLink seq. A jump (MISSION_SET_CURRENT) and the
+        # current-waypoint readout go through this map, and an insert (DO_CHANGE_SPEED, servo,
+        # ROI, ...) moves the seqs away from i + 2 — the jump then landed on an earlier item.
+        m._seq_to_wp = {seq: i for i, seq in enumerate(wp_seqs)}
         m._dl_messages.append({"type": "mission_downloaded", "waypoints": wps})
         if len(m._dl_messages) > 500:
             m._dl_messages = m._dl_messages[-200:]

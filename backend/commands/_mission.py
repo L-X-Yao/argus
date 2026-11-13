@@ -141,6 +141,9 @@ def cmd_mission_download(link: DroneLink, param, data: dict):
     link.mission._dl_pending = True
     link.mission._dl_total = 0
     link.mission._dl_items = []
+    # A download asks what the FC has now: the map of the last upload describes a mission that
+    # may be gone, and a jump would use it. handle_mission_item_int builds the new one.
+    link.mission._seq_to_wp = {}
     link.mission._dl_start_time = link.mission._dl_last_send = time.time()
     link.add_event(lt("mission_dl", link.locale), "mission_dl")
     _send_request_list(link)
@@ -300,6 +303,10 @@ def _upload_mission(link: DroneLink, waypoints: list, takeoff_alt: float) -> Non
                 "alt": float(wp.get("alt", takeoff_alt)),
                 "p1": p1_val,
                 "p2": 0,
+                # ArduPilot's per-item radius and yaw, as a download preserved them: a
+                # download then upload used to reset them to 0.
+                "p3": float(wp.get("p3", 0) or 0),
+                "p4": float(wp.get("p4", 0) or 0),
             }
         )
         seq += 1
