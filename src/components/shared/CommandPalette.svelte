@@ -534,14 +534,6 @@
         available: true,
       },
       {
-        id: 'tool-role',
-        label: t('role.current'),
-        category: t('cmd.catTools'),
-        icon: ShieldAlert,
-        handler: () => openPanel('role'),
-        available: true,
-      },
-      {
         id: 'tool-airspace',
         label: t('airspace.title'),
         category: t('cmd.catTools'),

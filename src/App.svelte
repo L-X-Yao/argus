@@ -18,7 +18,6 @@
   import AssistantDialog from './components/shared/AssistantDialog.svelte';
   import SlideConfirm from './components/shared/SlideConfirm.svelte';
   import { showConfirm, showSlide, undo } from './lib/stores.svelte';
-  import { startScheduler } from './lib/scheduler.svelte';
   import { panels } from './lib/panels.svelte';
   import { apiUrl, login } from './lib/backend';
   import { worst } from './lib/worst';
@@ -240,7 +239,6 @@
     loadSettings();
     startStorageSync();
     checkAuth();
-    startScheduler();
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   });

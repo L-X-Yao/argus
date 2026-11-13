@@ -88,17 +88,12 @@ describe('PANEL_LOADERS', () => {
       'poi',
       'annotation',
       'remote',
-      'role',
       'airspace',
       'offlineMap',
       'mission3d',
       'gimbal',
       'dashboard',
-      'aiPlanner',
-      'script',
       'ortho',
-      'aiAnnotation',
-      'scheduler',
       'posSource',
       'ntrip',
       'fleet',
@@ -119,7 +114,7 @@ describe('PANEL_LOADERS', () => {
   it('has exactly 42 panel loaders', () => {
     // MultiVehiclePanel removed 2026-07 (placeholder switch — FleetDashboard
     // is the real multi-vehicle UI).
-    expect(Object.keys(PANEL_LOADERS).length).toBe(42);
+    expect(Object.keys(PANEL_LOADERS).length).toBe(37);
   });
 
   it('shortcuts loader resolves immediately', async () => {

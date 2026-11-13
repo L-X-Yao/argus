@@ -32,7 +32,7 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 | Messages, backend | 35 | 28 | 3 | 0 | 4 | 0 | 0 |
 | Messages, WebSerial | 35 | 17 | 13 | 0 | 4 | 0 | 1 |
 | REST routes | 28 | 6 | 5 | 17 | 0 | 0 | 0 |
-| Panels | 82 | 14 | 34 | 18 | 14 | 2 | 0 |
+| Panels | 77 | 14 | 34 | 18 | 11 | 0 | 0 |
 | Platform | 50 | 8 | 14 | 13 | 10 | 2 | 3 |
 
 ## Commands / 飞控命令
@@ -176,10 +176,6 @@ Real FC here means the route was in use during a session with a real flight cont
 
 ## Panels / 界面面板
 
-Four panels have code but no way to open them, marked in the Evidence column. They were never reachable from the UI.
-
-有 4 个面板有代码，但界面上没有入口，在证据列注明。它们从未对用户开放。
-
 | Panel | Area | 作用 | Level | Evidence |
 | --- | --- | --- | --- | --- |
 | `ChartPanel` | core | 查看实时遥测曲线 | Simulator | e2e: connected-flow, error-boundary |
@@ -222,13 +218,9 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 | `ParamPanel` | params | 读取编辑飞控参数 | Real FC | 2026-11-06 on both links on Windows: 1028 parameters in about 4 s. Writes 2026-11-05 used the same dispatch, not the row editor. Unit tests 2026-11-13: a decimal comma ("1,5") reads as 1.5 in the edit box and in an imported file, and a CSV header is skipped |
 | `PidPanel` | params | 调节PID参数 | SITL | CI by clicks on firmware: typed and slider gains reach the FC |
 | `PowerCalPanel` | params | 校准电压电流 | SITL | CI by clicks on firmware: voltage and current scale on the FC |
-| `AiAnnotationPanel` | planning | 标注图像缺陷 | None | No test. Auto-detect is a stub. No way to open it |
-| `AiPlannerPanel` | planning | 文字生成航线 | None | No test. Rule-based parser, not an LLM. No way to open it |
 | `AnnotationPanel` | planning | 记录地图标注点 | Tests only | Browser test: opens, refuses an entry without a position, and leaves out one that was stored without it |
 | `CustomDashboard` | planning | 自定义仪表 | SITL | WebSerial CI, live values |
 | `OverlapCalcPanel` | planning | 计算相机重叠率 | Tests only | Browser test: opens without an error |
-| `SchedulerPanel` | planning | 定时执行任务 | Tests only | Logic: scheduler. No way to open it |
-| `ScriptPanel` | planning | 运行用户脚本 | Tests only | Logic: ws. No way to open it |
 | `CalibrationPanel` | setup | 校准传感器 | Real FC | 2026-11-06 on both links: compass start and cancel only, no whole run. e2e: connected-flow |
 | `EscCalPanel` | setup | 校准电调 | SITL | CI by clicks on firmware: parameter and undo. The calibration itself needs a power cycle |
 | `FirmwarePanel` | setup | 上传固件并重启 | Simulator | e2e: settings, mobile |
@@ -244,7 +236,6 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 | `FlightSummary` | shared | 查看飞行总结 | SITL | CI by clicks on firmware: matches the flight the FC reported. 2026-11-13: the history stores a flight once when two pages receive its summary (unit test) |
 | `LoginDialog` | shared | 输入令牌登录 | Simulator | e2e: auth |
 | `PreflightPanel` | shared | 查看起飞前检查 | Real FC | 2026-11-05 on both links. 2026-11-13: the mission item says the route is the local one, not the vehicle's (the vehicle's count is unknown without a download); the battery threshold is ArduPilot's BATT_ARM_VOLT when a parameter read has it, the old 22 V otherwise, and hiding a critical check asks first |
-| `RolePanel` | shared | 切换操作角色 | Tests only | Browser test: opens without an error. Demo, not wired to roles |
 | `SettingsPanel` | shared | 修改应用设置 | Simulator | e2e: settings, mobile. 2026-11-13: the footer shows the version `package.json` has, and the test reads that file; a stored 0 (a submarine's altitude, a fence radius) is kept, not replaced by the default (unit test) |
 | `SlideConfirm` | shared | 滑动确认关键指令 | SITL | CI by clicks on firmware: an early release arms nothing |
 | `EkfPanel` | telemetry | 查看导航滤波状态 | Simulator | e2e: connected-flow, navigation |
@@ -328,11 +319,10 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 4. **RTK, gimbal, camera and ADS-B.** These need hardware that has not been available.
 5. **Vehicles other than Copter on real hardware.** Plane, QuadPlane, Rover and Sub run whole missions in SITL in CI through the backend. None has been on a real board since the 2026-05 telemetry check.
 6. **Chrome itself on Windows.** Edge on Windows ran through the real port chooser 2026-11-06. Chrome was not on that machine.
-7. **Four panels nobody can open.** Scripts, scheduler, AI planner and AI annotation exist in code only.
-8. **The backend's serial link on Windows since the package bundles Python 3.14 (v3.7.8).** It ran on a real FC on the Python 3.10 of earlier packages. On 3.14 a COM port was opened and closed 2026-11-10, with no FC on it. WebSerial does not use that Python.
-9. **Video from a real camera.** ffmpeg turned an HTTP test stream into frames 2026-11-10. No RTSP camera has been on it, and before v3.7.8 only `rtsp://` addresses could play at all.
-10. **A real phone or tablet.** A phone-sized touch browser opened Argus at a network address 2026-11-11. No real phone has, and neither Safari on iOS nor the browser inside a chat app has been tried.
-11. **The AI assistant with a real AI client and a real FC.** Its tests use a plain MCP client, the built-in simulator and ArduCopter SITL. Claude Code, a real MCP client, drove it by hand on 2026-11-13: status read, a proposed mission approved in the page and uploaded to the built-in simulator. Claude Desktop has not been tried, and no proposal has reached a real flight controller.
+7. **The backend's serial link on Windows since the package bundles Python 3.14 (v3.7.8).** It ran on a real FC on the Python 3.10 of earlier packages. On 3.14 a COM port was opened and closed 2026-11-10, with no FC on it. WebSerial does not use that Python.
+8. **Video from a real camera.** ffmpeg turned an HTTP test stream into frames 2026-11-10. No RTSP camera has been on it, and before v3.7.8 only `rtsp://` addresses could play at all.
+9. **A real phone or tablet.** A phone-sized touch browser opened Argus at a network address 2026-11-11. No real phone has, and neither Safari on iOS nor the browser inside a chat app has been tried.
+10. **The AI assistant with a real AI client and a real FC.** Its tests use a plain MCP client, the built-in simulator and ArduCopter SITL. Claude Code, a real MCP client, drove it by hand on 2026-11-13: status read, a proposed mission approved in the page and uploaded to the built-in simulator. Claude Desktop has not been tried, and no proposal has reached a real flight controller.
 
 1. **真实飞行。** 没有飞过。下面都只是台架或仿真结果。
 2. **真机上的解锁、起飞、返航、开始任务。** 只在 SITL 跑过。这些需要接电池，要单独安排。
@@ -340,11 +330,10 @@ Four panels have code but no way to open them, marked in the Evidence column. Th
 4. **RTK、云台、相机、ADS-B。** 缺硬件。
 5. **多旋翼以外机型上真机。** 固定翼、QuadPlane、地面车、水下机器人在 CI 里经后端跑完整任务（SITL）。除 2026-05 的遥测检查外，都没有接过真实飞控。
 6. **Windows 上的 Chrome 本身。** 2026-11-06 已用 Windows 上的 Edge 走真实端口弹窗，那台机器没有装 Chrome。
-7. **4 个打不开的面板。** 脚本、定时任务、AI 规划、AI 标注只存在于代码中。
-8. **发布包改用 Python 3.14（v3.7.8）之后，Windows 上的后端串口。** 之前的发布包内置 Python 3.10，在真实飞控上跑过。3.14 上只在 2026-11-10 打开并关闭过一个 COM 口，没有接飞控。WebSerial 不经过这个 Python。
-9. **真实相机的视频。** 2026-11-10 用 ffmpeg 把一路 HTTP 测试流转成了画面。没有接过 RTSP 相机，而且 v3.7.8 之前只有 `rtsp://` 地址能播放。
-10. **真实的手机或平板。** 2026-11-11 用手机尺寸的触屏浏览器在局域网地址上打开过 Argus。没有用过真实手机，iOS 上的 Safari 和聊天软件内置的浏览器也都没有试过。
-11. **用真实飞控运行 AI 助手，以及用 Claude Desktop。** 测试用的是一个最简单的 MCP 客户端、内置模拟器和 ArduCopter SITL。2026-11-13 已用 Claude Code（真实 MCP 客户端）手工跑通一次：读取状态、在页面批准一条提议航线并上传到内置模拟器。Claude Desktop 尚未试过，提议也还没有到达过真实飞控。
+7. **发布包改用 Python 3.14（v3.7.8）之后，Windows 上的后端串口。** 之前的发布包内置 Python 3.10，在真实飞控上跑过。3.14 上只在 2026-11-10 打开并关闭过一个 COM 口，没有接飞控。WebSerial 不经过这个 Python。
+8. **真实相机的视频。** 2026-11-10 用 ffmpeg 把一路 HTTP 测试流转成了画面。没有接过 RTSP 相机，而且 v3.7.8 之前只有 `rtsp://` 地址能播放。
+9. **真实的手机或平板。** 2026-11-11 用手机尺寸的触屏浏览器在局域网地址上打开过 Argus。没有用过真实手机，iOS 上的 Safari 和聊天软件内置的浏览器也都没有试过。
+10. **用真实飞控运行 AI 助手，以及用 Claude Desktop。** 测试用的是一个最简单的 MCP 客户端、内置模拟器和 ArduCopter SITL。2026-11-13 已用 Claude Code（真实 MCP 客户端）手工跑通一次：读取状态、在页面批准一条提议航线并上传到内置模拟器。Claude Desktop 尚未试过，提议也还没有到达过真实飞控。
 
 ## Known limits / 已知限制
 

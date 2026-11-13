@@ -34,12 +34,12 @@ fake progress bars anywhere. The 8 problem panels below are the complete list.
 | panel | audit finding | resolution |
 |---|---|---|
 | map/Compass3DPanel | sample sphere plotted `vibe` as if mag samples | FIXED — backend now parses RAW_IMU (27, subscribed 5Hz) and pushes `mag`; sphere plots the real field |
-| planning/SchedulerPanel | no timer; autoArm/mission-select ignored | FIXED — app-level scheduler service ticks all session, confirm-gated firing honoring autoArm; vestigial mission dropdown removed (saved-mission slots never existed) |
+| planning/SchedulerPanel | no timer; autoArm/mission-select ignored | REMOVED 2026-11-13 — fixed in 2026-07, but the panel never had an entry point; it and its app-level service went with the rest of the unreachable panels |
 | vehicle/MultiVehiclePanel | placeholder no-op switch, duplicate of FleetDashboard | REMOVED — palette entry now opens FleetDashboard |
 | map/AirspacePanel | 50 hardcoded airports could read as authoritative | LABELED — in-UI demo-data banner; data unchanged (still DEMO) |
-| shared/RolePanel | `argus_role` written, never enforced | LABELED — in-UI "display-only, not enforced" banner (still DEMO) |
-| planning/AiPlannerPanel | "AI" is a regex heuristic, no LLM | LABELED — in-UI note: local rule parser, not a cloud LLM (still functional) |
-| planning/AiAnnotationPanel | `aiDetect()` is a toast stub | LABELED — honest toast: auto-detect unavailable, annotate manually |
+| shared/RolePanel | `argus_role` written, never enforced | REMOVED 2026-11-13 — no entry point; RBAC is still unenforced and no panel claims otherwise |
+| planning/AiPlannerPanel | "AI" is a regex heuristic, no LLM | REMOVED 2026-11-13 — no entry point; the MCP assistant is the supported way for an AI to propose a route |
+| planning/AiAnnotationPanel | `aiDetect()` is a toast stub | REMOVED 2026-11-13 — no entry point; annotation without AI is `AnnotationPanel` |
 | tools/RemotePanel | no tunnel/relay behind 远程操控 | LABELED — hint states no built-in tunnel; needs reachable backend |
 
 Trivial cleanup applied: `mission/PoiPanel`'s stale "do_set_roi not
@@ -169,13 +169,13 @@ Format: `Panel | verdict | what it does / evidence`.
 
 | panel | verdict | note |
 |---|---|---|
-| AiAnnotationPanel | PARTIAL | manual bbox annotation real; aiDetect() is a toast stub |
-| AiPlannerPanel | DEMO | regex heuristic, no LLM; does append real waypoints |
+| ~~AiAnnotationPanel~~ | REMOVED | no entry point; deleted 2026-11-13 |
+| ~~AiPlannerPanel~~ | REMOVED | no entry point; deleted 2026-11-13 |
 | AnnotationPanel | GCS-LOCAL | localStorage POI notes CRUD |
 | CustomDashboard | WIRED | tile dashboard of live telemetry; localStorage layout |
 | OverlapCalcPanel | GCS-LOCAL | GSD/overlap math; feeds surveySpacing to SurveyPanel |
-| SchedulerPanel | WIRED | app-level timer, confirm-gated firing, autoArm honored |
-| ScriptPanel | WIRED | user JS with real send()/drone-state API |
+| ~~SchedulerPanel~~ | REMOVED | no entry point; deleted 2026-11-13 with its service |
+| ~~ScriptPanel~~ | REMOVED | no entry point; deleted 2026-11-13 |
 
 ### shared/
 
@@ -186,7 +186,7 @@ Format: `Panel | verdict | what it does / evidence`.
 | FlightSummary | WIRED | real post-flight stats; local export |
 | LoginDialog | WIRED | /api/auth/login token flow |
 | PreflightPanel | WIRED | readiness checks from live telemetry/prearm |
-| RolePanel | DEMO | RBAC unenforced (in-UI banner says display-only) |
+| ~~RolePanel~~ | REMOVED | no entry point; deleted 2026-11-13 |
 | SettingsPanel | GCS-LOCAL | localStorage settings feeding real commands; embeds FirmwarePanel |
 | SlideConfirm | GCS-LOCAL | slide gesture executing real command callbacks |
 

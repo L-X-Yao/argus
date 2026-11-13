@@ -26,17 +26,12 @@ export type PanelId =
   | 'poi'
   | 'annotation'
   | 'remote'
-  | 'role'
   | 'airspace'
   | 'offlineMap'
   | 'mission3d'
   | 'gimbal'
   | 'dashboard'
-  | 'aiPlanner'
-  | 'script'
   | 'ortho'
-  | 'aiAnnotation'
-  | 'scheduler'
   | 'posSource'
   | 'ntrip'
   | 'fleet'
@@ -96,17 +91,12 @@ export const PANEL_LOADERS: Record<PanelId, () => Promise<{ default: unknown }>>
   poi: () => import('../components/mission/PoiPanel.svelte'),
   annotation: () => import('../components/planning/AnnotationPanel.svelte'),
   remote: () => import('../components/tools/RemotePanel.svelte'),
-  role: () => import('../components/shared/RolePanel.svelte'),
   airspace: () => import('../components/map/AirspacePanel.svelte'),
   offlineMap: () => import('../components/map/OfflineMapPanel.svelte'),
   mission3d: () => import('../components/map/Mission3DPanel.svelte'),
   gimbal: () => import('../components/vehicle/GimbalPanel.svelte'),
   dashboard: () => import('../components/planning/CustomDashboard.svelte'),
-  aiPlanner: () => import('../components/planning/AiPlannerPanel.svelte'),
-  script: () => import('../components/planning/ScriptPanel.svelte'),
   ortho: () => import('../components/map/OrthoOverlayPanel.svelte'),
-  aiAnnotation: () => import('../components/planning/AiAnnotationPanel.svelte'),
-  scheduler: () => import('../components/planning/SchedulerPanel.svelte'),
   posSource: () => import('../components/setup/PositionSourcePanel.svelte'),
   ntrip: () => import('../components/setup/NtripPanel.svelte'),
   fleet: () => import('../components/vehicle/FleetDashboard.svelte'),
