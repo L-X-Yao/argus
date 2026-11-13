@@ -1,6 +1,18 @@
 import { test, expect } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+
+const pkg = JSON.parse(readFileSync(fileURLToPath(new URL('../../package.json', import.meta.url)), 'utf-8'));
 
 test.describe('Settings panel', () => {
+  test('shows the version the package has', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForTimeout(1000);
+
+    await page.keyboard.press('Control+s');
+    await expect(page.getByText(`v${pkg.version} · `)).toBeVisible({ timeout: 3000 });
+  });
+
   test('opens via Ctrl+S', async ({ page }) => {
     await page.goto('/');
     await page.waitForTimeout(1000);

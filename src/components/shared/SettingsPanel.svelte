@@ -48,7 +48,9 @@
       // No backend: both stay as they are, and no tiles would come anyway.
     }
   });
-  const VERSION = '3.4.0';
+  // The package's own version (vite.config.ts defines it from package.json): it was a copy
+  // written here and stayed at 3.4.0 while the releases moved on.
+  const VERSION = __APP_VERSION__;
   const BUILD = __BUILD_DATE__;
 </script>
 
