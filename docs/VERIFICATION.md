@@ -162,7 +162,7 @@ Real FC here means the route was in use during a session with a real flight cont
 | `GET /api/session` | Session info | 会话信息 | Simulator | e2e |
 | `GET /api/version` | Version | 版本 | Simulator | e2e, real Windows each release |
 | `GET /api/tile_sources` | Map sources | 地图源列表 | Simulator | Integration tests |
-| `GET /api/video` | Video stream | 视频流 | Simulator | Integration tests. 2026-11-10: real ffmpeg, an HTTP test stream at a private address came out as MJPEG. RTSP by its command line only, no real camera |
+| `GET /api/video` | Video stream | 视频流 | Simulator | Integration tests. 2026-11-10: real ffmpeg, an HTTP test stream at a private address came out as MJPEG. 2026-11-14: a real RTSP server (MediaMTX) with H.264 over TCP played into the page, 88 frames of 640x480 in 8 s, none repeated. No physical camera |
 | `GET /api/video/stop` | Stop video | 停止视频 | Simulator | Integration tests, no real camera |
 | `POST /api/auth/generate` | Generate a token | 生成 Token | Simulator | Integration tests |
 | `POST /api/tile_bulk_download` | Download tiles for offline use | 批量下载瓦片 | Simulator | Integration tests: counts tiles, and refuses OpenStreetMap, whose server forbids bulk download. Whether a map server answers is up to it |
@@ -254,7 +254,7 @@ Real FC here means the route was in use during a session with a real flight cont
 | `ReplayPanel` | tools | 加载并回放飞行日志 | Simulator | e2e: map3d, a file with rows that are not numbers included |
 | `FleetDashboard` | vehicle | 查看并切换多机 | Tests only | Logic: ws |
 | `GimbalPanel` | vehicle | 控制云台相机 | Simulator | e2e: command-palette. Opens; no gimbal |
-| `VideoOverlay` | vehicle | 观看视频流 | Simulator | e2e: memory. No real camera |
+| `VideoOverlay` | vehicle | 观看视频流 | Simulator | e2e: memory. 2026-11-14: a real RTSP server's H.264 stream showed in the panel and kept moving. No physical camera |
 
 ## Platform / 平台与功能
 
@@ -278,7 +278,7 @@ Real FC here means the route was in use during a session with a real flight cont
 | Several browser clients | 多浏览器客户端 | Simulator | Integration tests. 2026-11-13: a page without command authority can no longer connect or disconnect the shared vehicle link, a mission download's model goes to the page that asked for it only, and a value another tab saved is applied here instead of being written back over (unit tests). The backend text's language is the operator's: another page's locale is ignored, and two pages record one flight once (unit tests) |
 | A phone or tablet on the network | 局域网里的手机或平板 | Simulator | A phone-sized touch browser on a network address 2026-11-11: token login, live telemetry and a parameter read upright, a mode change on its side. e2e: a page the backend does not list is told so at the login; upright, RTL asks for the slide, hold sends the mode command, the flight controls open and close, and nothing lies over the events bar. No real phone |
 | AI assistant (MCP) | AI 助手（MCP） | SITL | Unit tests of the MCP server in both protocol eras, and through the real backend over its websocket. e2e: an MCP client starts the server, the page answers it, and an operator approves a mission and a parameter against the built-in simulator, declines one, and one is withdrawn. panels-sitl: the flight commands on ArduCopter SITL, refused on the ground, then hold, RTL and land in flight, each approved and slid, read back from the firmware's heartbeat. By hand 2026-11-13: Claude Code, a real MCP client, read the status, proposed a mission, had it approved in the page, and got done with 1 waypoint on the built-in simulator. No real FC |
-| Video and AR overlay | 视频和 AR 叠加 | Simulator | Integration tests, and real ffmpeg on an HTTP test stream 2026-11-10. No real camera |
+| Video and AR overlay | 视频和 AR 叠加 | Simulator | Integration tests, and real ffmpeg on an HTTP test stream 2026-11-10. 2026-11-14: a real RTSP server (MediaMTX), H.264 over TCP, moving 640x480 frames in the panel. No physical camera |
 | Token login | Token 登录 | Simulator | e2e, real Windows each release |
 | Windows package | Windows 发布包 | Simulator | CI builds and smoke-tests it on every push. The release workflow starts the zip it is about to publish on a Windows runner, and publishes nothing if that fails. Real Windows each release |
 | Windows installer | Windows 安装程序 | Simulator | CI builds it from the zip on every push and, on a Windows runner, installs it for the user, runs the package checks on the installed copy against the built-in simulator, uninstalls it, and checks that the program, its caches, token, shortcuts and uninstall entry are gone and the logs and map files kept. The release workflow does the same with the installer it publishes. Since 2026-11-13 the folder can be chosen: an empty one, or an earlier Argus one, which PrepareToInstall checks for. The directory page is GUI and no CI run opens it: it needs a look on real Windows. Not yet on a real Windows machine |
@@ -320,7 +320,7 @@ Real FC here means the route was in use during a session with a real flight cont
 5. **Vehicles other than Copter on real hardware.** Plane, QuadPlane, Rover and Sub run whole missions in SITL in CI through the backend. None has been on a real board since the 2026-05 telemetry check.
 6. **Chrome itself on Windows.** Edge on Windows ran through the real port chooser 2026-11-06. Chrome was not on that machine.
 7. **The backend's serial link on Windows since the package bundles Python 3.14 (v3.7.8).** It ran on a real FC on the Python 3.10 of earlier packages. On 3.14 a COM port was opened and closed 2026-11-10, with no FC on it. WebSerial does not use that Python.
-8. **Video from a real camera.** ffmpeg turned an HTTP test stream into frames 2026-11-10. No RTSP camera has been on it, and before v3.7.8 only `rtsp://` addresses could play at all.
+8. **Video from a real camera.** ffmpeg turned an HTTP test stream into frames 2026-11-10. 2026-11-14 a real RTSP server (MediaMTX, H.264 over TCP) played in the panel: 640x480, frames moving, no console errors. No physical camera has been on it, and neither UDP transport nor a vendor-specific stream has been tried.
 9. **A real phone or tablet.** A phone-sized touch browser opened Argus at a network address 2026-11-11. No real phone has, and neither Safari on iOS nor the browser inside a chat app has been tried.
 10. **The AI assistant with a real AI client and a real FC.** Its tests use a plain MCP client, the built-in simulator and ArduCopter SITL. Claude Code, a real MCP client, drove it by hand on 2026-11-13: status read, a proposed mission approved in the page and uploaded to the built-in simulator. Claude Desktop has not been tried, and no proposal has reached a real flight controller.
 
@@ -331,7 +331,7 @@ Real FC here means the route was in use during a session with a real flight cont
 5. **多旋翼以外机型上真机。** 固定翼、QuadPlane、地面车、水下机器人在 CI 里经后端跑完整任务（SITL）。除 2026-05 的遥测检查外，都没有接过真实飞控。
 6. **Windows 上的 Chrome 本身。** 2026-11-06 已用 Windows 上的 Edge 走真实端口弹窗，那台机器没有装 Chrome。
 7. **发布包改用 Python 3.14（v3.7.8）之后，Windows 上的后端串口。** 之前的发布包内置 Python 3.10，在真实飞控上跑过。3.14 上只在 2026-11-10 打开并关闭过一个 COM 口，没有接飞控。WebSerial 不经过这个 Python。
-8. **真实相机的视频。** 2026-11-10 用 ffmpeg 把一路 HTTP 测试流转成了画面。没有接过 RTSP 相机，而且 v3.7.8 之前只有 `rtsp://` 地址能播放。
+8. **真实相机的视频。** 2026-11-10 用 ffmpeg 把一路 HTTP 测试流转成了画面。2026-11-14 用真实 RTSP 服务器（MediaMTX）推 H.264 over TCP 进页面：640x480、画面在动、无控制台错误。没有接过物理相机，UDP 传输和厂商私有流也都没试过。
 9. **真实的手机或平板。** 2026-11-11 用手机尺寸的触屏浏览器在局域网地址上打开过 Argus。没有用过真实手机，iOS 上的 Safari 和聊天软件内置的浏览器也都没有试过。
 10. **用真实飞控运行 AI 助手，以及用 Claude Desktop。** 测试用的是一个最简单的 MCP 客户端、内置模拟器和 ArduCopter SITL。2026-11-13 已用 Claude Code（真实 MCP 客户端）手工跑通一次：读取状态、在页面批准一条提议航线并上传到内置模拟器。Claude Desktop 尚未试过，提议也还没有到达过真实飞控。
 
