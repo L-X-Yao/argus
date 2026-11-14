@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 
 from scripts.build_installer import ICON, SCRIPT, png_to_ico, version_of
-from scripts.smoke_package import UNINSTALL_KEY
+from scripts.smoke_package import KEPT, UNINSTALL_KEY
 
 ISS = SCRIPT.read_text(encoding="utf-8-sig")
 BUILD_PACKAGE = (Path(__file__).resolve().parent.parent / "scripts" / "build_package.py").read_text(encoding="utf-8")
@@ -85,6 +85,13 @@ class TestScript:
         # takes only an empty folder or an earlier Argus one.
         assert re.search(r"^DisableDirPage=auto$", ISS, re.MULTILINE)
         assert "function PrepareToInstall" in ISS and "backend\\server.py" in ISS
+
+    def test_a_folder_left_with_only_kept_files_takes_a_reinstall(self):
+        # The uninstaller keeps logs, mbtiles and firmware, so the default folder is never empty
+        # again. Refusing it made a reinstall into the default folder impossible (2026-11-14).
+        keeper = re.search(r"function IsKeptEntry.*?\nend;", ISS, re.S).group(0)
+        assert set(re.findall(r"'([a-z]+)'", keeper)) == set(KEPT)
+        assert "IsKeptEntry(Found.Name)" in ISS
 
     def test_an_upgrade_clears_only_program_folders(self):
         cleared = {re.search(r'Name: "\{app\}\\([^"]+)"', entry).group(1) for entry in section("InstallDelete")}

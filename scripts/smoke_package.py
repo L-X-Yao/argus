@@ -257,6 +257,13 @@ def main() -> int:
                 # its entry and shortcuts would outlive the folder.
                 if (root / "unins000.exe").exists():
                     uninstall(root)
+            # The uninstaller keeps its logs, map files and firmware, so the default folder is
+            # never empty again: it has to take the program back, as a reinstall does.
+            if all((root / name).is_dir() for name in KEPT):
+                code = run_setup(package, root, Path(tmp) / "reinstall.log")
+                record("a folder left with its kept files takes a reinstall", code == 0, code)
+                if (root / "unins000.exe").exists():
+                    uninstall(root)
         else:
             with zipfile.ZipFile(package) as z:
                 z.extractall(tmp)

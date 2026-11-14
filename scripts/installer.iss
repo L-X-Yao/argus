@@ -102,6 +102,16 @@ Type: dirifempty; Name: "{app}"
 [Code]
 // The folder given with /DIR, or kept from an earlier install, must be Argus's own or empty:
 // [InstallDelete] would clear backend, dist, python and LICENSES in any other.
+//
+// What the uninstaller keeps (see [UninstallDelete]) is still Argus's: a folder left with only
+// flight logs, map files and firmware must take the program again. Without this a reinstall
+// into the default folder was refused, because the uninstaller had just left its logs there.
+function IsKeptEntry(const Name: String): Boolean;
+begin
+  Result := (CompareText(Name, 'logs') = 0) or (CompareText(Name, 'mbtiles') = 0)
+    or (CompareText(Name, 'firmware') = 0);
+end;
+
 function PrepareToInstall(var NeedsRestart: Boolean): String;
 var
   Dir: String;
@@ -114,7 +124,7 @@ begin
   if FindFirst(Dir + '*', Found) then
   try
     repeat
-      if (Found.Name <> '.') and (Found.Name <> '..') then
+      if (Found.Name <> '.') and (Found.Name <> '..') and not IsKeptEntry(Found.Name) then
       begin
         Result := FmtMessage(CustomMessage('NotItsOwn'), [RemoveBackslash(Dir)]);
         Exit;
