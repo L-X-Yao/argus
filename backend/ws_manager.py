@@ -426,6 +426,8 @@ class WSManager:
                         )
                         continue
                     cmd = msg.get("cmd", "")
+                    if not isinstance(cmd, str):
+                        continue
                     param = msg.get("param")
                     if cmd == "mission_download":
                         # The model is this page's answer: every other page keeps its own

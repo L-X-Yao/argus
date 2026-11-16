@@ -490,6 +490,19 @@ class TestReceiveLoop:
         assert ws.send_text.call_count == 0
 
     @pytest.mark.asyncio
+    async def test_non_string_command_does_not_end_the_receive_loop(self):
+        link = DroneLink()
+        mgr = WSManager(link)
+        ws = make_ws()
+        mgr._clients.add(ws)
+        bad = json.dumps({"type": "command", "cmd": ["arm"]})
+        next_message = json.dumps({"type": "set_locale", "locale": "en"})
+        ws.receive_text.side_effect = [bad, next_message, WebSocketDisconnect()]
+        await mgr._receive_loop(ws)
+        assert link.locale == "en"
+        assert ws.send_text.call_count == 0
+
+    @pytest.mark.asyncio
     async def test_invalid_json_skipped(self):
         """Invalid JSON messages are silently skipped."""
         link = DroneLink()

@@ -880,6 +880,11 @@ class TestRcOverride:
 
 
 class TestExecuteDispatch:
+    @pytest.mark.parametrize("cmd", [["arm"], {"cmd": "arm"}, 42, None])
+    def test_non_string_command_is_ignored(self, cmd):
+        link = make_link()
+        assert execute(cmd, None, link) is None
+
     def test_unknown_command_fails_loud(self):
         """Unknown command names must produce an error cmd_result, not
         silence — a caller with a stale command name would otherwise wait

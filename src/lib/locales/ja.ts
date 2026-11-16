@@ -1131,7 +1131,7 @@ const messages: Record<string, string> = {
   'assistant.otherFlight': '未送信: 以前の飛行のための依頼です',
   'assistant.noMode': '未送信: この機体にはそのモードがありません',
   'log.tooLarge': 'ログが 256 MB の上限を超えています',
-  'mission.err.downloadTooLarge': 'ミッションのダウンロードが 1000 項目の上限を超えています',
+  'mission.err.downloadTooLarge': 'ミッションのダウンロードが 4003 項目の上限を超えています',
   'param.tooMany': '2000 個のパラメータ上限を超えたため、読み取りを停止しました',
   'assistant.otherVehicle': '未送信: 機体またはリンクが変わりました。再提案してください',
   'log.listTooLarge': 'ログ一覧が 1000 件の上限を超えています',

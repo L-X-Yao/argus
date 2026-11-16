@@ -142,6 +142,8 @@ _NO_LINK_NEEDED = _GCS_LOCAL | {"param_save", "ntrip_start", "cal_cancel", "log_
 
 def execute(cmd: str, param, link: DroneLink, data: dict | None = None) -> dict | None:
     data = data or {}
+    if not isinstance(cmd, str):
+        return None
     handler = _DISPATCH.get(cmd)
     if not handler:
         # Fail loud: an unregistered command name (client/backend version skew,
