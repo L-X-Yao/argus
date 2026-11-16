@@ -199,6 +199,11 @@ export interface MissionDownloadedMsg {
   waypoints: Waypoint[];
 }
 
+export interface MissionDownloadFailedMsg {
+  type: 'mission_download_failed';
+  error: string;
+}
+
 export interface LogListMsg {
   type: 'log_list';
   logs: { id: number; size: number; time_utc: number }[];
@@ -273,6 +278,7 @@ export type WSMessage =
   | ParamsCompleteMsg
   | ParamTimeoutMsg
   | MissionDownloadedMsg
+  | MissionDownloadFailedMsg
   | LogListMsg
   | LogProgressMsg
   | LogChunkMsg

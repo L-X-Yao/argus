@@ -72,6 +72,7 @@ _T = {
     "mission_dl_n": ("任务下载: 共 %d 项", "Mission download: %d items"),
     "mission_dl_none": ("任务下载: 飞控无任务", "Mission download: no mission"),
     "mission_dl_done": ("任务下载完成: %d 航点", "Mission download done: %d WP"),
+    "mission_dl_too_large": ("任务下载超过 %d 项上限", "Mission download exceeds the %d-item limit"),
     "mission_ack_ok": ("任务确认: 成功", "Mission ack: success"),
     "mission_ack_fail": ("任务确认: 失败(%d)", "Mission ack: failed(%d)"),
     "fence_ack_ok": ("围栏确认: 成功", "Fence ack: success"),

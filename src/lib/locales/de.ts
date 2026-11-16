@@ -1134,6 +1134,10 @@ const messages: Record<string, string> = {
   'assistant.otherFlight': 'Nicht gesendet: die Anfrage galt einem früheren Flug',
   'assistant.noMode': 'Nicht gesendet: dieses Fahrzeug hat keinen solchen Modus',
   'log.tooLarge': 'Log überschreitet das Limit von 256 MB',
+  'mission.err.downloadTooLarge': 'Missionsdownload überschreitet das Limit von 4003 Einträgen',
+  'param.tooMany': 'Mehr als 2000 Parameter; Lesen gestoppt',
+  'assistant.otherVehicle': 'Nicht gesendet: Fahrzeug oder Verbindung geändert; erneut anfragen',
+  'log.listTooLarge': 'Logliste überschreitet das Limit von 1000 Einträgen',
 };
 
 export default messages;

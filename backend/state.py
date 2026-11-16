@@ -110,6 +110,8 @@ class MissionState:
     _dl_total: int = 0
     _dl_items: list = field(default_factory=list)
     _dl_messages: list[dict] = field(default_factory=list)
+    # Bumped when the queue trims: ws_manager resets cursors so a terminal result is not lost.
+    _dl_gen: int = 0
     _dl_start_time: float = 0.0
     _dl_last_send: float = 0.0
 

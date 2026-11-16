@@ -183,6 +183,9 @@ export function connectWs(): void {
           loadDownloadedMission(msg.waypoints);
           addToast(t('toast.missionDown').replace('{n}', String(msg.waypoints.length)), 'success');
           break;
+        case 'mission_download_failed':
+          addToast(msg.error, 'error', 6000);
+          break;
         case 'log_list':
           setLogList(msg.logs);
           addToast(t('toast.logList').replace('{n}', String(msg.logs.length)), 'success');

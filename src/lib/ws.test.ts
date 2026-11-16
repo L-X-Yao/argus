@@ -212,6 +212,13 @@ describe('message handling', () => {
     expect(loadDownloadedMission).toHaveBeenCalledWith([{ lat: 1, lon: 2 }]);
   });
 
+  it('surfaces a failed mission download immediately without replacing the route', async () => {
+    await fire({ type: 'mission_download_failed', error: 'too many items' });
+    const { addToast, loadDownloadedMission } = await import('./stores.svelte');
+    expect(addToast).toHaveBeenCalledWith('too many items', 'error', 6000);
+    expect(loadDownloadedMission).not.toHaveBeenCalled();
+  });
+
   it('dispatches log_list', async () => {
     await fire({ type: 'log_list', logs: [{ id: 1 }] });
     const { setLogList } = await import('./logStore.svelte');

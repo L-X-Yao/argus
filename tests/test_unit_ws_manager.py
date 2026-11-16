@@ -1,6 +1,7 @@
 """Unit tests for WSManager delta push and state management."""
 
 import json
+import struct
 import sys
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
@@ -1021,6 +1022,36 @@ class TestPushLoop:
         all_msgs = [json.loads(c[0][0]) for c in ws.send_text.call_args_list]
         dl_msgs = [m for m in all_msgs if m.get("type") == "mission_item"]
         assert any(m["seq"] == 99 for m in dl_msgs)
+
+    @pytest.mark.asyncio
+    async def test_dl_failure_survives_a_trim_at_the_clients_cursor(self):
+        """A terminal failure trimmed to exactly the client's cursor must still arrive."""
+        from backend.mavlink_handlers import handle_mission_count
+
+        link = DroneLink()
+        mgr = WSManager(link)
+        ws = make_ws()
+        for i in range(200):
+            link.mission._dl_messages.append({"type": "mission_item", "seq": i})
+        call_count = 0
+
+        async def fake_sleep(_interval):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                for i in range(200, 500):
+                    link.mission._dl_messages.append({"type": "mission_item", "seq": i})
+                link.mission._dl_pending = True
+                p = struct.pack("<HBB", 4004, link.vehicle.sysid, 1)
+                handle_mission_count(p, len(p), link)
+            if call_count >= 2:
+                raise WebSocketDisconnect()
+
+        with patch("backend.ws_manager.asyncio.sleep", side_effect=fake_sleep):
+            await mgr._push_loop(ws)
+
+        sent = [json.loads(c[0][0]) for c in ws.send_text.call_args_list]
+        assert any(m.get("type") == "mission_download_failed" for m in sent)
 
     @pytest.mark.asyncio
     async def test_log_cursor_reset_on_shrink(self):

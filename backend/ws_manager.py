@@ -448,6 +448,7 @@ class WSManager:
         param_cursor = len(self.link.param_mgr._messages)
         param_gen = self.link.param_mgr._fetch_gen
         dl_cursor = len(self.link.mission._dl_messages)
+        dl_gen = self.link.mission._dl_gen
         log_cursor = len(self.link.log_dl._log_messages)
         last_sent: dict = {}
         push_count = 0
@@ -472,6 +473,7 @@ class WSManager:
                     events = list(self.link.events)
                     events_total = self.link._events_emitted_total
                     dlmsg = list(self.link.mission._dl_messages)
+                    dl_gen_now = self.link.mission._dl_gen
                     logmsg = list(self.link.log_dl._log_messages)
                     pmsg = list(self.link.param_mgr._messages)
                     param_gen_now = self.link.param_mgr._fetch_gen
@@ -492,6 +494,10 @@ class WSManager:
                                 out["cmd"] = ev["cmd"]
                             await ws.send_text(dumps(out))
                     event_seq_cursor = events_total
+                if dl_gen_now != dl_gen:
+                    # A trim can otherwise leave the terminal result exactly at the cursor.
+                    dl_cursor = 0
+                    dl_gen = dl_gen_now
                 if dl_cursor > len(dlmsg):
                     dl_cursor = 0
                 if len(dlmsg) > dl_cursor:

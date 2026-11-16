@@ -819,6 +819,36 @@ class TestMissionCount:
         handle_mission_count(p, len(p), link)
         assert link.mission._dl_total == 0
 
+    def test_oversized_count_fails_and_closes_the_download(self):
+        link = make_link()
+        link.mission._dl_pending = True
+        p = struct.pack("<HBB", 4004, link.vehicle.sysid, 1)
+        handle_mission_count(p, len(p), link)
+        assert link.mission._dl_pending is False
+        assert link.mission._dl_total == 0
+        assert link.mission._dl_items == []
+        assert link.mission._dl_messages[-1]["type"] == "mission_download_failed"
+        assert any(e["event_type"] == "mission_dl_fail" for e in link.events)
+
+    def test_builder_maximum_count_is_accepted(self):
+        link = make_link()
+        link.mission._dl_pending = True
+        link.send = lambda frame: None
+        p = struct.pack("<HBB", 4003, link.vehicle.sysid, 1)
+        handle_mission_count(p, len(p), link)
+        assert link.mission._dl_pending is True
+        assert link.mission._dl_total == 4003
+        assert len(link.mission._dl_items) == 4003
+
+    def test_failures_are_capped_like_successful_downloads(self):
+        link = make_link()
+        for _ in range(600):
+            link.mission._dl_pending = True
+            p = struct.pack("<HBB", 4004, link.vehicle.sysid, 1)
+            handle_mission_count(p, len(p), link)
+        assert len(link.mission._dl_messages) <= 500
+        assert link.mission._dl_messages[-1]["type"] == "mission_download_failed"
+
 
 # ── Mission Ack ──────────────────────────────────────────────────────────────
 

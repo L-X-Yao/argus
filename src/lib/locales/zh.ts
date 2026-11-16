@@ -223,6 +223,7 @@ const messages: Record<string, string> = {
   'serial.err.logListTimeout': '飞控没有返回日志列表',
   'mission.err.noWaypoints': '没有航点',
   'mission.err.tooLarge': '任务过大（最多 500 个航点）',
+  'mission.err.downloadTooLarge': '任务下载超过 4003 项上限',
   'mission.err.badCoords': '坐标无效',
   'mission.err.fenceMin': '围栏至少需要 3 个顶点',
   'mission.err.fenceMax': '围栏过大（最多 200 个顶点）',

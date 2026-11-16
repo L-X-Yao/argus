@@ -1136,6 +1136,10 @@ const messages: Record<string, string> = {
   'assistant.otherFlight': 'Non envoyé : la demande concernait un vol précédent',
   'assistant.noMode': 'Non envoyé : ce véhicule n’a pas ce mode',
   'log.tooLarge': 'Le journal dépasse la limite de 256 Mo',
+  'mission.err.downloadTooLarge': 'Le téléchargement de la mission dépasse la limite de 4003 éléments',
+  'param.tooMany': 'Plus de 2000 paramètres ; lecture arrêtée',
+  'assistant.otherVehicle': 'Non envoyé : le véhicule ou sa liaison a changé ; redemander',
+  'log.listTooLarge': 'La liste des journaux dépasse la limite de 1000 entrées',
 };
 
 export default messages;

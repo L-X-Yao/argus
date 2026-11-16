@@ -593,12 +593,30 @@ def handle_autopilot_version(p: bytes, pl: int, link: DroneLink) -> None:
 
 
 # ArduPilot: libraries/GCS_MAVLink/MissionItemProtocol.cpp:135 — handle_mission_request_list
+# Our own upload builder emits at most 8 items per waypoint (navigation, speed and six
+# attachments) plus HOME, TAKEOFF and RTL: 500 * 8 + 3 = 4003.
+MISSION_DOWNLOAD_MAX = 4003
+
+
 def handle_mission_count(p: bytes, pl: int, link: DroneLink) -> None:
     m = link.mission
     if pl < 1 or not m._dl_pending:
         return
     p = _pad(p, 3)
     count = struct.unpack_from("<H", p, 0)[0]
+    if count > MISSION_DOWNLOAD_MAX:
+        # The count is FC-controlled. Close the read before it becomes an allocation and then
+        # tens of thousands of map markers; a timeout would leave the page waiting for items.
+        m._dl_pending = False
+        m._dl_total = 0
+        m._dl_items = []
+        text = lt("mission_dl_too_large", link.locale) % MISSION_DOWNLOAD_MAX
+        m._dl_messages.append({"type": "mission_download_failed", "error": text})
+        if len(m._dl_messages) > 500:
+            m._dl_messages = m._dl_messages[-200:]
+            m._dl_gen += 1
+        link.add_event(text, "mission_dl_fail")
+        return
     m._dl_total = count
     m._dl_items = [None] * count
     if count > 0:
@@ -727,6 +745,7 @@ def handle_mission_item_int(p: bytes, pl: int, link: DroneLink) -> None:
         m._dl_messages.append({"type": "mission_downloaded", "waypoints": wps})
         if len(m._dl_messages) > 500:
             m._dl_messages = m._dl_messages[-200:]
+            m._dl_gen += 1
         link.add_event(lt("mission_dl_done", link.locale) % len(wps), "mission_dl_done")
         from .mavlink_frame import bm
 

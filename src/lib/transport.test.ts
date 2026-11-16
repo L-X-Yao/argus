@@ -488,6 +488,30 @@ describe('serialDownloadMission', () => {
     expect(res.waypoints).toEqual([]);
     expect(countWrites(47)).toBe(1);
   });
+
+  it('a mission count above the builder maximum fails without allocating or requesting items', async () => {
+    vi.useFakeTimers();
+    const promise = serialDownloadMission();
+    inject(fcFrame(44, encodeMissionCount(1, 1, 4004)));
+    // Before the fix it requested item zero and stalled; exhaust that machine for cleanup.
+    await vi.advanceTimersByTimeAsync(11000);
+    const res = await promise;
+    vi.useRealTimers();
+    expect(res).toMatchObject({ ok: false, error: 'mission.err.downloadTooLarge' });
+    expect(countWrites(51)).toBe(0);
+    expect(events.some((e) => e.event_type === 'mission_dl_fail')).toBe(true);
+  });
+
+  it('the builder maximum count starts downloading instead of being rejected', async () => {
+    vi.useFakeTimers();
+    const promise = serialDownloadMission();
+    inject(fcFrame(44, encodeMissionCount(1, 1, 4003)));
+    const requested = countWrites(51) > 0;
+    await vi.advanceTimersByTimeAsync(11000);
+    await promise;
+    vi.useRealTimers();
+    expect(requested).toBe(true);
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────

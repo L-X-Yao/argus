@@ -1133,6 +1133,10 @@ const messages: Record<string, string> = {
   'assistant.otherFlight': 'No enviado: la solicitud era para un vuelo anterior',
   'assistant.noMode': 'No enviado: este vehículo no tiene ese modo',
   'log.tooLarge': 'El registro supera el límite de 256 MB',
+  'mission.err.downloadTooLarge': 'La descarga de la misión supera el límite de 4003 elementos',
+  'param.tooMany': 'Más del límite de 2000 parámetros; lectura detenida',
+  'assistant.otherVehicle': 'No enviado: el vehículo o su enlace cambió; vuelva a solicitarlo',
+  'log.listTooLarge': 'La lista de registros supera el límite de 1000 entradas',
 };
 
 export default messages;

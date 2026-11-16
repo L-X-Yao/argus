@@ -1125,10 +1125,24 @@ function _resolveDownload(result: { ok: boolean; error?: string; waypoints?: Way
   if (r) r(result);
 }
 
+// Twin of backend MISSION_DOWNLOAD_MAX: 500 waypoints with speed and six attachments each,
+// plus HOME, TAKEOFF and RTL. The count is FC-controlled.
+const MISSION_DOWNLOAD_MAX = 4003;
+
 function _onMissionCountDl(p: DataView): void {
   // p is pre-padded to ≥4 bytes by the read-loop interceptor.
   if (!download.pending) return;
   const count = p.getUint16(0, true);
+  if (count > MISSION_DOWNLOAD_MAX) {
+    addEvent({
+      type: 'event',
+      time: new Date().toLocaleTimeString(),
+      text: t('mission.err.downloadTooLarge'),
+      event_type: 'mission_dl_fail',
+    });
+    _resolveDownload({ ok: false, error: t('mission.err.downloadTooLarge') });
+    return;
+  }
   download.total = count;
   download.items = new Array(count).fill(null);
   if (count === 0) {

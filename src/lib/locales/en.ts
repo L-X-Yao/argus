@@ -224,6 +224,7 @@ const messages: Record<string, string> = {
   'serial.err.logListTimeout': 'No log list from the FC',
   'mission.err.noWaypoints': 'No waypoints',
   'mission.err.tooLarge': 'Mission too large (max 500 waypoints)',
+  'mission.err.downloadTooLarge': 'Mission download exceeds the 4003-item limit',
   'mission.err.badCoords': 'Invalid coordinates',
   'mission.err.fenceMin': 'A fence needs at least 3 vertices',
   'mission.err.fenceMax': 'Fence too large (max 200 vertices)',
