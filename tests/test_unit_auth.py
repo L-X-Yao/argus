@@ -20,7 +20,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 import backend.auth as auth_module
 from backend.app import app
-from backend.auth import TOKEN_FILE, auth_required, generate_token, note_for_other_devices, verify_token
+from backend.auth import (
+    TOKEN_FILE,
+    auth_required,
+    generate_token,
+    note_for_other_devices,
+    refuse_if_exposed,
+    verify_token,
+)
 from backend.drone_link import DroneLink
 from backend.ws_manager import WSManager
 
@@ -130,11 +137,47 @@ class TestAuthDisableMode:
     def test_no_token_means_auth_not_required(self):
         assert auth_required() is False
 
-    def test_no_token_allows_any_value(self):
-        assert verify_token("anything_at_all") is True
+    def test_no_token_verifies_nothing(self):
+        """Audit 2026-11-16 H1: with no token configured there is nothing to
+        verify, so verify_token can no longer say yes to every secret (the old
+        `return True` let a blank token file pass auth_required() and accept
+        any provided value at once)."""
+        assert verify_token("anything_at_all") is False
+        assert verify_token("") is False
 
-    def test_no_token_allows_empty_string(self):
-        assert verify_token("") is True
+
+class TestBlankTokenFile:
+    """Audit 2026-11-16 H1: a blank .gcs_token must count as no token, must
+    not pass the exposed-bind guard, and must verify nothing."""
+
+    def test_blank_file_is_no_token(self):
+        TOKEN_FILE.write_text("")
+        assert auth_required() is False
+
+    def test_whitespace_file_is_no_token(self):
+        TOKEN_FILE.write_text("  \n\t")
+        assert auth_required() is False
+
+    def test_blank_file_refuses_an_exposed_bind(self):
+        TOKEN_FILE.write_text("")
+        with pytest.raises(SystemExit):
+            refuse_if_exposed("0.0.0.0")
+
+    def test_blank_file_verifies_nothing(self):
+        TOKEN_FILE.write_text("")
+        assert verify_token("x") is False
+
+    def test_blank_file_falls_through_to_the_environment(self):
+        TOKEN_FILE.write_text("   ")
+        os.environ["GCS_AUTH_TOKEN"] = "env_token_1234567890ab"
+        assert auth_required() is True
+        assert verify_token("env_token_1234567890ab") is True
+        assert verify_token("wrong") is False
+
+    def test_generate_leaves_no_temp_files_behind(self):
+        generate_token()
+        assert TOKEN_FILE.read_text().strip() != ""
+        assert list(TOKEN_FILE.parent.glob(".gcs_token.*")) == []
 
 
 class TestProtectedEndpoints:
@@ -215,9 +258,13 @@ class TestSessionCookie:
         assert "set-cookie" not in r.headers
 
     def test_login_without_auth_sets_no_cookie(self, client):
+        """Audit 2026-11-16 H1: a login against a server with no token is
+        refused — verify_token no longer accepts anything when there is
+        nothing to compare against. The page only logs in after
+        /api/auth/status said auth is required, so no flow changes."""
         del os.environ["GCS_AUTH_TOKEN"]
         r = client.post("/api/auth/login", json={"token": "anything"})
-        assert r.json() == {"ok": True}
+        assert r.status_code == 401
         assert "set-cookie" not in r.headers
 
     def test_non_ascii_token_gets_a_usable_cookie(self, client):

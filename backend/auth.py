@@ -8,6 +8,7 @@ import ipaddress
 import os
 import re
 import socket
+import tempfile
 from pathlib import Path
 
 from fastapi import Request, Response, WebSocket
@@ -24,8 +25,14 @@ def _load_token() -> str | None:
     if _token:
         return _token
     if TOKEN_FILE.exists():
-        _token = TOKEN_FILE.read_text().strip()
-        return _token
+        token = TOKEN_FILE.read_text().strip()
+        if token:
+            _token = token
+            return _token
+        # A blank file is no token (audit 2026-11-16 H1): a crash between the
+        # old O_TRUNC and the write used to leave one, and it must not disable
+        # auth while the startup guard already believed a token exists. Fall
+        # through to the environment.
     env_token = os.environ.get("GCS_AUTH_TOKEN")
     if env_token:
         _token = env_token
@@ -35,12 +42,23 @@ def _load_token() -> str | None:
 
 def generate_token() -> str:
     token = hashlib.sha256(os.urandom(32)).hexdigest()[:32]
-    fd = os.open(str(TOKEN_FILE), os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
-    try:
-        os.write(fd, token.encode())
-    finally:
-        os.close(fd)
     global _token
+    # Temp file + fsync + rename (audit 2026-11-16 H1): the old in-place
+    # O_TRUNC write could be interrupted into a blank file, which reads as no
+    # token. A reader now sees the old token or the new one, never blank.
+    fd, tmp = tempfile.mkstemp(dir=str(TOKEN_FILE.parent), prefix=".gcs_token.", suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w") as f:
+            f.write(token)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, TOKEN_FILE)
+    except OSError:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
     _token = token
     return token
 
@@ -48,7 +66,10 @@ def generate_token() -> str:
 def verify_token(provided: str) -> bool:
     expected = _load_token()
     if not expected:
-        return True
+        # No token configured — or a blank one (H1): there is nothing to
+        # verify, and a yes here accepted every secret against a server whose
+        # startup guard had already passed because auth_required() was True.
+        return False
     # hmac.compare_digest raises TypeError on non-str/bytes input (e.g. null,
     # int, list from a malformed JSON body). Reject those upfront as invalid
     # rather than letting the 500 leak.
