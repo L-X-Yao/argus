@@ -412,6 +412,33 @@ class TestRequestsUnderAnotherName:
         r = client.get(path, headers=self.REBOUND)
         assert (r.status_code, r.json()) == (403, {"error": "host not allowed"})
 
+    @pytest.mark.parametrize(
+        "path",
+        ["/", "/health", "/docs", "/openapi.json", "/manifest.json", "/sw.js", "/assets/shell.js", "/lib/x.js"],
+    )
+    def test_read_outside_the_api_is_refused_too(self, client, path):
+        """Audit 2026-11-16 L17: with no token the Host rule covers every path.
+        /docs and /openapi.json used to hand a rebound page the whole API
+        schema, because the host check was bound to /api/*."""
+        assert client.get(path, headers=self.REBOUND).status_code == 403
+
+    def test_our_own_names_still_serve_everything(self, client):
+        assert client.get("/health", headers={"host": "localhost:8100"}).status_code == 200
+        assert client.get("/openapi.json", headers={"host": "127.0.0.1"}).status_code == 200
+        assert client.get("/docs", headers={"host": "localhost"}).status_code == 200
+
+    def test_with_a_token_the_host_rule_steps_aside(self, client):
+        """With a token the gate is the token: a request under another name
+        that carries it still passes (the no-token branch never runs)."""
+        os.environ["GCS_AUTH_TOKEN"] = "token_for_host_test_123"
+        token = "token_for_host_test_123"
+        assert (
+            client.get("/api/session", headers={**self.REBOUND, "Authorization": f"Bearer {token}"}).status_code == 200
+        )
+        assert (
+            client.get("/openapi.json", headers={**self.REBOUND, "Authorization": f"Bearer {token}"}).status_code == 200
+        )
+
     def test_write_with_any_authorization_header_is_refused(self, client):
         # Same-origin to the browser, so the page may add the header that skips the page check.
         headers = {**self.REBOUND, "origin": "http://evil.example:8100", "Authorization": "x"}
@@ -483,8 +510,13 @@ class TestRequestsUnderAnotherName:
         headers = {**self.REBOUND, "Authorization": f"Bearer {token}"}
         assert client.get("/api/ports", headers=headers).status_code == 200
 
-    def test_routes_outside_the_api_are_not_checked(self, client):
-        assert client.get("/health", headers=self.REBOUND).status_code == 200
+    def test_outside_the_api_the_host_rule_still_holds(self, client):
+        """Audit 2026-11-16 L17: with no token the Host rule covers every path,
+        not only /api — /health under a rebinding name used to answer, and
+        /docs with it carried the whole API schema. Under our own name it
+        still answers."""
+        assert client.get("/health", headers=self.REBOUND).status_code == 403
+        assert client.get("/health", headers={"host": "localhost"}).status_code == 200
 
 
 class TestConcurrentAuth:

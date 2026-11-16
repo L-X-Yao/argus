@@ -156,9 +156,12 @@ async def auth_middleware(request: Request, call_next):
     if path.startswith("/api/") and "Authorization" not in request.headers and not _from_own_page(request):
         return JSONResponse(status_code=403, content={"error": "origin not allowed"})
     if not auth_required():
-        # Nothing else stands between a page and the API here, and the rule above lets any
-        # request with an Authorization header through.
-        if path.startswith("/api/") and not _asked_by_our_name(request):
+        # Nothing else stands between a page and the server here, and the rule
+        # above lets any request with an Authorization header through. Every
+        # path is held to our names, not only /api: SECURITY.md promises
+        # answers to a loopback name alone, and /docs or /openapi.json under a
+        # rebinding name read the whole API schema (audit 2026-11-16 L17).
+        if not _asked_by_our_name(request):
             return JSONResponse(status_code=403, content={"error": "host not allowed"})
         return await call_next(request)
     # `/sw.js` and `/manifest.json` MUST be reachable without an Authorization
