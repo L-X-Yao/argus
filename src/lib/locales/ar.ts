@@ -1126,6 +1126,7 @@ const messages: Record<string, string> = {
   'assistant.withdrawnNow': 'سحب مساعد الذكاء الاصطناعي طلبه: لم يُرسل شيء',
   'assistant.otherFlight': 'لم يُرسل: كان الطلب لرحلة سابقة',
   'assistant.noMode': 'لم يُرسل: لا تملك هذه المركبة هذا الوضع',
+  'log.tooLarge': 'السجل يتجاوز الحد الأقصى 256 ميغابايت',
 };
 
 export default messages;

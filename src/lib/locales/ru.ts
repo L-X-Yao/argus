@@ -1132,6 +1132,7 @@ const messages: Record<string, string> = {
   'assistant.withdrawnNow': 'ИИ-ассистент отозвал запрос: ничего не отправлено',
   'assistant.otherFlight': 'Не отправлено: запрос относился к прошлому полёту',
   'assistant.noMode': 'Не отправлено: у этого аппарата нет такого режима',
+  'log.tooLarge': 'Журнал превышает ограничение 256 МБ',
 };
 
 export default messages;

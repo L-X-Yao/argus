@@ -65,6 +65,7 @@ vi.mock('./i18n.svelte', () => ({
 }));
 
 vi.mock('./logStore.svelte', () => ({
+  MAX_LOG_SIZE: 256 * 1024 * 1024,
   logState: {
     list: [] as Array<{ id: number; size: number; time_utc: number }>,
     downloading: false,
@@ -521,6 +522,20 @@ describe('serialLogList + serialLogDownload', () => {
     expect(logStoreMock.setLogList).toHaveBeenCalledWith([]);
   });
 
+  it('refuses an advertised log above 256 MB without starting or requesting it', async () => {
+    (logStoreMock.logState as unknown as { list: Array<{ id: number; size: number; time_utc: number }> }).list = [
+      { id: 10, size: 256 * 1024 * 1024 + 1, time_utc: 0 },
+    ];
+    const promise = serialLogDownload(10);
+    // Before the fix the download started; cancel it so the failed assertion leaves no watchdog.
+    if (vi.mocked(logStoreMock.startDownload).mock.calls.length > 0) serialLogCancel();
+    const res = await promise;
+    expect(res).toMatchObject({ ok: false, error: 'log.tooLarge' });
+    expect(logStoreMock.startDownload).not.toHaveBeenCalled();
+    expect(countWrites(119)).toBe(0);
+    expect(events.some((e) => e.event_type === 'log_dl_fail')).toBe(true);
+  });
+
   it('download truncates on count=0 sentinel (AP_Logger EOF / unreadable log)', async () => {
     // Pre-seed the list mock with a 90-byte log.
     (logStoreMock.logState as unknown as { list: Array<{ id: number; size: number; time_utc: number }> }).list = [
@@ -626,6 +641,17 @@ describe('serialLogList + serialLogDownload', () => {
     inject(fcFrame(120, mkLogData(90, 7, 90, new Uint8Array(90).fill(3))));
     expect(vi.mocked(logStoreMock.appendLogChunkBinary).mock.calls.length).toBe(appendsAtFinish);
     expect(countWrites(119)).toBe(writesAtFinish); // no re-request, no re-arm side effects
+  });
+
+  it('fails the transfer when final assembly refuses the log', async () => {
+    (logStoreMock.logState as unknown as { list: Array<{ id: number; size: number; time_utc: number }> }).list = [
+      { id: 11, size: 90, time_utc: 0 },
+    ];
+    vi.mocked(logStoreMock.completeDownload).mockReturnValueOnce(false);
+    const promise = serialLogDownload(11);
+    inject(fcFrame(120, mkLogData(0, 11, 90, new Uint8Array(90).fill(1))));
+    const res = await promise;
+    expect(res).toMatchObject({ ok: false, error: 'log.tooLarge' });
   });
 
   it('reconstructs zero-tailed chunks that MAVLink2 trimmed on the wire', async () => {

@@ -148,6 +148,29 @@ describe('completeDownload', () => {
     expect(URL.revokeObjectURL).toHaveBeenCalledWith('blob:mock-url');
   });
 
+  it('refuses an oversized assembly before allocating', () => {
+    const RealUint8Array = globalThis.Uint8Array;
+    const allocations: number[] = [];
+    try {
+      vi.stubGlobal(
+        'Uint8Array',
+        class {
+          length = 0;
+          constructor(size: number) {
+            allocations.push(size);
+          }
+        },
+      );
+      startDownload(1, 256 * 1024 * 1024 + 1);
+      const result = completeDownload(1, undefined, 256 * 1024 * 1024 + 1);
+      expect(result).toBe(false);
+      expect(allocations).toEqual([]);
+      expect(logState.downloading).toBe(false);
+    } finally {
+      vi.stubGlobal('Uint8Array', RealUint8Array);
+    }
+  });
+
   it('streaming path: appendLogChunk + completeDownload reassembles', () => {
     startDownload(99, 6);
     appendLogChunk(99, 0, btoa('abc'));

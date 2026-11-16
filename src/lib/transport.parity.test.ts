@@ -61,6 +61,7 @@ vi.mock('./i18n.svelte', () => ({
   i18nState: { locale: 'en' },
 }));
 vi.mock('./logStore.svelte', () => ({
+  MAX_LOG_SIZE: 256 * 1024 * 1024,
   logState: H.logList,
   setLogList: vi.fn(),
   startDownload: vi.fn(),

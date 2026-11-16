@@ -329,6 +329,23 @@ class TestCommandExecute:
         result = execute("log_download", None, link, data={"id": 99})
         assert result is not None and not result["ok"]
 
+    def test_log_download_refuses_an_oversize_before_allocating(self, monkeypatch):
+        link = make_link()
+        oversized = 256 * 1024 * 1024 + 1
+        link.log_dl._log_list = [{"id": 5, "size": oversized}]
+        allocations = []
+
+        def fake_bytearray(size=0):
+            allocations.append(size)
+            return bytearray()
+
+        monkeypatch.setattr("backend.commands._setup.bytearray", fake_bytearray, raising=False)
+        result = execute("log_download", None, link, data={"id": 5})
+        assert result is not None and result["ok"] is False
+        assert allocations == []
+        assert link.log_dl._log_download_id == -1
+        assert any(e["event_type"] == "log_dl_fail" for e in link.events)
+
     def test_log_cancel(self):
         link = make_link()
         link.log_dl._log_download_id = 5

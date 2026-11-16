@@ -1127,6 +1127,7 @@ const messages: Record<string, string> = {
   'assistant.withdrawnNow': 'AI 어시스턴트가 요청을 철회했습니다. 아무것도 보내지 않았습니다',
   'assistant.otherFlight': '전송 안 됨: 이전 비행에 대한 요청입니다',
   'assistant.noMode': '전송 안 됨: 이 기체에는 해당 모드가 없습니다',
+  'log.tooLarge': '로그가 256 MB 제한을 초과했습니다',
 };
 
 export default messages;

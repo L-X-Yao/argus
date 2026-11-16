@@ -53,6 +53,7 @@ vi.mock('./i18n.svelte', () => ({
 }));
 
 vi.mock('./logStore.svelte', () => ({
+  MAX_LOG_SIZE: 256 * 1024 * 1024,
   logState: { list: [], downloading: false, downloadId: -1, progress: 0 },
   setLogList: vi.fn(),
   startDownload: vi.fn(),

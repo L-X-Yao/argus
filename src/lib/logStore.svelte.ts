@@ -1,3 +1,5 @@
+export const MAX_LOG_SIZE = 256 * 1024 * 1024;
+
 export interface LogEntry {
   id: number;
   size: number;
@@ -87,7 +89,11 @@ export function updateDownloadProgress(received: number, total: number) {
   }
 }
 
-export function completeDownload(id: number, b64data: string | undefined, size: number) {
+export function completeDownload(id: number, b64data: string | undefined, size: number): boolean {
+  if (size > MAX_LOG_SIZE) {
+    cancelDownload();
+    return false;
+  }
   logState.downloading = false;
   logState.downloadId = -1;
   logState.progress = 100;
@@ -106,6 +112,10 @@ export function completeDownload(id: number, b64data: string | undefined, size: 
       const e = c.ofs + c.bytes.length;
       if (e > maxEnd) maxEnd = e;
     }
+    if (maxEnd > MAX_LOG_SIZE) {
+      cancelDownload();
+      return false;
+    }
     bytes = new Uint8Array(maxEnd);
     for (const c of logState._chunks) {
       bytes.set(c.bytes, c.ofs);
@@ -114,7 +124,7 @@ export function completeDownload(id: number, b64data: string | undefined, size: 
   logState._chunks = [];
   logState._expectedSize = 0;
 
-  if (bytes.length === 0) return;
+  if (bytes.length === 0) return true;
   // Cast through ArrayBuffer to placate the strict BlobPart typing in
   // TS ≥6 — Uint8Array<ArrayBufferLike> isn't directly assignable.
   const blob = new Blob([bytes.buffer as ArrayBuffer], { type: 'application/octet-stream' });
@@ -124,6 +134,7 @@ export function completeDownload(id: number, b64data: string | undefined, size: 
   a.download = `log_${id}.bin`;
   a.click();
   URL.revokeObjectURL(url);
+  return true;
 }
 
 export function cancelDownload() {

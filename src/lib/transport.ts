@@ -51,6 +51,7 @@ import {
   logState,
   setLogList,
   startDownload,
+  MAX_LOG_SIZE,
   appendLogChunkBinary,
   updateDownloadProgress,
   completeDownload,
@@ -1669,8 +1670,13 @@ function _finishLogDownload(truncated: boolean, reason?: string): void {
   // separately guarded) but a real cross-stack divergence.
   logSession.dlRecvIntervals = [];
   // Pass empty b64 — the streaming chunks already populated logState._chunks;
-  // completeDownload assembles + triggers the browser download.
-  completeDownload(id, undefined, size);
+  // completeDownload assembles + triggers the browser download. A refused assembly means no
+  // file reached the user, so the transfer cannot report success.
+  const assembled = completeDownload(id, undefined, size);
+  if (assembled === false) {
+    truncated = true;
+    reason = t('log.tooLarge');
+  }
   const r = logSession.dlResolve;
   logSession.dlResolve = null;
   if (r) r({ ok: !truncated, error: truncated ? (reason ?? 'Download truncated (count=0 from FC)') : undefined });
@@ -1798,6 +1804,16 @@ export async function serialLogDownload(id: number): Promise<{ ok: boolean; erro
   const entry = logState.list.find((e) => e.id === id);
   if (!entry) return { ok: false, error: t('serial.err.logNotListed') };
   if (entry.size === 0) return { ok: false, error: t('serial.err.logEmpty') };
+  if (entry.size > MAX_LOG_SIZE) {
+    // The FC advertises this size, and logStore allocates from it. Never start the transfer.
+    addEvent({
+      type: 'event',
+      time: new Date().toLocaleTimeString(),
+      text: t('log.tooLarge'),
+      event_type: 'log_dl_fail',
+    });
+    return { ok: false, error: t('log.tooLarge') };
+  }
 
   startDownload(id, entry.size);
   return new Promise((resolve) => {

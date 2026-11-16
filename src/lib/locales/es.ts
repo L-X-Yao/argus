@@ -1132,6 +1132,7 @@ const messages: Record<string, string> = {
   'assistant.withdrawnNow': 'El asistente de IA retiró su solicitud: no se envió nada',
   'assistant.otherFlight': 'No enviado: la solicitud era para un vuelo anterior',
   'assistant.noMode': 'No enviado: este vehículo no tiene ese modo',
+  'log.tooLarge': 'El registro supera el límite de 256 MB',
 };
 
 export default messages;

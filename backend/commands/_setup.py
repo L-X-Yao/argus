@@ -125,6 +125,8 @@ def cmd_param_load(link: DroneLink, param, data: dict):
 
 # --- Logs ---
 
+MAX_LOG_SIZE = 256 * 1024 * 1024
+
 
 def cmd_log_list(link: DroneLink, param, data: dict):
     # ArduPilot's AP_Logger rejects LOG_REQUEST_LIST when armed
@@ -159,6 +161,10 @@ def cmd_log_download(link: DroneLink, param, data: dict):
     # As the WebSerial path refuses one: a download of nothing "succeeded" with no file.
     if log_entry["size"] <= 0:
         return {"ok": False, "error": lt("err_log_empty", link.locale)}
+    if log_entry["size"] > MAX_LOG_SIZE:
+        # The advertised size is FC-controlled and is allocated below. Refuse before bytearray.
+        link.add_event(lt("err_log_too_large", link.locale), "log_dl_fail")
+        return {"ok": False, "error": lt("err_log_too_large", link.locale)}
     lg._log_download_id = log_id
     lg._log_download_size = log_entry["size"]
     lg._log_download_data = bytearray(log_entry["size"])

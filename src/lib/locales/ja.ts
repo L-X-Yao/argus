@@ -1130,6 +1130,7 @@ const messages: Record<string, string> = {
   'assistant.withdrawnNow': 'AI アシスタントが依頼を取り下げました。何も送信していません',
   'assistant.otherFlight': '未送信: 以前の飛行のための依頼です',
   'assistant.noMode': '未送信: この機体にはそのモードがありません',
+  'log.tooLarge': 'ログが 256 MB の上限を超えています',
 };
 
 export default messages;

@@ -1133,6 +1133,7 @@ const messages: Record<string, string> = {
   'assistant.withdrawnNow': 'Der KI-Assistent hat seine Anfrage zurückgezogen: nichts gesendet',
   'assistant.otherFlight': 'Nicht gesendet: die Anfrage galt einem früheren Flug',
   'assistant.noMode': 'Nicht gesendet: dieses Fahrzeug hat keinen solchen Modus',
+  'log.tooLarge': 'Log überschreitet das Limit von 256 MB',
 };
 
 export default messages;

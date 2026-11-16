@@ -1135,6 +1135,7 @@ const messages: Record<string, string> = {
   'assistant.withdrawnNow': 'L’assistant IA a retiré sa demande : rien n’a été envoyé',
   'assistant.otherFlight': 'Non envoyé : la demande concernait un vol précédent',
   'assistant.noMode': 'Non envoyé : ce véhicule n’a pas ce mode',
+  'log.tooLarge': 'Le journal dépasse la limite de 256 Mo',
 };
 
 export default messages;

@@ -98,6 +98,7 @@ _T = {
     "err_clear_busy": ("飞控还没回复清除请求，请稍后再试", "The FC has not answered the clear yet, try again shortly"),
     "err_log_not_found": ("日志不存在", "Log not found"),
     "err_log_empty": ("日志为空", "The log is empty"),
+    "err_log_too_large": ("日志超过 256 MB 上限", "Log exceeds the 256 MB limit"),
     "reboot_bl": ("重启至引导程序...", "Rebooting to bootloader..."),
     "reboot": ("重启飞控...", "Rebooting FC..."),
     "vtype_plane": ("固定翼", "Fixed Wing"),

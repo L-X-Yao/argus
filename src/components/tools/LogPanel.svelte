@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { logState, startDownload, cancelDownload } from '../../lib/logStore.svelte';
+  import { logState, startDownload, cancelDownload, MAX_LOG_SIZE } from '../../lib/logStore.svelte';
   import { sendCommand } from '../../lib/ws';
   import { isSerialConnected, serialLogList, serialLogDownload, serialLogCancel } from '../../lib/transport';
   import { addToast } from '../../lib/stores.svelte';
@@ -24,6 +24,11 @@
       serialLogDownload(id).then((res) => {
         if (!res.ok) addToast(`${t('log.download')}: ${res.error}`, 'error', 4000);
       });
+      return;
+    }
+    if (size > MAX_LOG_SIZE) {
+      // The backend refuses this too; do not leave the panel's optimistic download state hanging.
+      addToast(t('log.tooLarge'), 'error', 4000);
       return;
     }
     startDownload(id, size);
