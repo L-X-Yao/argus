@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import ipaddress
+import json
 import os
 import re
 from concurrent.futures import ThreadPoolExecutor
@@ -43,12 +44,26 @@ def off_limits(ip: ipaddress.IPv4Address | ipaddress.IPv6Address) -> bool:
     return ip.is_loopback or ip.is_link_local or ip.is_multicast or ip.is_unspecified or ip.is_reserved
 
 
+class BodyTooLarge(Exception):
+    """A request body passed cfg.MAX_JSON_BODY; app.py answers it with 413."""
+
+
 async def json_object(request) -> dict:
     """The body of a request as a JSON object, and {} for anything else, which a route then
     answers as it answers a missing field. Each one used to fail with a 500 on a body that
-    was not JSON, or was JSON but a list."""
+    was not JSON, or was JSON but a list. A body past cfg.MAX_JSON_BODY raises BodyTooLarge
+    instead of being buffered: read through a capped stream, so a declared length is
+    checked before a byte is read and an undeclared one cuts off midway."""
+    length = request.headers.get("content-length", "")
+    if length.isdigit() and int(length) > cfg.MAX_JSON_BODY:
+        raise BodyTooLarge(int(length))
+    buf = bytearray()
+    async for chunk in request.stream():
+        buf += chunk
+        if len(buf) > cfg.MAX_JSON_BODY:
+            raise BodyTooLarge(len(buf))
     try:
-        body = await request.json()
+        body = json.loads(bytes(buf))
     except ValueError:
         return {}
     return body if isinstance(body, dict) else {}
@@ -177,6 +192,11 @@ class Config:
     # Validation
     VALID_BAUD_RATES: tuple = (9600, 19200, 38400, 57600, 115200, 230400, 460800, 921600)
     VIDEO_URL_MAX_LEN: int = 2048
+    # A JSON body larger than this is refused unread (audit 2026-11-16 M1):
+    # login is reachable without a token, and Starlette buffered the whole
+    # body before the token was ever looked at. The real bodies here (login,
+    # tile download list, firmware URL list) are kilobytes.
+    MAX_JSON_BODY: int = 1024 * 1024
 
 
 cfg = Config()

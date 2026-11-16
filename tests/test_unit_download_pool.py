@@ -6,6 +6,7 @@ when the downloads shared that pool, Disconnect waited behind them.
 """
 
 import asyncio
+import json
 import threading
 import urllib.error
 from concurrent.futures import ThreadPoolExecutor
@@ -18,8 +19,13 @@ from backend import firmware, param_meta, terrain, tiles
 
 
 class _BulkRequest:
-    async def json(self):
-        return {"lat_min": 10, "lat_max": 10.1, "lon_min": 10, "lon_max": 10.1, "zoom_min": 12, "zoom_max": 12}
+    # json_object reads a capped stream now (audit M1), not request.json().
+    headers: dict = {}
+
+    async def stream(self):
+        yield json.dumps(
+            {"lat_min": 10, "lat_max": 10.1, "lon_min": 10, "lon_max": 10.1, "zoom_min": 12, "zoom_max": 12}
+        ).encode()
 
 
 def _tiles():
@@ -39,8 +45,10 @@ def _firmware_list():
 
 
 class _FirmwareRequest:
-    async def json(self):
-        return {"url": "https://firmware.ardupilot.org/fw.apj", "filename": "fw.apj"}
+    headers: dict = {}
+
+    async def stream(self):
+        yield json.dumps({"url": "https://firmware.ardupilot.org/fw.apj", "filename": "fw.apj"}).encode()
 
 
 def _firmware_download():

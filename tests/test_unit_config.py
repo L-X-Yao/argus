@@ -3,7 +3,9 @@
 import os
 from unittest.mock import patch
 
-from backend.config import Config, _env
+import pytest
+
+from backend.config import BodyTooLarge, Config, _env, json_object
 
 
 class TestEnvHelper:
@@ -48,3 +50,46 @@ class TestConfigDefaults:
 
     def test_tile_cache_max(self):
         assert Config.TILE_CACHE_MAX > 0
+
+
+class _FakeRequest:
+    """Just what json_object reads: headers and a chunked body stream."""
+
+    def __init__(self, body: bytes, headers: dict | None = None):
+        self._body = body
+        self.headers = headers if headers is not None else {"content-length": str(len(body))}
+        self.read_to = 0
+
+    async def stream(self):
+        # Emulate a real transport: the body arrives in chunks, not at once.
+        for i in range(0, len(self._body), 65536):
+            self.read_to = i + 65536
+            yield self._body[i : i + 65536]
+
+
+class TestJsonObjectBodyCap:
+    """Audit 2026-11-16 M1: a request body past the cap is refused, not buffered."""
+
+    @pytest.mark.asyncio
+    async def test_oversized_content_length_is_refused_before_any_read(self):
+        request = _FakeRequest(b"", headers={"content-length": str(Config.MAX_JSON_BODY + 1)})
+        with pytest.raises(BodyTooLarge):
+            await json_object(request)
+        assert request.read_to == 0
+
+    @pytest.mark.asyncio
+    async def test_a_stream_past_the_cap_is_cut_off_midway(self):
+        body = b"x" * (Config.MAX_JSON_BODY + 70000)
+        request = _FakeRequest(body, headers={})
+        with pytest.raises(BodyTooLarge):
+            await json_object(request)
+        assert request.read_to < len(body)
+
+    @pytest.mark.asyncio
+    async def test_a_body_under_the_cap_parses(self):
+        assert await json_object(_FakeRequest(b'{"token": "t"}')) == {"token": "t"}
+
+    @pytest.mark.asyncio
+    async def test_what_is_no_json_object_still_answers_empty(self):
+        assert await json_object(_FakeRequest(b"[1, 2]")) == {}
+        assert await json_object(_FakeRequest(b"")) == {}

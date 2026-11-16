@@ -8,6 +8,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from backend.app import DIST_DIR, app
+from backend.config import Config
 from backend.drone_link import DroneLink
 from backend.ws_manager import WSManager
 
@@ -79,6 +80,26 @@ class TestAuth:
         with patch("backend.app.auth_required", return_value=True):
             r = client.post("/api/auth/generate")
         assert r.status_code == 403
+
+
+class TestLoginBodyCap:
+    """Audit 2026-11-16 M1: login is reachable without a token, so its body
+    must be refused past the cap instead of buffered whole."""
+
+    def test_oversized_login_body_is_refused(self):
+        r = client.post(
+            "/api/auth/login",
+            content=b"x" * (Config.MAX_JSON_BODY + 1),
+            headers={"content-type": "application/json"},
+        )
+        assert r.status_code == 413
+        assert r.json() == {"error": "body too large"}
+
+    def test_a_normal_login_still_works(self):
+        with patch("backend.auth._load_token", return_value="real_token"):
+            r = client.post("/api/auth/login", json={"token": "real_token"})
+        assert r.status_code == 200
+        assert r.json()["ok"] is True
 
 
 class TestTileCache:

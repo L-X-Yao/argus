@@ -11,7 +11,16 @@ from fastapi.responses import FileResponse, JSONResponse, Response, StreamingRes
 from fastapi.staticfiles import StaticFiles
 
 from .auth import auth_middleware, auth_required, generate_token, set_session_cookie, verify_token, verify_ws_token
-from .config import ROOT_DIR, VERSION, aio, aio_download, allowed_origins, cfg, json_object
+from .config import (
+    ROOT_DIR,
+    VERSION,
+    BodyTooLarge,
+    aio,
+    aio_download,
+    allowed_origins,
+    cfg,
+    json_object,
+)
 from .drone_link import DroneLink
 from .firmware import router as firmware_router
 from .param_meta import get_metadata
@@ -99,6 +108,12 @@ async def security_headers(request: Request, call_next):
 async def health():
     """Health check endpoint."""
     return {"ok": True}
+
+
+@app.exception_handler(BodyTooLarge)
+async def body_too_large(request: Request, exc: BodyTooLarge):
+    """A JSON body past the cap (config.json_object) is refused, not parsed (audit M1)."""
+    return JSONResponse(status_code=413, content={"error": "body too large"})
 
 
 @app.get("/api/session", tags=["System"])
