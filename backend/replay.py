@@ -12,11 +12,23 @@ are also readable by mavlogdump.py / Mission Planner.
 
 from __future__ import annotations
 
+import os
+import stat
 import struct
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .drone_link import DroneLink
+
+MAX_TLOG_SIZE = 512 * 1024 * 1024
+
+
+def _check_file(st: os.stat_result, path: str) -> None:
+    if not stat.S_ISREG(st.st_mode):
+        raise ValueError("replay is not a regular file: %s" % path)
+    if st.st_size > MAX_TLOG_SIZE:
+        raise ValueError("replay exceeds the 512 MB limit: %s" % path)
+
 
 # GCS-originated frames carry sysid 255 (mavlink_frame.bm default). Replay
 # must skip them by default: handle_heartbeat latches connected/mode/armed
@@ -32,8 +44,14 @@ def read_tlog(path: str, include_gcs: bool = False) -> list[tuple[int, bytes]]:
     recorder writes. A malformed record means the file is corrupt or not a
     tlog; fail loud with the byte offset rather than silently skipping.
     """
+    # Stat before open so a FIFO cannot block us, then fstat the descriptor as well. Read at
+    # most one byte past the cap so even a file that grows during the read stays bounded.
+    _check_file(os.stat(path), path)
     with open(path, "rb") as f:
-        data = f.read()
+        _check_file(os.fstat(f.fileno()), path)
+        data = f.read(MAX_TLOG_SIZE + 1)
+    if len(data) > MAX_TLOG_SIZE:
+        raise ValueError("replay exceeds the 512 MB limit: %s" % path)
     records: list[tuple[int, bytes]] = []
     ofs = 0
     while ofs < len(data):

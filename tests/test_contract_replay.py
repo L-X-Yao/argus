@@ -6,8 +6,11 @@ live session would have produced — that is what makes recorded hardware
 sessions usable as offline regression fixtures.
 """
 
+import os
+import stat
 import struct
 import time
+from types import SimpleNamespace
 
 import pytest
 from frame_builders import SESSION, attitude, global_position, heartbeat, write_tlog
@@ -142,6 +145,35 @@ class TestReadTlog:
         path = tmp_path / "s.tlog"
         path.write_bytes(b"")
         assert read_tlog(str(path)) == []
+
+    def test_fifo_is_refused_before_open(self, tmp_path, monkeypatch):
+        if not hasattr(os, "mkfifo"):
+            pytest.skip("FIFOs are not available on this platform")
+        path = tmp_path / "pipe.tlog"
+        os.mkfifo(path)
+
+        def no_open(*args, **kwargs):
+            raise AssertionError("a FIFO must be refused before open can block")
+
+        monkeypatch.setattr("builtins.open", no_open)
+        with pytest.raises(ValueError, match="regular file"):
+            read_tlog(str(path))
+
+    def test_device_file_is_refused(self):
+        if not os.path.exists("/dev/null"):
+            pytest.skip("no device file on this platform")
+        with pytest.raises(ValueError, match="regular file"):
+            read_tlog("/dev/null")
+
+    def test_oversized_file_is_refused_before_reading(self, tmp_path, monkeypatch):
+        path = tmp_path / "big.tlog"
+        path.write_bytes(b"")
+        fake = SimpleNamespace(st_mode=stat.S_IFREG, st_size=512 * 1024 * 1024 + 1)
+        import backend.replay as replay_module
+
+        monkeypatch.setattr(replay_module, "os", SimpleNamespace(stat=lambda _path: fake), raising=False)
+        with pytest.raises(ValueError, match="512 MB"):
+            read_tlog(str(path))
 
 
 # ── replay into state ────────────────────────────────────────────────────
