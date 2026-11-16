@@ -863,6 +863,7 @@ class TestMissionAck:
 class TestLogEntry:
     def test_appends_to_log_list(self):
         link = make_link()
+        link.log_dl._log_list_start = time.time()
         p = struct.pack("<IIHHH", 1700000000, 524288, 3, 5, 5)
         handle_log_entry(p, len(p), link)
         assert len(link.log_dl._log_list) == 1
@@ -871,6 +872,7 @@ class TestLogEntry:
 
     def test_last_log_triggers_message(self):
         link = make_link()
+        link.log_dl._log_list_start = time.time()
         p1 = struct.pack("<IIHHH", 1700000000, 100000, 1, 2, 2)
         handle_log_entry(p1, len(p1), link)
         assert len(link.log_dl._log_messages) == 0
@@ -878,6 +880,25 @@ class TestLogEntry:
         handle_log_entry(p2, len(p2), link)
         assert len(link.log_dl._log_messages) == 1
         assert link.log_dl._log_messages[0]["type"] == "log_list"
+        assert link.log_dl._log_list_start == 0.0
+
+    def test_ignores_entries_without_a_list_request(self):
+        link = make_link()
+        p = struct.pack("<IIHHH", 1700000000, 100000, 1, 1, 1)
+        handle_log_entry(p, len(p), link)
+        assert link.log_dl._log_list == []
+        assert link.log_dl._log_messages == []
+
+    def test_caps_the_list_and_closes_the_request_on_overflow(self):
+        link = make_link()
+        link.log_dl._log_list_start = time.time()
+        for log_id in range(1, 1002):
+            p = struct.pack("<IIHHH", 1700000000, 100000, log_id, 2000, 2000)
+            handle_log_entry(p, len(p), link)
+        assert len(link.log_dl._log_list) == 1000
+        assert link.log_dl._log_list_start == 0.0
+        assert link.log_dl._log_messages == []
+        assert sum(e["event_type"] == "log_list_too_many" for e in link.events) == 1
 
 
 # ── Log Data ─────────────────────────────────────────────────────────────────

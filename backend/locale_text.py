@@ -79,6 +79,7 @@ _T = {
     "log_list_req": ("日志: 正在获取列表...", "Log: requesting list..."),
     "log_list_n": ("日志: 获取到 %d 条", "Log: found %d entries"),
     "log_list_failed": ("日志: 列表请求没有应答", "Log: no answer to the list request"),
+    "log_list_too_many": ("日志: 条目超过 %d 条上限", "Log: more than the %d-entry limit"),
     "log_dl": ("日志: 下载 #%d (%d KB)...", "Log: downloading #%d (%d KB)..."),
     "log_dl_done": ("日志: #%d 下载完成 (%d KB)", "Log: #%d complete (%d KB)"),
     "log_dl_done_part": ("日志: #%d 传输结束, 收到 %d KB (不完整)", "Log: #%d ended — %d KB received (incomplete)"),

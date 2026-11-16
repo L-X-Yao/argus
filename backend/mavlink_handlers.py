@@ -827,12 +827,19 @@ def handle_mission_ack(p: bytes, pl: int, link: DroneLink) -> None:
 
 
 # ArduPilot: libraries/AP_Logger/AP_Logger_MAVLinkLogTransfer.cpp:259 — AP_Logger::handle_log_send_listing
+LOG_LIST_MAX = 1000
+
+
 def handle_log_entry(p: bytes, pl: int, link: DroneLink) -> None:
     if pl < 1:
         return
+    lg = link.log_dl
+    # LOG_ENTRY answers only LOG_REQUEST_LIST. Without this gate, an unsolicited stream appends
+    # for ever and every repeated final id broadcasts another full copy of the list.
+    if not lg._log_list_start:
+        return
     p = _pad(p, 14)
     time_utc, size, log_id, num_logs, last_log_num = struct.unpack_from("<IIHHH", p, 0)
-    lg = link.log_dl
     # AP answers an empty log store with one dummy entry: id 0, last 0, size 0
     # (AP_Logger_MAVLinkLogTransfer.cpp:82-84, 262-273). Listed, it offered a "#0" whose
     # download saved nothing and reported success.
@@ -842,6 +849,11 @@ def handle_log_entry(p: bytes, pl: int, link: DroneLink) -> None:
         lg._log_list_tries = 0
         lg._log_messages.append({"type": "log_list", "logs": []})
         link.add_event(lt("log_list_n", link.locale) % 0, "log_list_n")
+        return
+    if len(lg._log_list) >= LOG_LIST_MAX:
+        lg._log_list_start = 0.0
+        lg._log_list_tries = 0
+        link.add_event(lt("log_list_too_many", link.locale) % LOG_LIST_MAX, "log_list_too_many")
         return
     lg._log_list.append({"id": log_id, "size": size, "time_utc": time_utc})
     if log_id == last_log_num:

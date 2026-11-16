@@ -1059,6 +1059,7 @@ class TestIncomingHandlers:
         from backend.mavlink_handlers import handle_log_entry
 
         link = FakeLink()
+        link.log_dl._log_list_start = 1.0
         msg = mavlink.MAVLink_log_entry_message(
             id=5,
             num_logs=1,
@@ -1079,6 +1080,7 @@ class TestIncomingHandlers:
         from backend.mavlink_handlers import handle_log_entry
 
         link = FakeLink()
+        link.log_dl._log_list_start = 1.0
         msg = mavlink.MAVLink_log_entry_message(id=0, num_logs=1, last_log_num=0, time_utc=0, size=0)
         payload, pl = _encode_payload(msg)
         handle_log_entry(payload, pl, link)
