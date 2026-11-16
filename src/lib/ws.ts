@@ -290,5 +290,10 @@ export function sendDisconnect(): void {
 }
 
 export function sendCommand(cmd: string, param?: number, data?: Record<string, unknown>): void {
+  if (cmd === 'param_request_all') {
+    // A fresh backend fetch replaces the vehicle's list. Clear our rows too, or a previously
+    // capped list would reject every valid new name while params_complete kept the stale ones.
+    clearParams();
+  }
   sendMessage({ type: 'command', cmd, param, ...data });
 }

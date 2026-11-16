@@ -20,6 +20,7 @@ const H = vi.hoisted(() => ({
     completes: 0,
     timeouts: 0,
     starts: 0,
+    known: new Set<string>(),
   },
 }));
 
@@ -60,9 +61,13 @@ vi.mock('./logStore.svelte', () => ({
   cancelDownload: vi.fn(),
 }));
 vi.mock('./paramStore.svelte', () => ({
-  clearParams: vi.fn(),
+  PARAM_STORE_MAX: 2000,
+  clearParams: vi.fn(() => {
+    H.store.known.clear();
+  }),
   handleParamBatch: vi.fn((b: Record<string, unknown>[]) => {
     H.store.batches.push(...b);
+    for (const row of b) H.store.known.add(row.name as string);
   }),
   handleParamsComplete: vi.fn(() => {
     H.store.completes++;
@@ -73,8 +78,10 @@ vi.mock('./paramStore.svelte', () => ({
   startParamFetch: vi.fn(() => {
     H.store.starts++;
   }),
+  hasParam: vi.fn((name: string) => H.store.known.has(name)),
   updateParamRow: vi.fn((name: string, value: number, ptype: number, index: number) => {
     H.store.rows.push({ name, value, ptype, index });
+    H.store.known.add(name);
   }),
 }));
 vi.mock('./ws', () => ({ sendCommand: vi.fn() }));
@@ -117,6 +124,7 @@ describe('WebSerial param fetch state machine', () => {
     H.store.completes = 0;
     H.store.timeouts = 0;
     H.store.starts = 0;
+    H.store.known.clear();
     expect(await connectSerial(115200, {})).toBe(true);
     app.drone.connected = true; // as the first heartbeat does
     H.writes.length = 0; // drop the connect-time stream-setup frames
@@ -252,10 +260,18 @@ describe('WebSerial param fetch state machine', () => {
     expect(writesOf(20).length + writesOf(21).length).toBe(paramSent);
   });
 
-  it('routes a PARAM_SET echo outside any fetch through the counters-free row update', () => {
+  it('ignores an unsolicited new parameter outside any fetch', () => {
+    inject('WPNAV_SPEED', 750, 42, 1034);
+    expect(H.store.rows.length).toBe(0);
+    expect(H.store.batches.length).toBe(0);
+    expect(H.store.starts).toBe(0);
+    expect(H.store.completes).toBe(0);
+  });
+
+  it('routes a requested PARAM_SET echo through the counters-free row update', () => {
+    dispatch('param_set', undefined, { name: 'WPNAV_SPEED', value: 750 });
     inject('WPNAV_SPEED', 750, 42, 1034);
     expect(H.store.rows.at(-1)).toMatchObject({ name: 'WPNAV_SPEED', value: 750 });
-    // handleParamBatch must NOT run — it would replay fetch counters.
     expect(H.store.batches.length).toBe(0);
     expect(H.store.starts).toBe(0);
     expect(H.store.completes).toBe(0);
@@ -270,9 +286,21 @@ describe('WebSerial param fetch state machine', () => {
     // A later PARAM_SET echo carries stale-looking counters; feeding it to
     // handleParamBatch would recompute fetching=true with no ticker alive,
     // permanently disabling the Read-All button.
+    dispatch('param_set', undefined, { name: 'WPNAV_SPEED', value: 750 });
     inject('WPNAV_SPEED', 750, 42, 1000);
     expect(H.store.batches.length).toBe(batchesAfterTimeout);
     expect(H.store.rows.at(-1)).toMatchObject({ name: 'WPNAV_SPEED', value: 750 });
+  });
+
+  it('caps a fetch at 2000 names and fails with a typed error', () => {
+    dispatch('param_request_all');
+    for (let i = 0; i < 2001; i++) inject(`P${i}`, 1, i, 2001);
+    expect(H.store.known.size).toBe(2000);
+    expect(H.store.timeouts).toBe(1);
+    expect(vi.mocked(addToast)).toHaveBeenCalledWith('param.tooMany', 'error', 5000);
+    const paramSent = writesOf(20).length + writesOf(21).length;
+    vi.advanceTimersByTime(10_000);
+    expect(writesOf(20).length + writesOf(21).length).toBe(paramSent);
   });
 
   it('disconnect mid-fetch stops the ticker without a timeout toast', async () => {

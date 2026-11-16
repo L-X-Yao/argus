@@ -1133,10 +1133,8 @@ const messages: Record<string, string> = {
   'assistant.otherFlight': 'Не отправлено: запрос относился к прошлому полёту',
   'assistant.noMode': 'Не отправлено: у этого аппарата нет такого режима',
   'log.tooLarge': 'Журнал превышает ограничение 256 МБ',
-  'mission.err.downloadTooLarge': 'Загрузка миссии превышает ограничение 4003 элементов',
+  'mission.err.downloadTooLarge': 'Загрузка миссии превышает ограничение 1000 элементов',
   'param.tooMany': 'Больше 2000 параметров; чтение остановлено',
-  'assistant.otherVehicle': 'Не отправлено: аппарат или связь изменились; запросите заново',
-  'log.listTooLarge': 'Список журналов превышает ограничение 1000 записей',
 };
 
 export default messages;

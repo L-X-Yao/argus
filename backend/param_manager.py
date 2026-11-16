@@ -16,6 +16,9 @@ if TYPE_CHECKING:
     from .drone_link import DroneLink
 
 
+MAX_PARAMS = 2000
+
+
 def _pad(p: bytes, n: int) -> bytes:
     return p if len(p) >= n else p + b"\x00" * (n - len(p))
 
@@ -47,6 +50,9 @@ class ParamManager:
         # cycle collides on the strict-`>` reset guard and delivers 0 params
         # (empty param panel). Same failure the event cursor solved with seq.
         self._fetch_gen = 0
+        # Only a fresh Read All replaces the page's rows. _fetch_gen also advances on overflow
+        # to reset websocket cursors; that terminal event must not clear the rows itself.
+        self._list_gen = 0
 
     def request_all(self) -> None:
         # The clock first and `fetching` last. check_timeout runs on the link thread: a fetch
@@ -57,6 +63,7 @@ class ParamManager:
         self.received_count = 0
         self._complete_emitted = False
         self._fetch_gen += 1
+        self._list_gen += 1
         self.fetching = True
         self._received_indices.clear()
         self._gap_fill_attempts.clear()
@@ -105,6 +112,26 @@ class ParamManager:
         if not name:
             return
 
+        requested = name in self._set_pending
+        known = name in self.params
+        # Outside a list fetch, only a row we already know or a PARAM_SET we just asked for may
+        # arrive. Anything else is unsolicited and would grow both this dict and every page.
+        if not self.fetching and not known and not requested:
+            return
+        if not known and len(self.params) >= MAX_PARAMS:
+            self._set_pending.pop(name, None)
+            if self.fetching:
+                self.fetching = False
+                # A trim can put the terminal timeout behind a client's cursor. Bumping the
+                # generation makes that client reset to zero, so the failure cannot be lost.
+                self._fetch_gen += 1
+                n_missing = max(0, (self.total_count or 0) - len(self._received_indices))
+                self._messages.append({"type": "param_timeout", "missing": n_missing})
+                if len(self._messages) > 2000:
+                    self._messages = self._messages[-1000:]
+            self._link.add_event(lt("param_too_many", self._link.locale) % MAX_PARAMS, "param_too_many")
+            return
+
         self._set_pending.pop(name, None)
         if self.total_count < 0:
             self.total_count = count
@@ -128,20 +155,24 @@ class ParamManager:
             "index": index,
         }
 
-        self._messages.append(
-            {
-                "type": "param_value",
-                "name": name,
-                "value": value,
-                "ptype": ptype,
-                "index": index,
-                "total": self.total_count,
-                "received": self.received_count,
-                # The counters can't tell the frontend whether a fetch is
-                # running: a real FC also sends PARAM_VALUE on its own.
-                "fetching": self.fetching,
-            }
-        )
+        message = {
+            "type": "param_value",
+            "name": name,
+            "value": value,
+            "ptype": ptype,
+            "index": index,
+            "total": self.total_count,
+            "received": self.received_count,
+            # The counters can't tell the frontend whether a fetch is
+            # running: a real FC also sends PARAM_VALUE on its own.
+            "fetching": self.fetching,
+            # Every tab replaces a stale list when a new fetch starts, not just the requester.
+            "fetch_gen": self._list_gen,
+        }
+        if requested and not known:
+            # Let the page create this one row: it answers our own PARAM_SET, not a random name.
+            message["allow_new"] = True
+        self._messages.append(message)
         # Cap message buffer on every append (not just on completion) so a
         # stuck/incomplete fetch can't grow unbounded.
         if len(self._messages) > 2000:

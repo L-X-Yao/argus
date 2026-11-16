@@ -279,9 +279,12 @@ class TestParamManagerStability:
             p = _param_value_payload(name, float(i), i, 2500)
             mgr.handle_param_value(p, len(p))
 
-        # Messages buffer should be trimmed (cap at 2000, trim to 1000)
+        # Messages buffer should be trimmed and the dictionary capped; the fetch fails loud.
         assert len(mgr._messages) <= 1500
-        assert mgr.received_count == 2500
+        assert mgr.received_count == 2000
+        assert len(mgr.params) == 2000
+        assert mgr.fetching is False
+        assert any(call.args[1] == "param_too_many" for call in link.add_event.call_args_list)
 
     def test_rapid_set_param_calls(self):
         link = _make_link()

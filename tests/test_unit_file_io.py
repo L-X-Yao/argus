@@ -343,6 +343,7 @@ class TestParamFileExport:
     def test_backend_save_to_file_json_format(self):
         link = _make_link()
         mgr = ParamManager(link)
+        mgr.fetching = True
         # Populate some params
         names = ["BATT_CAPACITY", "ARMING_CHECK", "ACRO_YAW_P"]
         values = [5000.0, 1.0, 4.5]
@@ -366,6 +367,7 @@ class TestParamFileExport:
     def test_backend_save_sorted_alphabetically(self):
         link = _make_link()
         mgr = ParamManager(link)
+        mgr.fetching = True
         names = ["Z_PARAM", "A_PARAM", "M_PARAM"]
         for i, name in enumerate(names):
             p = _param_value_payload(name, float(i), i, 3)
@@ -452,6 +454,7 @@ class TestParamFileImport:
     def test_backend_load_from_file(self):
         link = _make_link()
         mgr = ParamManager(link)
+        mgr.fetching = True
         # Pre-populate with existing params
         names = ["BATT_CAPACITY", "ARMING_CHECK"]
         values = [5000.0, 1.0]

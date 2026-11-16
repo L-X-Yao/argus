@@ -1,5 +1,7 @@
 import type { Param } from './types';
 
+export const PARAM_STORE_MAX = 2000;
+
 class ParamState {
   list: Param[] = $state([]);
   total: number = $state(0);
@@ -10,6 +12,7 @@ class ParamState {
 export const paramState = new ParamState();
 
 const nameIndex = new Map<string, number>();
+let lastFetchGen: number | undefined;
 
 export function handleParamBatch(
   params: {
@@ -20,21 +23,42 @@ export function handleParamBatch(
     total: number;
     received: number;
     fetching?: boolean;
+    fetch_gen?: number;
+    /** True only for the reply to our own PARAM_SET for a name not read yet. */
+    allow_new?: boolean;
   }[],
 ) {
+  const generation = params.find((p) => p.fetch_gen !== undefined)?.fetch_gen;
+  if (generation !== undefined && generation !== lastFetchGen) {
+    // Another tab may have started this fetch. Its Read All cannot clear our storage directly,
+    // but the generation on the broadcast replaces a capped or stale list here too.
+    clearParams();
+    lastFetchGen = generation;
+  }
   const arr = paramState.list.slice();
+  let capped = false;
   for (const p of params) {
     const param: Param = { name: p.name, value: p.value, type: p.ptype, index: p.index };
     const idx = nameIndex.get(p.name);
     if (idx !== undefined) {
       arr[idx] = param;
-    } else {
-      nameIndex.set(p.name, arr.length);
-      arr.push(param);
+      continue;
     }
+    // Missing fetching is the legacy shape of a fetch batch. An explicit false outside one
+    // accepts no new name unless the backend marked this as our own PARAM_SET echo.
+    const active = p.fetching ?? true;
+    if (!active && p.allow_new !== true) continue;
+    if (arr.length >= PARAM_STORE_MAX) {
+      capped = true;
+      continue;
+    }
+    nameIndex.set(p.name, arr.length);
+    arr.push(param);
   }
   paramState.list = arr;
-  if (params.length > 0) {
+  if (capped) {
+    paramState.fetching = false;
+  } else if (params.length > 0) {
     const last = params[params.length - 1];
     paramState.total = last.total;
     paramState.received = last.received;
@@ -65,13 +89,14 @@ export function handleParamTimeout() {
  * partial fetch (say 300/1000) the recomputed `fetching = received < total`
  * re-latches true with no ticker running, permanently disabling the
  * Read-All button until reconnect. */
-export function updateParamRow(name: string, value: number, ptype: number, index: number) {
+export function updateParamRow(name: string, value: number, ptype: number, index: number, allowNew = false) {
   const arr = paramState.list.slice();
   const param: Param = { name, value, type: ptype, index };
   const idx = nameIndex.get(name);
   if (idx !== undefined) {
     arr[idx] = param;
   } else {
+    if (!allowNew || arr.length >= PARAM_STORE_MAX) return;
     nameIndex.set(name, arr.length);
     arr.push(param);
   }
@@ -85,6 +110,10 @@ export function updateParamRow(name: string, value: number, ptype: number, index
 export function startParamFetch() {
   clearParams();
   paramState.fetching = true;
+}
+
+export function hasParam(name: string): boolean {
+  return nameIndex.has(name);
 }
 
 export function getParam(name: string, fallback: number): number {
@@ -101,4 +130,5 @@ export function clearParams() {
   paramState.received = 0;
   paramState.fetching = false;
   nameIndex.clear();
+  lastFetchGen = undefined;
 }

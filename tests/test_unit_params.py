@@ -65,6 +65,7 @@ class TestParamManager:
     def test_duplicate_param_not_double_counted(self):
         link = _make_link()
         mgr = ParamManager(link)
+        mgr.fetching = True
         p = _param_value_payload("TEST", 1.0, 0, 5)
         mgr.handle_param_value(p, len(p))
         mgr.handle_param_value(p, len(p))
@@ -122,6 +123,7 @@ class TestParamManager:
     def test_messages_accumulate_for_ws(self):
         link = _make_link()
         mgr = ParamManager(link)
+        mgr.fetching = True
         for i in range(5):
             p = _param_value_payload("P%d" % i, float(i), i, 10)
             mgr.handle_param_value(p, len(p))
@@ -139,6 +141,7 @@ class TestParamManager:
     def test_messages_trimmed_on_overflow(self):
         link = _make_link()
         mgr = ParamManager(link)
+        mgr.fetching = True
         mgr.total_count = 2500
         for i in range(2500):
             name = "P%04d" % i

@@ -65,6 +65,8 @@ import {
   handleParamTimeout,
   startParamFetch,
   updateParamRow,
+  hasParam,
+  PARAM_STORE_MAX,
 } from './paramStore.svelte';
 
 export type TransportMode = 'websocket' | 'serial';
@@ -1942,15 +1944,26 @@ function _onParamValue(p: DataView): void {
   // Empty name = all-zero/garbage frame — don't poison the store with a
   // blank row (same guard as the backend).
   if (!name) return;
+  const requested = pendingParamSets.has(name);
   clearTimeout(pendingParamSets.get(name));
   pendingParamSets.delete(name);
 
   if (!paramFetch.active) {
-    // PARAM_SET echo or unsolicited value: upsert the row only. Feeding
-    // handleParamBatch here would replay stale total/received counters and
-    // re-latch paramState.fetching after a timed-out partial fetch,
-    // bricking the Read-All button (fresh-eyes finding, 2026-07-16).
-    updateParamRow(name, value, ptype, index);
+    // A set echo (even for a name not read yet) or an update of a known row. Any other
+    // unsolicited name is dropped here and in paramStore, never appended indefinitely.
+    if (requested || hasParam(name)) updateParamRow(name, value, ptype, index, requested);
+    return;
+  }
+
+  if (!paramFetch.names.has(name) && paramFetch.names.size >= PARAM_STORE_MAX) {
+    _abortParamFetch(false);
+    addEvent({
+      type: 'event',
+      time: new Date().toLocaleTimeString(),
+      text: t('param.tooMany'),
+      event_type: 'param_too_many',
+    });
+    addToast(t('param.tooMany'), 'error', 5000);
     return;
   }
 
@@ -1960,7 +1973,9 @@ function _onParamValue(p: DataView): void {
   // are filled: see backend handle_param_value.
   if (!paramFetch.names.has(name)) paramFetch.lastValueTime = paramFetch.lastProgress = Date.now();
   paramFetch.names.add(name);
-  handleParamBatch([{ name, value, ptype, index, total: paramFetch.total, received: paramFetch.names.size }]);
+  handleParamBatch([
+    { name, value, ptype, index, total: paramFetch.total, received: paramFetch.names.size, fetching: true },
+  ]);
   if (paramFetch.total > 0 && paramFetch.names.size >= paramFetch.total) {
     paramFetch.active = false;
     _stopParamTimer();

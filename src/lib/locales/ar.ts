@@ -1127,10 +1127,8 @@ const messages: Record<string, string> = {
   'assistant.otherFlight': 'لم يُرسل: كان الطلب لرحلة سابقة',
   'assistant.noMode': 'لم يُرسل: لا تملك هذه المركبة هذا الوضع',
   'log.tooLarge': 'السجل يتجاوز الحد الأقصى 256 ميغابايت',
-  'mission.err.downloadTooLarge': 'تنزيل المهمة يتجاوز حد 4003 عنصر',
+  'mission.err.downloadTooLarge': 'تنزيل المهمة يتجاوز حد 1000 عنصر',
   'param.tooMany': 'تجاوز حد 2000 معامل؛ توقفت القراءة',
-  'assistant.otherVehicle': 'لم يُرسل: تغيرت المركبة أو رابطها؛ اطلب من جديد',
-  'log.listTooLarge': 'قائمة السجلات تتجاوز حد 1000 إدخال',
 };
 
 export default messages;

@@ -55,6 +55,7 @@ class TestHandleParamValue:
     def test_parses_single_param(self):
         link = _make_link()
         mgr = ParamManager(link)
+        mgr.fetching = True
         p = _param_payload("BATT_CAPACITY", 5000.0, 0, 3)
         mgr.handle_param_value(p, len(p))
         assert "BATT_CAPACITY" in mgr.params
@@ -65,6 +66,7 @@ class TestHandleParamValue:
     def test_duplicate_param_not_double_counted(self):
         link = _make_link()
         mgr = ParamManager(link)
+        mgr.fetching = True
         p = _param_payload("BATT_CAPACITY", 5000.0, 0, 3)
         mgr.handle_param_value(p, len(p))
         mgr.handle_param_value(p, len(p))
@@ -97,17 +99,48 @@ class TestHandleParamValue:
             mgr.handle_param_value(p, len(p))
         assert len(mgr._messages) <= 2000
 
+    def test_store_cap_fails_the_fetch_instead_of_growing(self):
+        mgr = ParamManager(_make_link())
+        mgr.request_all()
+        generation = mgr._fetch_gen
+        for i in range(2001):
+            p = _param_payload(f"P{i:04d}", float(i), i, 2001)
+            mgr.handle_param_value(p, len(p))
+        assert len(mgr.params) == 2000
+        assert mgr.fetching is False
+        assert mgr._messages[-1]["type"] == "param_timeout"
+        assert mgr._fetch_gen == generation + 1
+        assert any(call.args[1] == "param_too_many" for call in mgr._link.add_event.call_args_list)
+        # Overflow advances the websocket cursor generation, not the list-replacement one:
+        # an ordinary set echo after it must not clear the rows the page already has.
+        mgr.set_param("P0000", 7.0)
+        p = _param_payload("P0000", 7.0, 0xFFFF, 2001)
+        mgr.handle_param_value(p, len(p))
+        assert mgr._messages[-1]["fetch_gen"] == generation
+        assert mgr._messages[-1]["fetching"] is False
+        assert mgr.params["P0000"]["value"] == 7.0
+
 
 class TestFetchingFlagInMessages:
     """The frontend trusts this flag: a real FC sends PARAM_VALUE on its own,
     and treating that as a fetch left the Read button locked."""
 
-    def test_value_outside_a_fetch_is_not_marked_fetching(self):
+    def test_unknown_value_outside_a_fetch_is_ignored(self):
         mgr = ParamManager(_make_link())
         p = _param_payload("STAT_RUNTIME", 1.0, 5, 1028)
         mgr.handle_param_value(p, len(p))
+        assert mgr.params == {}
+        assert mgr._messages == []
+
+    def test_a_requested_set_echo_outside_a_fetch_is_accepted(self):
+        mgr = ParamManager(_make_link())
+        mgr.set_param("STAT_RUNTIME", 1.0)
+        p = _param_payload("STAT_RUNTIME", 1.0, 0xFFFF, 1028)
+        mgr.handle_param_value(p, len(p))
+        assert mgr.params["STAT_RUNTIME"]["value"] == 1.0
         assert mgr._messages[-1]["fetching"] is False
-        assert mgr._messages[-1]["received"] == 1 and mgr._messages[-1]["total"] == 1028
+        assert mgr._messages[-1]["allow_new"] is True
+        assert "STAT_RUNTIME" not in mgr._set_pending
 
     def test_value_during_a_fetch_is_marked_fetching(self):
         mgr = ParamManager(_make_link())
@@ -115,6 +148,7 @@ class TestFetchingFlagInMessages:
         p = _param_payload("A", 1.0, 0, 2)
         mgr.handle_param_value(p, len(p))
         assert mgr._messages[-1]["fetching"] is True
+        assert mgr._messages[-1]["fetch_gen"] == mgr._fetch_gen
 
 
 class TestSetParam:
@@ -270,6 +304,7 @@ class TestHandleParamValueEdgeCases:
         """AP replies with index=0xFFFF for PARAM_REQUEST_READ by name."""
         link = _make_link()
         mgr = ParamManager(link)
+        mgr.fetching = True
         p = _param_payload("THR_MAX", 80.0, 0xFFFF, 10)
         mgr.handle_param_value(p, len(p))
         assert "THR_MAX" in mgr.params

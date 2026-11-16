@@ -206,6 +206,7 @@ const messages: Record<string, string> = {
   'mission.clearFailed': '清除任务失败',
   'err.noLink': '未连接飞控，指令没有发送',
   'param.noAnswer': '参数 {name} 没有应答，未确认写入',
+  'param.tooMany': '参数超过 2000 项上限，读取已停止',
   'setup.copterOnly': '此面板只适用于多旋翼。这台飞机请在参数列表里设置。',
   'serial.err.notConnected': '未通过串口连接',
   'serial.err.uploadBusy': '另一个上传正在进行',

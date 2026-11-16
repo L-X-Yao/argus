@@ -181,6 +181,9 @@ export interface ParamBatchMsg {
     index: number;
     total: number;
     received: number;
+    fetching?: boolean;
+    fetch_gen?: number;
+    allow_new?: boolean;
   }[];
 }
 

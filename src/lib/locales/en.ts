@@ -207,6 +207,7 @@ const messages: Record<string, string> = {
   'mission.clearFailed': 'Clearing the mission failed',
   'err.noLink': 'Not connected to a flight controller: nothing was sent',
   'param.noAnswer': 'Parameter {name}: no answer, not confirmed',
+  'param.tooMany': 'More than the 2000-parameter limit; read stopped',
   'setup.copterOnly': 'This panel is for Copter. On this vehicle, use the parameter list.',
   'serial.err.notConnected': 'Not connected via serial',
   'serial.err.uploadBusy': 'Another upload is in progress',

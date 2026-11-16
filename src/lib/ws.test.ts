@@ -11,6 +11,7 @@ vi.mock('./stores.svelte', () => ({
 vi.mock('./paramStore.svelte', () => ({
   handleParamBatch: vi.fn(),
   handleParamsComplete: vi.fn(),
+  clearParams: vi.fn(),
 }));
 vi.mock('./logStore.svelte', () => ({
   setLogList: vi.fn(),
@@ -184,6 +185,16 @@ describe('message handling', () => {
     await fire({ type: 'param_batch', params: [{ name: 'P', value: 1 }] });
     const { handleParamBatch } = await import('./paramStore.svelte');
     expect(handleParamBatch).toHaveBeenCalledWith([{ name: 'P', value: 1 }]);
+  });
+
+  it('clears stale page rows before a new Read All is sent', async () => {
+    await freshConnect();
+    mockWs.onopen?.(new Event('open'));
+    const { sendCommand } = await import('./ws');
+    sendCommand('param_request_all');
+    const { clearParams } = await import('./paramStore.svelte');
+    expect(clearParams).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(mockWs.send.mock.calls.at(-1)![0])).toMatchObject({ type: 'command', cmd: 'param_request_all' });
   });
 
   it('cmd_result error surfaces as toast', async () => {

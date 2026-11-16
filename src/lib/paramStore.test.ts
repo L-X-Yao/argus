@@ -6,6 +6,7 @@ import {
   handleParamTimeout,
   getParam,
   clearParams,
+  updateParamRow,
 } from './paramStore.svelte';
 
 beforeEach(() => {
@@ -128,12 +129,55 @@ describe('handleParamBatch edge cases', () => {
     expect(paramState.fetching).toBe(false);
   });
 
-  it('stays idle when a value arrives outside a fetch', () => {
-    // A real FC sends PARAM_VALUE on its own: 1 of 1028 with no fetch running.
-    // Inferring a fetch from received < total locked the Read button for good.
+  it('ignores an unknown value outside a fetch without latching', () => {
     handleParamBatch([{ name: 'A', value: 1, ptype: 9, index: 0, total: 1028, received: 1, fetching: false }]);
     expect(paramState.fetching).toBe(false);
-    expect(paramState.list.length).toBe(1);
+    expect(paramState.list.length).toBe(0);
+  });
+
+  it('updates a known value outside a fetch', () => {
+    handleParamBatch([{ name: 'A', value: 1, ptype: 9, index: 0, total: 1, received: 1 }]);
+    handleParamBatch([{ name: 'A', value: 2, ptype: 9, index: 0, total: 1028, received: 1, fetching: false }]);
+    expect(paramState.list).toHaveLength(1);
+    expect(paramState.list[0].value).toBe(2);
+    expect(paramState.fetching).toBe(false);
+  });
+
+  it('accepts a requested new set echo but not an unsolicited new row', () => {
+    updateParamRow('NOISE', 1, 9, 0);
+    expect(paramState.list).toHaveLength(0);
+    updateParamRow('REQUESTED', 2, 9, 0, true);
+    expect(paramState.list).toHaveLength(1);
+    expect(paramState.list[0].value).toBe(2);
+  });
+
+  it('accepts a backend-marked set echo for an unread name', () => {
+    handleParamBatch([
+      { name: 'NEW_SET', value: 3, ptype: 9, index: 0xffff, total: 1, received: 1, fetching: false, allow_new: true },
+    ]);
+    expect(paramState.list).toHaveLength(1);
+    expect(paramState.list[0].value).toBe(3);
+  });
+
+  it('replaces a full stale list when another tab starts a new fetch generation', () => {
+    for (let i = 0; i < 2000; i++) {
+      handleParamBatch([
+        { name: `OLD${i}`, value: i, ptype: 9, index: i, total: 2000, received: i + 1, fetching: true, fetch_gen: 1 },
+      ]);
+    }
+    handleParamBatch([
+      { name: 'NEW_VALID', value: 5, ptype: 9, index: 0, total: 1, received: 1, fetching: true, fetch_gen: 2 },
+    ]);
+    expect(paramState.list).toHaveLength(1);
+    expect(paramState.list[0]).toMatchObject({ name: 'NEW_VALID', value: 5 });
+  });
+
+  it('caps rows at 2000 and leaves the fetching state', () => {
+    for (let i = 0; i < 2001; i++) {
+      handleParamBatch([{ name: `P${i}`, value: i, ptype: 9, index: i, total: 2001, received: i + 1, fetching: true }]);
+    }
+    expect(paramState.list).toHaveLength(2000);
+    expect(paramState.fetching).toBe(false);
   });
 
   it('follows the fetching flag while a fetch runs', () => {
