@@ -118,12 +118,22 @@ def cmd_fence_upload(link: DroneLink, param, data: dict):
         return {"ok": False, "error": lt("err_fence_min", link.locale)}
     items = []
     for i, pt in enumerate(polygon):
+        try:
+            lat = float(pt.get("lat", 0))
+            lon = float(pt.get("lon", 0))
+            alt = float(pt.get("alt", 0))
+        except (AttributeError, TypeError, ValueError):
+            return {"ok": False, "error": lt("err_bad_coord", link.locale)}
+        if not (-90 <= lat <= 90) or not (-180 <= lon <= 180) or not (-500 <= alt <= 100000):
+            return {"ok": False, "error": lt("err_bad_coord", link.locale)}
         items.append(
             {
                 "seq": i,
                 "cmd": 5001,
-                "lat": pt["lat"],
-                "lon": pt["lon"],
+                "lat": lat,
+                "lon": lon,
+                # Fence points keep the existing wire altitude of zero; a supplied altitude is
+                # validated above rather than allowed to smuggle a bad type into this thread.
                 "alt": 0,
                 "p1": len(polygon),
                 "p2": 0,

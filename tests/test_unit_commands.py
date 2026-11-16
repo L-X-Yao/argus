@@ -202,6 +202,26 @@ class TestCommandExecute:
         assert result is not None and not result["ok"]
         assert "3" in result["error"]
 
+    @pytest.mark.parametrize(
+        "bad_point",
+        [
+            {"lat": "north", "lon": 108.0},
+            {"lat": 91, "lon": 108.0},
+            {"lat": 34.0, "lon": 181.0},
+            {"lat": 34.0, "lon": 108.0, "alt": "high"},
+            {"lat": 34.0, "lon": 108.0, "alt": 100001},
+            {"lat": 34.0, "lon": 108.0, "alt": float("nan")},
+        ],
+    )
+    def test_fence_upload_refuses_a_bad_point_before_uploading(self, bad_point):
+        link = make_link()
+        polygon = [{"lat": 34.0, "lon": 108.0}, {"lat": 34.1, "lon": 108.1}, bad_point]
+        result = execute("fence_upload", None, link, data={"polygon": polygon})
+        assert result is not None and result["ok"] is False
+        assert link.mission._fence_pending is False
+        assert link.mission._fence_items == []
+        assert link._ser.write.call_count == 0
+
     def test_guided_goto(self):
         link = make_link()
         link.vehicle.vtype_raw = 2  # copter
