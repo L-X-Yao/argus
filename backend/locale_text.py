@@ -6,6 +6,7 @@ _T = {
     "connected": ("已连接 (sysid=%d)", "Connected (sysid=%d)"),
     "disconnected": ("已断开", "Disconnected"),
     "link_lost": ("链路丢失", "Link lost"),
+    "write_timeout": ("串口写入超时", "Serial write timed out"),
     "reconnecting": ("自动重连...", "Reconnecting..."),
     "reconnected": ("已重连", "Reconnected"),
     "reconnect_fail": ("重连失败, 3秒后重试", "Reconnect failed, retry in 3s"),

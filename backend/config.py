@@ -197,6 +197,10 @@ class Config:
     # body before the token was ever looked at. The real bodies here (login,
     # tile download list, firmware URL list) are kilobytes.
     MAX_JSON_BODY: int = 1024 * 1024
+    # How long a serial write may hold the link thread (audit 2026-11-16 M2):
+    # a write happens under _state_lock, and without a bound a port that
+    # stopped draining froze every page and HTTP route with it.
+    SERIAL_WRITE_TIMEOUT: float = 1.0
 
 
 cfg = Config()

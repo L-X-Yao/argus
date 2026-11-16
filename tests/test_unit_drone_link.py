@@ -74,6 +74,56 @@ def _build_global_position_int_payload(lat_deg=30.0, lon_deg=120.0, alt_m=100.0,
 
 
 # ---------------------------------------------------------------------------
+# TestSerialWriteTimeout (audit 2026-11-16 M2)
+# ---------------------------------------------------------------------------
+
+
+class TestSerialWriteTimeout:
+    """A stalled serial write must drop the frame, report the failure, and
+    leave the link and its locks working."""
+
+    def _link_with_stalled_port(self, effect):
+        link = DroneLink()
+        fake = MagicMock()
+        fake.in_waiting = 0
+        fake.write.side_effect = effect
+        return link, fake
+
+    def test_a_timed_out_write_is_dropped_and_reported(self):
+        from serial import SerialTimeoutException
+
+        link, fake = self._link_with_stalled_port(SerialTimeoutException())
+        with patch.object(link, "_ser", fake):
+            before = link.sq
+            events_before = len(link.events)
+            link.send(b"\xfd" + b"\x00" * 15)  # must not raise
+            assert link.sq == before  # the timed-out frame is not counted as sent
+            assert len(link.events) == events_before + 1
+            assert link.events[-1]["event_type"] == "write_timeout"
+            link.get_state()  # answers: no lock was left hostage
+
+    def test_telemetry_flows_after_a_timed_out_write(self):
+        from serial import SerialTimeoutException
+
+        link, fake = self._link_with_stalled_port(SerialTimeoutException())
+        with patch.object(link, "_ser", fake):
+            link.send(b"\xfd" + b"\x00" * 15)
+            frames = link.feed(_build_mavlink_frame(link))  # a valid HEARTBEAT parses and dispatches
+            assert frames == 1
+            assert link.frame_count == 1
+
+    def test_untimed_out_writes_still_count(self):
+        link = DroneLink()
+        fake = MagicMock()
+        fake.in_waiting = 0
+        with patch.object(link, "_ser", fake):
+            before = link.sq
+            link.send(b"\xfd" + b"\x00" * 15)
+            assert link.sq == before + 1
+            assert not any(e.get("event_type") == "write_timeout" for e in link.events)
+
+
+# ---------------------------------------------------------------------------
 # TestDroneLinkInit
 # ---------------------------------------------------------------------------
 

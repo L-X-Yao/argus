@@ -4,6 +4,8 @@ import struct
 import threading
 import time
 
+from serial import SerialTimeoutException
+
 from . import commands as cmd_module
 from . import mavlink_dispatch
 from .config import cfg
@@ -214,6 +216,14 @@ class DroneLink:
                     self._ser.write(frame)
                     self.sq += 1
                     self._record_tlog(frame)
+                except SerialTimeoutException:
+                    # The port stopped draining (audit 2026-11-16 M2). Without
+                    # write_timeout this blocked the link thread — inside
+                    # _state_lock when called from a dispatched handler — and
+                    # with it every page and HTTP route. Drop the frame and
+                    # say so; telemetry keeps flowing.
+                    logger.warning("serial write timed out; frame dropped (%d bytes)", len(frame))
+                    self.add_event(lt("write_timeout", self.locale), "write_timeout")
                 except OSError:
                     logger.debug("send failed", exc_info=True)
                 except ValueError:

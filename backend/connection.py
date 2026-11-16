@@ -201,6 +201,9 @@ def open_port(port: str, baudrate: int):
     else:
         import serial
 
-        s = serial.Serial(port, baudrate, timeout=cfg.SERIAL_READ_TIMEOUT)
+        # write_timeout (audit 2026-11-16 M2): a write runs on the link thread
+        # under _state_lock, and without a bound a port that stopped draining
+        # blocked it — and every page and HTTP route reading state — forever.
+        s = serial.Serial(port, baudrate, timeout=cfg.SERIAL_READ_TIMEOUT, write_timeout=cfg.SERIAL_WRITE_TIMEOUT)
         s.reset_input_buffer()
         return s

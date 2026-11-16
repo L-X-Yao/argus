@@ -4,6 +4,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
+from backend.config import cfg
 from backend.connection import TcpWrapper, UdpWrapper, open_port
 
 
@@ -39,6 +40,16 @@ class TestOpenPortParsing:
         with patch("serial.Serial", return_value=mock_serial):
             result = open_port("/dev/ttyUSB0", 115200)
         assert result is mock_serial
+
+    def test_serial_open_passes_write_timeout(self):
+        """Audit 2026-11-16 M2: pyserial gets a write timeout, so a port that
+        stopped draining raises SerialTimeoutException instead of blocking the
+        link thread — which holds _state_lock — forever."""
+        assert 0 < cfg.SERIAL_WRITE_TIMEOUT < 5
+        mock_serial = MagicMock()
+        with patch("serial.Serial", return_value=mock_serial) as mock_open:
+            open_port("/dev/ttyUSB0", 115200)
+        assert mock_open.call_args.kwargs.get("write_timeout") == cfg.SERIAL_WRITE_TIMEOUT
 
 
 class TestTcpWrapper:
