@@ -264,6 +264,7 @@ describe("the operator's decision", () => {
     expect(dispatch).toHaveBeenCalledWith('mission_upload', undefined, {
       waypoints: app.waypoints,
       takeoff_alt: 15,
+      expected_sysid: 1,
     });
     event('mission_ack_ok', 'Mission ack: success');
     await done;
@@ -341,12 +342,57 @@ describe("the operator's decision", () => {
     expect(app.waypoints).toEqual([]);
   });
 
+  it('another sysid while a mission waited: refused instead of uploading to it', async () => {
+    event('connected');
+    ask('propose_mission', MISSION);
+    app.drone.sysid = 2;
+    const done = approve('k1');
+    // Before the fix this approval uploads; answer it so the failed test leaves nothing pending.
+    event('mission_ack_ok');
+    await done;
+    expect(reply()).toMatchObject({ ok: false, result: { outcome: 'refused' } });
+    expect(reply()!.error).toContain('vehicle');
+    expect(dispatch).not.toHaveBeenCalled();
+    expect(app.waypoints).toEqual([]);
+  });
+
+  it('a new link generation while parameters waited: refused instead of writing through it', async () => {
+    ask('propose_parameters', { values: { BATT_MONITOR: 4 } });
+    event('connected', 'reconnected');
+    await approve('k1');
+    expect(reply()).toMatchObject({ ok: false, result: { outcome: 'refused' } });
+    expect(reply()!.error).toContain('link');
+    expect(dispatch).not.toHaveBeenCalled();
+  });
+
+  it('a backend vehicle mismatch fails the mission without waiting for the upload timeout', async () => {
+    vi.useFakeTimers();
+    ask('propose_mission', MISSION);
+    const done = approve('k1');
+    event('vehicle_mismatch', 'The active vehicle changed');
+    await vi.advanceTimersByTimeAsync(18000);
+    await done;
+    expect(reply()).toMatchObject({ ok: false, result: { outcome: 'failed' } });
+    expect(reply()!.error).toContain('vehicle changed');
+  });
+
+  it('a backend vehicle mismatch stops parameter confirmation immediately', async () => {
+    vi.useFakeTimers();
+    ask('propose_parameters', { values: { WPNAV_SPEED: 800 } });
+    const done = approve('k1');
+    event('vehicle_mismatch', 'The active vehicle changed');
+    await vi.advanceTimersByTimeAsync(250);
+    await done;
+    expect(reply()).toMatchObject({ ok: false, result: { outcome: 'failed' } });
+    expect(reply()!.error).toContain('vehicle changed');
+  });
+
   it('parameters approved: each is set, and the answer waits for the flight controller', async () => {
     ask('propose_parameters', { values: { WPNAV_SPEED: 800, BATT_MONITOR: 4 } });
     const done = approve('k1');
     expect(vi.mocked(dispatch).mock.calls).toEqual([
-      ['param_set', undefined, { name: 'WPNAV_SPEED', value: 800 }],
-      ['param_set', undefined, { name: 'BATT_MONITOR', value: 4 }],
+      ['param_set', undefined, { name: 'WPNAV_SPEED', value: 800, expected_sysid: 1 }],
+      ['param_set', undefined, { name: 'BATT_MONITOR', value: 4, expected_sysid: 1 }],
     ]);
     paramState.list = paramState.list.map((p) => (p.name === 'WPNAV_SPEED' ? { ...p, value: 800 } : p));
     await done;

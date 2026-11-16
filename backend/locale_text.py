@@ -125,6 +125,7 @@ _T = {
     "param_no_answer": ("参数 %s 没有应答，未确认写入", "Parameter %s: no answer, not confirmed"),
     "mission_clear_fail": ("清除任务失败(%d)", "Clearing the mission failed(%d)"),
     "err_no_link": ("未连接飞控，指令没有发送", "Not connected to a flight controller: nothing was sent"),
+    "err_vehicle_changed": ("飞行器已切换，请求未发送", "The vehicle changed; the request was not sent"),
     "err_sub_depth": ("水下机器人的航点高度必须是负数（深度）", "Sub waypoints need a negative altitude (depth)"),
     "err_mission_start": ("任务启动命令失败", "Mission start command failed"),
     "rally_uploading": ("备降点: 上传中 (%d 个)", "Rally: uploading %d points"),

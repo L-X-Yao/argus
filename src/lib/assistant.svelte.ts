@@ -17,7 +17,14 @@ import { specialModes, vehicleKind } from './vehicleModes';
 import { t } from './i18n.svelte';
 import type { DroneEvent, Waypoint } from './types';
 
-export interface MissionProposal {
+interface VehiclePin {
+  /** The active vehicle and link generation when the proposal entered the queue. */
+  sysid: number;
+  mark: DroneEvent | undefined;
+  linkLosses: number;
+}
+
+export interface MissionProposal extends VehiclePin {
   id: string;
   kind: 'propose_mission';
   waypoints: Waypoint[];
@@ -25,7 +32,7 @@ export interface MissionProposal {
   reason: string;
 }
 
-export interface ParameterProposal {
+export interface ParameterProposal extends VehiclePin {
   id: string;
   kind: 'propose_parameters';
   changes: { name: string; from: number; to: number }[];
@@ -316,6 +323,7 @@ function proposeMission(id: string, args: Fields): MissionProposal | { error: st
     return { error: 'takeoff_alt: metres above home, more than 0.' };
   }
   return {
+    ...vehiclePin(),
     id,
     kind: 'propose_mission',
     waypoints,
@@ -344,7 +352,7 @@ function proposeParameters(id: string, args: Fields): ParameterProposal | { erro
     }
     changes.push({ name, from: row.value, to });
   }
-  return { id, kind: 'propose_parameters', changes, reason: reasonOf(args) };
+  return { ...vehiclePin(), id, kind: 'propose_parameters', changes, reason: reasonOf(args) };
 }
 
 const COMMANDS: readonly string[] = ['rtl', 'hold', 'land'];
@@ -357,6 +365,19 @@ const NO_MODE: Record<FlightCommand, string> = {
 /** Events after mark, the newest event at some moment. By the event itself, as nextEvent does. */
 function eventsAfter(mark: DroneEvent | undefined): DroneEvent[] {
   return mark === undefined ? app.events : app.events.slice(app.events.lastIndexOf(mark) + 1);
+}
+
+function vehiclePin(): VehiclePin {
+  return { sysid: app.drone.sysid, mark: app.events[app.events.length - 1], linkLosses: linkLossCount() };
+}
+
+const VEHICLE_LINK_ENDS = new Set(['connected', 'disconnected', 'link_lost', 'vehicle_switch', 'vehicle_mismatch']);
+
+function vehicleChanged(pin: VehiclePin): boolean {
+  if (app.drone.sysid !== pin.sysid || linkLossCount() !== pin.linkLosses) return true;
+  // As with flight commands, a trimmed mark hides what happened while the proposal waited.
+  if (pin.mark !== undefined && app.events.lastIndexOf(pin.mark) < 0) return true;
+  return eventsAfter(pin.mark).some((e) => VEHICLE_LINK_ENDS.has(e.event_type));
 }
 
 /** What ends the flight a command was asked for: a disarm, a link that dropped, or another
@@ -491,6 +512,16 @@ export async function approve(id: string): Promise<void> {
     showSlide(t(text), color, confirm);
     return;
   }
+  // A mission or parameter change belongs to the vehicle and link generation that proposed it.
+  if (vehicleChanged(proposal)) {
+    finish(proposal, {
+      ok: false,
+      error: 'The vehicle or its link changed since this was proposed: ask again.',
+      ending: 'refused',
+    });
+    addToast(t('assistant.otherVehicle'), 'error', 5000);
+    return;
+  }
   // It may have waited a while: the vehicle can be armed by now.
   const refused = refusal();
   if (refused) {
@@ -565,10 +596,15 @@ async function runMission(proposal: MissionProposal): Promise<Outcome> {
     return res.ok ? done : { ok: false, error: `The upload failed: ${res.error}` };
   }
   const mark = app.events[app.events.length - 1];
-  dispatch('mission_upload', undefined, { waypoints: app.waypoints, takeoff_alt: proposal.takeoffAlt });
+  dispatch('mission_upload', undefined, {
+    waypoints: app.waypoints,
+    takeoff_alt: proposal.takeoffAlt,
+    expected_sysid: proposal.sysid,
+  });
   const wait = UPLOAD_WAIT_MS + UPLOAD_WAIT_PER_WAYPOINT_MS * proposal.waypoints.length;
-  const ack = await nextEvent(mark, ['mission_ack_ok', 'mission_ack_fail'], wait);
+  const ack = await nextEvent(mark, ['mission_ack_ok', 'mission_ack_fail', 'vehicle_mismatch'], wait);
   if (ack?.event_type === 'mission_ack_ok') return done;
+  if (ack?.event_type === 'vehicle_mismatch') return { ok: false, error: ack.text };
   return {
     ok: false,
     error: ack
@@ -580,10 +616,15 @@ async function runMission(proposal: MissionProposal): Promise<Outcome> {
 const confirmed = (now: number, asked: number) => Math.abs(now - asked) <= Math.max(1e-6, Math.abs(asked) * 1e-6);
 
 async function runParameters(proposal: ParameterProposal): Promise<Outcome> {
-  for (const change of proposal.changes) dispatch('param_set', undefined, { name: change.name, value: change.to });
+  const mark = app.events[app.events.length - 1];
+  for (const change of proposal.changes) {
+    dispatch('param_set', undefined, { name: change.name, value: change.to, expected_sysid: proposal.sysid });
+  }
   const deadline = Date.now() + PARAM_WAIT_MS;
   let pending = proposal.changes;
   while (true) {
+    const mismatch = eventsAfter(mark).find((e) => e.event_type === 'vehicle_mismatch');
+    if (mismatch) return { ok: false, error: mismatch.text };
     const now = byName();
     pending = pending.filter((c) => !confirmed(now.get(c.name) ?? NaN, c.to));
     if (pending.length === 0 || Date.now() >= deadline) break;

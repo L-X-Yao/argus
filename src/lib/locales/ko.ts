@@ -1130,6 +1130,7 @@ const messages: Record<string, string> = {
   'log.tooLarge': '로그가 256 MB 제한을 초과했습니다',
   'mission.err.downloadTooLarge': '임무 다운로드가 1000개 항목 제한을 초과했습니다',
   'param.tooMany': '2000개 매개변수 제한을 초과하여 읽기를 중단했습니다',
+  'assistant.otherVehicle': '전송 안 됨: 기체 또는 링크가 변경되었습니다. 다시 제안하세요',
 };
 
 export default messages;

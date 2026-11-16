@@ -1135,6 +1135,7 @@ const messages: Record<string, string> = {
   'log.tooLarge': 'Журнал превышает ограничение 256 МБ',
   'mission.err.downloadTooLarge': 'Загрузка миссии превышает ограничение 1000 элементов',
   'param.tooMany': 'Больше 2000 параметров; чтение остановлено',
+  'assistant.otherVehicle': 'Не отправлено: аппарат или связь изменились; запросите заново',
 };
 
 export default messages;

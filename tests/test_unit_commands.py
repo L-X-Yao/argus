@@ -859,6 +859,51 @@ class TestExecuteDispatch:
         result = execute("nonexistent_xyz", None, link)
         assert result == {"ok": False, "error": "unknown command: nonexistent_xyz"}
 
+    def test_parameter_set_is_allowed_on_the_default_single_vehicle_link(self):
+        link = make_link()
+        link.active_sysid = 0
+        link.vehicle.sysid = 1
+        result = execute(
+            "param_set",
+            None,
+            link,
+            data={"name": "WPNAV_SPEED", "value": 800, "expected_sysid": 1},
+        )
+        assert result is None
+        assert link._ser.write.called
+        assert not any(e["event_type"] == "vehicle_mismatch" for e in link.events)
+
+    def test_parameter_set_is_refused_when_the_pinned_vehicle_has_changed(self):
+        link = make_link()
+        link.active_sysid = 2
+        result = execute(
+            "param_set",
+            None,
+            link,
+            data={"name": "WPNAV_SPEED", "value": 800, "expected_sysid": 1},
+        )
+        assert result is not None and result["ok"] is False
+        assert not link._ser.write.called
+        assert any(e["event_type"] == "vehicle_mismatch" for e in link.events)
+
+    def test_mission_upload_is_refused_when_the_pinned_vehicle_has_changed(self):
+        link = make_link()
+        link.active_sysid = 2
+        result = execute(
+            "mission_upload",
+            None,
+            link,
+            data={
+                "waypoints": [{"lat": 34.0, "lon": 108.0, "alt": 30}],
+                "takeoff_alt": 30,
+                "expected_sysid": 1,
+            },
+        )
+        assert result is not None and result["ok"] is False
+        assert link.mission._mission_pending is False
+        assert not link._ser.write.called
+        assert any(e["event_type"] == "vehicle_mismatch" for e in link.events)
+
     def test_unsupported_autopilot_blocks_fc_commands(self):
         """A latched non-ArduPilot FC (e.g. PX4=12) must refuse FC-bound
         commands — our mode numbers and command params are ArduPilot-specific

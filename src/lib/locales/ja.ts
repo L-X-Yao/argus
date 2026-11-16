@@ -1133,6 +1133,7 @@ const messages: Record<string, string> = {
   'log.tooLarge': 'ログが 256 MB の上限を超えています',
   'mission.err.downloadTooLarge': 'ミッションのダウンロードが 1000 項目の上限を超えています',
   'param.tooMany': '2000 個のパラメータ上限を超えたため、読み取りを停止しました',
+  'assistant.otherVehicle': '未送信: 機体またはリンクが変わりました。再提案してください',
 };
 
 export default messages;

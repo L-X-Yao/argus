@@ -1131,6 +1131,7 @@ const messages: Record<string, string> = {
   'assistant.notArmed': 'Not sent: the vehicle is not armed',
   'assistant.withdrawnNow': 'The AI assistant took its request back: nothing was sent',
   'assistant.otherFlight': 'Not sent: the request was for an earlier flight',
+  'assistant.otherVehicle': 'Not sent: the vehicle or its link changed; ask again',
   'assistant.noMode': 'Not sent: this vehicle has no such mode',
 };
 

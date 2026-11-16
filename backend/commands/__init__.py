@@ -164,6 +164,13 @@ def execute(cmd: str, param, link: DroneLink, data: dict | None = None) -> dict 
     # heard on it: kept for a retry, a key pressed with no vehicle would arm whatever came next.
     if cmd not in _NO_LINK_NEEDED and not link.connected:
         return {"ok": False, "error": lt("err_no_link", link.locale)}
+    expected_sysid = data.get("expected_sysid")
+    if expected_sysid is not None and expected_sysid != (link.active_sysid or link.vehicle.sysid):
+        # The page's cached state can lag a switch made by another page. Check the pin again at
+        # this synchronous boundary so a mission or parameter change cannot land on that vehicle.
+        error = lt("err_vehicle_changed", link.locale)
+        link.add_event(error, "vehicle_mismatch")
+        return {"ok": False, "error": error}
     try:
         return handler(link, param, data)
     except Exception as exc:

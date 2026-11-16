@@ -1138,6 +1138,7 @@ const messages: Record<string, string> = {
   'log.tooLarge': 'Le journal dépasse la limite de 256 Mo',
   'mission.err.downloadTooLarge': 'Le téléchargement de la mission dépasse la limite de 1000 éléments',
   'param.tooMany': 'Plus de 2000 paramètres ; lecture arrêtée',
+  'assistant.otherVehicle': 'Non envoyé : le véhicule ou sa liaison a changé ; redemander',
 };
 
 export default messages;

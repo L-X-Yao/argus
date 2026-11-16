@@ -1123,6 +1123,7 @@ const messages: Record<string, string> = {
   'assistant.notArmed': '未发送：飞行器未解锁',
   'assistant.withdrawnNow': 'AI 助手已撤回请求，未发送任何指令',
   'assistant.otherFlight': '未发送：该请求属于之前的一次飞行',
+  'assistant.otherVehicle': '未发送：飞行器或链路已变化，请重新提议',
   'assistant.noMode': '未发送：该飞行器没有这个模式',
 };
 
