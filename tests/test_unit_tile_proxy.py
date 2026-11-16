@@ -342,6 +342,53 @@ class TestMbtilesReading:
         r = client.get("/api/mbtiles/notmbtiles.txt/1/0/0")
         assert r.status_code == 404
 
+    def test_mbtiles_huge_zoom_is_refused_not_a_500(self, mbtiles_dir):
+        """Audit 2026-11-16 L3: z=10**10 used to build a multi-gigabyte shift
+        and then die in the sqlite bind (OverflowError, 500)."""
+        self._create_mbtiles(mbtiles_dir / "test.mbtiles", [])
+        r = client.get("/api/mbtiles/test.mbtiles/10000000000/0/0")
+        assert r.status_code == 404
+
+    def test_mbtiles_zoom_past_30_is_refused(self, mbtiles_dir):
+        """Audit 2026-11-16 L3: the zoom cap holds even for a tile that is in
+        the database — nothing at that zoom was ever addressed to it."""
+        tile_data = b"\x89PNG\r\n\x1a\n" + b"\xcd" * 64
+        z = 31
+        tms_y = (1 << z) - 1 - 0
+        self._create_mbtiles(mbtiles_dir / "test.mbtiles", [(z, 0, tms_y, tile_data)])
+        r = client.get(f"/api/mbtiles/test.mbtiles/{z}/0/0")
+        assert r.status_code == 404
+
+    def test_mbtiles_x_out_of_range_is_refused(self, mbtiles_dir):
+        """Audit 2026-11-16 L3: x >= 2**z names no tile; it must not be served."""
+        tile_data = b"\x89PNG\r\n\x1a\n" + b"\xce" * 64
+        self._create_mbtiles(mbtiles_dir / "test.mbtiles", [(5, 32, (1 << 5) - 1 - 0, tile_data)])
+        r = client.get("/api/mbtiles/test.mbtiles/5/32/0")
+        assert r.status_code == 404
+
+    def test_mbtiles_y_out_of_range_is_refused(self, mbtiles_dir):
+        """Audit 2026-11-16 L3: y >= 2**z names no tile; it must not be served."""
+        tile_data = b"\x89PNG\r\n\x1a\n" + b"\xcf" * 64
+        self._create_mbtiles(mbtiles_dir / "test.mbtiles", [(5, 0, (1 << 5) - 1 - 32, tile_data)])
+        r = client.get("/api/mbtiles/test.mbtiles/5/0/32")
+        assert r.status_code == 404
+
+    def test_mbtiles_zoom_30_is_still_served(self, mbtiles_dir):
+        """The cap is at 30, and a tile at the boundary answers."""
+        tile_data = b"\x89PNG\r\n\x1a\n" + b"\xd0" * 64
+        z, x, y = 30, 0, 0
+        self._create_mbtiles(mbtiles_dir / "test.mbtiles", [(z, x, (1 << z) - 1 - y, tile_data)])
+        r = client.get(f"/api/mbtiles/test.mbtiles/{z}/{x}/{y}")
+        assert r.status_code == 200
+        assert r.content == tile_data
+
+    def test_mbtiles_negative_zoom_is_refused_not_a_500(self, mbtiles_dir):
+        """A negative z must not 500. The int path converter already refuses
+        to match one; this pins the answer in case the route shape changes."""
+        self._create_mbtiles(mbtiles_dir / "test.mbtiles", [])
+        r = client.get("/api/mbtiles/test.mbtiles/-1/0/0")
+        assert r.status_code == 404
+
 
 class TestTileBulkDownload:
     """Test offline map bulk download task."""

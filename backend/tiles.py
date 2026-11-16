@@ -21,6 +21,8 @@ router = APIRouter()
 
 TILE_CACHE = ROOT_DIR / "tile_cache"
 MBTILES_DIR = ROOT_DIR / "mbtiles"
+# No map names a zoom past 30; the cap keeps (1 << z) bounded (audit 2026-11-16 L3).
+MAX_MBTILES_Z = 30
 
 _TILE_MAX = cfg.TILE_CACHE_MAX
 _TILE_MAX_BYTES = 2 * 1024 * 1024
@@ -337,7 +339,15 @@ async def api_mbtiles_tile(name: str, z: int, x: int, y: int):
         return Response(status_code=404, content="not found")
     if not path.exists():
         return Response(status_code=404, content="not found")
-    tms_y = (1 << z) - 1 - y
+    # Bounds before the shift (audit 2026-11-16 L3): a huge z built a
+    # multi-gigabyte integer and died in the sqlite bind (500), a negative z
+    # raised on the shift itself, and x or y past 2**z named no tile at all.
+    if not 0 <= z <= MAX_MBTILES_Z:
+        return Response(status_code=404, content="not found")
+    span = 1 << z
+    if not (0 <= x < span and 0 <= y < span):
+        return Response(status_code=404, content="not found")
+    tms_y = span - 1 - y
 
     def _read_mbtile() -> bytes | None:
         conn = sqlite3.connect(str(path))
