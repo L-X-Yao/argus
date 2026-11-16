@@ -1134,6 +1134,7 @@ const messages: Record<string, string> = {
   'mission.err.downloadTooLarge': 'ミッションのダウンロードが 1000 項目の上限を超えています',
   'param.tooMany': '2000 個のパラメータ上限を超えたため、読み取りを停止しました',
   'assistant.otherVehicle': '未送信: 機体またはリンクが変わりました。再提案してください',
+  'log.listTooLarge': 'ログ一覧が 1000 件の上限を超えています',
 };
 
 export default messages;

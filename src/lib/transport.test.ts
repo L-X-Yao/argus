@@ -534,6 +534,19 @@ describe('serialLogList + serialLogDownload', () => {
     expect(entries[1].size).toBe(2048);
   });
 
+  it('caps a log list at 1000 entries and closes the request', async () => {
+    const promise = serialLogList();
+    for (let id = 1; id <= 1001; id++) inject(fcFrame(118, mkLogEntry(id, 100, 0, 2000)));
+    // Before the cap this stayed pending; cancel it so the failed assertion is isolated.
+    serialLogCancel();
+    const res = await promise;
+    expect(res).toMatchObject({ ok: false, error: 'log.listTooLarge' });
+    vi.mocked(logStoreMock.setLogList).mockClear();
+    inject(fcFrame(118, mkLogEntry(2000, 100, 0, 2000)));
+    expect(logStoreMock.setLogList).not.toHaveBeenCalled();
+    expect(events.some((e) => e.event_type === 'log_list_too_many')).toBe(true);
+  });
+
   it('an empty store (dummy entry id 0, last 0, size 0) lists nothing, not a #0 log', async () => {
     // AP answers an empty log store with one dummy entry
     // (AP_Logger_MAVLinkLogTransfer.cpp:82-84, 262-273). The backend already
@@ -803,16 +816,25 @@ describe('log list watchdog', () => {
     expect(entries.map((e: { id: number }) => e.id)).toEqual([1, 2]);
   });
 
-  it('a slow listing that keeps answering is never re-asked', async () => {
+  it('entries do not extend the fixed list deadline', async () => {
     const promise = serialLogList();
-    // Entry every 4 s: each resets the watchdog, so no retry goes out.
-    inject(fcFrame(118, mkLogEntry(1, 10, 0, 2)));
-    await vi.advanceTimersByTimeAsync(4001);
-    inject(fcFrame(118, mkLogEntry(2, 20, 0, 2)));
-    await vi.advanceTimersByTimeAsync(4001);
+    let settled = false;
+    void promise.then(() => {
+      settled = true;
+    });
+    // One entry every 4 s used to keep the request alive for ever.
+    for (let id = 1; id <= 5; id++) {
+      inject(fcFrame(118, mkLogEntry(id, 10, 0, 2000)));
+      await vi.advanceTimersByTimeAsync(4001);
+    }
+    const settledAtDeadline = settled;
+    // Before the fix the last entry re-armed the ladder. Exhaust it for cleanup.
+    await vi.advanceTimersByTimeAsync(45000);
     const res = await promise;
-    expect(res.ok).toBe(true);
-    expect(countWrites(117)).toBe(1);
+    expect(settledAtDeadline).toBe(true);
+    expect(res.ok).toBe(false);
+    expect(res.error).toBe('serial.err.logListTimeout');
+    expect(countWrites(117)).toBe(4);
   });
 });
 

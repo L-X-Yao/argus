@@ -1599,6 +1599,7 @@ function _resolveLogList(result: { ok: boolean; error?: string }): void {
 // a bounded number of times — twin of backend check_log_list_stall.
 const LOG_LIST_RETRY_MS = 5000; // the existing per-entry window; backend re-asks every 3 s
 const LOG_LIST_TRIES = 3; // matches backend LOG_LIST_TRIES
+const LOG_LIST_MAX = 1000; // matches backend LOG_LIST_MAX
 
 function _armLogListWatchdog(): void {
   if (logSession.listTimer) clearTimeout(logSession.listTimer);
@@ -1635,10 +1636,18 @@ function _onLogEntry(p: DataView): void {
     _resolveLogList({ ok: true });
     return;
   }
+  if (logSession.listEntries.length >= LOG_LIST_MAX) {
+    addEvent({
+      type: 'event',
+      time: new Date().toLocaleTimeString(),
+      text: t('log.listTooLarge'),
+      event_type: 'log_list_too_many',
+    });
+    _resolveLogList({ ok: false, error: t('log.listTooLarge') });
+    return;
+  }
   logSession.listEntries.push(entry);
-  // Reset the watchdog every time a new entry shows up — slow FCs can take
-  // tens of seconds to list 100+ logs.
-  _armLogListWatchdog();
+  // The retry ladder is a fixed deadline. Entries may complete the list but never extend it.
   if (entry.id === lastLogNum) {
     setLogList([...logSession.listEntries]);
     _resolveLogList({ ok: true });

@@ -1138,6 +1138,7 @@ const messages: Record<string, string> = {
   'mission.err.downloadTooLarge': 'O download da missão excede o limite de 1000 itens',
   'param.tooMany': 'Mais de 2000 parâmetros; leitura interrompida',
   'assistant.otherVehicle': 'Não enviado: o veículo ou sua ligação mudou; peça novamente',
+  'log.listTooLarge': 'A lista de registros excede o limite de 1000 entradas',
 };
 
 export default messages;

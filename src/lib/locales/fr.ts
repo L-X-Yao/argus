@@ -1139,6 +1139,7 @@ const messages: Record<string, string> = {
   'mission.err.downloadTooLarge': 'Le téléchargement de la mission dépasse la limite de 1000 éléments',
   'param.tooMany': 'Plus de 2000 paramètres ; lecture arrêtée',
   'assistant.otherVehicle': 'Non envoyé : le véhicule ou sa liaison a changé ; redemander',
+  'log.listTooLarge': 'La liste des journaux dépasse la limite de 1000 entrées',
 };
 
 export default messages;

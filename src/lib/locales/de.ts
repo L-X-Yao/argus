@@ -1137,6 +1137,7 @@ const messages: Record<string, string> = {
   'mission.err.downloadTooLarge': 'Missionsdownload überschreitet das Limit von 1000 Einträgen',
   'param.tooMany': 'Mehr als 2000 Parameter; Lesen gestoppt',
   'assistant.otherVehicle': 'Nicht gesendet: Fahrzeug oder Verbindung geändert; erneut anfragen',
+  'log.listTooLarge': 'Logliste überschreitet das Limit von 1000 Einträgen',
 };
 
 export default messages;
