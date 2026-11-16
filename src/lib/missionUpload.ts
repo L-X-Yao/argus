@@ -177,6 +177,8 @@ export function buildRallyItems(points: RallyPoint[]): MissionItem[] {
 // The FC refuses these one item in (MissionItemProtocol_Rally.cpp:63-69), so catch them first.
 export function validateRallyPoints(points: RallyPoint[]): { ok: true } | { ok: false; error: string } {
   if (points.length === 0) return { ok: false, error: 'mission.err.noRally' };
+  // Twin of backend cmd_rally_upload's 500-point limit.
+  if (points.length > 500) return { ok: false, error: 'mission.err.rallyTooLarge' };
   for (const p of points) {
     const lat = Number(p.lat),
       lon = Number(p.lon),

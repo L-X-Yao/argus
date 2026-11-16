@@ -1137,6 +1137,7 @@ const messages: Record<string, string> = {
   'param.tooMany': 'Más del límite de 2000 parámetros; lectura detenida',
   'assistant.otherVehicle': 'No enviado: el vehículo o su enlace cambió; vuelva a solicitarlo',
   'log.listTooLarge': 'La lista de registros supera el límite de 1000 entradas',
+  'mission.err.rallyTooLarge': 'La carga de puntos de reunión supera el límite de 500 puntos',
 };
 
 export default messages;

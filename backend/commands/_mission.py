@@ -248,6 +248,10 @@ def cmd_rally_upload(link: DroneLink, param, data: dict):
     points = data.get("points", [])
     if not points:
         return None
+    if len(points) > 500:
+        # Same operator-facing bound as a mission, and far below the u16 wire count.
+        link.add_event(lt("err_rally_too_large", link.locale), "rally_ack_fail")
+        return {"ok": False, "error": lt("err_rally_too_large", link.locale)}
     # The FC refuses these one item in (MissionItemProtocol_Rally.cpp:63-66 for the
     # coordinates, :69 for an altitude outside int16), so catch them before starting.
     for pt in points:

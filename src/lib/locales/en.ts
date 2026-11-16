@@ -230,6 +230,7 @@ const messages: Record<string, string> = {
   'mission.err.fenceMin': 'A fence needs at least 3 vertices',
   'mission.err.fenceMax': 'Fence too large (max 200 vertices)',
   'mission.err.noRally': 'No rally points',
+  'mission.err.rallyTooLarge': 'Rally upload exceeds the 500-point limit',
   'mission.err.badRally': 'Invalid rally point',
   'welcome.subtitle': 'Ground Control Station',
   'welcome.hint': 'Enter connection address above and click "Connect"',

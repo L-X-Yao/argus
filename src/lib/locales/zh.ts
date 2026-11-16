@@ -229,6 +229,7 @@ const messages: Record<string, string> = {
   'mission.err.fenceMin': '围栏至少需要 3 个顶点',
   'mission.err.fenceMax': '围栏过大（最多 200 个顶点）',
   'mission.err.noRally': '没有备降点',
+  'mission.err.rallyTooLarge': '备降点上传超过 500 个上限',
   'mission.err.badRally': '备降点无效',
   'welcome.subtitle': '地面控制站',
   'welcome.hint': '在顶部输入连接地址后点击"连接"',

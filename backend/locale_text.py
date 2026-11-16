@@ -46,6 +46,7 @@ _T = {
     "rally_clear_ok": ("飞控上的备降点已清除", "Rally points cleared on the FC"),
     "rally_clear_fail": ("清除飞控备降点失败(%d)", "Clearing rally points on the FC failed (%d)"),
     "err_rally_busy": ("备降点正在上传", "Rally points are uploading"),
+    "err_rally_too_large": ("备降点超过 500 个上限", "Rally points exceed the 500-point limit"),
     "fence_clear_fail": ("清除飞控围栏失败(%d)", "Clearing the fence on the FC failed (%d)"),
     "vtype_set": ("机型: %s", "Vehicle: %s"),
     "guided": ("引导飞往 %.5f, %.5f @ %.0fm", "Guided to %.5f, %.5f @ %.0fm"),

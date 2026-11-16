@@ -1140,6 +1140,7 @@ const messages: Record<string, string> = {
   'param.tooMany': 'Plus de 2000 paramètres ; lecture arrêtée',
   'assistant.otherVehicle': 'Non envoyé : le véhicule ou sa liaison a changé ; redemander',
   'log.listTooLarge': 'La liste des journaux dépasse la limite de 1000 entrées',
+  'mission.err.rallyTooLarge': 'Le téléversement de points de ralliement dépasse la limite de 500 points',
 };
 
 export default messages;

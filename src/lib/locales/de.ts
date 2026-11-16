@@ -1138,6 +1138,7 @@ const messages: Record<string, string> = {
   'param.tooMany': 'Mehr als 2000 Parameter; Lesen gestoppt',
   'assistant.otherVehicle': 'Nicht gesendet: Fahrzeug oder Verbindung geändert; erneut anfragen',
   'log.listTooLarge': 'Logliste überschreitet das Limit von 1000 Einträgen',
+  'mission.err.rallyTooLarge': 'Rally-Upload überschreitet das Limit von 500 Punkten',
 };
 
 export default messages;

@@ -465,6 +465,15 @@ class TestRallyUpload:
         execute("rally_upload", None, link, data={"points": []})
         assert not any("备降" in e["text"] for e in link.events)
 
+    def test_rally_upload_refuses_more_than_500_points(self):
+        link = make_link()
+        points = [{"lat": 30, "lon": 120, "alt": 50}] * 501
+        result = execute("rally_upload", None, link, data={"points": points})
+        assert result is not None and result["ok"] is False
+        assert link.mission._rally_pending is False
+        assert link._ser.write.call_count == 0
+        assert any(e["event_type"] == "rally_ack_fail" for e in link.events)
+
     @pytest.mark.parametrize(
         "point",
         [{"lat": 91, "lon": 0}, {"lat": 0, "lon": 181}, {"lat": 30, "lon": 120, "alt": 40000}],

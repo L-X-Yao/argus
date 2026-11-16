@@ -1135,6 +1135,7 @@ const messages: Record<string, string> = {
   'param.tooMany': '2000 個のパラメータ上限を超えたため、読み取りを停止しました',
   'assistant.otherVehicle': '未送信: 機体またはリンクが変わりました。再提案してください',
   'log.listTooLarge': 'ログ一覧が 1000 件の上限を超えています',
+  'mission.err.rallyTooLarge': 'ラリーポイントのアップロードが 500 点の上限を超えています',
 };
 
 export default messages;

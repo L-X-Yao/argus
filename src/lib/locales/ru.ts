@@ -1137,6 +1137,7 @@ const messages: Record<string, string> = {
   'param.tooMany': 'Больше 2000 параметров; чтение остановлено',
   'assistant.otherVehicle': 'Не отправлено: аппарат или связь изменились; запросите заново',
   'log.listTooLarge': 'Список журналов превышает ограничение 1000 записей',
+  'mission.err.rallyTooLarge': 'Загрузка точек сбора превышает ограничение 500 точек',
 };
 
 export default messages;

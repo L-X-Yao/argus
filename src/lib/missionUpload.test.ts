@@ -397,6 +397,11 @@ describe('rally points', () => {
     expect(validateRallyPoints(points)).toEqual({ ok: true });
   });
 
+  it('refuses more than 500 points', () => {
+    const many = Array.from({ length: 501 }, () => ({ lat: 34, lon: 108, alt: 50 }));
+    expect(validateRallyPoints(many)).toEqual({ ok: false, error: 'mission.err.rallyTooLarge' });
+  });
+
   it.each([
     ['no points', []],
     ['latitude out of range', [{ lat: 91, lon: 0, alt: 50 }]],

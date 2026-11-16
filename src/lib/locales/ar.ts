@@ -1131,6 +1131,7 @@ const messages: Record<string, string> = {
   'param.tooMany': 'تجاوز حد 2000 معامل؛ توقفت القراءة',
   'assistant.otherVehicle': 'لم يُرسل: تغيرت المركبة أو رابطها؛ اطلب من جديد',
   'log.listTooLarge': 'قائمة السجلات تتجاوز حد 1000 إدخال',
+  'mission.err.rallyTooLarge': 'تحميل نقاط التجمع يتجاوز حد 500 نقطة',
 };
 
 export default messages;

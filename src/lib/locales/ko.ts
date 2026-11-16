@@ -1132,6 +1132,7 @@ const messages: Record<string, string> = {
   'param.tooMany': '2000개 매개변수 제한을 초과하여 읽기를 중단했습니다',
   'assistant.otherVehicle': '전송 안 됨: 기체 또는 링크가 변경되었습니다. 다시 제안하세요',
   'log.listTooLarge': '로그 목록이 1000개 항목 제한을 초과했습니다',
+  'mission.err.rallyTooLarge': '랠리 포인트 업로드가 500개 제한을 초과했습니다',
 };
 
 export default messages;
