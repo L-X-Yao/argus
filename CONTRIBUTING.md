@@ -98,6 +98,18 @@ Contract tests keep the two aligned:
 
 Bug fixes and FC-facing changes get a second read before release, from a person or a new AI session that did not write them. Give the reviewer the diff, not your conclusion.
 
+## Several Sessions at Once
+
+More than one AI session can work on this repository at the same time. Each follows the rules above, and these:
+
+- Each session works in its own worktree: `git worktree add ../argus-wt-<name> -b collab/<topic>`. `node_modules` and `tile_cache` are not in it, and the tests and the dev server want both: link them in (`ln -s`). The main checkout belongs to the integrator.
+- Before starting, a session claims its work in `$(git rev-parse --git-common-dir)/CLAIMS.md`, one line per topic: the files it will touch, the session, the reviewer. The line goes when the work is merged or dropped. Every worktree shares the file, and it stays out of version control, like `.git/info/sensitive-words`. A session takes the same file's lock around a heavy test.
+- Heavy tests run one session at a time: `make test-integration` (its ports are fixed in `tests/conftest.py`), the Playwright specs and the SITL scripts. Each session's own servers get fixed ports of their own.
+- Branches stay local. The integrator merges a reviewed branch into `main` and pushes once per batch, so a batch costs one CI run. Only one session runs `scripts/make-release.sh`; the others keep off `main` until the release is out.
+- The writer is never the only reader: the claim names the reviewer of that batch. The author hands over `git diff main...<branch>`, not a conclusion.
+- The integrator resolves a conflict that is mechanical (adjacent lines, import order). Any other the two sessions settle before it is merged.
+- `CLAUDE.local.md` exists only in the main checkout: it is excluded from git, not present in a worktree. Append your own section to it by absolute path, titled with the date, and leave the other sections alone. `docs/VERIFICATION.md` is updated by whoever made the change.
+
 ## Verification Status
 
 `docs/VERIFICATION.md` records how far every command, message, REST route, panel and platform feature has been tested.
