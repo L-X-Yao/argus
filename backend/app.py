@@ -45,7 +45,7 @@ _REVALIDATE = {"Cache-Control": "no-cache"}
 # What the page may load and run. Its scripts come from this server and from nowhere else, so
 # markup that gets into the page cannot bring a handler that runs: the map writes icons,
 # tooltips and popups with innerHTML, from mission files, browser storage and telemetry.
-# Sent with the page only: /docs loads its own scripts from a CDN.
+# Sent with the page only — an API answer is no page, and /docs is disabled.
 #   style-src 'unsafe-inline'   the map libraries and the components set style attributes
 #   ELEVATION                   the one other server the page reads, for the 3D view
 #                               (src/components/map/Map3DView.svelte): that bucket, not the host
@@ -86,6 +86,12 @@ app = FastAPI(
     description="Web ground control station for ArduPilot vehicles: REST API",
     version=VERSION,
     lifespan=lifespan,
+    # The schema stays at /openapi.json; the Swagger and ReDoc pages are off
+    # (audit 2026-11-16 L16): they were the one page that loaded scripts from
+    # a CDN — unpinned jsdelivr — on the token's origin, and they are also why
+    # the page's content policy could not go with every HTML answer.
+    docs_url=None,
+    redoc_url=None,
 )
 
 _cors_origins = allowed_origins(cfg.PORT)

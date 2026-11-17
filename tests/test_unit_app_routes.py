@@ -419,9 +419,13 @@ class TestContentPolicy:
         assert "'https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png'" in source
 
     def test_it_goes_with_nothing_but_the_page(self):
-        """/docs loads its scripts from a CDN, and an API answer is no page."""
-        assert client.get("/docs").status_code == 200
-        assert "content-security-policy" not in client.get("/docs").headers
+        """An API answer is no page, and the Swagger/ReDoc pages are disabled
+        (audit 2026-11-16 L16): they loaded unpinned CDN scripts on the
+        token's origin. The schema itself stays."""
+        assert client.get("/docs").status_code == 404
+        assert client.get("/redoc").status_code == 404
+        assert client.get("/openapi.json").status_code == 200
+        assert "content-security-policy" not in client.get("/openapi.json").headers
         assert "content-security-policy" not in client.get("/api/version").headers
 
     # CI runs these tests before it builds: tests/e2e/smoke.spec.ts and scripts/smoke_package.py

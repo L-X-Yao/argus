@@ -425,7 +425,6 @@ class TestRequestsUnderAnotherName:
     def test_our_own_names_still_serve_everything(self, client):
         assert client.get("/health", headers={"host": "localhost:8100"}).status_code == 200
         assert client.get("/openapi.json", headers={"host": "127.0.0.1"}).status_code == 200
-        assert client.get("/docs", headers={"host": "localhost"}).status_code == 200
 
     def test_with_a_token_the_host_rule_steps_aside(self, client):
         """With a token the gate is the token: a request under another name
