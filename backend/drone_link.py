@@ -154,6 +154,8 @@ class DroneLink:
         # are useless without an active GPS_RTCM_DATA path to a connected FC.
         self.ntrip_thread: threading.Thread | None = None
         self.ntrip_stop: threading.Event | None = None
+        # Manual RTCM paste uses one worker at a time; the worker clears this on exit.
+        self.rtcm_inject_thread: threading.Thread | None = None
         self.param_mgr = ParamManager(self)
 
         self.attitude = AttitudeState()

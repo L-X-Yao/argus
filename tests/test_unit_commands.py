@@ -4,6 +4,8 @@ import base64
 import json
 import struct
 import sys
+import threading
+import time
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -450,11 +452,18 @@ class TestSwitchVehicle:
 
 
 class TestInjectRtcm:
+    @staticmethod
+    def _wait_for_writes(link, count):
+        deadline = time.monotonic() + 1
+        while link._ser.write.call_count < count and time.monotonic() < deadline:
+            time.sleep(0.005)
+
     def test_inject_rtcm(self):
         link = make_link()
         raw_data = b"\x01\x02\x03\x04\x05"
         b64 = base64.b64encode(raw_data).decode()
         execute("inject_rtcm", None, link, data={"data": b64})
+        self._wait_for_writes(link, 1)
         assert link._ser.write.called
 
     def test_inject_rtcm_large(self):
@@ -462,7 +471,63 @@ class TestInjectRtcm:
         raw_data = b"\xaa" * 250
         b64 = base64.b64encode(raw_data).decode()
         execute("inject_rtcm", None, link, data={"data": b64})
+        self._wait_for_writes(link, 2)
         assert link._ser.write.call_count >= 2  # 250/180 = 2 chunks
+
+    def test_inject_rtcm_refuses_more_than_256_kib(self):
+        link = make_link()
+        b64 = base64.b64encode(b"\xaa" * (256 * 1024 + 1)).decode()
+        result = execute("inject_rtcm", None, link, data={"data": b64})
+        assert result is not None and result["ok"] is False
+        assert not link._ser.write.called
+        assert any(e["event_type"] == "rtcm_inject_fail" for e in link.events)
+
+    def test_inject_rtcm_sends_outside_the_calling_thread(self):
+        link = make_link()
+        entered = threading.Event()
+        release = threading.Event()
+        finished = threading.Event()
+
+        def blocked_write(_frame):
+            entered.set()
+            release.wait(1)
+            finished.set()
+
+        link._ser.write.side_effect = blocked_write
+        b64 = base64.b64encode(b"rtcm").decode()
+        result = []
+        caller = threading.Thread(target=lambda: result.append(execute("inject_rtcm", None, link, data={"data": b64})))
+        caller.start()
+        assert entered.wait(1)
+        caller.join(0.1)
+        returned = not caller.is_alive()
+        release.set()
+        caller.join(1)
+        assert finished.wait(1)
+        assert returned, "the caller stayed blocked in serial write"
+        assert result == [None]
+
+        assert result == [None]
+
+    @pytest.mark.parametrize("bad", [123, ["x"], "abc", "!!!!", "AA AA", "é"])
+    def test_inject_rtcm_rejects_invalid_base64_with_a_typed_error(self, bad):
+        link = make_link()
+        result = execute("inject_rtcm", None, link, data={"data": bad})
+        assert result is not None and result["ok"] is False
+        assert "base64" in result["error"].lower()
+        assert any(e["event_type"] == "rtcm_inject_fail" for e in link.events)
+        assert not link._ser.write.called
+
+    def test_inject_rtcm_refuses_a_second_worker(self):
+        link = make_link()
+        existing = MagicMock()
+        existing.is_alive.return_value = True
+        link.rtcm_inject_thread = existing
+        b64 = base64.b64encode(b"rtcm").decode()
+        result = execute("inject_rtcm", None, link, data={"data": b64})
+        assert result is not None and result["ok"] is False
+        assert any(e["event_type"] == "rtcm_inject_fail" for e in link.events)
+        assert not link._ser.write.called
 
     def test_inject_rtcm_empty(self):
         link = make_link()

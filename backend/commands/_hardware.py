@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import base64
+import binascii
 import math
 import struct
+import threading
 import time
 from typing import TYPE_CHECKING
 
@@ -98,21 +100,65 @@ def cmd_serial_control(link: DroneLink, param, data: dict):
         send_serial_control(link, text)
 
 
+MAX_RTCM_SIZE = 256 * 1024
+MAX_RTCM_B64 = 4 * ((MAX_RTCM_SIZE + 2) // 3)
+
+
+def _rtcm_fail(link: DroneLink, key: str) -> dict:
+    error = lt(key, link.locale)
+    link.add_event(error, "rtcm_inject_fail")
+    return {"ok": False, "error": error}
+
+
+def _inject_rtcm_frames(link: DroneLink, raw: bytes) -> None:
+    try:
+        for i in range(0, len(raw), 180):
+            chunk = raw[i : i + 180]
+            flags = 0x01
+            if i == 0:
+                flags |= 0x04
+            if i + 180 >= len(raw):
+                flags |= 0x08
+            p = struct.pack("<BB", flags, len(chunk))
+            p += chunk + b"\x00" * (180 - len(chunk))
+            link.send(bm(233, p, link.sq, CRC_EXTRA[233]))
+    finally:
+        with link._state_lock:
+            if link.rtcm_inject_thread is threading.current_thread():
+                link.rtcm_inject_thread = None
+
+
 def cmd_inject_rtcm(link: DroneLink, param, data: dict):
     rtcm_data = data.get("data", "")
+    if not isinstance(rtcm_data, str):
+        return _rtcm_fail(link, "err_rtcm_invalid")
     if not rtcm_data:
         return
-    raw = base64.b64decode(rtcm_data)
-    for i in range(0, len(raw), 180):
-        chunk = raw[i : i + 180]
-        flags = 0x01
-        if i == 0:
-            flags |= 0x04
-        if i + 180 >= len(raw):
-            flags |= 0x08
-        p = struct.pack("<BB", flags, len(chunk))
-        p += chunk + b"\x00" * (180 - len(chunk))
-        link.send(bm(233, p, link.sq, CRC_EXTRA[233]))
+    if len(rtcm_data) > MAX_RTCM_B64:
+        return _rtcm_fail(link, "err_rtcm_too_large")
+    try:
+        # The UI sends one base64 value, not a document: reject bad alphabet and whitespace too.
+        raw = base64.b64decode(rtcm_data, validate=True)
+    except (binascii.Error, ValueError):
+        return _rtcm_fail(link, "err_rtcm_invalid")
+    if len(raw) > MAX_RTCM_SIZE:
+        return _rtcm_fail(link, "err_rtcm_too_large")
+    if not raw:
+        return
+    # A large paste is hundreds of serial writes. Keep them off the websocket event loop,
+    # and never pile up a second worker while the first one is still sending.
+    with link._state_lock:
+        existing = link.rtcm_inject_thread
+        if existing is not None and existing.is_alive():
+            return _rtcm_fail(link, "err_rtcm_busy")
+        thread = threading.Thread(
+            target=_inject_rtcm_frames,
+            args=(link, raw),
+            daemon=True,
+            name="rtcm-inject",
+        )
+        link.rtcm_inject_thread = thread
+        thread.start()
 
 
 # --- RC / Motor ---
