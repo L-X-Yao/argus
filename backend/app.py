@@ -41,8 +41,11 @@ _REVALIDATE = {"Cache-Control": "no-cache"}
 #   style-src 'unsafe-inline'   the map libraries and the components set style attributes
 #   ELEVATION                   the one other server the page reads, for the 3D view
 #                               (src/components/map/Map3DView.svelte): that bucket, not the host
-#   connect-src ws: wss:        'self' covers a WebSocket to this server in newer browsers only,
-#                               and behind a proxy the Host header is not the page's address
+#   connect-src without ws:/wss:  the page's one websocket is to the server that served it,
+#                               which 'self' covers (CSP3); a scheme source like ws: would let
+#                               the page open a socket to ANY host and port (audit 2026-11-16
+#                               L14). The e2e suite drives the whole app over that websocket
+#                               under this policy, which is the proof that 'self' holds it.
 ELEVATION = "https://s3.amazonaws.com/elevation-tiles-prod/"
 CONTENT_POLICY = "; ".join(
     (
@@ -51,7 +54,7 @@ CONTENT_POLICY = "; ".join(
         "style-src 'self' 'unsafe-inline'",
         f"img-src 'self' data: blob: {ELEVATION}",
         "font-src 'self' data:",
-        f"connect-src 'self' ws: wss: {ELEVATION}",
+        f"connect-src 'self' {ELEVATION}",
         "worker-src 'self'",
         "manifest-src 'self'",
         "object-src 'none'",

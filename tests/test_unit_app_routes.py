@@ -400,8 +400,16 @@ class TestContentPolicy:
             assert ("'unsafe-inline'" in sources) == (name == "style-src"), name
 
     def test_no_directive_is_open_to_every_server(self):
+        """Scheme-only sources name every host and port on the scheme: ws: in
+        connect-src let the page open a socket anywhere (audit L14)."""
         for name, sources in self._policy().items():
-            assert not {"*", "http:", "https:"} & set(sources), name
+            assert not {"*", "http:", "https:", "ws:", "wss:"} & set(sources), name
+
+    def test_the_websocket_is_held_by_self(self):
+        """The page's one websocket is to the server that served it, which
+        'self' covers; the e2e suite drives the whole app over it under this
+        policy (audit 2026-11-16 L14)."""
+        assert self._policy()["connect-src"] == ["'self'", "https://s3.amazonaws.com/elevation-tiles-prod/"]
 
     def test_the_other_server_is_the_bucket_the_page_reads(self):
         """Elevation for the 3D view. The host alone would admit every bucket on it."""
