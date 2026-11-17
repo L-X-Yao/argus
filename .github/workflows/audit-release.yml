@@ -36,8 +36,11 @@ jobs:
         run: |
           tag=$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq .tagName)
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
+          # SHA256SUMS.txt lists every asset, so every asset is downloaded: a release that
+          # ships the installer as well would fail the check below on the missing file.
           gh release download "$tag" --repo "$GITHUB_REPOSITORY" --dir release \
-            --pattern 'Argus_GCS_v*_amd64.zip' --pattern 'SHA256SUMS.txt'
+            --pattern 'Argus_GCS_v*_amd64.zip' --pattern 'Argus_GCS_v*_amd64_setup.exe' \
+            --pattern 'SHA256SUMS.txt'
           cd release && sha256sum -c SHA256SUMS.txt
 
       - name: Known holes in the libraries it bundles
