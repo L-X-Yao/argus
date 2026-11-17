@@ -401,6 +401,39 @@ class TestRequestsFromOtherPages:
         assert client.get("/health", headers={"sec-fetch-site": "cross-site"}).status_code == 200
 
 
+class TestRemoteClientWithoutToken:
+    """Audit 2026-11-16 L18: without a token, only this machine talks to the
+    server, whatever name it asks by. The entry points refuse an exposed
+    bind, but a direct `uvicorn backend.app:app --host 0.0.0.0` skips them,
+    so the middleware holds the peer's address too."""
+
+    def _remote_client(self):
+        return TestClient(
+            app, base_url="http://localhost", client=("192.168.1.50", 5000), raise_server_exceptions=False
+        )
+
+    @pytest.mark.parametrize("path", ["/api/session", "/", "/health", "/openapi.json", "/manifest.json"])
+    def test_a_remote_client_is_refused_whatever_its_host(self, path):
+        c = self._remote_client()
+        r = c.get(path, headers={"host": "localhost:8100"})
+        assert (r.status_code, r.json()) == (403, {"error": "client address not allowed"})
+
+    def test_a_remote_client_is_refused_under_a_foreign_name_too(self):
+        c = self._remote_client()
+        r = c.get("/api/session", headers={"host": "evil.example:8100"})
+        assert r.status_code == 403
+
+    def test_this_machine_still_passes(self):
+        c = TestClient(app, base_url="http://localhost", client=("127.0.0.1", 5000), raise_server_exceptions=False)
+        assert c.get("/api/session").status_code == 200
+
+    def test_with_a_token_the_client_address_does_not_matter(self):
+        os.environ["GCS_AUTH_TOKEN"] = "remote_client_token_1234567"
+        c = self._remote_client()
+        r = c.get("/api/session", headers={"Authorization": "Bearer remote_client_token_1234567"})
+        assert r.status_code == 200
+
+
 class TestRequestsUnderAnotherName:
     """DNS rebinding: a hostile page gets its own name pointed at this machine, and is then
     same-origin with us to the browser. Only the Host header still gives it away."""

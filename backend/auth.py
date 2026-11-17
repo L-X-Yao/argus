@@ -148,6 +148,23 @@ def auth_required() -> bool:
     return _load_token() is not None
 
 
+def _from_this_machine(request: Request) -> bool:
+    """The peer's address, not the name it asked by (audit 2026-11-16 L18).
+    The two entry points refuse a bind beyond this machine without a token,
+    but a direct `uvicorn backend.app:app --host 0.0.0.0` skips them; this
+    holds whoever it is asked by. An address that is not one — the test
+    client's "testclient" — cannot be judged and passes; uvicorn always
+    provides one."""
+    client = request.client
+    if client is None:
+        return True
+    try:
+        addr = ipaddress.ip_address(client.host)
+    except ValueError:
+        return True
+    return addr.is_loopback
+
+
 async def auth_middleware(request: Request, call_next):
     # Not request.url.path: older Starlette builds it from the Host header.
     path = request.scope["path"]
@@ -156,6 +173,10 @@ async def auth_middleware(request: Request, call_next):
     if path.startswith("/api/") and "Authorization" not in request.headers and not _from_own_page(request):
         return JSONResponse(status_code=403, content={"error": "origin not allowed"})
     if not auth_required():
+        # And only this machine talks to it, whatever it asks by (L18): the
+        # peer's address, then the name it used (L17).
+        if not _from_this_machine(request):
+            return JSONResponse(status_code=403, content={"error": "client address not allowed"})
         # Nothing else stands between a page and the server here, and the rule
         # above lets any request with an Authorization header through. Every
         # path is held to our names, not only /api: SECURITY.md promises
