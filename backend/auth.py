@@ -269,3 +269,10 @@ def verify_ws_token(ws: WebSocket) -> bool:
         return True
     token = ws.query_params.get("token", "")
     return verify_token(token)
+
+
+def verify_ws_cookie(ws: WebSocket) -> bool:
+    """The handshake cookie a logged-in page carries, in place of a token in
+    the URL (audit 2026-11-16 L15). Empty when no token is configured, which
+    the caller answers for first."""
+    return _verify_cookie(ws.cookies.get(COOKIE_NAME, ""))

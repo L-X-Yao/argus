@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 describe('backend URL resolver', () => {
   beforeEach(() => {
     vi.resetModules();
+    vi.unstubAllGlobals();
   });
 
   it('apiUrl returns relative path in browser mode', async () => {
@@ -24,6 +25,31 @@ describe('backend URL resolver', () => {
     const { getWsUrl } = await import('./backend');
     const url = getWsUrl();
     expect(url).toBe('wss://gcs.example.com/ws');
+  });
+
+  it('getWsUrl keeps no token in the URL in browser mode', async () => {
+    // Audit 2026-11-16 L15: the served page's handshake rides on the login
+    // cookie; a token in a URL leaks into access logs and proxies.
+    vi.stubGlobal('window', { location: { protocol: 'http:', host: 'localhost:8100' } });
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => (key === 'argus_auth_token' ? 'secret_token_value' : null),
+    });
+    const { getWsUrl } = await import('./backend');
+    expect(getWsUrl()).toBe('ws://localhost:8100/ws');
+  });
+
+  it('getWsUrl keeps the query token only in Tauri mode', async () => {
+    // Residual: the webview origin is tauri://localhost, a cross-origin
+    // fetch cannot carry the login cookie.
+    vi.stubGlobal('window', {
+      __TAURI_INTERNALS__: {},
+      location: { protocol: 'https:', host: 'tauri.localhost' },
+    });
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => (key === 'argus_auth_token' ? 'secret_token_value' : null),
+    });
+    const { getWsUrl } = await import('./backend');
+    expect(getWsUrl()).toBe('ws://127.0.0.1:8100/ws?token=secret_token_value');
   });
 
   it('detects Tauri mode via __TAURI_INTERNALS__', async () => {

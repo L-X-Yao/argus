@@ -19,14 +19,22 @@ export const API_BASE: string = isTauri ? 'http://127.0.0.1:8100' : '';
 /** WebSocket URL for the drone link. */
 export function getWsUrl(): string {
   let base: string;
+  let tokenInQuery = false;
   if (isTauri) {
     base = 'ws://127.0.0.1:8100/ws';
+    // The webview's origin is tauri://localhost: a fetch to the backend is
+    // cross-origin and cannot carry the login cookie, so the handshake keeps
+    // the token in the query (audit 2026-11-16 L15 residual).
+    tokenInQuery = true;
   } else {
+    // Same origin (served page) or the dev proxy: the handshake rides on the
+    // HttpOnly login cookie. A token in a URL leaks into access logs and
+    // proxies, so it goes only where a cookie cannot reach.
     const loc = window.location;
     const proto = loc.protocol === 'https:' ? 'wss:' : 'ws:';
     base = `${proto}//${loc.host}/ws`;
   }
-  const token = typeof localStorage !== 'undefined' ? localStorage.getItem('argus_auth_token') : null;
+  const token = tokenInQuery && typeof localStorage !== 'undefined' ? localStorage.getItem('argus_auth_token') : null;
   return token ? `${base}?token=${encodeURIComponent(token)}` : base;
 }
 

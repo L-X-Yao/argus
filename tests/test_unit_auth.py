@@ -567,6 +567,46 @@ class TestConcurrentAuth:
         assert all(r is False for r in results)
 
 
+class TestWsCookieHandshake:
+    """Audit 2026-11-16 L15: the handshake accepts the HttpOnly session
+    cookie, so the served page need not put the token in the URL. The query
+    token stays for the clients that cannot hold a cookie (the MCP server)."""
+
+    TOKEN = "ws_cookie_token_1234567890"
+
+    def _logged_in(self, client) -> str:
+        os.environ["GCS_AUTH_TOKEN"] = self.TOKEN
+        r = client.post("/api/auth/login", json={"token": self.TOKEN})
+        assert r.status_code == 200
+        # A browser sends the HttpOnly cookie on the handshake automatically;
+        # the test client's jar does not reach the websocket, so send what it
+        # would send.
+        return r.headers["set-cookie"].split(";")[0]
+
+    def test_the_login_cookie_authorizes_the_handshake(self, client):
+        cookie = self._logged_in(client)
+        with client.websocket_connect("/ws", headers={"cookie": cookie}):
+            pass  # accepted is the assertion
+
+    def test_no_credentials_are_refused(self, client):
+        os.environ["GCS_AUTH_TOKEN"] = self.TOKEN
+        with pytest.raises(WebSocketDisconnect) as exc, client.websocket_connect("/ws"):
+            pass
+        assert exc.value.code == 4001
+
+    def test_the_query_token_still_connects(self, client):
+        """The MCP server cannot hold a cookie; its query token keeps working."""
+        os.environ["GCS_AUTH_TOKEN"] = self.TOKEN
+        with client.websocket_connect(f"/ws?token={self.TOKEN}"):
+            pass
+
+    def test_a_forged_cookie_is_refused(self, client):
+        os.environ["GCS_AUTH_TOKEN"] = self.TOKEN
+        forged = f"{auth_module.COOKIE_NAME}=forged"
+        with pytest.raises(WebSocketDisconnect), client.websocket_connect("/ws", headers={"cookie": forged}):
+            pass
+
+
 class TestPageFromAnotherDevice:
     """A phone on the network: the page loads from this server, and its login is a POST that
     carries the address the phone opened as Origin."""

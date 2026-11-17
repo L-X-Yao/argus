@@ -10,7 +10,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from .auth import auth_middleware, auth_required, generate_token, set_session_cookie, verify_token, verify_ws_token
+from .auth import (
+    auth_middleware,
+    auth_required,
+    generate_token,
+    set_session_cookie,
+    verify_token,
+    verify_ws_cookie,
+    verify_ws_token,
+)
 from .config import (
     ROOT_DIR,
     VERSION,
@@ -201,7 +209,10 @@ async def websocket_endpoint(ws: WebSocket):
     if origin and origin not in _cors_origins:
         await ws.close(code=4003, reason="origin not allowed")
         return
-    if not verify_ws_token(ws):
+    # The logged-in page is authorized by its HttpOnly session cookie, so the
+    # token need not travel in the URL (audit 2026-11-16 L15). The query
+    # token stays for the clients that cannot hold a cookie: the MCP server.
+    if not verify_ws_token(ws) and not verify_ws_cookie(ws):
         await ws.close(code=4001, reason="unauthorized")
         return
     await app.state.ws_mgr.handle_client(ws)

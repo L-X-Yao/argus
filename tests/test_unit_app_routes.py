@@ -500,13 +500,14 @@ class TestAuthGenerate:
 
 
 class TestWebSocketUnauthorized:
-    """Cover the ws unauthorized close (lines 146-147)."""
+    """Cover the ws unauthorized close: neither credential may accept."""
 
     def test_ws_rejected_when_auth_required_no_token(self):
         from starlette.websockets import WebSocketDisconnect
 
         with (
             patch("backend.app.verify_ws_token", return_value=False),
+            patch("backend.app.verify_ws_cookie", return_value=False),
             pytest.raises(WebSocketDisconnect) as exc,
             client.websocket_connect("/ws", headers={"origin": "http://localhost:5173"}),
         ):
