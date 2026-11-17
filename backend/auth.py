@@ -168,6 +168,17 @@ def _from_this_machine(request: Request) -> bool:
 async def auth_middleware(request: Request, call_next):
     # Not request.url.path: older Starlette builds it from the Host header.
     path = request.scope["path"]
+    # A preflight from a page in ARGUS_CORS_ORIGINS goes straight through to
+    # the CORS middleware (audit 2026-11-16 L19): it carries no Authorization
+    # by design, and the token gate answered it 401, so cross-origin JSON
+    # POSTs from an allowed page never ran. Only OPTIONS is let through
+    # early, and only for an origin the list already allows — the CORS
+    # middleware still answers nothing to any other origin.
+    if (
+        request.method == "OPTIONS"
+        and (request.headers.get("origin") or "").rstrip("/") in request.app.state.cors_origins
+    ):
+        return await call_next(request)
     # Holds with or without a token. Another site's page cannot set Authorization
     # without a CORS preflight, so a request that carries it is not such a page.
     if path.startswith("/api/") and "Authorization" not in request.headers and not _from_own_page(request):

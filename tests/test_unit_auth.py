@@ -434,6 +434,44 @@ class TestRemoteClientWithoutToken:
         assert r.status_code == 200
 
 
+class TestCorsPreflight:
+    """Audit 2026-11-16 L19: a preflight from a page ARGUS_CORS_ORIGINS
+    allows must reach the CORS middleware — it carries no Authorization by
+    design, and the token gate answered it 401, so cross-origin JSON POSTs
+    from an allowed page never ran."""
+
+    TOKEN = "preflight_token_123456789"
+
+    def _preflight(self, client, origin):
+        return client.options(
+            "/api/session",
+            headers={
+                "origin": origin,
+                "sec-fetch-site": "cross-site",
+                "access-control-request-method": "POST",
+                "access-control-request-headers": "content-type",
+            },
+        )
+
+    def test_preflight_from_an_allowed_origin_passes(self, client):
+        os.environ["GCS_AUTH_TOKEN"] = self.TOKEN
+        r = self._preflight(client, "http://localhost:5173")
+        assert r.status_code == 200
+        assert r.headers.get("access-control-allow-origin") == "http://localhost:5173"
+
+    def test_preflight_from_an_unlisted_origin_is_refused(self, client):
+        os.environ["GCS_AUTH_TOKEN"] = self.TOKEN
+        r = self._preflight(client, "http://evil.example")
+        assert r.status_code == 403
+        assert r.headers.get("access-control-allow-origin") is None
+
+    def test_a_real_request_still_needs_the_token(self, client):
+        """Only OPTIONS is let through early; nothing else is relaxed."""
+        os.environ["GCS_AUTH_TOKEN"] = self.TOKEN
+        r = client.post("/api/firmware/download", json={}, headers={"origin": "http://localhost:5173"})
+        assert r.status_code == 401
+
+
 class TestRequestsUnderAnotherName:
     """DNS rebinding: a hostile page gets its own name pointed at this machine, and is then
     same-origin with us to the browser. Only the Host header still gives it away."""
