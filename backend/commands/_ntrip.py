@@ -64,12 +64,40 @@ def _inject_chunk(link, chunk: bytes, *, is_first: bool, is_last: bool) -> None:
 
 
 def _ntrip_loop(
-    link: DroneLink, host: str, port: int, mountpoint: str, username: str, password: str, stop_event: threading.Event
+    link: DroneLink,
+    connect_to: str | list[tuple[str, int]],
+    port: int,
+    mountpoint: str,
+    username: str,
+    password: str,
+    stop_event: threading.Event,
+    host_header: str | None = None,
 ) -> None:
-    """Connect to caster, validate response, stream RTCM to FC until stop."""
+    """Connect to caster, validate response, stream RTCM to FC until stop.
+
+    connect_to is what the connection is made to: cmd_ntrip_start passes the
+    addresses its guard already checked (audit 2026-11-16 L4), so a name that
+    re-resolves in between cannot hand the connection to another machine.
+    host_header is the name the caster is asked by, when that differs from it.
+    """
+    targets = [(connect_to, port)] if isinstance(connect_to, str) else list(connect_to)
+    named_host = (
+        host_header if host_header is not None else (connect_to if isinstance(connect_to, str) else connect_to[0][0])
+    )
     sock: socket.socket | None = None
     try:
-        sock = socket.create_connection((host, port), timeout=10)
+        last_err: OSError | None = None
+        for address in targets:
+            try:
+                sock = socket.create_connection(address, timeout=10)
+                break
+            except OSError as e:
+                last_err = e
+                sock = None
+        if sock is None:
+            if last_err is not None:
+                raise last_err
+            raise RuntimeError("no address to connect to")
         # Short recv timeout so the stop_event check runs every 2s even on
         # an idle stream. RTCM correctional data is typically 1-3 Hz so the
         # timeouts are expected and benign.
@@ -78,7 +106,7 @@ def _ntrip_loop(
         auth = base64.b64encode(f"{username}:{password}".encode()).decode("ascii")
         request = (
             f"GET /{mountpoint} HTTP/1.0\r\n"
-            f"Host: {host}\r\n"
+            f"Host: {named_host}\r\n"
             f"User-Agent: NTRIP Argus/{VERSION}\r\n"
             f"Authorization: Basic {auth}\r\n"
             f"Connection: close\r\n"
@@ -191,6 +219,7 @@ def cmd_ntrip_start(link: DroneLink, param, data: dict):
         addrs = socket.getaddrinfo(host, port)
     except socket.gaierror:
         return {"ok": False, "error": lt("err_ntrip_resolve", link.locale)}
+    pinned: list[tuple[str, int]] = []
     for _fam, *_rest, sockaddr in addrs:
         try:
             ip = ipaddress.ip_address(sockaddr[0])
@@ -198,6 +227,9 @@ def cmd_ntrip_start(link: DroneLink, param, data: dict):
             continue
         if off_limits(ip):
             return {"ok": False, "error": lt("err_ntrip_address", link.locale)}
+        pinned.append((sockaddr[0], sockaddr[1]))
+    if not pinned:
+        return {"ok": False, "error": lt("err_ntrip_resolve", link.locale)}
 
     with link._state_lock:
         existing = link.ntrip_thread
@@ -205,9 +237,11 @@ def cmd_ntrip_start(link: DroneLink, param, data: dict):
         return {"ok": False, "error": lt("err_ntrip_running", link.locale)}
 
     stop_event = threading.Event()
+    # The loop connects to the checked addresses, and asks by the name (L4).
     thread = threading.Thread(
         target=_ntrip_loop,
-        args=(link, host, port, mountpoint, username, password, stop_event),
+        args=(link, pinned, port, mountpoint, username, password, stop_event),
+        kwargs={"host_header": host},
         daemon=True,
         name="ntrip-client",
     )

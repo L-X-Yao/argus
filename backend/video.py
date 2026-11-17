@@ -85,6 +85,13 @@ async def video_stream(url: str = ""):
     url_err = _validate_video_url(url)
     if url_err:
         return {"error": f"Invalid video URL: {url_err}"}
+    # Residual (audit 2026-11-16 L4): ffmpeg resolves the name again when it
+    # connects, so a name re-resolved between this check and the connection
+    # can hand the stream to an address that was never checked. Pinning it is
+    # not possible without breaking streams: https needs the name for SNI and
+    # the certificate, and rewriting the host in rtsp/http URLs breaks
+    # name-based virtual hosts. The operator types the address, as with the
+    # vehicle link.
     if not _ffmpeg_available():
         return {"error": "ffmpeg not installed on server"}
 

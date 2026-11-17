@@ -2,6 +2,7 @@
 
 import socket
 import threading
+import time
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -160,6 +161,79 @@ class TestNtripLoopEdgeCases:
         t.join(timeout=3)
         assert "ntrip_connected" in [e["event_type"] for e in link.events]
         assert link._ser.write.called
+
+
+class TestPinnedConnection:
+    """Audit 2026-11-16 L4: the connection goes to the addresses the guard
+    checked, and asks by the name — a second resolution in between could
+    hand the connection to a different machine than the one validated."""
+
+    def test_start_connects_to_the_validated_address(self, monkeypatch):
+        asked = []
+
+        def fake_getaddrinfo(host, port, *a, **kw):
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("203.0.113.7", port))]
+
+        def fake_create_connection(addr, timeout=None):
+            asked.append(addr)
+            raise OSError("refused")
+
+        monkeypatch.setattr(socket, "getaddrinfo", fake_getaddrinfo)
+        monkeypatch.setattr(socket, "create_connection", fake_create_connection)
+        link = make_link()
+        cmd_ntrip_start(link, None, {"host": "caster.example", "port": 2101, "mountpoint": "MNT"})
+        deadline = time.time() + 5
+        while time.time() < deadline and not any(e["event_type"] == "ntrip_error" for e in link.events):
+            time.sleep(0.01)
+        # Pre-fix this was ("caster.example", 2101): the loop resolved the
+        # name a second time and connected to whatever it answered then.
+        assert asked == [("203.0.113.7", 2101)]
+        assert any(e["event_type"] == "ntrip_error" for e in link.events)
+
+    def test_the_caster_is_asked_by_its_name_not_the_pinned_ip(self, monkeypatch):
+        sock = MagicMock()
+        sock.recv.side_effect = [b"ICY 200 OK\r\n\r\n", b""]
+
+        def fake_getaddrinfo(host, port, *a, **kw):
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("203.0.113.7", port))]
+
+        monkeypatch.setattr(socket, "getaddrinfo", fake_getaddrinfo)
+        monkeypatch.setattr(socket, "create_connection", lambda *a, **kw: sock)
+        link = make_link()
+        cmd_ntrip_start(link, None, {"host": "caster.example", "port": 2101, "mountpoint": "MNT"})
+        deadline = time.time() + 5
+        while time.time() < deadline and not sock.sendall.called:
+            time.sleep(0.01)
+        request = sock.sendall.call_args.args[0]
+        assert b"Host: caster.example\r\n" in request
+        assert b"203.0.113.7" not in request
+
+    def test_every_validated_address_is_tried_in_order(self, monkeypatch):
+        asked = []
+
+        def fake_getaddrinfo(host, port, *a, **kw):
+            return [
+                (socket.AF_INET6, socket.SOCK_STREAM, 6, "", ("2001:db8::5", port)),
+                (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("203.0.113.7", port)),
+            ]
+
+        def fake_create_connection(addr, timeout=None):
+            asked.append(addr)
+            if addr == ("2001:db8::5", 2101):
+                raise OSError("v6 unreachable")
+            ok = MagicMock()
+            ok.recv.side_effect = [b"ICY 200 OK\r\n\r\n", b""]
+            return ok
+
+        monkeypatch.setattr(socket, "getaddrinfo", fake_getaddrinfo)
+        monkeypatch.setattr(socket, "create_connection", fake_create_connection)
+        link = make_link()
+        cmd_ntrip_start(link, None, {"host": "caster.example", "port": 2101, "mountpoint": "MNT"})
+        deadline = time.time() + 5
+        while time.time() < deadline and "ntrip_connected" not in [e["event_type"] for e in link.events]:
+            time.sleep(0.01)
+        assert asked == [("2001:db8::5", 2101), ("203.0.113.7", 2101)]
+        assert "ntrip_connected" in [e["event_type"] for e in link.events]
 
 
 class TestCmdNtripStartFullPath:
