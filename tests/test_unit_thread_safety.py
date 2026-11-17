@@ -4,6 +4,9 @@ import sys
 import threading
 import time
 from pathlib import Path
+from unittest.mock import MagicMock
+
+import pytest
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from backend.drone_link import DroneLink
@@ -61,6 +64,33 @@ class TestThreadSafety:
         assert state.keys() == expected, (
             f"\nBackend-only: {state.keys() - expected}\nFrontend-only: {expected - state.keys()}"
         )
+
+
+class TestLogCommandLocking:
+    @pytest.mark.parametrize("operation", ["list", "download", "cancel"])
+    def test_log_commands_wait_for_state_lock_before_writing(self, operation):
+        from backend.commands import _setup
+
+        link = DroneLink()
+        link._ser = MagicMock()
+        link.log_dl._log_list = [{"id": 1, "size": 100, "time_utc": 0}]
+        calls = {
+            "list": lambda: _setup.cmd_log_list(link, None, {}),
+            "download": lambda: _setup.cmd_log_download(link, None, {"id": 1}),
+            "cancel": lambda: _setup.cmd_log_cancel(link, None, {}),
+        }
+        link._state_lock.acquire()
+        thread = threading.Thread(target=calls[operation], daemon=True)
+        thread.start()
+        try:
+            time.sleep(0.05)
+            waited = not link._ser.write.called
+        finally:
+            link._state_lock.release()
+            thread.join(timeout=1)
+        assert waited, f"{operation} changed transfer state without waiting for the lock"
+        assert not thread.is_alive()
+        assert link._ser.write.called
 
 
 class TestBufferCap:

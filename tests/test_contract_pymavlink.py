@@ -66,6 +66,7 @@ class FakeLink:
         self.locale = "zh"
         self.captured: list[bytes] = []
         self._lock = threading.Lock()
+        self._state_lock = threading.Lock()
         self._mag_cal_pct = -1
         self._mag_cal_done = False
         self._mag_cal_reports: dict[int, int] = {}

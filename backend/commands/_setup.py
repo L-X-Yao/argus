@@ -129,6 +129,13 @@ MAX_LOG_SIZE = 256 * 1024 * 1024
 
 
 def cmd_log_list(link: DroneLink, param, data: dict):
+    # Serialize the request with LOG_DATA/finalize on the link thread. link.send takes _lock
+    # afterwards, the same order as DroneLink._process, so there is no lock-order inversion.
+    with link._state_lock:
+        return _cmd_log_list(link, param, data)
+
+
+def _cmd_log_list(link: DroneLink, param, data: dict):
     # ArduPilot's AP_Logger rejects LOG_REQUEST_LIST when armed
     # (AP_Logger_MAVLinkLogTransfer.cpp:40). Surface that to the UI as a
     # typed error instead of the user seeing only a generic statustext.
@@ -146,6 +153,11 @@ def cmd_log_list(link: DroneLink, param, data: dict):
 
 
 def cmd_log_download(link: DroneLink, param, data: dict):
+    with link._state_lock:
+        return _cmd_log_download(link, param, data)
+
+
+def _cmd_log_download(link: DroneLink, param, data: dict):
     if link.vehicle.armed:
         return {"ok": False, "error": lt("err_no_log_armed", link.locale)}
     log_id = int(data.get("id", 0))
@@ -194,6 +206,11 @@ def cmd_log_download(link: DroneLink, param, data: dict):
 
 
 def cmd_log_cancel(link: DroneLink, param, data: dict):
+    with link._state_lock:
+        return _cmd_log_cancel(link, param, data)
+
+
+def _cmd_log_cancel(link: DroneLink, param, data: dict):
     link.send(bm(122, struct.pack("<BB", link.vehicle.sysid, 1), link.sq, CRC_EXTRA[122]))
     lg = link.log_dl
     lg._log_download_id = -1
