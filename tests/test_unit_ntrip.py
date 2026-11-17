@@ -234,6 +234,8 @@ class TestPinnedConnection:
             time.sleep(0.01)
         assert asked == [("2001:db8::5", 2101), ("203.0.113.7", 2101)]
         assert "ntrip_connected" in [e["event_type"] for e in link.events]
+
+
 class TestPendingStartCancellation:
     @pytest.mark.parametrize("cancel", ["stop", "disconnect"])
     def test_stop_or_disconnect_invalidates_a_start_still_resolving(self, monkeypatch, cancel):
