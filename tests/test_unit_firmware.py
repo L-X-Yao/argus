@@ -21,6 +21,19 @@ def _setup_app_state():
 
 
 class TestFirmwareUploadTooLarge:
+    def test_declared_body_is_refused_before_multipart_parsing(self):
+        import backend.firmware as fw_mod
+
+        with patch.object(fw_mod.cfg, "FIRMWARE_MAX_SIZE", 500):
+            r = client.post(
+                "/api/firmware/upload",
+                headers={"Content-Length": str(500 + 64 * 1024 + 1)},
+                content=b"",
+            )
+        assert r.status_code == 413
+        assert r.json()["ok"] is False
+        assert "too large" in r.json()["error"].lower()
+
     def test_upload_exceeding_max_size(self, tmp_path):
         import backend.firmware as fw_mod
 

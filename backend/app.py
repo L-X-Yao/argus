@@ -113,6 +113,23 @@ app.middleware("http")(auth_middleware)
 
 
 @app.middleware("http")
+async def firmware_upload_size(request: Request, call_next):
+    # FastAPI otherwise parses multipart into a temporary file before api_firmware_upload runs.
+    # Check the declared body first, allowing 64 KiB for multipart headers and boundaries.
+    if request.method == "POST" and request.scope["path"] == "/api/firmware/upload":
+        length = request.headers.get("content-length", "")
+        if length.isdigit() and int(length) > cfg.FIRMWARE_MAX_SIZE + 64 * 1024:
+            return JSONResponse(
+                status_code=413,
+                content={
+                    "ok": False,
+                    "error": f"File too large (max {cfg.FIRMWARE_MAX_SIZE // 1024 // 1024} MB)",
+                },
+            )
+    return await call_next(request)
+
+
+@app.middleware("http")
 async def security_headers(request: Request, call_next):
     response = await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
