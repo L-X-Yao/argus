@@ -1139,6 +1139,7 @@ const messages: Record<string, string> = {
   'assistant.otherVehicle': 'Nicht gesendet: Fahrzeug oder Verbindung geändert; erneut anfragen',
   'log.listTooLarge': 'Logliste überschreitet das Limit von 1000 Einträgen',
   'mission.err.rallyTooLarge': 'Rally-Upload überschreitet das Limit von 500 Punkten',
+  'log.tooManyChunks': 'Logübertragung hat zu viele Blöcke; Download gestoppt',
 };
 
 export default messages;

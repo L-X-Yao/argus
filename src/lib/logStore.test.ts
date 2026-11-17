@@ -187,6 +187,35 @@ describe('completeDownload', () => {
     expect(logState._chunks.length).toBe(0);
   });
 
+  it('coalesces adjacent fresh slices instead of counting every overlap fragment', () => {
+    startDownload(99, 90090);
+    expect(appendLogChunk(99, 0, btoa('a'.repeat(90)))).toBe(true);
+    let last = true;
+    for (let i = 0; i < 1000; i++) {
+      last = appendLogChunk(99, 90 + i * 45, btoa('b'.repeat(45)));
+    }
+    expect(last).toBe(true);
+    expect(logState._chunks).toHaveLength(1001);
+    expect(logState._chunkBytes).toBe(45090);
+    expect(appendLogChunk(99, 45090, btoa('c'.repeat(45)))).toBe(true);
+    expect(logState._chunks).toHaveLength(1001);
+  });
+
+  it('caps chunk bytes at the expected log size', () => {
+    startDownload(99, 90);
+    expect(appendLogChunk(99, 0, btoa('a'.repeat(90)))).toBe(true);
+    expect(appendLogChunk(99, 90, btoa('x'))).toBe(false);
+    expect(logState._chunks).toHaveLength(1);
+    expect(logState._chunkBytes).toBe(90);
+  });
+
+  it('caps chunk count even for empty slices', () => {
+    startDownload(99, 90);
+    for (let i = 0; i < 1001; i++) appendLogChunk(99, i, '');
+    expect(logState._chunks).toHaveLength(1000);
+    expect(logState._chunkBytes).toBe(0);
+  });
+
   it('cancelDownload clears accumulated chunks', () => {
     startDownload(99, 100);
     appendLogChunk(99, 0, btoa('abcd'));

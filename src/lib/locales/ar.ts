@@ -1132,6 +1132,7 @@ const messages: Record<string, string> = {
   'assistant.otherVehicle': 'لم يُرسل: تغيرت المركبة أو رابطها؛ اطلب من جديد',
   'log.listTooLarge': 'قائمة السجلات تتجاوز حد 1000 إدخال',
   'mission.err.rallyTooLarge': 'تحميل نقاط التجمع يتجاوز حد 500 نقطة',
+  'log.tooManyChunks': 'نقل السجل يحتوي على أجزاء كثيرة؛ توقف التنزيل',
 };
 
 export default messages;

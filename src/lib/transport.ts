@@ -1551,6 +1551,21 @@ function _coveredBytes(intervals: Array<[number, number]>): number {
   return sum;
 }
 
+/** The parts of [start, end) that no existing interval covers, in ascending order. */
+function _newCoverage(intervals: Array<[number, number]>, start: number, end: number): Array<[number, number]> {
+  const fresh: Array<[number, number]> = [];
+  let at = start;
+  for (const [s, e] of intervals) {
+    if (e <= at) continue;
+    if (s >= end) break;
+    if (s > at) fresh.push([at, Math.min(s, end)]);
+    at = Math.max(at, e);
+    if (at >= end) break;
+  }
+  if (at < end) fresh.push([at, end]);
+  return fresh;
+}
+
 // First uncovered byte range of the download, or null when coverage is
 // complete. With whole-log streaming this doubles as the resume point: no
 // holes means the first gap starts exactly at the high-water mark (twin of
@@ -1771,8 +1786,25 @@ function _onLogData(p: DataView): void {
   // past the size — completeDownload sizes its assembly buffer from the
   // largest ofs+length, up to 4 GB for a u32 ofs.
   if (end > logSession.dlSize) return;
-  const data = new Uint8Array(p.buffer, p.byteOffset + 7, count);
-  appendLogChunkBinary(logId, ofs, data);
+  const fresh = _newCoverage(logSession.dlRecvIntervals, ofs, end);
+  // A duplicate is not progress: it adds no storage and must not keep a stalled download alive.
+  if (fresh.length === 0) return;
+  for (const [start, stop] of fresh) {
+    const data = new Uint8Array(p.buffer, p.byteOffset + 7 + (start - ofs), stop - start);
+    if (appendLogChunkBinary(logId, start, data) === false) {
+      // Do not leave AP bursting while this page accepts another log operation.
+      sendSerialFrame(122, encodeLogRequestEnd(serial.targetSysId, serial.targetCompId));
+      logSession.dlId = -1;
+      addEvent({
+        type: 'event',
+        time: new Date().toLocaleTimeString(),
+        text: t('log.tooManyChunks'),
+        event_type: 'log_dl_fail',
+      });
+      _abortLogDownload(t('log.tooManyChunks'));
+      return;
+    }
+  }
   _markReceived(logSession.dlRecvIntervals, ofs, end);
   // High-water mark: only used as the delivered-file size when a truncated
   // finish ships a partial download. Progress/completion run on coverage.
@@ -1780,8 +1812,7 @@ function _onLogData(p: DataView): void {
   const covered = _coveredBytes(logSession.dlRecvIntervals);
   updateDownloadProgress(covered, logSession.dlSize);
 
-  // Any accepted frame is progress — re-arm the stall watchdog and forget
-  // past retries.
+  // Any newly covered range is progress — re-arm the stall watchdog and forget past retries.
   logSession.dlStallRetries = 0;
   _armDlWatchdog();
 

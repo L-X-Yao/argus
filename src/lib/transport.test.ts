@@ -725,6 +725,56 @@ describe('serialLogList + serialLogDownload', () => {
     await promise;
   });
 
+  it('appends only the new part of a partially overlapping frame', async () => {
+    (logStoreMock.logState as unknown as { list: Array<{ id: number; size: number; time_utc: number }> }).list = [
+      { id: 12, size: 135, time_utc: 0 },
+    ];
+    vi.mocked(logStoreMock.appendLogChunkBinary).mockClear();
+    const promise = serialLogDownload(12);
+    inject(fcFrame(120, mkLogData(0, 12, 90, new Uint8Array(90).fill(1))));
+    inject(fcFrame(120, mkLogData(45, 12, 90, new Uint8Array(90).fill(2))));
+    const res = await promise;
+    expect(res.ok).toBe(true);
+    const calls = vi.mocked(logStoreMock.appendLogChunkBinary).mock.calls;
+    expect(calls).toHaveLength(2);
+    expect(calls[1][1]).toBe(90);
+    expect(calls[1][2]).toHaveLength(45);
+  });
+
+  it('a wholly duplicate frame adds no chunk and does not re-arm the watchdog', async () => {
+    vi.useFakeTimers();
+    (logStoreMock.logState as unknown as { list: Array<{ id: number; size: number; time_utc: number }> }).list = [
+      { id: 13, size: 180, time_utc: 0 },
+    ];
+    vi.mocked(logStoreMock.appendLogChunkBinary).mockClear();
+    const promise = serialLogDownload(13);
+    inject(fcFrame(120, mkLogData(0, 13, 90, new Uint8Array(90).fill(1))));
+    await vi.advanceTimersByTimeAsync(4000);
+    inject(fcFrame(120, mkLogData(0, 13, 90, new Uint8Array(90).fill(1))));
+    await vi.advanceTimersByTimeAsync(1000);
+    const requestsAtDeadline = countWrites(119);
+    const appends = vi.mocked(logStoreMock.appendLogChunkBinary).mock.calls.length;
+    await vi.advanceTimersByTimeAsync(25000);
+    await promise;
+    vi.useRealTimers();
+    expect(appends).toBe(1);
+    expect(requestsAtDeadline).toBe(2);
+  });
+
+  it('a storage cap failure ends the FC transfer and invalidates its id', async () => {
+    (logStoreMock.logState as unknown as { list: Array<{ id: number; size: number; time_utc: number }> }).list = [
+      { id: 14, size: 90, time_utc: 0 },
+    ];
+    vi.mocked(logStoreMock.appendLogChunkBinary).mockReturnValueOnce(false);
+    const promise = serialLogDownload(14);
+    inject(fcFrame(120, mkLogData(0, 14, 90, new Uint8Array(90).fill(1))));
+    const res = await promise;
+    expect(res).toMatchObject({ ok: false, error: 'log.tooManyChunks' });
+    expect(countWrites(122)).toBe(1);
+    inject(fcFrame(120, mkLogData(0, 14, 90, new Uint8Array(90).fill(2))));
+    expect(logStoreMock.appendLogChunkBinary).toHaveBeenCalledTimes(1);
+  });
+
   it('duplicate frames do not mask a real hole (coverage is intervals, not a sum)', async () => {
     // After a stall re-request a late tail of the old burst can legitimately
     // duplicate frames — a raw byte sum (90+90+90=270 > 200 here) would

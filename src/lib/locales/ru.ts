@@ -1138,6 +1138,7 @@ const messages: Record<string, string> = {
   'assistant.otherVehicle': 'Не отправлено: аппарат или связь изменились; запросите заново',
   'log.listTooLarge': 'Список журналов превышает ограничение 1000 записей',
   'mission.err.rallyTooLarge': 'Загрузка точек сбора превышает ограничение 500 точек',
+  'log.tooManyChunks': 'Слишком много фрагментов при передаче журнала; загрузка остановлена',
 };
 
 export default messages;

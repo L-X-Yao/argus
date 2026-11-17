@@ -1140,6 +1140,7 @@ const messages: Record<string, string> = {
   'assistant.otherVehicle': 'Não enviado: o veículo ou sua ligação mudou; peça novamente',
   'log.listTooLarge': 'A lista de registros excede o limite de 1000 entradas',
   'mission.err.rallyTooLarge': 'O upload de pontos de rally excede o limite de 500 pontos',
+  'log.tooManyChunks': 'A transferência do registro tem fragmentos demais; download interrompido',
 };
 
 export default messages;

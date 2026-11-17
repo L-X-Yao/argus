@@ -454,6 +454,7 @@ const messages: Record<string, string> = {
   'log.download': 'Download',
   'log.tooLarge': 'Log exceeds the 256 MB limit',
   'log.listTooLarge': 'Log list exceeds the 1000-entry limit',
+  'log.tooManyChunks': 'Log transfer has too many chunks; download stopped',
   'log.total': '{n} logs total',
   'log.hint': 'Click "Fetch List" to read onboard logs',
   'video.title': 'Video Feed',

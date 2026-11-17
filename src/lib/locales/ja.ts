@@ -1136,6 +1136,7 @@ const messages: Record<string, string> = {
   'assistant.otherVehicle': '未送信: 機体またはリンクが変わりました。再提案してください',
   'log.listTooLarge': 'ログ一覧が 1000 件の上限を超えています',
   'mission.err.rallyTooLarge': 'ラリーポイントのアップロードが 500 点の上限を超えています',
+  'log.tooManyChunks': 'ログ転送のチャンク数が多すぎるため、ダウンロードを停止しました',
 };
 
 export default messages;

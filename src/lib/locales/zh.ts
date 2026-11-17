@@ -453,6 +453,7 @@ const messages: Record<string, string> = {
   'log.download': '下载',
   'log.tooLarge': '日志超过 256 MB 上限',
   'log.listTooLarge': '日志列表超过 1000 条上限',
+  'log.tooManyChunks': '日志分块过多，下载已停止',
   'log.total': '共 {n} 条日志',
   'log.hint': '点击"获取列表"从飞控读取机载日志',
   'video.title': '视频监控',

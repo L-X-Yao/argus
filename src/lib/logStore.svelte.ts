@@ -19,6 +19,7 @@ class LogState {
   // Backend now sends ~64KB chunks rather than one giant base64 blob at end.
   _chunks: { ofs: number; bytes: Uint8Array }[] = [];
   _expectedSize: number = 0;
+  _chunkBytes: number = 0;
 }
 
 export const logState = new LogState();
@@ -39,6 +40,7 @@ export function startDownload(id: number, size: number) {
   logState._lastSpeedBytes = 0;
   logState._chunks = [];
   logState._expectedSize = size;
+  logState._chunkBytes = 0;
 }
 
 function _decodeB64(b64: string): Uint8Array {
@@ -48,20 +50,49 @@ function _decodeB64(b64: string): Uint8Array {
   return bytes;
 }
 
-export function appendLogChunk(id: number, ofs: number, b64data: string) {
-  if (id !== logState.downloadId) return;
-  logState._chunks.push({ ofs, bytes: _decodeB64(b64data) });
+function _appendChunk(ofs: number, bytes: Uint8Array): boolean {
+  if (logState._chunkBytes + bytes.length > logState._expectedSize) return false;
+  const maxChunks = Math.max(1000, Math.ceil(logState._expectedSize / 90));
+  if (logState._chunks.length >= maxChunks) {
+    // Fresh slices can be much smaller than 90 bytes. Merge a touching one at the cap instead
+    // of rejecting a valid overlap stream; normal 90-byte bursts never pay this copy at the cap.
+    for (const [i, c] of logState._chunks.entries()) {
+      const touchesLeft = c.ofs + c.bytes.length === ofs;
+      const touchesRight = ofs + bytes.length === c.ofs;
+      if (!touchesLeft && !touchesRight) continue;
+      const merged = new Uint8Array(c.bytes.length + bytes.length);
+      if (touchesLeft) {
+        merged.set(c.bytes);
+        merged.set(bytes, c.bytes.length);
+      } else {
+        merged.set(bytes);
+        merged.set(c.bytes, bytes.length);
+      }
+      logState._chunks.splice(i, 1, { ofs: touchesLeft ? c.ofs : ofs, bytes: merged });
+      logState._chunkBytes += bytes.length;
+      return true;
+    }
+    return false;
+  }
+  logState._chunks.push({ ofs, bytes });
+  logState._chunkBytes += bytes.length;
+  return true;
+}
+
+export function appendLogChunk(id: number, ofs: number, b64data: string): boolean {
+  if (id !== logState.downloadId) return false;
+  return _appendChunk(ofs, _decodeB64(b64data));
 }
 
 /** WebSerial direct-mode path: LOG_DATA bytes arrive as raw Uint8Array, no
  *  base64 round-trip. Mirrors appendLogChunk but skips the atob() decode. */
-export function appendLogChunkBinary(id: number, ofs: number, bytes: Uint8Array) {
-  if (id !== logState.downloadId) return;
+export function appendLogChunkBinary(id: number, ofs: number, bytes: Uint8Array): boolean {
+  if (id !== logState.downloadId) return false;
   // Copy so the underlying ArrayBuffer can be reused by the transport's
   // read buffer without corrupting accumulated chunks.
   const owned = new Uint8Array(bytes.length);
   owned.set(bytes);
-  logState._chunks.push({ ofs, bytes: owned });
+  return _appendChunk(ofs, owned);
 }
 
 export function updateDownloadProgress(received: number, total: number) {
@@ -123,6 +154,7 @@ export function completeDownload(id: number, b64data: string | undefined, size: 
   }
   logState._chunks = [];
   logState._expectedSize = 0;
+  logState._chunkBytes = 0;
 
   if (bytes.length === 0) return true;
   // Cast through ArrayBuffer to placate the strict BlobPart typing in
@@ -145,4 +177,5 @@ export function cancelDownload() {
   // Drop the accumulated chunks — could be tens of MB in flight.
   logState._chunks = [];
   logState._expectedSize = 0;
+  logState._chunkBytes = 0;
 }

@@ -1133,6 +1133,7 @@ const messages: Record<string, string> = {
   'assistant.otherVehicle': '전송 안 됨: 기체 또는 링크가 변경되었습니다. 다시 제안하세요',
   'log.listTooLarge': '로그 목록이 1000개 항목 제한을 초과했습니다',
   'mission.err.rallyTooLarge': '랠리 포인트 업로드가 500개 제한을 초과했습니다',
+  'log.tooManyChunks': '로그 전송의 청크가 너무 많아 다운로드를 중단했습니다',
 };
 
 export default messages;
