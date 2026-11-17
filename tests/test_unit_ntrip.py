@@ -234,6 +234,44 @@ class TestPinnedConnection:
             time.sleep(0.01)
         assert asked == [("2001:db8::5", 2101), ("203.0.113.7", 2101)]
         assert "ntrip_connected" in [e["event_type"] for e in link.events]
+class TestPendingStartCancellation:
+    @pytest.mark.parametrize("cancel", ["stop", "disconnect"])
+    def test_stop_or_disconnect_invalidates_a_start_still_resolving(self, monkeypatch, cancel):
+        entered = threading.Event()
+        release = threading.Event()
+        attempted = threading.Event()
+
+        def resolving(host, port, *args, **kwargs):
+            entered.set()
+            release.wait(1)
+            return [(socket.AF_INET, socket.SOCK_STREAM, 6, "", ("203.0.113.7", port))]
+
+        def no_connection(*args, **kwargs):
+            attempted.set()
+            raise OSError("no connection")
+
+        monkeypatch.setattr(socket, "getaddrinfo", resolving)
+        monkeypatch.setattr(socket, "create_connection", no_connection)
+        link = make_link()
+        result = []
+        caller = threading.Thread(
+            target=lambda: result.append(
+                cmd_ntrip_start(link, None, {"host": "caster.example", "port": 2101, "mountpoint": "MNT"})
+            ),
+            daemon=True,
+        )
+        caller.start()
+        assert entered.wait(1)
+        if cancel == "stop":
+            cmd_ntrip_stop(link, None, {})
+        else:
+            link.disconnect()
+        release.set()
+        caller.join(1)
+        assert not caller.is_alive()
+        assert result and result[0] is not None and result[0]["ok"] is False
+        assert not attempted.wait(0.2)
+        assert link.ntrip_thread is None
 
 
 class TestCmdNtripStartFullPath:

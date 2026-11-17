@@ -216,6 +216,8 @@ def cmd_ntrip_start(link: DroneLink, param, data: dict):
         return {"ok": False, "error": lt("err_ntrip_cred_chars", link.locale)}
 
     try:
+        with link._state_lock:
+            generation = link.ntrip_generation
         addrs = socket.getaddrinfo(host, port)
     except socket.gaierror:
         return {"ok": False, "error": lt("err_ntrip_resolve", link.locale)}
@@ -246,9 +248,14 @@ def cmd_ntrip_start(link: DroneLink, param, data: dict):
         name="ntrip-client",
     )
     with link._state_lock:
+        if generation != link.ntrip_generation:
+            return {"ok": False, "error": lt("err_ntrip_cancelled", link.locale)}
+        current = link.ntrip_thread
+        if current is not None and current.is_alive():
+            return {"ok": False, "error": lt("err_ntrip_running", link.locale)}
         link.ntrip_thread = thread
         link.ntrip_stop = stop_event
-    thread.start()
+        thread.start()
 
 
 def cmd_ntrip_stop(link: DroneLink, param, data: dict):
@@ -258,6 +265,7 @@ def cmd_ntrip_stop(link: DroneLink, param, data: dict):
     the thread's finally block, and the FC stops receiving RTCM frames.
     """
     with link._state_lock:
+        link.ntrip_generation += 1
         stop = link.ntrip_stop
     if stop is not None:
         stop.set()

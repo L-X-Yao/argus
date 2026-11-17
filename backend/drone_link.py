@@ -154,6 +154,8 @@ class DroneLink:
         # are useless without an active GPS_RTCM_DATA path to a connected FC.
         self.ntrip_thread: threading.Thread | None = None
         self.ntrip_stop: threading.Event | None = None
+        # Incremented by stop/disconnect/session reset to invalidate a start still resolving DNS.
+        self.ntrip_generation = 0
         # Manual RTCM paste uses one worker at a time; the worker clears this on exit.
         self.rtcm_inject_thread: threading.Thread | None = None
         self.param_mgr = ParamManager(self)
@@ -294,6 +296,7 @@ class DroneLink:
         would leak fence/rally/download pending flags + a 100MB log buffer
         + never re-issue stream requests because frame_count was non-zero)."""
         with self._state_lock:
+            self.ntrip_generation += 1
             self.connected = False
             self.vehicle.vtype_raw = 0
             self.vehicle.vtol_state = 0
@@ -377,6 +380,8 @@ class DroneLink:
             self.add_event(lt("param_timeout", self.locale), "param_timeout")
 
     def disconnect(self) -> None:
+        with self._state_lock:
+            self.ntrip_generation += 1
         self._running = False
         self._reconnect_enabled = False
         self._reconnecting = False

@@ -433,7 +433,12 @@ class WSManager:
                         # The model is this page's answer: every other page keeps its own
                         # route, which the broadcast was replacing with the vehicle's.
                         self._dl_requester = (ws, time.time())
-                    result = commands.execute(cmd, param, self.link, data=msg)
+                    if cmd == "ntrip_start":
+                        # cmd_ntrip_start resolves DNS synchronously before spawning its client.
+                        # Keep that lookup off the event loop; its return and errors stay as before.
+                        result = await asyncio.to_thread(commands.execute, cmd, param, self.link, data=msg)
+                    else:
+                        result = commands.execute(cmd, param, self.link, data=msg)
                     if result:
                         await ws.send_text(dumps({"type": "cmd_result", **result}))
         except WebSocketDisconnect:

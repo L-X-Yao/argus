@@ -132,6 +132,7 @@ _T = {
     "rally_uploading": ("备降点: 上传中 (%d 个)", "Rally: uploading %d points"),
     "ntrip_connected": ("NTRIP 已连接: %s", "NTRIP connected: %s"),
     "ntrip_disconnected": ("NTRIP 已断开", "NTRIP disconnected"),
+    "err_ntrip_cancelled": ("NTRIP 启动已被停止或断开操作取消", "NTRIP start was cancelled by stop or disconnect"),
     "ntrip_error": ("NTRIP 错误: %s", "NTRIP error: %s"),
     "err_ntrip_resolve": ("无法解析 NTRIP 主机", "Cannot resolve NTRIP host"),
     "err_channel_data": ("无效的通道数据", "Invalid channel data"),

@@ -475,6 +475,24 @@ class TestReceiveLoop:
         assert mgr._dl_is_mine(ws_a) is False
 
     @pytest.mark.asyncio
+    async def test_ntrip_start_is_offloaded_from_the_event_loop(self):
+        link = DroneLink()
+        mgr = WSManager(link)
+        ws = make_ws()
+        mgr._clients.add(ws)
+        msg = json.dumps({"type": "command", "cmd": "ntrip_start", "host": "caster.example"})
+        ws.receive_text.side_effect = [msg, WebSocketDisconnect()]
+        with (
+            patch("backend.ws_manager.commands.execute", return_value=None) as execute,
+            patch("backend.ws_manager.asyncio.to_thread", new=AsyncMock(return_value=None)) as to_thread,
+        ):
+            await mgr._receive_loop(ws)
+        to_thread.assert_awaited_once()
+        assert to_thread.call_args.args[0] is execute
+        assert to_thread.call_args.args[1:4] == ("ntrip_start", None, link)
+        assert to_thread.call_args.kwargs["data"]["host"] == "caster.example"
+
+    @pytest.mark.asyncio
     async def test_command_returns_none(self):
         """When commands.execute returns None, no cmd_result is sent."""
         link = DroneLink()
