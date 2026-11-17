@@ -1,0 +1,42 @@
+name: Watch alerts and pull requests
+
+# CodeQL, Dependabot and the package audit each do their own work, and GitHub mails the
+# maintainer when one of them finds something new. What nobody watches is the state they
+# leave behind: an alert that is neither fixed nor dismissed, or a pull request nobody acted
+# on, can sit for months. This fails while either is open, so the weekly mail is a reminder.
+#
+# Dependabot alerts are left out: their REST endpoint needs a token of its own, and Dependabot
+# already mails about its own alerts.
+#
+# GitHub stops scheduled workflows in a public repository after 60 days without activity:
+# see "What CI Checks" in CONTRIBUTING.md.
+on:
+  schedule:
+    - cron: '12 6 * * 3'
+  workflow_dispatch:
+
+jobs:
+  watch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: read
+      security-events: read
+    steps:
+      - name: Open code scanning alerts
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          count=$(gh api "repos/$GITHUB_REPOSITORY/code-scanning/alerts?state=open&per_page=100" --jq length)
+          echo "$count open"
+          test "$count" = 0
+
+      - name: Open pull requests
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh pr list --repo "$GITHUB_REPOSITORY" --state open --limit 100
+          count=$(gh pr list --repo "$GITHUB_REPOSITORY" --state open --limit 100 --json number --jq length)
+          echo "$count open"
+          test "$count" = 0
