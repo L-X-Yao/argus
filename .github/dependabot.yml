@@ -1,11 +1,11 @@
 version: 2
 updates:
-  # Minor and patch updates come as one pull request a month for npm and one for pip. A major
+  # Minor and patch updates come as one pull request a week for npm and one for pip. A major
   # update comes on its own. A security update does not wait for the schedule.
   - package-ecosystem: npm
     directory: /
     schedule:
-      interval: monthly
+      interval: weekly
     open-pull-requests-limit: 5
     labels: ["dependencies"]
     groups:
@@ -20,7 +20,7 @@ updates:
   - package-ecosystem: pip
     directory: /
     schedule:
-      interval: monthly
+      interval: weekly
     open-pull-requests-limit: 3
     labels: ["dependencies"]
     groups:
