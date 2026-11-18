@@ -6,7 +6,6 @@ import hashlib
 import hmac
 import ipaddress
 import os
-import re
 import socket
 import tempfile
 from pathlib import Path
@@ -119,9 +118,8 @@ def _from_own_page(request: Request) -> bool:
     return request.headers.get("sec-fetch-site", "same-origin") in ("same-origin", "none")
 
 
-# A name or an IPv4 address, or an IPv6 address in brackets, then perhaps a port: nothing
-# else, so that "[::1].evil.example" is not read as ::1.
-_HOST = re.compile(r"(?:\[(?P<v6>[0-9a-f.]*:[0-9a-f:.]*)\]|(?P<name>[^\[\]:/@\s]+))(?::\d{1,5})?\Z")
+_V6_CHARS = frozenset("0123456789abcdef.:")
+_NAME_BAD = frozenset("[]:/@")
 
 
 def _is_this_machine(host: str) -> bool:
@@ -131,17 +129,38 @@ def _is_this_machine(host: str) -> bool:
         return host.lower().rstrip(".") == "localhost"
 
 
+def _port_ok(rest: str) -> bool:
+    """'' or a colon and one to five digits, the forms a Host header has always been read for."""
+    if not rest:
+        return True
+    digits = rest[1:]
+    return rest.startswith(":") and 1 <= len(digits) <= 5 and all(c in "0123456789" for c in digits)
+
+
 def _host_is_ours(host_header: str, own_hosts: set[str]) -> bool:
     """Tell the names we answer to from one that another site has pointed at this machine.
     After DNS rebinding a hostile page is same-origin with us to the browser: it sends no
     Origin on a read, no Fetch Metadata, and may add any header. Only Host still names it.
-    0.0.0.0 reaches this machine too, from any page, and browsers send it no Fetch Metadata."""
-    match = _HOST.match(host_header.strip().lower())
-    if not match:
+    0.0.0.0 reaches this machine too, from any page, and browsers send it no Fetch Metadata.
+
+    Read by hand, not by a regex: the header is reachable before any token check, and a
+    backtracking pattern there is a quadratic path on one long line of punctuation
+    (CodeQL py/polynomial-redos, 2026-11-18)."""
+    host = host_header.strip().lower()
+    if host.startswith("["):
+        end = host.find("]")
+        if end < 0:
+            return False
+        name, rest = host[1:end], host[end + 1 :]
+        if ":" not in name or any(c not in _V6_CHARS for c in name):
+            return False
+        return _port_ok(rest) and (name == "::1" or name in own_hosts)
+    name, sep, port = host.partition(":")
+    if not name or any(c in _NAME_BAD or c.isspace() for c in name):
         return False
-    if match["v6"] is not None:
-        return match["v6"] == "::1" or match["v6"] in own_hosts
-    return _is_this_machine(match["name"]) or match["name"] in own_hosts
+    if sep and (":" in port or not _port_ok(":" + port)):
+        return False
+    return _is_this_machine(name) or name in own_hosts
 
 
 def _asked_by_our_name(request: Request) -> bool:

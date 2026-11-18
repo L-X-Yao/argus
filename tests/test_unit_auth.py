@@ -620,6 +620,20 @@ class TestRequestsUnderAnotherName:
         assert client.get("/health", headers=self.REBOUND).status_code == 403
         assert client.get("/health", headers={"host": "localhost"}).status_code == 200
 
+    @pytest.mark.parametrize("host", ["[::1]:123456", "localhost:123456", "localhost:١٢٣"])
+    def test_a_port_is_one_to_five_ascii_digits(self, host):
+        assert auth_module._host_is_ours(host, set()) is False
+
+    def test_a_port_of_five_digits_is_read(self):
+        assert auth_module._host_is_ours("[::1]:12345", set()) is True
+
+    def test_a_long_line_of_punctuation_is_read_without_backtracking(self):
+        """CodeQL py/polynomial-redos, 2026-11-18: the Host header is reachable before any
+        token check, so the parse must stay linear on a line of punctuation."""
+        assert auth_module._host_is_ours("!" * 50_000, set()) is False
+        assert auth_module._host_is_ours("[" + "a" * 50_000, set()) is False
+        assert auth_module._host_is_ours("localhost:" + "9" * 50_000, set()) is False
+
 
 class TestConcurrentAuth:
     def test_concurrent_verify_no_race(self):
