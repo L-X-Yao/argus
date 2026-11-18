@@ -110,9 +110,11 @@ def _rtcm_fail(link: DroneLink, key: str) -> dict:
     return {"ok": False, "error": error}
 
 
-def _inject_rtcm_frames(link: DroneLink, raw: bytes) -> None:
+def _inject_rtcm_frames(link: DroneLink, raw: bytes, stop: threading.Event) -> None:
     try:
         for i in range(0, len(raw), 180):
+            if stop.is_set():
+                return
             chunk = raw[i : i + 180]
             flags = 0x01
             if i == 0:
@@ -126,6 +128,7 @@ def _inject_rtcm_frames(link: DroneLink, raw: bytes) -> None:
         with link._state_lock:
             if link.rtcm_inject_thread is threading.current_thread():
                 link.rtcm_inject_thread = None
+                link.rtcm_inject_stop = None
 
 
 def cmd_inject_rtcm(link: DroneLink, param, data: dict):
@@ -151,13 +154,15 @@ def cmd_inject_rtcm(link: DroneLink, param, data: dict):
         existing = link.rtcm_inject_thread
         if existing is not None and existing.is_alive():
             return _rtcm_fail(link, "err_rtcm_busy")
+        stop = threading.Event()
         thread = threading.Thread(
             target=_inject_rtcm_frames,
-            args=(link, raw),
+            args=(link, raw, stop),
             daemon=True,
             name="rtcm-inject",
         )
         link.rtcm_inject_thread = thread
+        link.rtcm_inject_stop = stop
         thread.start()
 
 

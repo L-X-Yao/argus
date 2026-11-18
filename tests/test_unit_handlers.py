@@ -1048,6 +1048,27 @@ class TestMissionItemInt:
         p += struct.pack("<BBBBB", 1, 1, 3, 0, 1)
         return p
 
+    def test_a_non_finite_field_does_not_kill_the_link(self):
+        """An FC sending p1=inf used to raise OverflowError out of feed() and
+        stop telemetry (post-release review 2026-11-18)."""
+        link = make_link()
+        link.mission._dl_pending = True
+        link.mission._dl_total = 3
+        link.mission._dl_items = [None, None, None]
+        link.send = lambda frame: None
+        for seq in (0, 1):
+            p = self._item(seq)
+            handle_mission_item_int(p, len(p), link)
+        p = struct.pack("<ffff", float("inf"), 0.0, 0.0, 0.0)
+        p += struct.pack("<ii", int(34.0 * 1e7), int(108.0 * 1e7))
+        p += struct.pack("<f", 50.0)
+        p += struct.pack("<HH", 2, 3000)  # DO_VTOL_TRANSITION after a waypoint
+        p += struct.pack("<BBBBB", 1, 1, 3, 0, 1)
+        handle_mission_item_int(p, len(p), link)  # must not raise
+        assert link.mission._dl_pending is False
+        wps = link.mission._dl_messages[-1]["waypoints"]
+        assert wps[0]["cmd_vtol"]["mode"] == 4  # the default, not the infinity
+
     def test_early_final_item_does_not_truncate(self):
         # Regression: a final MISSION_ITEM_INT (seq == _dl_total-1) arriving
         # before the middle items must NOT finalize the download and silently

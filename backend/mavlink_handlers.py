@@ -631,6 +631,18 @@ def handle_mission_count(p: bytes, pl: int, link: DroneLink) -> None:
         link.add_event(lt("mission_dl_none", link.locale), "mission_dl_none")
 
 
+def _as_int(value, fallback: int) -> int:
+    """An FC float can be NaN or infinity. int(inf) raised OverflowError out of
+    feed() and killed the link thread (post-release review 2026-11-18); the
+    float itself is kept so the JSON layer can mark it, and only the integer
+    field falls back."""
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return fallback
+    return int(number) if math.isfinite(number) else fallback
+
+
 def handle_mission_item_int(p: bytes, pl: int, link: DroneLink) -> None:
     m = link.mission
     if pl < 1 or not m._dl_pending:
@@ -729,7 +741,7 @@ def handle_mission_item_int(p: bytes, pl: int, link: DroneLink) -> None:
             # survey lost its camera triggers, servo moves, ROI and yaw. Field shapes as
             # _upload_mission writes them.
             elif item["cmd"] == 183 and wps:
-                wps[-1]["cmd_servo"] = {"num": int(item.get("p1", 1)), "pwm": item.get("p2", 1500)}
+                wps[-1]["cmd_servo"] = {"num": _as_int(item.get("p1", 1), 1), "pwm": item.get("p2", 1500)}
             elif item["cmd"] == 201 and wps:
                 wps[-1]["cmd_roi"] = {"lat": item["lat"], "lon": item["lon"], "alt": item["alt"]}
             elif item["cmd"] == 206 and wps:
@@ -737,7 +749,7 @@ def handle_mission_item_int(p: bytes, pl: int, link: DroneLink) -> None:
             elif item["cmd"] == 115 and wps:
                 wps[-1]["cmd_yaw"] = {"deg": item.get("p1", 0), "dir": item.get("p3", 1)}
             elif item["cmd"] == 3000 and wps:
-                wps[-1]["cmd_vtol"] = {"mode": int(item.get("p1", 4))}
+                wps[-1]["cmd_vtol"] = {"mode": _as_int(item.get("p1", 4), 4)}
         # Waypoint i of the page sits at this MAVLink seq. A jump (MISSION_SET_CURRENT) and the
         # current-waypoint readout go through this map, and an insert (DO_CHANGE_SPEED, servo,
         # ROI, ...) moves the seqs away from i + 2 — the jump then landed on an earlier item.

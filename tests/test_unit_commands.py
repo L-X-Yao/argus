@@ -482,6 +482,25 @@ class TestInjectRtcm:
         assert not link._ser.write.called
         assert any(e["event_type"] == "rtcm_inject_fail" for e in link.events)
 
+    def test_a_session_reset_stops_an_in_flight_injection(self):
+        """The worker used to keep writing through whatever port was open
+        after a reconnect (post-release review 2026-11-18)."""
+        from backend.commands._hardware import _inject_rtcm_frames
+
+        link = make_link()
+        stop = threading.Event()
+        writes = []
+
+        def write(frame):
+            writes.append(frame)
+            stop.set()
+
+        link._ser.write.side_effect = write
+        link.rtcm_inject_thread = threading.current_thread()
+        link.rtcm_inject_stop = stop
+        _inject_rtcm_frames(link, b"x" * 540, stop)
+        assert len(writes) == 1
+
     def test_inject_rtcm_sends_outside_the_calling_thread(self):
         link = make_link()
         entered = threading.Event()

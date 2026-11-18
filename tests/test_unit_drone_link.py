@@ -1822,3 +1822,18 @@ class TestQueueWs:
             link.queue_ws({"i": i})
         # After trim, the last entries should be the most recent
         assert link._ws_queue[-1]["i"] == 2099
+
+
+class TestSessionResetWorkerTeardown:
+    def test_a_reset_stops_a_worker_installed_during_disconnect(self):
+        """A NTRIP start that resolved DNS across a disconnect can install its
+        worker between disconnect's signal and the reset's generation bump;
+        the reset must signal whatever is installed then."""
+        link = DroneLink()
+        ntrip_stop = threading.Event()
+        rtcm_stop = threading.Event()
+        link.ntrip_stop = ntrip_stop
+        link.rtcm_inject_stop = rtcm_stop
+        link._reset_session_state()
+        assert ntrip_stop.is_set()
+        assert rtcm_stop.is_set()

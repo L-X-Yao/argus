@@ -158,6 +158,7 @@ class DroneLink:
         self.ntrip_generation = 0
         # Manual RTCM paste uses one worker at a time; the worker clears this on exit.
         self.rtcm_inject_thread: threading.Thread | None = None
+        self.rtcm_inject_stop: threading.Event | None = None
         self.param_mgr = ParamManager(self)
 
         self.attitude = AttitudeState()
@@ -297,6 +298,13 @@ class DroneLink:
         + never re-issue stream requests because frame_count was non-zero)."""
         with self._state_lock:
             self.ntrip_generation += 1
+            # A start that resolved DNS across this reset can install its worker after
+            # disconnect already signalled the old one; stop whatever is installed now.
+            # The generation check in cmd_ntrip_start cancels the other order.
+            if self.ntrip_stop is not None:
+                self.ntrip_stop.set()
+            if self.rtcm_inject_stop is not None:
+                self.rtcm_inject_stop.set()
             self.connected = False
             self.vehicle.vtype_raw = 0
             self.vehicle.vtol_state = 0
@@ -741,7 +749,7 @@ class DroneLink:
                 frames += 1
                 try:
                     self._process(payload)
-                except (struct.error, ValueError, IndexError):
+                except (struct.error, ValueError, IndexError, OverflowError):
                     self._parse_errors += 1
                     if self._parse_errors == 1 or self._parse_errors % 100 == 0:
                         import traceback

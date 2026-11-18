@@ -218,10 +218,14 @@ def cmd_ntrip_start(link: DroneLink, param, data: dict):
     try:
         with link._state_lock:
             generation = link.ntrip_generation
-        addrs = socket.getaddrinfo(host, port)
+        # A stream connection: without the type, the resolver also answers for datagram
+        # and raw sockets, and connect() then retries the same address three times
+        # (post-release review 2026-11-18).
+        addrs = socket.getaddrinfo(host, port, type=socket.SOCK_STREAM)
     except socket.gaierror:
         return {"ok": False, "error": lt("err_ntrip_resolve", link.locale)}
     pinned: list[tuple[str, int]] = []
+    seen: set[tuple[str, int]] = set()
     for _fam, *_rest, sockaddr in addrs:
         try:
             ip = ipaddress.ip_address(sockaddr[0])
@@ -229,7 +233,11 @@ def cmd_ntrip_start(link: DroneLink, param, data: dict):
             continue
         if off_limits(ip):
             return {"ok": False, "error": lt("err_ntrip_address", link.locale)}
-        pinned.append((sockaddr[0], sockaddr[1]))
+        address = (sockaddr[0], sockaddr[1])
+        if address in seen:
+            continue
+        seen.add(address)
+        pinned.append(address)
     if not pinned:
         return {"ok": False, "error": lt("err_ntrip_resolve", link.locale)}
 

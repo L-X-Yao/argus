@@ -208,6 +208,32 @@ class TestPinnedConnection:
         assert b"Host: caster.example\r\n" in request
         assert b"203.0.113.7" not in request
 
+    def test_duplicate_addresses_are_tried_once(self, monkeypatch):
+        """getaddrinfo without SOCK_STREAM answers once per socket type; the
+        same address was then retried three times (post-release review
+        2026-11-18)."""
+        asked = []
+
+        def fake_getaddrinfo(host, port, *a, **kw):
+            return [
+                (socket.AF_INET, socket.SOCK_STREAM, 6, "", ("203.0.113.7", port)),
+                (socket.AF_INET, socket.SOCK_DGRAM, 17, "", ("203.0.113.7", port)),
+                (socket.AF_INET, socket.SOCK_RAW, 0, "", ("203.0.113.7", port)),
+            ]
+
+        def fake_create_connection(addr, timeout=None):
+            asked.append(addr)
+            raise OSError("refused")
+
+        monkeypatch.setattr(socket, "getaddrinfo", fake_getaddrinfo)
+        monkeypatch.setattr(socket, "create_connection", fake_create_connection)
+        link = make_link()
+        cmd_ntrip_start(link, None, {"host": "caster.example", "port": 2101, "mountpoint": "MNT"})
+        deadline = time.time() + 5
+        while time.time() < deadline and not any(e["event_type"] == "ntrip_error" for e in link.events):
+            time.sleep(0.01)
+        assert asked == [("203.0.113.7", 2101)]
+
     def test_every_validated_address_is_tried_in_order(self, monkeypatch):
         asked = []
 
