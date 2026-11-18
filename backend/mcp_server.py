@@ -134,6 +134,28 @@ TOOLS = [
         "annotations": {"readOnlyHint": True, "openWorldHint": False},
     },
     {
+        "name": "analyze_flight",
+        "title": "Analyze a flight log",
+        "description": (
+            "Summarise a .tlog Argus recorded on this computer: the newest, or one named from the "
+            "logs folder. Gives the duration, modes and armed time, altitudes, distance, battery, "
+            "GPS, vibration, EKF, and the flight controller's warnings (failsafes, prearm, errors). "
+            "Read-only, and needs no page."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "file": {
+                    "type": "string",
+                    "maxLength": 200,
+                    "description": "A .tlog file name in the Argus logs folder. The newest is used when left out.",
+                }
+            },
+            "additionalProperties": False,
+        },
+        "annotations": {"readOnlyHint": True, "openWorldHint": False},
+    },
+    {
         "name": "propose_mission",
         "title": "Propose a mission",
         "description": (
@@ -728,6 +750,8 @@ class Server:
         if problem:
             return self._tool_text(problem, error=True)
         try:
+            if name == "analyze_flight":
+                return self._analyze(arguments, cancelled)
             if name in READS:
                 return self._read_tool(READS[name], arguments, cancelled)
             if name in PROPOSALS:
@@ -737,6 +761,18 @@ class Server:
             return self._withdraw(arguments["proposal"], cancelled)
         except Unreachable as exc:
             return self._tool_text(str(exc), error=True)
+
+    def _analyze(self, arguments: dict, cancelled: threading.Event) -> dict | None:
+        """A log on disk, not the page: nothing is asked of the operator, nothing changes."""
+        from . import flight_log
+
+        try:
+            summary = flight_log.analyze(arguments.get("file"), cancelled)
+        except flight_log.LogRefused as exc:
+            return self._tool_text(str(exc), error=True)
+        if summary is None:
+            return None  # the client stopped waiting
+        return self._tool_text(json.dumps(summary, ensure_ascii=False), structured=summary)
 
     def _read_tool(self, kind: str, arguments: dict, cancelled: threading.Event) -> dict | None:
         rid = self.backend.ask(kind, arguments)

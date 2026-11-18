@@ -20,6 +20,7 @@ TOOL_NAMES = [
     "get_status",
     "get_mission",
     "get_parameters",
+    "analyze_flight",
     "propose_mission",
     "propose_parameters",
     "propose_flight_command",
@@ -329,6 +330,23 @@ class TestReads:
         page.unreachable = "No Argus at ws://127.0.0.1:8100/ws: refused. Start Argus"
         result = call(server, wire, 1, "get_status")["result"]
         assert result["isError"] is True and "Start Argus" in result["content"][0]["text"]
+
+
+class TestFlightLog:
+    def test_a_recorded_log_is_summarised_without_a_page(self, server, wire, page, tmp_path):
+        from frame_builders import global_position, heartbeat, write_tlog
+
+        write_tlog(tmp_path / "argus_x.tlog", [heartbeat(armed=True), global_position()])
+        with mock.patch.object(cfg, "LOG_DIR", tmp_path):
+            summary = outcome(call(server, wire, 1, "analyze_flight"))
+        assert summary["file"] == "argus_x.tlog"
+        assert summary["messages"] == 2
+        assert page.asked == []  # the log is on disk: nothing is asked of the operator
+
+    def test_a_name_outside_the_folder_is_an_error(self, server, wire):
+        reply = call(server, wire, 1, "analyze_flight", {"file": "../x.tlog"})["result"]
+        assert reply["isError"] is True
+        assert "not a path" in reply["content"][0]["text"]
 
 
 class TestProposals:
