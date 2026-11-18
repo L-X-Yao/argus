@@ -19,7 +19,9 @@ npm run format:check                          # Prettier + ruff format
 make test-integration                         # backend + simulator, about 3 min
 ```
 
-`CONTRIBUTING.md` holds the full rules: CI limits, both links, tests, review, verification status, releases.
+`CONTRIBUTING.md` holds the full rules: CI limits, both links, tests, review, several sessions at once, verification status, releases.
+
+When more than one session works on this checkout: read the "Several Sessions at Once" section of `CONTRIBUTING.md` before starting, and write your claim line into `$(git rev-parse --git-common-dir)/CLAIMS.md`.
 
 ## Commit Convention
 
