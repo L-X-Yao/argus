@@ -14,7 +14,7 @@ If you discover a security vulnerability in Argus GCS, please report it responsi
 - Affected version(s)
 - Potential impact
 
-**Response:** Argus is in maintenance and has one maintainer, so there is no guaranteed response time. Security reports are read before anything else, and a confirmed problem gets a fix or a documented workaround.
+**Response:** Argus has one maintainer, so there is no guaranteed response time. Security reports are read before anything else, and a confirmed problem gets a fix or a documented workaround.
 
 **Please do NOT:**
 - Open a public GitHub issue for security vulnerabilities

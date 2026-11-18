@@ -18,7 +18,7 @@ Argus is a **web GCS** for ArduPilot: one browser interface on desktop, tablet a
 
 > **Status**: ArduPilot is verified on ArduCopter SITL in CI and on a real flight controller on the bench, but Argus has not been through proper flight testing. [docs/VERIFICATION.md](docs/VERIFICATION.md) lists what has been tested and how, feature by feature. PX4 is not supported: a command for a PX4 vehicle is refused with an error.
 >
-> **Maintenance since November 2026**: bugs and security problems get fixed. Two pieces of new work were taken up since, at the maintainer's request: a Windows installer and operation by an AI assistant. See [Project Status](#project-status).
+> **Development**: bug and security fixes, and new features, are taken up by the maintainer. See [Project Status](#project-status).
 
 Why another GCS: Argus runs in a browser tab, so the device in your hand needs nothing installed, and it can reach a flight controller straight over USB (WebSerial).
 
@@ -293,7 +293,7 @@ bash scripts/changelog.sh v3.5.0   # Changes since v3.5.0
 
 ## Project Status
 
-Argus is in maintenance since November 2026: bugs and security problems get fixed. Two pieces of new work were taken up since, at the maintainer's request: a Windows installer, and operation by an AI assistant through MCP, in which every change waits for the operator's approval in the page. The assistant reads the page and proposes missions, parameter changes, and return, hold or land; arming, takeoff and starting a mission are not open to it.
+Argus is under active development: bug and security fixes, and new features, are taken up by the maintainer. The two most recent pieces of work were a Windows installer, and operation by an AI assistant through MCP, in which every change waits for the operator's approval in the page. The assistant reads the page and proposes missions, parameter changes, and return, hold or land; arming, takeoff and starting a mission are not open to it.
 
 **Built**
 

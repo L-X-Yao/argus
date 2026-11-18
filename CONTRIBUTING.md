@@ -2,7 +2,7 @@
 
 Thanks for your interest! Here's how to get started.
 
-Argus is in maintenance: fixes for bugs and security problems are welcome, and new features are no longer added. See Project Status in the README.
+Bug and security fixes are welcome. New features are taken up at the maintainer's discretion, so open an issue before starting one. See Project Status in the README.
 
 ## Setup
 

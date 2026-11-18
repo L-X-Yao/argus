@@ -5,4 +5,4 @@ contact_links:
     about: Please do not open a public issue. SECURITY.md says how to report it.
   - name: Feature request
     url: https://github.com/L-X-Yao/argus#project-status
-    about: Argus is in maintenance. New features are no longer added, see Project Status in the README.
+    about: New features are taken up at the maintainer's discretion. Describe what you need in an issue.
