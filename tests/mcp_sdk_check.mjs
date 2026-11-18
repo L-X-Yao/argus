@@ -46,6 +46,7 @@ try {
         'get_status',
         'get_mission',
         'get_parameters',
+        'analyze_flight',
         'propose_mission',
         'propose_parameters',
         'propose_flight_command',
