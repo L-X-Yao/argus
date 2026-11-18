@@ -6,11 +6,13 @@ holds command authority, whatever order the clients connected in.
 
 import asyncio
 import json
+from unittest import mock
 
 import pytest
 import pytest_asyncio
 from fastapi import WebSocketDisconnect
 
+from backend.config import cfg
 from backend.drone_link import DroneLink
 from backend.locale_text import lt
 from backend.ws_manager import _CLOSED_RUNNING, _MAX_WAITING, _NO_PAGE, _PAGE_CLOSED, WSManager
@@ -53,7 +55,7 @@ async def settle():
 
 
 @pytest_asyncio.fixture
-async def mgr():
+async def mgr(tmp_path):
     manager = WSManager(DroneLink())
     tasks: list[asyncio.Task] = []
 
@@ -64,10 +66,11 @@ async def mgr():
         return client
 
     manager.join = join
-    yield manager
-    for task in tasks:
-        task.cancel()
-    await asyncio.gather(*tasks, return_exceptions=True)
+    with mock.patch.object(cfg, "LOG_DIR", tmp_path):
+        yield manager
+        for task in tasks:
+            task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
 
 
 async def assistant(mgr) -> Client:
@@ -76,6 +79,12 @@ async def assistant(mgr) -> Client:
     await settle()
     assert client.of("assistant_welcome")
     return client
+
+
+@pytest.fixture
+def audit_log(tmp_path):
+    # mgr points cfg.LOG_DIR at this same tmp_path for the length of each test.
+    return tmp_path / "assistant_audit.jsonl"
 
 
 def observer_refusal(client: Client) -> bool:
@@ -228,20 +237,21 @@ class TestAskingThePage:
             {"type": "assistant_reply", "id": "r", "ok": False, "error": _CLOSED_RUNNING}
         ]
 
-    async def test_keys_differ_from_one_backend_to_the_next(self):
+    async def test_keys_differ_from_one_backend_to_the_next(self, tmp_path):
         # A page keeps its requests across a restart of the backend: an answer to one of before
         # must not land on a new one.
         pages = [Client(), Client()]
         keys = []
-        for page in pages:
-            manager = WSManager(DroneLink())
-            manager._clients.add(page)
-            manager._order.append(page)
-            ai = Client()
-            manager._clients.add(ai)
-            manager._assistants.add(ai)
-            await manager._from_assistant(ai, "assistant_request", {"id": "r", "kind": "status", "args": {}})
-            keys.append(page.of("assistant_request")[0]["id"])
+        with mock.patch.object(cfg, "LOG_DIR", tmp_path):
+            for page in pages:
+                manager = WSManager(DroneLink())
+                manager._clients.add(page)
+                manager._order.append(page)
+                ai = Client()
+                manager._clients.add(ai)
+                manager._assistants[ai] = {}
+                await manager._from_assistant(ai, "assistant_request", {"id": "r", "kind": "status", "args": {}})
+                keys.append(page.of("assistant_request")[0]["id"])
         assert keys[0] != keys[1]
 
     async def test_requests_of_an_assistant_that_left_are_withdrawn(self, mgr):
@@ -308,3 +318,97 @@ class TestAskingThePage:
         page.say(type="command", cmd="arm")
         await settle()
         assert page.of("cmd_result")
+
+
+class TestAudit:
+    """logs/assistant_audit.jsonl: who asked for what, and what the operator decided."""
+
+    @staticmethod
+    def entries(path):
+        return [json.loads(line) for line in path.read_text().splitlines()]
+
+    async def test_an_ask_running_and_its_answer_are_recorded_with_the_client(self, mgr, audit_log):
+        page = await mgr.join()
+        ai = await mgr.join()
+        ai.say(type="assistant_hello", name="Claude Desktop", version="1.9")
+        await settle()
+        ai.say(type="assistant_request", id="r1", kind="propose_parameters", args={"values": {"X": 1}})
+        await settle()
+        key = page.of("assistant_request")[0]["id"]
+        page.say(type="assistant_state", id=key, state="running")
+        page.say(type="assistant_reply", id=key, ok=True, result={"values": {"X": 1}})
+        await settle()
+        lines = self.entries(audit_log)
+        assert [e["event"] for e in lines] == ["connected", "asked", "running", "answered"]
+        assert lines[0]["client"] == {"name": "Claude Desktop", "version": "1.9"}
+        assert lines[1]["id"] == key and lines[1]["kind"] == "propose_parameters"
+        assert lines[1]["args"] == {"values": {"X": 1}}
+        assert lines[1]["client"]["name"] == "Claude Desktop"
+        assert lines[3]["ok"] is True and lines[3]["result"] == {"values": {"X": 1}}
+
+    async def test_a_declined_proposal_records_the_outcome(self, mgr, audit_log):
+        page = await mgr.join()
+        ai = await assistant(mgr)
+        ai.say(type="assistant_request", id="r", kind="propose_mission", args={})
+        await settle()
+        key = page.of("assistant_request")[0]["id"]
+        page.say(type="assistant_reply", id=key, ok=False, error="Declined", result={"outcome": "declined"})
+        await settle()
+        answered = [e for e in self.entries(audit_log) if e["event"] == "answered"][0]
+        assert answered["ok"] is False and answered["outcome"] == "declined"
+
+    async def test_a_page_that_closes_is_recorded(self, mgr, audit_log):
+        page = await mgr.join()
+        ai = await assistant(mgr)
+        ai.say(type="assistant_request", id="r", kind="propose_mission", args={})
+        await settle()
+        page.leave()
+        await settle()
+        assert "page_closed" in [e["event"] for e in self.entries(audit_log)]
+
+    async def test_an_assistant_that_leaves_is_recorded(self, mgr, audit_log):
+        await mgr.join()
+        ai = await assistant(mgr)
+        ai.say(type="assistant_request", id="r", kind="propose_mission", args={})
+        await settle()
+        ai.leave()
+        await settle()
+        lines = self.entries(audit_log)
+        assert [e["event"] for e in lines][-2:] == ["withdrawn", "disconnected"]
+        assert lines[-2]["reason"] == "the assistant disconnected"
+
+    async def test_an_assistant_that_leaves_while_the_change_runs_is_not_called_withdrawn(self, mgr, audit_log):
+        page = await mgr.join()
+        ai = await assistant(mgr)
+        ai.say(type="assistant_request", id="r", kind="propose_mission", args={})
+        await settle()
+        key = page.of("assistant_request")[0]["id"]
+        page.say(type="assistant_state", id=key, state="running")
+        await settle()
+        ai.leave()
+        await settle()
+        page.say(type="assistant_reply", id=key, ok=True, result={"uploaded": True})
+        await settle()
+        lines = self.entries(audit_log)
+        events = [e["event"] for e in lines]
+        assert "withdrawn" not in events
+        assert "abandoned" in events
+        assert events[-1] == "answered" and lines[-1]["ok"] is True
+
+    async def test_no_page_refuses_and_records(self, mgr, audit_log):
+        ai = await assistant(mgr)
+        ai.say(type="assistant_request", id="r", kind="status", args={})
+        await settle()
+        refused = [e for e in self.entries(audit_log) if e["event"] == "refused"]
+        assert refused and refused[0]["error"] == _NO_PAGE
+
+    async def test_a_later_hello_updates_the_client_name(self, mgr, audit_log):
+        await mgr.join()
+        ai = await mgr.join()
+        ai.say(type="assistant_hello", name="argus-mcp", version="3.10.7")
+        await settle()
+        ai.say(type="assistant_hello", name="Claude Code", version="2.0")
+        await settle()
+        lines = self.entries(audit_log)
+        assert [e["event"] for e in lines] == ["connected", "identified"]
+        assert lines[1]["client"] == {"name": "Claude Code", "version": "2.0"}

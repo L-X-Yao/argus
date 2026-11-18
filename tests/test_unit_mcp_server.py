@@ -4,12 +4,14 @@ import json
 import socket
 import threading
 import time
+from unittest import mock
 
 import pytest
 import uvicorn
 from websockets.sync.client import connect
 
 from backend import mcp_server as mcp
+from backend.config import cfg
 from backend.mcp_server import LEGACY, MODERN, Backend, Request, Server, Unreachable
 
 META = "io.modelcontextprotocol/protocolVersion"
@@ -35,6 +37,7 @@ class FakeBackend(Backend):
         super().__init__("ws://fake")
         self.asked: list[tuple[str, dict]] = []
         self.withdrawn: list[str] = []
+        self.identified: list[tuple[str, str]] = []
         self.unreachable: str | None = None
 
         def respond(kind, args):
@@ -43,6 +46,9 @@ class FakeBackend(Backend):
             return {"answer": {"ok": True, "result": {"mode": "LOITER"}}}
 
         self.respond = respond
+
+    def identify(self, name, version):
+        self.identified.append((name, version))
 
     def ask(self, kind, args):
         if self.unreachable:
@@ -151,6 +157,10 @@ def outcome(response: dict) -> dict:
 
 
 class TestLegacyEra:
+    def test_initialize_names_the_client_to_the_page(self, server, wire, page):
+        initialize(server, wire)
+        assert page.identified == [("t", "1")]
+
     def test_initialize_takes_a_version_it_knows(self, server, wire):
         result = initialize(server, wire, "2025-03-26")
         assert result["protocolVersion"] == "2025-03-26"
@@ -186,6 +196,15 @@ class TestLegacyEra:
 
 
 class TestModernEra:
+    def test_client_info_in_each_request_names_the_client(self, server, wire, page):
+        send(
+            server,
+            1,
+            "tools/list",
+            {"_meta": {META: MODERN[0], CAPS: {}, mcp.META_CLIENT: {"name": "Claude Code", "version": "2"}}},
+        )
+        assert page.identified == [("Claude Code", "2")]
+
     def test_discover(self, server, wire):
         send(server, "d", "server/discover", modern())
         result = wire.answer("d")["result"]
@@ -492,7 +511,7 @@ def free_port() -> int:
 
 
 @pytest.fixture
-def argus(monkeypatch):
+def argus(monkeypatch, tmp_path):
     """The real backend on a port of its own."""
     monkeypatch.delenv("GCS_AUTH_TOKEN", raising=False)
     monkeypatch.setattr("backend.auth._token", None)
@@ -502,14 +521,15 @@ def argus(monkeypatch):
     port = free_port()
     server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning"))
     thread = threading.Thread(target=server.run, daemon=True)
-    thread.start()
-    deadline = time.monotonic() + 10
-    while not server.started and time.monotonic() < deadline:
-        time.sleep(0.05)
-    assert server.started
-    yield f"ws://127.0.0.1:{port}/ws"
-    server.should_exit = True
-    thread.join(10)
+    with mock.patch.object(cfg, "LOG_DIR", tmp_path):
+        thread.start()
+        deadline = time.monotonic() + 10
+        while not server.started and time.monotonic() < deadline:
+            time.sleep(0.05)
+        assert server.started
+        yield f"ws://127.0.0.1:{port}/ws"
+        server.should_exit = True
+        thread.join(10)
 
 
 def open_page(url: str, answer):
@@ -615,6 +635,46 @@ class TestThroughTheBackend:
             presence = json.loads(page.recv(timeout=5))
         assert presence == {"type": "assistant_presence", "count": 1}
         page.close()
+
+    @staticmethod
+    def audit(path):
+        return [json.loads(line) for line in path.read_text().splitlines()]
+
+    def test_the_client_name_goes_out_with_the_first_hello(self, argus, tmp_path):
+        with mock.patch.object(cfg, "LOG_DIR", tmp_path):
+            page, _ = open_page(argus, lambda m, ws: reply(ws, m, ok=True, result={}))
+            server, wire = self.tools(argus)
+            initialize(server, wire)  # clientInfo t/1, before anything asks the page
+            outcome(call(server, wire, 1, "get_status"))
+            time.sleep(0.3)
+            page.close()
+            lines = self.audit(tmp_path / "assistant_audit.jsonl")
+        assert lines[0]["event"] == "connected"
+        assert lines[0]["client"] == {"name": "t", "version": "1"}
+        assert any(e["event"] == "asked" and e["client"]["name"] == "t" for e in lines)
+
+    def test_before_any_handshake_the_client_is_unknown_not_this_server(self, argus, tmp_path):
+        with mock.patch.object(cfg, "LOG_DIR", tmp_path):
+            page, _ = open_page(argus, lambda m, ws: reply(ws, m, ok=True, result={}))
+            server, wire = self.tools(argus)
+            outcome(call(server, wire, 1, "get_status"))
+            time.sleep(0.3)
+            page.close()
+            lines = self.audit(tmp_path / "assistant_audit.jsonl")
+        assert lines[0]["event"] == "connected"
+        assert lines[0]["client"] == {"name": "unknown client", "version": ""}
+
+    def test_a_name_that_arrives_after_the_connection_is_sent_again(self, argus, tmp_path):
+        with mock.patch.object(cfg, "LOG_DIR", tmp_path):
+            page, _ = open_page(argus, lambda m, ws: reply(ws, m, ok=True, result={}))
+            server, wire = self.tools(argus)
+            outcome(call(server, wire, 1, "get_status"))  # connects as argus-mcp
+            initialize(server, wire)  # the handshake names the client
+            time.sleep(0.3)
+            page.close()
+            lines = self.audit(tmp_path / "assistant_audit.jsonl")
+        identified = [e for e in lines if e["event"] == "identified"]
+        assert identified and identified[0]["client"] == {"name": "t", "version": "1"}
 
     def test_no_argus_at_the_address(self):
         with pytest.raises(Unreachable, match="No Argus at ws://127.0.0.1:"):

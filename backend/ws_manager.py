@@ -10,7 +10,7 @@ from dataclasses import dataclass
 
 from fastapi import WebSocket, WebSocketDisconnect
 
-from . import commands
+from . import assistant_audit, commands
 from .config import cfg
 from .drone_link import DroneLink
 from .locale_text import lt
@@ -76,6 +76,19 @@ _CLOSED_RUNNING = (
 # its way to the vehicle. Only the answer ends it.
 _STATES = ("waiting", "running")
 
+# The requests that change something; a read's result is not repeated in the audit, its kind is.
+_PROPOSALS = frozenset(("propose_mission", "propose_parameters", "propose_command"))
+
+
+def _identity(msg: dict) -> dict:
+    """Who the assistant says it is: the client's own word, recorded as such."""
+
+    def bounded(key: str, limit: int, default: str) -> str:
+        value = msg.get(key)
+        return value[:limit] if isinstance(value, str) and value.strip() else default
+
+    return {"name": bounded("name", 100, "unknown assistant"), "version": bounded("version", 40, "")}
+
 
 @dataclass
 class _Asked:
@@ -85,6 +98,7 @@ class _Asked:
     assistant: WebSocket
     rid: str
     page: WebSocket
+    kind: str = ""
     running: bool = False
 
 
@@ -106,7 +120,8 @@ class WSManager:
         self._order: list[WebSocket] = []
         self._pilot_ws: WebSocket | None = None
         self._roles: dict[int, str] = {}
-        self._assistants: set[WebSocket] = set()
+        # Who each assistant says it is, by its websocket: the audit names the client that asked.
+        self._assistants: dict[WebSocket, dict] = {}
         self._asked: dict[str, _Asked] = {}
         self._asked_total = 0
         # The page that asked for a mission download: its model goes to that page only.
@@ -118,11 +133,11 @@ class WSManager:
     @property
     def client_count(self) -> int:
         """Pages, not assistants: what the pages show as the number of operators and viewers."""
-        return len(self._clients - self._assistants)
+        return len(self._clients - self._assistants.keys())
 
     @property
     def assistant_count(self) -> int:
-        return len(self._assistants & self._clients)
+        return sum(1 for ws in self._assistants if ws in self._clients)
 
     def operator(self) -> WebSocket | None:
         """The page with command authority: the pilot, or else the page that connected first."""
@@ -196,20 +211,42 @@ class WSManager:
 
     async def _forget(self, ws: WebSocket) -> None:
         """What was asked by or of a client that has gone."""
-        was_assistant = ws in self._assistants
-        self._assistants.discard(ws)
+        identity = self._assistants.pop(ws, None)
         for key, asked in list(self._asked.items()):
             if asked.assistant is ws:
-                # Nobody to answer: a change still waiting is withdrawn, one running goes on.
+                if asked.running:
+                    # The page goes on with it (src/lib/assistant.svelte.ts withdraw keeps the
+                    # running one): keep the entry, so the answer it sends is still recorded.
+                    assistant_audit.record(
+                        "abandoned",
+                        id=key,
+                        kind=asked.kind,
+                        client=identity,
+                        reason="the assistant disconnected while it was running",
+                    )
+                    await self._send(asked.page, {"type": "assistant_cancel", "id": key})
+                    continue
+                # Nobody to answer: a change still waiting is withdrawn.
                 del self._asked[key]
+                assistant_audit.record(
+                    "withdrawn", id=key, kind=asked.kind, client=identity, reason="the assistant disconnected"
+                )
                 await self._send(asked.page, {"type": "assistant_cancel", "id": key})
             elif asked.page is ws:
                 del self._asked[key]
                 error = _CLOSED_RUNNING if asked.running else _PAGE_CLOSED
+                assistant_audit.record(
+                    "page_closed",
+                    id=key,
+                    kind=asked.kind,
+                    client=self._assistants.get(asked.assistant, {}),
+                    running=asked.running,
+                )
                 await self._send(
                     asked.assistant, {"type": "assistant_reply", "id": asked.rid, "ok": False, "error": error}
                 )
-        if was_assistant:
+        if identity is not None:
+            assistant_audit.record("disconnected", client=identity)
             await self._presence()
 
     @staticmethod
@@ -220,17 +257,23 @@ class WSManager:
             pass  # gone: its own receive loop cleans up
 
     async def _presence(self) -> None:
-        for page in list(self._clients - self._assistants):
+        for page in list(self._clients - self._assistants.keys()):
             await self._send(page, {"type": "assistant_presence", "count": self.assistant_count})
 
     async def _from_assistant(self, ws: WebSocket, msg_type: str, msg: dict) -> None:
         if msg_type == "assistant_hello":
+            identity = _identity(msg)
             if ws not in self._assistants:
-                self._assistants.add(ws)
+                self._assistants[ws] = identity
                 self._roles.pop(id(ws), None)
                 if self._pilot_ws is ws:
                     self._pilot_ws = None
+                assistant_audit.record("connected", client=identity)
                 await self._presence()
+            elif identity != self._assistants[ws]:
+                # The MCP client's own name arrives with initialize, after the first hello.
+                self._assistants[ws] = identity
+                assistant_audit.record("identified", client=identity)
             await self._send(ws, {"type": "assistant_welcome"})
             return
         if msg_type not in _FROM_ASSISTANT:
@@ -246,20 +289,31 @@ class WSManager:
                     await self._send(asked.page, {"type": "assistant_cancel", "id": key})
             return
         kind, args = msg.get("kind"), msg.get("args", {})
-        if not isinstance(kind, str) or not isinstance(args, dict):
+        client = self._assistants.get(ws, {})
+        if not isinstance(kind, str) or len(kind) > 100 or not isinstance(args, dict):
+            assistant_audit.record(
+                "refused",
+                request=rid,
+                client=client,
+                kind=kind if isinstance(kind, str) else None,
+                error="kind and args",
+            )
             await self._send(ws, {"type": "assistant_reply", "id": rid, "ok": False, "error": "kind and args"})
             return
         if sum(1 for asked in self._asked.values() if asked.assistant is ws) >= _MAX_WAITING:
             error = f"{_MAX_WAITING} requests are already waiting for the page"
+            assistant_audit.record("refused", request=rid, client=client, kind=kind, error=error)
             await self._send(ws, {"type": "assistant_reply", "id": rid, "ok": False, "error": error})
             return
         page = self.operator()
         if page is None:
+            assistant_audit.record("refused", request=rid, client=client, kind=kind, error=_NO_PAGE)
             await self._send(ws, {"type": "assistant_reply", "id": rid, "ok": False, "error": _NO_PAGE})
             return
         self._asked_total += 1
         key = f"{self._session}-{self._asked_total}"
-        self._asked[key] = _Asked(ws, rid, page)
+        self._asked[key] = _Asked(ws, rid, page, kind)
+        assistant_audit.record("asked", id=key, request=rid, client=client, kind=kind, args=args)
         await self._send(page, {"type": "assistant_request", "id": key, "kind": kind, "args": args})
 
     def _asked_of(self, page: WebSocket, msg: dict) -> tuple[str, _Asked] | None:
@@ -279,6 +333,18 @@ class WSManager:
             reply["result"] = msg["result"]
         if isinstance(msg.get("error"), str):
             reply["error"] = msg["error"][:2000]
+        result = reply.get("result")
+        outcome = result.get("outcome") if isinstance(result, dict) else None
+        assistant_audit.record(
+            "answered",
+            id=key,
+            kind=asked.kind,
+            client=self._assistants.get(asked.assistant, {}),
+            ok=reply["ok"],
+            outcome=outcome[:100] if isinstance(outcome, str) else None,
+            error=reply.get("error"),
+            result=result if asked.kind in _PROPOSALS else None,
+        )
         await self._send(asked.assistant, reply)
 
     async def _state_to_assistant(self, page: WebSocket, msg: dict) -> None:
@@ -287,7 +353,9 @@ class WSManager:
         state = msg.get("state")
         if found is None or state not in _STATES:
             return
-        _, asked = found
+        key, asked = found
+        if state == "running" and not asked.running:
+            assistant_audit.record("running", id=key, kind=asked.kind, client=self._assistants.get(asked.assistant, {}))
         if state == "running":
             asked.running = True
         await self._send(asked.assistant, {"type": "assistant_state", "id": asked.rid, "state": state})

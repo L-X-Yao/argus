@@ -50,6 +50,7 @@ STRUCTURED_SINCE = "2025-06-18"
 SERVER_INFO = {"name": "argus-gcs", "title": "Argus GCS", "version": VERSION}
 META_VERSION = "io.modelcontextprotocol/protocolVersion"
 META_CAPABILITIES = "io.modelcontextprotocol/clientCapabilities"
+META_CLIENT = "io.modelcontextprotocol/clientInfo"
 META_SERVER = "io.modelcontextprotocol/serverInfo"
 
 INVALID_REQUEST, METHOD_NOT_FOUND, INVALID_PARAMS, PARSE_ERROR = -32600, -32601, -32602, -32700
@@ -403,6 +404,12 @@ class Backend:
         self._changed = threading.Condition()
         self._requests: dict[str, Request] = {}
         self._expiring = False
+        # The MCP client's own name, once its handshake or request metadata has said it: the page
+        # records it in logs/assistant_audit.jsonl, so a decision traces to the client that asked.
+        # Until then it is unknown: this server's own name is not the client's.
+        self._id_lock = threading.Lock()
+        self.client_name = "unknown client"
+        self.client_version = ""
 
     def _connection(self):
         with self._lock:
@@ -414,7 +421,9 @@ class Backend:
                 options["proxy"] = None
             try:
                 ws = connect(self.url, **options)
-                ws.send(json.dumps({"type": "assistant_hello", "name": "argus-mcp", "version": VERSION}))
+                with self._id_lock:  # brief: identify() must not wait on a connection
+                    name, version = self.client_name, self.client_version
+                ws.send(json.dumps({"type": "assistant_hello", "name": name, "version": version}))
                 while json.loads(ws.recv(timeout=5)).get("type") != "assistant_welcome":
                     pass
             except Exception as exc:
@@ -425,6 +434,19 @@ class Backend:
             self._ws = ws
             threading.Thread(target=self._read, args=(ws,), daemon=True).start()
             return ws
+
+    def identify(self, name: str, version: str) -> None:
+        """The MCP client's own name, from its handshake or a request's _meta. The first hello
+        may have gone out before it was known: say it again, and the page updates it."""
+        with self._id_lock:
+            self.client_name, self.client_version = name, version
+        ws = self._ws  # not the connection lock: a connect in progress must not stall stdio
+        if ws is None:
+            return  # the connection this server makes next carries it
+        try:
+            ws.send(json.dumps({"type": "assistant_hello", "name": name, "version": version}))
+        except Exception:
+            pass  # a dead socket is noticed by the reader
 
     def connect_soon(self) -> None:
         """Connect now, without waiting: the page shows an assistant is there from the moment its
@@ -614,8 +636,25 @@ class Server:
             if event is not None:
                 event.set()
 
+    def _identify(self, client: dict) -> None:
+        """The client's own name, from its initialize, for the page to record."""
+        name = client.get("name")
+        version = client.get("version")
+        self.backend.identify(
+            name[:100] if isinstance(name, str) and name.strip() else "unknown client",
+            version[:40] if isinstance(version, str) else "",
+        )
+
     def _request(self, rid, method: str, params: dict) -> None:
         meta = params.get("_meta") if isinstance(params.get("_meta"), dict) else {}
+        # A 2025-11-25 or earlier handshake names the client in initialize; 2026-07-28 carries
+        # clientInfo in every request's _meta and forbids inferring it from earlier ones
+        # (modelcontextprotocol.io/specification/2026-07-28/basic#_meta).
+        client = params.get("clientInfo")
+        if not isinstance(client, dict):
+            client = meta.get(META_CLIENT)
+        if isinstance(client, dict):
+            self._identify(client)
         modern = META_VERSION in meta
         if modern:
             version = meta.get(META_VERSION)

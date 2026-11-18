@@ -169,6 +169,8 @@ An AI client that speaks the [Model Context Protocol](https://modelcontextprotoc
 
 A proposal returns its id at once, and `check_proposal` waits up to 50 s a call for the decision, so the operator can take minutes. A mission or parameter change is refused while the vehicle is armed, and a flight command while it is not. The tools cannot arm, take off, start a mission or change to any other mode.
 
+Every request and every decision is written to `logs/assistant_audit.jsonl`, one JSON object per line, with the client's own name from its MCP handshake or request metadata: the record of who asked for a change and what the operator decided. It holds positions and parameter values, as the tlogs do, and moves to `.1` past 5 MB.
+
 These limits are those of the tools. A client that can also run commands on this computer, as Claude Code can, could reach Argus and the vehicle in other ways, as any program here could: keep it asking before each command, which is its default.
 
 Set it up with Argus running and its page open, which answers for the vehicle:
