@@ -314,6 +314,7 @@ Argus is under active development: bug and security fixes, and new features, are
 - Tag-triggered release workflow with auto-changelog
 - Windows installer for your account only, without administrator rights
 - AI assistant through MCP: reads the page, proposes missions, parameter changes, and return, hold or land, and the operator approves each
+- Audit log of every AI request and decision, with the client's name from its MCP handshake or request metadata
 
 **No longer planned**
 
