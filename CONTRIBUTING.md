@@ -55,6 +55,8 @@ CI runs on every push to `main` and every PR. On top of the five checks above, i
 
 `make test-integration` runs the integration tests locally, in about 3 minutes.
 
+An advisory with no fixed version does not lower `--audit-level`: move the build-only packages out of the production tree first, since they do not ship, and record a dated exception where that is not possible.
+
 GitHub turns two things off in a public repository where nothing happens. Scheduled workflows, here the weekly CodeQL run, stop after 60 days without activity. Dependabot stops opening pull requests, the security ones included, once one of its pull requests has been open for more than 90 days and nobody has merged or closed one in that time. Merging or closing the monthly Dependabot pull request keeps both running.
 
 CI only runs the specs named in `.github/workflows/ci.yml`, so add a new spec to that list. The specs that need SITL are named in their run scripts, `tests/e2e/run-webserial-sitl.sh` and `tests/e2e/run-panels-sitl.sh`.
@@ -97,7 +99,9 @@ Contract tests keep the two aligned:
 
 ## Review
 
-Bug fixes and FC-facing changes get a second read before release, from a person or a new AI session that did not write them. Give the reviewer the diff, not your conclusion.
+Bug fixes and FC-facing changes get a second read before release, from a person or a new AI session that did not write them. Give the reviewer the merged result, not the branch diff alone and not your conclusion.
+
+A security fix names every entry point it guards: an HTTP route, the websocket handshake, a websocket message, a timer or thread, and the other link. One test per entry point. A middleware runs for HTTP only.
 
 ## Several Sessions at Once
 
