@@ -1,7 +1,7 @@
 import type { WSMessage } from './types';
 import { app, updateState, addEvent, setWsConnected, addToast, loadDownloadedMission } from './stores.svelte';
 import { handleParamBatch, handleParamsComplete, handleParamTimeout, clearParams } from './paramStore.svelte';
-import { setLogList, completeDownload, updateDownloadProgress, appendLogChunk } from './logStore.svelte';
+import { logState, setLogList, completeDownload, updateDownloadProgress, appendLogChunk } from './logStore.svelte';
 import { updateInspector, appendConsole } from './inspectorStore.svelte';
 import { saveFlightRecord } from './flightDb';
 import { getWsUrl } from './backend';
@@ -197,6 +197,9 @@ export function connectWs(): void {
           appendLogChunk(msg.id, msg.ofs, msg.data);
           break;
         case 'log_complete':
+          // Another client's download ends in a broadcast too; its chunks were
+          // dropped by id here, so it is not ours to save or announce.
+          if (msg.id !== logState.downloadId) break;
           // truncated covers the count==0 EOF sentinel, stall give-up, and
           // detected frame-loss holes — a success toast over a corrupted
           // file would undo the honesty the backend just signalled.
@@ -290,10 +293,8 @@ export function sendDisconnect(): void {
 }
 
 export function sendCommand(cmd: string, param?: number, data?: Record<string, unknown>): void {
-  if (cmd === 'param_request_all') {
-    // A fresh backend fetch replaces the vehicle's list. Clear our rows too, or a previously
-    // capped list would reject every valid new name while params_complete kept the stale ones.
-    clearParams();
-  }
+  // A new fetch clears this page on its first batch (paramStore watches the
+  // generation), not here: the backend can refuse the command, and clearing
+  // first emptied the panel over a link that was down.
   sendMessage({ type: 'command', cmd, param, ...data });
 }

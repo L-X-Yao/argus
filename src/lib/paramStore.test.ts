@@ -172,6 +172,18 @@ describe('handleParamBatch edge cases', () => {
     expect(paramState.list[0]).toMatchObject({ name: 'NEW_VALID', value: 5 });
   });
 
+  it('does not clear the panel when a capped fetch bumps the generation', () => {
+    // The backend bumps the generation on overflow, then one unsolicited
+    // PARAM_VALUE arrives with fetching=false. That is not a new fetch.
+    handleParamBatch([
+      { name: 'KEEP', value: 1, ptype: 9, index: 0, total: 1, received: 1, fetching: true, fetch_gen: 1 },
+    ]);
+    handleParamBatch([
+      { name: 'UNSOLICITED', value: 2, ptype: 9, index: 0, total: 1, received: 1, fetching: false, fetch_gen: 2 },
+    ]);
+    expect(paramState.list.map((p) => p.name)).toEqual(['KEEP']);
+  });
+
   it('caps rows at 2000 and leaves the fetching state', () => {
     for (let i = 0; i < 2001; i++) {
       handleParamBatch([{ name: `P${i}`, value: i, ptype: 9, index: i, total: 2001, received: i + 1, fetching: true }]);

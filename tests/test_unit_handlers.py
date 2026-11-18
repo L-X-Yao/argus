@@ -5,6 +5,7 @@ from __future__ import annotations
 import math
 import struct
 import sys
+import threading
 import time
 from pathlib import Path
 from unittest.mock import MagicMock, patch
@@ -1548,3 +1549,34 @@ class TestLanguages:
         link.vehicle.vtype_raw = 2
         assert lt("link_lost", "zh") == "链路丢失"
         assert link.get_state()["gps_fix"] == "无定位"
+
+
+class TestLogWatchdogLock:
+    def test_the_download_watchdog_takes_the_state_lock(self):
+        """The link thread runs the watchdog outside the lock while a cancel
+        or a new download runs under it (post-release review 2026-11-18)."""
+        from backend.mavlink_handlers import (
+            LOG_DL_STALL_RETRIES,
+            LOG_DL_STALL_TIMEOUT,
+            check_log_dl_stall,
+        )
+
+        link = DroneLink()
+        link.log_dl._log_download_id = 7
+        link.log_dl._log_last_data_time = time.time() - LOG_DL_STALL_TIMEOUT - 1
+        link.log_dl._log_stall_retries = LOG_DL_STALL_RETRIES
+        link._state_lock.acquire()
+        finished = threading.Event()
+
+        def run():
+            check_log_dl_stall(link)
+            finished.set()
+
+        thread = threading.Thread(target=run)
+        thread.start()
+        try:
+            assert not finished.wait(0.2), "the watchdog finalized without the state lock"
+        finally:
+            link._state_lock.release()
+        assert finished.wait(2)
+        thread.join(1)

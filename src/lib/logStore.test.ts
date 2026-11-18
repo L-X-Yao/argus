@@ -201,12 +201,22 @@ describe('completeDownload', () => {
     expect(logState._chunks).toHaveLength(1001);
   });
 
-  it('caps chunk bytes at the expected log size', () => {
+  it('keeps a chunk past the size this page listed', () => {
+    // The backend sizes the transfer from its own list, which another client
+    // may have refreshed since this page's log_list. Dropping the tail made a
+    // zero-filled file look complete (post-release review 2026-11-18).
     startDownload(99, 90);
     expect(appendLogChunk(99, 0, btoa('a'.repeat(90)))).toBe(true);
-    expect(appendLogChunk(99, 90, btoa('x'))).toBe(false);
-    expect(logState._chunks).toHaveLength(1);
-    expect(logState._chunkBytes).toBe(90);
+    expect(appendLogChunk(99, 90, btoa('x'))).toBe(true);
+    expect(logState._chunks).toHaveLength(2);
+    expect(logState._chunkBytes).toBe(91);
+  });
+
+  it('ignores a completion for a download this page did not start', () => {
+    startDownload(1, 10);
+    expect(completeDownload(2, undefined, 10)).toBe(true);
+    expect(logState.downloading).toBe(true);
+    expect(logState.downloadId).toBe(1);
   });
 
   it('caps chunk count even for empty slices', () => {

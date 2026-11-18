@@ -449,12 +449,39 @@ class TestWebSocketGuards:
         assert exc.value.code == 4003
 
     def test_allowed_origin_accepted(self):
-        with client.websocket_connect("/ws", headers={"origin": "http://localhost:5173"}) as ws:
+        with client.websocket_connect("/ws", headers={"origin": "http://localhost:5173", "host": "localhost"}) as ws:
             ws.send_json({"type": "disconnect"})
 
     def test_no_origin_accepted(self):
-        with client.websocket_connect("/ws") as ws:
+        # TestClient's websocket sends Host "testserver" whatever the base_url;
+        # a browser sends the name it opened. With no token the handshake holds
+        # the Host rule too (post-release review 2026-11-18).
+        with client.websocket_connect("/ws", headers={"host": "localhost"}) as ws:
             ws.send_json({"type": "disconnect"})
+
+
+class TestVideoValidationThreading:
+    def test_dns_lookup_runs_off_the_event_loop(self, monkeypatch):
+        """A slow resolver used to stall every request and websocket push
+        (post-release review 2026-11-18)."""
+        import asyncio
+
+        from backend import video
+
+        seen = {}
+
+        def fake(url):
+            try:
+                asyncio.get_running_loop()
+                seen["off_loop"] = False
+            except RuntimeError:
+                seen["off_loop"] = True
+            return "invalid for the test"
+
+        monkeypatch.setattr(video, "_validate_video_url", fake)
+        r = client.get("/api/video", params={"url": "rtsp://example.com/live"})
+        assert r.status_code == 200
+        assert seen["off_loop"] is True
 
 
 class TestParamMeta:
@@ -510,6 +537,7 @@ class TestWebSocketUnauthorized:
         from starlette.websockets import WebSocketDisconnect
 
         with (
+            patch("backend.app.auth_required", return_value=True),
             patch("backend.app.verify_ws_token", return_value=False),
             patch("backend.app.verify_ws_cookie", return_value=False),
             pytest.raises(WebSocketDisconnect) as exc,

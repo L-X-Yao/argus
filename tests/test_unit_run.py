@@ -43,7 +43,7 @@ auth.TOKEN_FILE = Path("no-such-token-file")
 
 def websocket(client, origin):
     try:
-        with client.websocket_connect("/ws", headers={"origin": origin}) as ws:
+        with client.websocket_connect("/ws", headers={"origin": origin, "host": "localhost"}) as ws:
             ws.send_json({"type": "disconnect"})
     except WebSocketDisconnect as exc:
         return exc.code

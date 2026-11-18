@@ -510,8 +510,12 @@ class WSManager:
                 if len(dlmsg) > dl_cursor:
                     for msg in dlmsg[dl_cursor:]:
                         # A mission download's model is the requester's answer, not news for
-                        # every page: it replaced another operator's unsaved route.
-                        if msg.get("type") == "mission_downloaded" and not self._dl_is_mine(ws):
+                        # every page: it replaced another operator's unsaved route. The
+                        # refusal for a count over the cap is the same answer.
+                        if msg.get("type") in (
+                            "mission_downloaded",
+                            "mission_download_failed",
+                        ) and not self._dl_is_mine(ws):
                             continue
                         await ws.send_text(dumps(msg))
                     dl_cursor = len(dlmsg)

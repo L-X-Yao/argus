@@ -131,31 +131,34 @@ def _is_this_machine(host: str) -> bool:
         return host.lower().rstrip(".") == "localhost"
 
 
-def _asked_by_our_name(request: Request) -> bool:
+def _host_is_ours(host_header: str, own_hosts: set[str]) -> bool:
     """Tell the names we answer to from one that another site has pointed at this machine.
     After DNS rebinding a hostile page is same-origin with us to the browser: it sends no
     Origin on a read, no Fetch Metadata, and may add any header. Only Host still names it.
     0.0.0.0 reaches this machine too, from any page, and browsers send it no Fetch Metadata."""
-    match = _HOST.match(request.headers.get("host", "").strip().lower())
+    match = _HOST.match(host_header.strip().lower())
     if not match:
         return False
     if match["v6"] is not None:
-        return match["v6"] == "::1" or match["v6"] in request.app.state.own_hosts
-    return _is_this_machine(match["name"]) or match["name"] in request.app.state.own_hosts
+        return match["v6"] == "::1" or match["v6"] in own_hosts
+    return _is_this_machine(match["name"]) or match["name"] in own_hosts
+
+
+def _asked_by_our_name(request: Request) -> bool:
+    return _host_is_ours(request.headers.get("host", ""), request.app.state.own_hosts)
 
 
 def auth_required() -> bool:
     return _load_token() is not None
 
 
-def _from_this_machine(request: Request) -> bool:
+def _addr_is_this_machine(client) -> bool:
     """The peer's address, not the name it asked by (audit 2026-11-16 L18).
     The two entry points refuse a bind beyond this machine without a token,
     but a direct `uvicorn backend.app:app --host 0.0.0.0` skips them; this
     holds whoever it is asked by. An address that is not one — the test
     client's "testclient" — cannot be judged and passes; uvicorn always
     provides one."""
-    client = request.client
     if client is None:
         return True
     try:
@@ -163,6 +166,10 @@ def _from_this_machine(request: Request) -> bool:
     except ValueError:
         return True
     return addr.is_loopback
+
+
+def _from_this_machine(request: Request) -> bool:
+    return _addr_is_this_machine(request.client)
 
 
 async def auth_middleware(request: Request, call_next):
@@ -294,6 +301,21 @@ def note_for_other_devices(host: str, port: int, origins: list[str]) -> str | No
     if guessed:
         lines.append("A page opened at another address and refused at login names the address to add.")
     return "\n".join(lines)
+
+
+def ws_exposure_error(ws: WebSocket) -> str | None:
+    """The no-token rule for a websocket handshake (audit 2026-11-16 L18/L17).
+
+    `auth_middleware` is an HTTP middleware: Starlette never runs it for a
+    websocket scope, so the handshake has to ask the same two questions
+    itself, or a direct `uvicorn backend.app:app --host 0.0.0.0` with no
+    token hands the command surface to any client that sends no Origin.
+    """
+    if not _addr_is_this_machine(ws.client):
+        return "client address not allowed"
+    if not _host_is_ours(ws.headers.get("host", ""), ws.app.state.own_hosts):
+        return "host not allowed"
+    return None
 
 
 def verify_ws_token(ws: WebSocket) -> bool:

@@ -433,6 +433,38 @@ class TestRemoteClientWithoutToken:
         r = c.get("/api/session", headers={"Authorization": "Bearer remote_client_token_1234567"})
         assert r.status_code == 200
 
+    def test_a_remote_client_cannot_open_the_websocket(self):
+        """The HTTP middleware never sees a websocket scope, so the handshake
+        asks the same question itself (post-release review 2026-11-18)."""
+        c = self._remote_client()
+        with pytest.raises(WebSocketDisconnect) as exc, c.websocket_connect("/ws"):
+            pass
+        assert exc.value.code == 4003
+
+    def test_a_remote_client_is_refused_under_a_foreign_name_too_on_the_websocket(self):
+        c = self._remote_client()
+        with (
+            pytest.raises(WebSocketDisconnect) as exc,
+            c.websocket_connect("/ws", headers={"host": "evil.example:8100"}),
+        ):
+            pass
+        assert exc.value.code == 4003
+
+    def test_this_machine_can_open_the_websocket(self):
+        c = TestClient(app, base_url="http://localhost", client=("127.0.0.1", 5000), raise_server_exceptions=False)
+        # The test client's handshake names "testserver" regardless of base_url.
+        with c.websocket_connect("/ws", headers={"host": "localhost"}) as ws:
+            ws.send_json({"type": "disconnect"})
+
+    def test_with_a_token_a_remote_websocket_needs_it(self):
+        os.environ["GCS_AUTH_TOKEN"] = "remote_ws_token_1234567890"
+        c = self._remote_client()
+        with pytest.raises(WebSocketDisconnect) as exc, c.websocket_connect("/ws"):
+            pass
+        assert exc.value.code == 4001
+        with c.websocket_connect("/ws?token=remote_ws_token_1234567890"):
+            pass
+
 
 class TestCorsPreflight:
     """Audit 2026-11-16 L19: a preflight from a page ARGUS_CORS_ORIGINS

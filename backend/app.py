@@ -18,6 +18,7 @@ from .auth import (
     verify_token,
     verify_ws_cookie,
     verify_ws_token,
+    ws_exposure_error,
 )
 from .config import (
     ROOT_DIR,
@@ -232,6 +233,14 @@ async def websocket_endpoint(ws: WebSocket):
     if origin and origin not in _cors_origins:
         await ws.close(code=4003, reason="origin not allowed")
         return
+    # With no token, only this machine talks to the server (audit 2026-11-16
+    # L18/L17). The middleware that holds HTTP to that rule never sees a
+    # websocket scope, so the handshake asks it here.
+    if not auth_required():
+        refusal = ws_exposure_error(ws)
+        if refusal is not None:
+            await ws.close(code=4003, reason=refusal)
+            return
     # The logged-in page is authorized by its HttpOnly session cookie, so the
     # token need not travel in the URL (audit 2026-11-16 L15). The query
     # token stays for the clients that cannot hold a cookie: the MCP server.

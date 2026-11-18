@@ -888,7 +888,7 @@ LOG_LIST_RETRY_S = 3.0
 LOG_LIST_TRIES = 3
 
 
-def check_log_list_stall(link: DroneLink) -> None:
+def _check_log_list_stall(link: DroneLink) -> None:
     lg = link.log_dl
     if not lg._log_list_start:
         return
@@ -905,6 +905,13 @@ def check_log_list_stall(link: DroneLink) -> None:
     lg._log_list_start = 0.0
     lg._log_list_tries = 0
     link.add_event(lt("log_list_failed", link.locale), "log_list_failed")
+
+
+def check_log_list_stall(link: DroneLink) -> None:
+    """Same lock as the dl watchdog: cmd_log_list rebuilds the list under it
+    (post-release review 2026-11-18)."""
+    with link._state_lock:
+        _check_log_list_stall(link)
 
 
 # ArduPilot: libraries/GCS_MAVLink/GCS_Common.cpp:304 — GCS_MAVLINK::send_battery_status
@@ -1185,7 +1192,7 @@ LOG_DL_STALL_TIMEOUT = 5.0  # seconds; matches the transport.ts 5s watchdog
 LOG_DL_STALL_RETRIES = 3  # matches transport.ts LOG_DL_STALL_RETRIES
 
 
-def check_log_dl_stall(link: DroneLink) -> None:
+def _check_log_dl_stall(link: DroneLink) -> None:
     """Stall watchdog for the log download — twin of transport.ts _onDlStall.
 
     Called from the link thread's main loop alongside the param/mission
@@ -1222,6 +1229,16 @@ def check_log_dl_stall(link: DroneLink) -> None:
         _finalize_log_download(lg, log_id, truncated=False, link=link)
         return
     link.add_event(lt("log_dl_stall", link.locale) % (lg._log_download_ofs // 1024), "log_dl_stall")
+
+
+def check_log_dl_stall(link: DroneLink) -> None:
+    """The link thread runs this outside the state lock; a cancel or a new
+    download runs on the event loop under it. Take it here too, or a finalize
+    can land between the two and disarm the new transfer (post-release review
+    2026-11-18). The lock is an RLock, so a future caller already holding it
+    does not deadlock."""
+    with link._state_lock:
+        _check_log_dl_stall(link)
 
 
 def init_handlers() -> None:

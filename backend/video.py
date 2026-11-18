@@ -82,7 +82,10 @@ async def video_stream(url: str = ""):
     """Proxy RTSP/video stream as MJPEG for browser display."""
     if not url:
         return {"error": "No video URL provided"}
-    url_err = _validate_video_url(url)
+    # getaddrinfo is synchronous: on the event loop a slow resolver stalls every
+    # websocket push and request until it returns. Off it, as the NTRIP start
+    # already is (post-release review 2026-11-18).
+    url_err = await asyncio.to_thread(_validate_video_url, url)
     if url_err:
         return {"error": f"Invalid video URL: {url_err}"}
     # Residual (audit 2026-11-16 L4): ffmpeg resolves the name again when it

@@ -29,7 +29,11 @@ export function handleParamBatch(
   }[],
 ) {
   const generation = params.find((p) => p.fetch_gen !== undefined)?.fetch_gen;
-  if (generation !== undefined && generation !== lastFetchGen) {
+  // Only a batch that belongs to a running fetch replaces this page's rows.
+  // The backend also bumps the generation when it caps an overflow and then
+  // sends one unsolicited value with fetching=false; clearing on that would
+  // blank the panel for good (post-release review 2026-11-18).
+  if (generation !== undefined && generation !== lastFetchGen && params.some((p) => p.fetching === true)) {
     // Another tab may have started this fetch. Its Read All cannot clear our storage directly,
     // but the generation on the broadcast replaces a capped or stale list here too.
     clearParams();

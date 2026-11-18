@@ -51,7 +51,14 @@ function _decodeB64(b64: string): Uint8Array {
 }
 
 function _appendChunk(ofs: number, bytes: Uint8Array): boolean {
-  if (logState._chunkBytes + bytes.length > logState._expectedSize) return false;
+  // This page's row is not the transfer's authority: the backend sizes the log
+  // from its own list, which another client may have refreshed since. Dropping
+  // the tail there saved a zero-filled file reported as complete (post-release
+  // review 2026-11-18). MAX_LOG_SIZE is the memory bound; a byte past it is
+  // refused, and completeDownload refuses that file anyway.
+  if (logState._chunkBytes + bytes.length > MAX_LOG_SIZE) return false;
+  const end = ofs + bytes.length;
+  if (end > logState._expectedSize) logState._expectedSize = end;
   const maxChunks = Math.max(1000, Math.ceil(logState._expectedSize / 90));
   if (logState._chunks.length >= maxChunks) {
     // Fresh slices can be much smaller than 90 bytes. Merge a touching one at the cap instead
@@ -121,6 +128,9 @@ export function updateDownloadProgress(received: number, total: number) {
 }
 
 export function completeDownload(id: number, b64data: string | undefined, size: number): boolean {
+  // The completion of another client's download is not ours to assemble: the
+  // chunks were dropped by id and a size-sized zero buffer would be saved.
+  if (id !== logState.downloadId) return true;
   if (size > MAX_LOG_SIZE) {
     cancelDownload();
     return false;

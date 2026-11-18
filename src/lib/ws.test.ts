@@ -14,6 +14,7 @@ vi.mock('./paramStore.svelte', () => ({
   clearParams: vi.fn(),
 }));
 vi.mock('./logStore.svelte', () => ({
+  logState: { downloadId: -1 },
   setLogList: vi.fn(),
   completeDownload: vi.fn(),
   updateDownloadProgress: vi.fn(),
@@ -187,13 +188,15 @@ describe('message handling', () => {
     expect(handleParamBatch).toHaveBeenCalledWith([{ name: 'P', value: 1 }]);
   });
 
-  it('clears stale page rows before a new Read All is sent', async () => {
+  it('does not clear the page rows before the backend accepts a Read All', async () => {
+    // A refused command (link down) used to empty the panel anyway; the first
+    // batch of a real fetch carries the generation that clears it instead.
     await freshConnect();
     mockWs.onopen?.(new Event('open'));
     const { sendCommand } = await import('./ws');
     sendCommand('param_request_all');
     const { clearParams } = await import('./paramStore.svelte');
-    expect(clearParams).toHaveBeenCalledTimes(1);
+    expect(clearParams).not.toHaveBeenCalled();
     expect(JSON.parse(mockWs.send.mock.calls.at(-1)![0])).toMatchObject({ type: 'command', cmd: 'param_request_all' });
   });
 
@@ -243,6 +246,8 @@ describe('message handling', () => {
   });
 
   it('dispatches log_complete', async () => {
+    const { logState } = await import('./logStore.svelte');
+    (logState as { downloadId: number }).downloadId = 5;
     await fire({ type: 'log_complete', id: 5, data: 'base64data', size: 1024 });
     const { completeDownload } = await import('./logStore.svelte');
     expect(completeDownload).toHaveBeenCalledWith(5, 'base64data', 1024);
@@ -250,7 +255,19 @@ describe('message handling', () => {
     expect(vi.mocked(addToast).mock.calls.at(-1)).toEqual(['toast.logDone', 'success']);
   });
 
+  it('ignores the completion of another client download', async () => {
+    const { logState } = await import('./logStore.svelte');
+    (logState as { downloadId: number }).downloadId = -1;
+    await fire({ type: 'log_complete', id: 5, data: 'base64data', size: 1024 });
+    const { completeDownload } = await import('./logStore.svelte');
+    expect(completeDownload).not.toHaveBeenCalled();
+    const { addToast } = await import('./stores.svelte');
+    expect(addToast).not.toHaveBeenCalled();
+  });
+
   it('log_complete with truncated=true delivers the file but toasts an error, not success', async () => {
+    const { logState } = await import('./logStore.svelte');
+    (logState as { downloadId: number }).downloadId = 5;
     // truncated covers the count==0 EOF sentinel, stall give-up, and detected
     // frame-loss holes — a success toast here would silently bless a
     // corrupted file (the WebSerial path already surfaces the reason).
