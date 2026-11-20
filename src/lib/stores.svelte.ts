@@ -1,4 +1,4 @@
-import type { DroneState, DroneEvent, FlightSummary, Waypoint, Toast, RallyPoint } from './types';
+import type { DroneState, DroneEvent, FlightSummary, FwFlash, Waypoint, Toast, RallyPoint } from './types';
 import { defaultState } from './types';
 import { cleanPositions, cleanRallyPoints, cleanWaypoints, finiteNumber } from './missionIO';
 import { t } from './i18n.svelte';
@@ -7,6 +7,7 @@ class AppState {
   drone: DroneState = $state({ ...defaultState });
   events: DroneEvent[] = $state([]);
   wsConnected: boolean = $state(false);
+  fwFlash: FwFlash = $state({ active: false, phase: '', done: 0, total: 0, file: '', error: '' });
   // Which transport owns the FC link right now. 'ws' = via backend (TCP/UDP/
   // serial over the FastAPI proxy). 'serial' = via WebSerial directly in the
   // browser. Mutex: only one may write drone fields at a time; the button-

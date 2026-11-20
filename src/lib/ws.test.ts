@@ -1,7 +1,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 
 vi.mock('./stores.svelte', () => ({
-  app: { drone: {}, events: [] },
+  app: {
+    drone: {},
+    events: [],
+    fwFlash: { active: false, phase: '', done: 0, total: 0, file: '', error: '' },
+  },
   updateState: vi.fn(),
   addEvent: vi.fn(),
   setWsConnected: vi.fn(),
@@ -243,6 +247,12 @@ describe('message handling', () => {
     await fire({ type: 'log_progress', received: 100, total: 1000 });
     const { updateDownloadProgress } = await import('./logStore.svelte');
     expect(updateDownloadProgress).toHaveBeenCalledWith(100, 1000);
+  });
+
+  it('keeps the firmware flash state', async () => {
+    await fire({ type: 'fw_progress', active: true, phase: 'write', done: 50, total: 100, file: 'x.apj', error: '' });
+    const { app } = await import('./stores.svelte');
+    expect(app.fwFlash).toMatchObject({ active: true, phase: 'write', done: 50, total: 100 });
   });
 
   it('dispatches log_complete', async () => {

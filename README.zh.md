@@ -43,7 +43,7 @@ Argus 是面向 ArduPilot 的 **Web 地面站**：一个浏览器界面，支持
 | **参数** | 元数据驱动 UI（描述/范围/单位/枚举/位掩码），树形视图，差异导出，恢复默认 |
 | **校准** | 罗盘、加速度计、陀螺仪、水平、气压计向导，实时进度 |
 | **RTK** | NTRIP 客户端，HTTP/1.0 + ICY-200 协商，RTCM 流式注入 |
-| **固件** | 在后端保存 `.apj` 文件，在线固件浏览器，重启至 Bootloader（不含刷写功能） |
+| **固件** | 在后端保存 `.apj` 文件，在线固件浏览器，重启至 Bootloader，并通过后端串口刷写 |
 | **编队** | 多机仪表盘，每架飞机实时遥测 |
 | **视频** | 后端经 ffmpeg 转发 RTSP、HTTP 和 RTMP 视频流，AR 航点叠加，截图 |
 | **HUD** | PFD（姿态/速度/高度/罗盘/风向），实时图表，EKF 状态 |
@@ -208,7 +208,7 @@ python run.py --sim            # 同时启动后端 + simulator.py
 |  Python 后端 (FastAPI + uvicorn)          |
 |  31 模块, 7.1K 行                        |
 |  MAVLink 分发 + 35 消息处理器             |
-|  53 条命令, 瓦片/视频/固件 API            |
+|  54 条命令, 瓦片/视频/固件 API            |
 +------------------------------------------+
 |          MAVLink v2                       |
 |  TCP / UDP / Serial                      |
@@ -230,7 +230,7 @@ python run.py --sim            # 同时启动后端 + simulator.py
 | `src/lib/survey.ts` | 测绘图案生成（网格、交叉、螺旋、环绕） |
 | `src/lib/i18n.svelte.ts` | 10 语言国际化，支持 RTL |
 | `backend/drone_link.py` | MAVLink 连接、帧解析、状态管理 |
-| `backend/commands/` | 53 条命令处理器（解锁、模式、航线、校准、云台、NTRIP 等） |
+| `backend/commands/` | 54 条命令处理器（解锁、模式、航线、校准、云台、NTRIP 等） |
 | `backend/config.py` | 集中配置（所有超时/端口/速率常量） |
 
 ## 开发
@@ -321,7 +321,6 @@ Argus 处于积极开发中：缺陷修复、安全问题和新功能由维护�
 
 以下各项曾列入路线图，本项目不会再实现：
 
-- 固件刷写（APJ 解析 + Bootloader 协议）
 - PX4 端到端支持（后端读取 `HEARTBEAT.autopilot` 并拒绝 PX4；前端只有模式表）
 - WebRTC 视频流（替代 ffmpeg 代理）
 - MQTT 云端中继，用于编队管理

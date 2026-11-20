@@ -159,6 +159,15 @@ _T = {
         "NTRIP host resolves to this machine or a link-local address",
     ),
     "err_ntrip_running": ("NTRIP 已在运行", "NTRIP already running"),
+    "flash_start": ("开始刷写 %s", "Flashing %s"),
+    "flash_done": ("刷写完成", "Flash complete"),
+    "flash_fail": ("刷写失败: %s", "Flash failed: %s"),
+    "flash_busy": ("正在刷写，请等待完成", "A flash is already running"),
+    "flash_armed": ("飞行器已解锁，先锁定再刷写", "Disarm the vehicle before flashing"),
+    "flash_no_link": ("没有飞控连接", "No vehicle is connected"),
+    "flash_serial_only": ("刷写只支持后端串口连接", "Flashing needs the backend serial link"),
+    "flash_unstable": ("链路正在重连，稍后再试", "The link is reconnecting; try again"),
+    "flash_bad_file": ("固件文件无效: %s", "Invalid firmware file: %s"),
 }
 
 

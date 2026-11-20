@@ -27,13 +27,13 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 
 | Area | Items | Real FC | SITL | Simulator | Tests only | None | n/a |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Commands, backend | 53 | 19 | 28 | 0 | 6 | 0 | 0 |
-| Commands, WebSerial | 53 | 12 | 28 | 0 | 3 | 0 | 10 |
+| Commands, backend | 54 | 19 | 28 | 0 | 7 | 0 | 0 |
+| Commands, WebSerial | 54 | 12 | 28 | 0 | 3 | 0 | 11 |
 | Messages, backend | 35 | 28 | 3 | 0 | 4 | 0 | 0 |
 | Messages, WebSerial | 35 | 17 | 13 | 0 | 4 | 0 | 1 |
 | REST routes | 28 | 6 | 5 | 17 | 0 | 0 | 0 |
 | Panels | 77 | 14 | 34 | 18 | 11 | 0 | 0 |
-| Platform | 50 | 8 | 14 | 13 | 10 | 2 | 3 |
+| Platform | 50 | 8 | 14 | 13 | 11 | 2 | 2 |
 
 ## Commands / 飞控命令
 
@@ -78,6 +78,7 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 | `log_cancel` | Cancel a download | 取消下载 | SITL | SITL | CI on both links |
 | `reboot` | Reboot the FC | 重启飞控 | Real FC | Real FC | Both 2026-11-06 on Windows, disarmed. WebSerial comes back by the USB button, the backend by itself |
 | `reboot_bootloader` | Reboot to bootloader | 重启到 Bootloader | SITL | SITL | CI on both links |
+| `firmware_flash` | Write an .apj through the bootloader | 刷写固件 | Tests only | n/a | Unit tests against a scripted bootloader; not yet on real hardware (2026-11-20) |
 | `serial_control` | MAVLink console | MAVLink 控制台 | Real FC | n/a | Backend 2026-05, CI |
 | `inspector_toggle` | Message inspector | 消息检查器开关 | SITL | n/a | CI, local state only |
 | `set_vtype` | Set vehicle type | 手动设置机型 | SITL | n/a | CI, local state only |
@@ -307,7 +308,7 @@ Real FC here means the route was in use during a session with a real flight cont
 | Right-to-left layout | 阿拉伯语从右到左布局 | Tests only | Browser test: page turns around and stays inside the window |
 | macOS | macOS | Simulator | CI: unit and contract tests, then the app in a browser on macos-latest. No SITL there |
 | Desktop app (Tauri) | 桌面版（Tauri） | None | Not built |
-| Firmware flashing | 固件刷写 | n/a | Not implemented |
+| Firmware flashing | 固件刷写 | Tests only | Backend serial only. Unit tests against a scripted bootloader; not yet on real hardware (2026-11-20) |
 | PX4 | PX4 | n/a | Refused on connect, not implemented |
 | White-label branding | 白标定制 | n/a | Code exists but is not wired in |
 

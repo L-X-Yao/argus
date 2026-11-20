@@ -4,7 +4,7 @@
   import { t } from '../../lib/i18n.svelte';
   import { apiUrl } from '../../lib/backend';
   import Button from '$lib/components/ui/button/button.svelte';
-  import { Upload, RotateCw, HardDriveDownload } from '@lucide/svelte';
+  import { Upload, RotateCw, HardDriveDownload, Zap } from '@lucide/svelte';
 
   let files: { name: string; size: number }[] = $state([]);
   let uploading = $state(false);
@@ -18,6 +18,37 @@
   let onlineVersions: FwVersion[] = $state([]);
   let loadingOnline = $state(false);
   let showOnline = $state(false);
+
+  let canFlash = $derived(
+    !app.fwFlash.active &&
+      !app.drone.armed &&
+      app.wsConnected &&
+      app.activeTransport !== 'serial' &&
+      (app.drone.connected || app.fwFlash.phase === 'failed'),
+  );
+  let flashBlock = $derived.by(() => {
+    if (app.fwFlash.active) return t('fw.flashBusy');
+    if (app.drone.armed) return t('fw.armed');
+    if (app.activeTransport === 'serial') return t('fw.notBackend');
+    if (!app.wsConnected) return t('fw.noBackend');
+    if (!app.drone.connected && app.fwFlash.phase !== 'failed') return t('fw.noLink');
+    return '';
+  });
+  let flashPercent = $derived(
+    app.fwFlash.total > 0 ? Math.min(100, Math.round((app.fwFlash.done / app.fwFlash.total) * 100)) : 0,
+  );
+  // Literal keys: the locale contract test sees a key only when it appears in the source.
+  const PHASE_KEYS: Record<string, string> = {
+    reboot: 'fw.phase.reboot',
+    waiting: 'fw.phase.waiting',
+    erase: 'fw.phase.erase',
+    write: 'fw.phase.write',
+    verify: 'fw.phase.verify',
+    reconnecting: 'fw.phase.reconnecting',
+    done: 'fw.phase.done',
+    failed: 'fw.phase.failed',
+  };
+  let flashPhase = $derived(app.fwFlash.phase ? t(PHASE_KEYS[app.fwFlash.phase] || app.fwFlash.phase) : '');
 
   async function fetchOnlineVersions() {
     if (onlineVersions.length > 0) {
@@ -95,6 +126,12 @@
     input.click();
   }
 
+  async function flash(f: { name: string; size: number }) {
+    const ok = await showConfirm(`${t('fw.flashConfirm')} ${f.name}? ${t('fw.flashWarn')}`, true);
+    if (!ok) return;
+    dispatch('firmware_flash', undefined, { file: f.name });
+  }
+
   async function rebootBootloader() {
     if (await showConfirm(t('fw.reboot') + '?', true)) {
       dispatch('reboot_bootloader');
@@ -120,7 +157,13 @@
   <p class="text-[11px] text-muted-foreground/60">{t('fw.storeOnly')}</p>
 
   <div class="flex gap-2">
-    <Button variant="outline" size="sm" class="gap-1 h-7 text-xs flex-1" onclick={uploadFile} disabled={uploading}>
+    <Button
+      variant="outline"
+      size="sm"
+      class="gap-1 h-7 text-xs flex-1"
+      onclick={uploadFile}
+      disabled={uploading || app.fwFlash.active}
+    >
       <Upload size={13} />{t('fw.upload')}
     </Button>
     <Button
@@ -128,7 +171,7 @@
       size="sm"
       class="gap-1 h-7 text-xs"
       onclick={fetchOnlineVersions}
-      disabled={loadingOnline}
+      disabled={loadingOnline || app.fwFlash.active}
     >
       <HardDriveDownload size={13} />{loadingOnline ? '...' : t('fw.browse')}
     </Button>
@@ -160,14 +203,55 @@
   {#if files.length > 0}
     <div class="space-y-1 max-h-24 overflow-y-auto">
       {#each files as f}
-        <div class="flex justify-between items-center text-xs text-muted-foreground px-1">
+        <div class="flex justify-between items-center gap-1.5 text-xs text-muted-foreground px-1">
           <span class="truncate">{f.name}</span>
           <span class="text-[10px] shrink-0">{(f.size / 1024).toFixed(0)} KB</span>
+          <Button
+            variant="outline"
+            size="xs"
+            class="text-[10px] gap-0.5 shrink-0"
+            onclick={() => flash(f)}
+            disabled={!canFlash}
+          >
+            <Zap size={11} />{t('fw.flash')}
+          </Button>
         </div>
       {/each}
     </div>
   {:else}
     <p class="text-[11px] text-muted-foreground/60 text-center py-1">{t('fw.noFiles')}</p>
+  {/if}
+
+  {#if flashBlock && !app.fwFlash.active}
+    <p class="text-[10px] text-muted-foreground/60">{flashBlock}</p>
+  {/if}
+
+  {#if app.fwFlash.active || app.fwFlash.phase === 'done' || app.fwFlash.phase === 'failed'}
+    <div class="mt-1 p-2 rounded-lg border border-border bg-muted/20 space-y-1">
+      <div class="flex items-center justify-between gap-2 text-[11px]">
+        <span class="font-semibold text-foreground">{flashPhase}</span>
+        <span class="truncate text-muted-foreground">{app.fwFlash.file}</span>
+      </div>
+      {#if app.fwFlash.total > 0}
+        <div class="h-1.5 rounded bg-muted overflow-hidden">
+          <div class="h-full bg-primary transition-all" style="width: {flashPercent}%"></div>
+        </div>
+      {/if}
+      {#if app.fwFlash.phase === 'failed' && app.fwFlash.error}
+        <p class="text-[10px] text-destructive break-words">{app.fwFlash.error}</p>
+      {/if}
+      {#if app.fwFlash.phase === 'failed' && app.fwFlash.file}
+        <Button
+          variant="outline"
+          size="xs"
+          class="text-[10px] gap-0.5"
+          onclick={() => flash({ name: app.fwFlash.file, size: 0 })}
+          disabled={!canFlash}
+        >
+          <RotateCw size={11} />{t('fw.flashRetry')}
+        </Button>
+      {/if}
+    </div>
   {/if}
 
   <div class="flex gap-2 pt-1">
@@ -176,7 +260,7 @@
       size="sm"
       class="gap-1 h-7 text-xs flex-1"
       onclick={rebootBootloader}
-      disabled={!app.drone.connected}
+      disabled={!app.drone.connected || app.fwFlash.active}
     >
       <RotateCw size={13} />{t('fw.reboot')}
     </Button>
@@ -185,7 +269,7 @@
       size="sm"
       class="gap-1 h-7 text-xs"
       onclick={rebootNormal}
-      disabled={!app.drone.connected}
+      disabled={!app.drone.connected || app.fwFlash.active}
     >
       <RotateCw size={13} />{t('fw.rebootNormal')}
     </Button>
