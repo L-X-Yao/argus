@@ -312,20 +312,24 @@ def _active_tlog_name() -> str:
 async def api_local_logs():
     active = _active_tlog_name()
     files = []
+    entries = []
     if cfg.LOG_DIR.exists():
-        for path in sorted(cfg.LOG_DIR.glob("*.tlog"), key=lambda p: p.stat().st_mtime, reverse=True):
+        for path in cfg.LOG_DIR.glob("*.tlog"):
             try:
                 st = path.stat()
             except OSError:
+                # Deleted between the glob and the stat by another page.
                 continue
-            files.append(
-                {
-                    "name": path.name,
-                    "size": st.st_size,
-                    "mtime": st.st_mtime,
-                    "active": path.name == active,
-                }
-            )
+            entries.append((st.st_mtime, path, st))
+    for _mtime, path, st in sorted(entries, key=lambda item: item[0], reverse=True):
+        files.append(
+            {
+                "name": path.name,
+                "size": st.st_size,
+                "mtime": st.st_mtime,
+                "active": path.name == active,
+            }
+        )
     return {"files": files}
 
 
@@ -343,13 +347,15 @@ async def api_local_logs_delete(request: Request):
         if safe != name or not safe.endswith(".tlog") or safe == active:
             refused.append(name)
             continue
-        path = (root / safe).resolve()
         try:
+            path = (root / safe).resolve()
             path.relative_to(root)
-        except ValueError:
-            refused.append(name)
-            continue
-        if not path.is_file():
+            # is_file() stats the path: an overlong name raises here, not in resolve().
+            if not path.is_file():
+                refused.append(name)
+                continue
+        except (ValueError, OSError):
+            # A NUL byte, an overlong name, or a path that escapes the folder.
             refused.append(name)
             continue
         try:

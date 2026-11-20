@@ -69,3 +69,10 @@ class TestLocalLogs:
         monkeypatch.setattr(cfg, "LOG_DIR", tmp_path)
         r = client.post("/api/logs/delete", json={"names": "argus_a.tlog"})
         assert r.json()["ok"] is False
+
+    def test_a_name_that_cannot_be_a_path_is_refused_not_a_500(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(cfg, "LOG_DIR", tmp_path)
+        r = client.post("/api/logs/delete", json={"names": ["a\u0000.tlog", "x" * 5000 + ".tlog"]})
+        assert r.status_code == 200
+        assert r.json()["deleted"] == []
+        assert len(r.json()["refused"]) == 2

@@ -81,7 +81,7 @@
       const data = await r.json();
       localFiles = data.files || [];
     } catch {
-      addToast(t('log.deleteFailed'), 'error');
+      addToast(t('log.localLoadFailed'), 'error');
     } finally {
       localLoading = false;
     }
@@ -119,7 +119,14 @@
         addToast(data.error || t('log.deleteFailed'), 'error');
         return;
       }
-      addToast(t('log.deleted').replace('{n}', String(data.deleted.length)), 'success');
+      if (data.deleted.length) {
+        addToast(
+          t('log.deleted').replace('{n}', String(data.deleted.length)),
+          data.refused.length ? 'warn' : 'success',
+        );
+      } else if (data.refused.length) {
+        addToast(t('log.deleteRefused'), 'error');
+      }
       selectedLocal = {};
       await loadLocal();
     } catch {
@@ -133,7 +140,8 @@
     const ok = await showConfirm(t('log.eraseConfirm'), true);
     if (!ok) return;
     dispatch('log_erase');
-    addToast(t('log.eraseSent'), 'info');
+    // No "sent" toast: a refused command (armed, busy, no link) already surfaces its own
+    // error, and the list refresh is the result of a successful one.
     setTimeout(requestList, 4000);
   }
 </script>

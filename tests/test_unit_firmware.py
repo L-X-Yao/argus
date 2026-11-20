@@ -99,6 +99,14 @@ class TestFirmwareInfo:
             r = client.get("/api/firmware/info", params={"name": "bad.apj"})
         assert r.json()["ok"] is False
 
+    def test_a_name_that_cannot_be_a_path_is_refused_not_a_500(self, tmp_path):
+        import backend.firmware as fw_mod
+
+        with patch.object(fw_mod, "FIRMWARE_DIR", tmp_path):
+            r = client.get("/api/firmware/info", params={"name": "a\u0000.apj"})
+        assert r.status_code == 200
+        assert r.json()["ok"] is False
+
 
 class TestFirmwareUploadOverwrites:
     def test_a_second_upload_with_the_same_name_replaces_it(self, tmp_path):

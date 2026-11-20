@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { app, addToast, showConfirm } from '../../lib/stores.svelte';
   import { dispatch, disconnectSerial } from '../../lib/transport';
+  import { resetSerialSession } from '../../lib/serialHandlers';
   import { sendConnect, sendDisconnect } from '../../lib/ws';
   import { t } from '../../lib/i18n.svelte';
   import { apiUrl } from '../../lib/backend';
@@ -24,6 +25,8 @@
   let uploading = $state(false);
   let loadingPorts = $state(false);
   let dragOver = $state(false);
+  // A slow info response must not describe a file the user has moved away from.
+  let infoSeq = 0;
 
   const PHASE_KEYS: Record<string, string> = {
     reboot: 'fw.phase.reboot',
@@ -40,7 +43,9 @@
     app.fwFlash.total > 0 ? Math.min(100, Math.round((app.fwFlash.done / app.fwFlash.total) * 100)) : 0,
   );
   let usbActive = $derived(app.activeTransport === 'serial');
-  let backendLinked = $derived(app.activeTransport === 'ws' && app.drone.connected);
+  // The backend owning the link is what matters here, not a heartbeat: a controller in its
+  // bootloader sends none and is still the one to flash.
+  let backendLinked = $derived(app.activeTransport === 'ws');
   let canFlash = $derived(
     !!selected && info !== null && !app.fwFlash.active && !app.drone.armed && app.wsConnected && !usbActive,
   );
@@ -83,6 +88,7 @@
   }
 
   async function selectFile(name: string) {
+    const seq = ++infoSeq;
     selected = name;
     info = null;
     infoError = '';
@@ -90,10 +96,11 @@
     try {
       const r = await fetch(apiUrl(`/api/firmware/info?name=${encodeURIComponent(name)}`));
       const data = await r.json();
+      if (seq !== infoSeq) return;
       if (data.ok) info = { board_id: data.board_id, image_size: data.image_size };
       else infoError = data.error || t('fw.infoFailed');
     } catch {
-      infoError = t('fw.infoFailed');
+      if (seq === infoSeq) infoError = t('fw.infoFailed');
     }
   }
 
@@ -143,18 +150,37 @@
 
   function connectBackend() {
     if (!port || usbActive) return;
+    // As the ConnectionForm does: the backend owns the drone state from now on, and the
+    // state pushes must be accepted (they are discarded while activeTransport is serial).
+    app.activeTransport = 'ws';
     sendConnect(port, 57600);
     addToast(`${t('fw.connectSent')}: ${port}`, 'info');
   }
 
+  function disconnectBackend() {
+    app.activeTransport = 'none';
+    sendDisconnect();
+  }
+
   async function disconnectUsb() {
+    // The ConnectionForm's cleanup, not disconnectSerial alone: the transport does not
+    // release activeTransport, and otherwise this panel stays stuck on the USB branch.
+    app.activeTransport = 'none';
     await disconnectSerial();
+    resetSerialSession();
+    addToast(t('conn.serialDisconnected'), 'info');
   }
 
   async function flash() {
     if (!canFlash) return;
     const ok = await showConfirm(`${t('fw.flashConfirm')} ${selected}. ${t('fw.flashWarn')}`, true);
     if (ok) dispatch('firmware_flash', undefined, { file: selected });
+  }
+
+  async function retryFlash() {
+    // The card names the file that failed; do not retry whatever is selected now.
+    if (app.fwFlash.file && app.fwFlash.file !== selected) await selectFile(app.fwFlash.file);
+    await flash();
   }
 
   onMount(() => {
@@ -262,10 +288,13 @@
         {:else if backendLinked}
           <div class="flex items-center justify-between gap-2">
             <p class="text-[11px] text-success">{t('fw.backendLinked')}</p>
-            <Button variant="ghost" size="xs" class="text-[10px] gap-1" onclick={() => sendDisconnect()}>
+            <Button variant="ghost" size="xs" class="text-[10px] gap-1" onclick={disconnectBackend}>
               <Unplug size={11} />{t('conn.disconnect')}
             </Button>
           </div>
+          {#if !app.drone.connected}
+            <p class="text-[10px] text-muted-foreground/60">{t('fw.noHeartbeat')}</p>
+          {/if}
         {:else}
           <p class="text-[11px] text-muted-foreground">{t('fw.backendNotLinked')}</p>
           <div class="flex items-center gap-2">
@@ -325,7 +354,7 @@
               <p class="text-[10px] text-destructive break-words">{app.fwFlash.error}</p>
             {/if}
             {#if app.fwFlash.phase === 'failed' && app.fwFlash.file}
-              <Button variant="outline" size="xs" class="text-[10px] gap-0.5" onclick={flash} disabled={!canFlash}>
+              <Button variant="outline" size="xs" class="text-[10px] gap-0.5" onclick={retryFlash} disabled={!canFlash}>
                 <RefreshCw size={11} />{t('fw.flashRetry')}
               </Button>
             {/if}

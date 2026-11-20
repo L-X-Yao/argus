@@ -76,7 +76,7 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 | `log_list` | List logs | 日志列表 | Real FC | Real FC | Both 2026-11-06 on Windows. 2026-11-13: a lost last LOG_ENTRY is asked for again (3 s, 3 tries) and then reported, where the request waited forever (unit test); an empty log store (AP's dummy id 0, last 0, size 0) shows an empty list instead of a "#0" whose download saved nothing (contract test). The WebSerial link does all three too (vitest, 2026-11-13) |
 | `log_download` | Download a log | 下载日志 | Real FC | Real FC | Both 2026-11-06 on Windows, same sha256 on both links. 2026-11-13: a link that drops mid-download reports it as incomplete, where the panel sat at the last percentage (unit test); the WebSerial link delivers the bytes it received, flagged, instead of discarding them (vitest) |
 | `log_cancel` | Cancel a download | 取消下载 | SITL | SITL | CI on both links |
-| `log_erase` | Erase every onboard log | 擦除全部机载日志 | Tests only | Tests only | Unit tests on the frame and the local routes; not yet on a real FC |
+| `log_erase` | Erase every onboard log | 擦除全部机载日志 | Tests only | Tests only | Unit tests on the backend frame and the local routes; the WebSerial builder is not wire-tested; not yet on a real FC |
 | `reboot` | Reboot the FC | 重启飞控 | Real FC | Real FC | Both 2026-11-06 on Windows, disarmed. WebSerial comes back by the USB button, the backend by itself |
 | `reboot_bootloader` | Reboot to bootloader | 重启到 Bootloader | SITL | SITL | CI on both links |
 | `firmware_flash` | Write an .apj through the bootloader | 刷写固件 | Real FC | n/a | 2026-11-20 through the packaged Windows build on a real FC, disarmed: identified the bootloader, erased, programmed 1.29 MB, verified the CRC, rebooted and reconnected; the rebooted firmware reported the new git hash. Earlier the same day, an .apj for another board was refused before erasing, and the controller rebooted and reconnected |
@@ -251,7 +251,7 @@ Real FC here means the route was in use during a session with a real flight cont
 | `AdvancedCmdPanel` | tools | 给航点加高级指令 | SITL | CI by clicks on firmware: items land on the FC |
 | `ConsolePanel` | tools | 发送飞控控制台命令 | Simulator | e2e: memory |
 | `FFTPanel` | tools | 分析日志频谱 | SITL | CI on a real .BIN: finds an injected 35 Hz tone |
-| `FirmwareUpgradePanel` | tools | 选择固件、连接后端串口并刷写 | Simulator | e2e: opens from the palette; no vehicle needed |
+| `FirmwareUpgradePanel` | tools | 选择固件、连接后端串口并刷写 | Simulator | e2e: opens from the palette |
 | `FlightReportPanel` | tools | 填写导出飞行报告 | SITL | CI by clicks on firmware: keeps the flight after the summary closes |
 | `InspectorPanel` | tools | 检视实时消息流 | Simulator | e2e: memory |
 | `LogPanel` | tools | 下载机载日志 | Real FC | 2026-11-06 on both links on Windows |
