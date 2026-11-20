@@ -22,7 +22,7 @@ import {
 } from './assistant.svelte';
 import { app, slideState, completeSlide, cancelSlide } from './stores.svelte';
 import { paramState } from './paramStore.svelte';
-import { defaultState } from './types';
+import { defaultState, type DroneState } from './types';
 import { t } from './i18n.svelte';
 
 let sent: (AssistantReply | AssistantStateMsg)[];
@@ -75,6 +75,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
+  vi.unstubAllGlobals();
 });
 
 describe('reads', () => {
@@ -139,6 +140,76 @@ describe('reads', () => {
     handleAssistantRequest({ type: 'assistant_request', kind: 'status', args: {} });
     expect(replies()).toHaveLength(1);
     expect(reply()!.ok).toBe(false);
+  });
+});
+
+describe('preflight', () => {
+  function healthyDrone(): DroneState {
+    return {
+      ...defaultState,
+      connected: true,
+      link_age: 0.5,
+      gps_fix: '3D',
+      gps_fix_raw: 3,
+      gps_sats: 12,
+      voltage: 24,
+      remaining: 80,
+      home_lat: 34.25,
+      home_lon: 108.9,
+      ekf_vel: 0.1,
+      ekf_pos_h: 0.1,
+      ekf_pos_v: 0.1,
+      ekf_compass: 0.1,
+      vibe: [5, 5, 5],
+      alt_msl: 400,
+      alt_rel: 10,
+      rc_rssi: 80,
+      rc: [1500],
+      vtype_raw: 2,
+      armed: false,
+    };
+  }
+
+  const result = () =>
+    reply()!.result as {
+      ready: boolean;
+      checks: { key: string; ok: boolean; enabled: boolean }[];
+      hidden_critical: string[];
+    };
+
+  it('reads the page checks with their values, and ready follows the visible critical ones', () => {
+    app.drone = healthyDrone();
+    app.waypoints = [{ lat: 1.5, lon: 2.5, alt: 20, drop: false, delay: 0, speed: 0, type: 'wp', loiter_param: 0 }];
+    ask('preflight');
+    expect(reply()!.ok).toBe(true);
+    expect(result().ready).toBe(true);
+    expect(result().hidden_critical).toEqual([]);
+    expect(result().checks.find((c) => c.key === 'gps')).toMatchObject({ ok: true, enabled: true });
+    expect(result().checks.find((c) => c.key === 'mission')).toMatchObject({ ok: true });
+  });
+
+  it('a failed critical check makes the page not ready', () => {
+    app.drone = { ...healthyDrone(), vibe: [40, 1, 1] };
+    ask('preflight');
+    expect(result().ready).toBe(false);
+    expect(result().checks.find((c) => c.key === 'vibe')!.ok).toBe(false);
+  });
+
+  it('a hidden critical check is named, and no longer gates ready', () => {
+    vi.stubGlobal('localStorage', { getItem: () => JSON.stringify({ gps: false }), setItem: () => {} });
+    app.drone = { ...healthyDrone(), gps_fix_raw: 1, gps_fix: 'none' };
+    ask('preflight');
+    expect(result().hidden_critical).toEqual(['gps']);
+    expect(result().checks.find((c) => c.key === 'gps')).toMatchObject({ ok: false, enabled: false });
+    expect(result().ready).toBe(true);
+  });
+
+  it('a hidden non-critical check is not named as a hidden critical one', () => {
+    vi.stubGlobal('localStorage', { getItem: () => JSON.stringify({ rc: false }), setItem: () => {} });
+    app.drone = healthyDrone();
+    ask('preflight');
+    expect(result().hidden_critical).toEqual([]);
+    expect(result().checks.find((c) => c.key === 'rc')).toMatchObject({ enabled: false });
   });
 });
 

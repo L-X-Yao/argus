@@ -9,7 +9,8 @@
  * What goes back to the assistant is English written for the model, and is not shown here.
  */
 import { app, pushUndo, saveWaypoints, addToast, showSlide, cancelSlide, slideState } from './stores.svelte';
-import { paramState } from './paramStore.svelte';
+import { getParam, paramState } from './paramStore.svelte';
+import { preflightChecks, loadPreflightConfig, isCheckEnabled } from './preflight';
 import { cleanWaypoints, MissionDataError } from './missionIO';
 import { validateMissionWaypoints } from './missionUpload';
 import { dispatch, isSerialConnected, linkLossCount, modeRequestCount, serialUploadMission } from './transport';
@@ -147,6 +148,9 @@ export function handleAssistantRequest(msg: unknown): void {
       case 'status':
         answer(id, { ok: true, result: status() });
         return;
+      case 'preflight':
+        answer(id, { ok: true, result: preflight() });
+        return;
       case 'mission':
         answer(id, { ok: true, result: mission() });
         return;
@@ -211,6 +215,35 @@ function status() {
     seconds_since_last_message: d.link_age,
     prearm_failures: [...d.prearm],
     recent_messages: app.events.slice(-10).map((e) => ({ time: e.time, text: e.text })),
+  };
+}
+
+function preflight() {
+  const d = app.drone;
+  const config = loadPreflightConfig();
+  const checks = preflightChecks({
+    drone: d,
+    waypointCount: app.waypoints.length,
+    battArmVolt: getParam('BATT_ARM_VOLT', -1),
+    t,
+  }).map((c) => ({
+    key: c.key,
+    label: c.name,
+    ok: c.ok,
+    detail: c.detail,
+    critical: c.critical,
+    enabled: isCheckEnabled(config, c.key),
+  }));
+  const visible = checks.filter((c) => c.enabled);
+  return {
+    // The page's own verdict: its visible critical checks decide "ready", as PreflightPanel does.
+    ready: visible.filter((c) => c.critical).every((c) => c.ok),
+    checks,
+    // A critical check the operator hid does not guard the flight; name it rather than let
+    // "ready" be read as every check passing.
+    hidden_critical: checks.filter((c) => c.critical && !c.enabled).map((c) => c.key),
+    prearm_failures: [...d.prearm],
+    rule: 'ready follows the checks the operator has left on, as the page does. A critical check listed in hidden_critical is off and does not count.',
   };
 }
 

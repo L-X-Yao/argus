@@ -18,6 +18,7 @@ META = "io.modelcontextprotocol/protocolVersion"
 CAPS = "io.modelcontextprotocol/clientCapabilities"
 TOOL_NAMES = [
     "get_status",
+    "get_preflight",
     "get_mission",
     "get_parameters",
     "analyze_flight",
@@ -314,7 +315,13 @@ class TestArguments:
 
 class TestReads:
     @pytest.mark.parametrize(
-        ("name", "kind"), [("get_status", "status"), ("get_mission", "mission"), ("get_parameters", "parameters")]
+        ("name", "kind"),
+        [
+            ("get_status", "status"),
+            ("get_preflight", "preflight"),
+            ("get_mission", "mission"),
+            ("get_parameters", "parameters"),
+        ],
     )
     def test_what_each_asks_the_page(self, server, wire, page, name, kind):
         arguments = {"names": ["BATT_*"]} if name == "get_parameters" else {}

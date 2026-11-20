@@ -159,6 +159,7 @@ python run.py --sim            # 同时启动后端 + simulator.py
 | 工具 | 作用 |
 |---|---|
 | `get_status` | 页面显示的飞行器状态：链路、模式、是否解锁、位置、高度、速度、电池、GPS、家点、最近消息 |
+| `get_preflight` | 页面起飞前检查逐项结果与数值：GPS、电池、家点、链路、导航与 AHRS、振动、罗盘、气压计、RC、航线、机型、是否解锁、prearm 消息。操作员隐藏的关键项会单独列出，且不计入就绪判断 |
 | `get_mission` | 页面上的计划航线 |
 | `get_parameters` | 页面已读取的参数值，按名称或前缀 |
 | `analyze_flight` | Argus 录制的 .tlog：时长、模式、解锁时长、高度、里程、电池、GPS、振动、EKF，以及飞控的告警。只读，不需要页面 |
