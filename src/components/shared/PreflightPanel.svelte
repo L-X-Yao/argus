@@ -2,7 +2,13 @@
   import { app, showConfirm } from '../../lib/stores.svelte';
   import { getParam } from '../../lib/paramStore.svelte';
   import { t } from '../../lib/i18n.svelte';
-  import { preflightChecks, loadPreflightConfig, savePreflightConfig, isCheckEnabled } from '../../lib/preflight';
+  import {
+    preflightChecks,
+    loadPreflightConfig,
+    savePreflightConfig,
+    isCheckEnabled,
+    PREFLIGHT_CONFIG_KEY,
+  } from '../../lib/preflight';
   import { Check, X as XIcon, Settings2 } from '@lucide/svelte';
 
   const d = app.drone;
@@ -14,6 +20,16 @@
   function checkOn(key: string): boolean {
     return isCheckEnabled(customConfig, key);
   }
+
+  // Another tab's change must show here too: the assistant reads localStorage per request,
+  // and a panel still showing a hidden check would disagree with what the model is told.
+  $effect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key === PREFLIGHT_CONFIG_KEY) customConfig = loadPreflightConfig();
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  });
 
   /** Applies the toggle. A critical check asks first: hidden, it stops guarding the flight. */
   function toggleCheck(key: string) {
