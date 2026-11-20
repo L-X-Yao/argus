@@ -203,6 +203,14 @@ describe('preflight', () => {
     expect(result().checks.find((c) => c.key === 'gps')).toMatchObject({ ok: false, enabled: false });
     expect(result().ready).toBe(true);
   });
+
+  it('a hidden non-critical check is not named as a hidden critical one', () => {
+    vi.stubGlobal('localStorage', { getItem: () => JSON.stringify({ rc: false }), setItem: () => {} });
+    app.drone = healthyDrone();
+    ask('preflight');
+    expect(result().hidden_critical).toEqual([]);
+    expect(result().checks.find((c) => c.key === 'rc')).toMatchObject({ enabled: false });
+  });
 });
 
 describe('proposals wait for the operator', () => {

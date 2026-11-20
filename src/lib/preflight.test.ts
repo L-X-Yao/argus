@@ -89,6 +89,39 @@ describe('preflightChecks', () => {
     expect(check(checks, 'vibe').ok).toBe(false);
   });
 
+  it.each([
+    ['sats', { gps_sats: 9 }],
+    ['batPct', { remaining: 29 }],
+    ['link', { link_age: 2 }],
+    ['nav', { ekf_vel: 1 }],
+    ['ahrs', { ekf_pos_v: 1 }],
+    ['compass', { ekf_compass: 0.8 }],
+    ['baro', { alt_msl: 0, alt_rel: 0 }],
+    ['rc', { rc_rssi: 0, rc: [0] }],
+    ['vtype', { vtype_raw: 0 }],
+    ['notArmed', { armed: true }],
+  ])('fails %s at its threshold', (key, overrides) => {
+    const checks = preflightChecks({
+      drone: good(overrides),
+      waypointCount: 1,
+      battArmVolt: -1,
+      t,
+    });
+    expect(check(checks, key).ok).toBe(false);
+  });
+
+  it('passes the other side of the thresholds', () => {
+    const checks = preflightChecks({
+      drone: good({ gps_sats: 10, remaining: 30, link_age: 1.9, ekf_vel: 0.99, ekf_pos_v: 0.99 }),
+      waypointCount: 1,
+      battArmVolt: -1,
+      t,
+    });
+    for (const key of ['sats', 'batPct', 'link', 'nav', 'ahrs']) expect(check(checks, key).ok).toBe(true);
+    const unknown = preflightChecks({ drone: good({ remaining: -1 }), waypointCount: 1, battArmVolt: -1, t });
+    expect(check(unknown, 'batPct').ok).toBe(true);
+  });
+
   it('a check the operator hid is off; every other key stays on', () => {
     expect(isCheckEnabled({ gps: false }, 'gps')).toBe(false);
     expect(isCheckEnabled({ gps: false }, 'sats')).toBe(true);
