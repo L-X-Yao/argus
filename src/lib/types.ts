@@ -272,6 +272,19 @@ export interface AssistantPresenceMsg {
   count: number;
 }
 
+export interface FwFlash {
+  active: boolean;
+  phase: string;
+  done: number;
+  total: number;
+  file: string;
+  error: string;
+}
+
+export interface FwFlashMsg extends FwFlash {
+  type: 'fw_progress';
+}
+
 export type WSMessage =
   | DroneState
   | DroneEvent
@@ -290,7 +303,8 @@ export type WSMessage =
   | ConsoleOutputMsg
   | AssistantRequestMsg
   | AssistantCancelMsg
-  | AssistantPresenceMsg;
+  | AssistantPresenceMsg
+  | FwFlashMsg;
 
 export const defaultState: DroneState = {
   type: 'state',

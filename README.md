@@ -43,7 +43,7 @@ To fly real missions today, use QGroundControl or Mission Planner: both are flig
 | **Parameters** | Metadata-driven UI (desc/range/units/enum/bitmask), tree view, diff export, default reset |
 | **Calibration** | Compass, accel, gyro, level, baro wizards with real-time progress |
 | **RTK** | NTRIP client with HTTP/1.0 + ICY-200 negotiation, streaming RTCM injection |
-| **Firmware** | Store `.apj` files on the backend, online firmware browser, reboot to bootloader (no built-in flashing) |
+| **Firmware** | Store `.apj` files on the backend, online firmware browser, reboot to bootloader, and flash through the backend serial link |
 | **Fleet** | Multi-vehicle dashboard with live telemetry per vehicle |
 | **Video** | RTSP, HTTP and RTMP streams through ffmpeg on the backend, AR waypoint overlay, screenshot capture |
 | **HUD** | PFD (attitude/speed/altitude/compass/wind), real-time charts, EKF status |
@@ -210,7 +210,7 @@ Map tiles, terrain heights and ArduPilot's firmware and parameter lists are not 
 |  Python Backend (FastAPI + uvicorn)      |
 |  31 modules, 7.1K lines                  |
 |  MAVLink dispatch + 35 message handlers  |
-|  53 commands, tile/video/firmware API    |
+|  54 commands, tile/video/firmware API    |
 +------------------------------------------+
 |          MAVLink v2                      |
 |  TCP / UDP / Serial                      |
@@ -232,7 +232,7 @@ Map tiles, terrain heights and ArduPilot's firmware and parameter lists are not 
 | `src/lib/survey.ts` | Survey patterns (grid, crosshatch, spiral, orbit) |
 | `src/lib/i18n.svelte.ts` | 10-language i18n with RTL support |
 | `backend/drone_link.py` | MAVLink connection, frame parsing, state management |
-| `backend/commands/` | 53 command handlers (arm, mode, mission, calibration, gimbal, NTRIP, etc.) |
+| `backend/commands/` | 54 command handlers (arm, mode, mission, calibration, gimbal, NTRIP, etc.) |
 | `backend/config.py` | Centralized configuration (all timeouts/ports/rates) |
 
 ## Development
@@ -323,7 +323,6 @@ Argus is under active development: bug and security fixes, and new features, are
 
 These were on the roadmap and will not be built here:
 
-- Firmware flashing (APJ parsing + bootloader protocol)
 - PX4 end-to-end support (the backend reads `HEARTBEAT.autopilot` and refuses PX4; the frontend holds a mode table only)
 - WebRTC video streaming (replace the ffmpeg proxy)
 - MQTT cloud relay for fleet management

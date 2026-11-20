@@ -33,6 +33,8 @@ _WS_ONLY = {
     "log_list",
     "log_download",
     "param_load",
+    # Firmware flashing owns the backend serial port; WebSerial cannot reopen a bootloader.
+    "firmware_flash",
     # param_save writes a host-side JSON backup — the serial path can't replicate that.
     "param_save",
 }

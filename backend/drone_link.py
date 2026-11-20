@@ -159,6 +159,19 @@ class DroneLink:
         # Manual RTCM paste uses one worker at a time; the worker clears this on exit.
         self.rtcm_inject_thread: threading.Thread | None = None
         self.rtcm_inject_stop: threading.Event | None = None
+        # Firmware flashing (backend serial only). The worker owns the port while active;
+        # fw_flash is pushed to every page by ws_manager._push_loop.
+        self.fw_flash: dict = {
+            "active": False,
+            "phase": "",
+            "done": 0,
+            "total": 0,
+            "file": "",
+            "port": "",
+            "error": "",
+        }
+        self.fw_thread: threading.Thread | None = None
+        self.fw_stop: threading.Event | None = None
         self.param_mgr = ParamManager(self)
 
         self.attitude = AttitudeState()
@@ -409,6 +422,35 @@ class DroneLink:
         self._reset_session_state()
         self._stop_log()
         self.add_event(lt("disconnected", self.locale), "disconnected")
+
+    def pause_for_flash(self) -> bool:
+        """Stop the link and leave the serial port closed for the bootloader protocol.
+
+        The flashing worker owns the port until it calls connect() again. Refuses while the
+        link is in reconnect backoff, where the thread can sleep up to 60 s, and refuses when
+        the thread cannot be joined, so the worker never races it for the port.
+        """
+        if self._reconnecting:
+            return False
+        self._running = False
+        self._reconnect_enabled = False
+        if self._thread and self._thread.is_alive():
+            self._thread.join(timeout=3)
+            if self._thread.is_alive():
+                # The thread may be in a reconnect-backoff sleep and would reopen the port
+                # after the FC is already a bootloader. Leave the link stopped: a port that
+                # comes back later is for the operator to connect, not for a blind retry.
+                return False
+        with self._lock:
+            try:
+                if self._ser:
+                    self._ser.close()
+            except OSError:
+                pass
+            self._ser = None
+        self._reset_session_state()
+        self._stop_log()
+        return True
 
     def reconnect(self) -> bool:
         self._running = False

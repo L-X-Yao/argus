@@ -395,6 +395,19 @@ class WSManager:
                             )
                         )
                         continue
+                    if self.link.fw_flash.get("active") or (
+                        self.link.fw_thread is not None and self.link.fw_thread.is_alive()
+                    ):
+                        await ws.send_text(
+                            dumps(
+                                {
+                                    "type": "connect_result",
+                                    "ok": False,
+                                    "error": lt("flash_busy", self.link.locale),
+                                }
+                            )
+                        )
+                        continue
                     port = msg.get("port", "tcp:localhost:5770")
                     baud = msg.get("baud", cfg.SERIAL_BAUD)
                     if not validate_port(port):
@@ -427,6 +440,19 @@ class WSManager:
                                     "type": "connect_result",
                                     "ok": False,
                                     "error": lt("err_observer_no_cmd", self.link.locale),
+                                }
+                            )
+                        )
+                        continue
+                    if self.link.fw_flash.get("active") or (
+                        self.link.fw_thread is not None and self.link.fw_thread.is_alive()
+                    ):
+                        await ws.send_text(
+                            dumps(
+                                {
+                                    "type": "connect_result",
+                                    "ok": False,
+                                    "error": lt("flash_busy", self.link.locale),
                                 }
                             )
                         )
@@ -526,6 +552,7 @@ class WSManager:
         dl_gen = self.link.mission._dl_gen
         log_cursor = len(self.link.log_dl._log_messages)
         last_sent: dict = {}
+        fw_last: dict | None = None
         push_count = 0
         try:
             while True:
@@ -552,6 +579,12 @@ class WSManager:
                     logmsg = list(self.link.log_dl._log_messages)
                     pmsg = list(self.link.param_mgr._messages)
                     param_gen_now = self.link.param_mgr._fetch_gen
+                    fw = dict(self.link.fw_flash)
+                # Firmware flashing: the panel needs phase and percent, not the event log.
+                # The terminal state goes too, so a page opened late still sees the result.
+                if fw != fw_last and (fw["active"] or fw["phase"] in ("done", "failed")):
+                    await ws.send_text(dumps({"type": "fw_progress", **fw}))
+                    fw_last = fw
                 # Send any events with seq > our last-sent seq. The array may
                 # have trimmed older entries; if cursor < oldest-available
                 # seq, we accept the loss (the trimmed events are gone).

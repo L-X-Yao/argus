@@ -133,7 +133,7 @@ Format: `Panel | verdict | what it does / evidence`.
 |---|---|---|
 | CalibrationPanel | WIRED | all cal commands; progress parsed from live events |
 | EscCalPanel | WIRED | Sets ESC_CALIBRATION: the FC calibrates by itself at the next power-up |
-| FirmwarePanel | WIRED | /api/firmware/* + reboot/reboot_bootloader |
+| FirmwarePanel | WIRED | /api/firmware/* + reboot/reboot_bootloader + firmware_flash (backend serial) |
 | FrameSelectPanel | WIRED | FRAME_CLASS/TYPE via param store |
 | MotorTestPanel | WIRED | motor_test/stop real; countdown cosmetic |
 | NtripPanel | WIRED | ntrip_start/stop, ack-driven, live gps_fix_raw |

@@ -211,6 +211,24 @@ export function connectWs(): void {
             addToast(t('toast.logDone').replace('{n}', String(msg.id)), 'success');
           }
           break;
+        case 'fw_progress': {
+          // A page opened after the flash sees the terminal state on connect; toast only when
+          // this page watched it run, not again on every reconnect.
+          const wasActive = app.fwFlash.active;
+          app.fwFlash = {
+            active: msg.active,
+            phase: msg.phase,
+            done: msg.done,
+            total: msg.total,
+            file: msg.file,
+            error: msg.error,
+          };
+          if (wasActive && msg.phase === 'done') addToast(t('fw.flashDone'), 'success', 5000);
+          else if (wasActive && msg.phase === 'failed') {
+            addToast(`${t('fw.flashFailed')}: ${msg.error}`, 'error', 8000);
+          }
+          break;
+        }
         case 'inspector':
           updateInspector(msg.messages);
           break;

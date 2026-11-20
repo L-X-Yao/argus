@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING
 
 from ..locale_text import lt
+from ._firmware import cmd_firmware_flash
 from ._flight import (
     cmd_arm,
     cmd_disarm,
@@ -114,6 +115,7 @@ _DISPATCH = {
     "log_cancel": cmd_log_cancel,
     "reboot": cmd_reboot,
     "reboot_bootloader": cmd_reboot_bootloader,
+    "firmware_flash": cmd_firmware_flash,
     "inspector_toggle": cmd_inspector_toggle,
     "serial_control": cmd_serial_control,
     "inject_rtcm": cmd_inject_rtcm,
@@ -164,7 +166,9 @@ def execute(cmd: str, param, link: DroneLink, data: dict | None = None) -> dict 
         return {"ok": False, "error": "unsupported autopilot (%s): ArduPilot only" % ap}
     # Nothing to send it to, and said so now, whether the port is shut or no vehicle has been
     # heard on it: kept for a retry, a key pressed with no vehicle would arm whatever came next.
-    if cmd not in _NO_LINK_NEEDED and not link.connected:
+    # firmware_flash may run without a live link after a failed attempt left the FC in its
+    # bootloader; its handler decides whether that retry is allowed.
+    if cmd not in _NO_LINK_NEEDED and not link.connected and cmd != "firmware_flash":
         return {"ok": False, "error": lt("err_no_link", link.locale)}
     expected_sysid = data.get("expected_sysid")
     if expected_sysid is not None and expected_sysid != (link.active_sysid or link.vehicle.sysid):
