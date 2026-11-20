@@ -1,5 +1,6 @@
 export type PanelId =
   | 'logPanel'
+  | 'firmware'
   | 'video'
   | 'calibration'
   | 'shortcuts'
@@ -65,6 +66,7 @@ export const panels = new PanelRegistry();
 
 export const PANEL_LOADERS: Record<PanelId, () => Promise<{ default: unknown }>> = {
   logPanel: () => import('../components/tools/LogPanel.svelte'),
+  firmware: () => import('../components/tools/FirmwareUpgradePanel.svelte'),
   video: () => import('../components/vehicle/VideoOverlay.svelte'),
   calibration: () => import('../components/setup/CalibrationPanel.svelte'),
   shortcuts: () => Promise.resolve({ default: null }),

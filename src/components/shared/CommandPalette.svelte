@@ -307,7 +307,15 @@
         category: t('cmd.catTools'),
         icon: HardDrive,
         handler: () => openPanel('logPanel'),
-        available: connected,
+        available: true,
+      },
+      {
+        id: 'tool-firmware',
+        label: t('fw.upgradeTitle'),
+        category: t('cmd.catTools'),
+        icon: Zap,
+        handler: () => openPanel('firmware'),
+        available: true,
       },
       {
         id: 'tool-video',

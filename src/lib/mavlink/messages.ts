@@ -937,6 +937,15 @@ export function encodeLogRequestEnd(targetSys: number, targetComp: number): Uint
 }
 
 /**
+ * LOG_ERASE (msg 121, 2-byte payload). Erases every log on the FC:
+ * AP_Logger_MAVLinkLogTransfer.cpp:56 and :161-169 route it to EraseAll.
+ * ArduPilot has no per-log delete, so this is all or nothing.
+ */
+export function encodeLogErase(targetSys: number, targetComp: number): Uint8Array {
+  return new Uint8Array([targetSys, targetComp]);
+}
+
+/**
  * Pad a DataView's underlying payload to at least `minBytes` with trailing zeros.
  * MAVLink 2 senders may zero-trim trailing zero bytes; receivers must treat
  * the missing bytes as zero. Without this, decoders calling getUint16(2) etc.

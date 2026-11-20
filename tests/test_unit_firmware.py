@@ -50,6 +50,64 @@ class TestFirmwareUploadTooLarge:
         assert not (tmp_path / "big.apj.tmp").exists()
 
 
+class TestFirmwareInfo:
+    def _apj(self, tmp_path, name="info.apj", board=9, image=b"\x01\x02\x03"):
+        import base64
+        import json
+        import zlib
+
+        path = tmp_path / name
+        path.write_text(
+            json.dumps(
+                {
+                    "board_id": board,
+                    "image": base64.b64encode(zlib.compress(image)).decode(),
+                    "image_size": len(image),
+                }
+            ),
+            encoding="utf-8",
+        )
+        return path
+
+    def test_reads_the_board_and_size(self, tmp_path):
+        import backend.firmware as fw_mod
+
+        self._apj(tmp_path)
+        with patch.object(fw_mod, "FIRMWARE_DIR", tmp_path):
+            r = client.get("/api/firmware/info", params={"name": "info.apj"})
+        assert r.json() == {"ok": True, "name": "info.apj", "board_id": 9, "image_size": 3}
+
+    def test_rejects_a_path(self, tmp_path):
+        import backend.firmware as fw_mod
+
+        with patch.object(fw_mod, "FIRMWARE_DIR", tmp_path):
+            r = client.get("/api/firmware/info", params={"name": "../info.apj"})
+        assert r.json()["ok"] is False
+
+    def test_reports_a_missing_file(self, tmp_path):
+        import backend.firmware as fw_mod
+
+        with patch.object(fw_mod, "FIRMWARE_DIR", tmp_path):
+            r = client.get("/api/firmware/info", params={"name": "nope.apj"})
+        assert r.json()["ok"] is False
+
+    def test_reports_an_unreadable_apj(self, tmp_path):
+        import backend.firmware as fw_mod
+
+        (tmp_path / "bad.apj").write_text('{"board_id": 9, "image": "nope"}', encoding="utf-8")
+        with patch.object(fw_mod, "FIRMWARE_DIR", tmp_path):
+            r = client.get("/api/firmware/info", params={"name": "bad.apj"})
+        assert r.json()["ok"] is False
+
+    def test_a_name_that_cannot_be_a_path_is_refused_not_a_500(self, tmp_path):
+        import backend.firmware as fw_mod
+
+        with patch.object(fw_mod, "FIRMWARE_DIR", tmp_path):
+            r = client.get("/api/firmware/info", params={"name": "a\u0000.apj"})
+        assert r.status_code == 200
+        assert r.json()["ok"] is False
+
+
 class TestFirmwareUploadOverwrites:
     def test_a_second_upload_with_the_same_name_replaces_it(self, tmp_path):
         # Windows' rename refuses an existing destination; os.replace must overwrite it.

@@ -3,6 +3,7 @@ from __future__ import annotations
 import glob
 import sys
 from contextlib import asynccontextmanager
+from pathlib import Path
 from urllib.parse import urlsplit
 
 from fastapi import FastAPI, Request, WebSocket
@@ -299,6 +300,74 @@ async def api_log():
             headers={"Content-Length": str(size), "Content-Disposition": f'attachment; filename="{name}"'},
         )
     return Response(status_code=404, content="No active log")
+
+
+def _active_tlog_name() -> str:
+    """The .tlog of the session that is recording now, from the CSV get_log_path names."""
+    csv_path = app.state.link.get_log_path()
+    return Path(csv_path).with_suffix(".tlog").name if csv_path else ""
+
+
+@app.get("/api/logs")
+async def api_local_logs():
+    active = _active_tlog_name()
+    files = []
+    entries = []
+    if cfg.LOG_DIR.exists():
+        for path in cfg.LOG_DIR.glob("*.tlog"):
+            try:
+                st = path.stat()
+            except OSError:
+                # Deleted between the glob and the stat by another page.
+                continue
+            entries.append((st.st_mtime, path, st))
+    for _mtime, path, st in sorted(entries, key=lambda item: item[0], reverse=True):
+        files.append(
+            {
+                "name": path.name,
+                "size": st.st_size,
+                "mtime": st.st_mtime,
+                "active": path.name == active,
+            }
+        )
+    return {"files": files}
+
+
+@app.post("/api/logs/delete")
+async def api_local_logs_delete(request: Request):
+    body = await json_object(request)
+    names = body.get("names", [])
+    if not isinstance(names, list) or not all(isinstance(n, str) for n in names) or len(names) > 500:
+        return {"ok": False, "error": "Invalid names"}
+    active = _active_tlog_name()
+    root = cfg.LOG_DIR.resolve()
+    deleted, refused = [], []
+    for name in names:
+        safe = Path(name).name
+        if safe != name or not safe.endswith(".tlog") or safe == active:
+            refused.append(name)
+            continue
+        try:
+            path = (root / safe).resolve()
+            path.relative_to(root)
+            # is_file() stats the path: an overlong name raises here, not in resolve().
+            if not path.is_file():
+                refused.append(name)
+                continue
+        except (ValueError, OSError):
+            # A NUL byte, an overlong name, or a path that escapes the folder.
+            refused.append(name)
+            continue
+        try:
+            path.unlink()
+            # The CSV recorded beside a tlog describes the same session; keep them together.
+            csv_path = path.with_suffix(".csv")
+            if csv_path.is_file():
+                csv_path.unlink()
+            deleted.append(safe)
+        except OSError:
+            refused.append(name)
+    return {"ok": True, "deleted": deleted, "refused": refused}
 
 
 if DIST_DIR.exists():

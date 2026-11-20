@@ -205,6 +205,21 @@ def _cmd_log_download(link: DroneLink, param, data: dict):
     )
 
 
+def cmd_log_erase(link: DroneLink, param, data: dict):
+    """Erase every log on the flight controller: MAVLink LOG_ERASE, message 121.
+
+    ArduPilot's AP_Logger_MAVLinkLogTransfer.cpp:56 and :161-169 route it to EraseAll; the
+    protocol has no per-log delete, so this is all or nothing.
+    """
+    if link.vehicle.armed:
+        return {"ok": False, "error": lt("err_no_log_armed", link.locale)}
+    if link.log_dl._log_download_id != -1:
+        return {"ok": False, "error": lt("err_log_busy", link.locale)}
+    link.add_event(lt("log_erase", link.locale), "log_erase")
+    link.send(bm(121, struct.pack("<BB", link.vehicle.sysid, 1), link.sq, CRC_EXTRA[121]))
+    return {"ok": True}
+
+
 def cmd_log_cancel(link: DroneLink, param, data: dict):
     with link._state_lock:
         return _cmd_log_cancel(link, param, data)

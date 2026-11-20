@@ -43,7 +43,8 @@ To fly real missions today, use QGroundControl or Mission Planner: both are flig
 | **Parameters** | Metadata-driven UI (desc/range/units/enum/bitmask), tree view, diff export, default reset |
 | **Calibration** | Compass, accel, gyro, level, baro wizards with real-time progress |
 | **RTK** | NTRIP client with HTTP/1.0 + ICY-200 negotiation, streaming RTCM injection |
-| **Firmware** | Store `.apj` files on the backend, online firmware browser, reboot to bootloader, and flash through the backend serial link |
+| **Firmware** | Store `.apj` files on the backend, online firmware browser, reboot to bootloader, and flash through the backend serial link with a guided upgrade panel |
+| **Logs** | Onboard log list, download and erase-all; local `.tlog` list and delete |
 | **Fleet** | Multi-vehicle dashboard with live telemetry per vehicle |
 | **Video** | RTSP, HTTP and RTMP streams through ffmpeg on the backend, AR waypoint overlay, screenshot capture |
 | **HUD** | PFD (attitude/speed/altitude/compass/wind), real-time charts, EKF status |

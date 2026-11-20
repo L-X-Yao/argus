@@ -375,6 +375,15 @@ class TestCommandExecute:
         assert link.log_dl._log_download_id == -1
         assert any("取消" in e["text"] for e in link.events)
 
+    def test_log_erase_sends_message_121(self):
+        link = make_link()
+        execute("log_erase", None, link)
+        frame = link._ser.write.call_args.args[0]
+        assert frame[0] == 0xFD
+        assert (frame[7] | (frame[8] << 8) | (frame[9] << 16)) == 121
+        assert frame[10] == 1 and frame[11] == 1
+        assert any(e["event_type"] == "log_erase" for e in link.events)
+
     def test_rc_override(self):
         link = make_link()
         channels = [1500, 1500, 1100, 1500, 1000, 1000, 1000, 1000]

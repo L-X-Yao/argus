@@ -28,6 +28,7 @@ import {
   encodeLogRequestList,
   encodeLogRequestData,
   encodeLogRequestEnd,
+  encodeLogErase,
   encodeCommandAck,
 } from './mavlink';
 import { openSerial, serialWrite, serialReadLoop, isWebSerialSupported } from './serial';
@@ -653,6 +654,9 @@ const _serialDispatch: Record<string, CmdHandler> = {
   cal_accel: () => serialCalAccel(),
   cal_accel_next: () => serialCalAccelNext(),
   log_cancel: () => serialLogCancel(),
+  log_erase: () => {
+    serialLogErase();
+  },
   gimbal_pitchyaw: (_, d) => serialGimbalPitchYaw(d as Parameters<typeof serialGimbalPitchYaw>[0]),
   // MAV_CMD_DO_MOUNT_CONTROL (205): p1=pitch, p3=yaw, p7=MAV_MOUNT_MODE_MAVLINK_TARGETING (2). AP source: AP_Mount.cpp:363-417.
   gimbal_angle: (_, d) => {
@@ -1891,6 +1895,12 @@ export async function serialLogDownload(id: number): Promise<{ ok: boolean; erro
     logSession.dlWindowEnd = entry.size;
     sendSerialFrame(119, encodeLogRequestData(serial.targetSysId, serial.targetCompId, id, 0, entry.size));
   });
+}
+
+export function serialLogErase(): { ok: boolean; error?: string } {
+  if (!isSerialConnected()) return { ok: false, error: t('serial.err.notConnected') };
+  sendSerialFrame(121, encodeLogErase(serial.targetSysId, serial.targetCompId));
+  return { ok: true };
 }
 
 export function serialLogCancel(): void {

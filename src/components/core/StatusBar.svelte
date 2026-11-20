@@ -8,7 +8,8 @@
   import ConnectionForm from './ConnectionForm.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
   import Badge from '$lib/components/ui/badge/badge.svelte';
-  import { Volume2, VolumeOff, Sun, Moon, Settings, Satellite } from '@lucide/svelte';
+  import { Volume2, VolumeOff, Sun, Moon, Settings, Satellite, Zap } from '@lucide/svelte';
+  import { panels } from '../../lib/panels.svelte';
 
   let { toggleTheme, onSettings }: { toggleTheme: () => void; onSettings: () => void } = $props();
 
@@ -279,6 +280,15 @@
     </Button>
     <Button variant="ghost" size="icon-xs" onclick={toggleTheme} title={t('tip.theme')} aria-label={t('tip.theme')}>
       {#if app.darkTheme}<Sun size={14} />{:else}<Moon size={14} />{/if}
+    </Button>
+    <Button
+      variant="ghost"
+      size="icon-xs"
+      onclick={() => panels.open('firmware')}
+      title={t('fw.upgradeTitle')}
+      aria-label={t('fw.upgradeTitle')}
+    >
+      <Zap size={14} />
     </Button>
     <Button
       variant="ghost"

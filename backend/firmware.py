@@ -15,6 +15,7 @@ from urllib.parse import urlparse
 from fastapi import APIRouter, Request, UploadFile
 
 from .config import FAKE_IP_RANGE, ROOT_DIR, USER_AGENT, aio_download, cfg, json_object
+from .firmware_flash import FlashError, load_apj
 
 router = APIRouter()
 
@@ -33,13 +34,13 @@ async def api_firmware_upload(file: UploadFile):
     if not file.filename or not file.filename.endswith(".apj"):
         return {"ok": False, "error": "Only .apj files accepted"}
     safe_name = Path(file.filename).name
-    if not safe_name[:-4]:
+    if not safe_name[:-4] or len(safe_name) > 200:
         return {"ok": False, "error": "Only .apj files accepted"}
     FIRMWARE_DIR.mkdir(exist_ok=True)
-    dest = (FIRMWARE_DIR / safe_name).resolve()
     try:
+        dest = (FIRMWARE_DIR / safe_name).resolve()
         dest.relative_to(FIRMWARE_DIR.resolve())
-    except ValueError:
+    except (ValueError, OSError):
         return {"ok": False, "error": "Invalid filename"}
     tmp = dest.with_suffix(".apj.tmp")
     total = 0
@@ -72,6 +73,33 @@ async def api_firmware_list():
     for f in sorted(FIRMWARE_DIR.glob("*.apj")):
         files.append({"name": f.name, "size": f.stat().st_size})
     return {"files": files}
+
+
+def _firmware_info(name: str) -> dict:
+    safe = Path(name).name
+    if not safe or safe != name or not safe.endswith(".apj"):
+        return {"ok": False, "error": "Invalid filename"}
+    root = FIRMWARE_DIR.resolve()
+    try:
+        path = (root / safe).resolve()
+        path.relative_to(root)
+        # is_file() stats the path: an overlong name raises here, not in resolve().
+        if not path.is_file():
+            return {"ok": False, "error": "No such firmware file"}
+    except (ValueError, OSError):
+        # A NUL byte, an overlong name, or a path that escapes the folder.
+        return {"ok": False, "error": "Invalid filename"}
+    try:
+        apj = load_apj(path)
+    except FlashError as exc:
+        return {"ok": False, "error": str(exc)}
+    return {"ok": True, "name": apj.name, "board_id": apj.board_id, "image_size": apj.image_size}
+
+
+@router.get("/api/firmware/info")
+async def api_firmware_info(name: str = ""):
+    # Decoding the image is CPU work; keep it off the event loop like the downloads are.
+    return await aio_download(_firmware_info, name)
 
 
 def _read_url(url: str, limit: int) -> str:
@@ -126,10 +154,10 @@ def _download_firmware(fw_url: str, filename: str) -> dict:
         req = urlreq.Request(fw_url, headers={"User-Agent": USER_AGENT})
         resp = urlreq.urlopen(req, timeout=cfg.FIRMWARE_DOWNLOAD_TIMEOUT)
         FIRMWARE_DIR.mkdir(exist_ok=True)
-        target = (FIRMWARE_DIR / filename).resolve()
         try:
+            target = (FIRMWARE_DIR / filename).resolve()
             target.relative_to(FIRMWARE_DIR.resolve())
-        except ValueError:
+        except (ValueError, OSError):
             return {"ok": False, "error": "Invalid filename"}
         tmp = target.with_suffix(".tmp")
         total = 0
@@ -164,6 +192,6 @@ async def api_firmware_download(request: Request):
     if not fw_url or not isinstance(raw_filename, str):
         return {"ok": False, "error": "Invalid params"}
     filename = Path(raw_filename).name
-    if not filename.endswith(".apj") or filename in ("", ".", ".."):
+    if not filename.endswith(".apj") or filename in ("", ".", "..") or len(filename) > 200:
         return {"ok": False, "error": "Invalid params"}
     return await aio_download(_download_firmware, fw_url, filename)
