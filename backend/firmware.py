@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import ipaddress
 import logging
+import os
 import re
 import socket as _socket
 import urllib.error
@@ -57,7 +58,9 @@ async def api_firmware_upload(file: UploadFile):
     if too_large:
         tmp.unlink(missing_ok=True)
         return {"ok": False, "error": f"File too large (max {cfg.FIRMWARE_MAX_SIZE // 1024 // 1024} MB)"}
-    tmp.rename(dest)
+    # os.replace, not Path.rename: on Windows rename refuses an existing destination, so a
+    # second upload of the same .apj name failed with WinError 183.
+    os.replace(tmp, dest)
     return {"ok": True, "filename": safe_name, "size": total}
 
 
@@ -140,7 +143,7 @@ def _download_firmware(fw_url: str, filename: str) -> dict:
                     if total > cfg.FIRMWARE_MAX_SIZE:
                         raise ValueError("too large")
                     f.write(chunk)
-            tmp.rename(target)
+            os.replace(tmp, target)
         except ValueError:
             tmp.unlink(missing_ok=True)
             return {"ok": False, "error": "File too large (max %d MB)" % (cfg.FIRMWARE_MAX_SIZE // 1024 // 1024)}

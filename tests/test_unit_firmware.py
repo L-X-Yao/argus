@@ -50,6 +50,26 @@ class TestFirmwareUploadTooLarge:
         assert not (tmp_path / "big.apj.tmp").exists()
 
 
+class TestFirmwareUploadOverwrites:
+    def test_a_second_upload_with_the_same_name_replaces_it(self, tmp_path):
+        # Windows' rename refuses an existing destination; os.replace must overwrite it.
+        import backend.firmware as fw_mod
+
+        with patch.object(fw_mod, "FIRMWARE_DIR", tmp_path):
+            first = client.post(
+                "/api/firmware/upload",
+                files={"file": ("same.apj", b"one", "application/octet-stream")},
+            )
+            second = client.post(
+                "/api/firmware/upload",
+                files={"file": ("same.apj", b"two", "application/octet-stream")},
+            )
+        assert first.json()["ok"] is True
+        assert second.json()["ok"] is True
+        assert (tmp_path / "same.apj").read_bytes() == b"two"
+        assert not (tmp_path / "same.apj.tmp").exists()
+
+
 class TestFirmwareListWithFiles:
     def test_list_returns_existing_apj_files(self, tmp_path):
         import backend.firmware as fw_mod
