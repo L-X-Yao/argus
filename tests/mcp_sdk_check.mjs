@@ -44,6 +44,7 @@ try {
     JSON.stringify(names) ===
       JSON.stringify([
         'get_status',
+        'get_preflight',
         'get_mission',
         'get_parameters',
         'analyze_flight',
@@ -59,6 +60,9 @@ try {
   const status = await client.callTool({ name: 'get_status', arguments: {} });
   check('a call with no Argus is a tool error the model reads', status.isError === true, status.content?.[0]?.text);
   check('which says what to do', /Start Argus/.test(status.content?.[0]?.text ?? ''));
+
+  const pre = await client.callTool({ name: 'get_preflight', arguments: {} });
+  check('a preflight call with no Argus is a tool error the model reads', pre.isError === true, pre.content?.[0]?.text);
 
   const none = await client.callTool({ name: 'check_proposal', arguments: { proposal: 'p-none' } });
   check('a proposal this server never made', none.isError === true && /No proposal/.test(none.content?.[0]?.text ?? ''));

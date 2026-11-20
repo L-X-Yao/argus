@@ -159,6 +159,7 @@ An AI client that speaks the [Model Context Protocol](https://modelcontextprotoc
 | Tool | What it does |
 |---|---|
 | `get_status` | What the page shows about the vehicle: link, mode, armed, position, altitudes, speeds, battery, GPS, home, recent messages |
+| `get_preflight` | The checks the page makes before flight, each pass or fail with its value: GPS, battery, home, link, navigation and AHRS, vibration, compass, barometer, RC, mission, vehicle type, armed, prearm messages. A critical check the operator hid is named and does not count |
 | `get_mission` | The mission planned in the page |
 | `get_parameters` | Parameter values the page has read, by name or prefix |
 | `analyze_flight` | A .tlog Argus recorded: duration, modes, armed time, altitude, distance, battery, GPS, vibration, EKF, and the controller's warnings. Read-only, and needs no page |

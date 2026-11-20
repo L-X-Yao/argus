@@ -2,46 +2,22 @@
   import { app, showConfirm } from '../../lib/stores.svelte';
   import { getParam } from '../../lib/paramStore.svelte';
   import { t } from '../../lib/i18n.svelte';
-  import { worst } from '../../lib/worst';
+  import { preflightChecks, loadPreflightConfig, savePreflightConfig, isCheckEnabled } from '../../lib/preflight';
   import { Check, X as XIcon, Settings2 } from '@lucide/svelte';
 
   const d = app.drone;
 
-  interface CheckItem {
-    key: string;
-    name: string;
-    ok: boolean;
-    detail: string;
-    critical: boolean;
-  }
-
   /* ── Customization state ── */
-  const CONFIG_KEY = 'argus_preflight_config';
-
-  function loadConfig(): Record<string, boolean> {
-    try {
-      const cfg = JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}');
-      if (cfg && typeof cfg === 'object' && !Array.isArray(cfg)) return cfg;
-    } catch {}
-    return {};
-  }
-
-  function saveConfig(cfg: Record<string, boolean>) {
-    try {
-      localStorage.setItem(CONFIG_KEY, JSON.stringify(cfg));
-    } catch {}
-  }
-
-  let customConfig: Record<string, boolean> = $state(loadConfig());
+  let customConfig: Record<string, boolean> = $state(loadPreflightConfig());
   let showEditor = $state(false);
 
-  function isCheckEnabled(key: string): boolean {
-    return customConfig[key] !== false;
+  function checkOn(key: string): boolean {
+    return isCheckEnabled(customConfig, key);
   }
 
   /** Applies the toggle. A critical check asks first: hidden, it stops guarding the flight. */
   function toggleCheck(key: string) {
-    if (isCheckEnabled(key) && allChecks.find((c) => c.key === key)?.critical) {
+    if (checkOn(key) && allChecks.find((c) => c.key === key)?.critical) {
       void showConfirm(t('check.hideCritical')).then((ok) => {
         if (ok) applyToggle(key);
       });
@@ -51,134 +27,26 @@
   }
 
   function applyToggle(key: string) {
-    customConfig[key] = !isCheckEnabled(key);
+    customConfig[key] = !checkOn(key);
     customConfig = { ...customConfig };
-    saveConfig(customConfig);
+    savePreflightConfig(customConfig);
   }
 
   // BATT_ARM_VOLT is the voltage ArduPilot itself refuses to arm below.
   let battArmVolt = $derived(getParam('BATT_ARM_VOLT', -1));
-  let minBatV = $derived(battArmVolt > 0 ? battArmVolt : 22);
 
   /* ── All available checks ── */
-  let allChecks = $derived.by((): CheckItem[] => {
-    const gpsOk = d.gps_fix_raw >= 3;
-    return [
-      { key: 'gps', name: t('check.gps'), ok: gpsOk, detail: `${d.gps_fix}`, critical: true },
-      { key: 'sats', name: t('check.sats'), ok: d.gps_sats >= 10, detail: `${d.gps_sats} (>=10)`, critical: true },
-      {
-        key: 'batV',
-        name: t('check.batV'),
-        // ArduPilot's own arm threshold when a parameter read has it; the fixed 22 V otherwise
-        // (the old check read every vehicle as a 6S one).
-        ok: d.voltage >= minBatV,
-        detail: `${d.voltage.toFixed(1)}V (>=${minBatV.toFixed(1)})`,
-        critical: true,
-      },
-      {
-        key: 'batPct',
-        name: t('check.batPct'),
-        ok: d.remaining >= 30 || d.remaining < 0,
-        detail: d.remaining >= 0 ? `${d.remaining}%` : '---',
-        critical: true,
-      },
-      {
-        key: 'home',
-        name: t('check.home'),
-        ok: d.home_lat !== 0,
-        detail: d.home_lat !== 0 ? `${d.home_lat.toFixed(5)}, ${d.home_lon.toFixed(5)}` : '---',
-        critical: true,
-      },
-      {
-        key: 'link',
-        name: t('check.link'),
-        ok: d.connected && d.link_age >= 0 && d.link_age < 2,
-        detail: d.connected ? `${d.link_age.toFixed(1)}s` : '---',
-        critical: true,
-      },
-      {
-        key: 'nav',
-        name: t('check.nav'),
-        ok: !(d.ekf_flags & 0x480) && worst(d.ekf_vel, d.ekf_pos_h, d.ekf_pos_v, d.ekf_compass) < 1.0,
-        detail:
-          d.ekf_flags & 0x480 ? 'ERR' : worst(d.ekf_vel, d.ekf_pos_h, d.ekf_pos_v, d.ekf_compass) < 0.5 ? 'OK' : 'WARN',
-        critical: true,
-      },
-      {
-        key: 'vibe',
-        name: t('check.vibe'),
-        ok: worst(d.vibe[0], d.vibe[1], d.vibe[2]) < 30,
-        detail: `${Math.max(d.vibe[0], d.vibe[1], d.vibe[2]).toFixed(0)} m/s2`,
-        critical: true,
-      },
-      {
-        key: 'compass',
-        name: t('check.compass'),
-        ok: worst(d.ekf_compass) < 0.8,
-        detail: worst(d.ekf_compass) < 0.5 ? 'OK' : worst(d.ekf_compass) < 0.8 ? 'WARN' : `${d.ekf_compass.toFixed(2)}`,
-        critical: true,
-      },
-      {
-        key: 'baro',
-        name: t('check.baro'),
-        ok: d.alt_msl !== 0 || d.alt_rel !== 0 || !d.connected,
-        detail: d.connected ? `MSL ${d.alt_msl.toFixed(1)}m` : '---',
-        critical: true,
-      },
-      {
-        key: 'ahrs',
-        name: t('check.ahrs'),
-        ok: !(d.ekf_flags & 0x800) && worst(d.ekf_vel, d.ekf_pos_v) < 1.0,
-        detail: d.ekf_flags & 0x800 ? 'ERR' : worst(d.ekf_vel, d.ekf_pos_v) < 0.5 ? 'OK' : 'WARN',
-        critical: true,
-      },
-      {
-        key: 'rc',
-        name: t('check.rc'),
-        ok: d.rc_rssi > 0 || d.rc[0] > 0,
-        detail: d.rc_rssi > 0 ? `RSSI ${d.rc_rssi}` : d.rc[0] > 0 ? 'OK' : '---',
-        critical: false,
-      },
-      {
-        key: 'mission',
-        name: t('check.mission'),
-        ok: app.waypoints.length > 0,
-        // The route kept in this page, not the vehicle's: nothing tells the vehicle's count
-        // without a download. The detail says which one it is, so the green tick is not read
-        // as "the vehicle has this mission" when it never was uploaded.
-        detail: app.waypoints.length > 0 ? `${app.waypoints.length} WP · ${t('check.local')}` : '---',
-        critical: false,
-      },
-      {
-        key: 'vtype',
-        name: t('check.vtype'),
-        ok: d.vtype_raw > 0,
-        detail:
-          d.vtype_raw > 0
-            ? t(
-                [1, 19, 20, 21, 22, 23, 24, 25].includes(d.vtype_raw)
-                  ? 'vtype.plane'
-                  : [10, 11].includes(d.vtype_raw)
-                    ? 'vtype.rover'
-                    : d.vtype_raw === 12
-                      ? 'vtype.sub'
-                      : 'vtype.copter',
-              )
-            : '---',
-        critical: false,
-      },
-      {
-        key: 'notArmed',
-        name: t('check.notArmed'),
-        ok: !d.armed,
-        detail: d.armed ? t('status.armed') : 'OK',
-        critical: false,
-      },
-    ];
-  });
+  let allChecks = $derived.by(() =>
+    preflightChecks({
+      drone: d,
+      waypointCount: app.waypoints.length,
+      battArmVolt,
+      t,
+    }),
+  );
 
   /* ── Filtered checks based on user config ── */
-  let checks = $derived(allChecks.filter((c) => isCheckEnabled(c.key)));
+  let checks = $derived(allChecks.filter((c) => checkOn(c.key)));
 
   let allCriticalOk = $derived(checks.filter((c) => c.critical).every((c) => c.ok));
   let passCount = $derived(checks.filter((c) => c.ok).length);
@@ -217,7 +85,7 @@
           <label class="flex items-center gap-2 py-0.5 cursor-pointer group">
             <input
               type="checkbox"
-              checked={isCheckEnabled(c.key)}
+              checked={checkOn(c.key)}
               onchange={() => toggleCheck(c.key)}
               class="w-3.5 h-3.5 rounded border-border accent-primary"
             />

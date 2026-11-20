@@ -70,7 +70,8 @@ PROGRESS_EVERY = 10.0
 INSTRUCTIONS = (
     "Argus is a ground control station for ArduPilot vehicles. These tools read what the "
     "operator's Argus page shows and propose changes, which the operator approves or declines "
-    "in the page: nothing changes on the vehicle otherwise. Call get_status first. A proposal "
+    "in the page: nothing changes on the vehicle otherwise. Call get_status first, and "
+    "get_preflight before saying the vehicle is ready to fly. A proposal "
     "returns its id at once; call check_proposal with it to learn the decision and the result, "
     "as often as needed, since the operator may take minutes. A mission or parameter change is "
     "refused while the vehicle is armed. A flight command (return to launch, hold, land) is for a "
@@ -98,6 +99,20 @@ TOOLS = [
             "What the Argus page shows about the vehicle now: the link, vehicle type, flight mode, "
             "armed or not, position, altitudes, speeds, battery, GPS, home, the mission item being "
             "flown, and the latest messages of the flight controller."
+        ),
+        "inputSchema": _NO_ARGS,
+        "annotations": {"readOnlyHint": True, "openWorldHint": False},
+    },
+    {
+        "name": "get_preflight",
+        "title": "Preflight checks",
+        "description": (
+            "The checks the Argus page makes before flight, each pass or fail with the value it "
+            "checked: GPS fix and satellites, battery voltage and level, home, link, navigation and "
+            "AHRS health, vibration, compass, barometer, RC signal, mission, vehicle type, armed or "
+            "not, and the controller's prearm messages. ready follows the checks the operator has "
+            "left on; a critical check they hid is listed in hidden_critical and does not guard the "
+            "flight. Read-only."
         ),
         "inputSchema": _NO_ARGS,
         "annotations": {"readOnlyHint": True, "openWorldHint": False},
@@ -296,7 +311,12 @@ TOOLS = [
 ]
 _TOOLS = {tool["name"]: tool for tool in TOOLS}
 # What the page is asked for each tool that asks it something.
-READS = {"get_status": "status", "get_mission": "mission", "get_parameters": "parameters"}
+READS = {
+    "get_status": "status",
+    "get_preflight": "preflight",
+    "get_mission": "mission",
+    "get_parameters": "parameters",
+}
 PROPOSALS = {
     "propose_mission": "propose_mission",
     "propose_parameters": "propose_parameters",
