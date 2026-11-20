@@ -215,10 +215,9 @@ def cmd_firmware_flash(link: DroneLink, param, data: dict):
             return _refuse(link, "flash_serial_only")
         if link._reconnecting:
             return _refuse(link, "flash_unstable")
-        # A failed run may have left the FC in its bootloader: allow the retry without a live
-        # link, because the worker finds and talks to that bootloader first.
-        if not link.connected and link.fw_flash.get("phase") != "failed":
-            return _refuse(link, "flash_no_link")
+        # No heartbeat is not a refusal: the FC may already be sitting in its bootloader (a
+        # manual reboot, or a previous run). The worker opens the known serial port and the
+        # bootloader sync decides whether it is one; the app is never written by this path.
         stop = threading.Event()
         thread = threading.Thread(
             target=_flash_job,

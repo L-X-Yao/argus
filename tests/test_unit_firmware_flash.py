@@ -484,6 +484,13 @@ class TestCommandGuards:
         result = cmd.cmd_firmware_flash(link, None, {"file": "../fw.apj"})
         assert result["ok"] is False
 
+    def test_can_flash_a_known_serial_port_without_a_heartbeat(self, tmp_path, monkeypatch):
+        # A board already in its bootloader has no MAVLink heartbeat but is exactly what we
+        # want to flash; the bootloader sync, not link.connected, decides.
+        link = self.link(tmp_path, monkeypatch)
+        link.connected = False
+        assert cmd.cmd_firmware_flash(link, None, {"file": "fw.apj"}) == {"ok": True, "started": True}
+
     def test_a_failed_flash_can_retry_without_a_live_link(self, tmp_path, monkeypatch):
         link = self.link(tmp_path, monkeypatch)
         link.connected = False

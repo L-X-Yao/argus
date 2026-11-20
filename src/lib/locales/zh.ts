@@ -145,7 +145,7 @@ const messages: Record<string, string> = {
   'fw.armed': '请先锁定飞行器再刷写。',
   'fw.notBackend': '刷写需要后端串口连接，不能用浏览器 USB 链路。',
   'fw.noBackend': '后端未连接。',
-  'fw.noLink': '请先通过后端连接飞控。',
+  'fw.noLink': '没有在线飞控。如果飞控已在 Bootloader，先在连接面板连上它的端口，刷写会自动识别。',
   'fw.flashDone': '刷写完成',
   'fw.flashFailed': '刷写失败',
   'fw.flashRetry': '重新刷写',

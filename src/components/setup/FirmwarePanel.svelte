@@ -20,18 +20,14 @@
   let showOnline = $state(false);
 
   let canFlash = $derived(
-    !app.fwFlash.active &&
-      !app.drone.armed &&
-      app.wsConnected &&
-      app.activeTransport !== 'serial' &&
-      (app.drone.connected || app.fwFlash.phase === 'failed'),
+    !app.fwFlash.active && !app.drone.armed && app.wsConnected && app.activeTransport !== 'serial',
   );
   let flashBlock = $derived.by(() => {
     if (app.fwFlash.active) return t('fw.flashBusy');
     if (app.drone.armed) return t('fw.armed');
     if (app.activeTransport === 'serial') return t('fw.notBackend');
     if (!app.wsConnected) return t('fw.noBackend');
-    if (!app.drone.connected && app.fwFlash.phase !== 'failed') return t('fw.noLink');
+    if (!app.drone.connected) return t('fw.noLink');
     return '';
   });
   let flashPercent = $derived(

@@ -146,7 +146,8 @@ const messages: Record<string, string> = {
   'fw.armed': 'Disarm the vehicle before flashing.',
   'fw.notBackend': 'Flashing needs the backend serial link, not the browser USB link.',
   'fw.noBackend': 'The backend is not connected.',
-  'fw.noLink': 'Connect the vehicle through the backend first.',
+  'fw.noLink':
+    'No live vehicle. If the controller is in its bootloader, connect that port first; the flash will find it.',
   'fw.flashDone': 'Flash complete',
   'fw.flashFailed': 'Flash failed',
   'fw.flashRetry': 'Flash again',
