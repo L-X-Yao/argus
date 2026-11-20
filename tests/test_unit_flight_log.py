@@ -1,5 +1,6 @@
 """backend/flight_log.py: a recorded tlog summarised, and what it refuses to read."""
 
+import json
 import os
 import struct
 from unittest import mock
@@ -19,8 +20,8 @@ def heartbeat(mode=4, armed=True, seq=0, vtype=2, autopilot=3):
     return fc_frame(0, struct.pack("<IBBBBB", mode, vtype, autopilot, base_mode, 4, 3), seq)
 
 
-def position(lat, lon, vx=0, vy=0, seq=0):
-    payload = struct.pack("<Iiiiihhhh", 0, int(lat * 1e7), int(lon * 1e7), 15000, 5000, vx, vy, 0, 9000)
+def position(lat, lon, vx=0, vy=0, seq=0, rel_alt_mm=5000):
+    payload = struct.pack("<Iiiiihhhh", 0, int(lat * 1e7), int(lon * 1e7), 15000, rel_alt_mm, vx, vy, 0, 9000)
     return fc_frame(33, payload, seq)
 
 
@@ -36,16 +37,33 @@ def sys_status(voltage_mv=12000, remaining=50, seq=0):
     return fc_frame(1, payload, seq)
 
 
-def gps_raw(seq=0):
+def gps_raw(seq=0, fix=3, sats=9):
     # GPS_RAW_INT in MAVLink 2 wire order (fields sorted by size): time u64, lat/lon/alt i32,
     # eph/epv/vel/cog u16, fix u8, sats u8.
-    payload = struct.pack("<QiiiHHHHBB", 0, int(31.2304e7), int(121.4737e7), 15000, 100, 100, 0, 0, 3, 9)
+    payload = struct.pack("<QiiiHHHHBB", 0, int(31.2304e7), int(121.4737e7), 15000, 100, 100, 0, 0, fix, sats)
     return fc_frame(24, payload, seq)
 
 
-def vibration(seq=0):
-    payload = struct.pack("<QfffIII", 0, 1.5, 0.5, 0.2, 0, 0, 0)
+def vibration(seq=0, level=1.5):
+    payload = struct.pack("<QfffIII", 0, level, 0.5, 0.2, 0, 0, 0)
     return fc_frame(241, payload, seq)
+
+
+def vfr_hud(speed=5.0, seq=0):
+    payload = struct.pack("<ffffHH", 0.0, speed, 0.0, 0.0, 0, 0)
+    return fc_frame(74, payload, seq)
+
+
+def ekf(variance=0.25, seq=0):
+    payload = bytearray(34)
+    struct.pack_into("<f", payload, 16, variance)
+    return fc_frame(193, payload, seq)
+
+
+def mission_item(item_seq=0, seq=0):
+    payload = bytearray(37)
+    struct.pack_into("<H", payload, 28, item_seq)
+    return fc_frame(73, payload, seq)
 
 
 def statustext(text=b"Failsafe", severity=4, seq=0):
@@ -152,3 +170,158 @@ def test_a_log_with_no_messages_is_refused(tmp_path):
     (tmp_path / "empty.tlog").write_bytes(b"")
     with mock.patch.object(cfg, "LOG_DIR", tmp_path), pytest.raises(flight_log.LogRefused, match="no vehicle MAVLink"):
         flight_log.analyze("empty.tlog")
+
+
+def test_battery_start_and_end_are_summarised(tmp_path):
+    frames = [
+        heartbeat(armed=True, seq=0),
+        sys_status(voltage_mv=12500, remaining=80, seq=1),
+        sys_status(voltage_mv=11000, remaining=30, seq=2),
+        heartbeat(armed=False, seq=3),
+    ]
+    write_tlog(tmp_path / "battery.tlog", frames)
+    with mock.patch.object(cfg, "LOG_DIR", tmp_path):
+        battery = flight_log.analyze("battery.tlog")["battery"]
+    assert battery["start_voltage_v"] == 12.5
+    assert battery["end_voltage_v"] == 11.0
+    assert battery["min_voltage_v"] == 11.0
+    assert battery["start_remaining_pct"] == 80
+    assert battery["end_remaining_pct"] == 30
+    assert battery["min_remaining_pct"] == 30
+
+
+def test_mode_count_is_not_limited_by_the_returned_mode_list(tmp_path):
+    frames = [heartbeat(mode=4 if i % 2 == 0 else 5, armed=False, seq=i) for i in range(35)]
+    write_tlog(tmp_path / "modes.tlog", frames)
+    with mock.patch.object(cfg, "LOG_DIR", tmp_path):
+        summary = flight_log.analyze("modes.tlog")
+    assert len(summary["modes"]) == flight_log.MAX_MODES
+    assert summary["mode_count"] == 35
+
+
+def comparison_flights(tmp_path):
+    first = [
+        heartbeat(mode=4, armed=True, seq=0),
+        position(31.2304, 121.4737, seq=1),
+        sys_status(voltage_mv=12000, remaining=50, seq=2),
+        gps_raw(seq=3),
+        vibration(seq=4),
+        vfr_hud(speed=4.0, seq=5),
+        ekf(variance=0.2, seq=6),
+        mission_item(seq=7),
+        statustext(text=b"one", seq=8),
+        heartbeat(mode=4, armed=False, seq=9),
+    ]
+    second = [
+        heartbeat(mode=4, armed=True, seq=0),
+        position(31.2304, 121.4737, vx=100, seq=1, rel_alt_mm=10000),
+        sys_status(voltage_mv=13000, remaining=80, seq=2),
+        gps_raw(seq=3, fix=4, sats=12),
+        vibration(seq=4, level=2.5),
+        vfr_hud(speed=6.5, seq=5),
+        ekf(variance=0.5, seq=6),
+        mission_item(item_seq=0, seq=7),
+        mission_item(item_seq=1, seq=8),
+        statustext(text=b"one", seq=9),
+        statustext(text=b"two", seq=10),
+        position(31.2314, 121.4737, vx=100, seq=11, rel_alt_mm=10000),
+        sys_status(voltage_mv=11000, remaining=30, seq=12),
+        heartbeat(mode=5, armed=False, seq=13),
+    ]
+    write_tlog(tmp_path / "first.tlog", first, spacing_usec=1_000_000)
+    write_tlog(tmp_path / "second.tlog", second, spacing_usec=1_000_000)
+
+
+def test_two_flights_are_compared_through_the_same_analysis(tmp_path):
+    comparison_flights(tmp_path)
+    with mock.patch.object(cfg, "LOG_DIR", tmp_path):
+        result = flight_log.compare("first.tlog", "second.tlog")
+    assert result["first"] == "first.tlog"
+    assert result["second"] == "second.tlog"
+    assert result["delta_direction"] == "second - first"
+    metrics = result["metrics"]
+
+    def check(name, first, second, delta, group=None):
+        values = metrics[group][name] if group else metrics[name]
+        assert values == {"first": first, "second": second, "delta": delta}
+
+    check("duration_s", 9.0, 13.0, 4.0)
+    check("armed_seconds", 9.0, 13.0, 4.0)
+    check("max_altitude_above_home_m", 5.0, 10.0, 5.0)
+    check("max_ground_speed_ms", 4.0, 6.5, 2.5)
+    check("distance_m", 0, metrics["distance_m"]["second"], metrics["distance_m"]["second"])
+    assert metrics["distance_m"]["second"] > 50
+    check("min_voltage_v", 12.0, 11.0, -1.0, "battery")
+    check("start_voltage_v", 12.0, 13.0, 1.0, "battery")
+    check("end_voltage_v", 12.0, 11.0, -1.0, "battery")
+    check("min_remaining_pct", 50, 30, -20, "battery")
+    check("start_remaining_pct", 50, 80, 30, "battery")
+    check("end_remaining_pct", 50, 30, -20, "battery")
+    check("max_fix", 3, 4, 1, "gps")
+    check("max_satellites", 9, 12, 3, "gps")
+    check("vibration_max", 1.5, 2.5, 1.0)
+    check("ekf_max_pos_horiz_variance", 0.2, 0.5, 0.3)
+    check("mode_count", 1, 2, 1)
+    check("event_count", 1, 2, 1)
+    check("mission_items_seen", 1, 2, 1)
+
+
+def test_a_missing_metric_has_no_delta(tmp_path):
+    write_tlog(tmp_path / "bare.tlog", [heartbeat(armed=False), heartbeat(armed=False, seq=1)])
+    with mock.patch.object(cfg, "LOG_DIR", tmp_path):
+        result = flight_log.compare("bare.tlog", "bare.tlog")
+    assert result["metrics"]["max_ground_speed_ms"] == {"first": None, "second": None, "delta": None}
+    assert result["metrics"]["battery"]["start_voltage_v"] == {"first": None, "second": None, "delta": None}
+
+
+def test_compare_stops_when_the_first_analysis_is_cancelled():
+    cancelled = object()
+    with mock.patch.object(flight_log, "analyze", return_value=None) as analyze:
+        assert flight_log.compare("first.tlog", "second.tlog", cancelled) is None
+    analyze.assert_called_once_with("first.tlog", cancelled)
+
+
+def test_the_second_log_is_held_to_the_same_size_limit(tmp_path):
+    comparison_flights(tmp_path)
+    limit = (tmp_path / "first.tlog").stat().st_size
+    assert (tmp_path / "second.tlog").stat().st_size > limit
+    with (
+        mock.patch.object(cfg, "LOG_DIR", tmp_path),
+        mock.patch.object(flight_log, "MAX_TLOG_SIZE", limit),
+        pytest.raises(flight_log.LogRefused, match="second.tlog.*reads up to"),
+    ):
+        flight_log.compare("first.tlog", "second.tlog")
+
+
+def non_finite_flights(tmp_path):
+    for name, speed, vibration_y in (("first.tlog", 4.0, 2.0), ("second.tlog", 6.0, 3.0)):
+        vibration_frame = fc_frame(
+            241,
+            struct.pack("<QfffIII", 0, float("inf"), vibration_y, float("nan"), 0, 0, 0),
+            3,
+        )
+        frames = [
+            heartbeat(armed=False, seq=0),
+            vfr_hud(speed=float("inf"), seq=1),
+            vfr_hud(speed=speed, seq=2),
+            vibration_frame,
+        ]
+        write_tlog(tmp_path / name, frames)
+
+
+def test_non_finite_peaks_are_ignored(tmp_path):
+    non_finite_flights(tmp_path)
+    with mock.patch.object(cfg, "LOG_DIR", tmp_path):
+        summary = flight_log.analyze("first.tlog")
+    assert summary["max_ground_speed_ms"] == 4.0
+    assert summary["vibration_max"] == 2.0
+    json.dumps(summary, allow_nan=False)
+
+
+def test_non_finite_peaks_remain_json_safe_when_compared(tmp_path):
+    non_finite_flights(tmp_path)
+    with mock.patch.object(cfg, "LOG_DIR", tmp_path):
+        result = flight_log.compare("first.tlog", "second.tlog")
+    json.dumps(result, allow_nan=False)
+    assert result["metrics"]["max_ground_speed_ms"] == {"first": 4.0, "second": 6.0, "delta": 2.0}
+    assert result["metrics"]["vibration_max"] == {"first": 2.0, "second": 3.0, "delta": 1.0}

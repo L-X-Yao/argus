@@ -162,6 +162,7 @@ An AI client that speaks the [Model Context Protocol](https://modelcontextprotoc
 | `get_mission` | The mission planned in the page |
 | `get_parameters` | Parameter values the page has read, by name or prefix |
 | `analyze_flight` | A .tlog Argus recorded: duration, modes, armed time, altitude, distance, battery, GPS, vibration, EKF, and the controller's warnings. Read-only, and needs no page |
+| `compare_flights` | Two named .tlog files side by side, including battery minimum/start/end and mode, warning-event and mission-item counts. Each metric has both values and a delta (second minus first). Read-only, and needs no page |
 | `propose_mission` | A mission for the operator, shown waypoint by waypoint with every speed, hold and circling: uploaded only if approved |
 | `propose_parameters` | Parameter changes for the operator, with old and new values: written only if approved |
 | `propose_flight_command` | Return to launch, hold or land, for a vehicle that is armed: sent only if approved and then confirmed with a slide, as the RTL button is |

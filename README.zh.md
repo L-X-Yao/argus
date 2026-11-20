@@ -162,6 +162,7 @@ python run.py --sim            # 同时启动后端 + simulator.py
 | `get_mission` | 页面上的计划航线 |
 | `get_parameters` | 页面已读取的参数值，按名称或前缀 |
 | `analyze_flight` | Argus 录制的 .tlog：时长、模式、解锁时长、高度、里程、电池、GPS、振动、EKF，以及飞控的告警。只读，不需要页面 |
+| `compare_flights` | 对比两份指定 .tlog，包括电池最低值与起止值、模式数、告警事件数和任务项数。每项给出两份数值及差值（第二份减第一份）。只读，不需要页面 |
 | `propose_mission` | 提交给操作员的航线，逐个航点显示速度、停留和盘旋：批准后才上传 |
 | `propose_parameters` | 提交给操作员的参数修改，显示原值和新值：批准后才写入 |
 | `propose_flight_command` | 返航、悬停或降落，只用于已解锁的飞行器：批准后还要像返航按钮一样滑动确认，才会发送 |
