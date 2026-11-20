@@ -159,6 +159,7 @@ _T = {
         "NTRIP host resolves to this machine or a link-local address",
     ),
     "err_ntrip_running": ("NTRIP 已在运行", "NTRIP already running"),
+    "log_erase": ("正在擦除飞控日志...", "Erasing the flight controller's logs..."),
     "flash_start": ("开始刷写 %s", "Flashing %s"),
     "flash_done": ("刷写完成", "Flash complete"),
     "flash_fail": ("刷写失败: %s", "Flash failed: %s"),

@@ -72,6 +72,7 @@ export const CRC_EXTRA: Record<number, number> = {
   118: 56, // LOG_ENTRY
   119: 116, // LOG_REQUEST_DATA
   120: 134, // LOG_DATA
+  121: 237, // LOG_ERASE
   122: 203, // LOG_REQUEST_END
   125: 203, // POWER_STATUS
   126: 220, // SERIAL_CONTROL

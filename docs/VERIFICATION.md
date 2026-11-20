@@ -27,12 +27,12 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 
 | Area | Items | Real FC | SITL | Simulator | Tests only | None | n/a |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Commands, backend | 54 | 20 | 28 | 0 | 6 | 0 | 0 |
-| Commands, WebSerial | 54 | 12 | 28 | 0 | 3 | 0 | 11 |
+| Commands, backend | 55 | 20 | 28 | 0 | 7 | 0 | 0 |
+| Commands, WebSerial | 55 | 12 | 28 | 0 | 4 | 0 | 11 |
 | Messages, backend | 35 | 28 | 3 | 0 | 4 | 0 | 0 |
 | Messages, WebSerial | 35 | 17 | 13 | 0 | 4 | 0 | 1 |
-| REST routes | 28 | 6 | 5 | 17 | 0 | 0 | 0 |
-| Panels | 77 | 14 | 34 | 18 | 11 | 0 | 0 |
+| REST routes | 31 | 6 | 5 | 17 | 3 | 0 | 0 |
+| Panels | 78 | 14 | 34 | 19 | 11 | 0 | 0 |
 | Platform | 50 | 9 | 14 | 13 | 10 | 2 | 2 |
 
 ## Commands / 飞控命令
@@ -76,6 +76,7 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 | `log_list` | List logs | 日志列表 | Real FC | Real FC | Both 2026-11-06 on Windows. 2026-11-13: a lost last LOG_ENTRY is asked for again (3 s, 3 tries) and then reported, where the request waited forever (unit test); an empty log store (AP's dummy id 0, last 0, size 0) shows an empty list instead of a "#0" whose download saved nothing (contract test). The WebSerial link does all three too (vitest, 2026-11-13) |
 | `log_download` | Download a log | 下载日志 | Real FC | Real FC | Both 2026-11-06 on Windows, same sha256 on both links. 2026-11-13: a link that drops mid-download reports it as incomplete, where the panel sat at the last percentage (unit test); the WebSerial link delivers the bytes it received, flagged, instead of discarding them (vitest) |
 | `log_cancel` | Cancel a download | 取消下载 | SITL | SITL | CI on both links |
+| `log_erase` | Erase every onboard log | 擦除全部机载日志 | Tests only | Tests only | Unit tests on the frame and the local routes; not yet on a real FC |
 | `reboot` | Reboot the FC | 重启飞控 | Real FC | Real FC | Both 2026-11-06 on Windows, disarmed. WebSerial comes back by the USB button, the backend by itself |
 | `reboot_bootloader` | Reboot to bootloader | 重启到 Bootloader | SITL | SITL | CI on both links |
 | `firmware_flash` | Write an .apj through the bootloader | 刷写固件 | Real FC | n/a | 2026-11-20 through the packaged Windows build on a real FC, disarmed: identified the bootloader, erased, programmed 1.29 MB, verified the CRC, rebooted and reconnected; the rebooted firmware reported the new git hash. Earlier the same day, an .apj for another board was refused before erasing, and the controller rebooted and reconnected |
@@ -153,6 +154,8 @@ Real FC here means the route was in use during a session with a real flight cont
 | `GET /api/ports` | Serial port list | 串口列表 | Real FC | 2026-11-05 |
 | `GET /api/tile/{style}/{z}/{x}/{y}` | Map tiles | 地图瓦片 | Real FC | 2026-11-05, default map only |
 | `GET /api/log` | Download the CSV log | 下载 CSV 日志 | SITL | CI |
+| `GET /api/logs` | Local recorded tlogs | 本机录制的 tlog | Tests only | Unit tests with a temp folder |
+| `POST /api/logs/delete` | Delete local tlogs | 删除本机 tlog | Tests only | Unit tests: the CSV sibling, containment, the active session |
 | `GET /api/param_meta` | Parameter descriptions | 参数说明 | SITL | CI |
 | `GET /api/tile_cache` | Tile cache size | 瓦片缓存大小 | SITL | CI |
 | `POST /api/tile_cache_clear` | Clear the tile cache | 清除瓦片缓存 | SITL | CI |
@@ -171,6 +174,7 @@ Real FC here means the route was in use during a session with a real flight cont
 | `GET /api/mbtiles/{name}/{z}/{x}/{y}` | Offline map tiles | 离线地图瓦片 | Simulator | Integration tests with a real file |
 | `GET /api/terrain/elevation` | Terrain height | 地形高度 | Simulator | Integration tests against the real terrain server |
 | `GET /api/firmware/list` | Stored firmware | 已保存固件 | Simulator | Integration tests |
+| `GET /api/firmware/info` | Board id and image size of a stored .apj | 已保存 .apj 的板型编号和大小 | Tests only | Unit tests |
 | `GET /api/firmware/online` | Firmware browser | 在线固件 | Simulator | Integration tests against firmware.ardupilot.org |
 | `POST /api/firmware/download` | Download firmware | 下载固件 | Simulator | Integration tests against firmware.ardupilot.org |
 | `GET /api/video/capabilities` | Video support check | 视频能力检测 | Simulator | Integration tests |
@@ -247,6 +251,7 @@ Real FC here means the route was in use during a session with a real flight cont
 | `AdvancedCmdPanel` | tools | 给航点加高级指令 | SITL | CI by clicks on firmware: items land on the FC |
 | `ConsolePanel` | tools | 发送飞控控制台命令 | Simulator | e2e: memory |
 | `FFTPanel` | tools | 分析日志频谱 | SITL | CI on a real .BIN: finds an injected 35 Hz tone |
+| `FirmwareUpgradePanel` | tools | 选择固件、连接后端串口并刷写 | Simulator | e2e: opens from the palette; no vehicle needed |
 | `FlightReportPanel` | tools | 填写导出飞行报告 | SITL | CI by clicks on firmware: keeps the flight after the summary closes |
 | `InspectorPanel` | tools | 检视实时消息流 | Simulator | e2e: memory |
 | `LogPanel` | tools | 下载机载日志 | Real FC | 2026-11-06 on both links on Windows |

@@ -69,6 +69,7 @@ _MSG_NAMES: dict[int, str] = {
     118: "LOG_ENTRY",
     119: "LOG_REQUEST_DATA",
     120: "LOG_DATA",
+    121: "LOG_ERASE",
     122: "LOG_REQUEST_END",
     125: "POWER_STATUS",
     126: "SERIAL_CONTROL",

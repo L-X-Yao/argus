@@ -22,6 +22,7 @@ export {
   encodeLogRequestList,
   encodeLogRequestData,
   encodeLogRequestEnd,
+  encodeLogErase,
 } from './messages';
 export type {
   MessageHandlers,

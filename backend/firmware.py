@@ -15,6 +15,7 @@ from urllib.parse import urlparse
 from fastapi import APIRouter, Request, UploadFile
 
 from .config import FAKE_IP_RANGE, ROOT_DIR, USER_AGENT, aio_download, cfg, json_object
+from .firmware_flash import FlashError, load_apj
 
 router = APIRouter()
 
@@ -72,6 +73,31 @@ async def api_firmware_list():
     for f in sorted(FIRMWARE_DIR.glob("*.apj")):
         files.append({"name": f.name, "size": f.stat().st_size})
     return {"files": files}
+
+
+def _firmware_info(name: str) -> dict:
+    safe = Path(name).name
+    if not safe or safe != name or not safe.endswith(".apj"):
+        return {"ok": False, "error": "Invalid filename"}
+    root = FIRMWARE_DIR.resolve()
+    path = (root / safe).resolve()
+    try:
+        path.relative_to(root)
+    except ValueError:
+        return {"ok": False, "error": "Invalid filename"}
+    if not path.is_file():
+        return {"ok": False, "error": "No such firmware file"}
+    try:
+        apj = load_apj(path)
+    except FlashError as exc:
+        return {"ok": False, "error": str(exc)}
+    return {"ok": True, "name": apj.name, "board_id": apj.board_id, "image_size": apj.image_size}
+
+
+@router.get("/api/firmware/info")
+async def api_firmware_info(name: str = ""):
+    # Decoding the image is CPU work; keep it off the event loop like the downloads are.
+    return await aio_download(_firmware_info, name)
 
 
 def _read_url(url: str, limit: int) -> str:
