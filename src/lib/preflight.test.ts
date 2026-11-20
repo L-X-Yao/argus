@@ -1,6 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { defaultState, type DroneState } from './types';
-import { isCheckEnabled, preflightChecks } from './preflight';
+import { isCheckEnabled, preflightChecks, savePreflightConfig } from './preflight';
 
 const t = (key: string) => key;
 
@@ -67,6 +67,29 @@ describe('preflightChecks', () => {
     expect(check(withParam, 'batV').detail).toContain('>=24.0');
   });
 
+  it('BATT_ARM_VOLT 0 disables the voltage check instead of falling back to 22 V', () => {
+    const checks = preflightChecks({ drone: good({ voltage: 16 }), waypointCount: 0, battArmVolt: 0, t });
+    expect(check(checks, 'batV').ok).toBe(true);
+    expect(check(checks, 'batV').detail).toContain('no arming threshold');
+  });
+
+  it('a home on the equator is set, and a sea-level barometer is not a failure', () => {
+    const equator = preflightChecks({
+      drone: good({ home_lat: 0, home_lon: 108.9 }),
+      waypointCount: 0,
+      battArmVolt: -1,
+      t,
+    });
+    expect(check(equator, 'home').ok).toBe(true);
+    const seaLevel = preflightChecks({
+      drone: good({ alt_msl: 0, alt_rel: 0 }),
+      waypointCount: 0,
+      battArmVolt: -1,
+      t,
+    });
+    expect(check(seaLevel, 'baro').ok).toBe(true);
+  });
+
   it('fails navigation, AHRS and compass on their EKF flags and a NaN variance', () => {
     const checks = preflightChecks({
       drone: good({ ekf_flags: 0x480 | 0x800, ekf_compass: NaN }),
@@ -96,7 +119,7 @@ describe('preflightChecks', () => {
     ['nav', { ekf_vel: 1 }],
     ['ahrs', { ekf_pos_v: 1 }],
     ['compass', { ekf_compass: 0.8 }],
-    ['baro', { alt_msl: 0, alt_rel: 0 }],
+    ['baro', { connected: false }],
     ['rc', { rc_rssi: 0, rc: [0] }],
     ['vtype', { vtype_raw: 0 }],
     ['notArmed', { armed: true }],
@@ -126,5 +149,15 @@ describe('preflightChecks', () => {
     expect(isCheckEnabled({ gps: false }, 'gps')).toBe(false);
     expect(isCheckEnabled({ gps: false }, 'sats')).toBe(true);
     expect(isCheckEnabled({}, 'gps')).toBe(true);
+  });
+
+  it('a failed save is reported so the panel keeps its old state', () => {
+    vi.stubGlobal('localStorage', {
+      setItem: () => {
+        throw new Error('storage full');
+      },
+    });
+    expect(savePreflightConfig({ gps: false })).toBe(false);
+    vi.unstubAllGlobals();
   });
 });

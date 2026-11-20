@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { app, showConfirm } from '../../lib/stores.svelte';
+  import { app, showConfirm, addToast } from '../../lib/stores.svelte';
   import { getParam } from '../../lib/paramStore.svelte';
   import { t } from '../../lib/i18n.svelte';
   import {
@@ -25,27 +25,30 @@
   // and a panel still showing a hidden check would disagree with what the model is told.
   $effect(() => {
     const onStorage = (e: StorageEvent) => {
-      if (e.key === PREFLIGHT_CONFIG_KEY) customConfig = loadPreflightConfig();
+      // key null is localStorage.clear() from another same-origin tab.
+      if (e.key === PREFLIGHT_CONFIG_KEY || e.key === null) customConfig = loadPreflightConfig();
     };
     window.addEventListener('storage', onStorage);
     return () => window.removeEventListener('storage', onStorage);
   });
 
-  /** Applies the toggle. A critical check asks first: hidden, it stops guarding the flight. */
+  /** Applies the user's intended state, not a toggle of whatever another tab did meanwhile. */
+  function setCheck(key: string, enabled: boolean) {
+    const next = { ...customConfig, [key]: enabled };
+    if (savePreflightConfig(next)) customConfig = next;
+    else addToast(t('check.saveFailed'), 'error');
+  }
+
+  /** A critical check asks first: hidden, it stops guarding the flight. */
   function toggleCheck(key: string) {
-    if (checkOn(key) && allChecks.find((c) => c.key === key)?.critical) {
+    const enable = !checkOn(key);
+    if (!enable && allChecks.find((c) => c.key === key)?.critical) {
       void showConfirm(t('check.hideCritical')).then((ok) => {
-        if (ok) applyToggle(key);
+        if (ok) setCheck(key, false);
       });
       return;
     }
-    applyToggle(key);
-  }
-
-  function applyToggle(key: string) {
-    customConfig[key] = !checkOn(key);
-    customConfig = { ...customConfig };
-    savePreflightConfig(customConfig);
+    setCheck(key, enable);
   }
 
   // BATT_ARM_VOLT is the voltage ArduPilot itself refuses to arm below.

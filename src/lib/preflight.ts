@@ -24,8 +24,11 @@ export interface PreflightInputs {
 }
 
 export function preflightChecks({ drone: d, waypointCount, battArmVolt, t }: PreflightInputs): PreflightCheck[] {
-  // BATT_ARM_VOLT is the voltage ArduPilot itself refuses to arm below.
-  const minBatV = battArmVolt > 0 ? battArmVolt : 22;
+  // BATT_ARM_VOLT 0 means no voltage threshold: 0 disables the check
+  // (AP_BattMonitor_Params.cpp:167-173) and only a positive value is enforced
+  // (AP_BattMonitor_Backend.cpp:215-216). A negative value means the page has not read it,
+  // and the fixed 22 V fallback applies (the old check read every vehicle as a 6S one).
+  const minBatV = battArmVolt === 0 ? 0 : battArmVolt > 0 ? battArmVolt : 22;
   const gpsOk = d.gps_fix_raw >= 3;
   return [
     { key: 'gps', name: t('check.gps'), ok: gpsOk, detail: `${d.gps_fix}`, critical: true },
@@ -33,10 +36,11 @@ export function preflightChecks({ drone: d, waypointCount, battArmVolt, t }: Pre
     {
       key: 'batV',
       name: t('check.batV'),
-      // ArduPilot's own arm threshold when a parameter read has it; the fixed 22 V otherwise
-      // (the old check read every vehicle as a 6S one).
-      ok: d.voltage >= minBatV,
-      detail: `${d.voltage.toFixed(1)}V (>=${minBatV.toFixed(1)})`,
+      ok: minBatV === 0 || d.voltage >= minBatV,
+      detail:
+        minBatV === 0
+          ? `${d.voltage.toFixed(1)}V (no arming threshold)`
+          : `${d.voltage.toFixed(1)}V (>=${minBatV.toFixed(1)})`,
       critical: true,
     },
     {
@@ -49,8 +53,9 @@ export function preflightChecks({ drone: d, waypointCount, battArmVolt, t }: Pre
     {
       key: 'home',
       name: t('check.home'),
-      ok: d.home_lat !== 0,
-      detail: d.home_lat !== 0 ? `${d.home_lat.toFixed(5)}, ${d.home_lon.toFixed(5)}` : '---',
+      // (0, 0) is the "no home" sentinel; a home on the equator is still a home.
+      ok: d.home_lat !== 0 || d.home_lon !== 0,
+      detail: d.home_lat !== 0 || d.home_lon !== 0 ? `${d.home_lat.toFixed(5)}, ${d.home_lon.toFixed(5)}` : '---',
       critical: true,
     },
     {
@@ -85,7 +90,9 @@ export function preflightChecks({ drone: d, waypointCount, battArmVolt, t }: Pre
     {
       key: 'baro',
       name: t('check.baro'),
-      ok: d.alt_msl !== 0 || d.alt_rel !== 0 || !d.connected,
+      // A connected vehicle at sea level legitimately reports 0 m; what matters is that the
+      // barometer's numbers are present and finite, not that they are non-zero.
+      ok: d.connected && Number.isFinite(d.alt_msl) && Number.isFinite(d.alt_rel),
       detail: d.connected ? `MSL ${d.alt_msl.toFixed(1)}m` : '---',
       critical: true,
     },
@@ -153,11 +160,14 @@ export function loadPreflightConfig(): Record<string, boolean> {
   return {};
 }
 
-export function savePreflightConfig(config: Record<string, boolean>): void {
+export function savePreflightConfig(config: Record<string, boolean>): boolean {
   try {
     localStorage.setItem(PREFLIGHT_CONFIG_KEY, JSON.stringify(config));
+    return true;
   } catch {
-    // A full or forbidden storage keeps the choice for this session only.
+    // A full or forbidden storage must not leave the panel and the assistant reading
+    // different configurations: the caller keeps the old state when this returns false.
+    return false;
   }
 }
 
