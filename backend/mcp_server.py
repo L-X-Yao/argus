@@ -807,7 +807,7 @@ class Server:
             return self._tool_text(str(exc), error=True)
         if result is None:
             return None  # the client stopped waiting
-        return self._tool_text(json.dumps(result, ensure_ascii=False), structured=result)
+        return self._tool_text(json.dumps(result, ensure_ascii=False, allow_nan=False), structured=result)
 
     def _read_tool(self, kind: str, arguments: dict, cancelled: threading.Event) -> dict | None:
         rid = self.backend.ask(kind, arguments)

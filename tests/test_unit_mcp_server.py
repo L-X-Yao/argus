@@ -353,6 +353,13 @@ class TestFlightLog:
         assert reply["isError"] is True
         assert "not a path" in reply["content"][0]["text"]
 
+    def test_an_unexpected_non_finite_summary_is_a_tool_error(self, server, wire):
+        with mock.patch("backend.flight_log.analyze", return_value={"peak": float("nan")}):
+            reply = call(server, wire, 1, "analyze_flight")["result"]
+        assert reply["isError"] is True
+        assert "could not run analyze_flight" in reply["content"][0]["text"]
+        assert "Out of range float" in reply["content"][0]["text"]
+
     def test_two_recorded_logs_are_compared_without_a_page(self, server, wire, page, tmp_path):
         from frame_builders import global_position, heartbeat, write_tlog
 
