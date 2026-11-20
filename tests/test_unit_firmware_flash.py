@@ -6,19 +6,22 @@ import struct
 import threading
 import zlib
 from types import SimpleNamespace
+from unittest import mock
 
 import pytest
 
 from backend import firmware_flash as fw
 from backend.commands import _firmware as cmd
+from backend.drone_link import DroneLink
 
 
-def make_apj(tmp_path, image=b"\x01\x02\x03\x04\x05", board_id=9, image_size=None, extf=False):
+def make_apj(tmp_path, image=b"\x01\x02\x03\x04\x05", board_id=9, image_size=None, extf_size=0, extf_image=b""):
     desc = {"board_id": board_id, "image": base64.b64encode(zlib.compress(image)).decode()}
     if image_size is not None:
         desc["image_size"] = image_size
-    if extf:
-        desc["extf_image"] = base64.b64encode(zlib.compress(b"ext")).decode()
+    if extf_size or extf_image:
+        desc["extf_image"] = base64.b64encode(zlib.compress(extf_image)).decode()
+        desc["extf_image_size"] = extf_size
     path = tmp_path / "fw.apj"
     path.write_text(json.dumps(desc), encoding="utf-8")
     return path
@@ -31,9 +34,35 @@ class TestApj:
         assert apj.image == b"\x01\x02\x03\x04\x05\xff\xff\xff"
         assert apj.image_size == 5
 
-    def test_refuses_an_external_flash_image(self, tmp_path):
+    def test_refuses_a_real_external_flash_image(self, tmp_path):
         with pytest.raises(fw.FlashError, match="external"):
-            fw.load_apj(make_apj(tmp_path, extf=True))
+            fw.load_apj(make_apj(tmp_path, extf_size=3, extf_image=b"ext"))
+
+    def test_accepts_the_empty_external_flash_key_ardupilot_writes(self, tmp_path):
+        # The official .apj files carry "extf_image": "eNoDAAAAAAE=" with
+        # extf_image_size 0; the key alone is not an external image.
+        apj = fw.load_apj(make_apj(tmp_path, extf_size=0, extf_image=b""))
+        assert apj.board_id == 9
+        assert apj.image
+
+    def test_refuses_a_truncated_image(self, tmp_path):
+        packed = zlib.compress(b"x" * 1000)
+        path = tmp_path / "truncated.apj"
+        path.write_text(
+            json.dumps({"board_id": 9, "image": base64.b64encode(packed[:8]).decode()}),
+            encoding="utf-8",
+        )
+        with pytest.raises(fw.FlashError, match="truncated"):
+            fw.load_apj(path)
+
+    def test_refuses_an_empty_image(self, tmp_path):
+        path = tmp_path / "empty.apj"
+        path.write_text(
+            json.dumps({"board_id": 9, "image": base64.b64encode(zlib.compress(b"")).decode()}),
+            encoding="utf-8",
+        )
+        with pytest.raises(fw.FlashError, match="empty"):
+            fw.load_apj(path)
 
     def test_refuses_an_image_that_is_not_base64(self, tmp_path):
         path = tmp_path / "bad.apj"
@@ -87,11 +116,15 @@ class TestHeartbeatProbe:
 class FakeSerial:
     """The bootloader side of the protocol, in memory. One command at a time."""
 
-    def __init__(self, bl_rev=5, flash_size=1024, crc_ok=True, erase_answers=True):
+    def __init__(
+        self, bl_rev=5, flash_size=1024, crc_ok=True, erase_answers=True, bad_silicon=False, fail_program=False
+    ):
         self.info = {1: bl_rev, 2: 9, 3: 1, 4: flash_size, 6: 0}
         self.flash_size = flash_size
         self.crc_ok = crc_ok
         self.erase_answers = erase_answers
+        self.bad_silicon = bad_silicon
+        self.fail_program = fail_program
         self.inbuf = bytearray()
         self.out = bytearray()
         self.image = bytearray()
@@ -124,7 +157,9 @@ class FakeSerial:
                 if len(self.inbuf) < 2:
                     return
                 del self.inbuf[:2]
-                if self.erase_answers:
+                if self.bad_silicon:
+                    self.out += b"\x12\x14"
+                elif self.erase_answers:
                     self._reply()
             elif command == 0x27:  # PROG_MULTI + len + data + EOC
                 if len(self.inbuf) < 2:
@@ -134,7 +169,10 @@ class FakeSerial:
                     return
                 self.image += self.inbuf[2 : 2 + count]
                 del self.inbuf[: 2 + count + 1]
-                self._reply()
+                if self.fail_program:
+                    self.out += b"\x12\x11"
+                else:
+                    self._reply()
             elif command == 0x29:  # GET_CRC + EOC
                 if len(self.inbuf) < 2:
                     return
@@ -239,6 +277,36 @@ class TestBootloader:
         with pytest.raises(fw.FlashError, match="erase"):
             bl.erase()
 
+    def test_bad_silicon_is_reported_not_erased_again(self, monkeypatch):
+        fake = FakeSerial(bad_silicon=True)
+        bl = bootloader(monkeypatch, fake)
+        bl.identify()
+        with pytest.raises(fw.FlashError, match="silicon"):
+            bl.erase()
+
+    def test_a_failed_program_is_reported(self, monkeypatch):
+        fake = FakeSerial(fail_program=True)
+        bl = bootloader(monkeypatch, fake)
+        bl.identify()
+        with pytest.raises(fw.FlashError, match="failure"):
+            bl.program(b"\x01\x02\x03\x04")
+
+
+class TestPauseForFlash:
+    def test_refuses_while_the_link_is_reconnecting(self):
+        link = DroneLink()
+        link._reconnecting = True
+        assert link.pause_for_flash() is False
+
+    def test_closes_the_port_and_resets_the_session(self):
+        link = DroneLink()
+        link._ser = mock.MagicMock()
+        link._thread = None
+        link.connected = True
+        assert link.pause_for_flash() is True
+        assert link._ser is None
+        assert link.connected is False
+
 
 class FakeFlashLink:
     def __init__(self):
@@ -249,6 +317,7 @@ class FakeFlashLink:
             "done": 0,
             "total": 0,
             "file": "",
+            "port": "",
             "error": "",
         }
         self.fw_thread = None
@@ -285,12 +354,15 @@ class FakeBootloader:
         self.fail_on = fail_on
         self.calls = []
         self.programmed = b""
+        self.port_name = "COM2"
 
     def identify(self):
         self.calls.append("identify")
 
     def erase(self):
         self.calls.append("erase")
+        if self.fail_on == "erase":
+            raise fw.FlashError("erase failed")
 
     def program(self, image, progress):
         self.calls.append("program")
@@ -321,7 +393,7 @@ class TestFlashJob:
         monkeypatch.setattr(cmd, "discover_bootloader", lambda *args, **kwargs: boot)
         monkeypatch.setattr(cmd, "check_apj", lambda apj, bl: None)
 
-        def reconnect_link(target):
+        def reconnect_link(target, before):
             target.reconnected_to.append("reconnect")
             return reconnect
 
@@ -347,6 +419,14 @@ class TestFlashJob:
         assert "reboot" not in boot.calls
         assert link.reconnected_to == []
 
+    def test_a_failed_erase_does_not_reboot_a_possibly_blank_chip(self, tmp_path, monkeypatch):
+        boot = FakeBootloader(fail_on="erase")
+        link = self.run_job(tmp_path, monkeypatch, boot)
+        assert link.fw_flash["phase"] == "failed"
+        assert "erase failed" in link.fw_flash["error"]
+        assert "reboot" not in boot.calls
+        assert link.reconnected_to == []
+
     def test_a_refusal_before_erase_reboots_the_intact_image(self, tmp_path, monkeypatch):
         boot = FakeBootloader()
         link = FakeFlashLink()
@@ -356,7 +436,7 @@ class TestFlashJob:
         monkeypatch.setattr(cmd, "_current_ports", lambda: set())
         monkeypatch.setattr(cmd, "discover_bootloader", lambda *args, **kwargs: boot)
         monkeypatch.setattr(cmd, "check_apj", lambda apj, bl: (_ for _ in ()).throw(fw.FlashError("wrong board")))
-        monkeypatch.setattr(cmd, "_reconnect", lambda link: link.reconnected_to.append("yes"))
+        monkeypatch.setattr(cmd, "_reconnect", lambda target, before: target.reconnected_to.append("yes"))
         cmd._flash_job(link, path, threading.Event())
         assert link.fw_flash["phase"] == "failed"
         assert "reboot" in boot.calls

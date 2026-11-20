@@ -167,6 +167,7 @@ class DroneLink:
             "done": 0,
             "total": 0,
             "file": "",
+            "port": "",
             "error": "",
         }
         self.fw_thread: threading.Thread | None = None
@@ -436,9 +437,9 @@ class DroneLink:
         if self._thread and self._thread.is_alive():
             self._thread.join(timeout=3)
             if self._thread.is_alive():
-                # Leave the link as it was; the caller must not open the port behind it.
-                self._running = True
-                self._reconnect_enabled = True
+                # The thread may be in a reconnect-backoff sleep and would reopen the port
+                # after the FC is already a bootloader. Leave the link stopped: a port that
+                # comes back later is for the operator to connect, not for a blind retry.
                 return False
         with self._lock:
             try:

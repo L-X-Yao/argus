@@ -8,6 +8,8 @@ cannot flash.
 
 from __future__ import annotations
 
+import glob
+import sys
 import threading
 import time
 from pathlib import Path
@@ -53,21 +55,31 @@ def _fail(link: DroneLink, message: str) -> None:
 
 def _current_ports() -> set[str]:
     """The serial ports present before the reboot, so a new bootloader port stands out."""
+    ports: set[str] = set()
     try:
         from serial.tools import list_ports
 
-        return {port.device for port in list_ports.comports()}
+        ports.update(port.device for port in list_ports.comports())
     except Exception:  # pyserial missing or no port list on this platform
-        return set()
+        pass
+    if not sys.platform.startswith("win"):
+        for pattern in ("/dev/serial/by-id/*", "/dev/ttyACM*", "/dev/ttyUSB*"):
+            ports.update(glob.glob(pattern))
+    return ports
 
 
-def _reconnect(link: DroneLink) -> bool:
-    """Bring the normal link back on the port the firmware re-enumerated as."""
+def _reconnect(link: DroneLink, before: set[str]) -> bool:
+    """Bring the normal link back on the port the firmware re-enumerated as.
+
+    Only the original port and devices that appeared after the flash are considered: a
+    pre-existing port may be another vehicle or a radio, and connecting to it would make the
+    next command go to the wrong aircraft.
+    """
     original = link._last_port or ""
     baud = link._last_baud or cfg.SERIAL_BAUD
     deadline = time.monotonic() + 10.0
     while time.monotonic() < deadline:
-        for port in port_candidates(original):
+        for port in port_candidates(original, before):
             if not probe_mavlink_heartbeat(port, baud):
                 continue
             try:
@@ -88,28 +100,41 @@ def _reconnect(link: DroneLink) -> bool:
 def _flash_job(link: DroneLink, path: Path, stop: threading.Event) -> None:
     bootloader: Bootloader | None = None
     erased = False
+    paused = False
+    before: set[str] = set()
+    hint = link._last_port or ""
     try:
         apj: Apj = load_apj(path)
         _state(link, active=True, phase="reboot", done=0, total=apj.image_size, file=path.name, error="")
         link.add_event(lt("flash_start", link.locale) % path.name, "flash")
 
-        # A retry starts from an FC that may already be in its bootloader: every port counts.
-        before = _current_ports() if link.connected else set()
         if link.connected:
+            before = _current_ports()
+            hint = link._last_port or ""
             # The FC reboots into its bootloader on this command; the ACK may never arrive.
+            # The write has completed when send_cmd returns, so the port can be closed at
+            # once: a paused link would otherwise arm its reconnect backoff under us.
             send_cmd(link, FLASH_BOOTLOADER, p1=3)
-            time.sleep(0.6)
+        else:
+            # A retry: the failed run recorded the bootloader port. Only that port is ours;
+            # every other port that existed at the retry was there before and is not.
+            hint = link.fw_flash.get("port") or link._last_port or ""
+            before = _current_ports() - {hint}
         if not link.pause_for_flash():
             raise FlashError("The link did not stop for flashing (reconnect in progress?).")
+        paused = True
 
         _state(link, phase="waiting")
-        bootloader = discover_bootloader(link._last_port or "", before)
+        bootloader = discover_bootloader(hint, before)
+        _state(link, port=bootloader.port_name)
         bootloader.identify()
         check_apj(apj, bootloader)
 
         _state(link, phase="erase")
-        bootloader.erase()
+        # CHIP_ERASE has been sent even if the call times out: treat the chip as erased and
+        # never send REBOOT down the failure path, where a blank chip would be booted.
         erased = True
+        bootloader.erase()
 
         _state(link, phase="write", done=0, total=len(apj.image))
         marked = [0.0]
@@ -129,7 +154,7 @@ def _flash_job(link: DroneLink, path: Path, stop: threading.Event) -> None:
         bootloader = None
 
         _state(link, phase="reconnecting")
-        if not _reconnect(link):
+        if not _reconnect(link, before):
             raise FlashError("Flashed, but the flight controller did not come back on a serial port.")
         _state(link, active=False, phase="done", done=apj.image_size, total=apj.image_size, error="")
         link.add_event(lt("flash_done", link.locale), "flash")
@@ -143,12 +168,20 @@ def _flash_job(link: DroneLink, path: Path, stop: threading.Event) -> None:
                 except Exception:
                     pass
             bootloader.close()
-        if not erased:
-            _reconnect(link)
+        if paused and not erased:
+            _reconnect(link, before)
     except Exception as exc:  # a bad file, a closed port, a bug: never leave the page silent
         _fail(link, f"Unexpected error: {exc}")
         if bootloader is not None:
+            if not erased:
+                # Same recovery as a FlashError before the erase: the old image is intact.
+                try:
+                    bootloader.reboot()
+                except Exception:
+                    pass
             bootloader.close()
+        if paused and not erased:
+            _reconnect(link, before)
     finally:
         with link._state_lock:
             if link.fw_thread is threading.current_thread():

@@ -395,7 +395,9 @@ class WSManager:
                             )
                         )
                         continue
-                    if self.link.fw_flash.get("active"):
+                    if self.link.fw_flash.get("active") or (
+                        self.link.fw_thread is not None and self.link.fw_thread.is_alive()
+                    ):
                         await ws.send_text(
                             dumps(
                                 {
@@ -442,7 +444,9 @@ class WSManager:
                             )
                         )
                         continue
-                    if self.link.fw_flash.get("active"):
+                    if self.link.fw_flash.get("active") or (
+                        self.link.fw_thread is not None and self.link.fw_thread.is_alive()
+                    ):
                         await ws.send_text(
                             dumps(
                                 {

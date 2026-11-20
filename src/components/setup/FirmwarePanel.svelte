@@ -127,7 +127,7 @@
   }
 
   async function flash(f: { name: string; size: number }) {
-    const ok = await showConfirm(`${t('fw.flashConfirm')} ${f.name}? ${t('fw.flashWarn')}`, true);
+    const ok = await showConfirm(`${t('fw.flashConfirm')} ${f.name}. ${t('fw.flashWarn')}`, true);
     if (!ok) return;
     dispatch('firmware_flash', undefined, { file: f.name });
   }

@@ -53,7 +53,13 @@ def load_apj(path: Path) -> Apj:
         raise FlashError(f"Cannot read {path.name}: {exc}") from exc
     if not isinstance(desc, dict):
         raise FlashError(f"{path.name} is not an ArduPilot .apj.")
-    if desc.get("extf_image"):
+    # ArduPilot writes an extf_image key even when there is nothing for external flash: its
+    # usual shape is the base64 of an empty zlib stream with extf_image_size 0. Gate on the
+    # size, as uploader.py:961 does, not on the key.
+    extf_size = desc.get("extf_image_size", 0)
+    if not isinstance(extf_size, int) or isinstance(extf_size, bool) or extf_size < 0:
+        raise FlashError(f"{path.name} has an invalid extf_image_size.")
+    if extf_size > 0:
         raise FlashError("This .apj carries an external-flash image, which Argus does not write yet.")
     raw = desc.get("image")
     if not isinstance(raw, str) or not raw:
@@ -67,6 +73,12 @@ def load_apj(path: Path) -> Apj:
         image += stream.flush()
     except (binascii.Error, zlib.error, ValueError) as exc:
         raise FlashError(f"The image in {path.name} is not base64 zlib: {exc}") from exc
+    if not stream.eof:
+        # zlib.decompressobj returns what it decoded so far for a truncated stream; without
+        # this check a short image would be written, pass its own CRC, and reboot the board.
+        raise FlashError(f"The image in {path.name} is a truncated zlib stream.")
+    if not image:
+        raise FlashError(f"The image in {path.name} is empty.")
     if len(image) > cfg.FIRMWARE_MAX_SIZE:
         raise FlashError(f"The image in {path.name} is larger than {cfg.FIRMWARE_MAX_SIZE // 1024 // 1024} MB.")
     board_id = desc.get("board_id")
@@ -194,6 +206,8 @@ class Bootloader:
                 self.port.flushInput()
             except AttributeError:
                 pass
+        except OSError as exc:
+            raise FlashError(f"{self.port_name}: cannot flush the port: {exc}") from exc
 
     def _get_sync(self) -> None:
         self._flush_output()
@@ -219,11 +233,13 @@ class Bootloader:
             if first != INSYNC:
                 return False
             reply = self._read(1)
-            if reply == BAD_SILICON_REV:
-                raise FlashError("Programming is not supported on this silicon revision.")
-            return reply == OK
         except FlashError:
+            # A timeout or a malformed reply: the next poll tries again.
             return False
+        if reply == BAD_SILICON_REV:
+            # uploader.py:__trySync raises this rather than treating it as "not yet".
+            raise FlashError("Programming is not supported on this silicon revision.")
+        return reply == OK
 
     def info(self, param: bytes) -> int:
         self._write(GET_DEVICE + param + EOC)
@@ -309,6 +325,8 @@ class Bootloader:
 
 
 def check_apj(apj: Apj, bootloader: Bootloader) -> None:
+    if apj.image_size <= 0 or not apj.image:
+        raise FlashError("The firmware image is empty.")
     if bootloader.board_id != apj.board_id and COMPATIBLE_IDS.get(bootloader.board_id) != apj.board_id:
         raise FlashError(
             f"Firmware is for board {apj.board_id}, but the bootloader reports board {bootloader.board_id}."
@@ -318,34 +336,27 @@ def check_apj(apj: Apj, bootloader: Bootloader) -> None:
 
 
 def _heartbeat_in(buf: bytearray) -> bool:
-    """True when buf holds a complete, CRC-valid MAVLink HEARTBEAT (msgid 0)."""
-    while len(buf) >= 8:
-        if buf[0] == 0xFD:
-            length = buf[1]
-            need = 12 + length
-            if len(buf) < need:
-                return False
-            msgid = buf[8] | (buf[9] << 8) | (buf[10] << 16)
-            if msgid == 0:
-                header = bytes(buf[1:10])
-                payload = bytes(buf[10 : 10 + length])
-                crc = struct.unpack("<H", bytes(buf[10 + length : need]))[0]
-                if mc(header + payload, CRC_EXTRA[0]) == crc:
-                    return True
+    """True when buf holds a complete, CRC-valid MAVLink 2 HEARTBEAT (msgid 0).
+
+    The backend link itself parses MAVLink 2 only, so a MAVLink 1 port would not be a link
+    Argus could have flashed in the first place.
+    """
+    while len(buf) >= 12:
+        if buf[0] != 0xFD:
             del buf[0]
-        elif buf[0] == 0xFE:
-            length = buf[1]
-            need = 8 + length
-            if len(buf) < need:
-                return False
-            if buf[5] == 0:  # MAVLink 1 has a one-byte message id.
-                body = bytes(buf[1 : 6 + length])
-                crc = struct.unpack("<H", bytes(buf[6 + length : need]))[0]
-                if mc(body, CRC_EXTRA[0]) == crc:
-                    return True
-            del buf[0]
-        else:
-            del buf[0]
+            continue
+        length = buf[1]
+        need = 12 + length
+        if len(buf) < need:
+            return False
+        msgid = buf[8] | (buf[9] << 8) | (buf[10] << 16)
+        if msgid == 0:
+            header = bytes(buf[1:10])
+            payload = bytes(buf[10 : 10 + length])
+            crc = struct.unpack("<H", bytes(buf[10 + length : need]))[0]
+            if mc(header + payload, CRC_EXTRA[0]) == crc:
+                return True
+        del buf[0]
     return False
 
 
@@ -396,16 +407,17 @@ def port_candidates(original: str, before: set[str] | None = None) -> list[str]:
             ports = list(list_ports.comports())
         except Exception:  # pyserial missing, or the platform has no port list
             ports = []
-        # A bootloader's USB product string usually carries "BL"; a newly appeared COM port
-        # comes next. Opening a port and sending the sync is harmless.
-        ports.sort(key=lambda p: (0 if "BL" in (p.description or "").upper() else 1, p.device))
-        for port in ports:
-            description = (port.description or "").upper()
-            if port.device == original or port.device not in before or "BL" in description:
-                add(port.device)
+        # Only the original port and devices that appeared after the reboot are ours. A
+        # bootloader's product string usually carries "BL"; those come first among the new.
+        fresh = [port for port in ports if port.device != original and port.device not in before]
+        fresh.sort(key=lambda p: (0 if "BL" in (p.description or "").upper() else 1, p.device))
+        for port in fresh:
+            add(port.device)
     else:
         for pattern in ("/dev/serial/by-id/*_BL_*", "/dev/serial/by-id/*", "/dev/ttyACM*", "/dev/ttyUSB*"):
             for port in sorted(glob.glob(pattern)):
+                if port != original and port in before:
+                    continue
                 add(port)
     return out
 
