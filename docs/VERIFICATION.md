@@ -27,7 +27,7 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 
 | Area | Items | Real FC | SITL | Simulator | Tests only | None | n/a |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Commands, backend | 54 | 19 | 28 | 0 | 7 | 0 | 0 |
+| Commands, backend | 54 | 20 | 28 | 0 | 6 | 0 | 0 |
 | Commands, WebSerial | 54 | 12 | 28 | 0 | 3 | 0 | 11 |
 | Messages, backend | 35 | 28 | 3 | 0 | 4 | 0 | 0 |
 | Messages, WebSerial | 35 | 17 | 13 | 0 | 4 | 0 | 1 |
@@ -78,7 +78,7 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 | `log_cancel` | Cancel a download | 取消下载 | SITL | SITL | CI on both links |
 | `reboot` | Reboot the FC | 重启飞控 | Real FC | Real FC | Both 2026-11-06 on Windows, disarmed. WebSerial comes back by the USB button, the backend by itself |
 | `reboot_bootloader` | Reboot to bootloader | 重启到 Bootloader | SITL | SITL | CI on both links |
-| `firmware_flash` | Write an .apj through the bootloader | 刷写固件 | Tests only | n/a | Unit tests against a scripted bootloader; not yet on real hardware (2026-11-20) |
+| `firmware_flash` | Write an .apj through the bootloader | 刷写固件 | Real FC | n/a | 2026-11-20 through the packaged Windows build against a real bootloader: identified, refused an .apj for another board before erasing, rebooted the controller and reconnected. Erase, program and verify have not run yet (no matching .apj) |
 | `serial_control` | MAVLink console | MAVLink 控制台 | Real FC | n/a | Backend 2026-05, CI |
 | `inspector_toggle` | Message inspector | 消息检查器开关 | SITL | n/a | CI, local state only |
 | `set_vtype` | Set vehicle type | 手动设置机型 | SITL | n/a | CI, local state only |
@@ -308,7 +308,7 @@ Real FC here means the route was in use during a session with a real flight cont
 | Right-to-left layout | 阿拉伯语从右到左布局 | Tests only | Browser test: page turns around and stays inside the window |
 | macOS | macOS | Simulator | CI: unit and contract tests, then the app in a browser on macos-latest. No SITL there |
 | Desktop app (Tauri) | 桌面版（Tauri） | None | Not built |
-| Firmware flashing | 固件刷写 | Tests only | Backend serial only. Unit tests against a scripted bootloader; not yet on real hardware (2026-11-20) |
+| Firmware flashing | 固件刷写 | Tests only | Backend serial only. On a real bootloader 2026-11-20: identified, refused a wrong-board .apj before erasing, rebooted and reconnected. Erase, program and verify have not run yet (no matching .apj) |
 | PX4 | PX4 | n/a | Refused on connect, not implemented |
 | White-label branding | 白标定制 | n/a | Code exists but is not wired in |
 
@@ -324,6 +324,7 @@ Real FC here means the route was in use during a session with a real flight cont
 8. **Video from a real camera.** ffmpeg turned an HTTP test stream into frames 2026-11-10. 2026-11-14 a real RTSP server (MediaMTX, H.264 over TCP) played in the panel: 640x480, frames moving, no console errors. No physical camera has been on it, and neither UDP transport nor a vendor-specific stream has been tried.
 9. **A real phone or tablet.** A phone-sized touch browser opened Argus at a network address 2026-11-11. No real phone has, and neither Safari on iOS nor the browser inside a chat app has been tried.
 10. **The AI assistant with a real AI client and a real FC.** Its tests use a plain MCP client, the built-in simulator and ArduCopter SITL. Claude Code, a real MCP client, drove it by hand on 2026-11-13: status read, a proposed mission approved in the page and uploaded to the built-in simulator. Claude Desktop has not been tried, and no proposal has reached a real flight controller.
+11. **Writing firmware through the bootloader on a real FC.** 2026-11-20 the packaged build reached a real bootloader, identified it, refused a wrong-board `.apj` before erasing, then rebooted the controller and reconnected. Erase, program and verify have not run, because no `.apj` matching that bootloader was available.
 
 1. **真实飞行。** 没有飞过。下面都只是台架或仿真结果。
 2. **真机上的解锁、起飞、返航、开始任务。** 只在 SITL 跑过。这些需要接电池，要单独安排。
@@ -335,6 +336,7 @@ Real FC here means the route was in use during a session with a real flight cont
 8. **真实相机的视频。** 2026-11-10 用 ffmpeg 把一路 HTTP 测试流转成了画面。2026-11-14 用真实 RTSP 服务器（MediaMTX）推 H.264 over TCP 进页面：640x480、画面在动、无控制台错误。没有接过物理相机，UDP 传输和厂商私有流也都没试过。
 9. **真实的手机或平板。** 2026-11-11 用手机尺寸的触屏浏览器在局域网地址上打开过 Argus。没有用过真实手机，iOS 上的 Safari 和聊天软件内置的浏览器也都没有试过。
 10. **用真实飞控运行 AI 助手，以及用 Claude Desktop。** 测试用的是一个最简单的 MCP 客户端、内置模拟器和 ArduCopter SITL。2026-11-13 已用 Claude Code（真实 MCP 客户端）手工跑通一次：读取状态、在页面批准一条提议航线并上传到内置模拟器。Claude Desktop 尚未试过，提议也还没有到达过真实飞控。
+11. **真机上通过 bootloader 写入固件。** 2026-11-20 发布包连接到了真实 bootloader，完成识别，在擦除前拒绝了板型不符的 `.apj`，然后重启飞控并重连。擦除、写入和校验还没有跑过，因为没有与该 bootloader 匹配的 `.apj`。
 
 ## Known limits / 已知限制
 
@@ -343,6 +345,7 @@ Real FC here means the route was in use during a session with a real flight cont
 - Roles are a courtesy between operators, not access control: everyone who holds the token can command the vehicle.
 - Arming and fence terms in German, Arabic and Russian have not been checked by a native speaker.
 - The AI assistant reads and proposes only. Its tools cannot arm, take off, start a mission or change to a mode other than return, hold and land. A mission or parameter change is refused while the vehicle is armed, and a flight command while it is not. An AI client that can also run commands on the computer, as Claude Code can, is not held to the tools.
+- Firmware flashing needs an `.apj` whose board id matches the bootloader's. A board whose bootloader reports a different id from its running firmware needs an image built for the bootloader; Argus refuses the mismatch instead of forcing it.
 - On a screen narrower than 768 px, such as a phone held upright, logs, calibration, the 2D/3D switch and video are not shown. While a vehicle is connected, RTL and hold sit above the tabs, and in the Fly view the button for the flight controls (arming, modes) too. Most phones turned on their side are wider than that and get the desktop layout.
 
 - 模式列表来自 Argus 内置的表，每种机型一张。固件编译时去掉的模式仍会显示，选择时由飞控拒绝。
@@ -350,6 +353,7 @@ Real FC here means the route was in use during a session with a real flight cont
 - 角色只是操作员之间的约定，不是访问控制：持有 Token 的人都能指挥飞行器。
 - 德语、阿拉伯语和俄语里的解锁与围栏术语没有经过母语者校对。
 - AI 助手只能读取和提议，它的工具不能解锁、起飞、开始任务，也不能切换到返航、悬停、降落以外的模式。飞行器解锁时拒绝航线和参数修改，未解锁时拒绝飞行指令。能在本机执行命令的 AI 客户端（例如 Claude Code）不受这些工具的限制。
+- 固件刷写要求 `.apj` 的板型编号与 bootloader 报告的一致。bootloader 与当前固件报告不同编号的板子，需要按 bootloader 编号编译的固件；Argus 会拒绝不一致，不会强制写入。
 - 屏幕宽度小于 768 px 时（例如竖着拿的手机），不显示日志、校准、2D/3D 切换和视频。连上飞行器后，返航和悬停按钮在底部标签的上方，飞行视图里还有飞行操控（解锁、切换模式）按钮。多数手机横过来宽于 768 px，会变成电脑版布局。
 
 ## Keeping this file honest / 维护规则
