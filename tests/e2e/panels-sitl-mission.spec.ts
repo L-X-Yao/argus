@@ -66,9 +66,13 @@ async function clearList() {
 }
 
 async function upload(expected: number): Promise<StoredItem[]> {
-  await panel().getByRole('button', { name: label('wp.upload'), exact: true }).click();
+  const button = panel().getByRole('button', { name: label('wp.upload'), exact: true });
+  await button.click();
+  // The button re-enables when the FC acknowledges the upload. Probing before that reads
+  // the FC's old mission count while the new transfer is replacing it, and the request
+  // for the last old entry times out (MISSION_REQUEST_INT N). Wait for the ack first.
+  await expect(button).toBeEnabled({ timeout: 30000 });
   await expect.poll(async () => (await probe.store()).length, { message: 'mission on the FC' }).toBe(expected);
-  await expect(panel().getByRole('button', { name: label('wp.upload'), exact: true })).toBeEnabled();
   return probe.store();
 }
 
@@ -367,8 +371,10 @@ test.describe('Rally points', () => {
     ]);
     await rally.getByRole('button', { name: label('fence.finish') }).click();
     await rally.getByRole('button', { name: label('rally.upload'), exact: true }).click();
-    await expect.poll(async () => (await probe.store(RALLY)).length, { message: 'rally points on the FC' }).toBe(2);
+    // The panel says uploaded only after the FC acknowledges; probing before that races
+    // the FC's store replacement, and the last item of the old store times out.
     await expect(rally.getByText(label('fence.uploaded'))).toBeVisible();
+    await expect.poll(async () => (await probe.store(RALLY)).length, { message: 'rally points on the FC' }).toBe(2);
 
     const scale = await metersPerPixel();
     const points = await probe.store(RALLY);
@@ -382,6 +388,8 @@ test.describe('Rally points', () => {
     const confirm = page.getByRole('alertdialog');
     await page.waitForTimeout(350);
     await confirm.getByRole('button', { name: label('summary.confirm') }).click();
+    // Same race on the way back to an empty store: wait for the page's ack first.
+    await expect(rally.getByText(label('fence.notUploaded'))).toBeVisible();
     await expect.poll(async () => (await probe.store(RALLY)).length).toBe(0);
 
     await rally.getByRole('button', { name: label('rally.clear'), exact: true }).last().click();
