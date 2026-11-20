@@ -395,6 +395,7 @@ def compare(first_name: str, second_name: str, cancelled=None) -> dict | None:
                     "min_voltage_v",
                     "start_voltage_v",
                     "end_voltage_v",
+                    "max_current_a",
                     "min_remaining_pct",
                     "start_remaining_pct",
                     "end_remaining_pct",

@@ -30,10 +30,10 @@ def other_vehicle(lat, lon, seq=0):
     return bm(33, payload, seq, CRC_EXTRA[33], sysid=2, compid=1)
 
 
-def sys_status(voltage_mv=12000, remaining=50, seq=0):
+def sys_status(voltage_mv=12000, remaining=50, seq=0, current_ca=-1):
     # SYS_STATUS: present/enabled/health u32, load u16, voltage u16 mV, current i16 cA,
     # drop/errors u16, four counters u16, remaining i8
-    payload = struct.pack("<IIIHHhHHHHHHb", 0, 0, 0, 100, voltage_mv, -1, 0, 0, 0, 0, 0, 0, remaining)
+    payload = struct.pack("<IIIHHhHHHHHHb", 0, 0, 0, 100, voltage_mv, current_ca, 0, 0, 0, 0, 0, 0, remaining)
     return fc_frame(1, payload, seq)
 
 
@@ -203,7 +203,7 @@ def comparison_flights(tmp_path):
     first = [
         heartbeat(mode=4, armed=True, seq=0),
         position(31.2304, 121.4737, seq=1),
-        sys_status(voltage_mv=12000, remaining=50, seq=2),
+        sys_status(voltage_mv=12000, remaining=50, seq=2, current_ca=1000),
         gps_raw(seq=3),
         vibration(seq=4),
         vfr_hud(speed=4.0, seq=5),
@@ -215,7 +215,7 @@ def comparison_flights(tmp_path):
     second = [
         heartbeat(mode=4, armed=True, seq=0),
         position(31.2304, 121.4737, vx=100, seq=1, rel_alt_mm=10000),
-        sys_status(voltage_mv=13000, remaining=80, seq=2),
+        sys_status(voltage_mv=13000, remaining=80, seq=2, current_ca=2000),
         gps_raw(seq=3, fix=4, sats=12),
         vibration(seq=4, level=2.5),
         vfr_hud(speed=6.5, seq=5),
@@ -225,7 +225,7 @@ def comparison_flights(tmp_path):
         statustext(text=b"one", seq=9),
         statustext(text=b"two", seq=10),
         position(31.2314, 121.4737, vx=100, seq=11, rel_alt_mm=10000),
-        sys_status(voltage_mv=11000, remaining=30, seq=12),
+        sys_status(voltage_mv=11000, remaining=30, seq=12, current_ca=500),
         heartbeat(mode=5, armed=False, seq=13),
     ]
     write_tlog(tmp_path / "first.tlog", first, spacing_usec=1_000_000)
@@ -254,6 +254,7 @@ def test_two_flights_are_compared_through_the_same_analysis(tmp_path):
     check("min_voltage_v", 12.0, 11.0, -1.0, "battery")
     check("start_voltage_v", 12.0, 13.0, 1.0, "battery")
     check("end_voltage_v", 12.0, 11.0, -1.0, "battery")
+    check("max_current_a", 10.0, 20.0, 10.0, "battery")
     check("min_remaining_pct", 50, 30, -20, "battery")
     check("start_remaining_pct", 50, 80, 30, "battery")
     check("end_remaining_pct", 50, 30, -20, "battery")

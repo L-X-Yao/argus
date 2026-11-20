@@ -160,7 +160,8 @@ TOOLS = [
         "title": "Compare two flight logs",
         "description": (
             "Compare two named .tlog files from the Argus logs folder: duration, armed time, maximum "
-            "altitude and ground speed, distance, battery minimum/start/end, GPS, vibration and EKF "
+            "altitude and ground speed, distance, battery minimum/start/end and peak current, "
+            "GPS, vibration and EKF "
             "peaks, mode and warning-event counts, and mission items. Every metric gives first, second "
             "and delta, where delta is second minus first; a missing value gives a null delta. "
             "Read-only, and needs no page."
