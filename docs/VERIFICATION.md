@@ -33,7 +33,7 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 | Messages, WebSerial | 35 | 17 | 13 | 0 | 4 | 0 | 1 |
 | REST routes | 28 | 6 | 5 | 17 | 0 | 0 | 0 |
 | Panels | 77 | 14 | 34 | 18 | 11 | 0 | 0 |
-| Platform | 50 | 8 | 14 | 13 | 11 | 2 | 2 |
+| Platform | 50 | 9 | 14 | 13 | 10 | 2 | 2 |
 
 ## Commands / 飞控命令
 
@@ -78,7 +78,7 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 | `log_cancel` | Cancel a download | 取消下载 | SITL | SITL | CI on both links |
 | `reboot` | Reboot the FC | 重启飞控 | Real FC | Real FC | Both 2026-11-06 on Windows, disarmed. WebSerial comes back by the USB button, the backend by itself |
 | `reboot_bootloader` | Reboot to bootloader | 重启到 Bootloader | SITL | SITL | CI on both links |
-| `firmware_flash` | Write an .apj through the bootloader | 刷写固件 | Real FC | n/a | 2026-11-20 through the packaged Windows build against a real bootloader: identified, refused an .apj for another board before erasing, rebooted the controller and reconnected. Erase, program and verify have not run yet (no matching .apj) |
+| `firmware_flash` | Write an .apj through the bootloader | 刷写固件 | Real FC | n/a | 2026-11-20 through the packaged Windows build on a real FC, disarmed: identified the bootloader, erased, programmed 1.29 MB, verified the CRC, rebooted and reconnected; the rebooted firmware reported the new git hash. Earlier the same day, an .apj for another board was refused before erasing, and the controller rebooted and reconnected |
 | `serial_control` | MAVLink console | MAVLink 控制台 | Real FC | n/a | Backend 2026-05, CI |
 | `inspector_toggle` | Message inspector | 消息检查器开关 | SITL | n/a | CI, local state only |
 | `set_vtype` | Set vehicle type | 手动设置机型 | SITL | n/a | CI, local state only |
@@ -308,7 +308,7 @@ Real FC here means the route was in use during a session with a real flight cont
 | Right-to-left layout | 阿拉伯语从右到左布局 | Tests only | Browser test: page turns around and stays inside the window |
 | macOS | macOS | Simulator | CI: unit and contract tests, then the app in a browser on macos-latest. No SITL there |
 | Desktop app (Tauri) | 桌面版（Tauri） | None | Not built |
-| Firmware flashing | 固件刷写 | Tests only | Backend serial only. On a real bootloader 2026-11-20: identified, refused a wrong-board .apj before erasing, rebooted and reconnected. Erase, program and verify have not run yet (no matching .apj) |
+| Firmware flashing | 固件刷写 | Real FC | Backend serial only. 2026-11-20 through the packaged Windows build on a real FC, disarmed: erase, program 1.29 MB, CRC verify, reboot and reconnect; the rebooted firmware reported the new git hash. A wrong-board .apj was refused before erasing earlier the same day |
 | PX4 | PX4 | n/a | Refused on connect, not implemented |
 | White-label branding | 白标定制 | n/a | Code exists but is not wired in |
 
@@ -324,7 +324,6 @@ Real FC here means the route was in use during a session with a real flight cont
 8. **Video from a real camera.** ffmpeg turned an HTTP test stream into frames 2026-11-10. 2026-11-14 a real RTSP server (MediaMTX, H.264 over TCP) played in the panel: 640x480, frames moving, no console errors. No physical camera has been on it, and neither UDP transport nor a vendor-specific stream has been tried.
 9. **A real phone or tablet.** A phone-sized touch browser opened Argus at a network address 2026-11-11. No real phone has, and neither Safari on iOS nor the browser inside a chat app has been tried.
 10. **The AI assistant with a real AI client and a real FC.** Its tests use a plain MCP client, the built-in simulator and ArduCopter SITL. Claude Code, a real MCP client, drove it by hand on 2026-11-13: status read, a proposed mission approved in the page and uploaded to the built-in simulator. Claude Desktop has not been tried, and no proposal has reached a real flight controller.
-11. **Writing firmware through the bootloader on a real FC.** 2026-11-20 the packaged build reached a real bootloader, identified it, refused a wrong-board `.apj` before erasing, then rebooted the controller and reconnected. Erase, program and verify have not run, because no `.apj` matching that bootloader was available.
 
 1. **真实飞行。** 没有飞过。下面都只是台架或仿真结果。
 2. **真机上的解锁、起飞、返航、开始任务。** 只在 SITL 跑过。这些需要接电池，要单独安排。
@@ -336,7 +335,6 @@ Real FC here means the route was in use during a session with a real flight cont
 8. **真实相机的视频。** 2026-11-10 用 ffmpeg 把一路 HTTP 测试流转成了画面。2026-11-14 用真实 RTSP 服务器（MediaMTX）推 H.264 over TCP 进页面：640x480、画面在动、无控制台错误。没有接过物理相机，UDP 传输和厂商私有流也都没试过。
 9. **真实的手机或平板。** 2026-11-11 用手机尺寸的触屏浏览器在局域网地址上打开过 Argus。没有用过真实手机，iOS 上的 Safari 和聊天软件内置的浏览器也都没有试过。
 10. **用真实飞控运行 AI 助手，以及用 Claude Desktop。** 测试用的是一个最简单的 MCP 客户端、内置模拟器和 ArduCopter SITL。2026-11-13 已用 Claude Code（真实 MCP 客户端）手工跑通一次：读取状态、在页面批准一条提议航线并上传到内置模拟器。Claude Desktop 尚未试过，提议也还没有到达过真实飞控。
-11. **真机上通过 bootloader 写入固件。** 2026-11-20 发布包连接到了真实 bootloader，完成识别，在擦除前拒绝了板型不符的 `.apj`，然后重启飞控并重连。擦除、写入和校验还没有跑过，因为没有与该 bootloader 匹配的 `.apj`。
 
 ## Known limits / 已知限制
 
