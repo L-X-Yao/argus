@@ -161,11 +161,16 @@ def analyze(name: str | None = None, cancelled=None) -> dict | None:
     armed_since: float | None = None
     armed_s = 0.0
     mode_now: str | None = None
+    mode_periods = 0
     max_alt: float | None = None
     max_speed = 0.0
     min_voltage: float | None = None
+    start_voltage: float | None = None
+    end_voltage: float | None = None
     max_current = 0.0
     min_remaining: int | None = None
+    start_remaining: int | None = None
+    end_remaining: int | None = None
     max_fix = 0
     max_sats = 0
     max_vibration = 0.0
@@ -214,6 +219,7 @@ def analyze(name: str | None = None, cancelled=None) -> dict | None:
             mode = table.get(mode_number, f"MODE{mode_number}")
             if mode != mode_now:
                 mode_now = mode
+                mode_periods += 1
                 if len(modes) < MAX_MODES:
                     modes.append({"t": t, "mode": mode})
             armed = bool(base_mode & 0x80)
@@ -243,7 +249,9 @@ def analyze(name: str | None = None, cancelled=None) -> dict | None:
 
         elif mid == 74:  # VFR_HUD
             p = _pad(payload, 20)
-            max_speed = max(max_speed, struct.unpack_from("<f", p, 4)[0])
+            speed = struct.unpack_from("<f", p, 4)[0]
+            if math.isfinite(speed):
+                max_speed = max(max_speed, speed)
 
         elif mid == 1:  # SYS_STATUS
             p = _pad(payload, 31)
@@ -253,10 +261,16 @@ def analyze(name: str | None = None, cancelled=None) -> dict | None:
             if 0 < voltage < 65535:
                 volts = voltage / 1000.0
                 min_voltage = volts if min_voltage is None else min(min_voltage, volts)
+                if start_voltage is None:
+                    start_voltage = volts
+                end_voltage = volts
             if 0 < current < 32767:
                 max_current = max(max_current, current / 100.0)
             if 0 <= remaining <= 100:
                 min_remaining = remaining if min_remaining is None else min(min_remaining, remaining)
+                if start_remaining is None:
+                    start_remaining = remaining
+                end_remaining = remaining
 
         elif mid == 24:  # GPS_RAW_INT
             p = _pad(payload, 30)
@@ -265,8 +279,9 @@ def analyze(name: str | None = None, cancelled=None) -> dict | None:
 
         elif mid == 241:  # VIBRATION
             p = _pad(payload, 32)
-            x, y, z = struct.unpack_from("<fff", p, 8)
-            max_vibration = max(max_vibration, x, y, z)
+            for value in struct.unpack_from("<fff", p, 8):
+                if math.isfinite(value):
+                    max_vibration = max(max_vibration, value)
 
         elif mid == 193:  # EKF_STATUS_REPORT
             p = _pad(payload, 34)
@@ -306,13 +321,18 @@ def analyze(name: str | None = None, cancelled=None) -> dict | None:
         "vehicle": vehicle,
         "armed_seconds": round(armed_s, 1),
         "modes": modes,
+        "mode_periods": mode_periods,
         "max_altitude_above_home_m": None if max_alt is None else (0.0 if max_alt == 0 else round(max_alt, 1)),
         "max_ground_speed_ms": round(max_speed, 1) if max_speed else None,
         "distance_m": round(distance),
         "battery": {
             "min_voltage_v": None if min_voltage is None else round(min_voltage, 2),
+            "start_voltage_v": None if start_voltage is None else round(start_voltage, 2),
+            "end_voltage_v": None if end_voltage is None else round(end_voltage, 2),
             "max_current_a": round(max_current, 1) if max_current else None,
             "min_remaining_pct": min_remaining,
+            "start_remaining_pct": start_remaining,
+            "end_remaining_pct": end_remaining,
         },
         "gps": {"max_fix": max_fix or None, "max_satellites": max_sats or None},
         "vibration_max": round(max_vibration, 2) if max_vibration else None,
@@ -330,4 +350,62 @@ def analyze(name: str | None = None, cancelled=None) -> dict | None:
             "events are the controller's warnings and worse, in log order",
             "a tlog holds what Argus saw on the link, not the flight controller's own DataFlash log",
         ],
+    }
+
+
+def _values(first: float | int | None, second: float | int | None) -> dict:
+    """One comparison row. A value missing from either log cannot give a meaningful delta."""
+    delta = round(second - first, 6) if first is not None and second is not None else None
+    return {"first": first, "second": second, "delta": delta}
+
+
+def compare(first_name: str, second_name: str, cancelled=None) -> dict | None:
+    """Compare two logs through analyze(), with every delta being second minus first."""
+    first = analyze(first_name, cancelled)
+    if first is None:
+        return None
+    second = analyze(second_name, cancelled)
+    if second is None:
+        return None
+
+    def field(name: str) -> dict:
+        return _values(first[name], second[name])
+
+    def battery(name: str) -> dict:
+        return _values(first["battery"][name], second["battery"][name])
+
+    def gps(name: str) -> dict:
+        return _values(first["gps"][name], second["gps"][name])
+
+    first_events = len(first["events"]) + first["events_left_out"]
+    second_events = len(second["events"]) + second["events_left_out"]
+    return {
+        "first": first["file"],
+        "second": second["file"],
+        "delta_direction": "second - first",
+        "metrics": {
+            "duration_s": field("duration_s"),
+            "armed_seconds": field("armed_seconds"),
+            "max_altitude_above_home_m": field("max_altitude_above_home_m"),
+            "max_ground_speed_ms": field("max_ground_speed_ms"),
+            "distance_m": field("distance_m"),
+            "battery": {
+                name: battery(name)
+                for name in (
+                    "min_voltage_v",
+                    "start_voltage_v",
+                    "end_voltage_v",
+                    "max_current_a",
+                    "min_remaining_pct",
+                    "start_remaining_pct",
+                    "end_remaining_pct",
+                )
+            },
+            "gps": {name: gps(name) for name in ("max_fix", "max_satellites")},
+            "vibration_max": field("vibration_max"),
+            "ekf_max_pos_horiz_variance": field("ekf_max_pos_horiz_variance"),
+            "mode_periods": field("mode_periods"),
+            "event_count": _values(first_events, second_events),
+            "mission_items_seen": _values(first["mission"]["items_seen"], second["mission"]["items_seen"]),
+        },
     }

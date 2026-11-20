@@ -48,6 +48,7 @@ try {
         'get_mission',
         'get_parameters',
         'analyze_flight',
+        'compare_flights',
         'propose_mission',
         'propose_parameters',
         'propose_flight_command',

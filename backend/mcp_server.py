@@ -171,6 +171,38 @@ TOOLS = [
         "annotations": {"readOnlyHint": True, "openWorldHint": False},
     },
     {
+        "name": "compare_flights",
+        "title": "Compare two flight logs",
+        "description": (
+            "Compare two named .tlog files from the Argus logs folder: duration, armed time, maximum "
+            "altitude and ground speed, distance, battery minimum/start/end and peak current, "
+            "GPS, vibration and EKF peaks, mode periods (the initial mode and each later change), "
+            "warning events, and mission items. Every metric gives first, second and delta, where delta "
+            "is second minus first; a missing value gives a null delta. "
+            "Read-only, and needs no page."
+        ),
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "first": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "description": "The first .tlog file name in the Argus logs folder, not a path.",
+                },
+                "second": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200,
+                    "description": "The second .tlog file name in the Argus logs folder, not a path.",
+                },
+            },
+            "required": ["first", "second"],
+            "additionalProperties": False,
+        },
+        "annotations": {"readOnlyHint": True, "openWorldHint": False},
+    },
+    {
         "name": "propose_mission",
         "title": "Propose a mission",
         "description": (
@@ -770,8 +802,8 @@ class Server:
         if problem:
             return self._tool_text(problem, error=True)
         try:
-            if name == "analyze_flight":
-                return self._analyze(arguments, cancelled)
+            if name in ("analyze_flight", "compare_flights"):
+                return self._flight_log(name, arguments, cancelled)
             if name in READS:
                 return self._read_tool(READS[name], arguments, cancelled)
             if name in PROPOSALS:
@@ -782,17 +814,20 @@ class Server:
         except Unreachable as exc:
             return self._tool_text(str(exc), error=True)
 
-    def _analyze(self, arguments: dict, cancelled: threading.Event) -> dict | None:
-        """A log on disk, not the page: nothing is asked of the operator, nothing changes."""
+    def _flight_log(self, name: str, arguments: dict, cancelled: threading.Event) -> dict | None:
+        """Logs on disk, not the page: nothing is asked of the operator, nothing changes."""
         from . import flight_log
 
         try:
-            summary = flight_log.analyze(arguments.get("file"), cancelled)
+            if name == "compare_flights":
+                result = flight_log.compare(arguments["first"], arguments["second"], cancelled)
+            else:
+                result = flight_log.analyze(arguments.get("file"), cancelled)
         except flight_log.LogRefused as exc:
             return self._tool_text(str(exc), error=True)
-        if summary is None:
+        if result is None:
             return None  # the client stopped waiting
-        return self._tool_text(json.dumps(summary, ensure_ascii=False), structured=summary)
+        return self._tool_text(json.dumps(result, ensure_ascii=False, allow_nan=False), structured=result)
 
     def _read_tool(self, kind: str, arguments: dict, cancelled: threading.Event) -> dict | None:
         rid = self.backend.ask(kind, arguments)

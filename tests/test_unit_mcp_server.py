@@ -22,6 +22,7 @@ TOOL_NAMES = [
     "get_mission",
     "get_parameters",
     "analyze_flight",
+    "compare_flights",
     "propose_mission",
     "propose_parameters",
     "propose_flight_command",
@@ -283,6 +284,10 @@ class TestArguments:
             ("get_parameters", {}, "names is missing"),
             ("get_parameters", {"names": []}, "has 0 items"),
             ("get_status", {"verbose": True}, "not an argument"),
+            ("compare_flights", {}, "first is missing"),
+            ("compare_flights", {"first": "a.tlog"}, "second is missing"),
+            ("compare_flights", {"first": "", "second": "b.tlog"}, "first is empty"),
+            ("compare_flights", {"first": "a.tlog", "second": 2}, "second must be text"),
             ("propose_mission", {"waypoints": [{"lat": 91, "lon": 0, "alt": 10}]}, "at most 90"),
             ("propose_mission", {"waypoints": [{"lat": 30, "lon": 120}]}, "alt is missing"),
             ("propose_mission", {"waypoints": [{"lat": 30, "lon": 120, "alt": 10, "drop": True}]}, "not an argument"),
@@ -352,6 +357,51 @@ class TestFlightLog:
 
     def test_a_name_outside_the_folder_is_an_error(self, server, wire):
         reply = call(server, wire, 1, "analyze_flight", {"file": "../x.tlog"})["result"]
+        assert reply["isError"] is True
+        assert "not a path" in reply["content"][0]["text"]
+
+    def test_an_unexpected_non_finite_summary_is_a_tool_error(self, server, wire):
+        with mock.patch("backend.flight_log.analyze", return_value={"peak": float("nan")}):
+            reply = call(server, wire, 1, "analyze_flight")["result"]
+        assert reply["isError"] is True
+        assert "could not run analyze_flight" in reply["content"][0]["text"]
+        assert "Out of range float" in reply["content"][0]["text"]
+
+    def test_two_recorded_logs_are_compared_without_a_page(self, server, wire, page, tmp_path):
+        from frame_builders import global_position, heartbeat, write_tlog
+
+        write_tlog(
+            tmp_path / "first.tlog",
+            [heartbeat(armed=False, seq=0), global_position(seq=1)],
+            spacing_usec=1_000_000,
+        )
+        write_tlog(
+            tmp_path / "second.tlog",
+            [heartbeat(armed=True, seq=0), global_position(seq=1), heartbeat(armed=False, seq=2)],
+            spacing_usec=1_000_000,
+        )
+        with mock.patch.object(cfg, "LOG_DIR", tmp_path):
+            comparison = outcome(
+                call(server, wire, 1, "compare_flights", {"first": "first.tlog", "second": "second.tlog"})
+            )
+        assert comparison["first"] == "first.tlog" and comparison["second"] == "second.tlog"
+        assert comparison["metrics"]["duration_s"] == {"first": 1.0, "second": 2.0, "delta": 1.0}
+        assert comparison["metrics"]["armed_seconds"] == {"first": 0.0, "second": 2.0, "delta": 2.0}
+        assert page.asked == []
+
+    @pytest.mark.parametrize(
+        "arguments",
+        [
+            {"first": "../x.tlog", "second": "first.tlog"},
+            {"first": "first.tlog", "second": "../x.tlog"},
+        ],
+    )
+    def test_neither_comparison_name_can_leave_the_folder(self, server, wire, tmp_path, arguments):
+        from frame_builders import heartbeat, write_tlog
+
+        write_tlog(tmp_path / "first.tlog", [heartbeat(armed=False)])
+        with mock.patch.object(cfg, "LOG_DIR", tmp_path):
+            reply = call(server, wire, 1, "compare_flights", arguments)["result"]
         assert reply["isError"] is True
         assert "not a path" in reply["content"][0]["text"]
 
