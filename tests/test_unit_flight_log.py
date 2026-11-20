@@ -190,13 +190,13 @@ def test_battery_start_and_end_are_summarised(tmp_path):
     assert battery["min_remaining_pct"] == 30
 
 
-def test_mode_count_is_not_limited_by_the_returned_mode_list(tmp_path):
+def test_mode_periods_are_not_limited_by_the_returned_mode_list(tmp_path):
     frames = [heartbeat(mode=4 if i % 2 == 0 else 5, armed=False, seq=i) for i in range(35)]
     write_tlog(tmp_path / "modes.tlog", frames)
     with mock.patch.object(cfg, "LOG_DIR", tmp_path):
         summary = flight_log.analyze("modes.tlog")
     assert len(summary["modes"]) == flight_log.MAX_MODES
-    assert summary["mode_count"] == 35
+    assert summary["mode_periods"] == 35
 
 
 def comparison_flights(tmp_path):
@@ -262,7 +262,7 @@ def test_two_flights_are_compared_through_the_same_analysis(tmp_path):
     check("max_satellites", 9, 12, 3, "gps")
     check("vibration_max", 1.5, 2.5, 1.0)
     check("ekf_max_pos_horiz_variance", 0.2, 0.5, 0.3)
-    check("mode_count", 1, 2, 1)
+    check("mode_periods", 1, 2, 1)
     check("event_count", 1, 2, 1)
     check("mission_items_seen", 1, 2, 1)
 

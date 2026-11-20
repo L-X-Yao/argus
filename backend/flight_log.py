@@ -161,7 +161,7 @@ def analyze(name: str | None = None, cancelled=None) -> dict | None:
     armed_since: float | None = None
     armed_s = 0.0
     mode_now: str | None = None
-    mode_count = 0
+    mode_periods = 0
     max_alt: float | None = None
     max_speed = 0.0
     min_voltage: float | None = None
@@ -219,7 +219,7 @@ def analyze(name: str | None = None, cancelled=None) -> dict | None:
             mode = table.get(mode_number, f"MODE{mode_number}")
             if mode != mode_now:
                 mode_now = mode
-                mode_count += 1
+                mode_periods += 1
                 if len(modes) < MAX_MODES:
                     modes.append({"t": t, "mode": mode})
             armed = bool(base_mode & 0x80)
@@ -321,7 +321,7 @@ def analyze(name: str | None = None, cancelled=None) -> dict | None:
         "vehicle": vehicle,
         "armed_seconds": round(armed_s, 1),
         "modes": modes,
-        "mode_count": mode_count,
+        "mode_periods": mode_periods,
         "max_altitude_above_home_m": None if max_alt is None else (0.0 if max_alt == 0 else round(max_alt, 1)),
         "max_ground_speed_ms": round(max_speed, 1) if max_speed else None,
         "distance_m": round(distance),
@@ -404,7 +404,7 @@ def compare(first_name: str, second_name: str, cancelled=None) -> dict | None:
             "gps": {name: gps(name) for name in ("max_fix", "max_satellites")},
             "vibration_max": field("vibration_max"),
             "ekf_max_pos_horiz_variance": field("ekf_max_pos_horiz_variance"),
-            "mode_count": field("mode_count"),
+            "mode_periods": field("mode_periods"),
             "event_count": _values(first_events, second_events),
             "mission_items_seen": _values(first["mission"]["items_seen"], second["mission"]["items_seen"]),
         },
