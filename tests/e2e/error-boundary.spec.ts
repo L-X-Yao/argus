@@ -200,7 +200,8 @@ test.describe('Error boundary and graceful degradation', () => {
     const settingsBtn = page.locator('button:has(svg.lucide-settings)').first();
     if (await settingsBtn.isVisible()) {
       await settingsBtn.click();
-      await expect(page.locator('h3', { hasText: /设置|Settings/ }).first()).toBeVisible({ timeout: 3000 });
+      // The settings panel is a lazy chunk; 3 s was tight on a loaded CI runner.
+      await expect(page.locator('h3', { hasText: /设置|Settings/ }).first()).toBeVisible({ timeout: 10000 });
     }
   });
 

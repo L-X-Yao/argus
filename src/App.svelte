@@ -760,10 +760,12 @@
   {#if isMobile}
     <div class="md:hidden mt-auto shrink-0">
       {#if app.drone.connected}
-        <nav aria-label={t('cmd.catFlight')} class="flex items-center gap-2 px-2 py-1.5 bg-card border-t border-border">
-          {@render rtlButton(true)}
-          {@render holdButton(true)}
-          {#if view === 'fly'}{@render controlsButton(true)}{/if}
+        <nav class="px-2 py-1.5 bg-card border-t border-border">
+          <div role="group" aria-label={t('cmd.catFlight')} class="flex items-center gap-2">
+            {@render rtlButton(true)}
+            {@render holdButton(true)}
+            {#if view === 'fly'}{@render controlsButton(true)}{/if}
+          </div>
         </nav>
       {/if}
       <nav
