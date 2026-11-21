@@ -12,10 +12,12 @@ const localesDir = resolve(__dir, 'locales');
 function parseLocale(filename: string): Record<string, string> {
   const src = readFileSync(resolve(localesDir, filename), 'utf-8');
   const entries: Record<string, string> = {};
-  const re = /['"]([^'"]+)['"]\s*:\s*'((?:[^'\\]|\\.)*)'/g;
+  // Values may be single- or double-quoted: French strings with an apostrophe
+  // use double quotes so the file stays readable.
+  const re = /(['"])([^'"]+)\1\s*:\s*(['"])((?:\\.|(?!\3)[^\\])*)\3/g;
   let m;
   while ((m = re.exec(src)) !== null) {
-    entries[m[1]] = m[2].replace(/\\'/g, "'");
+    entries[m[2]] = m[4].replace(/\\(['"\\])/g, '$1');
   }
   return entries;
 }
@@ -70,16 +72,7 @@ describe('i18n completeness', () => {
         const messages = allLocales[file];
         const baseKeys = Object.keys(baseMessages);
         const missing = baseKeys.filter((k) => !(k in messages));
-        // Non-eagerly-loaded locales may be sparse; report missing count
-        // This test documents coverage -- adjust threshold as locales mature
-        if (file === 'en.ts') {
-          // en.ts must have full parity
-          expect(missing, `Keys missing from ${file}: ${missing.slice(0, 20).join(', ')}...`).toEqual([]);
-        } else {
-          // Other locales: report missing keys as a coverage metric
-          // Fail if locale has zero keys (broken file)
-          expect(Object.keys(messages).length, `${file} appears empty or broken`).toBeGreaterThan(0);
-        }
+        expect(missing, `Keys missing from ${file}: ${missing.slice(0, 20).join(', ')}...`).toEqual([]);
       });
     }
   });

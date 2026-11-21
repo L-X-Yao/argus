@@ -300,7 +300,7 @@ Real FC here means the route was in use during a session with a real flight cont
 | Terrain profile | 地形剖面 | SITL | CI: clearance from home on real firmware, heights from the real terrain server |
 | Voice and audio alerts | 语音和声音告警 | SITL | CI: the armed message on real firmware, with speech stubbed. Sound itself not checked |
 | Gamepad | 手柄 | SITL | CI: a stubbed pad moves channel 1 on real firmware. No real pad. Since 2026-11-13 the status bar names the gamepad while it overrides; the badge itself has no test |
-| 10 languages | 10 种语言 | Tests only | None reviewed by native speakers. The eight locales other than English and Chinese lack 57 UI keys (56 firmware/log and one preflight message), which fall back to English. Parameter descriptions: zh is machine-translated unless marked reviewed; those eight fall back to English (marked EN) until their data pack. v3.15.0 ships zh only |
+| 10 languages | 10 种语言 | Tests only | UI keys complete in all ten since 2026-11-21, none reviewed by native speakers. Parameter descriptions: zh is machine-translated unless marked reviewed; the other eight translation locales fall back to English (marked EN) until their data pack. v3.15.0 ships zh only |
 | Plugins and scripts | 插件和脚本 | Tests only | Unit tests |
 | RTK through NTRIP | NTRIP RTK | Tests only | No real base station |
 | Cross-site request blocking | 跨站请求拦截 | Tests only | Unit tests, real Windows each release |
