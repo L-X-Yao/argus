@@ -288,6 +288,15 @@ def _manifest(vehicle: str) -> tuple[dict, list[str]]:
     return data, sorted(available, key=_version)
 
 
+def _finite_number(value) -> bool:
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        return False
+    try:
+        return math.isfinite(value)
+    except OverflowError:
+        return False
+
+
 def _clean_entry(entry: dict) -> dict:
     if not isinstance(entry, dict):
         raise _PackError("parameter metadata entry is not an object")
@@ -301,16 +310,12 @@ def _clean_entry(entry: dict) -> dict:
     for field in ("default", "step"):
         value = entry.get(field)
         if value is not None:
-            if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+            if not _finite_number(value):
                 raise _PackError("parameter metadata number is invalid")
             clean[field] = value
     if "range" in entry:
         value = entry["range"]
-        if (
-            not isinstance(value, list)
-            or len(value) != 2
-            or any(isinstance(n, bool) or not isinstance(n, (int, float)) or not math.isfinite(n) for n in value)
-        ):
+        if not isinstance(value, list) or len(value) != 2 or any(not _finite_number(n) for n in value):
             raise _PackError("parameter metadata range is invalid")
         clean["range"] = value.copy()
     for field in ("values", "bitmask"):
