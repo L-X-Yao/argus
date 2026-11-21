@@ -266,7 +266,7 @@ Real FC here means the route was in use during a session with a real flight cont
 
 | Feature | 功能 | Level | Evidence |
 | --- | --- | --- | --- |
-| Serial through the backend | 后端串口 | Real FC | 2026-11-06 on Windows, COM port, on the Python 3.10 the package bundled then; 2026-11-05 on Linux through usbipd. On the Python 3.14 it bundles since v3.7.8: a COM port opened and closed 2026-11-10, no FC on it |
+| Serial through the backend | 后端串口 | Real FC | 2026-11-06 on Windows, COM port, on the Python 3.10 the package bundled then; 2026-11-05 on Linux through usbipd. 2026-11-20 through the packaged Windows build on Python 3.14: a real FC flashed end to end over this link, from the bootloader and back to a live heartbeat |
 | WebSerial | 浏览器直连 USB | Real FC | 2026-11-06, real Edge on Windows, the port chooser used with the mouse. 2026-11-05, Chromium on Linux through usbipd |
 | Log download speed | 日志下载速度 | Real FC | 2026-11-06 on Windows, about 660 KB/s on both links. 2026-11-05 through usbipd, about 700 KB/s |
 | Reconnect after a lost link | 断链重连 | Real FC | 2026-11-06, FC reboot on Windows on both links. 2026-11-05, USB pulled on both links. CI: WebSerial keeps the flight through a drop in the air, on SITL |
@@ -300,7 +300,7 @@ Real FC here means the route was in use during a session with a real flight cont
 | Terrain profile | 地形剖面 | SITL | CI: clearance from home on real firmware, heights from the real terrain server |
 | Voice and audio alerts | 语音和声音告警 | SITL | CI: the armed message on real firmware, with speech stubbed. Sound itself not checked |
 | Gamepad | 手柄 | SITL | CI: a stubbed pad moves channel 1 on real firmware. No real pad. Since 2026-11-13 the status bar names the gamepad while it overrides; the badge itself has no test |
-| 10 languages | 10 种语言 | Tests only | UI keys complete, not reviewed by native speakers. Parameter descriptions: zh is machine-translated unless marked reviewed; the other nine locales fall back to English (marked EN) until their data pack. v3.15.0 ships zh only |
+| 10 languages | 10 种语言 | Tests only | None reviewed by native speakers. The eight locales other than English and Chinese lack 57 UI keys (56 firmware/log and one preflight message), which fall back to English. Parameter descriptions: zh is machine-translated unless marked reviewed; those eight fall back to English (marked EN) until their data pack. v3.15.0 ships zh only |
 | Plugins and scripts | 插件和脚本 | Tests only | Unit tests |
 | RTK through NTRIP | NTRIP RTK | Tests only | No real base station |
 | Cross-site request blocking | 跨站请求拦截 | Tests only | Unit tests, real Windows each release |
@@ -325,10 +325,9 @@ Real FC here means the route was in use during a session with a real flight cont
 4. **RTK, gimbal, camera and ADS-B.** These need hardware that has not been available.
 5. **Vehicles other than Copter on real hardware.** Plane, QuadPlane, Rover and Sub run whole missions in SITL in CI through the backend. None has been on a real board since the 2026-05 telemetry check.
 6. **Chrome itself on Windows.** Edge on Windows ran through the real port chooser 2026-11-06. Chrome was not on that machine.
-7. **The backend's serial link on Windows since the package bundles Python 3.14 (v3.7.8).** It ran on a real FC on the Python 3.10 of earlier packages. On 3.14 a COM port was opened and closed 2026-11-10, with no FC on it. WebSerial does not use that Python.
-8. **Video from a real camera.** ffmpeg turned an HTTP test stream into frames 2026-11-10. 2026-11-14 a real RTSP server (MediaMTX, H.264 over TCP) played in the panel: 640x480, frames moving, no console errors. No physical camera has been on it, and neither UDP transport nor a vendor-specific stream has been tried.
-9. **A real phone or tablet.** A phone-sized touch browser opened Argus at a network address 2026-11-11. No real phone has, and neither Safari on iOS nor the browser inside a chat app has been tried.
-10. **The AI assistant with a real AI client and a real FC.** Its tests use a plain MCP client, the built-in simulator and ArduCopter SITL. Claude Code, a real MCP client, drove it by hand on 2026-11-13: status read, a proposed mission approved in the page and uploaded to the built-in simulator. Claude Desktop has not been tried, and no proposal has reached a real flight controller.
+7. **Video from a real camera.** ffmpeg turned an HTTP test stream into frames 2026-11-10. 2026-11-14 a real RTSP server (MediaMTX, H.264 over TCP) played in the panel: 640x480, frames moving, no console errors. No physical camera has been on it, and neither UDP transport nor a vendor-specific stream has been tried.
+8. **A real phone or tablet.** A phone-sized touch browser opened Argus at a network address 2026-11-11. No real phone has, and neither Safari on iOS nor the browser inside a chat app has been tried.
+9. **The AI assistant with a real AI client and a real FC.** Its tests use a plain MCP client, the built-in simulator and ArduCopter SITL. Claude Code, a real MCP client, drove it by hand on 2026-11-13: status read, a proposed mission approved in the page and uploaded to the built-in simulator. Claude Desktop has not been tried, and no proposal has reached a real flight controller.
 
 1. **真实飞行。** 没有飞过。下面都只是台架或仿真结果。
 2. **真机上的解锁、起飞、返航、开始任务。** 只在 SITL 跑过。这些需要接电池，要单独安排。
@@ -336,10 +335,9 @@ Real FC here means the route was in use during a session with a real flight cont
 4. **RTK、云台、相机、ADS-B。** 缺硬件。
 5. **多旋翼以外机型上真机。** 固定翼、QuadPlane、地面车、水下机器人在 CI 里经后端跑完整任务（SITL）。除 2026-05 的遥测检查外，都没有接过真实飞控。
 6. **Windows 上的 Chrome 本身。** 2026-11-06 已用 Windows 上的 Edge 走真实端口弹窗，那台机器没有装 Chrome。
-7. **发布包改用 Python 3.14（v3.7.8）之后，Windows 上的后端串口。** 之前的发布包内置 Python 3.10，在真实飞控上跑过。3.14 上只在 2026-11-10 打开并关闭过一个 COM 口，没有接飞控。WebSerial 不经过这个 Python。
-8. **真实相机的视频。** 2026-11-10 用 ffmpeg 把一路 HTTP 测试流转成了画面。2026-11-14 用真实 RTSP 服务器（MediaMTX）推 H.264 over TCP 进页面：640x480、画面在动、无控制台错误。没有接过物理相机，UDP 传输和厂商私有流也都没试过。
-9. **真实的手机或平板。** 2026-11-11 用手机尺寸的触屏浏览器在局域网地址上打开过 Argus。没有用过真实手机，iOS 上的 Safari 和聊天软件内置的浏览器也都没有试过。
-10. **用真实飞控运行 AI 助手，以及用 Claude Desktop。** 测试用的是一个最简单的 MCP 客户端、内置模拟器和 ArduCopter SITL。2026-11-13 已用 Claude Code（真实 MCP 客户端）手工跑通一次：读取状态、在页面批准一条提议航线并上传到内置模拟器。Claude Desktop 尚未试过，提议也还没有到达过真实飞控。
+7. **真实相机的视频。** 2026-11-10 用 ffmpeg 把一路 HTTP 测试流转成了画面。2026-11-14 用真实 RTSP 服务器（MediaMTX）推 H.264 over TCP 进页面：640x480、画面在动、无控制台错误。没有接过物理相机，UDP 传输和厂商私有流也都没试过。
+8. **真实的手机或平板。** 2026-11-11 用手机尺寸的触屏浏览器在局域网地址上打开过 Argus。没有用过真实手机，iOS 上的 Safari 和聊天软件内置的浏览器也都没有试过。
+9. **用真实飞控运行 AI 助手，以及用 Claude Desktop。** 测试用的是一个最简单的 MCP 客户端、内置模拟器和 ArduCopter SITL。2026-11-13 已用 Claude Code（真实 MCP 客户端）手工跑通一次：读取状态、在页面批准一条提议航线并上传到内置模拟器。Claude Desktop 尚未试过，提议也还没有到达过真实飞控。
 
 ## Known limits / 已知限制
 
