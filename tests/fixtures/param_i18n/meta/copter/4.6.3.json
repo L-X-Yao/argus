@@ -1,0 +1,50 @@
+{
+  "BATT_CAPACITY": {
+    "default": 3300,
+    "desc": "Battery capacity",
+    "human": "Battery capacity",
+    "range": [
+      0,
+      100000
+    ],
+    "units": "mAh"
+  },
+  "FLTMODE1": {
+    "desc": "Flight mode for switch position 1",
+    "human": "Flight mode 1",
+    "values": {
+      "0": "Stabilize",
+      "1": "Acro",
+      "2": "AltHold"
+    }
+  },
+  "LOG_BITMASK": {
+    "bitmask": {
+      "0": "Fast Attitude",
+      "1": "Attitude",
+      "2": "GPS"
+    },
+    "desc": "Logging bitmask",
+    "human": "Logging bitmask"
+  },
+  "RTL_ALT": {
+    "default": 1500,
+    "desc": "Minimum altitude to return to launch",
+    "human": "RTL altitude",
+    "range": [
+      0,
+      100000
+    ],
+    "units": "cm"
+  },
+  "SYSID_THISMAV": {
+    "default": 1,
+    "desc": "MAVLink system ID of this vehicle",
+    "group": "ArduCopter",
+    "human": "MAVLink system ID",
+    "range": [
+      1,
+      255
+    ]
+  }
+}

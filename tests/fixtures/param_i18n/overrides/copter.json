@@ -1,0 +1,7 @@
+{
+  "SIM_ACC_TRIM_X": {
+    "desc": "Simulated accelerometer trim on the X axis",
+    "human": "Simulated accelerometer trim X",
+    "source": "generated"
+  }
+}

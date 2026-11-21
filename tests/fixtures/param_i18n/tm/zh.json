@@ -1,0 +1,58 @@
+{
+  "176c7866b945713ffc2aa2f33cd0ab8a179c2179893546bfc5041412f675da01": {
+    "r": 0,
+    "t": "GPS"
+  },
+  "323057ac777eeada3c3876b407310746e89bb6e3b229c7d8dd7f890557840801": {
+    "r": 0,
+    "t": "快速姿态"
+  },
+  "33f1cbaa69b263f4db3a91bd8d7fc3a6ae08fbc1fc87940129695e77ec5a32c5": {
+    "r": 0,
+    "t": "返航的最低高度"
+  },
+  "35292257cbabbf43adb1fd8f513b925f20542af0c3de810e81c80e2c25b084cb": {
+    "r": 0,
+    "t": "本机的 MAVLink 系统 ID"
+  },
+  "83b4038b5ac431dbea75983c98b3cbf1c5e9df296572ae001a1c7400a9c71763": {
+    "r": 0,
+    "t": "电池容量"
+  },
+  "933959b79f87f5e857e8449c62522e9f15f0c32b7cd0fa3fe6694ecabcabfcf8": {
+    "r": 0,
+    "t": "特技"
+  },
+  "a7c7ce24d122c14713948461d132d1e395f9202e4165fee7b62af053716dcacc": {
+    "r": 0,
+    "t": "飞行模式 1"
+  },
+  "ad679cf34bb2f394cf043e66b69ba64e3b01d732f8896778183dcccb82691c9f": {
+    "r": 0,
+    "t": "自稳"
+  },
+  "b352dcbaa269eb50d3450a1f4feb55589a9bfa1131aebb8182455a793033d4ca": {
+    "r": 0,
+    "t": "拨杆位置 1 的飞行模式"
+  },
+  "b43ccb6b3ea7dcb81d90c7510aa44d3e7782f77cabddf02b30c44edaeff708c2": {
+    "r": 0,
+    "t": "姿态"
+  },
+  "c8b071a3ce3d3ee528f7850be83d3fad4d6848ba96fd6fd5a09cbf2982375e3b": {
+    "r": 0,
+    "t": "日志位掩码"
+  },
+  "ce41e686adcee739dbe6886c2bc8a2559e99f7fa85c7865a432ff5965249eb9f": {
+    "r": 0,
+    "t": "MAVLink 系统 ID"
+  },
+  "daa9f60f417ea4812da180933c8859dfabbf3351116f9c4a532109aeff55c040": {
+    "r": 0,
+    "t": "返航高度"
+  },
+  "f55b7f69c9d032f6a2caa9e3015a2f459e4fa1eb1dd31973e4ab146171e91b2a": {
+    "r": 0,
+    "t": "定高"
+  }
+}

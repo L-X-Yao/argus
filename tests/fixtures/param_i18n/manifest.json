@@ -1,0 +1,30 @@
+{
+  "created": "2026-11-21T00:00:00Z",
+  "data_version": "2026.11.1-fixture",
+  "license": "GPL-3.0",
+  "locales": {
+    "en": {
+      "provider": "source",
+      "reviewed": 14,
+      "total": 14,
+      "translated": 14
+    },
+    "zh": {
+      "provider": "fixture",
+      "reviewed": 0,
+      "total": 14,
+      "translated": 14
+    }
+  },
+  "min_argus": "3.15.0",
+  "schema": 1,
+  "sources": [
+    {
+      "params": 5,
+      "series": "4.6.3",
+      "sha256": "d9fab4f2eccc2b387a2c332262358a6cb7095b5626f1adee7da226031db41f8c",
+      "url": "https://autotest.ardupilot.org/Parameters/versioned/Copter/stable-4.6.3/apm.pdef.xml",
+      "vehicle": "copter"
+    }
+  ]
+}
