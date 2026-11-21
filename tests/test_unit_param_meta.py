@@ -358,7 +358,7 @@ class TestPackValidation:
         with pytest.raises(pm._PackError):
             pm._clean_entry(entry)
 
-    @pytest.mark.parametrize("data", [[], {1: {}}, {"../BAD": {}}, {"ArduCopter:": {}}])
+    @pytest.mark.parametrize("data", [[], {1: {}}, {"../BAD": {}}, {"ArduCopter:": {}}, {"_meta": {"desc": "fake"}}])
     def test_bad_metadata_names_are_refused(self, data):
         import backend.param_meta as pm
 
@@ -403,6 +403,8 @@ class TestPackValidation:
             {"copter": []},
             {"copter": {"../OLD": "NEW"}},
             {"copter": {"OLD": "../NEW"}},
+            {"copter": {"_meta": "RTL_ALT"}},
+            {"copter": {"OLD_ALT": "_meta"}},
         ],
     )
     def test_bad_aliases_are_refused(self, data, tmp_path):
