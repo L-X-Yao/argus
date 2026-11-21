@@ -262,9 +262,10 @@ def _accepts_gzip(header: str) -> bool:
             continue
         quality = 1.0
         for parameter in parts[1:]:
-            if parameter.startswith("q="):
+            name, separator, value = parameter.partition("=")
+            if separator and name.strip().lower() == "q":
                 try:
-                    quality = float(parameter[2:])
+                    quality = float(value.strip())
                 except ValueError:
                     quality = 0.0
         encodings[coding] = quality
