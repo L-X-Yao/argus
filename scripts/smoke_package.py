@@ -154,7 +154,16 @@ def uninstall(root: Path) -> None:
     record("the uninstaller runs", done.returncode == 0 and not (root / "unins000.exe").exists(), done.returncode)
     left = [
         name
-        for name in ("backend", "dist", "python", "tile_cache", "param_cache", ".gcs_token", "Argus地面站.bat")
+        for name in (
+            "backend",
+            "dist",
+            "python",
+            "param_i18n",
+            "tile_cache",
+            "param_cache",
+            ".gcs_token",
+            "Argus地面站.bat",
+        )
         if (root / name).exists()
     ]
     record("it removes the program, its caches and the token", not left, left)
@@ -171,6 +180,8 @@ def check_package(root: Path, version: str) -> None:
         "LICENSES/Apache-2.0.txt",
         "LICENSES/BSD-2-Clause-Leaflet.txt",
         "LICENSES/BSD-3-Clause-pyserial.txt",
+        "LICENSES/GPL-3.0.txt",
+        "param_i18n/manifest.json",
         "dist/THIRD-PARTY-LICENSES.txt",
         "python/LICENSE.txt",
     ]
@@ -192,6 +203,14 @@ def check_package(root: Path, version: str) -> None:
 
         got = json.loads(request(f"{base}/api/version")[2]).get("version")
         record("version", got == version, got)
+
+        status, _, body = request(f"{base}/api/param_meta?vehicle=copter&locale=zh&series=4.6.3")
+        meta = json.loads(body).get("_meta", {}) if status == 200 else {}
+        translated = (
+            any(isinstance(v, dict) and "tr" in v for v in json.loads(body).values()) if status == 200 else False
+        )
+        record("parameter translations", status == 200 and meta.get("locale") == "zh" and translated, meta)
+
         status, headers, _ = request(f"{base}/")
         record("index", status == 200)
         policy = headers.get("content-security-policy", headers.get("Content-Security-Policy", ""))

@@ -95,7 +95,7 @@ class TestScript:
 
     def test_an_upgrade_clears_only_program_folders(self):
         cleared = {re.search(r'Name: "\{app\}\\([^"]+)"', entry).group(1) for entry in section("InstallDelete")}
-        assert cleared == {"backend", "dist", "python", "LICENSES"}
+        assert cleared == {"backend", "dist", "python", "LICENSES", "param_i18n"}
 
     def test_shortcuts_start_the_launchers_the_package_has(self):
         targets = re.findall(r'(?<![A-Za-z])Filename: "\{app\}\\([^"]+)"', "\n".join(section("Icons")))

@@ -156,7 +156,7 @@ Real FC here means the route was in use during a session with a real flight cont
 | `GET /api/log` | Download the CSV log | 下载 CSV 日志 | SITL | CI |
 | `GET /api/logs` | Local recorded tlogs | 本机录制的 tlog | Tests only | Unit tests with a temp folder |
 | `POST /api/logs/delete` | Delete local tlogs | 删除本机 tlog | Tests only | Unit tests: the CSV sibling, containment, the active session |
-| `GET /api/param_meta` | Parameter descriptions | 参数说明 | SITL | CI |
+| `GET /api/param_meta` | Parameter descriptions | 参数说明 | SITL | CI. 2026-11-21: locale/fw/series merge, per-field English fallback, gzip and the bundled 10-language pack; a metadata version is chosen by the live parameter names |
 | `GET /api/tile_cache` | Tile cache size | 瓦片缓存大小 | SITL | CI |
 | `POST /api/tile_cache_clear` | Clear the tile cache | 清除瓦片缓存 | SITL | CI |
 | `POST /api/firmware/upload` | Store a firmware file | 保存固件文件 | SITL | CI, stores only, no flashing |
@@ -220,7 +220,7 @@ Real FC here means the route was in use during a session with a real flight cont
 | `FailsafeConfigPanel` | params | 配置失控保护 | SITL | CI by clicks on firmware: every section written and read back |
 | `FlightModePanel` | params | 配置六档飞行模式 | SITL | CI by clicks on firmware: six slots read, FLTMODE written. 2026-11-13: the mode names are Chinese on a Chinese page, as the rest of the page's mode names are (the tables hold zh/en, like the backend's text) |
 | `ParamDiffPanel` | params | 对比参数文件差异 | SITL | CI by clicks on firmware: export, compare, apply |
-| `ParamPanel` | params | 读取编辑飞控参数 | Real FC | 2026-11-06 on both links on Windows: 1028 parameters in about 4 s. Writes 2026-11-05 used the same dispatch, not the row editor. Unit tests 2026-11-13: a decimal comma ("1,5") reads as 1.5 in the edit box and in an imported file, and a CSV header is skipped |
+| `ParamPanel` | params | 读取编辑飞控参数 | Real FC | 2026-11-06 on both links on Windows: 1028 parameters in about 4 s. Writes 2026-11-05 used the same dispatch, not the row editor. Unit tests 2026-11-13: a decimal comma ("1,5") reads as 1.5 in the edit box and in an imported file, and a CSV header is skipped. 2026-11-21: translated descriptions, machine/reviewed/generated badges, English-original toggle, translated search and CSV, WebSerial series choice; e2e with a fixed metadata response, and the offline pack through the packaged backend |
 | `PidPanel` | params | 调节PID参数 | SITL | CI by clicks on firmware: typed and slider gains reach the FC |
 | `PowerCalPanel` | params | 校准电压电流 | SITL | CI by clicks on firmware: voltage and current scale on the FC |
 | `AnnotationPanel` | planning | 记录地图标注点 | Tests only | Browser test: opens, refuses an entry without a position, and leaves out one that was stored without it |
@@ -300,7 +300,7 @@ Real FC here means the route was in use during a session with a real flight cont
 | Terrain profile | 地形剖面 | SITL | CI: clearance from home on real firmware, heights from the real terrain server |
 | Voice and audio alerts | 语音和声音告警 | SITL | CI: the armed message on real firmware, with speech stubbed. Sound itself not checked |
 | Gamepad | 手柄 | SITL | CI: a stubbed pad moves channel 1 on real firmware. No real pad. Since 2026-11-13 the status bar names the gamepad while it overrides; the badge itself has no test |
-| 10 languages | 10 种语言 | Tests only | Key completeness only, not reviewed by native speakers |
+| 10 languages | 10 种语言 | Tests only | Key completeness only, not reviewed by native speakers. Parameter descriptions are machine-translated unless marked reviewed; the pack and the UI badges say which |
 | Plugins and scripts | 插件和脚本 | Tests only | Unit tests |
 | RTK through NTRIP | NTRIP RTK | Tests only | No real base station |
 | Cross-site request blocking | 跨站请求拦截 | Tests only | Unit tests, real Windows each release |

@@ -40,7 +40,7 @@ Argus 是面向 ArduPilot 的 **Web 地面站**：一个浏览器界面，支持
 | **地图** | 8 种图源（高德、Google、OSM、Esri、CartoDB；天地图需自备密钥），各自受[其服务条款](#地图数据)约束 + 3D 地形（MapLibre GL）+ 离线 mbtiles |
 | **航线** | 航点 / 曲线 / 盘旋 / 测绘网格 / 交叉 / 螺旋 / 环绕 + 地形剖面与净空检查 |
 | **格式** | 读取 `.waypoints`（Mission Planner）和 `.plan`（QGroundControl）；读写 `.kml` 和自有的 `.json` |
-| **参数** | 元数据驱动 UI（描述/范围/单位/枚举/位掩码），树形视图，差异导出，恢复默认 |
+| **参数** | 元数据驱动 UI（描述/范围/单位/枚举/位掩码），10 语言说明（机器翻译/已审校标记、英文回退），树形视图，差异导出，恢复默认 |
 | **校准** | 罗盘、加速度计、陀螺仪、水平、气压计向导，实时进度 |
 | **RTK** | NTRIP 客户端，HTTP/1.0 + ICY-200 协商，RTCM 流式注入 |
 | **固件** | 在后端保存 `.apj` 文件，在线固件浏览器，重启至 Bootloader，并通过后端串口刷写，带独立升级面板 |
@@ -199,7 +199,7 @@ python run.py --sim            # 同时启动后端 + simulator.py
 
 ### 地图数据
 
-地图瓦片、地形高程以及 ArduPilot 的固件和参数列表都不属于 Argus。使用相应功能时，Argus 从第三方服务器获取这些数据，并受各服务器条款约束，清单见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。
+地图瓦片、地形高程以及 ArduPilot 的固件列表不属于 Argus。使用相应功能时，Argus 从第三方服务器获取这些数据，并受各服务器条款约束，清单见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md)。参数说明及其译文不同：它们作为 GPL-3.0 数据包（`param_i18n/`）随安装包分发，参数面板可离线使用；见 [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) 和 [docs/PARAM_I18N.md](docs/PARAM_I18N.md)。
 
 - 地图上会显示图源的署名。后端向它请求的服务器表明自己的身份（`Argus-GCS/<版本号>`）。3D 视图的地形由浏览器直接读取。
 - 默认的高德图源和 Google 图源都不是公开发布的 API，而是这两家公司自己的网页地图读取的地址。介意的话请在设置里换用其他图源。
@@ -286,6 +286,7 @@ npm run test:e2e -- --project=chromium
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — 开发规范：CI 门槛、双链路、测试、评审、发布
 - [`CLAUDE.md`](CLAUDE.md) — 项目规范、PX4 状态、协议耦合纪律
 - [`docs/VERIFICATION.md`](docs/VERIFICATION.md) — 每项功能验证到什么程度
+- [`docs/PARAM_I18N.md`](docs/PARAM_I18N.md) — 参数元数据与翻译数据包契约
 - [`SECURITY.md`](SECURITY.md) — 如何安全地运行，如何报告漏洞
 - [`docs/FAQ.md`](docs/FAQ.md) — 常见连接、地图、日志与固件问题
 - [`docs/RECOVERY.md`](docs/RECOVERY.md) — 固件刷写失败后的恢复步骤
@@ -325,6 +326,7 @@ Argus 处于积极开发中：缺陷修复、安全问题和新功能由维护�
 - NTRIP RTK 客户端（HTTP/1.0 + ICY-200，RTCM 流式注入）
 - 罗盘/加速度计/陀螺仪校准，二进制进度上报
 - 多语言 UI（10 种语言 + RTL）
+- 参数说明支持 10 种语言，随安装包分发 GPL-3.0 数据包，带机器翻译/已审校标记和英文回退
 - 双传输互斥锁（WS 后端 / WebSerial）
 - 云台俯仰/偏航控制
 - Tag 触发的发布流程，自动生成 changelog
