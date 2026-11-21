@@ -156,7 +156,7 @@ Real FC here means the route was in use during a session with a real flight cont
 | `GET /api/log` | Download the CSV log | 下载 CSV 日志 | SITL | CI |
 | `GET /api/logs` | Local recorded tlogs | 本机录制的 tlog | Tests only | Unit tests with a temp folder |
 | `POST /api/logs/delete` | Delete local tlogs | 删除本机 tlog | Tests only | Unit tests: the CSV sibling, containment, the active session |
-| `GET /api/param_meta` | Parameter descriptions | 参数说明 | SITL | CI. 2026-11-21: locale/fw/series merge and per-field English fallback with a fixture pack; gzip; a metadata version is chosen by the live parameter names. v3.15.0 ships the zh pack; other locales fall back to English until their data versions. The real pack is verified at package smoke |
+| `GET /api/param_meta` | Parameter descriptions | 参数说明 | SITL | CI. 2026-11-21: locale/fw/series merge and per-field English fallback with a fixture pack; gzip; a metadata version is chosen by the live parameter names. v3.15.0 ships the zh pack; other locales fall back to English until their data versions. 2026-11-21 real pack `data-v2026.11.2` through the packaged backend: zh descriptions for 1,382 of the real FC's 1,396 parameters; 14 fall back to English |
 | `GET /api/tile_cache` | Tile cache size | 瓦片缓存大小 | SITL | CI |
 | `POST /api/tile_cache_clear` | Clear the tile cache | 清除瓦片缓存 | SITL | CI |
 | `POST /api/firmware/upload` | Store a firmware file | 保存固件文件 | SITL | CI, stores only, no flashing |
