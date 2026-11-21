@@ -1,7 +1,7 @@
 {
   "schema": 1,
-  "version": "2026.11.3",
-  "asset": "argus-param-i18n-2026.11.3.tar.gz",
-  "sha256": "1b25bec46e5d5d8719897aa70d208949affc2ad5c8bb628f7794c5e663a44d2b",
-  "url": "https://github.com/L-X-Yao/argus-param-i18n/releases/download/data-v2026.11.3/argus-param-i18n-2026.11.3.tar.gz"
+  "version": "2026.11.4",
+  "asset": "argus-param-i18n-2026.11.4.tar.gz",
+  "sha256": "6b121e2117aec1b26791a8505d159b277fa208f6b1947fe0c9607c20eaabc6e2",
+  "url": "https://github.com/L-X-Yao/argus-param-i18n/releases/download/data-v2026.11.4/argus-param-i18n-2026.11.4.tar.gz"
 }
