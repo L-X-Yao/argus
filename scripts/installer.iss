@@ -73,6 +73,7 @@ Type: filesandordirs; Name: "{app}\backend"
 Type: filesandordirs; Name: "{app}\dist"
 Type: filesandordirs; Name: "{app}\python"
 Type: filesandordirs; Name: "{app}\LICENSES"
+Type: filesandordirs; Name: "{app}\param_i18n"
 
 [Files]
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs

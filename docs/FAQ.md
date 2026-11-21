@@ -28,7 +28,7 @@ On a network address this does not work: with no token at all Argus refuses to l
 ## Map, terrain and video
 
 **The map is blank.**
-Map tiles, terrain, parameter descriptions, video and firmware file storage come from the Python backend. Run it even when the flight controller is connected through WebSerial. Without it, new tiles cannot load. Check the map server credit and your network.
+Map tiles, terrain, parameter descriptions, video and firmware file storage come from the Python backend. Run it even when the flight controller is connected through WebSerial. Parameter descriptions ship in the package (`param_i18n/`) and work offline; map tiles still need the network or an offline `.mbtiles`. Check the map server credit and your network.
 
 **Offline map.**
 Put `.mbtiles` files in `mbtiles/` and pick the offline source. The map still needs the backend to serve them.
@@ -46,6 +46,12 @@ The link dropped or the controller is busy. Retry, and read the event log. A rea
 
 **A mission upload is refused.**
 Check that the vehicle is disarmed, that the mission is not empty, and that no other page is editing it. A download followed by an upload round-trips the waypoint commands and their p1 to p4 fields.
+
+**A parameter description is marked machine translated.**
+The English source comes from ArduPilot's generated parameter metadata. The translations ship in
+the GPL-3.0 `param_i18n/` pack and work offline. “Machine translation” means no person has
+reviewed that text; “Reviewed” means someone has. Expand the parameter and use “Show English
+original” to compare. A translated description is guidance, not flight procedure.
 
 **A parameter does not change.**
 The controller may round an integer parameter or clamp it to its range. Read it back; Argus shows the value the controller reports.

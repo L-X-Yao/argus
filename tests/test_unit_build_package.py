@@ -20,8 +20,21 @@ from scripts.build_package import (
 from scripts.package_requirements import bundled
 
 
+@pytest.fixture(autouse=True)
+def _param_i18n_fixture(monkeypatch):
+    # The package builder refuses to run without a pack; the checked-in fixture is enough
+    # for these tests, and the real data pack is fetched at release time.
+    monkeypatch.setenv("PARAM_I18N_DIR", str(SCRIPT_DIR / "tests" / "fixtures" / "param_i18n"))
+
+
 def test_version_matches_the_backend():
     assert _VERSION == VERSION
+
+
+def test_refuses_to_build_without_the_parameter_pack(tmp_path, monkeypatch):
+    monkeypatch.setenv("PARAM_I18N_DIR", str(tmp_path / "missing"))
+    with pytest.raises(SystemExit):
+        copy_app_files(tmp_path / "out")
 
 
 def test_packaged_backend_imports_without_the_repo(tmp_path):
@@ -47,6 +60,8 @@ class TestLicenseTexts:
             "THIRD_PARTY_NOTICES.md",
             "LICENSES/Apache-2.0.txt",
             "LICENSES/BSD-2-Clause-Leaflet.txt",
+            "LICENSES/GPL-3.0.txt",
+            "param_i18n/manifest.json",
         ]:
             assert (tmp_path / name).is_file(), name
         for name in OWN_LICENSE_TEXT.values():

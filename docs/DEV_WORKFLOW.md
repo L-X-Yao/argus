@@ -99,7 +99,7 @@ The FC is plugged into Windows. Both routes run the servers in WSL.
 
 **WebSerial (default).** Keep the FC on Windows and do not attach it with usbipd.
 
-1. In WSL, start the backend (`python run.py`) and Vite (`npm run dev`). WebSerial still needs the backend: map tiles and parameter metadata come from it.
+1. In WSL, start the backend (`python run.py`) and Vite (`npm run dev`). WebSerial still needs the backend: map tiles and parameter metadata come from it. Parameter metadata and translations are bundled in `param_i18n/`, so they work offline; map tiles still need the network or an offline `.mbtiles`.
 2. In a Windows browser (Chrome or Edge), open `http://localhost:5173` and click **USB**. Use `localhost`, not the WSL IP: WebSerial requires a secure context.
 
 **Backend serial or firmware upload.** Forward the FC into WSL from an admin PowerShell, then connect to `/dev/ttyACM0` from the UI:

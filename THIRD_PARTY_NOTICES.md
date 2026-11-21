@@ -27,6 +27,19 @@ Argus is under the MIT license, see [LICENSE](LICENSE). It contains work of othe
 
 pymavlink (LGPL-3.0) is used by the tests only. It is in no package.
 
+## Parameter metadata and translations
+
+The Windows package carries `param_i18n/`: normalized ArduPilot parameter metadata and its
+translations. They come from ArduPilot's generated `apm.pdef.xml` files, which are generated from
+the ArduPilot source; ArduPilot is GPL-3.0. The translations are derivative works of those
+descriptions. The data is distributed under GPL-3.0, with the text in
+[LICENSES/GPL-3.0.txt](LICENSES/GPL-3.0.txt), and its source is the public data repository
+[L-X-Yao/argus-param-i18n](https://github.com/L-X-Yao/argus-param-i18n). The Argus code remains
+MIT; `param_i18n/` is a separate data work read at run time, not linked into the code.
+
+The data is provided as-is. A translated description is not flight procedure; verify it against
+the ArduPilot documentation and the vehicle's behaviour.
+
 ## The Windows installer
 
 The installer holds the Windows package and is made with [Inno Setup](https://jrsoftware.org/isinfo.php), whose own code it carries: Copyright (C) 1997-2026 Jordan Russell, portions Copyright (C) 2000-2026 Martijn Laan, under the Inno Setup License, [LICENSES/InnoSetup.txt](LICENSES/InnoSetup.txt). Its Simplified Chinese text is the translation above, under MIT, [LICENSES/MIT-Inno-Setup-ChineseSimplified.txt](LICENSES/MIT-Inno-Setup-ChineseSimplified.txt): the package carries both texts.
@@ -44,6 +57,6 @@ Nothing below is included in Argus. It is fetched when you use the feature, unde
 | `webst01.is.autonavi.com`, `wprd01.is.autonavi.com` | AutoNavi (Amap) maps, the default source | Not a published API: these are the addresses AutoNavi's own web map reads. AutoNavi publishes no terms that allow other software to read them |
 | `mt1.google.com` | Google maps | Not a published API: this is the address Google's own web map reads. Google's terms ask that its services are used through the interfaces it provides |
 | `elevation-tiles-prod.s3.amazonaws.com` (backend), `s3.amazonaws.com/elevation-tiles-prod` (browser) | Terrain height for missions, and for the 3D view | [Terrain Tiles](https://registry.opendata.aws/terrain-tiles/) open data, [attribution](https://github.com/tilezen/joerd/blob/master/docs/attribution.md) |
-| `firmware.ardupilot.org`, `autotest.ardupilot.org` | Firmware list, firmware files and parameter descriptions | ArduPilot, GPL-3.0 |
+| `firmware.ardupilot.org`, `autotest.ardupilot.org` | Firmware list and firmware files; parameter metadata only as a fallback for a firmware series the bundled pack does not cover | ArduPilot, GPL-3.0 |
 
 The offline map download (Offline Maps panel) stores tiles of the AutoNavi layers. Whether you may keep tiles of a server offline is for its terms to say. A map file of your own (`.mbtiles`, put in `mbtiles/`) needs no server.

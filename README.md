@@ -40,7 +40,7 @@ To fly real missions today, use QGroundControl or Mission Planner: both are flig
 | **Map** | 8 tile sources (Amap, Google, OSM, Esri, CartoDB; Tianditu with a key of your own), each under [its own terms](#map-data) + 3D terrain (MapLibre GL) + offline mbtiles |
 | **Mission** | WP / Spline / Loiter / Survey grid / Crosshatch / Spiral / Orbit + terrain profile with clearance check |
 | **Formats** | Reads `.waypoints` (Mission Planner) and `.plan` (QGroundControl); reads and writes `.kml` and its own `.json` |
-| **Parameters** | Metadata-driven UI (desc/range/units/enum/bitmask), tree view, diff export, default reset |
+| **Parameters** | Metadata-driven UI (desc/range/units/enum/bitmask), 10-language descriptions with machine/reviewed badges and English fallback, tree view, diff export, default reset |
 | **Calibration** | Compass, accel, gyro, level, baro wizards with real-time progress |
 | **RTK** | NTRIP client with HTTP/1.0 + ICY-200 negotiation, streaming RTCM injection |
 | **Firmware** | Store `.apj` files on the backend, online firmware browser, reboot to bootloader, and flash through the backend serial link with a guided upgrade panel |
@@ -199,7 +199,7 @@ The server reaches Argus at `ARGUS_URL` (`http://127.0.0.1:8100` when unset). Wh
 
 ### Map data
 
-Map tiles, terrain heights and ArduPilot's firmware and parameter lists are not part of Argus. Argus fetches them from other parties' servers when you use the feature, under the terms of each server: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) lists them.
+Map tiles, terrain heights and ArduPilot's firmware lists are not part of Argus. Argus fetches them from other parties' servers when you use the feature, under the terms of each server: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) lists them. Parameter descriptions and their translations are different: they ship in the package as a GPL-3.0 data pack (`param_i18n/`), so the parameter panel works offline; see [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) and [docs/PARAM_I18N.md](docs/PARAM_I18N.md).
 
 - The map shows the credit of the server it comes from. The backend names itself to the servers it asks (`Argus-GCS/<version>`). The terrain of the 3D view is read by the browser itself.
 - The AutoNavi (Amap) source, which is the default, and the Google sources are not published APIs: they are the addresses those companies' own web maps read. Choose another source in Settings if that matters to you.
@@ -286,6 +286,7 @@ npm run test:e2e -- --project=chromium
 - [`CONTRIBUTING.md`](CONTRIBUTING.md) — development rules: CI limits, both links, tests, review, releases
 - [`CLAUDE.md`](CLAUDE.md) — project conventions, PX4 status, protocol-coupling discipline
 - [`docs/VERIFICATION.md`](docs/VERIFICATION.md) — how far every feature has been verified
+- [`docs/PARAM_I18N.md`](docs/PARAM_I18N.md) — parameter metadata and translation data pack contract
 - [`SECURITY.md`](SECURITY.md) — how to run it safely, and how to report a vulnerability
 - [`docs/FAQ.md`](docs/FAQ.md) — common connection, map, log and firmware problems
 - [`docs/RECOVERY.md`](docs/RECOVERY.md) — what to do when a firmware flash fails
@@ -325,6 +326,7 @@ Argus is under active development: bug and security fixes, and new features, are
 - NTRIP RTK client (HTTP/1.0 + ICY-200, RTCM streaming)
 - Compass/accel/gyro calibration with binary progress
 - Multi-language UI (10 locales + RTL)
+- Parameter descriptions in 10 languages from the bundled GPL-3.0 pack, with machine/reviewed badges and English fallback
 - Dual-transport mutex (WS backend / WebSerial)
 - Gimbal pitch/yaw control
 - Tag-triggered release workflow with auto-changelog

@@ -81,6 +81,7 @@ in the repository before you fly with it.
 Argus 没有经过飞行测试。飞行前请先看仓库里的 docs/VERIFICATION.md 和 SECURITY.md。
 
 Licenses: LICENSE (Argus, MIT). THIRD_PARTY_NOTICES.md and LICENSES/ (work of others).
+Parameter descriptions and translations: param_i18n/ (GPL-3.0).
 """
 
 
@@ -141,6 +142,15 @@ def copy_app_files(build_dir: Path) -> None:
     for name in LICENSE_FILES:
         shutil.copy2(SCRIPT_DIR / name, build_dir / name)
     shutil.copytree(SCRIPT_DIR / "LICENSES", build_dir / "LICENSES")
+
+    # The parameter descriptions and translations are GPL-3.0 data, not part of the MIT code.
+    # They are fetched by scripts/fetch_param_i18n.py; CI uses the small fixture pack.
+    param_dir = Path(os.environ.get("PARAM_I18N_DIR", str(SCRIPT_DIR / "param_i18n")))
+    if not (param_dir / "manifest.json").is_file():
+        print("  ERROR: %s has no manifest.json; run scripts/fetch_param_i18n.py first" % param_dir)
+        sys.exit(1)
+    shutil.copytree(param_dir, build_dir / "param_i18n")
+
     # utf-8-sig and CRLF: Notepad on an older Windows reads Chinese wrongly without the mark.
     (build_dir / "README.txt").write_text(README_TXT.format(version=_VERSION), encoding="utf-8-sig", newline="\r\n")
 
