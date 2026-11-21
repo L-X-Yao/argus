@@ -275,6 +275,7 @@ class DroneLink:
             # A different vehicle may report another firmware; never select metadata from the old one.
             self.vehicle.fw_version = ""
             self.vehicle.fw_git = ""
+            self.param_mgr.invalidate_names()
             # Re-arm the autopilot latch + unsupported-FC warning: the new
             # session may be a different vehicle, and a stale non-ArduPilot
             # value would silently gate every command (or a stale 3 would
@@ -328,6 +329,7 @@ class DroneLink:
             # A different vehicle may report another firmware; never select metadata from the old one.
             self.vehicle.fw_version = ""
             self.vehicle.fw_git = ""
+            self.param_mgr.invalidate_names()
             # The next vehicle may never send a TERRAIN_REPORT, and this one's would stay up.
             self.diagnostic.terrain_alt = -1.0
             # Same rationale as connect(): a silent in-loop reconnect may be a

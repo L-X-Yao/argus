@@ -182,6 +182,22 @@ def test_link_param_names_are_a_snapshot_and_firmware_does_not_survive_reset():
     assert link.vehicle.fw_git == ""
 
 
+def test_reset_invalidates_metadata_names_without_clearing_the_ui_cache():
+    from backend.drone_link import DroneLink
+
+    link = DroneLink()
+    link.param_mgr.params["OLD_VEHICLE_PARAM"] = {"name": "OLD_VEHICLE_PARAM"}
+    link._reset_session_state()
+    assert link.param_names() == ()
+    assert "OLD_VEHICLE_PARAM" in link.param_mgr.params
+
+    with patch.object(link.param_mgr, "_request_list"):
+        link.param_mgr.request_all()
+    assert link.param_names() == ()
+    link.param_mgr.params["NEW_VEHICLE_PARAM"] = {"name": "NEW_VEHICLE_PARAM"}
+    assert link.param_names() == ("NEW_VEHICLE_PARAM",)
+
+
 def test_reviewed_translation_status(tmp_path):
     pack = tmp_path / "pack"
     copytree(FIXTURE, pack)
