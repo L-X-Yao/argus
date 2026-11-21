@@ -577,6 +577,8 @@ jobs:
           # before every verify while an identically-launched backend
           # survives, and a foreground probe under timeout survives — so
           # capture the exit status (128+N = signal N) instead of guessing.
+          # The single-quoted string is a script for the inner bash: $HOME and $? expand there.
+          # shellcheck disable=SC2016
           setsid nohup bash -c '$HOME/sitl/arducopter --model + --speedup 8 -w \
             --serial0 tcp:0 \
             --defaults $HOME/sitl/copter.parm \
@@ -585,7 +587,7 @@ jobs:
           # Boot progresses unattended now; SERIAL2's bind is the last of
           # the serial-init lines. Give sensors/EKF a further beat past it
           # so no client traffic lands inside the fragile window.
-          for i in $(seq 1 60); do
+          for _ in $(seq 1 60); do
             grep -q 'SERIAL2 on TCP port' sitl.log 2>/dev/null && break
             sleep 1
           done
