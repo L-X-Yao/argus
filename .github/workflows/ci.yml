@@ -10,6 +10,12 @@ on:
   # release.yml runs all of this on the tagged commit before it publishes.
   workflow_call:
 
+# A superseded push or PR run has nothing left to prove: cancel it. A release call
+# runs on its own tag, so it never shares a group with a later push.
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 

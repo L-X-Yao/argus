@@ -39,6 +39,7 @@ CI runs on every push to `main` and every PR. On top of the five checks above, i
 | Bundle size | `dist/assets/` is at most 3 MiB |
 | npm audit | No high or critical issue in what the web build ships (`--omit=dev`) |
 | pip-audit | No known vulnerability in the Python dependencies |
+| Dependency review | On a pull request, a newly added dependency with a high or critical advisory fails it |
 | Oldest Python | Unit and contract tests on the oldest Python `pyproject.toml` allows. Every other job runs on the version the Windows package bundles, `PY_VER` in `scripts/build_package.py` |
 | CodeQL | `.github/workflows/codeql.yml`, on every push and weekly |
 | Published package | `.github/workflows/audit-release.yml`, weekly: pip-audit on the wheels inside the newest release's zip, and whether the Python it bundles is still the newest of its line. A failure means a new release is due |
@@ -52,6 +53,8 @@ CI runs on every push to `main` and every PR. On top of the five checks above, i
 | Other vehicles | `tests/sitl_vehicles.py` and `tests/sitl_flights.py`: Plane, QuadPlane, Rover and Sub on real firmware: recognition, mode numbers, parameters, and a whole mission each |
 | Links | `tests/sitl_links.py`: what the jobs above leave out, through the backend on real firmware |
 | End-to-end tests | Playwright specs in `tests/e2e/` |
+
+A superseded push or pull-request run is cancelled, so a new commit does not queue behind the run it replaced. A release call runs on its own tag and is not cancelled.
 
 `make test-integration` runs the integration tests locally, in about 3 minutes.
 
