@@ -55,6 +55,15 @@ Argus 是面向 ArduPilot 的 **Web 地面站**：一个浏览器界面，支持
 | **AI 助手** | 为 Claude Desktop、Claude Code 等 AI 客户端提供的 MCP 服务：读取页面显示的内容，提出航线、参数修改，以及飞行中的返航、悬停或降落，由操作员在页面上批准 |
 | **安全** | Token 认证，跨站与 DNS 重绑定请求拦截，SSRF + 路径穿越防护，statustext 过滤 |
 
+## 界面
+
+引导式固件升级与本机日志列表。
+
+<p align="center">
+  <img src="docs/screenshots/firmware.png" alt="固件升级：选择 .apj、连接后端串口、写入" width="48%">
+  <img src="docs/screenshots/logs.png" alt="日志：飞控机载列表与本机 tlog 文件" width="48%">
+</p>
+
 ## 安装
 
 ### Windows 发布包

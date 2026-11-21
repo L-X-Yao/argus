@@ -55,6 +55,15 @@ To fly real missions today, use QGroundControl or Mission Planner: both are flig
 | **AI assistant** | An MCP server for AI clients such as Claude Desktop or Claude Code: it reads what the page shows and proposes missions, parameter changes, and return, hold or land in flight, which the operator approves in the page |
 | **Security** | Token auth, cross-site and DNS-rebinding request blocking, SSRF + path-traversal guards, statustext filtering |
 
+## Screens
+
+The guided firmware upgrade and the local log list.
+
+<p align="center">
+  <img src="docs/screenshots/firmware.png" alt="Firmware upgrade: choose an .apj, connect the backend serial port, write it" width="48%">
+  <img src="docs/screenshots/logs.png" alt="Logs: the onboard list and the tlog files on this computer" width="48%">
+</p>
+
 ## Install
 
 ### Windows package
