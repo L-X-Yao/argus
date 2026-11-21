@@ -76,7 +76,9 @@ def test_coverage_uses_live_names_and_firmware_breaks_ties(tmp_path):
         target = pack / "meta" / "copter"
         target.mkdir(parents=True, exist_ok=True)
         (target / f"{series}.json").write_text(json.dumps({extra and next(iter(extra)): next(iter(extra.values()))}))
-    (pack / "meta" / "copter" / "4.6.3.json").write_text((FIXTURE / "meta" / "copter" / "4.6.3.json").read_text(encoding="utf-8"), encoding="utf-8")
+    (pack / "meta" / "copter" / "4.6.3.json").write_text(
+        (FIXTURE / "meta" / "copter" / "4.6.3.json").read_text(encoding="utf-8"), encoding="utf-8"
+    )
     manifest = json.loads((FIXTURE / "manifest.json").read_text(encoding="utf-8"))
     manifest["sources"] += [
         {"vehicle": "copter", "series": series, "url": "", "sha256": "", "params": 1} for series in ("4.5.7", "4.7.1")
