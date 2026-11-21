@@ -4,6 +4,8 @@ import json
 import time
 from unittest.mock import MagicMock, patch
 
+import pytest
+
 from backend.param_meta import _parse_xml, get_metadata
 
 SAMPLE_XML = b"""<?xml version="1.0" encoding="utf-8"?>
@@ -311,3 +313,210 @@ class TestGetMetadata:
         assert pm._URLS["copter"] == "https://autotest.ardupilot.org/Parameters/ArduCopter/apm.pdef.xml"
         assert all(url.startswith("https://autotest.ardupilot.org/Parameters/") for url in pm._URLS.values())
         assert all(url.endswith("/apm.pdef.xml") for url in pm._URLS.values())
+
+
+class TestPackValidation:
+    def setup_method(self):
+        import backend.param_meta as pm
+
+        pm._merged_cache.clear()
+        pm._selection_cache.clear()
+        pm._json_cache.clear()
+        pm._validation_cache.clear()
+        pm._active_pack = None
+
+    def test_versioned_url_has_its_own_cache_name(self, tmp_path):
+        import backend.param_meta as pm
+
+        response = MagicMock()
+        response.read.return_value = SAMPLE_XML
+        with patch.object(pm, "CACHE_DIR", tmp_path), patch("urllib.request.urlopen", return_value=response) as fetch:
+            result = pm._get_versioned_metadata("copter", "4.6.3")
+        assert "ANGLE_MAX" in result
+        assert (tmp_path / "copter-4.6.3.json").exists()
+        request = fetch.call_args.args[0]
+        assert request.full_url.endswith("/versioned/Copter/stable-4.6.3/apm.pdef.xml")
+        assert pm._get_versioned_metadata("bad", "4.6.3") == {}
+        assert pm._get_versioned_metadata("copter", "../4.6.3") == {}
+
+    @pytest.mark.parametrize(
+        "entry",
+        [
+            "bad",
+            {"desc": 1},
+            {"default": True},
+            {"default": float("inf")},
+            {"range": [0]},
+            {"range": [0, float("nan")]},
+            {"values": []},
+            {"values": {"0": 1}},
+        ],
+    )
+    def test_bad_metadata_entries_are_refused(self, entry):
+        import backend.param_meta as pm
+
+        with pytest.raises(pm._PackError):
+            pm._clean_entry(entry)
+
+    @pytest.mark.parametrize("data", [[], {1: {}}, {"../BAD": {}}, {"ArduCopter:": {}}])
+    def test_bad_metadata_names_are_refused(self, data):
+        import backend.param_meta as pm
+
+        with pytest.raises(pm._PackError):
+            pm._normalise_entries(data)
+
+    def test_prefixes_are_removed_and_bare_entry_wins(self):
+        import backend.param_meta as pm
+
+        result = pm._normalise_entries(
+            {
+                "ArduCopter:P": {"desc": "prefixed"},
+                "P": {"desc": "bare"},
+                "ArduPlane:Q": {"desc": "plane"},
+                "Rover:R": {"desc": "rover"},
+                "ArduSub:S": {"desc": "sub"},
+            }
+        )
+        assert list(result) == ["P", "Q", "R", "S"]
+        assert result["P"]["desc"] == "bare"
+
+    @pytest.mark.parametrize(
+        "data",
+        [
+            [],
+            {"schema": 1, "sources": []},
+            {"schema": 1, "data_version": "x", "sources": ["bad"]},
+            {"schema": 1, "data_version": "x", "sources": [{"vehicle": "bad", "series": "4.6.3"}]},
+            {"schema": 1, "data_version": "x", "sources": [{"vehicle": "copter", "series": "../x"}]},
+        ],
+    )
+    def test_bad_manifests_are_refused(self, data):
+        import backend.param_meta as pm
+
+        with patch.object(pm, "_read_json", return_value=data), pytest.raises(pm._PackError):
+            pm._manifest("copter")
+
+    @pytest.mark.parametrize(
+        "data",
+        [
+            [],
+            {"copter": []},
+            {"copter": {"../OLD": "NEW"}},
+            {"copter": {"OLD": "../NEW"}},
+        ],
+    )
+    def test_bad_aliases_are_refused(self, data, tmp_path):
+        import backend.param_meta as pm
+
+        with (
+            patch.object(pm, "PACK_DIR", tmp_path),
+            patch.object(pm.Path, "exists", return_value=True),
+            patch.object(pm, "_read_json", return_value=data),
+            pytest.raises(pm._PackError),
+        ):
+            pm._aliases("copter")
+
+    def test_absent_aliases_and_overrides_are_empty(self, tmp_path):
+        import backend.param_meta as pm
+
+        with patch.object(pm, "PACK_DIR", tmp_path):
+            assert pm._aliases("copter") == {}
+            assert pm._overrides("copter") == {}
+
+    @pytest.mark.parametrize(
+        "data",
+        [
+            [],
+            {"bad": {"t": "x", "r": 0}},
+            {"0" * 64: []},
+            {"0" * 64: {"t": 1, "r": 0}},
+            {"0" * 64: {"t": "x", "r": 2}},
+            {"0" * 64: {"t": "x", "r": True}},
+            {"0" * 64: {"t": "x", "r": 0, "s": "other"}},
+        ],
+    )
+    def test_bad_translation_memories_are_refused(self, data):
+        import backend.param_meta as pm
+
+        with patch.object(pm, "_read_json", return_value=data), pytest.raises(pm._PackError):
+            pm._translation_memory("zh")
+
+    def test_json_pack_rejects_nonfinite_and_non_utf8(self, tmp_path):
+        import backend.param_meta as pm
+
+        for name, raw in (("nan.json", b'{"x": 1e999}'), ("utf8.json", b"\xff")):
+            path = tmp_path / name
+            path.write_bytes(raw)
+            with patch.object(pm, "PACK_DIR", tmp_path), pytest.raises(pm._PackError):
+                pm._read_json(path)
+
+    def test_json_pack_refuses_outside_directory_and_oversized_race(self, tmp_path):
+        import backend.param_meta as pm
+
+        root = tmp_path / "root"
+        root.mkdir()
+        outside = tmp_path / "outside.json"
+        outside.write_text("{}")
+        with patch.object(pm, "PACK_DIR", root), pytest.raises(pm._PackError):
+            pm._read_json(outside)
+        with patch.object(pm, "PACK_DIR", root), pytest.raises(pm._PackError):
+            pm._read_json(root)
+        path = root / "small.json"
+        path.write_text("{}")
+        with (
+            patch.object(pm, "PACK_DIR", root),
+            patch.object(pm.cfg, "PARAM_META_MAX", 1),
+            pytest.raises(pm._PackError),
+        ):
+            pm._read_json(path)
+
+    def test_pack_limits_symlinks_and_missing_manifest(self, tmp_path):
+        import backend.param_meta as pm
+
+        with patch.object(pm, "PACK_DIR", tmp_path), pytest.raises(pm._PackError):
+            pm._validate_pack()
+        manifest = tmp_path / "manifest.json"
+        manifest.write_text("{}")
+        with (
+            patch.object(pm, "PACK_DIR", tmp_path),
+            patch.object(pm.cfg, "PARAM_META_MAX", 1),
+            pytest.raises(pm._PackError),
+        ):
+            pm._validate_pack()
+        with (
+            patch.object(pm, "PACK_DIR", tmp_path),
+            patch.object(pm, "PACK_MAX_TOTAL", 1),
+            pytest.raises(pm._PackError),
+        ):
+            pm._validate_pack()
+        target = tmp_path / "target.json"
+        target.write_text("{}")
+        link = tmp_path / "link.json"
+        link.symlink_to(target)
+        with patch.object(pm, "PACK_DIR", tmp_path), pytest.raises(pm._PackError):
+            pm._validate_pack()
+
+    def test_non_regular_pack_entry_is_refused(self, tmp_path):
+        import os
+
+        import backend.param_meta as pm
+
+        (tmp_path / "manifest.json").write_text("{}")
+        os.mkfifo(tmp_path / "fifo")
+        with patch.object(pm, "PACK_DIR", tmp_path), pytest.raises(pm._PackError):
+            pm._validate_pack()
+
+    def test_translation_edge_statuses(self):
+        import backend.param_meta as pm
+
+        entry, status, complete = pm._translated_entry({"units": "V"}, {})
+        assert status == "reviewed" and complete and "tr" not in entry
+        text = "English"
+        digest = __import__("hashlib").sha256(text.encode()).hexdigest()
+        entry, status, complete = pm._translated_entry({"desc": text}, {digest: {"t": "", "r": 0}})
+        assert status == "partial" and not complete
+
+    def test_non_string_firmware_is_ignored(self):
+        import backend.param_meta as pm
+
+        assert pm._fw_series(None) == ""

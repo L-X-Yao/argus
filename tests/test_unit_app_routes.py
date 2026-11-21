@@ -489,6 +489,39 @@ class TestParamMeta:
         r = client.get("/api/param_meta")
         assert r.status_code == 200
 
+    def test_param_meta_uses_request_link_and_gzips_only_this_route(self):
+        response = {"_meta": {"vehicle": "copter"}, "RTL_ALT": {"desc": "English"}}
+        with (
+            patch("backend.app.get_param_metadata", return_value=response) as get_meta,
+            patch.object(app.state.link, "param_names", return_value=("B", "A")),
+            patch.object(app.state.link.vehicle, "fw_version", "v4.6.3"),
+        ):
+            r = client.get(
+                "/api/param_meta",
+                params={"vehicle": "copter", "locale": "zh"},
+                headers={"Accept-Encoding": "gzip"},
+            )
+        assert r.status_code == 200
+        assert r.headers["Content-Encoding"] == "gzip"
+        assert "Accept-Encoding" in r.headers["Vary"]
+        assert r.json() == response
+        get_meta.assert_called_once_with("copter", "zh", "v4.6.3", "", ("B", "A"))
+        assert "Content-Encoding" not in client.get("/health", headers={"Accept-Encoding": "gzip"}).headers
+
+    def test_param_meta_explicit_arguments_and_gzip_q_zero(self):
+        with (
+            patch("backend.app.get_param_metadata", return_value={"_meta": {}}) as get_meta,
+            patch.object(app.state.link, "param_names", return_value=()),
+        ):
+            r = client.get(
+                "/api/param_meta",
+                params={"vehicle": "plane", "locale": "en", "fw": "v4.7.1", "series": "4.7.1"},
+                headers={"Accept-Encoding": "gzip;q=0"},
+            )
+        assert r.status_code == 200
+        assert "Content-Encoding" not in r.headers
+        get_meta.assert_called_once_with("plane", "en", "v4.7.1", "4.7.1", ())
+
 
 class TestVersionGitHashFallback:
     """Cover the OSError/SubprocessError fallback in api_version (lines 100-101)."""

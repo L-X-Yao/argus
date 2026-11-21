@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import glob
+import gzip
+import json
 import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -33,7 +35,7 @@ from .config import (
 )
 from .drone_link import DroneLink
 from .firmware import router as firmware_router
-from .param_meta import get_metadata
+from .param_meta import get_param_metadata
 from .terrain import router as terrain_router
 from .tiles import router as tiles_router
 from .video import router as video_router
@@ -251,9 +253,38 @@ async def websocket_endpoint(ws: WebSocket):
     await app.state.ws_mgr.handle_client(ws)
 
 
+def _accepts_gzip(header: str) -> bool:
+    encodings = {}
+    for item in header.split(","):
+        parts = [part.strip() for part in item.split(";")]
+        coding = parts[0].lower()
+        if not coding:
+            continue
+        quality = 1.0
+        for parameter in parts[1:]:
+            if parameter.startswith("q="):
+                try:
+                    quality = float(parameter[2:])
+                except ValueError:
+                    quality = 0.0
+        encodings[coding] = quality
+    if "gzip" in encodings:
+        return encodings["gzip"] > 0
+    return encodings.get("*", 0.0) > 0
+
+
 @app.get("/api/param_meta")
-async def api_param_meta(vehicle: str = "copter"):
-    return await aio_download(get_metadata, vehicle)
+async def api_param_meta(request: Request, vehicle: str = "copter", locale: str = "en", fw: str = "", series: str = ""):
+    link: DroneLink = request.app.state.link
+    names = link.param_names()
+    selected_fw = fw or link.vehicle.fw_version
+    result = await aio_download(get_param_metadata, vehicle, locale, selected_fw, series, names)
+    body = json.dumps(result, ensure_ascii=False, allow_nan=False, separators=(",", ":")).encode("utf-8")
+    headers = {"Vary": "Accept-Encoding"}
+    if _accepts_gzip(request.headers.get("accept-encoding", "")):
+        body = gzip.compress(body)
+        headers["Content-Encoding"] = "gzip"
+    return Response(content=body, media_type="application/json", headers=headers)
 
 
 @app.get("/api/ports")
