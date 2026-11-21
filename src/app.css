@@ -15,22 +15,22 @@
     --background: 0 0% 100%;
     --foreground: 240 10% 3.9%;
     --muted: 240 4.8% 95.9%;
-    --muted-foreground: 240 3.8% 46.1%;
+    --muted-foreground: 240 3.8% 42%;
     --popover: 0 0% 100%;
     --popover-foreground: 240 10% 3.9%;
     --card: 0 0% 100%;
     --card-foreground: 240 10% 3.9%;
     --border: 240 5.9% 90%;
     --input: 240 5.9% 90%;
-    --primary: 211 100% 50%;
+    --primary: 211 100% 36%;
     --primary-foreground: 0 0% 100%;
     --secondary: 240 4.8% 95.9%;
     --secondary-foreground: 240 5.9% 10%;
     --accent: 240 4.8% 95.9%;
     --accent-foreground: 240 5.9% 10%;
-    --destructive: 0 72.2% 50.6%;
+    --destructive: 0 72.2% 40%;
     --destructive-foreground: 0 0% 98%;
-    --success: 142 76% 36%;
+    --success: 142 76% 28%;
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
     --warning-foreground: 0 0% 100%;
@@ -57,12 +57,11 @@
     --card-foreground: 210 20% 92%;
     --border: 220 12% 18%;
     --input: 220 12% 18%;
-    --primary: 211 100% 50%;
+    --primary: 211 100% 36%;
     --primary-foreground: 0 0% 100%;
     /* Text on the dark background and a background behind white text need
        different lightnesses; one blue cannot meet 4.5:1 on both sides. */
     --primary-text: 211 100% 68%;
-    --primary-bg: 211 100% 36%;
     --secondary: 220 12% 16%;
     --secondary-foreground: 210 20% 92%;
     --accent: 220 12% 16%;
@@ -176,14 +175,11 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
-/* The dark theme uses one primary for text on the dark background and another
-   for a background behind white text. A single blue cannot reach 4.5:1 on both
-   sides: white on #007bff is 3.97, #007bff on the card is 4.46. */
+/* In the dark theme --primary is the background behind white text;
+   --primary-text is the lighter blue used for text on the dark card. A single
+   blue cannot reach 4.5:1 on both sides. */
 .dark .text-primary {
   color: hsl(var(--primary-text));
-}
-.dark .bg-primary {
-  background-color: hsl(var(--primary-bg));
 }
 .dark .text-destructive {
   color: hsl(var(--destructive-text));

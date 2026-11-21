@@ -14,7 +14,8 @@
   <div class="fixed top-16 right-5 z-[10000] flex flex-col gap-1.5 pointer-events-none">
     {#each app.toasts as t (t.id)}
       <div
-        role="presentation"
+        role={t.level === 'error' ? 'alert' : 'status'}
+        aria-atomic="true"
         class="pointer-events-auto flex items-center gap-2 px-4 py-2 rounded-lg text-sm cursor-pointer
                   max-w-[350px] shadow-lg animate-in slide-in-from-right {toastClass(t.level)}"
         onclick={() => dismissToast(t.id)}

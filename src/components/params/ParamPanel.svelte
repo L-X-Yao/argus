@@ -383,7 +383,7 @@
                     <div role="presentation" class="font-mono cursor-pointer px-1.5 py-0.5 rounded hover:bg-input transition-colors text-right min-w-[60px] {hasDefaultDiff(p.name, p.value) ? 'text-warning' : ''}"
                onclick={() => startEdit(p)}>{fmtValue(p.value, p.type)}</div>
           {#if units}<span class="text-[10px] text-muted-foreground">{units}</span>{/if}
-          {#if valLabel}<span class="text-[10px] text-primary/70 truncate">{valLabel}</span>{/if}
+          {#if valLabel}<span class="text-[10px] text-primary truncate">{valLabel}</span>{/if}
           {#if hasDefaultDiff(p.name, p.value)}
             <button class="text-[9px] text-muted-foreground/60 hover:text-warning px-0.5 cursor-pointer bg-transparent border-none"
                     onclick={() => { dispatch('param_set', undefined, { name: p.name, value: getMeta()[p.name]!.default! }); modified.add(p.name); modified = new Set(modified); }}

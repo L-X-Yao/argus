@@ -52,9 +52,10 @@
   ]);
 
   function varColor(v: number): string {
-    if (worst(v) < 0.5) return '#22c55e';
-    if (worst(v) < 1.0) return '#eab308';
-    return '#ef4444';
+    const dark = app.darkTheme;
+    if (worst(v) < 0.5) return dark ? '#22c55e' : '#15803d';
+    if (worst(v) < 1.0) return dark ? '#eab308' : '#a16207';
+    return dark ? '#ef4444' : '#dc2626';
   }
 
   function varLevel(v: number): string {

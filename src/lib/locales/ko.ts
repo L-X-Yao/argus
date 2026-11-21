@@ -54,6 +54,7 @@ const messages: Record<string, string> = {
   'map.follow': '추종',
   'map.free': '자유',
   'map.home': '홈',
+  'map.vehicle': '기체',
   'map.fitAll': '전체 보기',
   'wp.title': '웨이포인트',
   'wp.upload': '업로드',

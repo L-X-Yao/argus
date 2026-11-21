@@ -29,7 +29,21 @@
               ? 1
               : 0,
   );
-  let barColor = $derived(linkBars >= 3 ? '#22c55e' : linkBars >= 2 ? '#eab308' : linkBars >= 1 ? '#ef4444' : '#666');
+  let barColor = $derived(
+    linkBars >= 3
+      ? app.darkTheme
+        ? '#22c55e'
+        : '#15803d'
+      : linkBars >= 2
+        ? app.darkTheme
+          ? '#eab308'
+          : '#a16207'
+        : linkBars >= 1
+          ? app.darkTheme
+            ? '#ef4444'
+            : '#b91c1c'
+          : '#666',
+  );
 
   let prevFrames = $state(0);
   let msgRate = $state(0);
@@ -208,7 +222,7 @@
         <span class="text-muted-foreground text-[10px] max-sm:hidden">{app.drone.fw_version}</span>
       {/if}
       {#if app.drone.parse_errors > 0}
-        <span class="text-[9px] text-destructive/70 font-mono" title={t('tip.parseErrors')}>
+        <span class="text-[9px] text-destructive font-mono" title={t('tip.parseErrors')}>
           E:{app.drone.parse_errors}
         </span>
       {/if}

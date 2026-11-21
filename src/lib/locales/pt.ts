@@ -54,6 +54,7 @@ const messages: Record<string, string> = {
   'map.follow': 'Seguir',
   'map.free': 'Livre',
   'map.home': 'Início',
+  'map.vehicle': 'Veículo',
   'map.fitAll': 'Ajustar tudo',
   'wp.title': 'Pontos de rota',
   'wp.upload': 'Enviar',

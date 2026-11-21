@@ -54,6 +54,7 @@ const messages: Record<string, string> = {
   'map.follow': '追従',
   'map.free': 'フリー',
   'map.home': 'ホーム',
+  'map.vehicle': '機体',
   'map.fitAll': '全体表示',
   'wp.title': 'ウェイポイント',
   'wp.upload': 'アップロード',

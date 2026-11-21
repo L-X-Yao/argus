@@ -148,7 +148,7 @@
       <span class="text-[10px] font-semibold text-destructive uppercase tracking-wider">{t('prearm.title')}</span>
       <div class="mt-1 space-y-0.5">
         {#each d.prearm as msg}
-          <div class="flex items-center gap-1.5 text-[11px] text-destructive/80">
+          <div class="flex items-center gap-1.5 text-[11px] text-destructive">
             <XIcon size={10} class="shrink-0" />
             <span>{msg}</span>
           </div>
