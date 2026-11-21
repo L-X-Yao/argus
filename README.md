@@ -40,7 +40,7 @@ To fly real missions today, use QGroundControl or Mission Planner: both are flig
 | **Map** | 8 tile sources (Amap, Google, OSM, Esri, CartoDB; Tianditu with a key of your own), each under [its own terms](#map-data) + 3D terrain (MapLibre GL) + offline mbtiles |
 | **Mission** | WP / Spline / Loiter / Survey grid / Crosshatch / Spiral / Orbit + terrain profile with clearance check |
 | **Formats** | Reads `.waypoints` (Mission Planner) and `.plan` (QGroundControl); reads and writes `.kml` and its own `.json` |
-| **Parameters** | Metadata-driven UI (desc/range/units/enum/bitmask), 10-language descriptions with machine/reviewed badges and English fallback, tree view, diff export, default reset |
+| **Parameters** | Metadata-driven UI (desc/range/units/enum/bitmask), Chinese descriptions with machine/reviewed badges and English fallback (more languages follow as data packs), tree view, diff export, default reset |
 | **Calibration** | Compass, accel, gyro, level, baro wizards with real-time progress |
 | **RTK** | NTRIP client with HTTP/1.0 + ICY-200 negotiation, streaming RTCM injection |
 | **Firmware** | Store `.apj` files on the backend, online firmware browser, reboot to bootloader, and flash through the backend serial link with a guided upgrade panel |
@@ -326,7 +326,7 @@ Argus is under active development: bug and security fixes, and new features, are
 - NTRIP RTK client (HTTP/1.0 + ICY-200, RTCM streaming)
 - Compass/accel/gyro calibration with binary progress
 - Multi-language UI (10 locales + RTL)
-- Parameter descriptions in 10 languages from the bundled GPL-3.0 pack, with machine/reviewed badges and English fallback
+- Chinese parameter descriptions from the bundled GPL-3.0 pack, with machine/reviewed badges and English fallback; other languages follow as data packs
 - Dual-transport mutex (WS backend / WebSerial)
 - Gimbal pitch/yaw control
 - Tag-triggered release workflow with auto-changelog

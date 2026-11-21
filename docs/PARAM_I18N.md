@@ -15,6 +15,8 @@ The data is derived from ArduPilot, which is GPL-3.0. It lives in a separate pub
 ## Data pack
 
 `param_i18n/` is generated or downloaded; it is not committed. `param_i18n.lock` is committed.
+The schema supports all ten locales. v3.15.0 ships the zh pack; other locales fall back to English
+until a later data version adds them.
 
 ```text
 param_i18n/
