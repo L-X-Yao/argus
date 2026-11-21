@@ -1135,6 +1135,16 @@ const messages: Record<string, string> = {
   'log.listTooLarge': '로그 목록이 1000개 항목 제한을 초과했습니다',
   'mission.err.rallyTooLarge': '랠리 포인트 업로드가 500개 제한을 초과했습니다',
   'log.tooManyChunks': '로그 전송의 청크가 너무 많아 다운로드를 중단했습니다',
+
+  'param.machine': '기계 번역',
+  'param.reviewed': '검토됨',
+  'param.generated': '자동 생성',
+  'param.partial': '부분 번역',
+  'param.showEnglish': '영어 원문 보기',
+  'param.hideEnglish': '번역 보기',
+  'param.coverage': '번역 범위 {n}%',
+  'param.series': '메타데이터 버전',
+  'param.seriesAuto': '자동',
 };
 
 export default messages;

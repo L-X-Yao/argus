@@ -1143,6 +1143,16 @@ const messages: Record<string, string> = {
   'log.listTooLarge': 'La liste des journaux dépasse la limite de 1000 entrées',
   'mission.err.rallyTooLarge': 'Le téléversement de points de ralliement dépasse la limite de 500 points',
   'log.tooManyChunks': 'Le transfert du journal contient trop de fragments ; téléchargement arrêté',
+
+  'param.machine': 'Traduction automatique',
+  'param.reviewed': 'Vérifié',
+  'param.generated': 'Généré automatiquement',
+  'param.partial': 'Traduction partielle',
+  'param.showEnglish': 'Afficher l’original anglais',
+  'param.hideEnglish': 'Afficher la traduction',
+  'param.coverage': 'Couverture de traduction {n}%',
+  'param.series': 'Version des métadonnées',
+  'param.seriesAuto': 'Automatique',
 };
 
 export default messages;

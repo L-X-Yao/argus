@@ -1141,6 +1141,16 @@ const messages: Record<string, string> = {
   'log.listTooLarge': 'Logliste überschreitet das Limit von 1000 Einträgen',
   'mission.err.rallyTooLarge': 'Rally-Upload überschreitet das Limit von 500 Punkten',
   'log.tooManyChunks': 'Logübertragung hat zu viele Blöcke; Download gestoppt',
+
+  'param.machine': 'Maschinenübersetzung',
+  'param.reviewed': 'Geprüft',
+  'param.generated': 'Automatisch erzeugt',
+  'param.partial': 'Teilweise übersetzt',
+  'param.showEnglish': 'Englisches Original anzeigen',
+  'param.hideEnglish': 'Übersetzung anzeigen',
+  'param.coverage': 'Übersetzungsabdeckung {n}%',
+  'param.series': 'Metadatenversion',
+  'param.seriesAuto': 'Automatisch',
 };
 
 export default messages;

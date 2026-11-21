@@ -1133,6 +1133,16 @@ const messages: Record<string, string> = {
   'log.listTooLarge': 'قائمة السجلات تتجاوز حد 1000 إدخال',
   'mission.err.rallyTooLarge': 'تحميل نقاط التجمع يتجاوز حد 500 نقطة',
   'log.tooManyChunks': 'نقل السجل يحتوي على أجزاء كثيرة؛ توقف التنزيل',
+
+  'param.machine': 'ترجمة آلية',
+  'param.reviewed': 'تمت المراجعة',
+  'param.generated': 'تم إنشاؤه تلقائيًا',
+  'param.partial': 'ترجمة جزئية',
+  'param.showEnglish': 'إظهار النص الإنجليزي الأصلي',
+  'param.hideEnglish': 'إظهار الترجمة',
+  'param.coverage': 'تغطية الترجمة {n}%',
+  'param.series': 'إصدار البيانات الوصفية',
+  'param.seriesAuto': 'تلقائي',
 };
 
 export default messages;
