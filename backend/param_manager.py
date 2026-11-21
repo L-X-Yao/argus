@@ -29,6 +29,9 @@ class ParamManager:
         self._load_generation = 0
         self._link = link
         self.params: dict[str, dict] = {}
+        # The UI may retain rows across a reconnect, but metadata coverage must not use them
+        # for a new vehicle until a fresh Read All starts replacing the names.
+        self._names_valid = True
         self.total_count = -1
         self.received_count = 0
         self.fetching = False
@@ -54,15 +57,19 @@ class ParamManager:
         # to reset websocket cursors; that terminal event must not clear the rows itself.
         self._list_gen = 0
 
+    def invalidate_names(self) -> None:
+        self._names_valid = False
+
     def names(self) -> tuple[str, ...]:
         """An immutable snapshot; callers never iterate the live parameter dictionary."""
-        return tuple(sorted(self.params))
+        return tuple(sorted(self.params)) if self._names_valid else ()
 
     def request_all(self) -> None:
         # The clock first and `fetching` last. check_timeout runs on the link thread: a fetch
         # flagged as running while it still held the last one's times was timed out at once.
         self._fetch_start = self._last_value_time = self._last_progress = time.time()
         self.params.clear()
+        self._names_valid = True
         self.total_count = -1
         self.received_count = 0
         self._complete_emitted = False
