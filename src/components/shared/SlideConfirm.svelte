@@ -120,7 +120,8 @@
   .slide-backdrop {
     position: fixed;
     inset: 0;
-    z-index: 9998;
+    /* Above every panel and the command palette, like ConfirmDialog. */
+    z-index: 100000;
     display: flex;
     align-items: flex-end;
     justify-content: center;

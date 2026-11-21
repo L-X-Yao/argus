@@ -44,8 +44,10 @@
   );
   let usbActive = $derived(app.activeTransport === 'serial');
   // The backend owning the link is what matters here, not a heartbeat: a controller in its
-  // bootloader sends none and is still the one to flash.
-  let backendLinked = $derived(app.activeTransport === 'ws');
+  // bootloader sends none and is still the one to flash. activeTransport is cleared when a
+  // link drops and is not set again by an auto-reconnect (or by another page's connect), so
+  // a live vehicle over the backend also counts.
+  let backendLinked = $derived(app.activeTransport === 'ws' || (app.wsConnected && app.drone.connected && !usbActive));
   let canFlash = $derived(
     !!selected && info !== null && !app.fwFlash.active && !app.drone.armed && app.wsConnected && !usbActive,
   );

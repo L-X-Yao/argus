@@ -1,7 +1,9 @@
 import { test, expect, type Page } from '@playwright/test';
-import { readFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { connectSimulator } from './helpers';
+import { deflateSync } from 'node:zlib';
+import { connectSimulator, disconnectIfConnected } from './helpers';
 
 // The palette is the only way in to most tool panels, and a panel that throws on
 // open looks fine to every other test. Reading the entries from the source means a
@@ -130,6 +132,85 @@ test.describe('Rally points', () => {
     await page.mouse.click(map.x + map.width * 0.3, map.y + map.height * 0.65);
     await page.waitForTimeout(300);
     await expect(page.locator('path.rally-point')).toHaveCount(0);
+  });
+});
+
+test.describe('Confirmation dialogs opened from a panel', () => {
+  test('the Logs delete confirmation is above the panel and can be cancelled', async ({ page }) => {
+    await connectSimulator(page);
+    const name = `e2e-confirm-${Date.now()}.tlog`;
+    const dir = fileURLToPath(new URL('../../logs', import.meta.url));
+    mkdirSync(dir, { recursive: true });
+    writeFileSync(join(dir, name), Buffer.alloc(32));
+    try {
+      await openFromPalette(page, 'tool-logs');
+      await page.getByRole('button', { name: label('log.localTab') }).click();
+      const row = page.locator('label', { hasText: name });
+      await expect(row).toBeVisible();
+      await row.getByRole('checkbox').check();
+      await page.getByRole('button', { name: label('log.deleteSelected') }).click();
+
+      const confirm = page.getByRole('alertdialog');
+      await expect(confirm).toBeVisible();
+      await confirm.getByRole('button', { name: label('map.cancel') }).click();
+      await expect(confirm).toHaveCount(0);
+      // A click that landed on the panel instead would have closed the panel.
+      await expect(page.getByRole('heading', { name: label('log.title') })).toBeVisible();
+    } finally {
+      rmSync(join(dir, name), { force: true });
+    }
+  });
+
+  test('a slide confirmation opened over a panel is on top', async ({ page }) => {
+    await connectSimulator(page);
+    await openFromPalette(page, 'tool-logs');
+    await page.keyboard.press('Control+k');
+    const palette = page.getByRole('dialog', { name: label('cmd.placeholder') });
+    await palette.locator('input').fill('cmd-rtl');
+    await page.waitForTimeout(300);
+    await page.keyboard.press('Enter');
+    await expect(page.locator('.slide-backdrop')).toBeVisible();
+    const box = (await page.locator('.slide-track').boundingBox())!;
+    const onTop = await page.evaluate(
+      ({ x, y }) => !!document.elementFromPoint(x, y)?.closest('.slide-backdrop'),
+      { x: box.x + box.width / 2, y: box.y + box.height / 2 },
+    );
+    expect(onTop).toBe(true);
+  });
+
+  test('a backend reconnect still counts as the link', async ({ page }) => {
+    await connectSimulator(page);
+    await disconnectIfConnected(page);
+    await connectSimulator(page);
+    await openFromPalette(page, 'tool-firmware');
+    await expect(page.getByText(label('fw.backendLinked'))).toBeVisible();
+  });
+
+  test('the firmware flash confirmation is above the panel and can be cancelled', async ({ page }) => {
+    await connectSimulator(page);
+    const name = `e2e-confirm-${Date.now()}.apj`;
+    const dir = fileURLToPath(new URL('../../firmware', import.meta.url));
+    mkdirSync(dir, { recursive: true });
+    const image = Buffer.from([0, 1, 2, 3]);
+    writeFileSync(
+      join(dir, name),
+      JSON.stringify({ board_id: 9, image: deflateSync(image).toString('base64'), image_size: image.length }),
+    );
+    try {
+      await openFromPalette(page, 'tool-firmware');
+      await page.locator('button', { hasText: name }).click();
+      const flash = page.getByRole('button', { name: label('fw.flash') });
+      await expect(flash).toBeEnabled();
+      await flash.click();
+
+      const confirm = page.getByRole('alertdialog');
+      await expect(confirm).toBeVisible();
+      await confirm.getByRole('button', { name: label('map.cancel') }).click();
+      await expect(confirm).toHaveCount(0);
+      await expect(page.getByRole('heading', { name: label('fw.upgradeTitle') })).toBeVisible();
+    } finally {
+      rmSync(join(dir, name), { force: true });
+    }
   });
 });
 

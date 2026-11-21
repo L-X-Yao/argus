@@ -32,8 +32,10 @@
 <svelte:window onkeydown={onKey} />
 
 {#if confirmState.visible}
+  <!-- Above every panel (z-[9999]) and the command palette (z-[99999]). Panels are mounted
+       after this component in App.svelte, so an equal z-index put the panel on top. -->
   <div
-    class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm"
+    class="fixed inset-0 z-[100000] flex items-center justify-center bg-black/60 backdrop-blur-sm"
     role="presentation"
     onclick={() => resolveConfirm(false)}
     onkeydown={onBackdropKeydown}
