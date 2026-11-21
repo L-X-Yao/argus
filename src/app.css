@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 @layer base {
   *,
@@ -50,7 +50,7 @@
     --background: 220 15% 7%;
     --foreground: 210 20% 92%;
     --muted: 220 12% 14%;
-    --muted-foreground: 215 15% 55%;
+    --muted-foreground: 215 15% 58%;
     --popover: 220 15% 9%;
     --popover-foreground: 210 20% 92%;
     --card: 220 14% 10%;
@@ -59,12 +59,17 @@
     --input: 220 12% 18%;
     --primary: 211 100% 50%;
     --primary-foreground: 0 0% 100%;
+    /* Text on the dark background and a background behind white text need
+       different lightnesses; one blue cannot meet 4.5:1 on both sides. */
+    --primary-text: 211 100% 68%;
+    --primary-bg: 211 100% 36%;
     --secondary: 220 12% 16%;
     --secondary-foreground: 210 20% 92%;
     --accent: 220 12% 16%;
     --accent-foreground: 210 20% 92%;
     --destructive: 0 62.8% 40%;
     --destructive-foreground: 0 0% 98%;
+    --destructive-text: 0 80% 68%;
     --success: 142 70% 40%;
     --success-foreground: 0 0% 100%;
     --warning: 38 92% 50%;
@@ -90,7 +95,12 @@
     color: hsl(var(--foreground));
     margin: 0;
     padding: 0;
-    font-family: 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+    font-family:
+      'Inter',
+      'Segoe UI',
+      -apple-system,
+      BlinkMacSystemFont,
+      sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
   }
@@ -164,4 +174,17 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* The dark theme uses one primary for text on the dark background and another
+   for a background behind white text. A single blue cannot reach 4.5:1 on both
+   sides: white on #007bff is 3.97, #007bff on the card is 4.46. */
+.dark .text-primary {
+  color: hsl(var(--primary-text));
+}
+.dark .bg-primary {
+  background-color: hsl(var(--primary-bg));
+}
+.dark .text-destructive {
+  color: hsl(var(--destructive-text));
 }

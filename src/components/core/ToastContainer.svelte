@@ -4,7 +4,7 @@
 
   function toastClass(level: string): string {
     if (level === 'success') return 'bg-green-700 text-white';
-    if (level === 'warn') return 'bg-amber-600 text-white';
+    if (level === 'warn') return 'bg-amber-700 text-white';
     if (level === 'error') return 'bg-red-700 text-white';
     return 'bg-primary text-primary-foreground';
   }
@@ -28,9 +28,9 @@
         </span>
         {t.text}
         {#if t.count > 1}
-          <span class="ml-1 px-1.5 py-px rounded-full bg-white/20 text-[10px] font-bold leading-none"
-            >&times;{t.count}</span
-          >
+          <span class="ml-1 px-1.5 py-px rounded-full bg-white/20 text-[10px] font-bold leading-none">
+            &times;{t.count}
+          </span>
         {/if}
       </div>
     {/each}

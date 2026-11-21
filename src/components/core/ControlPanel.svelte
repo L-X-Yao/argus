@@ -116,8 +116,10 @@
           variant={app.drone.mode_id === id ? 'default' : 'secondary'}
           size="sm"
           class="w-full justify-start"
-          onclick={() => dispatch('mode', id)}>{name}</Button
+          onclick={() => dispatch('mode', id)}
         >
+          {name}
+        </Button>
       {/each}
     </div>
     <div class="text-[11px] text-muted-foreground font-semibold mt-1 tracking-wide uppercase">{t('ctrl.mission')}</div>
@@ -138,16 +140,20 @@
         } else {
           sendCommand('mission_download');
         }
-      }}>{t('ctrl.downloadMission')}</Button
+      }}
     >
+      {t('ctrl.downloadMission')}
+    </Button>
     <Button
       variant="outline"
       size="sm"
       class="w-full"
       onclick={async () => {
         if (await showConfirm(t('ctrl.clearMission') + '?')) dispatch('mission_clear');
-      }}>{t('ctrl.clearMission')}</Button
+      }}
     >
+      {t('ctrl.clearMission')}
+    </Button>
   {:else if phase === 'ground'}
     <div class="flex gap-1">
       <Button size="sm" class="flex-1 bg-teal-700 hover:bg-teal-800 text-white font-bold gap-1" onclick={takeoff}>
@@ -175,9 +181,9 @@
         <Play size={14} />{t('ctrl.startMission')}
       </Button>
     {/if}
-    <Button size="sm" class="w-full bg-green-700 hover:bg-green-800 text-white" onclick={disarm}
-      >{t('ctrl.disarm')}</Button
-    >
+    <Button size="sm" class="w-full bg-green-700 hover:bg-green-800 text-white" onclick={disarm}>
+      {t('ctrl.disarm')}
+    </Button>
     <div class="text-[11px] text-muted-foreground font-semibold mt-1 tracking-wide uppercase">{t('ctrl.mode')}</div>
     <div class="flex flex-col gap-1">
       {#each app.drone.mode_btns.slice(0, 4) as [id, name]}
@@ -185,15 +191,17 @@
           variant={app.drone.mode_id === id ? 'default' : 'secondary'}
           size="sm"
           class="w-full justify-start"
-          onclick={() => dispatch('mode', id)}>{name}</Button
+          onclick={() => dispatch('mode', id)}
         >
+          {name}
+        </Button>
       {/each}
     </div>
   {:else if phase === 'flying'}
     <Button variant="destructive" size="sm" class="w-full font-bold gap-1.5" onclick={rtl}>
       <CornerDownLeft size={14} />{t('ctrl.rtl')}
     </Button>
-    <Button size="sm" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold gap-1.5" onclick={pauseMode}>
+    <Button size="sm" class="w-full bg-amber-700 hover:bg-amber-800 text-white font-bold gap-1.5" onclick={pauseMode}>
       <Pause size={14} />{t('ctrl.pause')}
     </Button>
     {#if app.waypoints.length > 0}
@@ -203,8 +211,9 @@
     {/if}
     <div class="text-[11px] text-muted-foreground font-semibold mt-1 tracking-wide uppercase">{t('ctrl.altitude')}</div>
     <div class="flex items-center gap-1">
-      <Button variant="outline" size="xs" class="px-1.5" onclick={() => adjustAlt(-5)}><ChevronDown size={12} /></Button
-      >
+      <Button variant="outline" size="xs" class="px-1.5" onclick={() => adjustAlt(-5)}>
+        <ChevronDown size={12} />
+      </Button>
       <span class="flex-1 text-center text-xs font-bold tabular-nums">{app.drone.alt_rel.toFixed(0)}m</span>
       <Button variant="outline" size="xs" class="px-1.5" onclick={() => adjustAlt(5)}><ChevronUp size={12} /></Button>
     </div>
@@ -213,9 +222,9 @@
       <Button size="sm" class="flex-1 bg-orange-700 hover:bg-orange-800 text-white font-bold" onclick={drop}>
         <Package size={12} />{t('ctrl.drop')}
       </Button>
-      <Button size="sm" variant="secondary" class="flex-1" onclick={() => dispatch('drop_stop')}
-        >{t('ctrl.dropStop')}</Button
-      >
+      <Button size="sm" variant="secondary" class="flex-1" onclick={() => dispatch('drop_stop')}>
+        {t('ctrl.dropStop')}
+      </Button>
     </div>
     <div class="text-[11px] text-muted-foreground font-semibold mt-1 tracking-wide uppercase">{t('ctrl.mode')}</div>
     <div class="flex flex-col gap-1">
@@ -224,15 +233,17 @@
           variant={app.drone.mode_id === id ? 'default' : 'secondary'}
           size="sm"
           class="w-full justify-start"
-          onclick={() => dispatch('mode', id)}>{name}</Button
+          onclick={() => dispatch('mode', id)}
         >
+          {name}
+        </Button>
       {/each}
     </div>
-    <Button variant="ghost" size="xs" class="w-full text-destructive mt-1" onclick={forceDisarm}
-      >{t('ctrl.forceDisarm')}</Button
-    >
+    <Button variant="ghost" size="xs" class="w-full text-destructive mt-1" onclick={forceDisarm}>
+      {t('ctrl.forceDisarm')}
+    </Button>
   {:else if phase === 'mission'}
-    <Button size="sm" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold gap-1.5" onclick={pauseMode}>
+    <Button size="sm" class="w-full bg-amber-700 hover:bg-amber-800 text-white font-bold gap-1.5" onclick={pauseMode}>
       <Pause size={14} />{t('ctrl.pauseMission')}
     </Button>
     <Button variant="destructive" size="sm" class="w-full font-bold gap-1.5" onclick={rtl}>
@@ -240,12 +251,12 @@
     </Button>
     <div class="text-[11px] text-muted-foreground font-semibold mt-1 tracking-wide uppercase">{t('ctrl.payload')}</div>
     <div class="flex gap-1.5">
-      <Button size="sm" class="flex-1 bg-orange-700 hover:bg-orange-800 text-white font-bold" onclick={drop}
-        >{t('ctrl.drop')}</Button
-      >
-      <Button size="sm" variant="secondary" class="flex-1" onclick={() => dispatch('drop_stop')}
-        >{t('ctrl.dropStop')}</Button
-      >
+      <Button size="sm" class="flex-1 bg-orange-700 hover:bg-orange-800 text-white font-bold" onclick={drop}>
+        {t('ctrl.drop')}
+      </Button>
+      <Button size="sm" variant="secondary" class="flex-1" onclick={() => dispatch('drop_stop')}>
+        {t('ctrl.dropStop')}
+      </Button>
     </div>
     <div class="text-[11px] text-muted-foreground font-semibold mt-1 tracking-wide uppercase">{t('ctrl.mode')}</div>
     <div class="flex flex-col gap-1">
@@ -254,15 +265,17 @@
           variant={app.drone.mode_id === id ? 'default' : 'secondary'}
           size="sm"
           class="w-full justify-start"
-          onclick={() => dispatch('mode', id)}>{name}</Button
+          onclick={() => dispatch('mode', id)}
         >
+          {name}
+        </Button>
       {/each}
     </div>
-    <Button variant="ghost" size="xs" class="w-full text-destructive mt-1" onclick={forceDisarm}
-      >{t('ctrl.forceDisarm')}</Button
-    >
+    <Button variant="ghost" size="xs" class="w-full text-destructive mt-1" onclick={forceDisarm}>
+      {t('ctrl.forceDisarm')}
+    </Button>
   {:else if phase === 'returning'}
-    <Button size="sm" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold gap-1.5" onclick={pauseMode}>
+    <Button size="sm" class="w-full bg-amber-700 hover:bg-amber-800 text-white font-bold gap-1.5" onclick={pauseMode}>
       <CircleStop size={14} />{t('ctrl.cancelRtl')}
     </Button>
     {#if specialModes().land !== null}
@@ -274,8 +287,8 @@
         <ArrowDown size={14} />{t('ctrl.land')}
       </Button>
     {/if}
-    <Button variant="ghost" size="xs" class="w-full text-destructive mt-2" onclick={forceDisarm}
-      >{t('ctrl.forceDisarm')}</Button
-    >
+    <Button variant="ghost" size="xs" class="w-full text-destructive mt-2" onclick={forceDisarm}>
+      {t('ctrl.forceDisarm')}
+    </Button>
   {/if}
 </div>

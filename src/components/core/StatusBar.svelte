@@ -134,6 +134,7 @@
 
       <span
         class="flex items-center gap-0.5"
+        role="img"
         title="Link {app.drone.link_age >= 0 ? app.drone.link_age.toFixed(1) + 's' : '---'} · {msgRate} Hz"
         aria-label={t('ui.linkQuality').replace('{rate}', String(msgRate))}
       >
@@ -207,9 +208,9 @@
         <span class="text-muted-foreground text-[10px] max-sm:hidden">{app.drone.fw_version}</span>
       {/if}
       {#if app.drone.parse_errors > 0}
-        <span class="text-[9px] text-destructive/70 font-mono" title={t('tip.parseErrors')}
-          >E:{app.drone.parse_errors}</span
-        >
+        <span class="text-[9px] text-destructive/70 font-mono" title={t('tip.parseErrors')}>
+          E:{app.drone.parse_errors}
+        </span>
       {/if}
       {#if app.drone.vehicles && app.drone.vehicles.length > 0}
         <button
@@ -230,9 +231,9 @@
             {#each app.drone.vehicles as v}
               <div class="flex items-center gap-2 px-2 py-1 text-xs border-b border-border/50 last:border-0">
                 <span class="font-mono font-bold text-primary">#{v.sysid}</span>
-                <span class={v.armed ? 'text-warning' : 'text-muted-foreground'}
-                  >{v.armed ? t('status.armed') : '---'}</span
-                >
+                <span class={v.armed ? 'text-warning' : 'text-muted-foreground'}>
+                  {v.armed ? t('status.armed') : '---'}
+                </span>
                 <span class="text-muted-foreground ml-auto">{v.alt?.toFixed(0) || 0}m</span>
               </div>
             {/each}
@@ -241,9 +242,9 @@
       {/if}
 
       {#if app.drone.log_active}
-        <Button variant="outline" size="xs" onclick={downloadLog} class="text-success border-success/50"
-          >{t('status.log')}</Button
-        >
+        <Button variant="outline" size="xs" onclick={downloadLog} class="text-success border-success/50">
+          {t('status.log')}
+        </Button>
       {/if}
     {:else}
       {#if connForm?.isTimeout()}
@@ -262,8 +263,10 @@
       <span
         class="text-[10px] font-bold px-1.5 py-0.5 rounded bg-primary/15 text-primary"
         title={t('assistant.present')}
-        data-testid="assistant-present">AI</span
+        data-testid="assistant-present"
       >
+        AI
+      </span>
     {/if}
     <Button
       variant="ghost"

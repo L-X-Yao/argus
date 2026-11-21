@@ -121,9 +121,9 @@
       <div>
         <div class="flex items-center gap-1.5 mb-2">
           <ShieldAlert size={14} class="text-primary" />
-          <span class="text-[11px] font-semibold text-primary uppercase tracking-wider"
-            >{t('settings.safetySection')}</span
-          >
+          <span class="text-[11px] font-semibold text-primary uppercase tracking-wider">
+            {t('settings.safetySection')}
+          </span>
         </div>
         <div class="flex justify-between items-center py-2 border-b border-border/50">
           <label for="s-radius" class="text-sm text-muted-foreground">{t('map.fence')}</label>
@@ -192,9 +192,9 @@
             </Button>
           </div>
           <div class="flex justify-between items-center py-2 border-b border-border/50">
-            <label class="text-sm text-muted-foreground"
-              ><Gamepad2 size={13} class="inline mr-1" />{t('settings.gamepad')}</label
-            >
+            <label class="text-sm text-muted-foreground">
+              <Gamepad2 size={13} class="inline mr-1" />{t('settings.gamepad')}
+            </label>
             <div class="flex items-center gap-1.5">
               {#if gamepad.connected}
                 <span class="text-[10px] text-success">{gamepad.name}</span>
@@ -216,6 +216,7 @@
             <span class="text-sm text-muted-foreground">{t('settings.mapSource')}</span>
             <select
               class="h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50"
+              aria-label={t('settings.mapSource')}
               value={app.tileSource}
               onchange={(e) => {
                 app.tileSource = (e.target as HTMLSelectElement).value;
@@ -247,11 +248,12 @@
             </select>
           </div>
           <div class="flex justify-between items-center py-2 border-b border-border/50">
-            <label class="text-sm text-muted-foreground"
-              ><Globe size={13} class="inline mr-1" />{t('settings.language')}</label
-            >
+            <label class="text-sm text-muted-foreground">
+              <Globe size={13} class="inline mr-1" />{t('settings.language')}
+            </label>
             <select
               class="h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50"
+              aria-label={t('settings.language')}
               value={i18nState.locale}
               onchange={(e) => setLocale((e.target as HTMLSelectElement).value as Locale)}
             >

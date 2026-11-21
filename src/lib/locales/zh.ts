@@ -54,6 +54,7 @@ const messages: Record<string, string> = {
   'map.follow': '跟随',
   'map.free': '自由',
   'map.home': '起飞点',
+  'map.vehicle': '飞行器',
   'map.fitAll': '全览',
   'wp.title': '航点',
   'wp.upload': '上传',

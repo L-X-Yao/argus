@@ -132,7 +132,7 @@
               class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium transition-colors
             {active
                 ? 'bg-primary/15 text-primary border border-primary/30'
-                : 'bg-muted text-muted-foreground/50 border border-transparent'}"
+                : 'bg-muted text-muted-foreground border border-transparent'}"
             >
               {f.label}
             </span>

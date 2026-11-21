@@ -453,7 +453,7 @@
     <div class="flex items-center gap-2">
       <h2 class="text-sm font-semibold text-primary uppercase tracking-wider">{t('param.title')}</h2>
       {#if metaLoaded}
-        <span class="text-[10px] text-muted-foreground/60">{t('param.metaLoaded')}</span>
+        <span class="text-[10px] text-muted-foreground">{t('param.metaLoaded')}</span>
       {/if}
     </div>
     <div class="flex items-center gap-2">

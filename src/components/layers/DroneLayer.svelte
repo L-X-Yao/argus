@@ -32,7 +32,7 @@
         iconSize: [28, 28],
         iconAnchor: [14, 14],
       });
-      droneMarker = L.marker([glat, glon], { icon, zIndexOffset: 1000 }).addTo(map);
+      droneMarker = L.marker([glat, glon], { icon, zIndexOffset: 1000, title: t('map.vehicle') }).addTo(map);
       droneMarker.on('click', () => {
         const d = app.drone;
         const coordStr = `${d.lat.toFixed(6)}, ${d.lon.toFixed(6)}`;
@@ -183,7 +183,11 @@
           iconSize: [22, 22],
           iconAnchor: [11, 11],
         });
-        const m = L.marker([glat, glon], { icon, zIndexOffset: 800 }).addTo(map);
+        const m = L.marker([glat, glon], {
+          icon,
+          zIndexOffset: 800,
+          title: `${t('map.vehicle')} ${v.sysid}`,
+        }).addTo(map);
         otherMarkers.set(v.sysid, m);
       }
     }

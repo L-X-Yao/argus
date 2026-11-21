@@ -410,7 +410,7 @@
 {#snippet holdButton(phone: boolean)}
   <Button
     size={phone ? 'lg' : 'sm'}
-    class="bg-amber-600 hover:bg-amber-700 text-white font-bold gap-1 {phone ? 'flex-1 h-11' : ''}"
+    class="bg-amber-700 hover:bg-amber-800 text-white font-bold gap-1 {phone ? 'flex-1 h-11' : ''}"
     onclick={() => dispatch('mode', specialModes().hold)}
     title="{t('ctrl.pause')} (Space)"
   >
@@ -432,13 +432,15 @@
   </Button>
 {/snippet}
 
-<a
-  href="#main-content"
-  class="sr-only focus:not-sr-only focus:absolute focus:z-[99999] focus:bg-primary focus:text-primary-foreground focus:p-2 focus:rounded-md focus:top-2 focus:left-2"
->
-  {t('ui.skipToContent')}
-</a>
-<div class="flex flex-col h-dvh overflow-hidden" role="application">
+<nav aria-label={t('ui.skipToContent')}>
+  <a
+    href="#main-content"
+    class="sr-only focus:not-sr-only focus:absolute focus:z-[99999] focus:bg-primary focus:text-primary-foreground focus:p-2 focus:rounded-md focus:top-2 focus:left-2"
+  >
+    {t('ui.skipToContent')}
+  </a>
+</nav>
+<div class="flex flex-col h-dvh overflow-hidden">
   {#if authReady}
     <StatusBar {toggleTheme} onSettings={() => (app.showSettings = !app.showSettings)} />
   {/if}
@@ -460,9 +462,9 @@
           <span class="w-2 h-2 rounded-full bg-destructive animate-pulse"></span>
         {/if}
         {#if tab.id === 'plan' && planCount > 0 && view !== 'plan'}
-          <span class="px-1 py-px rounded-full bg-primary/20 text-primary text-[9px] font-bold leading-none"
-            >{planCount}</span
-          >
+          <span class="px-1 py-px rounded-full bg-primary/20 text-primary text-[9px] font-bold leading-none">
+            {planCount}
+          </span>
         {/if}
         {#if tab.id === 'params' && paramProgress}
           <span class="w-2 h-2 rounded-full bg-warning animate-pulse"></span>
@@ -512,159 +514,170 @@
   </nav>
 
   {#if authReady}
-    <svelte:boundary onerror={(e) => console.error('View render error:', e)}>
-      {#snippet failed(error, reset)}
-        <div class="flex-1 flex items-center justify-center bg-background">
-          <div class="text-center p-6">
-            <p class="text-destructive font-bold text-sm">{t('ui.renderError')}</p>
-            <p class="text-xs text-muted-foreground mt-1 max-w-xs break-all">
-              {error instanceof Error ? error.message : String(error)}
-            </p>
-            <button class="mt-3 px-3 py-1.5 bg-primary text-primary-foreground text-xs rounded-md" onclick={reset}
-              >{t('ui.retry')}</button
-            >
-          </div>
-        </div>
-      {/snippet}
-
-      {#if view === 'fly'}
-        <div id="main-content" class="flex-1 flex overflow-hidden">
-          {#if app.drone.connected && controlsOpen}
-            <div class="shrink-0 border-r border-border bg-card z-[1002] overflow-y-auto">
-              <ControlPanel />
+    <main id="main-content" tabindex="-1" class="flex-1 flex flex-col overflow-hidden">
+      <div role="application" class="flex-1 flex flex-col overflow-hidden min-h-0">
+        <h1 class="sr-only">Argus GCS</h1>
+        <svelte:boundary onerror={(e) => console.error('View render error:', e)}>
+          {#snippet failed(error, reset)}
+            <div class="flex-1 flex items-center justify-center bg-background">
+              <div class="text-center p-6">
+                <p class="text-destructive font-bold text-sm">{t('ui.renderError')}</p>
+                <p class="text-xs text-muted-foreground mt-1 max-w-xs break-all">
+                  {error instanceof Error ? error.message : String(error)}
+                </p>
+                <button class="mt-3 px-3 py-1.5 bg-primary text-primary-foreground text-xs rounded-md" onclick={reset}>
+                  {t('ui.retry')}
+                </button>
+              </div>
             </div>
-          {/if}
-          <div class="flex-1 relative min-h-0 flex flex-col min-w-0">
-            {#if app.mapMode === '3d' && Map3DViewModule}
-              <Map3DViewModule />
-            {:else}
-              <MapView />
-            {/if}
-            {#if app.drone.connected}
-              <TelemetryOverlay />
-            {:else}
-              <div class="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[1001] pointer-events-none">
-                <div
-                  class="bg-card/90 backdrop-blur-md border border-border rounded-2xl shadow-2xl px-8 py-6 text-center min-w-[280px]"
-                >
-                  <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary/15 mb-3">
-                    <svg
-                      viewBox="0 0 24 24"
-                      width="28"
-                      height="28"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="1.5"
-                      class="text-primary"
+          {/snippet}
+
+          {#if view === 'fly'}
+            <div class="flex-1 flex overflow-hidden">
+              {#if app.drone.connected && controlsOpen}
+                <div class="shrink-0 border-r border-border bg-card z-[1002] overflow-y-auto">
+                  <ControlPanel />
+                </div>
+              {/if}
+              <div class="flex-1 relative min-h-0 flex flex-col min-w-0">
+                {#if app.mapMode === '3d' && Map3DViewModule}
+                  <Map3DViewModule />
+                {:else}
+                  <MapView />
+                {/if}
+                {#if app.drone.connected}
+                  <TelemetryOverlay />
+                {:else}
+                  <div class="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 z-[1001] pointer-events-none">
+                    <div
+                      class="bg-card/90 backdrop-blur-md border border-border rounded-2xl shadow-2xl px-8 py-6 text-center min-w-[280px]"
                     >
-                      <path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" />
-                    </svg>
-                  </div>
-                  <h2 class="text-lg font-bold text-primary tracking-wide">{t('app.name')}</h2>
-                  <p class="text-xs text-muted-foreground mt-1">{t('welcome.subtitle')}</p>
-                  <div class="mt-4 pt-3 border-t border-border/50">
-                    <p class="text-xs text-muted-foreground">{t('welcome.hint')}</p>
-                    <div class="flex items-center justify-center gap-3 mt-2 text-[11px] text-muted-foreground/70">
-                      <span
-                        ><kbd class="px-1 py-px bg-muted border border-border rounded text-[10px] font-mono">Ctrl+K</kbd
+                      <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary/15 mb-3">
+                        <svg
+                          viewBox="0 0 24 24"
+                          width="28"
+                          height="28"
+                          fill="none"
+                          stroke="currentColor"
+                          stroke-width="1.5"
+                          class="text-primary"
                         >
-                        {t('cmd.openPalette')}</span
-                      >
-                      <span
-                        ><kbd class="px-1 py-px bg-muted border border-border rounded text-[10px] font-mono">?</kbd>
-                        {t('welcome.shortcuts')}</span
-                      >
-                      <span
-                        ><kbd class="px-1 py-px bg-muted border border-border rounded text-[10px] font-mono">Ctrl+S</kbd
-                        >
-                        {t('welcome.settings')}</span
-                      >
+                          <path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" />
+                        </svg>
+                      </div>
+                      <h2 class="text-lg font-bold text-primary tracking-wide">{t('app.name')}</h2>
+                      <p class="text-xs text-muted-foreground mt-1">{t('welcome.subtitle')}</p>
+                      <div class="mt-4 pt-3 border-t border-border/50">
+                        <p class="text-xs text-muted-foreground">{t('welcome.hint')}</p>
+                        <div class="flex items-center justify-center gap-3 mt-2 text-[11px] text-muted-foreground/70">
+                          <span>
+                            <kbd class="px-1 py-px bg-muted border border-border rounded text-[10px] font-mono">
+                              Ctrl+K
+                            </kbd>
+                            {t('cmd.openPalette')}
+                          </span>
+                          <span>
+                            <kbd class="px-1 py-px bg-muted border border-border rounded text-[10px] font-mono">?</kbd>
+                            {t('welcome.shortcuts')}
+                          </span>
+                          <span>
+                            <kbd class="px-1 py-px bg-muted border border-border rounded text-[10px] font-mono">
+                              Ctrl+S
+                            </kbd>
+                            {t('welcome.settings')}
+                          </span>
+                        </div>
+                      </div>
+                      {#if !app.wsConnected}
+                        <div class="mt-3 text-destructive text-[11px] font-bold animate-pulse">
+                          {t('welcome.backendDown')}
+                        </div>
+                      {/if}
                     </div>
                   </div>
-                  {#if !app.wsConnected}
-                    <div class="mt-3 text-destructive text-[11px] font-bold animate-pulse">
-                      {t('welcome.backendDown')}
-                    </div>
+                {/if}
+                <MissionProgress />
+                {#if app.drone.connected && !app.drone.armed && PreflightMod}
+                  <div
+                    class="absolute bottom-12 right-3 z-[1001] w-[400px] max-w-[calc(100%-1.5rem)] max-h-56 overflow-auto bg-popover/95 backdrop-blur border border-border rounded-xl shadow-lg"
+                  >
+                    <PreflightMod />
+                  </div>
+                {/if}
+                <div class="absolute bottom-0 left-0 right-0 z-[1001]" class:max-h-52={flyEventsOpen}>
+                  <button
+                    class="w-full backdrop-blur flex items-center justify-center gap-1 py-1 text-[11px] cursor-pointer border-t hover:text-primary transition-colors
+            {hasUrgentEvent
+                      ? 'bg-destructive/15 border-destructive/40 text-destructive animate-pulse'
+                      : 'bg-card/90 border-border text-muted-foreground'}"
+                    onclick={() => {
+                      flyEventsOpen = !flyEventsOpen;
+                      if (flyEventsOpen) markEventsSeen();
+                    }}
+                  >
+                    {t('event.title')} ({app.events.length})
+                    {#if unseenEvents > 0 && !flyEventsOpen}
+                      <span
+                        class="px-1.5 py-px rounded-full text-[10px] font-bold {hasUrgentEvent
+                          ? 'bg-destructive text-white'
+                          : 'bg-primary text-primary-foreground'}"
+                      >
+                        {unseenEvents}
+                      </span>
+                    {/if}
+                    {#if flyEventsOpen}<ChevronDown size={12} />{:else}<ChevronUp size={12} />{/if}
+                  </button>
+                  {#if flyEventsOpen}
+                    <EventLog />
                   {/if}
                 </div>
               </div>
-            {/if}
-            <MissionProgress />
-            {#if app.drone.connected && !app.drone.armed && PreflightMod}
-              <div
-                class="absolute bottom-12 right-3 z-[1001] w-[400px] max-w-[calc(100%-1.5rem)] max-h-56 overflow-auto bg-popover/95 backdrop-blur border border-border rounded-xl shadow-lg"
-              >
-                <PreflightMod />
+            </div>
+          {:else if view === 'plan'}
+            {#if PlanMods}
+              <div class="flex-1 flex flex-col overflow-auto">
+                <div class="flex max-md:flex-col gap-2 p-2 flex-1 min-h-72">
+                  <MapView showHud={false} plan />
+                  <PlanMods.Mission />
+                </div>
+                {#if app.showSurvey}<PlanMods.Survey />{/if}
+                {#if app.showFence}<PlanMods.Fence />{/if}
+                {#if app.showRally}<PlanMods.Rally />{/if}
               </div>
             {/if}
-            <div class="absolute bottom-0 left-0 right-0 z-[1001]" class:max-h-52={flyEventsOpen}>
-              <button
-                class="w-full backdrop-blur flex items-center justify-center gap-1 py-1 text-[11px] cursor-pointer border-t hover:text-primary transition-colors
-            {hasUrgentEvent
-                  ? 'bg-destructive/15 border-destructive/40 text-destructive animate-pulse'
-                  : 'bg-card/90 border-border text-muted-foreground'}"
-                onclick={() => {
-                  flyEventsOpen = !flyEventsOpen;
-                  if (flyEventsOpen) markEventsSeen();
-                }}
-              >
-                {t('event.title')} ({app.events.length})
-                {#if unseenEvents > 0 && !flyEventsOpen}
-                  <span
-                    class="px-1.5 py-px rounded-full text-[10px] font-bold {hasUrgentEvent
-                      ? 'bg-destructive text-white'
-                      : 'bg-primary text-primary-foreground'}">{unseenEvents}</span
-                  >
-                {/if}
-                {#if flyEventsOpen}<ChevronDown size={12} />{:else}<ChevronUp size={12} />{/if}
-              </button>
-              {#if flyEventsOpen}
-                <EventLog />
-              {/if}
-            </div>
-          </div>
-        </div>
-      {:else if view === 'plan'}
-        {#if PlanMods}
-          <div class="flex-1 flex flex-col overflow-auto">
-            <div class="flex max-md:flex-col gap-2 p-2 flex-1 min-h-72">
-              <MapView showHud={false} plan />
-              <PlanMods.Mission />
-            </div>
-            {#if app.showSurvey}<PlanMods.Survey />{/if}
-            {#if app.showFence}<PlanMods.Fence />{/if}
-            {#if app.showRally}<PlanMods.Rally />{/if}
-          </div>
-        {/if}
-      {:else if view === 'monitor'}
-        {#if MonitorMods}
-          <div class="flex-1 overflow-auto p-3">
-            <div class="grid grid-cols-3 gap-3 max-lg:grid-cols-2 max-sm:grid-cols-1">
-              <MonitorMods.Rc />
-              <MonitorMods.Servo />
-              <MonitorMods.Vibe />
-              <MonitorMods.Ekf />
-              <div class="max-lg:col-span-2 max-md:col-span-1 col-span-2">
-                <MonitorMods.Chart />
+          {:else if view === 'monitor'}
+            {#if MonitorMods}
+              <div class="flex-1 overflow-auto p-3">
+                <div class="grid grid-cols-3 gap-3 max-lg:grid-cols-2 max-sm:grid-cols-1">
+                  <MonitorMods.Rc />
+                  <MonitorMods.Servo />
+                  <MonitorMods.Vibe />
+                  <MonitorMods.Ekf />
+                  <div class="max-lg:col-span-2 max-md:col-span-1 col-span-2">
+                    <MonitorMods.Chart />
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        {/if}
-      {:else if view === 'params'}
-        {#if ParamMod}
-          <div class="flex-1 flex flex-col overflow-hidden p-3">
-            <ParamMod />
-          </div>
-        {/if}
-      {/if}
+            {/if}
+          {:else if view === 'params'}
+            {#if ParamMod}
+              <div class="flex-1 flex flex-col overflow-hidden p-3">
+                <ParamMod />
+              </div>
+            {/if}
+          {/if}
 
-      {#if !app.drone.connected && view === 'fly' && ReplayMod}
-        <ReplayMod onposition={(lat: number, lon: number, yaw: number) => (app.replayPos = { lat, lon, yaw })} />
-      {/if}
-    </svelte:boundary>
+          {#if !app.drone.connected && view === 'fly' && ReplayMod}
+            <ReplayMod onposition={(lat: number, lon: number, yaw: number) => (app.replayPos = { lat, lon, yaw })} />
+          {/if}
+        </svelte:boundary>
+      </div>
+    </main>
   {/if}
 
-  <ToastContainer />
+  <aside>
+    <ToastContainer />
+  </aside>
   {#if app.summaryShown && app.drone.flight_summary && FlightSummaryMod}
     <FlightSummaryMod
       summary={app.drone.flight_summary}
@@ -725,8 +738,9 @@
             <div class="flex items-center gap-3 py-1 border-b border-border/50">
               <kbd
                 class="min-w-[60px] px-2 py-0.5 bg-muted border border-border rounded text-[11px] font-mono font-bold text-center"
-                >{key}</kbd
               >
+                {key}
+              </kbd>
               <span class="text-muted-foreground">{desc}</span>
             </div>
           {/each}

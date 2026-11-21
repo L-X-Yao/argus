@@ -38,17 +38,19 @@
     </div>
     <div class="flex gap-1">
       <Button variant="destructive" size="xs" onclick={rtl}>{t('ctrl.rtl')}</Button>
-      <Button size="xs" class="bg-amber-600 hover:bg-amber-700 text-white" onclick={pause}>{t('ctrl.pause')}</Button>
+      <Button size="xs" class="bg-amber-700 hover:bg-amber-800 text-white" onclick={pause}>{t('ctrl.pause')}</Button>
       {#if !app.drone.armed}
         <Button
           size="xs"
           class="bg-orange-700 hover:bg-orange-800 text-white"
-          onclick={() => showSlide(t('slide.arm'), 'orange', () => dispatch('arm'))}>{t('ctrl.arm')}</Button
+          onclick={() => showSlide(t('slide.arm'), 'orange', () => dispatch('arm'))}
         >
+          {t('ctrl.arm')}
+        </Button>
       {:else}
-        <Button size="xs" class="bg-green-700 hover:bg-green-800 text-white" onclick={() => dispatch('disarm')}
-          >{t('ctrl.disarm')}</Button
-        >
+        <Button size="xs" class="bg-green-700 hover:bg-green-800 text-white" onclick={() => dispatch('disarm')}>
+          {t('ctrl.disarm')}
+        </Button>
       {/if}
       {#if app.drone.armed}
         <Button variant="destructive" size="xs" onclick={forceDisarm}>{t('ctrl.forceDisarm')}</Button>
@@ -59,8 +61,10 @@
         <Button
           variant={app.drone.mode_id === id ? 'default' : 'outline'}
           size="xs"
-          onclick={() => dispatch('mode', id)}>{name}</Button
+          onclick={() => dispatch('mode', id)}
         >
+          {name}
+        </Button>
       {/each}
     </div>
   </div>
