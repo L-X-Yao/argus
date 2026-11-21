@@ -1138,6 +1138,16 @@ const messages: Record<string, string> = {
   'log.listTooLarge': 'ログ一覧が 1000 件の上限を超えています',
   'mission.err.rallyTooLarge': 'ラリーポイントのアップロードが 500 点の上限を超えています',
   'log.tooManyChunks': 'ログ転送のチャンク数が多すぎるため、ダウンロードを停止しました',
+
+  'param.machine': '機械翻訳',
+  'param.reviewed': 'レビュー済み',
+  'param.generated': '自動生成',
+  'param.partial': '一部翻訳',
+  'param.showEnglish': '英語原文を表示',
+  'param.hideEnglish': '翻訳を表示',
+  'param.coverage': '翻訳カバレッジ {n}%',
+  'param.series': 'メタデータ版',
+  'param.seriesAuto': '自動',
 };
 
 export default messages;

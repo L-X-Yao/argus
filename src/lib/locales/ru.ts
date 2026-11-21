@@ -1140,6 +1140,16 @@ const messages: Record<string, string> = {
   'log.listTooLarge': 'Список журналов превышает ограничение 1000 записей',
   'mission.err.rallyTooLarge': 'Загрузка точек сбора превышает ограничение 500 точек',
   'log.tooManyChunks': 'Слишком много фрагментов при передаче журнала; загрузка остановлена',
+
+  'param.machine': 'Машинный перевод',
+  'param.reviewed': 'Проверено',
+  'param.generated': 'Создано автоматически',
+  'param.partial': 'Частичный перевод',
+  'param.showEnglish': 'Показать английский оригинал',
+  'param.hideEnglish': 'Показать перевод',
+  'param.coverage': 'Покрытие перевода {n}%',
+  'param.series': 'Версия метаданных',
+  'param.seriesAuto': 'Авто',
 };
 
 export default messages;

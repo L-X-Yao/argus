@@ -11,6 +11,16 @@
   import { Battery, ShieldAlert, Sliders, Navigation, Radio, ToggleLeft, Cpu, FileText, List, GitCompareArrows } from '@lucide/svelte';
   import type { Component } from 'svelte';
 
+  type TranslationStatus = 'reviewed' | 'machine' | 'generated' | 'partial';
+
+  interface ParamTranslation {
+    desc?: string;
+    human?: string;
+    values?: Record<string, string>;
+    bitmask?: Record<string, string>;
+    status?: TranslationStatus;
+  }
+
   interface ParamMeta {
     desc?: string;
     human?: string;
@@ -21,12 +31,52 @@
     values?: Record<string, string>;
     bitmask?: Record<string, string>;
     default?: number;
+    tr?: ParamTranslation;
+  }
+
+  interface ParamMetaInfo {
+    vehicle: string;
+    series: string;
+    locale: string;
+    selection: 'coverage' | 'fw' | 'manual';
+    translation: 'reviewed' | 'machine' | 'generated' | 'partial' | 'unavailable';
+    translated: number;
+    total: number;
+    available_series: string[];
+    data_version?: string;
+    schema?: number;
+  }
+
+  interface MetaResult {
+    raw: Record<string, ParamMeta>;
+    info: ParamMetaInfo | null;
   }
 
   let _metaRaw: Record<string, ParamMeta> = {};
+  let _metaInfo = $state<ParamMetaInfo | null>(null);
   let _metaVersion = $state(0);
   function getMeta(): Record<string, ParamMeta> { void _metaVersion; return _metaRaw; }
   let metaLoaded = $state(false);
+  let metaSeries = $state('');
+  let metaLoading = $state(false);
+  let showEnglishFor = $state<string | null>(null);
+  let lastVehicle = '';
+  let lastMetaKey = '';
+  let lastRequestedSeries = '';
+  let lastProbeKey = '';
+  let probingKey = '';
+  let metaAbort: AbortController | null = null;
+  const META_CACHE_MAX = 6;
+  const metaCache = new Map<string, MetaResult>();
+
+  function cacheMeta(key: string, result: MetaResult) {
+    metaCache.set(key, result);
+    while (metaCache.size > META_CACHE_MAX) {
+      const oldest = metaCache.keys().next().value;
+      if (oldest === undefined || oldest === key) break;
+      metaCache.delete(oldest);
+    }
+  }
 
   const VTYPE_RAW_MAP: Record<number, string> = {
     2: 'copter', 3: 'copter', 4: 'copter', 13: 'copter', 14: 'copter',
@@ -36,30 +86,192 @@
     12: 'sub',
   };
 
-  let lastVtypeRaw = 0;
   $effect(() => {
     const vr = app.drone.vtype_raw;
-    if (vr > 0 && vr !== lastVtypeRaw && VTYPE_RAW_MAP[vr]) {
-      lastVtypeRaw = vr;
-      fetchMeta(VTYPE_RAW_MAP[vr]);
+    const vehicle = VTYPE_RAW_MAP[vr];
+    if (!vehicle) return;
+    if (vehicle !== lastVehicle) {
+      lastVehicle = vehicle;
+      metaSeries = '';
+      showEnglishFor = null;
     }
+    const locale = getLocale();
+    const fw = app.drone.fw_version || '';
+    const series = metaSeries;
+    const key = `${vehicle}|${locale}|${fw}|${series}`;
+    if (key === lastMetaKey) return;
+    if (series !== lastRequestedSeries) {
+      lastRequestedSeries = series;
+      // Manual -> Auto must be allowed to probe again; the cached Auto answer may be the
+      // low-coverage series the earlier probe was meant to replace.
+      lastProbeKey = '';
+      probingKey = '';
+    }
+    lastMetaKey = key;
+    showEnglishFor = null;
+    void fetchMeta(vehicle, locale, fw, series, key);
   });
 
-  async function fetchMeta(vehicle: string) {
-    try {
-      const r = await fetch(apiUrl(`/api/param_meta?vehicle=${vehicle}`));
-      if (r.ok) {
-        _metaRaw = await r.json();
-        _metaVersion++;
-        metaLoaded = true;
-      }
-    } catch {}
+  $effect(() => {
+    const fetching = paramState.fetching;
+    const count = paramState.list.length;
+    if (fetching || !count || !metaLoaded || !_metaInfo || !lastMetaKey) return;
+    const [vehicle, locale, fw] = lastMetaKey.split('|');
+    if (!vehicle || !locale) return;
+    void maybeImproveSeries(vehicle, locale, fw, { raw: _metaRaw, info: _metaInfo }, lastMetaKey);
+  });
+
+  async function requestMeta(
+    vehicle: string,
+    locale: string,
+    fw: string,
+    series: string,
+    signal?: AbortSignal,
+  ): Promise<MetaResult> {
+    const query = new URLSearchParams({ vehicle, locale });
+    if (fw) query.set('fw', fw);
+    if (series) query.set('series', series);
+    const r = await fetch(apiUrl(`/api/param_meta?${query.toString()}`), { signal });
+    if (!r.ok) throw new Error(`param_meta ${r.status}`);
+    const data = (await r.json()) as Record<string, unknown>;
+    const info = (data._meta as ParamMetaInfo | undefined) ?? null;
+    const raw: Record<string, ParamMeta> = {};
+    for (const [name, value] of Object.entries(data)) {
+      if (name !== '_meta') raw[name] = value as ParamMeta;
+    }
+    return { raw, info };
   }
 
-  function getDesc(name: string): string {
+  function applyMeta(result: MetaResult) {
+    _metaRaw = result.raw;
+    _metaInfo = result.info;
+    _metaVersion++;
+    metaLoaded = true;
+  }
+
+  async function fetchMeta(vehicle: string, locale: string, fw: string, series: string, key: string) {
+    // A cached answer must cancel a request for the previous series; otherwise that request
+    // can land later and replace the cached metadata with another series' data.
+    metaAbort?.abort();
+    const cached = metaCache.get(key);
+    if (cached) {
+      metaAbort = null;
+      metaLoading = false;
+      applyMeta(cached);
+      return;
+    }
+    const ctrl = new AbortController();
+    metaAbort = ctrl;
+    metaLoading = true;
+    try {
+      const result = await requestMeta(vehicle, locale, fw, series, ctrl.signal);
+      if (ctrl.signal.aborted) return;
+      cacheMeta(key, result);
+      applyMeta(result);
+      void maybeImproveSeries(vehicle, locale, fw, result, key);
+    } catch {
+      // Keep the previous language's metadata rather than blanking the panel.
+    } finally {
+      if (metaAbort === ctrl) {
+        metaAbort = null;
+        metaLoading = false;
+      }
+    }
+  }
+
+  function metaCoverage(result: MetaResult): number {
+    const list = paramState.list;
+    if (!list.length) return 1;
+    let hit = 0;
+    for (const p of list) if (result.raw[p.name]) hit++;
+    return hit / list.length;
+  }
+
+  async function maybeImproveSeries(
+    vehicle: string,
+    locale: string,
+    fw: string,
+    current: MetaResult,
+    key: string,
+  ) {
+    // WebSerial has no live parameter names on the backend. The panel has them, so it can
+    // choose the metadata series itself when the firmware's reported version is misleading.
+    if (app.activeTransport !== 'serial' || metaSeries || !paramState.list.length) return;
+    if (!current.info?.available_series?.length) return;
+    const base = metaCoverage(current);
+    if (base >= 0.9) return;
+    const probeKey = `${key}|${paramState.list.length}|${current.info.series}`;
+    if (probeKey === lastProbeKey || probingKey === probeKey) return;
+    probingKey = probeKey;
+    let best = current;
+    let bestCoverage = base;
+    let failed = false;
+    const candidates = current.info.available_series.filter((s) => s !== current.info?.series).slice(0, 2);
+    try {
+      for (const candidate of candidates) {
+        try {
+          const result = await requestMeta(vehicle, locale, fw, candidate);
+          const coverage = metaCoverage(result);
+          if (coverage > bestCoverage + 0.01) {
+            best = result;
+            bestCoverage = coverage;
+          }
+        } catch {
+          // A transient failure must not latch this series forever: the next read or
+          // locale/vehicle change gets another attempt.
+          failed = true;
+          break;
+        }
+      }
+      if (bestCoverage > base + 0.01 && getLocale() === locale && lastMetaKey === key) {
+        applyMeta(best);
+        cacheMeta(`${vehicle}|${locale}|${fw}|${best.info?.series ?? ''}`, best);
+      }
+    } finally {
+      probingKey = '';
+      if (!failed) lastProbeKey = probeKey;
+    }
+  }
+
+  function currentTranslation(name: string): ParamTranslation | undefined {
     const m = getMeta()[name];
-    if (m) return m.human || m.desc || '';
-    return '';
+    if (!m?.tr) return undefined;
+    // Do not show one language's translation under another language's UI.
+    if (_metaInfo && _metaInfo.locale !== getLocale()) return undefined;
+    return m.tr;
+  }
+
+  function getLabel(name: string): string {
+    const m = getMeta()[name];
+    const tr = currentTranslation(name);
+    return tr?.human || m?.human || m?.desc || '';
+  }
+
+  function getDescription(name: string): string {
+    const m = getMeta()[name];
+    const tr = currentTranslation(name);
+    return tr?.desc || m?.desc || tr?.human || m?.human || '';
+  }
+
+  function descriptionIsEnglish(name: string): boolean {
+    const m = getMeta()[name];
+    const tr = currentTranslation(name);
+    if (tr?.desc) return false;
+    if (m?.desc) return true;
+    if (tr?.human) return false;
+    return !!m?.human;
+  }
+
+  function valueLabelIsTranslated(name: string, val: number): boolean {
+    const tr = currentTranslation(name);
+    return !!tr?.values?.[String(Math.round(val))];
+  }
+
+  function statusLabel(status: TranslationStatus): string {
+    if (status === 'reviewed') return t('param.reviewed');
+    if (status === 'generated') return t('param.generated');
+    if (status === 'partial') return t('param.partial');
+    return t('param.machine');
   }
 
   function getUnits(name: string): string {
@@ -73,20 +285,31 @@
   }
 
   function getValueLabel(name: string, val: number): string {
-    const v = getMeta()[name]?.values;
-    if (!v) return '';
+    const m = getMeta()[name];
+    const tr = currentTranslation(name);
     const key = String(Math.round(val));
-    return v[key] || '';
+    return tr?.values?.[key] || m?.values?.[key] || '';
   }
 
-  function getBitmaskEntries(name: string, val: number): { bit: number; label: string; set: boolean }[] {
+  function getBitmaskEntries(
+    name: string,
+    val: number,
+  ): { bit: number; label: string; set: boolean; translated: boolean }[] {
     const bm = getMeta()[name]?.bitmask;
     if (!bm) return [];
+    const tr = currentTranslation(name);
     const iv = Math.round(val);
-    return Object.entries(bm).map(([k, v]) => {
-      const bit = parseInt(k);
-      return { bit, label: v, set: (iv & (1 << bit)) !== 0 };
-    }).sort((a, b) => a.bit - b.bit);
+    return Object.entries(bm)
+      .map(([k, v]) => {
+        const bit = parseInt(k);
+        return {
+          bit,
+          label: tr?.bitmask?.[k] || v,
+          set: (iv & (1 << bit)) !== 0,
+          translated: !!tr?.bitmask?.[k],
+        };
+      })
+      .sort((a, b) => a.bit - b.bit);
   }
 
   interface TreeGroup { name: string; params: typeof filtered; expanded: boolean }
@@ -165,11 +388,19 @@
       const q = search.toLowerCase();
       list = list.filter(p => {
         if (p.name.toLowerCase().includes(q)) return true;
-        const d = getDesc(p.name);
-        if (d && d.toLowerCase().includes(q)) return true;
+        const tr = currentTranslation(p.name);
         const m = getMeta()[p.name];
-        if (m?.human && m.human.toLowerCase().includes(q)) return true;
-        return false;
+        const parts = [
+          getLabel(p.name),
+          getDescription(p.name),
+          m?.human ?? '',
+          m?.desc ?? '',
+          ...Object.values(tr?.values ?? {}),
+          ...Object.values(tr?.bitmask ?? {}),
+          ...Object.values(m?.values ?? {}),
+          ...Object.values(m?.bitmask ?? {}),
+        ];
+        return parts.some((part) => part.toLowerCase().includes(q));
       });
     }
     return list;
@@ -267,14 +498,15 @@
 
   function exportCsv() {
     if (!paramState.list.length) return;
-    const header = 'Name,Value,Default,Units,Range,Description';
+    const header = 'Name,Value,Default,Units,Range,Description,DescriptionEN';
     const rows = paramState.list.map(p => {
       const m = getMeta()[p.name] || {};
       const def = m.default !== undefined ? String(m.default) : '';
       const units = (m.units || '').replace(/,/g, ';');
       const range = m.range ? `${m.range[0]}~${m.range[1]}` : '';
-      const desc = (m.human || m.desc || '').replace(/"/g, '""').replace(/\n/g, ' ');
-      return `${p.name},${p.value},${def},${units},${range},"${desc}"`;
+      const desc = getDescription(p.name).replace(/"/g, '""').replace(/\n/g, ' ');
+      const descEn = (m.desc || m.human || '').replace(/"/g, '""').replace(/\n/g, ' ');
+      return `${p.name},${p.value},${def},${units},${range},"${desc}","${descEn}"`;
     });
     const csv = [header, ...rows].join('\n');
     const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8' });
@@ -351,22 +583,35 @@
 </script>
 
 {#snippet paramRow(p: Param)}
-  {@const desc = getDesc(p.name)}
+  {@const label = getLabel(p.name)}
+  {@const description = getDescription(p.name)}
+  {@const tr = currentTranslation(p.name)}
+  {@const status = tr?.status}
   {@const units = getUnits(p.name)}
   {@const rangeStr = getRangeStr(p.name)}
   {@const valLabel = getValueLabel(p.name, p.value)}
+  {@const valTranslated = valueLabelIsTranslated(p.name, p.value)}
+  {@const descriptionEnglish = descriptionIsEnglish(p.name)}
   {@const isExpanded = expandedParam === p.name}
   {@const bmEntries = getBitmaskEntries(p.name, p.value)}
   <div>
     <div class="flex items-center gap-2 px-2 py-1.5 text-xs border-b border-border/50 hover:bg-muted/50 transition-colors
           {modified.has(p.name) ? 'bg-warning/5' : ''}">
-            <div role="presentation" class="w-40 shrink-0 cursor-pointer" onclick={() => expandedParam = isExpanded ? null : p.name}>
+            <div role="presentation" class="w-40 shrink-0 cursor-pointer" onclick={() => {
+              expandedParam = isExpanded ? null : p.name;
+              showEnglishFor = null;
+            }}>
         <div class="font-bold font-mono text-[11px] leading-tight flex items-center gap-1">
           {#if metaLoaded}<span class="text-[9px] text-muted-foreground/40">{isExpanded ? '▼' : '▶'}</span>{/if}
           {p.name}
         </div>
-        {#if desc}
-          <div class="text-[10px] text-muted-foreground leading-tight truncate" title={desc}>{desc}</div>
+        {#if label}
+          <div class="text-[10px] text-muted-foreground leading-tight truncate" title={description || label}>
+            {label}
+          </div>
+          {#if getLocale() !== 'en' && !tr?.human}
+            <span class="text-[8px] font-bold text-muted-foreground/50">EN</span>
+          {/if}
         {/if}
       </div>
       {#if editName === p.name}
@@ -383,7 +628,13 @@
                     <div role="presentation" class="font-mono cursor-pointer px-1.5 py-0.5 rounded hover:bg-input transition-colors text-right min-w-[60px] {hasDefaultDiff(p.name, p.value) ? 'text-warning' : ''}"
                onclick={() => startEdit(p)}>{fmtValue(p.value, p.type)}</div>
           {#if units}<span class="text-[10px] text-muted-foreground">{units}</span>{/if}
-          {#if valLabel}<span class="text-[10px] text-primary truncate">{valLabel}</span>{/if}
+          {#if valLabel}
+            <span class="text-[10px] text-primary truncate">
+              {valLabel}{#if getLocale() !== 'en' && !valTranslated}<span
+                  class="ml-0.5 text-[8px] font-bold text-muted-foreground/50 align-top">EN</span
+                >{/if}
+            </span>
+          {/if}
           {#if hasDefaultDiff(p.name, p.value)}
             <button class="text-[9px] text-muted-foreground/60 hover:text-warning px-0.5 cursor-pointer bg-transparent border-none"
                     onclick={() => { dispatch('param_set', undefined, { name: p.name, value: getMeta()[p.name]!.default! }); modified.add(p.name); modified = new Set(modified); }}
@@ -403,14 +654,32 @@
     </div>
     {#if isExpanded && metaLoaded}
       <div class="px-3 py-2 bg-muted/30 border-b border-border/50 text-[11px] space-y-1.5">
-        {#if getMeta()[p.name]?.desc}
+        {#if description}
           <p class="text-muted-foreground leading-relaxed">
-            <!-- The descriptions come from ArduPilot's apm.pdef.xml in English and do not follow
-                 the page's language: they say so rather than look like a missing translation. -->
-            {#if getLocale() !== 'en'}<span class="text-[9px] font-bold text-muted-foreground/60 mr-1 align-top"
-                >EN</span
-              >{/if}{getMeta()[p.name]!.desc}
+            {#if showEnglishFor === p.name}
+              <span class="text-[9px] font-bold text-muted-foreground/60 mr-1 align-top">EN</span>
+              {getMeta()[p.name]?.desc}
+            {:else}
+              <!-- The source is ArduPilot's apm.pdef.xml. When only the English text is available,
+                   say so rather than let it look like a missing translation. -->
+              {#if descriptionEnglish && getLocale() !== 'en'}<span
+                  class="text-[9px] font-bold text-muted-foreground/60 mr-1 align-top">EN</span
+                >{/if}{description}
+            {/if}
+            {#if status}<span class="ml-1 text-[9px] font-semibold text-muted-foreground/70"
+                >{statusLabel(status)}</span
+              >{/if}
           </p>
+          {#if tr?.desc && getMeta()[p.name]?.desc && tr.desc !== getMeta()[p.name]!.desc}
+            <button
+              type="button"
+              class="text-[10px] text-primary hover:underline cursor-pointer bg-transparent border-none p-0"
+              aria-pressed={showEnglishFor === p.name}
+              onclick={() => showEnglishFor = showEnglishFor === p.name ? null : p.name}
+            >
+              {showEnglishFor === p.name ? t('param.hideEnglish') : t('param.showEnglish')}
+            </button>
+          {/if}
         {/if}
         <div class="flex flex-wrap gap-x-4 gap-y-1 text-[10px]">
           {#if getMeta()[p.name]?.group}<span class="text-muted-foreground/60">{t('meta.group')}: <span class="text-foreground">{getMeta()[p.name]!.group}</span></span>{/if}
@@ -424,7 +693,9 @@
             {#each Object.entries(getMeta()[p.name]!.values!) as [code, label]}
               <span class="px-1.5 py-0.5 rounded text-[10px] border
                 {String(Math.round(p.value)) === code ? 'bg-primary/20 text-primary border-primary/50' : 'bg-muted text-muted-foreground border-border/50'}">
-                {code}: {label}
+                {code}: {tr?.values?.[code] || label}{#if getLocale() !== 'en' && !tr?.values?.[code]}<span
+                    class="ml-0.5 text-[8px] font-bold text-muted-foreground/50 align-top">EN</span
+                  >{/if}
               </span>
             {/each}
           </div>
@@ -437,7 +708,10 @@
                 <button class="px-1.5 py-0.5 rounded text-[10px] border cursor-pointer transition-colors
                   {bm.set ? 'bg-green-500/20 text-green-400 border-green-500/50' : 'bg-muted text-muted-foreground border-border/50 hover:border-primary/50'}"
                         onclick={() => toggleBitmaskBit(p.name, p.value, bm.bit)}>
-                  {bm.bit}: {bm.label} {bm.set ? '✓' : ''}
+                  {bm.bit}: {bm.label}{#if getLocale() !== 'en' && !bm.translated}<span
+                      class="ml-0.5 text-[8px] font-bold text-muted-foreground/50 align-top">EN</span
+                    >{/if}
+                  {bm.set ? '✓' : ''}
                 </button>
               {/each}
             </div>
@@ -454,6 +728,14 @@
       <h2 class="text-sm font-semibold text-primary uppercase tracking-wider">{t('param.title')}</h2>
       {#if metaLoaded}
         <span class="text-[10px] text-muted-foreground">{t('param.metaLoaded')}</span>
+      {/if}
+      {#if metaLoaded && _metaInfo && _metaInfo.total > 0 && getLocale() !== 'en'}
+        <span class="text-[10px] text-muted-foreground/70">
+          {t('param.coverage').replace('{n}', String(Math.round((_metaInfo.translated / _metaInfo.total) * 100)))}
+        </span>
+      {/if}
+      {#if metaLoading}
+        <span class="text-[10px] text-muted-foreground/60">…</span>
       {/if}
     </div>
     <div class="flex items-center gap-2">
@@ -507,6 +789,18 @@
               title={viewMode === 'flat' ? t('label.treeView') : t('label.flatView')}>
         {viewMode === 'flat' ? '🌲' : '☰'}
       </button>
+      {#if metaLoaded && _metaInfo && _metaInfo.available_series.length > 1}
+        <select
+          bind:value={metaSeries}
+          aria-label={t('param.series')}
+          class="h-7 px-1 text-[11px] bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-2 focus:ring-ring/50"
+        >
+          <option value="">{t('param.seriesAuto')}</option>
+          {#each _metaInfo.available_series as s}
+            <option value={s}>{s}</option>
+          {/each}
+        </select>
+      {/if}
       {#if metaLoaded && modifiedCount > 0}
         <button class="text-[11px] px-2 py-0.5 rounded border transition-all cursor-pointer
           {showModifiedOnly ? 'bg-warning/20 text-warning border-warning/50' : 'text-muted-foreground border-border hover:text-foreground'}"

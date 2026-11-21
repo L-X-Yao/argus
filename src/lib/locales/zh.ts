@@ -1186,6 +1186,16 @@ const messages: Record<string, string> = {
   'assistant.otherFlight': '未发送：该请求属于之前的一次飞行',
   'assistant.otherVehicle': '未发送：飞行器或链路已变化，请重新提议',
   'assistant.noMode': '未发送：该飞行器没有这个模式',
+
+  'param.machine': '机器翻译',
+  'param.reviewed': '已审校',
+  'param.generated': '自动生成',
+  'param.partial': '部分翻译',
+  'param.showEnglish': '显示英文原文',
+  'param.hideEnglish': '显示译文',
+  'param.coverage': '翻译覆盖 {n}%',
+  'param.series': '说明版本',
+  'param.seriesAuto': '自动',
 };
 
 export default messages;

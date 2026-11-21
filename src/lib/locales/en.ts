@@ -1197,6 +1197,16 @@ const messages: Record<string, string> = {
   'assistant.otherFlight': 'Not sent: the request was for an earlier flight',
   'assistant.otherVehicle': 'Not sent: the vehicle or its link changed; ask again',
   'assistant.noMode': 'Not sent: this vehicle has no such mode',
+
+  'param.machine': 'Machine translation',
+  'param.reviewed': 'Reviewed',
+  'param.generated': 'Auto-generated',
+  'param.partial': 'Partial translation',
+  'param.showEnglish': 'Show English original',
+  'param.hideEnglish': 'Show translation',
+  'param.coverage': 'Translation coverage {n}%',
+  'param.series': 'Metadata version',
+  'param.seriesAuto': 'Auto',
 };
 
 export default messages;
