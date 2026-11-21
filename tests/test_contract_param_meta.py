@@ -76,15 +76,15 @@ def test_coverage_uses_live_names_and_firmware_breaks_ties(tmp_path):
         target = pack / "meta" / "copter"
         target.mkdir(parents=True, exist_ok=True)
         (target / f"{series}.json").write_text(json.dumps({extra and next(iter(extra)): next(iter(extra.values()))}))
-    (pack / "meta" / "copter" / "4.6.3.json").write_text((FIXTURE / "meta" / "copter" / "4.6.3.json").read_text())
-    manifest = json.loads((FIXTURE / "manifest.json").read_text())
+    (pack / "meta" / "copter" / "4.6.3.json").write_text((FIXTURE / "meta" / "copter" / "4.6.3.json").read_text(encoding="utf-8"), encoding="utf-8")
+    manifest = json.loads((FIXTURE / "manifest.json").read_text(encoding="utf-8"))
     manifest["sources"] += [
         {"vehicle": "copter", "series": series, "url": "", "sha256": "", "params": 1} for series in ("4.5.7", "4.7.1")
     ]
     pack.mkdir(exist_ok=True)
     (pack / "manifest.json").write_text(json.dumps(manifest))
     for name in ("aliases.json",):
-        (pack / name).write_text((FIXTURE / name).read_text())
+        (pack / name).write_text((FIXTURE / name).read_text(encoding="utf-8"), encoding="utf-8")
 
     with patch.object(pm, "PACK_DIR", pack):
         result = pm.get_param_metadata("copter", fw="v4.5.7", param_names=("ONLY_OLD", "ONLY_NEW"))
@@ -160,7 +160,7 @@ def test_missing_or_bad_pack_falls_back_to_english_without_mutating_it(tmp_path)
 def test_translation_hash_is_exact_utf8_without_normalization():
     text = "Minimum altitude to return to launch"
     digest = hashlib.sha256(text.encode("utf-8")).hexdigest()
-    tm = json.loads((FIXTURE / "tm" / "zh.json").read_text())
+    tm = json.loads((FIXTURE / "tm" / "zh.json").read_text(encoding="utf-8"))
     assert tm[digest]["t"] == "返航的最低高度"
 
 
@@ -203,7 +203,7 @@ def test_reviewed_translation_status(tmp_path):
     pack = tmp_path / "pack"
     copytree(FIXTURE, pack)
     tm_path = pack / "tm" / "zh.json"
-    tm = json.loads(tm_path.read_text())
+    tm = json.loads(tm_path.read_text(encoding="utf-8"))
     for record in tm.values():
         record["r"] = 1
     tm_path.write_text(json.dumps(tm))
@@ -219,7 +219,7 @@ def test_generated_translation_status(tmp_path):
     pack = tmp_path / "pack"
     copytree(FIXTURE, pack)
     tm_path = pack / "tm" / "zh.json"
-    tm = json.loads(tm_path.read_text())
+    tm = json.loads(tm_path.read_text(encoding="utf-8"))
     for text, translated in (
         ("Simulated accelerometer trim on the X axis", "模拟 X 轴加速度计配平"),
         ("Simulated accelerometer trim X", "模拟加速度计 X 轴配平"),
@@ -262,7 +262,7 @@ def test_manifest_change_invalidates_selection_and_merged_caches(tmp_path):
         meta = {"NEW_PARAM": {"desc": "New"}}
         (pack / "meta" / "copter" / "4.7.1.json").write_text(json.dumps(meta))
         manifest_path = pack / "manifest.json"
-        manifest = json.loads(manifest_path.read_text())
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         manifest["sources"].append({"vehicle": "copter", "series": "4.7.1", "url": "", "sha256": "", "params": 1})
         manifest_path.write_text(json.dumps(manifest))
         result = pm.get_param_metadata("copter", fw="v4.7.1")
@@ -299,13 +299,13 @@ def test_old_request_cannot_repopulate_a_new_pack_generation(tmp_path):
         assert entered.wait(5)
         try:
             tm_path = pack / "tm" / "zh.json"
-            tm = json.loads(tm_path.read_text())
+            tm = json.loads(tm_path.read_text(encoding="utf-8"))
             digest = hashlib.sha256(b"RTL altitude").hexdigest()
             tm[digest]["t"] = "新返航高度"
             tm_path.write_text(json.dumps(tm))
             (pack / "meta" / "copter" / "4.7.1.json").write_text('{"NEW_PARAM":{"desc":"New"}}')
             manifest_path = pack / "manifest.json"
-            manifest = json.loads(manifest_path.read_text())
+            manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
             manifest["data_version"] = "new-generation"
             manifest["sources"].append({"vehicle": "copter", "series": "4.7.1", "url": "", "sha256": "", "params": 1})
             manifest_path.write_text(json.dumps(manifest))

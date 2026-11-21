@@ -1,6 +1,7 @@
 """Tests for backend/param_meta.py — XML parsing and metadata structure."""
 
 import json
+import os
 import time
 from unittest.mock import MagicMock, patch
 
@@ -500,9 +501,8 @@ class TestPackValidation:
         with patch.object(pm, "PACK_DIR", tmp_path), pytest.raises(pm._PackError):
             pm._validate_pack()
 
+    @pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="mkfifo is Unix-only")
     def test_non_regular_pack_entry_is_refused(self, tmp_path):
-        import os
-
         import backend.param_meta as pm
 
         (tmp_path / "manifest.json").write_text("{}")
