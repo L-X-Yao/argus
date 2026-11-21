@@ -150,6 +150,15 @@ def test_pack_merge_does_not_mutate_legacy_or_cached_entries():
     assert "tr" not in english_again["RTL_ALT"]
 
 
+def test_caller_cannot_mutate_nested_cached_entries():
+    first = metadata(series="4.6.3", locale="zh")
+    first["RTL_ALT"]["tr"]["human"] = "corrupted"
+    first["LOG_BITMASK"]["tr"]["bitmask"]["0"] = "corrupted"
+    second = metadata(series="4.6.3", locale="zh")
+    assert second["RTL_ALT"]["tr"]["human"] == "返航高度"
+    assert second["LOG_BITMASK"]["tr"]["bitmask"]["0"] == "快速姿态"
+
+
 def test_missing_or_bad_pack_falls_back_to_english_without_mutating_it(tmp_path):
     legacy = {"P": {"desc": "English", "values": {"0": "Zero"}}}
     before = copy.deepcopy(legacy)
