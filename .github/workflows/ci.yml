@@ -431,7 +431,7 @@ jobs:
       - name: Start the Vite dev server
         run: |
           npm run dev > /tmp/vite.log 2>&1 &
-          for i in $(seq 1 30); do
+          for _ in $(seq 1 30); do
             curl -sf http://127.0.0.1:5173/ > /dev/null && exit 0
             sleep 1
           done
@@ -577,9 +577,9 @@ jobs:
           # before every verify while an identically-launched backend
           # survives, and a foreground probe under timeout survives — so
           # capture the exit status (128+N = signal N) instead of guessing.
-          setsid nohup bash -c '~/sitl/arducopter --model + --speedup 8 -w \
+          setsid nohup bash -c '$HOME/sitl/arducopter --model + --speedup 8 -w \
             --serial0 tcp:0 \
-            --defaults ~/sitl/copter.parm \
+            --defaults $HOME/sitl/copter.parm \
             --home -35.363261,149.165230,584,353 >> sitl.log 2>&1; \
             echo "=== SITL exited with status $? ===" >> sitl.log' < /dev/null &
           # Boot progresses unattended now; SERIAL2's bind is the last of
@@ -597,7 +597,7 @@ jobs:
         run: |
           ARGUS_LOG_LEVEL=DEBUG python -m uvicorn backend.app:app --host 127.0.0.1 --port 8100 \
             --log-level info > /tmp/sitl-run/backend.log 2>&1 &
-          for i in $(seq 1 30); do
+          for _ in $(seq 1 30); do
             curl -sf http://127.0.0.1:8100/health > /dev/null && exit 0
             sleep 1
           done
@@ -686,7 +686,7 @@ jobs:
 
       - name: Wait for backend
         run: |
-          for i in $(seq 1 30); do
+          for _ in $(seq 1 30); do
             curl -sf http://localhost:8100/health && break
             sleep 1
           done

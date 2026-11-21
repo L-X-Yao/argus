@@ -75,7 +75,7 @@ jobs:
           pip-audit -r bundled.txt --no-deps --disable-pip
 
       - name: Checksum the package
-        run: cd release && sha256sum *.zip > SHA256SUMS.txt
+        run: cd release && sha256sum -- *.zip > SHA256SUMS.txt
 
       - name: Generate release notes
         run: |
