@@ -6,6 +6,8 @@ Adding modes here doesn't enable them — it's only how we *display* an
 incoming HEARTBEAT.custom_mode value. Missing entries fall back to "MODE%d".
 """
 
+VALID_LOCALES = frozenset(("zh", "en", "ja", "ko", "de", "fr", "es", "pt", "ru", "ar"))
+
 # Copter — ArduCopter/mode.h `enum class Number`
 COPTER_MODES = {
     0: "自稳",

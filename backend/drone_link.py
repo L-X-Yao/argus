@@ -272,6 +272,9 @@ class DroneLink:
             self.vehicle.vtype_raw = 0
             self.vehicle.vtol_state = 0
             self.vehicle.landed = False
+            # A different vehicle may report another firmware; never select metadata from the old one.
+            self.vehicle.fw_version = ""
+            self.vehicle.fw_git = ""
             # Re-arm the autopilot latch + unsupported-FC warning: the new
             # session may be a different vehicle, and a stale non-ArduPilot
             # value would silently gate every command (or a stale 3 would
@@ -322,6 +325,9 @@ class DroneLink:
             self.vehicle.vtype_raw = 0
             self.vehicle.vtol_state = 0
             self.vehicle.landed = False
+            # A different vehicle may report another firmware; never select metadata from the old one.
+            self.vehicle.fw_version = ""
+            self.vehicle.fw_git = ""
             # The next vehicle may never send a TERRAIN_REPORT, and this one's would stay up.
             self.diagnostic.terrain_alt = -1.0
             # Same rationale as connect(): a silent in-loop reconnect may be a
@@ -517,6 +523,10 @@ class DroneLink:
                 "Multirotor" if en else "多旋翼",
             )
         return (COPTER_MODES_EN if en else COPTER_MODES, COPTER_BTNS_EN if en else COPTER_BTNS, "")
+
+    def param_names(self) -> tuple[str, ...]:
+        with self._state_lock:
+            return self.param_mgr.names()
 
     def get_state(self) -> dict:
         with self._state_lock:

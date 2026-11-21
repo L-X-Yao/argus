@@ -12,6 +12,7 @@ from fastapi import WebSocket, WebSocketDisconnect
 
 from . import assistant_audit, commands
 from .config import cfg
+from .constants import VALID_LOCALES
 from .drone_link import DroneLink
 from .locale_text import lt
 
@@ -50,7 +51,7 @@ def dumps(msg: dict) -> str:
         return json.dumps(clean, allow_nan=False)
 
 
-_VALID_LOCALES = frozenset(("zh", "en", "ja", "ko", "de", "fr", "es", "pt", "ru", "ar"))
+_VALID_LOCALES = VALID_LOCALES
 
 
 def validate_port(port) -> bool:

@@ -54,6 +54,10 @@ class ParamManager:
         # to reset websocket cursors; that terminal event must not clear the rows itself.
         self._list_gen = 0
 
+    def names(self) -> tuple[str, ...]:
+        """An immutable snapshot; callers never iterate the live parameter dictionary."""
+        return tuple(sorted(self.params))
+
     def request_all(self) -> None:
         # The clock first and `fetching` last. check_timeout runs on the link thread: a fetch
         # flagged as running while it still held the last one's times was timed out at once.

@@ -10,7 +10,7 @@ import json
 import threading
 import urllib.error
 from concurrent.futures import ThreadPoolExecutor
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 
@@ -56,7 +56,11 @@ def _firmware_download():
 
 
 def _param_meta():
-    return [app_module.api_param_meta(vehicle) for vehicle in ("copter", "plane", "rover", "sub")]
+    request = MagicMock()
+    request.app.state.link.param_names.return_value = ()
+    request.app.state.link.vehicle.fw_version = ""
+    request.headers = {}
+    return [app_module.api_param_meta(request, vehicle) for vehicle in ("copter", "plane", "rover", "sub")]
 
 
 @pytest.mark.parametrize("start", [_tiles, _tile_bulk, _terrain, _firmware_list, _firmware_download, _param_meta])
