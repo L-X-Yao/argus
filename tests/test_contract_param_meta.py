@@ -123,6 +123,13 @@ def test_hot_request_does_not_walk_or_reread_the_pack():
     assert result["RTL_ALT"]["tr"]["status"] == "machine"
 
 
+def test_parameter_fingerprint_caches_are_bounded():
+    for index in range(12):
+        metadata(series="4.6.3", param_names=(f"P{index}",))
+    assert len(pm._selection_cache) <= 8
+    assert len(pm._merged_cache) <= 8
+
+
 def test_unknown_vehicle_and_bad_series_do_not_leak_paths():
     assert metadata(vehicle="unknown") == {}
     result = metadata(series="../../etc/passwd")

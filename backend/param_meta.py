@@ -22,6 +22,8 @@ PACK_DIR = Path(__file__).resolve().parent.parent / "param_i18n"
 CACHE_TTL = cfg.PARAM_CACHE_TTL
 PACK_MAX_TOTAL = 256 * 1024 * 1024
 PACK_MAX_FILES = 512
+_MERGED_CACHE_MAX = 8
+_SELECTION_CACHE_MAX = 8
 
 _P = "https://autotest.ardupilot.org/Parameters/"
 _URLS = {
@@ -218,6 +220,13 @@ def _activate_pack(signature: tuple[int, int, int]) -> None:
         _selection_cache.clear()
         _json_cache.clear()
         _active_pack = identity
+
+
+def _trim_cache(cache: dict, limit: int) -> None:
+    # Fingerprints change while a parameter list fills. Keep hot requests fast without
+    # retaining one full metadata object for every prefix ever seen; dict order is FIFO.
+    while len(cache) > limit:
+        cache.pop(next(iter(cache)))
 
 
 def _read_json(path: Path):
@@ -592,6 +601,7 @@ def get_param_metadata(vehicle="copter", locale="en", fw="", series="", param_na
             with _merge_lock:
                 if _active_pack == (PACK_DIR, signature):
                     _selection_cache[selection_key] = chosen
+                    _trim_cache(_selection_cache, _SELECTION_CACHE_MAX)
         selected, selection, base = chosen
         key = (vehicle, selected, locale, fingerprint)
         with _merge_lock:
@@ -616,6 +626,7 @@ def get_param_metadata(vehicle="copter", locale="en", fw="", series="", param_na
             # was merging. The old caller can keep its answer, but must not refill new caches.
             if _active_pack == (PACK_DIR, signature):
                 result = _merged_cache.setdefault(key, result)
+                _trim_cache(_merged_cache, _MERGED_CACHE_MAX)
         return _request_result(result, selection, locale_was_invalid)
     except _PackError:
         return _legacy_result(vehicle, locale, fw, locale_was_invalid)
