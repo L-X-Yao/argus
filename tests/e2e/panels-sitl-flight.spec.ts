@@ -250,7 +250,7 @@ test('the flight summary shows what the FC flew', async () => {
 
 test('the flight report keeps the flight after the summary is gone', async () => {
   await palette(page, 'tool-report');
-  const dialog = page.getByRole('dialog', { name: label('report.title') }); // the inner of two
+  const dialog = page.getByRole('dialog', { name: label('report.title') });
   await expect(dialog).toBeVisible();
   await dialog.getByPlaceholder(label('report.pilot')).fill('Li Si');
   await dialog.getByPlaceholder(label('report.weather')).fill('Clear');

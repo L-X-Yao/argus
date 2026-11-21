@@ -118,12 +118,7 @@
     if (e.key === 'Escape') onclose();
   }}
 >
-  <div
-    class="bg-card border border-border rounded-xl shadow-2xl w-[500px] max-h-[85vh] flex flex-col overflow-hidden"
-    role="dialog"
-    aria-modal="true"
-    aria-label={t('report.title')}
-  >
+  <div class="bg-card border border-border rounded-xl shadow-2xl w-[500px] max-h-[85vh] flex flex-col overflow-hidden">
     <!-- Header -->
     <div class="flex items-center justify-between px-4 py-3 border-b border-border">
       <div class="flex items-center gap-2">
