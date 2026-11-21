@@ -508,7 +508,8 @@ class TestParamMeta:
         get_meta.assert_called_once_with("copter", "zh", "v4.6.3", "", ("B", "A"))
         assert "Content-Encoding" not in client.get("/health", headers={"Accept-Encoding": "gzip"}).headers
 
-    def test_param_meta_explicit_arguments_and_gzip_q_zero(self):
+    @pytest.mark.parametrize("encoding", ["gzip;q=0", "gzip;Q=0"])
+    def test_param_meta_explicit_arguments_and_gzip_q_zero(self, encoding):
         with (
             patch("backend.app.get_param_metadata", return_value={"_meta": {}}) as get_meta,
             patch.object(app.state.link, "param_names", return_value=()),
@@ -516,7 +517,7 @@ class TestParamMeta:
             r = client.get(
                 "/api/param_meta",
                 params={"vehicle": "plane", "locale": "en", "fw": "v4.7.1", "series": "4.7.1"},
-                headers={"Accept-Encoding": "gzip;q=0"},
+                headers={"Accept-Encoding": encoding},
             )
         assert r.status_code == 200
         assert "Content-Encoding" not in r.headers
