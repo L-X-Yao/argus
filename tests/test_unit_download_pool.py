@@ -95,6 +95,9 @@ def test_default_pool_stays_free_while_downloads_hang(start, tmp_path):
         patch.object(terrain, "SRTM_CACHE", tmp_path / "srtm"),
         patch.object(firmware, "FIRMWARE_DIR", tmp_path / "firmware"),
         patch.object(param_meta, "CACHE_DIR", tmp_path / "params"),
+        # A developer machine may have the real pack at the repo root; force the
+        # download path this test is about.
+        patch.object(param_meta, "PACK_DIR", tmp_path / "pack"),
         patch.dict(param_meta._cache, clear=True),
         patch("socket.getaddrinfo", return_value=[(2, 1, 6, "", ("8.8.8.8", 443))]),
     ):
