@@ -583,7 +583,8 @@ def get_param_metadata(vehicle="copter", locale="en", fw="", series="", param_na
         if chosen is None:
             chosen = _select_series(vehicle, available, fw, series, names)
             with _merge_lock:
-                _selection_cache[selection_key] = chosen
+                if _active_pack == (PACK_DIR, signature):
+                    _selection_cache[selection_key] = chosen
         selected, selection, base = chosen
         key = (vehicle, selected, locale, fingerprint)
         with _merge_lock:
@@ -604,7 +605,10 @@ def get_param_metadata(vehicle="copter", locale="en", fw="", series="", param_na
                 pass  # English metadata remains useful when one locale is absent or bad.
         result = _with_meta(merged, vehicle, selected, locale, selection, manifest, tm)
         with _merge_lock:
-            result = _merged_cache.setdefault(key, result)
+            # A pack update may have cleared and replaced the generation while this request
+            # was merging. The old caller can keep its answer, but must not refill new caches.
+            if _active_pack == (PACK_DIR, signature):
+                result = _merged_cache.setdefault(key, result)
         return _request_result(result, selection, locale_was_invalid)
     except _PackError:
         return _legacy_result(vehicle, locale, fw, locale_was_invalid)

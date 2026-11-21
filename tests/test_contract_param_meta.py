@@ -3,6 +3,7 @@
 import copy
 import hashlib
 import json
+import threading
 from pathlib import Path
 from shutil import copytree
 from unittest.mock import patch
@@ -268,6 +269,56 @@ def test_manifest_change_invalidates_selection_and_merged_caches(tmp_path):
     assert result["_meta"]["series"] == "4.7.1"
     assert result["_meta"]["available_series"] == ["4.6.3", "4.7.1"]
     assert result["NEW_PARAM"]["desc"] == "New"
+
+
+def test_old_request_cannot_repopulate_a_new_pack_generation(tmp_path):
+    pack = tmp_path / "pack"
+    copytree(FIXTURE, pack)
+    entered = threading.Event()
+    release = threading.Event()
+    errors = []
+    original = pm._with_meta
+
+    def controlled_merge(*args):
+        result = original(*args)
+        if threading.current_thread().name == "old-pack-request":
+            entered.set()
+            if not release.wait(5):
+                raise TimeoutError("old request was not released")
+        return result
+
+    def old_request():
+        try:
+            pm.get_param_metadata("copter", locale="zh", series="4.6.3")
+        except Exception as exc:  # surfaced after both requests are joined
+            errors.append(exc)
+
+    with patch.object(pm, "PACK_DIR", pack), patch.object(pm, "_with_meta", side_effect=controlled_merge):
+        thread = threading.Thread(target=old_request, name="old-pack-request")
+        thread.start()
+        assert entered.wait(5)
+        try:
+            tm_path = pack / "tm" / "zh.json"
+            tm = json.loads(tm_path.read_text())
+            digest = hashlib.sha256(b"RTL altitude").hexdigest()
+            tm[digest]["t"] = "新返航高度"
+            tm_path.write_text(json.dumps(tm))
+            (pack / "meta" / "copter" / "4.7.1.json").write_text('{"NEW_PARAM":{"desc":"New"}}')
+            manifest_path = pack / "manifest.json"
+            manifest = json.loads(manifest_path.read_text())
+            manifest["data_version"] = "new-generation"
+            manifest["sources"].append({"vehicle": "copter", "series": "4.7.1", "url": "", "sha256": "", "params": 1})
+            manifest_path.write_text(json.dumps(manifest))
+            pm.get_param_metadata("copter", fw="v4.7.1")
+        finally:
+            release.set()
+        thread.join(5)
+        assert not thread.is_alive()
+        if errors:
+            raise errors[0]
+        result = pm.get_param_metadata("copter", locale="zh", series="4.6.3")
+    assert result["_meta"]["data_version"] == "new-generation"
+    assert result["RTL_ALT"]["tr"]["human"] == "新返航高度"
 
 
 def test_versioned_and_master_fallbacks(tmp_path):
