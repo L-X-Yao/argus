@@ -541,8 +541,8 @@ def _with_meta(merged, vehicle, series, locale, selection, manifest, tm):
 def _request_result(result: dict, selection: str, locale_was_invalid: bool) -> dict:
     # Selection is request metadata, not part of the frozen cache key. Two requests can choose
     # the same series by manual and firmware paths, so never leak the first request's label.
-    result = result.copy()
-    result["_meta"] = result["_meta"].copy()
+    # Deep-copy the entries too: a caller must not mutate the cached translations or labels.
+    result = copy.deepcopy(result)
     result["_meta"]["selection"] = selection
     if locale_was_invalid:
         result["_meta"]["translation"] = "unavailable"
