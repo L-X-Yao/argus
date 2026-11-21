@@ -156,7 +156,7 @@ Real FC here means the route was in use during a session with a real flight cont
 | `GET /api/log` | Download the CSV log | 下载 CSV 日志 | SITL | CI |
 | `GET /api/logs` | Local recorded tlogs | 本机录制的 tlog | Tests only | Unit tests with a temp folder |
 | `POST /api/logs/delete` | Delete local tlogs | 删除本机 tlog | Tests only | Unit tests: the CSV sibling, containment, the active session |
-| `GET /api/param_meta` | Parameter descriptions | 参数说明 | SITL | CI. 2026-11-21: locale/fw/series merge and per-field English fallback with a fixture pack; gzip; a metadata version is chosen by the live parameter names. v3.15.0 ships the zh pack; other locales fall back to English until their data versions. 2026-11-21 real pack `data-v2026.11.2` through the packaged backend: zh descriptions for 1,382 of the real FC's 1,396 parameters; 14 fall back to English |
+| `GET /api/param_meta` | Parameter descriptions | 参数说明 | SITL | CI. 2026-11-21: locale/fw/series merge and per-field English fallback with a fixture pack; gzip; a metadata version is chosen by the live parameter names. v3.15.1 ships the zh pack; other locales fall back to English until their data versions. 2026-11-21 `data-v2026.11.3`: every copter 4.6.3 field (meta plus overrides) has a zh translation, so the previous 14 real-FC fallbacks are covered |
 | `GET /api/tile_cache` | Tile cache size | 瓦片缓存大小 | SITL | CI |
 | `POST /api/tile_cache_clear` | Clear the tile cache | 清除瓦片缓存 | SITL | CI |
 | `POST /api/firmware/upload` | Store a firmware file | 保存固件文件 | SITL | CI, stores only, no flashing |
@@ -300,7 +300,7 @@ Real FC here means the route was in use during a session with a real flight cont
 | Terrain profile | 地形剖面 | SITL | CI: clearance from home on real firmware, heights from the real terrain server |
 | Voice and audio alerts | 语音和声音告警 | SITL | CI: the armed message on real firmware, with speech stubbed. Sound itself not checked |
 | Gamepad | 手柄 | SITL | CI: a stubbed pad moves channel 1 on real firmware. No real pad. Since 2026-11-13 the status bar names the gamepad while it overrides; the badge itself has no test |
-| 10 languages | 10 种语言 | Tests only | UI keys complete in all ten since 2026-11-21, none reviewed by native speakers. Parameter descriptions: zh is machine-translated unless marked reviewed; the other eight translation locales fall back to English (marked EN) until their data pack. v3.15.0 ships zh only |
+| 10 languages | 10 种语言 | Tests only | UI keys complete in all ten since 2026-11-21, none reviewed by native speakers. Parameter descriptions: zh is machine-translated unless marked reviewed; the other eight translation locales fall back to English (marked EN) until their data pack. v3.15.1 ships zh only |
 | Plugins and scripts | 插件和脚本 | Tests only | Unit tests |
 | RTK through NTRIP | NTRIP RTK | Tests only | No real base station |
 | Cross-site request blocking | 跨站请求拦截 | Tests only | Unit tests, real Windows each release |
