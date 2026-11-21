@@ -35,9 +35,9 @@ A bench arm is not a flight. It does not change the "Real flight" row in [VERIFI
 Fly at a site with room for a return and a landing, away from people and property. The pilot keeps the transmitter in hand throughout.
 
 1. Connect, wait for a 3D fix and a healthy EKF, and read the battery voltage.
-2. Arm. Take off to 10 m and hold. Confirm the altitude and position on the HUD and from the spotter.
+2. Set the altitude field beside Take Off to 10 m; the default is 30 m. Arm. Take off and hold. Confirm the altitude and position on the HUD and from the spotter.
 3. RTL. Confirm the climb to the configured return altitude, the return, the landing and the disarm.
-4. Upload a short mission of three waypoints inside the test area. Start it. Watch the waypoint counter advance.
+4. Arm again on the ground. Upload a short mission of three waypoints inside the test area, then start it. Watch the waypoint counter advance.
 5. RTL at the second waypoint. Confirm the return, landing and disarm.
 6. Check the flight summary, then clear the mission.
 

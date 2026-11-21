@@ -5,6 +5,7 @@ but catch major regressions (10x slower would fail).
 """
 
 import json
+import statistics
 import struct
 import threading
 import time
@@ -311,17 +312,20 @@ class TestConcurrentStateAccess:
         writer_thread = threading.Thread(target=writer, daemon=True)
         writer_thread.start()
 
-        # Three rounds, best ratio. A loaded runner can starve the reader for a
-        # whole round while the writer holds the lock; a real lock regression is
-        # slow in every round. This is why the old single run failed at 19x on
-        # macOS with only scheduling noise (2026-11-21 release).
+        # Three rounds, median. A round where the writer made no progress is
+        # excluded: it proves nothing about contention. A real lock regression
+        # is slow in the rounds that did run, so the median catches it while one
+        # starved round cannot fail the job (the old single run failed at 19x on
+        # macOS with only scheduling noise, 2026-11-21 release).
         ratios = []
         for _ in range(3):
+            before = write_count[0]
             start = time.perf_counter()
             for _ in range(1000):
                 link.get_state()
             concurrent_time = time.perf_counter() - start
-            ratios.append(concurrent_time / max(baseline, 0.0001))
+            if write_count[0] > before:
+                ratios.append(concurrent_time / max(baseline, 0.0001))
 
         stop_event.set()
         writer_thread.join(timeout=2)
@@ -329,12 +333,12 @@ class TestConcurrentStateAccess:
         # Concurrent should not be more than 10x slower than baseline.
         # Loosened from 3x→5x→10x because under full test suite load the OS
         # scheduler can starve the main thread while the writer holds the lock.
-        ratio = min(ratios)
+        assert len(ratios) >= 2, f"writer made progress in only {len(ratios)} of 3 rounds"
+        ratio = statistics.median(ratios)
         assert ratio < 10.0, (
             f"Concurrent access {ratio:.1f}x slower than baseline "
             f"(baseline={baseline:.4f}s, rounds={[round(r, 1) for r in ratios]})"
         )
-        assert write_count[0] > 0, "Writer thread did not execute"
 
     def test_lock_contention_stress(self):
         """Multiple readers + one writer: all complete within 2s for 5000 reads."""

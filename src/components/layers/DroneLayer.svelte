@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import { app } from '../../lib/stores.svelte';
-  import { t } from '../../lib/i18n.svelte';
+  import { t, i18nState } from '../../lib/i18n.svelte';
   import { cssNumber, escHtml } from '../../lib/html';
 
   type CoordFn = (lat: number, lon: number) => [number, number];
@@ -154,6 +154,15 @@
   });
 
   let otherMarkers: Map<number, L.Marker> = new Map();
+
+  // A locale change after the markers were created must rename them too.
+  $effect(() => {
+    void i18nState.locale;
+    droneMarker?.getElement()?.setAttribute('title', t('map.vehicle'));
+    for (const [sysid, marker] of otherMarkers) {
+      marker.getElement()?.setAttribute('title', `${t('map.vehicle')} ${sysid}`);
+    }
+  });
 
   $effect(() => {
     const vehicles = app.drone.vehicles || [];

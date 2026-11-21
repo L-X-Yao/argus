@@ -322,6 +322,7 @@
     )
       return;
     const k = e.key.toLowerCase();
+    if (k === ' ' && target.closest('button, a, summary, [role="button"], [role="link"], [role="menuitem"]')) return;
     if (k === ' ') {
       e.preventDefault();
       dispatch('mode', specialModes().hold);
@@ -432,14 +433,16 @@
   </Button>
 {/snippet}
 
-<nav aria-label={t('ui.skipToContent')}>
-  <a
-    href="#main-content"
-    class="sr-only focus:not-sr-only focus:absolute focus:z-[99999] focus:bg-primary focus:text-primary-foreground focus:p-2 focus:rounded-md focus:top-2 focus:left-2"
-  >
-    {t('ui.skipToContent')}
-  </a>
-</nav>
+{#if authReady}
+  <nav aria-label={t('ui.skipToContent')}>
+    <a
+      href="#main-content"
+      class="sr-only focus:not-sr-only focus:absolute focus:z-[99999] focus:bg-primary focus:text-primary-foreground focus:p-2 focus:rounded-md focus:top-2 focus:left-2"
+    >
+      {t('ui.skipToContent')}
+    </a>
+  </nav>
+{/if}
 <div class="flex flex-col h-dvh overflow-hidden">
   {#if authReady}
     <StatusBar {toggleTheme} onSettings={() => (app.showSettings = !app.showSettings)} />
@@ -757,15 +760,11 @@
   {#if isMobile}
     <div class="md:hidden mt-auto shrink-0">
       {#if app.drone.connected}
-        <div
-          role="group"
-          aria-label={t('cmd.catFlight')}
-          class="flex items-center gap-2 px-2 py-1.5 bg-card border-t border-border"
-        >
+        <nav aria-label={t('cmd.catFlight')} class="flex items-center gap-2 px-2 py-1.5 bg-card border-t border-border">
           {@render rtlButton(true)}
           {@render holdButton(true)}
           {#if view === 'fly'}{@render controlsButton(true)}{/if}
-        </div>
+        </nav>
       {/if}
       <nav
         class="md:hidden relative z-[2000] bg-card border-t border-border flex items-center justify-around py-1.5 safe-area-bottom"

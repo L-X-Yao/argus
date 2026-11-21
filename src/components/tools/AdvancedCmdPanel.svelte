@@ -82,6 +82,7 @@
 <div
   role="dialog"
   aria-modal="true"
+  aria-label={t('advcmd.title')}
   tabindex="-1"
   class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
   onclick={(e) => {

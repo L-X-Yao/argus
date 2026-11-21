@@ -211,11 +211,23 @@
     {/if}
     <div class="text-[11px] text-muted-foreground font-semibold mt-1 tracking-wide uppercase">{t('ctrl.altitude')}</div>
     <div class="flex items-center gap-1">
-      <Button variant="outline" size="xs" class="px-1.5" onclick={() => adjustAlt(-5)}>
+      <Button
+        variant="outline"
+        size="xs"
+        class="px-1.5"
+        aria-label={`${t('ctrl.altitude')} -5 m`}
+        onclick={() => adjustAlt(-5)}
+      >
         <ChevronDown size={12} />
       </Button>
       <span class="flex-1 text-center text-xs font-bold tabular-nums">{app.drone.alt_rel.toFixed(0)}m</span>
-      <Button variant="outline" size="xs" class="px-1.5" onclick={() => adjustAlt(5)}><ChevronUp size={12} /></Button>
+      <Button
+        variant="outline"
+        size="xs"
+        class="px-1.5"
+        aria-label={`${t('ctrl.altitude')} +5 m`}
+        onclick={() => adjustAlt(5)}><ChevronUp size={12} /></Button
+      >
     </div>
     <div class="text-[11px] text-muted-foreground font-semibold mt-1 tracking-wide uppercase">{t('ctrl.payload')}</div>
     <div class="flex gap-1.5">

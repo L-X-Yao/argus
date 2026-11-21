@@ -31,7 +31,7 @@ function getDict(locale: Locale): Record<string, string> {
 }
 
 export function t(key: string): string {
-  return getDict(i18nState.locale)[key] || zh[key] || key;
+  return getDict(i18nState.locale)[key] || en[key] || zh[key] || key;
 }
 
 export function setLocale(l: Locale) {

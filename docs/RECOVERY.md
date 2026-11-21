@@ -1,14 +1,14 @@
 # Recovering from a failed firmware flash
 
-Argus writes an `.apj` through the ArduPilot bootloader over a direct USB serial port. It checks the board id and image size before erasing, verifies the image before rebooting, and does not reboot after a failed erase, program or verify. A failure therefore leaves the controller in its bootloader, not running a partial image.
+Argus writes an `.apj` through the ArduPilot bootloader over a direct USB serial port. It checks the board id and image size before erasing, verifies the image before rebooting, and does not reboot after a failed erase, program or verify. A failure after erase therefore leaves the controller in its bootloader, never running a partial image. A failure before erase leaves the old firmware running. A reconnect failure after a successful write, verify and reboot leaves the new firmware running while the GCS is disconnected.
 
 ## The panel says the flash failed
 
 1. Read the error. It names the phase: reboot, waiting, erase, write, verify or reconnect.
 2. Do not unplug the controller while erase, write or verify is running.
-3. Select the same `.apj` again. The panel's Retry uses the file that failed, not whatever is selected now.
-4. Refresh the port list. The bootloader may enumerate as a different COM or tty port.
-5. Select that port and flash again. A controller in its bootloader sends no MAVLink heartbeat; this is normal and the panel accepts it.
+3. A failure before erase (reboot, waiting, board check, port discovery) leaves the old firmware running. Correct the file or port and retry; a power-cycle clears a bootloader that is waiting.
+4. A failure in erase, write or verify leaves the bootloader. Select the same `.apj` again; the panel's Retry uses the file that failed, not whatever is selected now. Refresh the port list, because the bootloader may enumerate as a different COM or tty port, then flash again. A controller in its bootloader sends no MAVLink heartbeat; this is normal and the panel accepts it.
+5. A failure in reconnect comes after a successful write, verify and reboot. The new firmware is running; refresh the port or reconnect. Do not reflash just because the GCS lost the link.
 
 A board-id mismatch is refused before erase. Use an `.apj` built for that board.
 

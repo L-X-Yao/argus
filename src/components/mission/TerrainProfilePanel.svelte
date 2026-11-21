@@ -352,6 +352,7 @@
 <div
   role="dialog"
   aria-modal="true"
+  aria-label={t('terrain.profileTitle')}
   class="fixed inset-0 z-[1100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
 >
   <div class="bg-card border border-border rounded-xl shadow-2xl w-full max-w-3xl overflow-hidden">

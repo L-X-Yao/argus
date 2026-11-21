@@ -14,16 +14,16 @@ Close the other program that holds it: another ground station, a terminal, or a 
 WebSerial needs Chrome or Edge and a secure context: `localhost` or `https`. Firefox and Safari do not implement it. Use the backend serial/TCP/UDP link in those browsers.
 
 **The phone cannot reach the computer.**
-Follow [From a phone or tablet](../README.md#from-a-phone-or-tablet). The backend must listen beyond this machine, `GCS_AUTH_TOKEN` must be set, and the phone's address must be in `ARGUS_CORS_ORIGINS`. The phone is a second screen; it cannot use WebSerial and cannot use the offline features over plain HTTP.
+Follow [From a phone or tablet](../README.md#from-a-phone-or-tablet). The backend must listen beyond this machine, `GCS_AUTH_TOKEN` must be set, and the URL the phone opens (the computer's address, not the phone's) must be in `ARGUS_CORS_ORIGINS`. The phone is a second screen; it cannot use WebSerial and cannot use the offline features over plain HTTP.
 
 **I need to change the token.**
-The token is in `.gcs_token` in the program folder, or comes from `GCS_AUTH_TOKEN`. Stop Argus, remove the file or set a new `GCS_AUTH_TOKEN`, and start it again. With no token set, this computer can generate one:
+The token is in `.gcs_token` in the program folder, or comes from `GCS_AUTH_TOKEN`; if both exist, the file wins. On this machine only, stop Argus, remove `.gcs_token`, start it, and generate a token:
 
 ```bash
 curl -X POST http://127.0.0.1:8100/api/auth/generate
 ```
 
-Then update every phone, browser and AI client. The observer role is not access control: everyone with the token can command the vehicle.
+On a network address this does not work: with no token at all Argus refuses to listen on anything but loopback. Set the new `GCS_AUTH_TOKEN` (or write the new `.gcs_token`) before starting it. If both were set, remove the file for the environment variable to take effect. Then update every phone, browser and AI client. The observer role is not access control: everyone with the token can command the vehicle.
 
 ## Map, terrain and video
 

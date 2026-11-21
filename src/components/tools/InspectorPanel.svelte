@@ -63,6 +63,7 @@
 <div
   role="dialog"
   aria-modal="true"
+  aria-label={t('inspector.title')}
   tabindex="-1"
   class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center"
   onclick={onclose}
