@@ -338,7 +338,7 @@ def _normalise_entries(data: dict) -> dict:
                 name = raw_name[len(prefix) :]
                 prefixed = True
                 break
-        if not _NAME_RE.fullmatch(name):
+        if name == "_meta" or not _NAME_RE.fullmatch(name):
             raise _PackError("parameter name is invalid")
         # The generator promises this, but an untrusted pack must get the same result.
         if prefixed and name in data:
@@ -361,6 +361,8 @@ def _aliases(vehicle: str) -> dict[str, str]:
         if (
             not isinstance(old, str)
             or not isinstance(new, str)
+            or old == "_meta"
+            or new == "_meta"
             or not _NAME_RE.fullmatch(old)
             or not _NAME_RE.fullmatch(new)
         ):
