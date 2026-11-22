@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { addToast } from '../../lib/stores.svelte';
+  import { app, addToast } from '../../lib/stores.svelte';
   import { t } from '../../lib/i18n.svelte';
   import { X, Image, Upload } from '@lucide/svelte';
   import Button from '$lib/components/ui/button/button.svelte';
@@ -34,6 +34,10 @@
   }
 
   function applyOverlay() {
+    if (app.mapMode === '3d') {
+      addToast(t('ortho.only2d'), 'warn');
+      return;
+    }
     if (!pendingDataUrl) {
       addToast(t('ortho.noImage'), 'warn');
       return;
@@ -82,6 +86,11 @@
     </div>
 
     <div class="flex-1 min-h-0 overflow-y-auto p-4 space-y-3">
+      {#if app.mapMode === '3d'}
+        <p class="p-2 rounded-lg bg-warning/10 border border-warning/30 text-xs text-warning">
+          {t('ortho.only2d')}
+        </p>
+      {/if}
       <!-- Upload button -->
       <label
         class="flex items-center justify-center gap-2 w-full px-3 py-2 rounded-lg border border-dashed border-border
@@ -157,7 +166,7 @@
       </div>
 
       <!-- Apply button -->
-      <Button variant="default" class="w-full" onclick={applyOverlay}>
+      <Button variant="default" class="w-full" onclick={applyOverlay} disabled={app.mapMode === '3d'}>
         {t('ortho.apply')}
       </Button>
 

@@ -142,7 +142,11 @@
         {t('corridor.hint')} &mdash; {centerLine.length} pts
       </div>
 
-      {#if centerLine.length >= 2}
+      {#if centerLine.length < 2}
+        <p class="text-xs p-2 rounded-lg bg-warning/10 border border-warning/30 text-warning">
+          {t('corridor.needWaypoints')}
+        </p>
+      {:else}
         <div class="bg-muted/30 rounded-lg p-2 max-h-24 overflow-y-auto">
           {#each centerLine as pt, i}
             <div class="text-[11px] text-foreground font-mono">

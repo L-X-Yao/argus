@@ -1,10 +1,10 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { app } from '../../lib/stores.svelte';
   import { apiUrl } from '../../lib/backend';
   import { t } from '../../lib/i18n.svelte';
   import { wrapPi } from '../../lib/worst';
-  import { X, VideoOff, Camera, Crosshair } from '@lucide/svelte';
+  import { X, VideoOff, Camera, Crosshair, RotateCcw } from '@lucide/svelte';
   import Button from '$lib/components/ui/button/button.svelte';
 
   let { onclose }: { onclose: () => void } = $props();
@@ -20,6 +20,8 @@
     } catch {}
   });
   let streaming = $state(false);
+  let starting = $state(false);
+  let preflight: AbortController | null = null;
   let size = $state<'sm' | 'md' | 'lg'>('md');
   let error = $state('');
   let ffmpegMissing = $state(false);
@@ -49,7 +51,8 @@
 
   let imgSrc = $derived(streaming ? apiUrl(`/api/video?url=${encodeURIComponent(videoUrl)}`) : '');
 
-  function startStream() {
+  async function startStream() {
+    if (starting) return;
     if (ffmpegMissing) {
       error = t('video.ffmpegMissing');
       return;
@@ -59,10 +62,54 @@
       return;
     }
     error = '';
-    streaming = true;
+    starting = true;
+    const url = videoUrl;
+    const controller = new AbortController();
+    preflight = controller;
+    let timedOut = false;
+    const timeout = setTimeout(() => {
+      timedOut = true;
+      controller.abort();
+    }, 10000);
     try {
-      localStorage.setItem('argus_video_url', videoUrl);
-    } catch {}
+      // Read only the response headers. A JSON answer carries the useful URL /
+      // ffmpeg error; a multipart answer is cancelled before its body streams.
+      const response = await fetch(apiUrl(`/api/video?url=${encodeURIComponent(url)}`), {
+        signal: controller.signal,
+      });
+      const contentType = response.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        const data = await response.json().catch(() => null);
+        const detail = typeof data?.error === 'string' ? data.error : `HTTP ${response.status}`;
+        if (detail.startsWith('Invalid video URL:') || detail === 'No video URL provided') {
+          error = `${t('video.invalidUrl')}: ${detail.replace(/^Invalid video URL:\s*/, '')}`;
+        } else if (detail === 'ffmpeg not installed on server') {
+          ffmpegMissing = true;
+          error = t('video.ffmpegMissing');
+        } else {
+          error = `${t('video.loadFail')}: ${detail}`;
+        }
+        return;
+      }
+      if (!response.ok || !contentType.includes('multipart/x-mixed-replace')) {
+        error = `${t('video.loadFail')}: HTTP ${response.status}`;
+        return;
+      }
+      streaming = true;
+      try {
+        localStorage.setItem('argus_video_url', url);
+      } catch {}
+    } catch (e) {
+      if (timedOut) error = `${t('video.networkFail')}: timeout`;
+      else if (!controller.signal.aborted) {
+        error = `${t('video.networkFail')}: ${e instanceof Error ? e.message : String(e)}`;
+      }
+    } finally {
+      clearTimeout(timeout);
+      controller.abort();
+      if (preflight === controller) preflight = null;
+      starting = false;
+    }
   }
 
   async function stopStream() {
@@ -82,11 +129,24 @@
     window.addEventListener('mouseup', onDragEnd);
   }
 
+  function clampPosition() {
+    posX = Math.min(Math.max(0, posX), Math.max(0, window.innerWidth - sizeMap[size].w));
+    // Keep the title bar reachable even when the video itself is taller than the viewport.
+    posY = Math.min(Math.max(0, posY), Math.max(0, window.innerHeight - 40));
+  }
+
   function onDragMove(e: MouseEvent) {
     if (!dragging) return;
     // posX is "right offset", so moving mouse right means decreasing posX
-    posX = Math.max(0, origX - (e.clientX - dragStartX));
-    posY = Math.max(0, origY + (e.clientY - dragStartY));
+    posX = origX - (e.clientX - dragStartX);
+    posY = origY + (e.clientY - dragStartY);
+    clampPosition();
+  }
+
+  function resetPosition() {
+    posX = 16;
+    posY = 8;
+    clampPosition();
   }
 
   function onDragEnd() {
@@ -117,9 +177,12 @@
   }
 
   function handleClose() {
+    preflight?.abort();
     if (streaming) stopStream();
     onclose();
   }
+
+  onDestroy(() => preflight?.abort());
 
   $effect(() => {
     if (!arEnabled || !arCanvas || !streaming) return;
@@ -210,6 +273,14 @@
           {t(sizeMap[s].labelKey)}
         </button>
       {/each}
+      <button
+        class="ml-1 text-muted-foreground hover:text-foreground leading-none px-0.5"
+        onclick={resetPosition}
+        title={t('video.resetPosition')}
+        aria-label={t('video.resetPosition')}
+      >
+        <RotateCcw size={13} />
+      </button>
       <button class="ml-1 text-muted-foreground hover:text-foreground leading-none px-0.5" onclick={handleClose}>
         <X size={14} />
       </button>
@@ -249,7 +320,7 @@
              placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-primary"
       placeholder={t('video.placeholder')}
       bind:value={videoUrl}
-      disabled={streaming}
+      disabled={streaming || starting}
       onkeydown={(e) => {
         if (e.key === 'Enter') startStream();
       }}
@@ -282,7 +353,9 @@
       {/if}
       <Button variant="destructive" size="sm" onclick={stopStream}>{t('video.disconnect')}</Button>
     {:else}
-      <Button size="sm" onclick={startStream}>{t('video.connect')}</Button>
+      <Button size="sm" onclick={startStream} disabled={starting}
+        >{starting ? t('conn.connecting') : t('video.connect')}</Button
+      >
     {/if}
   </div>
 
