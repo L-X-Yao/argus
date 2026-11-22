@@ -43,6 +43,15 @@
   let livePitch = $derived(app.drone.gimbal_pitch ?? null);
   let liveYaw = $derived(app.drone.gimbal_yaw ?? null);
 
+  // Camera recording state follows the FC's ack, not the click.
+  $effect(() => {
+    for (const ev of app.events) {
+      if (ev.event_type !== 'cmd_ack_ok') continue;
+      if (ev.cmd === 2500) recording = true;
+      else if (ev.cmd === 2501) recording = false;
+    }
+  });
+
   /* ── Gimbal controls ── */
   function requireLink(): boolean {
     if (!app.drone.connected) {
@@ -91,20 +100,14 @@
   function takePhoto() {
     if (!requireLink()) return;
     dispatch('camera_trigger');
-    addToast(t('camera.photoTaken'), 'success', 2000);
+    addToast(t('gimbal.sent'), 'info', 2000);
   }
 
   function toggleVideo() {
     if (!requireLink()) return;
-    if (recording) {
-      dispatch('camera_video_stop');
-      recording = false;
-      addToast(t('camera.videoStopped'), 'info', 2000);
-    } else {
-      dispatch('camera_video_start');
-      recording = true;
-      addToast(t('camera.videoStarted'), 'success', 2000);
-    }
+    dispatch(recording ? 'camera_video_stop' : 'camera_video_start');
+    // The FC's cmd_ack_ok for 2500/2501 is what changes `recording`.
+    addToast(t('gimbal.sent'), 'info', 2000);
   }
 
   function setZoom() {
@@ -121,13 +124,13 @@
       return;
     }
     dispatch('do_set_roi', undefined, { lat: roiLat, lon: roiLon, alt: roiAlt });
-    addToast(`${t('gimbal.roiSet')}: ${roiLat.toFixed(6)}, ${roiLon.toFixed(6)}`, 'success');
+    addToast(`${t('gimbal.sent')}: ${roiLat.toFixed(6)}, ${roiLon.toFixed(6)}`, 'info');
   }
 
   function clearRoi() {
     if (!requireLink()) return;
     dispatch('do_set_roi', undefined, { lat: 0, lon: 0, alt: 0 });
-    addToast(t('gimbal.roiCleared'), 'info');
+    addToast(t('gimbal.sent'), 'info');
   }
 
   function prefillFromDrone() {

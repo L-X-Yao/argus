@@ -1,7 +1,14 @@
 import type { WSMessage } from './types';
 import { app, updateState, addEvent, setWsConnected, addToast, loadDownloadedMission } from './stores.svelte';
 import { handleParamBatch, handleParamsComplete, handleParamTimeout, clearParams } from './paramStore.svelte';
-import { logState, setLogList, completeDownload, updateDownloadProgress, appendLogChunk } from './logStore.svelte';
+import {
+  logState,
+  setLogList,
+  completeDownload,
+  updateDownloadProgress,
+  appendLogChunk,
+  cancelDownload,
+} from './logStore.svelte';
 import { updateInspector, appendConsole } from './inspectorStore.svelte';
 import { saveFlightRecord } from './flightDb';
 import { getWsUrl } from './backend';
@@ -169,6 +176,7 @@ export function connectWs(): void {
           // autopilot gate, validation error, handler exception) would
           // otherwise fail with no visible feedback anywhere.
           if (msg.ok === false && msg.error) addToast(String(msg.error), 'error', 6000);
+          if (msg.ok === false && msg.cmd === 'log_download') cancelDownload();
           break;
         case 'param_batch':
           handleParamBatch(msg.params);

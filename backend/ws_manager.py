@@ -535,7 +535,7 @@ class WSManager:
                     else:
                         result = commands.execute(cmd, param, self.link, data=msg)
                     if result:
-                        await ws.send_text(dumps({"type": "cmd_result", **result}))
+                        await ws.send_text(dumps({"type": "cmd_result", "cmd": cmd, **result}))
         except WebSocketDisconnect:
             pass
         except (ConnectionError, RuntimeError):

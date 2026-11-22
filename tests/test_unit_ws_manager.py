@@ -381,6 +381,7 @@ class TestReceiveLoop:
             )
         sent = json.loads(ws.send_text.call_args[0][0])
         assert sent["type"] == "cmd_result"
+        assert sent["cmd"] == "arm"
         assert sent["ok"] is True
 
     @pytest.mark.asyncio

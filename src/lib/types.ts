@@ -125,6 +125,7 @@ export interface ConnectResult {
 // commands.execute()'s result dict spread onto {"type": "cmd_result"}).
 export interface CmdResult {
   type: 'cmd_result';
+  cmd?: string;
   ok: boolean;
   error?: string;
 }

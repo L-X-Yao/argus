@@ -65,7 +65,9 @@
           const parsed = parseDFLog(ev.target!.result as ArrayBuffer);
           log = parsed;
           fileName = file.name;
-          selectedTypes = new Set(['ATT', 'GPS', 'BARO', 'BAT', 'VIBE'].filter((t) => parsed.types.includes(t)));
+          selectedTypes = new Set(
+            ['ATT', 'GPS', 'BARO', 'BAT', 'VIBE'].filter((t) => parsed.types.includes(t)).slice(0, MAX_OVERLAY),
+          );
           addToast(t('logview.messages').replace('{n}', String(parsed.messages.length)), 'success');
           onlog?.(parsed);
           zoomStart = 0;

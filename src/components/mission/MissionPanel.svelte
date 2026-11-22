@@ -811,7 +811,9 @@
       >
     {/each}
     <Button variant="outline" size="xs" onclick={applyAltAll}>{t('cat.all')}</Button>
-    <Button variant="outline" size="xs" onclick={validateMission}>{t('wp.validate')}</Button>
+    <Button variant="outline" size="xs" onclick={validateMission} disabled={app.waypoints.length === 0}
+      >{t('wp.validate')}</Button
+    >
     <Button
       variant="outline"
       size="xs"
@@ -829,7 +831,7 @@
       size="xs"
       class="bg-orange-700 hover:bg-orange-800 text-white font-bold"
       onclick={uploadMission}
-      disabled={uploading}>{uploading ? t('toast.uploading') : t('wp.upload')}</Button
+      disabled={uploading || app.waypoints.length === 0}>{uploading ? t('toast.uploading') : t('wp.upload')}</Button
     >
   </div>
   <div class="flex gap-1 mt-1.5 items-center flex-wrap">

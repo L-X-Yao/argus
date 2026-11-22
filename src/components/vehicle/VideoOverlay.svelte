@@ -22,6 +22,15 @@
   let streaming = $state(false);
   let size = $state<'sm' | 'md' | 'lg'>('md');
   let error = $state('');
+  let ffmpegMissing = $state(false);
+  onMount(() => {
+    fetch(apiUrl('/api/video/capabilities'))
+      .then((r) => r.json())
+      .then((d) => {
+        ffmpegMissing = d?.mjpeg === false;
+      })
+      .catch(() => {});
+  });
 
   // --- dragging ---
   let dragging = $state(false);
@@ -41,6 +50,10 @@
   let imgSrc = $derived(streaming ? apiUrl(`/api/video?url=${encodeURIComponent(videoUrl)}`) : '');
 
   function startStream() {
+    if (ffmpegMissing) {
+      error = t('video.ffmpegMissing');
+      return;
+    }
     if (!videoUrl.trim()) {
       error = t('video.urlRequired');
       return;
@@ -110,13 +123,15 @@
 
   $effect(() => {
     if (!arEnabled || !arCanvas || !streaming) return;
-    const d = app.drone;
-    const wps = app.waypoints;
-    if (!d.connected || d.lat === 0 || wps.length === 0) return;
     const ctx = arCanvas.getContext('2d')!;
     const w = (arCanvas.width = sizeMap[size].w);
     const h = (arCanvas.height = sizeMap[size].h);
+    // Clear before the prerequisites: a lost link or an empty route must not
+    // leave the previous overlay drawn over the live picture.
     ctx.clearRect(0, 0, w, h);
+    const d = app.drone;
+    const wps = app.waypoints;
+    if (!d.connected || d.lat === 0 || wps.length === 0) return;
     const hfov = (arFov * Math.PI) / 180;
     const vfov = hfov * (h / w);
     const yawRad = (d.yaw * Math.PI) / 180;

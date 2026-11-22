@@ -23,6 +23,7 @@ vi.mock('./logStore.svelte', () => ({
   completeDownload: vi.fn(),
   updateDownloadProgress: vi.fn(),
   appendLogChunk: vi.fn(),
+  cancelDownload: vi.fn(),
 }));
 vi.mock('./inspectorStore.svelte', () => ({
   updateInspector: vi.fn(),
@@ -216,6 +217,12 @@ describe('message handling', () => {
     await fire({ type: 'cmd_result', ok: true });
     const { addToast } = await import('./stores.svelte');
     expect(addToast).not.toHaveBeenCalled();
+  });
+
+  it('a refused log download rolls back the optimistic panel state', async () => {
+    await fire({ type: 'cmd_result', ok: false, cmd: 'log_download', error: 'busy' });
+    const { cancelDownload } = await import('./logStore.svelte');
+    expect(cancelDownload).toHaveBeenCalled();
   });
 
   it('dispatches params_complete', async () => {
