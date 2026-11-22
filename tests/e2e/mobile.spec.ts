@@ -10,9 +10,24 @@ test.describe('Mobile responsive layout', () => {
     const bottomNav = page.locator('nav.md\\:hidden');
     await expect(bottomNav).toBeVisible({ timeout: 5000 });
 
-    // Verify it contains the 4 tab buttons
+    // 4 view tabs plus the Tools entry that opens the command palette
     const buttons = bottomNav.locator('button');
-    await expect(buttons).toHaveCount(4);
+    await expect(buttons).toHaveCount(5);
+  });
+
+  test('Tools button opens the command palette', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForTimeout(1500);
+
+    const bottomNav = page.locator('nav.md\\:hidden');
+    const toolsButton = bottomNav.locator('button', { hasText: /工具|Tools/ }).first();
+    await expect(toolsButton).toBeVisible();
+    await toolsButton.click();
+
+    // The palette opens with its filter input focused
+    const paletteInput = page.getByPlaceholder(/搜索命令|Search commands/);
+    await expect(paletteInput).toBeVisible({ timeout: 5000 });
+    await expect(paletteInput).toBeFocused();
   });
 
   test('top navigation tabs are hidden on mobile', async ({ page }) => {
@@ -57,7 +72,9 @@ test.describe('Mobile responsive layout', () => {
     await page.waitForTimeout(500);
 
     await expect(monitorTab).toHaveClass(/text-primary/);
-    await expect(page.locator('body')).toContainText(/遥控通道|RC Channels|振动|Vibration|导航滤波器|EKF/, { timeout: 5000 });
+    await expect(page.locator('body')).toContainText(/遥控通道|RC Channels|振动|Vibration|导航滤波器|EKF/, {
+      timeout: 5000,
+    });
   });
 
   test('bottom nav Params tab switches view', async ({ page }) => {

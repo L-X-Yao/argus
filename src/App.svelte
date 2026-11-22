@@ -788,6 +788,15 @@
             <span class="text-[9px] font-semibold">{t(tab.key)}</span>
           </button>
         {/each}
+        <!-- The wide bar's panels and the Ctrl+K palette have no key on a phone:
+             this opens the same palette, so every tool stays reachable. -->
+        <button
+          class="flex flex-col items-center gap-0.5 px-3 py-1 rounded-lg transition-all min-w-[56px] text-muted-foreground"
+          onclick={() => (showCmdPalette = true)}
+        >
+          <Wrench size={20} />
+          <span class="text-[9px] font-semibold">{t('nav.tools')}</span>
+        </button>
       </nav>
     </div>
   {/if}

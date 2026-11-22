@@ -17,6 +17,8 @@
 
   // Notch recommendation: top 3 peaks
   let notchPeaks = $state<{ freq: number; mag: number; bw: number }[]>([]);
+  // Why there is no plot right now; empty means the plot is current.
+  let fftError = $state('');
 
   const SOURCES = [
     { key: 'IMU.GyrX', label: 'fft.gyroX' },
@@ -94,13 +96,33 @@
   }
 
   $effect(() => {
-    if (!canvasEl || !log) return;
+    if (!canvasEl) return;
+    // Every recompute starts from a blank slate: an early return below must not
+    // leave the previous source's plot and notch advice standing as if current.
+    notchPeaks = [];
+    fftError = '';
+    if (!log) return;
+    const canvas = canvasEl;
+    const blank = () => {
+      const ctx = canvas.getContext('2d')!;
+      canvas.width = canvas.parentElement!.clientWidth;
+      ctx.fillStyle = '#0d1117';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    };
     const [msgType, field] = source.split('.');
     const series = getTimeSeries(log, msgType, field);
-    if (series.t.length < 64) return;
+    if (series.t.length < 64) {
+      blank();
+      fftError = t('fft.tooShort');
+      return;
+    }
 
     const dt = sampleInterval(series.t);
-    if (dt <= 0) return;
+    if (dt <= 0) {
+      blank();
+      fftError = t('fft.tooShort');
+      return;
+    }
     const sampleRate = 1 / dt;
 
     // Compute FFT: either Welch's method or single-shot
@@ -119,7 +141,11 @@
       freq = result.freq;
       mag = result.mag;
     }
-    if (freq.length === 0) return;
+    if (freq.length === 0) {
+      blank();
+      fftError = t('fft.tooShort');
+      return;
+    }
 
     // Find global peak
     let maxIdx = 0;
@@ -352,6 +378,9 @@
         <div class="border border-border rounded-lg overflow-hidden">
           <canvas bind:this={canvasEl} height="280" class="w-full"></canvas>
         </div>
+        {#if fftError}
+          <p class="mt-1 text-[11px] text-warning text-center" data-testid="fft-error">{fftError}</p>
+        {/if}
 
         <!-- Notch filter recommendation panel -->
         {#if notchPeaks.length > 0}
