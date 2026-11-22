@@ -4,7 +4,7 @@
     X,
     ChevronRight,
     ChevronLeft,
-    Check,
+    Eye,
     Layers,
     Radio,
     Zap,
@@ -79,7 +79,7 @@
   ];
 
   let currentStep = $state(0);
-  let completed = $state<boolean[]>(Array(steps.length).fill(false));
+  let visited = $state<boolean[]>(Array(steps.length).fill(false));
 
   let isLastStep = $derived(currentStep >= steps.length);
   let step = $derived(currentStep < steps.length ? steps[currentStep] : null);
@@ -104,7 +104,7 @@
 
   function openTool() {
     if (!step) return;
-    completed[currentStep] = true;
+    visited[currentStep] = true;
     step.callback();
   }
 
@@ -150,12 +150,13 @@
                 class="w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all
                 {currentStep === i
                   ? 'bg-primary text-primary-foreground shadow-md'
-                  : completed[i]
-                    ? 'bg-green-500/80 text-white'
+                  : visited[i]
+                    ? 'bg-primary/15 text-primary'
                     : 'bg-muted text-muted-foreground'}"
+                title={visited[i] ? t('setup.visited') : t(s.key)}
               >
-                {#if completed[i] && currentStep !== i}
-                  <Check size={12} />
+                {#if visited[i] && currentStep !== i}
+                  <Eye size={12} />
                 {:else}
                   {i + 1}
                 {/if}
@@ -185,11 +186,13 @@
           </div>
           <h3 class="text-lg font-bold text-foreground mb-2">{t('setup.done')}</h3>
           <p class="text-xs text-muted-foreground mb-6">
-            {stepLabel(completed.filter(Boolean).length)}
+            {t('setup.visitedCount')
+              .replace('{n}', String(visited.filter(Boolean).length))
+              .replace('{total}', String(steps.length))}
           </p>
           <div class="flex gap-2 justify-center">
             <Button variant="default" onclick={onclose}>
-              {t('setup.done')}
+              {t('error.close')}
             </Button>
           </div>
         </div>
@@ -213,11 +216,10 @@
                   {t(step.desc)}
                 </p>
               </div>
-              {#if completed[currentStep]}
-                <div class="ml-auto">
-                  <div class="w-6 h-6 rounded-full bg-green-500/20 flex items-center justify-center">
-                    <Check size={14} class="text-green-500" />
-                  </div>
+              {#if visited[currentStep]}
+                <div class="ml-auto flex items-center gap-1 text-[10px] font-medium text-primary">
+                  <Eye size={13} />
+                  <span>{t('setup.visited')}</span>
                 </div>
               {/if}
             </div>
