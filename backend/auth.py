@@ -273,7 +273,13 @@ def network_address() -> str | None:
 
     Only the address: the port is the caller's (a page's own), and no token ever
     rides along — a URL with a token in it leaks through chat logs and histories.
+    A loopback-only backend has nothing another device can open, so it says so
+    with None instead of offering an address it does not listen on.
     """
+    from .config import cfg
+
+    if _is_this_machine(cfg.HOST):
+        return None
     return _address_on_the_network()
 
 
