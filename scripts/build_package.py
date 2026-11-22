@@ -46,6 +46,9 @@ PY_SHA256 = {
 PIP_DEPS = [
     "fastapi",
     "uvicorn",
+    # Without it uvicorn falls back to h11, whose error path prints a traceback
+    # for every malformed probe that reaches the port.
+    "httptools",
     "pyserial",
     "websockets",
     "python-multipart",

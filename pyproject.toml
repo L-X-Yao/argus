@@ -14,6 +14,9 @@ requires-python = ">=3.11"
 dependencies = [
     "fastapi>=0.115.0,<1.0",
     "uvicorn[standard]>=0.34.0,<1.0",
+    # uvicorn[standard] includes it; listing it explicitly keeps the Windows
+    # package on the httptools parser instead of h11.
+    "httptools>=0.6.0,<1.0",
     "websockets>=14.0,<18.0",
     "python-multipart>=0.0.31",  # CVE-2026-53538, CVE-2026-53539, CVE-2026-53540
     "pyserial>=3.5",

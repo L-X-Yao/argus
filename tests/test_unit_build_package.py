@@ -121,6 +121,8 @@ class TestLicenseTexts:
 def test_package_ships_inside_what_pyproject_allows():
     allowed = allowed_versions()
     assert "websockets>=14.0,<18.0" in allowed
+    # Listed explicitly so the Windows package gets the httptools parser, not h11.
+    assert "httptools>=0.6.0,<1.0" in allowed
     # pip refuses a constraint with extras, and uvicorn[standard] asks for uvloop: no Windows build.
     assert not any("[" in line for line in allowed)
     constrained = {re.split(r"[<>=!~ ]", line, maxsplit=1)[0] for line in allowed}
