@@ -1,6 +1,6 @@
 <script lang="ts">
   import { isCalEvent } from '../../lib/calEvents';
-  import { app } from '../../lib/stores.svelte';
+  import { app, showConfirm } from '../../lib/stores.svelte';
   import { dispatch } from '../../lib/transport';
   import { API_BASE } from '../../lib/backend';
   import { t } from '../../lib/i18n.svelte';
@@ -259,6 +259,24 @@
     calibrating = false;
     calRunStartTime = '';
   }
+
+  let closeInquiry = $state(false);
+  async function requestClose() {
+    if (!calibrating) {
+      onclose();
+      return;
+    }
+    // X, backdrop and Escape share this guard. A second close while the global
+    // confirm is open must not replace it and resolve the first one as declined.
+    if (closeInquiry) return;
+    closeInquiry = true;
+    const cancel = await showConfirm(t('cal.closeConfirm'), true);
+    closeInquiry = false;
+    if (!cancel) return;
+    // The run may have completed while the operator read the confirmation.
+    if (calibrating) cancelCal();
+    onclose();
+  }
 </script>
 
 <div
@@ -268,17 +286,25 @@
   tabindex="-1"
   class="fixed inset-0 z-[9999] flex items-center justify-center bg-black/50 backdrop-blur-sm"
   onclick={(e) => {
-    if (e.target === e.currentTarget) onclose();
+    if (e.target === e.currentTarget) void requestClose();
   }}
   onkeydown={(e) => {
-    if (e.key === 'Escape') onclose();
+    if (e.key === 'Escape') {
+      // Do not let the same keypress reach ConfirmDialog's window listener and
+      // immediately decline the confirmation it just opened.
+      e.preventDefault();
+      e.stopPropagation();
+      void requestClose();
+    }
   }}
 >
   <div class="bg-card border border-border rounded-xl shadow-2xl w-[560px] max-h-[85vh] flex flex-col overflow-hidden">
     <!-- Header -->
     <div class="flex items-center justify-between px-4 py-3 border-b border-border">
       <h2 class="text-sm font-semibold text-primary uppercase tracking-wider">{t('cal.title')}</h2>
-      <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label={t('error.close')}><X size={16} /></Button>
+      <Button variant="ghost" size="icon-xs" onclick={() => void requestClose()} aria-label={t('error.close')}
+        ><X size={16} /></Button
+      >
     </div>
 
     <div class="flex-1 min-h-0 overflow-y-auto p-4">

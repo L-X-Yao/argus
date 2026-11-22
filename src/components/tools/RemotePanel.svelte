@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { app } from '../../lib/stores.svelte';
+  import { app, addToast } from '../../lib/stores.svelte';
   import { t } from '../../lib/i18n.svelte';
   import { apiUrl } from '../../lib/backend';
   import { X, Wifi, Users } from '@lucide/svelte';
@@ -38,7 +38,7 @@
    * ×1000 for milliseconds — the previous Math.round(seconds) collapsed every
    * healthy link to ~0 ms, making the 200/500 ms color thresholds dead. This is
    * frame staleness (how far behind the link is), not a round-trip ping. */
-  let latencyMs = $derived.by(() => {
+  let telemetryAgeMs = $derived.by(() => {
     const hist = app.linkHistory;
     if (hist.length < 1) return -1;
     const last = hist[hist.length - 1];
@@ -47,16 +47,19 @@
 
   /* ── Copy URL helper ── */
   let copied = $state(false);
-  function copyUrl() {
-    navigator.clipboard
-      .writeText(window.location.href)
-      .then(() => {
-        copied = true;
-        setTimeout(() => {
-          copied = false;
-        }, 2000);
-      })
-      .catch(() => {});
+  async function copyUrl() {
+    try {
+      // Clipboard access is absent on some plain-HTTP LAN pages; even the
+      // property read/call can fail before a Promise exists to catch.
+      await navigator.clipboard.writeText(window.location.href);
+      copied = true;
+      setTimeout(() => {
+        copied = false;
+      }, 2000);
+    } catch {
+      copied = false;
+      addToast(t('remote.copyFailed'), 'error', 4000);
+    }
   }
 </script>
 
@@ -114,17 +117,17 @@
             </div>
           </div>
 
-          <!-- Latency -->
+          <!-- Telemetry age -->
           <div class="flex items-center justify-between text-xs">
             <span class="text-muted-foreground">{t('remote.latency')}</span>
             <span
-              class="font-mono font-medium {latencyMs >= 0 && latencyMs < 200
+              class="font-mono font-medium {telemetryAgeMs >= 0 && telemetryAgeMs < 200
                 ? 'text-green-500'
-                : latencyMs >= 200 && latencyMs < 500
+                : telemetryAgeMs >= 200 && telemetryAgeMs < 500
                   ? 'text-yellow-500'
                   : 'text-muted-foreground'}"
             >
-              {latencyMs >= 0 ? `${latencyMs} ms` : '---'}
+              {telemetryAgeMs >= 0 ? `${telemetryAgeMs} ms` : '---'}
             </span>
           </div>
         </div>

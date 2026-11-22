@@ -18,6 +18,7 @@
   let downloading = $state(false);
   let result = $state<{ total: number; downloaded: number; skipped: number; truncated?: boolean } | null>(null);
   let cacheInfo = $state<{ size: number; count: number } | null>(null);
+  let sourceSwitchNeeded = $derived(app.tileSource !== 'amap');
 
   // Snapshot drone position once on mount instead of via $effect, so the user's
   // manually-edited bounding box isn't clobbered by every telemetry frame.
@@ -159,6 +160,9 @@
           />
         </div>
       </div>
+      <p class="text-xs text-muted-foreground">
+        {t('offmap.provider')} · {style === '6' ? t('label.satellite') : t('label.vector')}
+      </p>
       <div class="flex gap-3 items-center text-xs">
         <span class="text-muted-foreground">{t('offmap.zoomRange')}:</span>
         <input
@@ -181,6 +185,11 @@
           <option value="7">{t('label.vector')}</option>
         </select>
       </div>
+      {#if sourceSwitchNeeded}
+        <p class="text-xs p-2 rounded-lg bg-warning/10 border border-warning/30 text-warning">
+          {t('offmap.switchSource')}
+        </p>
+      {/if}
       <div class="text-xs text-muted-foreground">
         {t('offmap.estimateTiles').replace('{n}', String(estimatedTiles))}
       </div>
