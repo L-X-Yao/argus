@@ -10,6 +10,7 @@
   /* ── Session polling ── */
   let clientCount = $state(0);
   let fetchError = $state(false);
+  let networkHost = $state<string | null>(null);
 
   async function fetchSession() {
     try {
@@ -17,6 +18,7 @@
       if (res.ok) {
         const data = await res.json();
         clientCount = data.clients ?? data.count ?? 0;
+        networkHost = typeof data.network_host === 'string' && data.network_host ? data.network_host : null;
         fetchError = false;
       } else {
         fetchError = true;
@@ -31,6 +33,19 @@
     const id = setInterval(fetchSession, 5000);
     return () => clearInterval(id);
   });
+
+  /* ── The address to hand to a phone on the same network ──
+   * The backend names its LAN address; the port is this page's own. Without a
+   * LAN address (loopback-only backend, no route outward) the page's own URL is
+   * the only honest offer. No token ever goes into the URL: it lives in the
+   * session cookie, and a URL is copied into chats and histories. */
+  let lanShareUrl = $derived.by(() => {
+    if (!networkHost) return null;
+    const port = window.location.port;
+    const suffix = port && port !== '80' ? `:${port}` : '';
+    return `http://${networkHost}${suffix}`;
+  });
+  let shareUrl = $derived(lanShareUrl ?? window.location.href);
 
   /* ── Link freshness ──
    * ms since the last telemetry frame. `age` is SECONDS (backend rounds to
@@ -51,7 +66,7 @@
     try {
       // Clipboard access is absent on some plain-HTTP LAN pages; even the
       // property read/call can fail before a Promise exists to catch.
-      await navigator.clipboard.writeText(window.location.href);
+      await navigator.clipboard.writeText(shareUrl);
       copied = true;
       setTimeout(() => {
         copied = false;
@@ -141,15 +156,24 @@
           <p class="text-xs text-muted-foreground">{t('remote.shareHint')}</p>
 
           <div class="flex items-center gap-2">
-            <div
-              class="flex-1 bg-background border border-border rounded px-2 py-1.5 text-xs font-mono text-foreground truncate"
-            >
-              {window.location.href}
+            <div class="flex-1 min-w-0">
+              {#if lanShareUrl}
+                <span class="block text-[10px] text-muted-foreground mb-0.5">{t('remote.lanAddress')}</span>
+              {/if}
+              <div
+                class="bg-background border border-border rounded px-2 py-1.5 text-xs font-mono text-foreground truncate"
+              >
+                {shareUrl}
+              </div>
             </div>
             <Button variant="outline" size="xs" onclick={copyUrl}>
               {copied ? t('remote.copied') : t('remote.copy')}
             </Button>
           </div>
+
+          {#if lanShareUrl}
+            <p class="text-[11px] text-muted-foreground/80 leading-relaxed">{t('remote.lanHint')}</p>
+          {/if}
         </div>
       </div>
 

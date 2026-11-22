@@ -854,6 +854,9 @@ const messages: Record<string, string> = {
   'remote.connected': '接続済み',
   'remote.share': '共有',
   'remote.shareHint': 'この URL をチームメンバーに共有すると、飛行セッションを閲覧できます。',
+  'remote.lanHint':
+    'バックエンドがこのアドレスで待ち受け（ARGUS_HOST）、かつ ARGUS_CORS_ORIGINS にこのアドレスを追加しないと、相手の端末ではページを開けません。',
+  'remote.lanAddress': 'LANアドレス',
   'remote.copy': 'URL をコピー',
   'remote.copied': 'コピーしました',
   'adsb.title': 'ADSBトラフィック',

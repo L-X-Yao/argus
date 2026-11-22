@@ -937,6 +937,9 @@ const messages: Record<string, string> = {
   'remote.connected': 'Connected',
   'remote.share': 'Share',
   'remote.shareHint': 'Share this URL with team members to observe the flight session.',
+  'remote.lanHint':
+    'The backend must listen on this address (ARGUS_HOST) and the address must be in ARGUS_CORS_ORIGINS, or the other device cannot load this page.',
+  'remote.lanAddress': 'LAN address',
   'remote.copy': 'Copy URL',
   'remote.copied': 'Copied!',
   'adsb.title': 'ADSB Traffic',

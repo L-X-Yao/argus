@@ -15,7 +15,7 @@
   import { isOfflineSource, tileUrl } from '../../lib/backend';
   import { TERRAIN_ATTRIBUTION, tileAttribution } from '../../lib/tileAttribution';
   import { cssNumber } from '../../lib/html';
-  import { Ruler, Square, ShieldAlert, Grid3x3, X as XIcon } from '@lucide/svelte';
+  import { Ruler, Square, ShieldAlert, Grid3x3, X as XIcon, Crosshair, Home, Maximize2 } from '@lucide/svelte';
   import { segDist } from '../../lib/missionIO';
   import { polygonArea } from '../../lib/survey';
   import { fmtDist } from '../../lib/units';
@@ -210,6 +210,13 @@
 
     map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), 'top-right');
     map.addControl(new maplibregl.ScaleControl({ maxWidth: 150 }), 'bottom-right');
+
+    // For the e2e that proves the camera cluster moves the camera: the map
+    // instance itself is unreachable from the page, same as data-overlays-ready.
+    mapEl.dataset.cameraZoom = map.getZoom().toFixed(2);
+    map.on('moveend', () => {
+      mapEl.dataset.cameraZoom = map!.getZoom().toFixed(2);
+    });
 
     // Not 'load': that waits for every tile, including terrain from a third-party
     // host, so a slow tile server would hold back all overlays.
@@ -506,6 +513,28 @@
     if (map) map.remove();
   });
 
+  // Camera cluster, the 2D map's Follow/Home/Fit All at parity. Every position
+  // passes toMap, so a GCJ-02 source keeps its shift here too.
+  let follow = $state(false);
+
+  function flyHome() {
+    if (!map || (app.drone.home_lat === 0 && app.drone.home_lon === 0)) return;
+    const [la, lo] = toMap(app.drone.home_lat, app.drone.home_lon);
+    map.flyTo({ center: [lo, la], zoom: 16, duration: 1200 });
+  }
+
+  function fitRoute() {
+    if (!map) return;
+    if (app.waypoints.length === 0) return; // 2D does nothing without a route either
+    const pts = app.waypoints.map((w) => {
+      const [la, lo] = toMap(w.lat, w.lon);
+      return [lo, la] as [number, number];
+    });
+    const bounds = new maplibregl.LngLatBounds(pts[0], pts[Math.min(1, pts.length - 1)]);
+    for (const c of pts.slice(2)) bounds.extend(c);
+    map.fitBounds(bounds, { padding: 40, duration: 1000 });
+  }
+
   $effect(() => {
     if (!map) return;
     const d = app.drone;
@@ -527,6 +556,12 @@
       droneMarker.setLngLat([mlon, mlat]);
       (droneMarker.getElement() as HTMLElement).style.transform = `rotate(${d.hdg}deg)`;
     }
+
+    // Follow keeps zoom, pitch and bearing: only the center rides along, and a
+    // new easeTo replaces the one still running instead of queueing behind it.
+    // Reading `follow` here also re-runs this effect on the toggle itself, so
+    // switching on centres at once, before the next telemetry frame.
+    if (follow) map.easeTo({ center: [mlon, mlat], duration: 400 });
 
     if (Math.abs(mlat - prevLat) > 0.00001 || Math.abs(mlon - prevLon) > 0.00001) {
       trailCoords.push([mlon, mlat]);
@@ -911,7 +946,7 @@
     class="above-events-bar h-full rounded-lg border border-border"
   ></div>
 
-  <div class="absolute top-2.5 left-2.5 z-10 flex gap-1">
+  <div class="absolute top-2.5 left-2.5 z-10 flex flex-wrap gap-1 max-w-[calc(100%-7rem)]">
     <div class="map-btn">
       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
         ><path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" /></svg
@@ -963,6 +998,26 @@
         <XIcon size={13} />
       </button>
     {/if}
+
+    <span class="w-px self-stretch bg-border/70 mx-0.5" aria-hidden="true"></span>
+    <button
+      class="map-btn {follow ? '!text-destructive !border-destructive' : ''}"
+      onclick={() => (follow = !follow)}
+      title={follow ? t('map.free') : t('map.follow')}
+    >
+      <Crosshair size={13} />{follow ? t('map.follow') : t('map.free')}
+    </button>
+    <button
+      class="map-btn"
+      onclick={flyHome}
+      title={t('map.home')}
+      disabled={app.drone.home_lat === 0 && app.drone.home_lon === 0}
+    >
+      <Home size={13} />{t('map.home')}
+    </button>
+    <button class="map-btn" onclick={fitRoute} title={t('map.fitAll')} disabled={app.waypoints.length === 0}>
+      <Maximize2 size={13} />{t('map.fitAll')}
+    </button>
   </div>
 
   {#if app.drone.connected}
@@ -1029,5 +1084,11 @@
     font-weight: 600;
     color: hsl(var(--muted-foreground));
     backdrop-filter: blur(4px);
+  }
+  /* Home/Fit All say no instead of silently doing nothing when there is
+     nothing yet to fly to. */
+  .map-btn:disabled {
+    opacity: 0.45;
+    cursor: default;
   }
 </style>

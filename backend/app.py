@@ -17,6 +17,7 @@ from .auth import (
     auth_middleware,
     auth_required,
     generate_token,
+    network_address,
     set_session_cookie,
     verify_token,
     verify_ws_cookie,
@@ -159,7 +160,7 @@ async def body_too_large(request: Request, exc: BodyTooLarge):
 
 @app.get("/api/session", tags=["System"])
 async def api_session(request: Request):
-    """Current session info: connected clients, vehicle state."""
+    """Current session info: connected clients, vehicle state, LAN address."""
     link = request.app.state.link
     mgr = request.app.state.ws_mgr
     return {
@@ -170,6 +171,9 @@ async def api_session(request: Request):
         "sysid": link.vehicle.sysid,
         "mode": link.vehicle.mode,
         "vtype": link.vehicle.vtype_raw,
+        # The Remote panel builds http://<this>:<its own port> from it; None means
+        # the backend could not tell (loopback-only, or no route outward).
+        "network_host": network_address(),
     }
 
 
