@@ -637,7 +637,7 @@ const messages: Record<string, string> = {
   'frame.current': 'Actual',
   'frame.write': 'Escribir',
   'frame.saved': 'Tipo de armazón enviado',
-  'frame.reboot': 'Reinicie el controlador para aplicar el nuevo tipo de armazón',
+  'frame.reboot': 'El nuevo armazón se aplica tras reiniciar',
   'pid.title': 'Ajuste PID',
   'pid.roll': 'Alabeo',
   'pid.pitch': 'Cabeceo',
@@ -870,8 +870,8 @@ const messages: Record<string, string> = {
   'terrain.loading': 'Cargando terreno...',
   'terrain.adjusted': '{n} waypoints ajustados para seguimiento de terreno ({alt}m AGL)',
   'terrain.noData': 'Datos de terreno no disponibles',
-  'terrain.noHome': 'Posición home desconocida: conecte el vehículo y espere un fix antes del seguimiento de terreno',
-  'terrain.wp1Ref': 'Home desconocido: las alturas son relativas al WP1, no al home',
+  'terrain.noHome': 'Home desconocido: conecte y espere un fix antes del seguimiento',
+  'terrain.wp1Ref': 'Home desconocido: alturas relativas al WP1',
   'terrain.routeChanged':
     'La ruta o el punto de inicio cambiaron mientras se esperaban los datos del terreno, no se aplicó nada. Inténtelo de nuevo.',
   'terrain.clearance': 'Separación',
@@ -1220,7 +1220,7 @@ const messages: Record<string, string> = {
   'param.coverage': 'Cobertura de traducción {n}%',
   'param.liveCoverage': 'Cobertura de descripciones {n} %',
   'param.noMeta': 'Sin descripción',
-  'param.armedWrite': 'El vehículo está armado: ¿escribir los parámetros de todos modos?',
+  'param.armedWrite': 'Armado: ¿escribir los parámetros igualmente?',
   'param.series': 'Versión de metadatos',
   'param.seriesAuto': 'Automático',
 };

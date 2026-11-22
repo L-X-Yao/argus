@@ -637,7 +637,7 @@ const messages: Record<string, string> = {
   'frame.current': 'Текущий',
   'frame.write': 'Записать',
   'frame.saved': 'Тип рамы отправлен',
-  'frame.reboot': 'Перезагрузите контроллер, чтобы применить новый тип рамы',
+  'frame.reboot': 'Новый тип рамы вступит в силу после перезагрузки',
   'pid.title': 'Настройка PID',
   'pid.roll': 'Крен',
   'pid.pitch': 'Тангаж',
@@ -870,8 +870,8 @@ const messages: Record<string, string> = {
   'terrain.loading': 'Загрузка рельефа...',
   'terrain.adjusted': 'Скорректировано {n} точек для следования рельефу ({alt}m AGL)',
   'terrain.noData': 'Данные рельефа недоступны',
-  'terrain.noHome': 'Позиция home неизвестна: подключите аппарат и дождитесь фикса перед полётом по рельефу',
-  'terrain.wp1Ref': 'Home неизвестен: высоты отсчитываются от WP1, а не от home',
+  'terrain.noHome': 'Home неизвестен: подключитесь и дождитесь фикса перед рельефом',
+  'terrain.wp1Ref': 'Home неизвестен: высоты относительно WP1',
   'terrain.routeChanged':
     'Маршрут или точка старта изменились, пока загружались данные рельефа, ничего не применено. Повторите попытку.',
   'terrain.clearance': 'Просвет',
@@ -1220,7 +1220,7 @@ const messages: Record<string, string> = {
   'param.coverage': 'Покрытие перевода {n}%',
   'param.liveCoverage': 'Покрытие описаниями {n} %',
   'param.noMeta': 'Описание отсутствует',
-  'param.armedWrite': 'Аппарат армирован: всё равно записать параметры?',
+  'param.armedWrite': 'Армирован: всё равно записать параметры?',
   'param.series': 'Версия метаданных',
   'param.seriesAuto': 'Авто',
 };

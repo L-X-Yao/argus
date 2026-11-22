@@ -711,7 +711,7 @@ const messages: Record<string, string> = {
   'frame.current': 'Current',
   'frame.write': 'Write',
   'frame.saved': 'Frame type sent',
-  'frame.reboot': 'Reboot the flight controller for the new frame type to take effect',
+  'frame.reboot': 'Reboot the controller for the new frame type',
   'pid.title': 'PID Tuning',
   'pid.roll': 'Roll',
   'pid.pitch': 'Pitch',
@@ -954,8 +954,8 @@ const messages: Record<string, string> = {
   'terrain.loading': 'Loading terrain...',
   'terrain.adjusted': 'Adjusted {n} waypoints for terrain following ({alt}m AGL)',
   'terrain.noData': 'Terrain data unavailable',
-  'terrain.noHome': 'Home position unknown: connect the vehicle and wait for a fix before terrain following',
-  'terrain.wp1Ref': 'Home unknown: heights are relative to WP1, not home',
+  'terrain.noHome': 'Home unknown: connect and wait for a fix before terrain following',
+  'terrain.wp1Ref': 'Home unknown: heights are relative to WP1',
   'terrain.routeChanged':
     'The route or home changed while waiting for terrain data, so nothing was applied. Try again.',
   'terrain.clearance': 'Clearance',
@@ -1217,7 +1217,7 @@ const messages: Record<string, string> = {
   'param.coverage': 'Translation coverage {n}%',
   'param.liveCoverage': 'Description coverage {n}%',
   'param.noMeta': 'No description available',
-  'param.armedWrite': 'Vehicle is armed: write parameter changes anyway?',
+  'param.armedWrite': 'Armed: write parameter changes anyway?',
   'param.series': 'Metadata version',
   'param.seriesAuto': 'Auto',
 };

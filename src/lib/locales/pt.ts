@@ -638,7 +638,7 @@ const messages: Record<string, string> = {
   'frame.current': 'Atual',
   'frame.write': 'Gravar',
   'frame.saved': 'Tipo de estrutura enviado',
-  'frame.reboot': 'Reinicie o controlador para aplicar o novo tipo de estrutura',
+  'frame.reboot': 'A nova estrutura aplica-se após reiniciar',
   'pid.title': 'Ajuste PID',
   'pid.roll': 'Rolagem',
   'pid.pitch': 'Arfagem',
@@ -871,8 +871,8 @@ const messages: Record<string, string> = {
   'terrain.loading': 'Carregando terreno...',
   'terrain.adjusted': '{n} waypoints ajustados para seguimento de terreno ({alt}m AGL)',
   'terrain.noData': 'Dados de terreno indisponíveis',
-  'terrain.noHome': 'Posição home desconhecida: conecte o veículo e aguarde um fix antes do acompanhamento de terreno',
-  'terrain.wp1Ref': 'Home desconhecido: as alturas são relativas ao WP1, não ao home',
+  'terrain.noHome': 'Home desconhecido: conecte e aguarde um fix antes do acompanhamento',
+  'terrain.wp1Ref': 'Home desconhecido: alturas relativas ao WP1',
   'terrain.routeChanged':
     'A rota ou o ponto inicial mudou enquanto aguardava os dados do terreno, nada foi aplicado. Tente novamente.',
   'terrain.clearance': 'Separação',
@@ -1222,7 +1222,7 @@ const messages: Record<string, string> = {
   'param.coverage': 'Cobertura da tradução {n}%',
   'param.liveCoverage': 'Cobertura das descrições {n} %',
   'param.noMeta': 'Sem descrição',
-  'param.armedWrite': 'O veículo está armado: gravar os parâmetros mesmo assim?',
+  'param.armedWrite': 'Armado: gravar os parâmetros mesmo assim?',
   'param.series': 'Versão dos metadados',
   'param.seriesAuto': 'Automático',
 };

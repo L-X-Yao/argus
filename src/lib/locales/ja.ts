@@ -637,7 +637,7 @@ const messages: Record<string, string> = {
   'frame.current': '現在',
   'frame.write': '書込',
   'frame.saved': '機体フレームを送信しました',
-  'frame.reboot': '新しい機体フレームを反映するには再起動が必要です',
+  'frame.reboot': '新しい機体フレームは再起動後に反映',
   'pid.title': 'PIDチューニング',
   'pid.roll': 'ロール',
   'pid.pitch': 'ピッチ',
@@ -870,8 +870,8 @@ const messages: Record<string, string> = {
   'terrain.loading': '地形データ読込中...',
   'terrain.adjusted': '{n}個のウェイポイントを地形追従に調整しました（{alt}m AGL）',
   'terrain.noData': '地形データ利用不可',
-  'terrain.noHome': 'ホーム位置が不明です。地形追従の前に機体を接続し測位を待ってください',
-  'terrain.wp1Ref': 'ホーム不明：高さはホームではなく WP1 基準です',
+  'terrain.noHome': 'ホーム不明：地形追従の前に接続と測位を',
+  'terrain.wp1Ref': 'ホーム不明：高さは WP1 基準',
   'terrain.routeChanged':
     '地形データの待機中にルートまたはホームが変更されたため、適用しませんでした。もう一度お試しください',
   'terrain.clearance': 'クリアランス',
@@ -1218,7 +1218,7 @@ const messages: Record<string, string> = {
   'param.coverage': '翻訳カバレッジ {n}%',
   'param.liveCoverage': '説明カバレッジ {n}%',
   'param.noMeta': '説明なし',
-  'param.armedWrite': '機体がアームされています。それでもパラメータを書き込みますか？',
+  'param.armedWrite': 'アーム中：それでもパラメータを書き込みますか？',
   'param.series': 'メタデータ版',
   'param.seriesAuto': '自動',
 };

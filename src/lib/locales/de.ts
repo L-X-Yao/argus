@@ -638,7 +638,7 @@ const messages: Record<string, string> = {
   'frame.current': 'Aktuell',
   'frame.write': 'Schreiben',
   'frame.saved': 'Rahmentyp gesendet',
-  'frame.reboot': 'Zum Anwenden des neuen Rahmentyps den Flieger neu starten',
+  'frame.reboot': 'Neuer Rahmentyp gilt nach einem Neustart',
   'pid.title': 'PID-Abstimmung',
   'pid.roll': 'Rollen',
   'pid.pitch': 'Nick',
@@ -871,8 +871,8 @@ const messages: Record<string, string> = {
   'terrain.loading': 'Lade Geländedaten...',
   'terrain.adjusted': '{n} Wegpunkte für Geländefolge angepasst ({alt}m AGL)',
   'terrain.noData': 'Geländedaten nicht verfügbar',
-  'terrain.noHome': 'Home-Position unbekannt: Flieger verbinden und auf einen Fix warten, bevor Terrain Follow läuft',
-  'terrain.wp1Ref': 'Home unbekannt: Höhen beziehen sich auf WP1, nicht auf Home',
+  'terrain.noHome': 'Home unbekannt: vor Terrain Follow verbinden und Fix abwarten',
+  'terrain.wp1Ref': 'Home unbekannt: Höhen relativ zu WP1',
   'terrain.routeChanged':
     'Route oder Startpunkt haben sich beim Warten auf Geländedaten geändert, nichts wurde übernommen. Bitte erneut versuchen.',
   'terrain.clearance': 'Bodenfreiheit',
@@ -1221,7 +1221,7 @@ const messages: Record<string, string> = {
   'param.coverage': 'Übersetzungsabdeckung {n}%',
   'param.liveCoverage': 'Beschreibungsabdeckung {n}%',
   'param.noMeta': 'Keine Beschreibung',
-  'param.armedWrite': 'Flieger ist scharf: Parameter trotzdem schreiben?',
+  'param.armedWrite': 'Scharf: Parameter trotzdem schreiben?',
   'param.series': 'Metadatenversion',
   'param.seriesAuto': 'Automatisch',
 };

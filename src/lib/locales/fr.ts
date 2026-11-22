@@ -638,7 +638,7 @@ const messages: Record<string, string> = {
   'frame.current': 'Actuel',
   'frame.write': 'Écrire',
   'frame.saved': 'Type de châssis envoyé',
-  'frame.reboot': 'Redémarrez le contrôleur pour appliquer le nouveau type de châssis',
+  'frame.reboot': 'Le nouveau châssis prend effet après redémarrage',
   'pid.title': 'Réglage PID',
   'pid.roll': 'Roulis',
   'pid.pitch': 'Tangage',
@@ -871,8 +871,8 @@ const messages: Record<string, string> = {
   'terrain.loading': 'Chargement du terrain...',
   'terrain.adjusted': '{n} waypoints ajustés pour le suivi de terrain ({alt}m AGL)',
   'terrain.noData': 'Données de terrain indisponibles',
-  'terrain.noHome': 'Position home inconnue : connectez le véhicule et attendez un fix avant le suivi de terrain',
-  'terrain.wp1Ref': 'Home inconnu : les hauteurs sont relatives au WP1, pas au home',
+  'terrain.noHome': 'Home inconnu : connectez et attendez un fix avant le suivi',
+  'terrain.wp1Ref': 'Home inconnu : hauteurs relatives au WP1',
   'terrain.routeChanged':
     'La route ou le point de départ a changé pendant l’attente des données de terrain, rien n’a été appliqué. Réessayez.',
   'terrain.clearance': 'Marge de dégagement',
@@ -1223,7 +1223,7 @@ const messages: Record<string, string> = {
   'param.coverage': 'Couverture de traduction {n}%',
   'param.liveCoverage': 'Couverture des descriptions {n} %',
   'param.noMeta': 'Aucune description',
-  'param.armedWrite': 'Le véhicule est armé : écrire quand même les paramètres ?',
+  'param.armedWrite': 'Armé : écrire quand même les paramètres ?',
   'param.series': 'Version des métadonnées',
   'param.seriesAuto': 'Automatique',
 };
