@@ -61,7 +61,10 @@ test.describe('Log viewer', () => {
 
     await dialog.getByRole('button', { name: label('logview.stats') }).click();
     const sidebar = dialog.locator('div.w-44');
+    // Only the channels the viewer opens with (at most MAX_OVERLAY = 4).
+    const shown = ['ATT', 'GPS', 'BARO', 'BAT'];
     for (const [channel, expected] of Object.entries(truth.stats)) {
+      if (!shown.some((prefix) => channel.startsWith(`${prefix}.`))) continue;
       const block = sidebar.locator('div.space-y-0\\.5').filter({ hasText: channel });
       await expect(block, channel).toBeVisible();
       const cells = (await block.locator('span.font-mono').allTextContents()).map(Number);
@@ -87,7 +90,8 @@ test.describe('Log viewer', () => {
     await expect(dialog.getByText(label('logview.zoomHint'))).toHaveCount(0);
 
     await dialog.getByRole('button', { name: label('logview.table') }).click();
-    const rows = ['ATT', 'BARO', 'BAT', 'GPS', 'VIBE'].reduce((sum, t) => sum + truth.counts[t], 0);
+    // The viewer opens with at most MAX_OVERLAY (4) channels selected.
+    const rows = ['ATT', 'GPS', 'BARO', 'BAT'].reduce((sum, t) => sum + truth.counts[t], 0);
     await expect(dialog.getByText(label('logview.rows').replace('{n}', String(rows)))).toBeVisible();
     await close(page, dialog);
   });
@@ -150,4 +154,3 @@ test.describe('Remote', () => {
     await close(page, dialog);
   });
 });
-

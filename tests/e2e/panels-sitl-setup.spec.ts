@@ -140,7 +140,10 @@ test.describe('Setup wizard', () => {
       await dialog.getByRole('button', { name: label('setup.next') }).click();
     }
     await expect(dialog.getByText(label('setup.done')).first()).toBeVisible();
-    await dialog.getByRole('button', { name: label('setup.done') }).click();
+    await dialog
+      .getByRole('button', { name: label('error.close') })
+      .last()
+      .click();
     await expect(dialog).toHaveCount(0);
   });
 
@@ -168,7 +171,10 @@ test.describe('Setup wizard', () => {
     }
     await wizard.getByRole('button', { name: label('setup.next') }).click();
     await expect(wizard).toContainText('6/6');
-    await wizard.getByRole('button', { name: label('setup.done') }).click();
+    await wizard
+      .getByRole('button', { name: label('error.close') })
+      .last()
+      .click();
   });
 });
 
