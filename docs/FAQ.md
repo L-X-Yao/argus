@@ -48,11 +48,12 @@ The link dropped or the controller is busy. Retry, and read the event log. A rea
 Check that the vehicle is disarmed, that the mission is not empty, and that no other page is editing it. A download followed by an upload round-trips the waypoint commands and their p1 to p4 fields.
 
 **A parameter description is marked machine translated.**
-The English source comes from ArduPilot's generated parameter metadata. The Chinese translations
-ship in the GPL-3.0 `param_i18n/` pack and work offline; other UI languages fall back to English
-(with an EN marker) until their data pack is added. “Machine translation” means no person has
-reviewed that text; “Reviewed” means someone has. Expand the parameter and use “Show English
-original” to compare. A translated description is guidance, not flight procedure.
+The English source comes from ArduPilot's generated parameter metadata. Descriptions in nine
+languages (zh, ar, de, es, fr, ja, ko, pt, ru) ship in the GPL-3.0 `param_i18n/` pack and work
+offline; all nine are machine translations unless marked reviewed, and a missing field falls back
+to English (with an EN marker). “Machine translation” means no person has reviewed that text;
+“Reviewed” means someone has. Expand the parameter and use “Show English original” to compare.
+A translated description is guidance, not flight procedure.
 
 **A parameter does not change.**
 The controller may round an integer parameter or clamp it to its range. Read it back; Argus shows the value the controller reports.
