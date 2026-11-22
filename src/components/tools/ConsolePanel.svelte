@@ -1,12 +1,18 @@
 <script lang="ts">
   import { inspectorState } from '../../lib/inspectorStore.svelte';
   import { sendCommand } from '../../lib/ws';
+  import { isSerialConnected } from '../../lib/transport';
   import { t } from '../../lib/i18n.svelte';
   import { app } from '../../lib/stores.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
-  import { X, Terminal, Trash2, Send } from '@lucide/svelte';
+  import { X, Terminal, Trash2, Send, Usb } from '@lucide/svelte';
 
   let { onclose }: { onclose: () => void } = $props();
+
+  // The shell rides the backend's SERIAL_CONTROL: over WebSerial the page talks
+  // to the FC directly and a command here would go to whatever other link the
+  // backend happens to hold.
+  const serialActive = $derived(isSerialConnected());
 
   let inputValue = $state('');
   let outputDiv: HTMLDivElement = $state(null!);
@@ -114,6 +120,11 @@
       <!-- Not connected state -->
       <div class="flex-1 flex items-center justify-center">
         <p class="text-sm text-muted-foreground">{t('console.notConnected')}</p>
+      </div>
+    {:else if serialActive}
+      <div class="flex-1 flex flex-col items-center justify-center gap-2 p-6 text-center">
+        <Usb size={20} class="text-muted-foreground" />
+        <p class="text-sm text-muted-foreground">{t('console.needBackend')}</p>
       </div>
     {:else}
       <!-- Terminal output -->
