@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import AxeBuilder from '@axe-core/playwright';
 
 test.describe('Accessibility', () => {
   test('skip-to-content link exists and is focusable', async ({ page }) => {
@@ -29,7 +30,7 @@ test.describe('Accessibility', () => {
     // Each button should have either text content, aria-label, or title
     for (let i = 0; i < count; i++) {
       const btn = buttons.nth(i);
-      const text = (await btn.textContent() || '').trim();
+      const text = ((await btn.textContent()) || '').trim();
       const ariaLabel = await btn.getAttribute('aria-label');
       const title = await btn.getAttribute('title');
 
@@ -38,10 +39,7 @@ test.describe('Accessibility', () => {
         // Check for child SVG with aria-label or img with alt
         const svgLabel = await btn.locator('svg[aria-label]').count();
         const imgAlt = await btn.locator('img[alt]').count();
-        expect(
-          svgLabel > 0 || imgAlt > 0,
-          `Button at index ${i} has no accessible name`
-        ).toBeTruthy();
+        expect(svgLabel > 0 || imgAlt > 0, `Button at index ${i} has no accessible name`).toBeTruthy();
       }
     }
   });
@@ -79,9 +77,7 @@ test.describe('Accessibility', () => {
     }
 
     // Should reach interactive elements (buttons, inputs, links)
-    const interactiveReached = focusedTags.some(
-      (tag) => ['button', 'input', 'a', 'select', 'textarea'].includes(tag)
-    );
+    const interactiveReached = focusedTags.some((tag) => ['button', 'input', 'a', 'select', 'textarea'].includes(tag));
     expect(interactiveReached).toBe(true);
   });
 
@@ -133,7 +129,7 @@ test.describe('Accessibility', () => {
     // Container exists in DOM structure (may or may not have toasts)
     const containerCount = await toastContainer.count();
     // If toasts are present, verify they have text content
-    if (containerCount > 0 && await toastContainer.first().isVisible()) {
+    if (containerCount > 0 && (await toastContainer.first().isVisible())) {
       const toastText = await toastContainer.first().textContent();
       expect(toastText).toBeTruthy();
     }
@@ -163,5 +159,15 @@ test.describe('Accessibility', () => {
     // At minimum the element should be reachable (focus indicator may be CSS-based)
     const activeTag = await page.evaluate(() => document.activeElement?.tagName.toLowerCase());
     expect(activeTag).not.toBe('body');
+  });
+});
+
+test.describe('axe scan', () => {
+  test('the Fly view has no serious or critical violations', async ({ page }) => {
+    await page.goto('/');
+    await page.waitForTimeout(2000);
+    const results = await new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa']).analyze();
+    const bad = results.violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
+    expect(bad.map((v) => `${v.id}: ${v.help}`)).toEqual([]);
   });
 });
