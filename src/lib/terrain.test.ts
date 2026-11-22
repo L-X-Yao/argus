@@ -3,8 +3,15 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 // backend.ts accesses `window` at module scope — stub before import
 vi.stubGlobal('window', { location: { protocol: 'http:', host: 'localhost' } });
 
-const { interpolateRoute, getElevation, getElevationProfile, adjustWaypointsForTerrain, groundAboveHome, routeKey } =
-  await import('./terrain');
+const {
+  interpolateRoute,
+  getElevation,
+  getElevationProfile,
+  adjustWaypointsForTerrain,
+  groundAboveHome,
+  routeKey,
+  homeIsKnown,
+} = await import('./terrain');
 
 describe('interpolateRoute', () => {
   it('returns single point for a single waypoint', () => {
@@ -476,5 +483,18 @@ describe('requests in turn', () => {
     fetchMock.mockResolvedValueOnce(answer([400]));
     await getElevationProfile(route(41.5));
     expect(fetchMock.mock.calls[0][1].signal).toBeInstanceOf(AbortSignal);
+  });
+});
+
+describe('homeIsKnown', () => {
+  it('treats a missing or zero home as unknown', () => {
+    expect(homeIsKnown(null)).toBe(false);
+    expect(homeIsKnown(undefined)).toBe(false);
+    expect(homeIsKnown({ lat: 0, lon: 0 })).toBe(false);
+  });
+
+  it('accepts either non-zero component', () => {
+    expect(homeIsKnown({ lat: 34.2, lon: 0 })).toBe(true);
+    expect(homeIsKnown({ lat: 0, lon: 108.9 })).toBe(true);
   });
 });

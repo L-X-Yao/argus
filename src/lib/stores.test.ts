@@ -24,6 +24,8 @@ import {
   loadDownloadedMission,
   loadSettings,
   reloadFromStorage,
+  saveFence,
+  saveWaypoints,
 } from './stores.svelte';
 
 function makeStorage(): Storage {
@@ -439,5 +441,19 @@ describe('stored values that are zero', () => {
     loadSettings();
     expect(app.defaultAlt).toBe(0);
     expect(app.geoRadius).toBe(0);
+  });
+});
+
+describe('persistence helpers', () => {
+  it('saveFence stores the current polygon', () => {
+    app.fencePolygon = [{ lat: 34.2, lon: 108.9 }];
+    saveFence();
+    expect(JSON.parse(localStorage.getItem('argus_fence')!)).toEqual([{ lat: 34.2, lon: 108.9 }]);
+  });
+
+  it('saveWaypoints stores the current route', () => {
+    app.waypoints = [{ lat: 30, lon: 120, alt: 50, drop: false, delay: 0, speed: 0, type: 'wp', loiter_param: 0 }];
+    saveWaypoints();
+    expect(JSON.parse(localStorage.getItem('argus_waypoints')!)).toHaveLength(1);
   });
 });

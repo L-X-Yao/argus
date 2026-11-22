@@ -92,12 +92,16 @@ export async function getElevationProfile(points: { lat: number; lon: number }[]
  *              That is a profile convenience, not home AGL: callers that write
  *              altitudes must require a known home instead.
  */
+export function homeIsKnown(home?: { lat: number; lon: number } | null): home is { lat: number; lon: number } {
+  return !!home && (home.lat !== 0 || home.lon !== 0);
+}
+
 export async function groundAboveHome(
   points: { lat: number; lon: number }[],
   home?: { lat: number; lon: number } | null,
 ): Promise<number[]> {
   const elevations = await getElevationProfile(points);
-  const reference = home && (home.lat !== 0 || home.lon !== 0) ? await getElevation(home.lat, home.lon) : elevations[0];
+  const reference = homeIsKnown(home) ? await getElevation(home.lat, home.lon) : elevations[0];
   return elevations.map((e) => e - reference);
 }
 
