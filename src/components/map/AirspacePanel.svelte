@@ -92,10 +92,11 @@
   }
 
   /* ── Airport list with distance, sorted by distance ── */
+  let hasPosition = $derived(app.drone.lat !== 0 || app.drone.lon !== 0);
   let airportList = $derived.by(() => {
     const droneLat = app.drone.lat;
     const droneLon = app.drone.lon;
-    const hasPos = droneLat !== 0 || droneLon !== 0;
+    const hasPos = hasPosition;
 
     return AIRPORTS.map((ap) => {
       const dist = hasPos ? haversineM(droneLat, droneLon, ap.lat, ap.lon) : -1;
@@ -150,6 +151,13 @@
         <AlertTriangle size={14} class="text-yellow-500 shrink-0" />
         <span class="text-[11px] text-yellow-600 dark:text-yellow-400">{t('airspace.demoData')}</span>
       </div>
+
+      {#if !hasPosition}
+        <div class="p-3 rounded-lg bg-warning/10 border border-warning/30 flex items-center gap-2">
+          <AlertTriangle size={14} class="text-warning shrink-0" />
+          <span class="text-xs text-warning">{t('airspace.noPosition')}</span>
+        </div>
+      {/if}
 
       <!-- Violation warning -->
       {#if violation && enabled}

@@ -2,6 +2,7 @@
   import { app, addToast } from '../../lib/stores.svelte';
   import { dispatch } from '../../lib/transport';
   import { t } from '../../lib/i18n.svelte';
+  import type { DroneEvent } from '../../lib/types';
 
   // All gimbal/camera/ROI commands go through dispatch(): its table carries
   // the WebSerial-native handlers (with backend-parity validation) and falls
@@ -52,6 +53,51 @@
     }
   });
 
+  interface PendingAck {
+    cmd: number;
+    mark: DroneEvent | undefined;
+    success: string;
+  }
+  let pendingAcks = $state<PendingAck[]>([]);
+  let ackError = $state('');
+
+  function sendWithAck(cmd: number, name: string, data: Record<string, unknown> | undefined, success: string) {
+    // MAVLink ACK has no request id. Match only an ACK after this click, and
+    // replace an unanswered earlier request of the same command on a retry.
+    pendingAcks = pendingAcks.filter((p) => p.cmd !== cmd);
+    pendingAcks.push({ cmd, mark: app.events[app.events.length - 1], success });
+    ackError = '';
+    dispatch(name, undefined, data);
+    // Silence is not a failure: without an ACK the only honest message is sent.
+    addToast(t('gimbal.sent'), 'info', 2000);
+  }
+
+  $effect(() => {
+    if (!app.drone.connected && pendingAcks.length > 0) pendingAcks = [];
+  });
+
+  $effect(() => {
+    for (let i = pendingAcks.length - 1; i >= 0; i--) {
+      const pending = pendingAcks[i];
+      const markIndex = pending.mark ? app.events.lastIndexOf(pending.mark) : -1;
+      // If the marker was trimmed, every retained event is newer than it.
+      const start = markIndex >= 0 ? markIndex + 1 : 0;
+      const ack = app.events
+        .slice(start)
+        .find((ev) => ev.cmd === pending.cmd && (ev.event_type === 'cmd_ack_ok' || ev.event_type === 'cmd_ack_fail'));
+      if (!ack) continue;
+      if (ack.event_type === 'cmd_ack_ok') {
+        ackError = '';
+        addToast(pending.success, 'success', 2500);
+      } else {
+        // Both links already emit an error toast. Keep the exact failure here
+        // as well without adding a second toast to the same screen.
+        ackError = ack.text;
+      }
+      pendingAcks.splice(i, 1);
+    }
+  });
+
   /* ── Gimbal controls ── */
   function requireLink(): boolean {
     if (!app.drone.connected) {
@@ -99,21 +145,18 @@
   /* ── Camera controls ── */
   function takePhoto() {
     if (!requireLink()) return;
-    dispatch('camera_trigger');
-    addToast(t('gimbal.sent'), 'info', 2000);
+    sendWithAck(203, 'camera_trigger', undefined, t('camera.photoTaken'));
   }
 
   function toggleVideo() {
     if (!requireLink()) return;
-    dispatch(recording ? 'camera_video_stop' : 'camera_video_start');
-    // The FC's cmd_ack_ok for 2500/2501 is what changes `recording`.
-    addToast(t('gimbal.sent'), 'info', 2000);
+    if (recording) sendWithAck(2501, 'camera_video_stop', undefined, t('camera.videoStopped'));
+    else sendWithAck(2500, 'camera_video_start', undefined, t('camera.videoStarted'));
   }
 
   function setZoom() {
     if (!requireLink()) return;
-    dispatch('camera_zoom', undefined, { zoom: zoomLevel });
-    addToast(`${t('camera.zoom')}: ${zoomLevel}x`, 'info', 2000);
+    sendWithAck(531, 'camera_zoom', { zoom: zoomLevel }, `${t('camera.zoom')}: ${zoomLevel}x`);
   }
 
   /* ── ROI ── */
@@ -123,14 +166,17 @@
       addToast(t('gimbal.roiHint'), 'warn');
       return;
     }
-    dispatch('do_set_roi', undefined, { lat: roiLat, lon: roiLon, alt: roiAlt });
-    addToast(`${t('gimbal.sent')}: ${roiLat.toFixed(6)}, ${roiLon.toFixed(6)}`, 'info');
+    sendWithAck(
+      201,
+      'do_set_roi',
+      { lat: roiLat, lon: roiLon, alt: roiAlt },
+      `${t('gimbal.roiSet')}: ${roiLat.toFixed(6)}, ${roiLon.toFixed(6)}`,
+    );
   }
 
   function clearRoi() {
     if (!requireLink()) return;
-    dispatch('do_set_roi', undefined, { lat: 0, lon: 0, alt: 0 });
-    addToast(t('gimbal.sent'), 'info');
+    sendWithAck(201, 'do_set_roi', { lat: 0, lon: 0, alt: 0 }, t('gimbal.roiCleared'));
   }
 
   function prefillFromDrone() {
@@ -333,6 +379,9 @@
         </div>
       </div>
 
+      {#if ackError}
+        <p class="text-[11px] text-destructive text-center" role="alert">{ackError}</p>
+      {/if}
       <p class="text-[11px] text-muted-foreground text-center">{t('gimbal.hint')}</p>
     </div>
   </div>
