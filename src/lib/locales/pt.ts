@@ -854,6 +854,9 @@ const messages: Record<string, string> = {
   'remote.connected': 'Conectado',
   'remote.share': 'Compartilhar',
   'remote.shareHint': 'Compartilhe esta URL com sua equipe para que ela possa observar o voo.',
+  'remote.lanHint':
+    'O backend precisa escutar neste endereço (ARGUS_HOST) e o endereço precisa estar em ARGUS_CORS_ORIGINS, ou o outro dispositivo não consegue abrir a página.',
+  'remote.lanAddress': 'Endereço LAN',
   'remote.copy': 'Copiar URL',
   'remote.copied': 'Copiado!',
   'adsb.title': 'Tráfego ADSB',

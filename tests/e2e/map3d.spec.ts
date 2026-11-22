@@ -95,6 +95,36 @@ test.describe('3D map', () => {
     await expect(numbered).toHaveCount(4);
   });
 
+  test('camera cluster: Home disabled without one, Fit All zooms to the route', async ({ page }) => {
+    const wp = (lat: number, lon: number) => ({
+      lat,
+      lon,
+      alt: 50,
+      drop: false,
+      delay: 0,
+      speed: 0,
+      type: 'wp',
+      loiter_param: 0,
+    });
+    // Far apart: fitting them has to zoom out, which widens the scale bar.
+    await seed(page, 'argus_waypoints', [wp(34.1, 108.8), wp(34.42, 109.1)]);
+    await open3d(page);
+    await overlaysReady(page);
+
+    await expect(page.getByTitle(/起飞点|Home/)).toBeDisabled();
+    await expect(page.getByTitle(/全览|Fit All/)).toBeEnabled();
+
+    // The view publishes its zoom on the map element for exactly this assertion.
+    const zoomNum = () =>
+      page.evaluate(() => {
+        const v = document.querySelector('[data-camera-zoom]')?.getAttribute('data-camera-zoom');
+        return v ? parseFloat(v) : NaN;
+      });
+    await expect.poll(zoomNum, { timeout: 15000 }).toBe(14);
+    await page.getByTitle(/全览|Fit All/).click();
+    await expect.poll(zoomNum, { timeout: 5000 }).toBeLessThan(14);
+  });
+
   test('shows a saved fence', async ({ page }) => {
     await seed(page, 'argus_fence', [
       { lat: 34.258, lon: 108.942 },
@@ -143,9 +173,12 @@ test.describe('3D map', () => {
     // Text for the longitude and the heading, and a latitude off the globe.
     const row = (t: number, lat: string, lon: string, yaw: string) =>
       `${t},0,0,${yaw},${lat},${lon},50,450,5,0,25,5,90,5,Loiter,1,3,14,0,90,0,-1`;
-    const csv = ['header', row(0, '34.258', 'east', 'north'), row(1, '534.2', '108.942', '90'), row(2, '34.259', '108.942', '90')].join(
-      '\n',
-    );
+    const csv = [
+      'header',
+      row(0, '34.258', 'east', 'north'),
+      row(1, '534.2', '108.942', '90'),
+      row(2, '34.259', '108.942', '90'),
+    ].join('\n');
     const chooser = page.waitForEvent('filechooser');
     await page.getByText(/加载飞行日志|Load Flight Log/).click();
     await (await chooser).setFiles({ name: 'flight.csv', mimeType: 'text/csv', buffer: Buffer.from(csv) });

@@ -268,6 +268,15 @@ def _address_on_the_network() -> str | None:
     return None if _is_this_machine(address) else address
 
 
+def network_address() -> str | None:
+    """The shareable LAN address, for the session route to show the Remote panel.
+
+    Only the address: the port is the caller's (a page's own), and no token ever
+    rides along — a URL with a token in it leaks through chat logs and histories.
+    """
+    return _address_on_the_network()
+
+
 def _origin(address: str, port: int) -> str:
     """The Origin header a browser sends for a page at http://address:port. _from_own_page
     compares it with ARGUS_CORS_ORIGINS as text, so it has to be written the browser's way: a

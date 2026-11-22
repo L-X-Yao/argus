@@ -850,6 +850,9 @@ const messages: Record<string, string> = {
   'remote.connected': 'متصل',
   'remote.share': 'مشاركة',
   'remote.shareHint': 'شارك هذا الرابط مع أعضاء الفريق لمتابعة جلسة الطيران.',
+  'remote.lanHint':
+    'يجب أن يستمع الخادم على هذا العنوان (ARGUS_HOST) وأن يُضاف العنوان إلى ARGUS_CORS_ORIGINS حتى يتمكن الجهاز الآخر من فتح الصفحة.',
+  'remote.lanAddress': 'عنوان الشبكة المحلية',
   'remote.copy': 'نسخ الرابط',
   'remote.copied': 'تم النسخ!',
   'adsb.title': 'حركة ADSB',

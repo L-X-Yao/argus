@@ -929,6 +929,8 @@ const messages: Record<string, string> = {
   'remote.connected': '已连接',
   'remote.share': '分享',
   'remote.shareHint': '把此地址发给团队成员，即可旁观本次飞行。',
+  'remote.lanHint': '后端需监听该地址（ARGUS_HOST），且该地址需加入 ARGUS_CORS_ORIGINS，对方设备才能打开页面。',
+  'remote.lanAddress': '局域网地址',
   'remote.copy': '复制地址',
   'remote.copied': '已复制',
   'adsb.title': 'ADSB 航空器',

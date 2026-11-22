@@ -336,11 +336,14 @@ class TestHTTPEndpointContracts:
         r = client.get("/api/session")
         assert r.status_code == 200
         data = r.json()
-        required_fields = {"connected", "clients", "armed", "sysid", "mode", "vtype"}
+        required_fields = {"connected", "clients", "armed", "sysid", "mode", "vtype", "network_host"}
         assert required_fields.issubset(data.keys())
         assert isinstance(data["connected"], bool)
         assert isinstance(data["clients"], int)
         assert isinstance(data["armed"], bool)
+        # A loopback-only test run has no LAN address; the field is then None,
+        # never missing — the Remote panel falls back to the page's own URL.
+        assert data["network_host"] is None or isinstance(data["network_host"], str)
 
     def test_version_returns_required_fields(self):
         """GET /api/version returns version string and protocol list."""
