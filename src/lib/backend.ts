@@ -56,6 +56,26 @@ const ORIGIN_REFUSED = 'origin not allowed';
  * Exchange the access token for the session cookie that REST, tile and video
  * requests rely on. Rejects when the backend cannot be reached.
  */
+/**
+ * Ask the backend to start the bundled simulator if port 5770 is idle. The
+ * backend answers once the port accepts, so the caller can connect right away.
+ */
+export async function startSimulator(): Promise<{ ok: boolean; error?: string }> {
+  try {
+    const res = await fetch(apiUrl('/api/simulator/start'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+      signal: AbortSignal.timeout(15000),
+    });
+    const data = await res.json().catch(() => null);
+    if (data?.ok === true) return { ok: true };
+    return { ok: false, error: data?.error || `HTTP ${res.status}` };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error ? e.message : String(e) };
+  }
+}
+
 export async function login(token: string): Promise<LoginResult> {
   const res = await fetch(apiUrl('/api/auth/login'), {
     method: 'POST',

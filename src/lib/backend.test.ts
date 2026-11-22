@@ -138,4 +138,37 @@ describe('backend URL resolver', () => {
       await expect(login('secret')).rejects.toThrow('Failed to fetch');
     });
   });
+
+  describe('startSimulator', () => {
+    const page = { location: { protocol: 'http:', host: 'localhost:8100' } };
+
+    it('posts to the launcher and reports success', async () => {
+      vi.stubGlobal('window', page);
+      const fetchMock = vi.fn().mockResolvedValue({ status: 200, json: async () => ({ ok: true, started: true }) });
+      vi.stubGlobal('fetch', fetchMock);
+      const { startSimulator } = await import('./backend');
+      await expect(startSimulator()).resolves.toEqual({ ok: true });
+      expect(fetchMock).toHaveBeenCalledWith(
+        '/api/simulator/start',
+        expect.objectContaining({ method: 'POST', body: '{}' }),
+      );
+    });
+
+    it('returns the backend error', async () => {
+      vi.stubGlobal('window', page);
+      vi.stubGlobal(
+        'fetch',
+        vi.fn().mockResolvedValue({ status: 200, json: async () => ({ ok: false, error: 'simulator.py not found' }) }),
+      );
+      const { startSimulator } = await import('./backend');
+      await expect(startSimulator()).resolves.toEqual({ ok: false, error: 'simulator.py not found' });
+    });
+
+    it('turns a network failure into a result the button can show', async () => {
+      vi.stubGlobal('window', page);
+      vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
+      const { startSimulator } = await import('./backend');
+      await expect(startSimulator()).resolves.toEqual({ ok: false, error: 'Failed to fetch' });
+    });
+  });
 });

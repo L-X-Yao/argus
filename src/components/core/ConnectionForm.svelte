@@ -3,7 +3,7 @@
   import { app, addToast } from '../../lib/stores.svelte';
   import { sendConnect, sendDisconnect } from '../../lib/ws';
   import { t } from '../../lib/i18n.svelte';
-  import { apiUrl } from '../../lib/backend';
+  import { apiUrl, startSimulator } from '../../lib/backend';
   import { webSerialAvailable, connectSerial, disconnectSerial, isSerialConnected } from '../../lib/transport';
   import { buildSerialHandlers, resetSerialSession } from '../../lib/serialHandlers';
   import Button from '$lib/components/ui/button/button.svelte';
@@ -135,6 +135,27 @@
       }
     }
   });
+
+  let simStarting = $state(false);
+  async function connectSimulator() {
+    if (simStarting) return;
+    if (app.activeTransport === 'serial' || isSerialConnected()) {
+      addToast(t('conn.serialBusy'), 'error');
+      return;
+    }
+    simStarting = true;
+    port = 'tcp:localhost:5770';
+    try {
+      const result = await startSimulator();
+      if (!result.ok) {
+        addToast(`${t('conn.simFailed')}: ${result.error}`, 'error', 8000);
+        return;
+      }
+      toggle();
+    } finally {
+      simStarting = false;
+    }
+  }
 
   let serialConnecting = $state(false);
   async function toggleSerial() {
@@ -278,7 +299,7 @@
   <Button
     variant={app.drone.connected ? 'destructive' : 'default'}
     size="sm"
-    disabled={connecting && !app.drone.connected}
+    disabled={simStarting || (connecting && !app.drone.connected)}
     onclick={toggle}
     class={connecting ? 'animate-pulse' : ''}
   >
@@ -298,12 +319,10 @@
     <Button
       variant="outline"
       size="sm"
-      class="text-[10px] px-2 opacity-60 hover:opacity-100"
-      onclick={() => {
-        port = 'tcp:localhost:5770';
-        toggle();
-      }}
-      title={t('tip.sim')}>SIM</Button
+      class="text-[10px] px-2 opacity-60 hover:opacity-100 {simStarting ? 'animate-pulse' : ''}"
+      disabled={simStarting}
+      onclick={connectSimulator}
+      title={simStarting ? t('conn.simStarting') : t('tip.sim')}>{simStarting ? '...' : 'SIM'}</Button
     >
     {#if webSerialAvailable()}
       <Button

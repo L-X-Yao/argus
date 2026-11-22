@@ -36,6 +36,7 @@ from .config import (
 from .drone_link import DroneLink
 from .firmware import router as firmware_router
 from .param_meta import get_param_metadata
+from .sim_launcher import start_simulator, stop_simulator
 from .terrain import router as terrain_router
 from .tiles import router as tiles_router
 from .video import router as video_router
@@ -83,6 +84,8 @@ async def lifespan(app: FastAPI):
     app.state.ws_mgr = WSManager(app.state.link)
     yield
     app.state.link.disconnect()
+    # A simulator this backend started must not outlive it as a hidden process.
+    await aio(stop_simulator)
 
 
 app = FastAPI(
@@ -286,6 +289,15 @@ async def api_param_meta(request: Request, vehicle: str = "copter", locale: str 
         body = gzip.compress(body)
         headers["Content-Encoding"] = "gzip"
     return Response(content=body, media_type="application/json", headers=headers)
+
+
+@app.post("/api/simulator/start")
+async def api_simulator_start():
+    """Start the bundled simulator if port 5770 is idle, then let the page connect.
+
+    Fixed script and fixed argument: see backend/sim_launcher.py.
+    """
+    return await aio(start_simulator)
 
 
 @app.get("/api/ports")
