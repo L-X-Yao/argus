@@ -15,8 +15,9 @@ The data is derived from ArduPilot, which is GPL-3.0. It lives in a separate pub
 ## Data pack
 
 `param_i18n/` is generated or downloaded; it is not committed. `param_i18n.lock` is committed.
-The schema supports all ten locales. v3.16.0 ships all nine translation locales (zh plus
-ar/de/es/fr/ja/ko/pt/ru); English remains the source and the per-field fallback.
+The schema supports all ten locales. v3.16.1 ships all nine translation locales (zh plus
+ar/de/es/fr/ja/ko/pt/ru); English remains the source and the per-field fallback. Enumeration
+labels that are identifiers (`MotorN`, `ModeN`) stay in English in every locale.
 
 ```text
 param_i18n/
