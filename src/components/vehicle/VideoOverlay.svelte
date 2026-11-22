@@ -72,14 +72,13 @@
       controller.abort();
     }, 10000);
     try {
-      // Read only the response headers. A JSON answer carries the useful URL /
-      // ffmpeg error; a multipart answer is cancelled before its body streams.
-      const response = await fetch(apiUrl(`/api/video?url=${encodeURIComponent(url)}`), {
+      // Validate without opening a stream: a camera with one RTSP session must
+      // see exactly one request, the <img> below.
+      const response = await fetch(apiUrl(`/api/video/validate?url=${encodeURIComponent(url)}`), {
         signal: controller.signal,
       });
-      const contentType = response.headers.get('content-type') || '';
-      if (contentType.includes('application/json')) {
-        const data = await response.json().catch(() => null);
+      const data = await response.json().catch(() => null);
+      if (!response.ok || data?.ok !== true) {
         const detail = typeof data?.error === 'string' ? data.error : `HTTP ${response.status}`;
         if (detail.startsWith('Invalid video URL:') || detail === 'No video URL provided') {
           error = `${t('video.invalidUrl')}: ${detail.replace(/^Invalid video URL:\s*/, '')}`;
@@ -89,10 +88,6 @@
         } else {
           error = `${t('video.loadFail')}: ${detail}`;
         }
-        return;
-      }
-      if (!response.ok || !contentType.includes('multipart/x-mixed-replace')) {
-        error = `${t('video.loadFail')}: HTTP ${response.status}`;
         return;
       }
       streaming = true;

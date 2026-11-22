@@ -92,7 +92,7 @@
   }
 
   /* ── Airport list with distance, sorted by distance ── */
-  let hasPosition = $derived(app.drone.lat !== 0 || app.drone.lon !== 0);
+  let hasPosition = $derived(app.drone.connected && (app.drone.lat !== 0 || app.drone.lon !== 0));
   let airportList = $derived.by(() => {
     const droneLat = app.drone.lat;
     const droneLon = app.drone.lon;

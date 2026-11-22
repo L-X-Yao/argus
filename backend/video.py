@@ -179,6 +179,24 @@ async def video_stop():
     return {"ok": True}
 
 
+@router.get("/api/video/validate")
+async def video_validate(url: str = ""):
+    """Check a URL and ffmpeg without opening a stream.
+
+    The panel used to fetch the streaming route just to read its headers, which
+    starts a second ffmpeg and can hold a camera's single RTSP session. This
+    route only validates; the one streaming request is the <img> itself.
+    """
+    if not url:
+        return {"ok": False, "error": "No video URL provided"}
+    err = await asyncio.to_thread(_validate_video_url, url)
+    if err:
+        return {"ok": False, "error": f"Invalid video URL: {err}"}
+    if not _ffmpeg_available():
+        return {"ok": False, "error": "ffmpeg not installed on server"}
+    return {"ok": True}
+
+
 @router.get("/api/video/capabilities")
 async def video_capabilities():
     """Report video streaming capabilities."""

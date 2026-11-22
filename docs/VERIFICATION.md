@@ -31,7 +31,7 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 | Commands, WebSerial | 55 | 12 | 28 | 0 | 4 | 0 | 11 |
 | Messages, backend | 35 | 28 | 3 | 0 | 4 | 0 | 0 |
 | Messages, WebSerial | 35 | 17 | 13 | 0 | 4 | 0 | 1 |
-| REST routes | 32 | 6 | 5 | 18 | 3 | 0 | 0 |
+| REST routes | 33 | 6 | 5 | 18 | 4 | 0 | 0 |
 | Panels | 78 | 14 | 34 | 19 | 11 | 0 | 0 |
 | Platform | 50 | 9 | 14 | 13 | 10 | 2 | 2 |
 
@@ -168,6 +168,7 @@ Real FC here means the route was in use during a session with a real flight cont
 | `GET /api/version` | Version | 版本 | Simulator | e2e, real Windows each release |
 | `GET /api/tile_sources` | Map sources | 地图源列表 | Simulator | Integration tests |
 | `GET /api/video` | Video stream | 视频流 | Simulator | Integration tests. 2026-11-10: real ffmpeg, an HTTP test stream at a private address came out as MJPEG. 2026-11-14: a real RTSP server (MediaMTX) with H.264 over TCP played into the page, 88 frames of 640x480 in 8 s, none repeated. No physical camera |
+| `GET /api/video/validate` | Validate a video URL | 校验视频地址 | Tests only | Unit tests: missing URL, loopback refusal, missing ffmpeg, valid URL without starting a process |
 | `GET /api/video/stop` | Stop video | 停止视频 | Simulator | Integration tests, no real camera |
 | `POST /api/auth/generate` | Generate a token | 生成 Token | Simulator | Integration tests |
 | `POST /api/tile_bulk_download` | Download tiles for offline use | 批量下载瓦片 | Simulator | Integration tests: counts tiles, and refuses OpenStreetMap, whose server forbids bulk download. Whether a map server answers is up to it |

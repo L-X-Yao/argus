@@ -503,3 +503,27 @@ class TestFfmpegCommand:
         assert out.returncode == 0, out.stderr[-400:]
         assert out.stdout.startswith(b"\xff\xd8")
         assert out.stdout.count(b"\xff\xd8\xff") >= 5
+
+
+class TestVideoValidate:
+    def test_a_loopback_url_is_refused(self, client):
+        r = client.get("/api/video/validate", params={"url": "rtsp://127.0.0.1/live"})
+        assert r.status_code == 200
+        body = r.json()
+        assert body["ok"] is False
+        assert "Invalid video URL" in body["error"]
+
+    def test_missing_url_is_explained(self, client):
+        assert client.get("/api/video/validate").json() == {"ok": False, "error": "No video URL provided"}
+
+    def test_missing_ffmpeg_is_named(self, client, monkeypatch):
+        monkeypatch.setattr(video_module, "_ffmpeg_available", lambda: False)
+        body = client.get("/api/video/validate", params={"url": "rtsp://8.8.8.8/live"}).json()
+        assert body == {"ok": False, "error": "ffmpeg not installed on server"}
+
+    def test_a_valid_url_passes_without_opening_a_stream(self, client, monkeypatch):
+        monkeypatch.setattr(video_module, "_ffmpeg_available", lambda: True)
+        with patch.object(video_module.subprocess, "Popen") as popen:
+            body = client.get("/api/video/validate", params={"url": "rtsp://8.8.8.8/live"}).json()
+        assert body == {"ok": True}
+        popen.assert_not_called()
