@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { onMount, onDestroy } from 'svelte';
+  import { onDestroy } from 'svelte';
   import { inspectorState } from '../../lib/inspectorStore.svelte';
   import { sendCommand } from '../../lib/ws';
-  import { isSerialConnected } from '../../lib/transport';
+  import { app } from '../../lib/stores.svelte';
   import { t } from '../../lib/i18n.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
   import { X, Pause, Play, Trash2, Search, Usb } from '@lucide/svelte';
@@ -15,7 +15,7 @@
   // The inspector reads the backend link's traffic. Over WebSerial the page holds
   // the FC itself and a toggle here would switch inspection on whatever other
   // link the backend happens to hold — so nothing is sent and nothing torn down.
-  const serialActive = $derived(isSerialConnected());
+  const serialActive = $derived(app.activeTransport === 'serial');
   let started = false;
   let sorted = $derived.by(() => {
     let msgs = [...inspectorState.messages];
@@ -57,10 +57,18 @@
     return String(v);
   }
 
-  onMount(() => {
-    if (isSerialConnected()) return;
-    started = true;
-    sendCommand('inspector_toggle');
+  // Follow link changes while the panel stays open: entering USB stops the
+  // backend inspector this instance started; leaving USB starts it again.
+  $effect(() => {
+    if (app.activeTransport === 'serial') {
+      if (started) {
+        sendCommand('inspector_toggle');
+        started = false;
+      }
+    } else if (!started) {
+      started = true;
+      sendCommand('inspector_toggle');
+    }
   });
 
   onDestroy(() => {

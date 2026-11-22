@@ -770,7 +770,7 @@
   }}
 >
   <div
-    class="w-[520px] max-h-[60vh] bg-card border border-border rounded-xl shadow-2xl flex flex-col overflow-hidden"
+    class="w-[520px] max-w-[calc(100vw-1rem)] max-h-[60vh] bg-card border border-border rounded-xl shadow-2xl flex flex-col overflow-hidden"
     role="presentation"
     onclick={(e) => e.stopPropagation()}
     onkeydown={onKeydown}

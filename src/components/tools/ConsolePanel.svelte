@@ -1,7 +1,6 @@
 <script lang="ts">
   import { inspectorState } from '../../lib/inspectorStore.svelte';
   import { sendCommand } from '../../lib/ws';
-  import { isSerialConnected } from '../../lib/transport';
   import { t } from '../../lib/i18n.svelte';
   import { app } from '../../lib/stores.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
@@ -12,7 +11,7 @@
   // The shell rides the backend's SERIAL_CONTROL: over WebSerial the page talks
   // to the FC directly and a command here would go to whatever other link the
   // backend happens to hold.
-  const serialActive = $derived(isSerialConnected());
+  const serialActive = $derived(app.activeTransport === 'serial');
 
   let inputValue = $state('');
   let outputDiv: HTMLDivElement = $state(null!);
