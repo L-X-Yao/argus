@@ -73,7 +73,8 @@ https://github.com/L-X-Yao/argus
 Start:      double-click "Argus地面站.bat". A browser opens http://localhost:8100
 Simulator:  click SIM in the page; it starts the simulator and connects.
             Double-click "启动仿真器.bat" instead to see the simulator's output.
-Stop:       close the window, or press Ctrl+C in it
+Stop:       close the window, or press Ctrl+C in it. A SIM-started simulator
+            stops with Argus; one started from the shortcut has its own window.
 
 Argus has not been flight tested. Read docs/VERIFICATION.md and SECURITY.md
 in the repository before you fly with it.
@@ -81,7 +82,8 @@ in the repository before you fly with it.
 启动：双击"Argus地面站.bat"，浏览器会打开 http://localhost:8100
 仿真器：在页面点 SIM，会自动启动仿真器并连接。
         想看到仿真器输出时，双击"启动仿真器.bat"再连接。
-停止：关闭窗口，或在窗口里按 Ctrl+C
+停止：关闭窗口，或在窗口里按 Ctrl+C。SIM 启动的仿真器随 Argus 关闭；
+      从快捷方式启动的仿真器要关闭它自己的窗口。
 
 Argus 没有经过飞行测试。飞行前请先看仓库里的 docs/VERIFICATION.md 和 SECURITY.md。
 

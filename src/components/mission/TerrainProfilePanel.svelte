@@ -19,6 +19,7 @@
   let frameId = 0;
 
   const wps = $derived(app.waypoints);
+  const homeKnown = $derived(app.drone.home_lat !== 0 || app.drone.home_lon !== 0);
 
   $effect(() => {
     if (wps.length < 2) {
@@ -29,20 +30,22 @@
       return;
     }
     const pts = interpolateRoute(wps, Math.max(50, segDist(wps[0], wps[wps.length - 1]) / 200));
-    const snapshot = JSON.stringify(wps.map((w) => `${w.lat.toFixed(5)},${w.lon.toFixed(5)}`));
+    const routeSnapshot = JSON.stringify(wps.map((w) => `${w.lat.toFixed(5)},${w.lon.toFixed(5)}`));
     loading = true;
     failed = false;
+    terrainElevations = null;
+    terrainPoints = [];
     const mine = ++ask;
     groundAboveHome(pts, { lat: app.drone.home_lat, lon: app.drone.home_lon })
       .then((elevs) => {
         const current = app.waypoints.map((w) => `${w.lat.toFixed(5)},${w.lon.toFixed(5)}`);
-        if (JSON.stringify(current) !== snapshot) return;
+        if (mine !== ask || JSON.stringify(current) !== routeSnapshot) return;
         terrainPoints = pts;
         terrainElevations = elevs;
       })
       .catch(() => {
         const current = app.waypoints.map((w) => `${w.lat.toFixed(5)},${w.lon.toFixed(5)}`);
-        if (JSON.stringify(current) !== snapshot) return;
+        if (mine !== ask || JSON.stringify(current) !== routeSnapshot) return;
         terrainElevations = null;
         terrainPoints = [];
         failed = true;
@@ -371,6 +374,11 @@
     {#if wps.length < 2}
       <div class="text-center py-20 text-muted-foreground text-sm">{t('terrain.noWaypoints')}</div>
     {:else}
+      {#if !homeKnown}
+        <p class="px-5 py-2 text-[11px] text-warning border-b border-border/50 bg-warning/10">
+          {t('terrain.wp1Ref')}
+        </p>
+      {/if}
       <!-- Clearance threshold -->
       <div class="flex items-center gap-3 px-5 py-2 border-b border-border/50 bg-muted/20">
         <label for="tp-clearance" class="text-[11px] text-muted-foreground">{t('terrain.minClearance')}:</label>

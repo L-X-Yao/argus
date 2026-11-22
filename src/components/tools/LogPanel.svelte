@@ -27,6 +27,7 @@
       });
       return;
     }
+    if (size <= 0) return; // nothing to download; the FC keeps a zero-length entry after erase
     if (size > MAX_LOG_SIZE) {
       // The backend refuses this too; do not leave the panel's optimistic download state hanging.
       addToast(t('log.tooLarge'), 'error', 4000);
@@ -78,6 +79,7 @@
     localLoading = true;
     try {
       const r = await fetch(apiUrl('/api/logs'));
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
       const data = await r.json();
       localFiles = data.files || [];
     } catch {
@@ -232,7 +234,7 @@
                   <Button
                     variant="outline"
                     size="xs"
-                    disabled={logState.downloading}
+                    disabled={logState.downloading || log.size === 0}
                     onclick={() => downloadLog(log.id, log.size)}
                   >
                     {t('log.download')}

@@ -1,6 +1,14 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
-  import { app, addWaypoint, deleteWaypoint, saveWaypoints, addToast, showConfirm } from '../../lib/stores.svelte';
+  import {
+    app,
+    addWaypoint,
+    deleteWaypoint,
+    saveFence,
+    saveWaypoints,
+    addToast,
+    showConfirm,
+  } from '../../lib/stores.svelte';
   import { dispatch } from '../../lib/transport';
   import { toGcj, toWgs } from '../../lib/gcj02';
   import { t } from '../../lib/i18n.svelte';
@@ -140,6 +148,14 @@
     // fire a redundant swap on first render. Mirrors MapView.svelte:97.
     prevTileSource = app.tileSource;
 
+    // Open where the vehicle or the route is, not at a fixed place in Xi'an.
+    const start =
+      app.drone.lat !== 0
+        ? toMap(app.drone.lat, app.drone.lon)
+        : app.waypoints.length > 0
+          ? toMap(app.waypoints[0].lat, app.waypoints[0].lon)
+          : [34.258, 108.942];
+
     maplibregl.setWorkerUrl(maplibreWorkerUrl);
     try {
       map = new maplibregl.Map({
@@ -176,7 +192,7 @@
         },
         // Never folded behind its button: the map servers' credit is to stay readable.
         attributionControl: { compact: false, customAttribution: MAPLIBRE_CREDIT },
-        center: [108.942, 34.258],
+        center: [start[1], start[0]],
         zoom: 14,
         pitch: 50,
         bearing: 0,
@@ -312,6 +328,8 @@
       }
       if (app.drawingFence) {
         app.fencePolygon = [...app.fencePolygon, { lat: wlat, lon: wlon }];
+        app.fenceUploaded = false;
+        saveFence();
         return;
       }
       if (app.guidedMode && app.drone.connected && app.drone.armed) {
@@ -455,6 +473,8 @@
   function clearFence() {
     app.drawingFence = false;
     app.fencePolygon = [];
+    app.fenceUploaded = false;
+    saveFence();
   }
 
   onDestroy(() => {
@@ -932,7 +952,11 @@
         class="map-btn"
         onclick={() => {
           clearMeasure();
-          clearFence();
+          if (app.fencePolygon.length > 0) clearFence();
+          if (app.surveyPolygon.length > 0) {
+            app.surveyPolygon = [];
+            app.drawingPolygon = false;
+          }
         }}
         title={t('label.clear')}
       >

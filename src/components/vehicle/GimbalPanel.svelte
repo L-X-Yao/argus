@@ -44,7 +44,16 @@
   let liveYaw = $derived(app.drone.gimbal_yaw ?? null);
 
   /* ── Gimbal controls ── */
+  function requireLink(): boolean {
+    if (!app.drone.connected) {
+      addToast(t('err.noLink'), 'error', 4000);
+      return false;
+    }
+    return true;
+  }
+
   function sendAngle() {
+    if (!requireLink()) return;
     if (rateMode) {
       sendGimbalPitchYaw({ pitch_rate: pitch, yaw_rate: yaw });
       addToast(`${t('gimbal.rate')}: P=${pitch}°/s Y=${yaw}°/s`, 'info', 2000);
@@ -55,6 +64,7 @@
   }
 
   function centerGimbal() {
+    if (!requireLink()) return;
     pitch = 0;
     yaw = 0;
     if (rateMode) sendGimbalPitchYaw({ pitch_rate: 0, yaw_rate: 0 });
@@ -63,6 +73,7 @@
   }
 
   function retractGimbal() {
+    if (!requireLink()) return;
     // GIMBAL_MANAGER_FLAGS_RETRACT = 1; AP_Mount.cpp:382 short-circuits to
     // set_mode(MAV_MOUNT_MODE_RETRACT) regardless of pitch/yaw payload.
     sendGimbalPitchYaw({ flags: 1 });
@@ -70,6 +81,7 @@
   }
 
   function neutralGimbal() {
+    if (!requireLink()) return;
     // GIMBAL_MANAGER_FLAGS_NEUTRAL = 2; AP_Mount.cpp:387.
     sendGimbalPitchYaw({ flags: 2 });
     addToast(t('gimbal.neutral'), 'info', 2000);
@@ -77,11 +89,13 @@
 
   /* ── Camera controls ── */
   function takePhoto() {
+    if (!requireLink()) return;
     dispatch('camera_trigger');
     addToast(t('camera.photoTaken'), 'success', 2000);
   }
 
   function toggleVideo() {
+    if (!requireLink()) return;
     if (recording) {
       dispatch('camera_video_stop');
       recording = false;
@@ -94,12 +108,14 @@
   }
 
   function setZoom() {
+    if (!requireLink()) return;
     dispatch('camera_zoom', undefined, { zoom: zoomLevel });
     addToast(`${t('camera.zoom')}: ${zoomLevel}x`, 'info', 2000);
   }
 
   /* ── ROI ── */
   function setRoi() {
+    if (!requireLink()) return;
     if (roiLat === 0 && roiLon === 0) {
       addToast(t('gimbal.roiHint'), 'warn');
       return;
@@ -109,6 +125,7 @@
   }
 
   function clearRoi() {
+    if (!requireLink()) return;
     dispatch('do_set_roi', undefined, { lat: 0, lon: 0, alt: 0 });
     addToast(t('gimbal.roiCleared'), 'info');
   }

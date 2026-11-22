@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { app, addToast } from '../../lib/stores.svelte';
+  import { app, addToast, showConfirm } from '../../lib/stores.svelte';
   import { vehicleKind } from '../../lib/vehicleModes';
   import { dispatch } from '../../lib/transport';
   import { t } from '../../lib/i18n.svelte';
@@ -104,12 +104,22 @@
 
   /* ── Write to FC ── */
 
+  let written = $state(false);
+
   function writeFrame() {
     dispatch('param_set', undefined, { name: 'FRAME_CLASS', value: selectedClass });
     if (showTypeGrid) {
       dispatch('param_set', undefined, { name: 'FRAME_TYPE', value: selectedType });
     }
+    written = true;
     addToast(t('frame.saved'), 'success');
+  }
+
+  async function rebootNormal() {
+    if (await showConfirm(t('fw.rebootNormal') + '?', false)) {
+      dispatch('reboot');
+      written = false;
+    }
   }
 </script>
 
@@ -209,7 +219,13 @@
         {/if}
 
         <!-- Write button -->
-        <div class="flex justify-end pt-2">
+        <div class="flex items-center justify-end gap-2 pt-2">
+          {#if written}
+            <p class="text-[10px] text-warning leading-tight">{t('frame.reboot')}</p>
+            <Button variant="outline" size="sm" class="h-8 text-xs px-3 gap-1" onclick={rebootNormal}>
+              {t('fw.rebootNormal')}
+            </Button>
+          {/if}
           <Button
             variant="default"
             size="sm"

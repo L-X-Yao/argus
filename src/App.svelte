@@ -79,7 +79,8 @@
   let Map3DViewModule: Component | null = $state(null);
   let MonitorMods: { Rc: Component; Servo: Component; Vibe: Component; Ekf: Component; Chart: Component } | null =
     $state(null);
-  let PlanMods: { Mission: Component; Survey: Component; Fence: Component; Rally: Component } | null = $state(null);
+  type PlanModules = { Mission?: Component; Survey?: Component; Fence?: Component; Rally?: Component };
+  let PlanMods: PlanModules | null = $state(null);
   let ParamMod: Component | null = $state(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- dynamic import components have heterogeneous props
   type DynComp = Component<any>;
@@ -124,16 +125,22 @@
   });
   $effect(() => {
     if (view === 'plan' && !PlanMods) {
-      Promise.all([
+      // One failed chunk must not take the map and the other plan panels with it.
+      Promise.allSettled([
         import('./components/mission/MissionPanel.svelte'),
         import('./components/mission/SurveyPanel.svelte'),
         import('./components/mission/FencePanel.svelte'),
         import('./components/mission/RallyPanel.svelte'),
-      ])
-        .then(([mission, survey, fence, rally]) => {
-          PlanMods = { Mission: mission.default, Survey: survey.default, Fence: fence.default, Rally: rally.default };
-        })
-        .catch(() => addToast(t('error.loadFailed'), 'error'));
+      ]).then((results) => {
+        const [mission, survey, fence, rally] = results;
+        const mods: PlanModules = {};
+        if (mission.status === 'fulfilled') mods.Mission = mission.value.default;
+        if (survey.status === 'fulfilled') mods.Survey = survey.value.default;
+        if (fence.status === 'fulfilled') mods.Fence = fence.value.default;
+        if (rally.status === 'fulfilled') mods.Rally = rally.value.default;
+        PlanMods = mods;
+        if (results.some((r) => r.status === 'rejected')) addToast(t('error.loadFailed'), 'error');
+      });
     }
   });
   $effect(() => {
@@ -641,11 +648,11 @@
               <div class="flex-1 flex flex-col overflow-auto">
                 <div class="flex max-md:flex-col gap-2 p-2 flex-1 min-h-72">
                   <MapView showHud={false} plan />
-                  <PlanMods.Mission />
+                  {#if PlanMods.Mission}<PlanMods.Mission />{/if}
                 </div>
-                {#if app.showSurvey}<PlanMods.Survey />{/if}
-                {#if app.showFence}<PlanMods.Fence />{/if}
-                {#if app.showRally}<PlanMods.Rally />{/if}
+                {#if app.showSurvey && PlanMods.Survey}<PlanMods.Survey />{/if}
+                {#if app.showFence && PlanMods.Fence}<PlanMods.Fence />{/if}
+                {#if app.showRally && PlanMods.Rally}<PlanMods.Rally />{/if}
               </div>
             {/if}
           {:else if view === 'monitor'}

@@ -71,13 +71,15 @@ class Simulator:
             "BATT_CAPACITY": 5000.0,
             "BATT_MONITOR": 4.0,
             "ARMING_CHECK": 1.0,
-            "ARMING_REQUIRE": 1.0,
             "FS_THR_ENABLE": 1.0,
             "FS_THR_VALUE": 975.0,
             "FS_GCS_ENABLE": 1.0,
-            "FS_BATT_ENABLE": 2.0,
-            "FS_BATT_MAH": 0.0,
-            "FS_BATT_VOLTAGE": 10.5,
+            # Current Copter names (4.0+); FS_BATT_* and ARMING_REQUIRE are gone
+            # from the 4.5/4.6/4.7 metadata, which left those rows without a
+            # description in the parameter panel.
+            "BATT_FS_LOW_ACT": 2.0,
+            "BATT_LOW_MAH": 0.0,
+            "BATT_LOW_VOLT": 10.5,
             "ATC_RAT_RLL_P": 0.135,
             "ATC_RAT_RLL_I": 0.135,
             "ATC_RAT_RLL_D": 0.0036,
@@ -751,8 +753,14 @@ def serve(port):
     sim = Simulator()
     srv = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     srv.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-    srv.bind(("127.0.0.1", port))
-    srv.listen(1)
+    try:
+        srv.bind(("127.0.0.1", port))
+        srv.listen(1)
+    except OSError as exc:
+        srv.close()
+        print("无法监听 127.0.0.1:%d: %s" % (port, exc))
+        print("仿真器可能已经在运行；在 Argus 页面点 SIM 即可连接。")
+        raise SystemExit(1) from None
     print("=" * 50)
     print("  Argus 飞控模拟器")
     print("  监听: tcp://127.0.0.1:%d" % port)

@@ -108,6 +108,7 @@ export function pushUndo() {
 export function undo() {
   if (!app.undoStack.length) return;
   app.waypoints = app.undoStack.pop()!;
+  saveWaypoints();
 }
 
 export function addWaypoint(wp: Waypoint) {

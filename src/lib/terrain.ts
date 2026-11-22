@@ -89,6 +89,8 @@ export async function getElevationProfile(points: { lat: number; lon: number }[]
  * metres above sea level: the two only compare once the home ground is taken off.
  *
  * @param home  If unknown, the first point's ground serves as the reference.
+ *              That is a profile convenience, not home AGL: callers that write
+ *              altitudes must require a known home instead.
  */
 export async function groundAboveHome(
   points: { lat: number; lon: number }[],

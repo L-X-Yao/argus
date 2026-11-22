@@ -16,7 +16,7 @@
   let zMax = $state(16);
   let style = $state('6');
   let downloading = $state(false);
-  let result = $state<{ total: number; downloaded: number; skipped: number } | null>(null);
+  let result = $state<{ total: number; downloaded: number; skipped: number; truncated?: boolean } | null>(null);
   let cacheInfo = $state<{ size: number; count: number } | null>(null);
 
   // Snapshot drone position once on mount instead of via $effect, so the user's
@@ -64,8 +64,15 @@
       });
       // A refusal is an answer too, and it is not a finished download.
       if (!r.ok) throw new Error(t('fw.downloadFailed'));
-      result = await r.json();
-      addToast(t('offmap.done'), 'success');
+      const data: { total: number; downloaded: number; skipped: number; truncated?: boolean } = await r.json();
+      result = data;
+      if (data.downloaded === 0) {
+        addToast(t('offmap.none'), 'error', 6000);
+      } else if (data.truncated) {
+        addToast(t('offmap.incomplete').replace('{n}', String(data.downloaded)), 'warn', 6000);
+      } else {
+        addToast(t('offmap.done'), 'success');
+      }
       fetch(apiUrl('/api/tile_cache'))
         .then((r) => r.json())
         .then((d) => (cacheInfo = d))

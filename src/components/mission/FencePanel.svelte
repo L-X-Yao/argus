@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { app, addToast, showConfirm } from '../../lib/stores.svelte';
+  import { app, addToast, showConfirm, saveFence as persistFence } from '../../lib/stores.svelte';
   import { dispatch } from '../../lib/transport';
   import { isSerialConnected, serialClearFence, serialUploadFence } from '../../lib/transport';
   import { t } from '../../lib/i18n.svelte';
@@ -7,23 +7,21 @@
   import Button from '$lib/components/ui/button/button.svelte';
   import Badge from '$lib/components/ui/badge/badge.svelte';
 
-  let drawingFence = $state(false);
-
   function startDraw() {
     app.fencePolygon = [];
     app.fenceUploaded = false;
-    drawingFence = true;
+    persistFence();
     app.drawingFence = true;
   }
   function finishDraw() {
-    drawingFence = false;
     app.drawingFence = false;
+    persistFence();
   }
   function clearFence() {
     app.fencePolygon = [];
     app.fenceUploaded = false;
     app.drawingFence = false;
-    drawingFence = false;
+    persistFence();
   }
 
   // Separate from clearFence, which only drops the local drawing: a fence on the
@@ -86,6 +84,7 @@
           if (pts.length < 3) throw new Error('min 3');
           app.fencePolygon = pts;
           app.fenceUploaded = false;
+          persistFence();
           addToast(t('fence.loaded').replace('{n}', String(pts.length)), 'success');
         } catch {
           addToast(t('fence.loadFail'), 'error');
@@ -149,7 +148,7 @@
       {/if}
     {/if}
   </div>
-  {#if app.fencePolygon.length < 3 && !drawingFence}
+  {#if app.fencePolygon.length < 3 && !app.drawingFence}
     <div class="flex gap-2">
       <button
         class="flex-1 py-2.5 bg-transparent border-2 border-dashed border-destructive/50 rounded-lg cursor-pointer
@@ -159,7 +158,7 @@
       <Button variant="outline" size="sm" onclick={loadFence}>{t('fence.load')}</Button>
     </div>
     <div class="text-[11px] text-muted-foreground mt-1 text-center">{t('fence.drawHint')}</div>
-  {:else if drawingFence}
+  {:else if app.drawingFence}
     <div class="flex items-center gap-2 text-sm">
       <span>{t('fence.vertexCount').replace('{n}', String(app.fencePolygon.length))}</span>
       {#if app.fencePolygon.length >= 3}
@@ -180,7 +179,7 @@
       <Button variant="ghost" size="xs" onclick={clearFence}>{t('fence.clear')}</Button>
     </div>
   {/if}
-  {#if app.drone.connected && !drawingFence}
+  {#if app.drone.connected && !app.drawingFence}
     <Button variant="destructive" size="xs" class="mt-2" onclick={clearFenceOnFc}>{t('fence.clearFc')}</Button>
   {/if}
 </div>

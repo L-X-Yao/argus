@@ -85,7 +85,7 @@ For Windows 10 and 11, x64. Python and every library come with Argus. A release 
 
 3. Start Argus from the Start menu ("Argus Ground Station"), or double-click `Argus地面站.bat` ("Argus ground station") in the unzipped folder. A browser opens `http://localhost:8100`.
 
-The **SIM** button starts the built-in simulator when it is not already running, then connects to it. The simulator shortcut, or `启动仿真器.bat` ("start simulator"), starts it in a console if you want to see its output. `README.txt` beside the program repeats these steps.
+The **SIM** button starts the built-in simulator when it is not already running, then connects to it. The simulator shortcut, or `启动仿真器.bat` ("start simulator"), starts it in a console if you want to see its output. A simulator the SIM button started stops with Argus; one started from the shortcut has its own window to close. `README.txt` beside the program repeats these steps.
 
 Uninstalling removes the program, its caches and its access token. It keeps the flight logs (`logs`), your own map files (`mbtiles`) and firmware files (`firmware`) in the install folder. Close Argus before you uninstall it: the uninstaller does not check.
 
@@ -123,7 +123,7 @@ python run.py --sim            # Starts backend + simulator.py together
 # Connect to "tcp:localhost:5770"
 ```
 
-The simulator (`scripts/simulator.py`) emits realistic telemetry (GPS, attitude, battery drain, heartbeat) and responds to arm/disarm/mode commands.
+Or start `python run.py` and click **SIM**: the backend starts `scripts/simulator.py` for you. The simulator emits realistic telemetry (GPS, attitude, battery drain, heartbeat) and responds to arm/disarm/mode commands.
 
 ### WebSerial (direct USB)
 

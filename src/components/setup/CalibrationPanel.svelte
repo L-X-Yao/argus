@@ -104,6 +104,13 @@
   // HH:MM:SS marker set when calibration starts. Empty string = no active run.
   // Filtering by timestamp (instead of a length cursor) survives backend events-array trim.
   let calRunStartTime = $state('');
+  // A refused calibration answers with cmd_ack_fail, whose "指令应答:" text is
+  // filtered out of the calibration message log. Without this the panel kept
+  // saying it was calibrating after the FC had already refused.
+  let calAckFailed = $derived.by(() => {
+    if (!calRunStartTime) return false;
+    return app.events.some((e) => e.time >= calRunStartTime && e.event_type === 'cmd_ack_fail');
+  });
 
   function eventInRun(ev: { time: string; text: string; event_type?: string }): boolean {
     if (!calRunStartTime) return false;
@@ -215,6 +222,10 @@
   /* Side effects: flip calibrating off on completion/failure. The link accepts a compass run. */
   $effect(() => {
     if (!calibrating) return;
+    if (calAckFailed) {
+      calibrating = false;
+      return;
+    }
     if (selected === 'compass') {
       if (compassParsed.done || compassParsed.failed) {
         calibrating = false;

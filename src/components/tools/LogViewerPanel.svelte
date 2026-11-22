@@ -56,15 +56,18 @@
     input.onchange = (e: Event) => {
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
-      fileName = file.name;
       parsing = true;
       const reader = new FileReader();
       reader.onload = (ev: ProgressEvent<FileReader>) => {
         try {
-          log = parseDFLog(ev.target!.result as ArrayBuffer);
-          selectedTypes = new Set(['ATT', 'GPS', 'BARO', 'BAT', 'VIBE'].filter((t) => log!.types.includes(t)));
-          addToast(t('logview.messages').replace('{n}', String(log.messages.length)), 'success');
-          onlog?.(log);
+          // Replace only after a complete parse: a failure must not leave the
+          // previous log labelled with the new file's name.
+          const parsed = parseDFLog(ev.target!.result as ArrayBuffer);
+          log = parsed;
+          fileName = file.name;
+          selectedTypes = new Set(['ATT', 'GPS', 'BARO', 'BAT', 'VIBE'].filter((t) => parsed.types.includes(t)));
+          addToast(t('logview.messages').replace('{n}', String(parsed.messages.length)), 'success');
+          onlog?.(parsed);
           zoomStart = 0;
           zoomEnd = 1;
         } catch (err: unknown) {
@@ -365,18 +368,18 @@
 
   function exportCsv() {
     if (!log) return;
-    const types = [...selectedTypes];
-    let csv = 'time,' + types.join(',') + '\n';
-    const series = types.map((tp) => {
-      const fmt = log!.formats.get(tp);
+    // Long format: each channel keeps its own timestamps. The old wide table
+    // paired the Nth sample of every channel with the first channel's Nth time,
+    // which is wrong as soon as two channels log at different rates, and it
+    // silently stopped at 10,000 rows.
+    let csv = 'time,type,value\n';
+    for (const tp of selectedTypes) {
+      const fmt = log.formats.get(tp);
       const col = (fmt && firstDataColumn(fmt)) || '';
-      return getTimeSeries(log!, tp, col);
-    });
-    const maxLen = Math.max(...series.map((s) => s.t.length));
-    for (let i = 0; i < Math.min(maxLen, 10000); i++) {
-      const row = [series[0]?.t[i]?.toFixed(3) || ''];
-      for (const s of series) row.push(s.v[i]?.toFixed(4) || '');
-      csv += row.join(',') + '\n';
+      const series = getTimeSeries(log, tp, col);
+      for (let i = 0; i < series.t.length; i++) {
+        csv += `${series.t[i].toFixed(3)},${tp},${series.v[i]?.toFixed(4) ?? ''}\n`;
+      }
     }
     const blob = new Blob([csv], { type: 'text/csv' });
     const a = document.createElement('a');

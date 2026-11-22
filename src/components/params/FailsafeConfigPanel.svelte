@@ -55,7 +55,8 @@
     if (_loaded) return;
     _loaded = true;
     // AP_BattMonitor_Params.cpp: BATT_FS_LOW_ACT is the action (0=warn/disabled).
-    // BATT_LOW_VOLT / BATT_LOW_MAH are the trigger thresholds.
+    // BATT_LOW_VOLT and BATT_LOW_MAH are the trigger thresholds.
+    // FS_BATT_* and ARMING_REQUIRE are Copter 3.x names and no longer exist.
     battAction  = getParam('BATT_FS_LOW_ACT', 0);
     battEnable  = battAction > 0 ? 1 : 0;
     battVoltage = getParam('BATT_LOW_VOLT', 10.5);
@@ -118,7 +119,7 @@
   /* ── Section save handlers ── */
   function saveBattery() {
     // AP_BattMonitor_Params.cpp: BATT_FS_LOW_ACT controls action (0=warn/off).
-    // FS_BATT_VOLTAGE and FS_BATT_MAH set the trigger thresholds.
+    // BATT_LOW_VOLT and BATT_LOW_MAH set the trigger thresholds.
     saveParams([
       ['BATT_FS_LOW_ACT', battEnable ? battAction || 1 : 0],
       ['BATT_LOW_VOLT', battVoltage],

@@ -1,6 +1,6 @@
 <script lang="ts">
   import { onMount, untrack } from 'svelte';
-  import { app, addWaypoint, addToast, saveRally, showConfirm } from '../../lib/stores.svelte';
+  import { app, addWaypoint, addToast, saveFence, saveRally, showConfirm } from '../../lib/stores.svelte';
   import { dispatch } from '../../lib/transport';
   import { fmtDist } from '../../lib/units';
   import { toGcj, toWgs } from '../../lib/gcj02';
@@ -201,6 +201,8 @@
     if (app.drawingFence) {
       const [wlat, wlon] = fromMap(ll.lat, ll.lng);
       app.fencePolygon = [...app.fencePolygon, { lat: wlat, lon: wlon }];
+      app.fenceUploaded = false;
+      saveFence();
       return;
     }
     if (app.drawingRally) {
@@ -264,6 +266,8 @@
       if (app.drawingFence) {
         app.drawingFence = false;
         app.fencePolygon = [];
+        app.fenceUploaded = false;
+        saveFence();
       }
       app.drawingRally = false;
       map?.closePopup();

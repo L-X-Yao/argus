@@ -21,6 +21,10 @@
       addToast(t('survey.genFail'), 'warn');
       return;
     }
+    if (app.waypoints.length + wps.length > 500) {
+      addToast(t('mission.err.tooLarge'), 'error', 6000);
+      return;
+    }
     pushUndo();
     app.waypoints = [...app.waypoints, ...wps];
     saveWaypoints();

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { addToast } from '../../lib/stores.svelte';
+  import { app, addToast, showConfirm } from '../../lib/stores.svelte';
   import { dispatch } from '../../lib/transport';
   import { paramState } from '../../lib/paramStore.svelte';
   import { t } from '../../lib/i18n.svelte';
@@ -125,14 +125,16 @@
     return v.toFixed(4);
   }
 
-  function applyOne(name: string, value: number) {
+  async function applyOne(name: string, value: number) {
+    if (app.drone.armed && !(await showConfirm(t('param.armedWrite'), true))) return;
     dispatch('param_set', undefined, { name, value });
     applied.add(name);
     applied = new Set(applied);
     addToast(`${name} = ${value}`, 'info', 2000);
   }
 
-  function applyAllDiff() {
+  async function applyAllDiff() {
+    if (app.drone.armed && !(await showConfirm(t('param.armedWrite'), true))) return;
     let count = 0;
     for (const row of allRows) {
       // STAT_* are the FC's own running counters, which an old file would only set back.
@@ -143,7 +145,7 @@
       }
     }
     applied = new Set(applied);
-    addToast(t('paramdiff.count').replace('{n}', String(count)), 'success');
+    addToast(t('paramdiff.applied').replace('{n}', String(count)), 'success');
   }
 
   function rowBg(row: DiffRow): string {

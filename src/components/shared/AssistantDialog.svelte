@@ -143,6 +143,11 @@
       {/if}
     </div>
 
+    {#if blocked}
+      <p class="px-4 pb-1 text-[10px] text-warning">
+        {current?.kind === 'propose_command' ? t('assistant.notArmed') : t('assistant.refusedNow')}
+      </p>
+    {/if}
     <div class="flex gap-2 px-4 pb-3 pt-2 border-t border-border">
       <Button
         variant="outline"

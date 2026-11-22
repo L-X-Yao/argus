@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte';
+  import { app, addToast } from '../../lib/stores.svelte';
   import { t } from '../../lib/i18n.svelte';
   import { parseDFLog } from '../../lib/dflog';
   import Button from '$lib/components/ui/button/button.svelte';
@@ -78,7 +80,10 @@
     const att = log.messages.filter((m) => m.type === 'ATT');
     const gps = log.messages.filter((m) => m.type === 'GPS');
     const bat = log.messages.filter((m) => m.type === 'BAT');
-    if (att.length < 2 && gps.length < 2) return;
+    if (att.length < 2 && gps.length < 2) {
+      addToast(t('toast.loadFail'), 'error');
+      return;
+    }
     const t0 = log.messages[0]?.timestamp || 0;
     const parsed: LogRow[] = [];
     let gi = 0,
@@ -218,16 +223,26 @@
     }
   }
 
+  function stopTimer() {
+    if (timer) clearInterval(timer);
+    timer = null;
+  }
+
   function close() {
-    if (timer) {
-      clearInterval(timer);
-      timer = null;
-    }
+    stopTimer();
     rows = [];
     cursor = 0;
     playing = false;
     fileName = '';
+    app.replayPos = null;
   }
+
+  // Connecting a vehicle removes this panel; a timer left running would keep
+  // moving a replay marker on the live map.
+  onDestroy(() => {
+    stopTimer();
+    app.replayPos = null;
+  });
 
   function fmtTime(s: number): string {
     const m = Math.floor(s / 60),

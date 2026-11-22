@@ -192,6 +192,13 @@ describe('waypoints + undo', () => {
     expect(app.waypoints.length).toBe(1);
   });
 
+  it('undo saves the restored route for the next page load', () => {
+    addWaypoint({ lat: 30, lon: 120, alt: 50, drop: false, delay: 0, speed: 0, type: 'wp', loiter_param: 0 });
+    addWaypoint({ lat: 31, lon: 121, alt: 60, drop: false, delay: 0, speed: 0, type: 'wp', loiter_param: 0 });
+    undo();
+    expect(JSON.parse(localStorage.getItem('argus_waypoints')!)).toHaveLength(1);
+  });
+
   it('undo on empty stack does nothing', () => {
     app.undoStack = [];
     app.waypoints = [{ lat: 30, lon: 120, alt: 50, drop: false, delay: 0, speed: 0, type: 'wp', loiter_param: 0 }];

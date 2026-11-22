@@ -1,6 +1,6 @@
 <script lang="ts">
   import { paramState } from '../../lib/paramStore.svelte';
-  import { app, addToast } from '../../lib/stores.svelte';
+  import { app, addToast, showConfirm } from '../../lib/stores.svelte';
   import { dispatch } from '../../lib/transport';
   import { getLocale, t } from '../../lib/i18n.svelte';
   import { paramLine, parseParamNumber } from '../../lib/paramText';
@@ -59,6 +59,19 @@
   let metaLoaded = $state(false);
   let metaSeries = $state('');
   let metaLoading = $state(false);
+  // What the live vehicle actually has a description for, not how complete the
+  // shipped pack is. Those differed on the simulator, whose old FS_BATT_* names
+  // no ArduPilot metadata contains, while the header still said 100%.
+  let liveCoverage = $derived.by(() => {
+    if (!metaLoaded || paramState.list.length === 0) return -1;
+    let hit = 0;
+    for (const p of paramState.list) {
+      const meta = getMeta()[p.name];
+      if (meta?.desc || meta?.human) hit++;
+    }
+    // Floor: one missing description must not round up to 100%.
+    return Math.floor((hit / paramState.list.length) * 100);
+  });
   let showEnglishFor = $state<string | null>(null);
   let lastVehicle = '';
   let lastMetaKey = '';
@@ -557,8 +570,9 @@
       const file = (e.target as HTMLInputElement).files?.[0];
       if (!file) return;
       const reader = new FileReader();
-      reader.onload = (ev: ProgressEvent<FileReader>) => {
+      reader.onload = async (ev: ProgressEvent<FileReader>) => {
         const text = ev.target!.result as string;
+        if (app.drone.armed && !(await showConfirm(t('param.armedWrite'), true))) return;
         const existing = new Map(paramState.list.map(p => [p.name, p.value]));
         let changed = 0;
         for (const line of text.split('\n')) {
@@ -612,6 +626,8 @@
           {#if getLocale() !== 'en' && !tr?.human}
             <span class="text-[8px] font-bold text-muted-foreground/50">EN</span>
           {/if}
+        {:else if metaLoaded && !getMeta()[p.name]?.desc && !getMeta()[p.name]?.human}
+          <div class="text-[10px] text-muted-foreground/50 italic leading-tight">{t('param.noMeta')}</div>
         {/if}
       </div>
       {#if editName === p.name}
@@ -728,6 +744,11 @@
       <h2 class="text-sm font-semibold text-primary uppercase tracking-wider">{t('param.title')}</h2>
       {#if metaLoaded}
         <span class="text-[10px] text-muted-foreground">{t('param.metaLoaded')}</span>
+      {/if}
+      {#if liveCoverage >= 0}
+        <span class="text-[10px] text-muted-foreground/70">
+          {t('param.liveCoverage').replace('{n}', String(liveCoverage))}
+        </span>
       {/if}
       {#if metaLoaded && _metaInfo && _metaInfo.total > 0 && getLocale() !== 'en'}
         <span class="text-[10px] text-muted-foreground/70">

@@ -9,6 +9,7 @@
   let { onclose }: { onclose: () => void } = $props();
 
   function writeParam(name: string, value: number) {
+    if (!app.drone.connected) return;
     dispatch('param_set', undefined, { name, value });
     addToast(t('power.saved'), 'success');
   }
@@ -122,7 +123,7 @@ aria-label={t('power.title')}
               <span class="text-[11px] text-muted-foreground">New BATT_VOLT_MULT</span>
               <span class="text-xs font-mono font-bold text-green-400">{calculatedMult.toFixed(4)}</span>
             </div>
-            <Button variant="default" size="xs" class="w-full" onclick={writeVoltMult}>
+            <Button variant="default" size="xs" class="w-full" onclick={writeVoltMult} disabled={!connected}>
               {t('power.voltMult')} &rarr; {t('power.write')}
             </Button>
           {/if}
@@ -154,7 +155,7 @@ aria-label={t('power.title')}
             class="flex-1 h-7 px-2 text-xs font-mono rounded-md border border-border bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-primary"
           />
           <Button variant="secondary" size="xs" onclick={writeAmpPerVlt}
-                  disabled={!manualAmpPerVlt}>
+                  disabled={!connected || !manualAmpPerVlt}>
             {t('power.write')}
           </Button>
         </div>

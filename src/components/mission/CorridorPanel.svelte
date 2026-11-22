@@ -98,6 +98,10 @@
       addToast(t('corridor.hint'), 'warn');
       return;
     }
+    if (waypoints.length > 500) {
+      addToast(t('mission.err.tooLarge'), 'error', 6000);
+      return;
+    }
 
     pushUndo();
     app.waypoints = waypoints;

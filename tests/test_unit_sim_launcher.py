@@ -139,3 +139,23 @@ def test_route_returns_the_launcher_answer():
         response = client.post("/api/simulator/start")
     assert response.status_code == 200
     assert response.json() == {"ok": True, "started": True}
+
+
+def test_lifespan_stops_a_simulator_this_backend_started():
+    with patch("backend.app.stop_simulator") as stop, TestClient(app):
+        pass
+    stop.assert_called_once()
+
+
+def test_route_is_behind_the_token(monkeypatch):
+    import backend.auth as auth_module
+
+    token = "a" * 32
+    monkeypatch.setattr(auth_module, "_token", token)
+    client = TestClient(app, base_url="http://localhost")
+    with patch("backend.app.start_simulator", return_value={"ok": True, "started": False}) as start:
+        assert client.post("/api/simulator/start").status_code == 401
+        start.assert_not_called()
+        response = client.post("/api/simulator/start", headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code == 200
+    start.assert_called_once()

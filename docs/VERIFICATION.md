@@ -31,7 +31,7 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 | Commands, WebSerial | 55 | 12 | 28 | 0 | 4 | 0 | 11 |
 | Messages, backend | 35 | 28 | 3 | 0 | 4 | 0 | 0 |
 | Messages, WebSerial | 35 | 17 | 13 | 0 | 4 | 0 | 1 |
-| REST routes | 32 | 6 | 5 | 17 | 4 | 0 | 0 |
+| REST routes | 32 | 6 | 5 | 18 | 3 | 0 | 0 |
 | Panels | 78 | 14 | 34 | 19 | 11 | 0 | 0 |
 | Platform | 50 | 9 | 14 | 13 | 10 | 2 | 2 |
 
@@ -152,7 +152,7 @@ Real FC here means the route was in use during a session with a real flight cont
 | `WEBSOCKET /ws` | Live telemetry and commands | 实时遥测和命令 | Real FC | 2026-11-05 |
 | `GET /api/auth/status` | Is a token required | 是否需要 Token | Real FC | 2026-11-05 |
 | `GET /api/ports` | Serial port list | 串口列表 | Real FC | 2026-11-05 |
-| `POST /api/simulator/start` | Start the bundled simulator | 启动内置仿真器 | Tests only | Unit tests: starts the fixed script, reuses a port already listening, reports a missing script, an early exit or a timeout, cleans up at shutdown; the route answers through the real app |
+| `POST /api/simulator/start` | Start the bundled simulator | 启动内置仿真器 | Simulator | 2026-11-22 packaged Windows build: POST started the hidden simulator on 5770; force-killing the backend closed it again (Job Object). The built page also passed: clicking **SIM** started it and connected, and stopping the backend closed 5770. Unit tests: starts the fixed script, reuses a port already listening, reports a missing script, an early exit or a timeout, cleans up at shutdown, and refuses without the token |
 | `GET /api/tile/{style}/{z}/{x}/{y}` | Map tiles | 地图瓦片 | Real FC | 2026-11-05, default map only |
 | `GET /api/log` | Download the CSV log | 下载 CSV 日志 | SITL | CI |
 | `GET /api/logs` | Local recorded tlogs | 本机录制的 tlog | Tests only | Unit tests with a temp folder |

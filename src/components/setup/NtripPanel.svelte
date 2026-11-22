@@ -14,13 +14,32 @@
   let password = $state('');
   let connected = $state(false);
   let connecting = $state(false);
+  let connectTimer: ReturnType<typeof setTimeout> | null = null;
   let rtkFixType = $derived(app.drone.gps_fix_raw);
+
+  function clearConnectTimer() {
+    if (connectTimer) clearTimeout(connectTimer);
+    connectTimer = null;
+  }
+
+  function startConnectTimer() {
+    clearConnectTimer();
+    // A refused command (for example on a non-ArduPilot autopilot) answers
+    // with cmd_result, not an NTRIP event. Without this the button stayed
+    // disabled on "Connecting..." until the panel was reopened.
+    connectTimer = setTimeout(() => {
+      if (!connecting) return;
+      connecting = false;
+      addToast(t('conn.timeout'), 'error');
+    }, 30000);
+  }
 
   // Ack-driven connection state: backend emits ntrip_connected /
   // ntrip_disconnected / ntrip_error events from the client thread. We don't
   // trust the click-side optimistic flip — if auth fails or the caster rejects
   // us, the optimistic "connected=true" would stay forever.
   let _lastEventSeq = $state(0);
+  let _eventsSeen = false;
   $effect(() => {
     for (let i = app.events.length - 1; i >= 0; i--) {
       const ev = app.events[i];
@@ -28,16 +47,24 @@
       if (ev.event_type === 'ntrip_connected') {
         connected = true;
         connecting = false;
+        clearConnectTimer();
+        // The first pass replays the page's history to set the state; only
+        // events after that are the answer to a click made here.
+        if (_eventsSeen) addToast(t('ntrip.started'), 'success');
       } else if (ev.event_type === 'ntrip_disconnected') {
         connected = false;
         connecting = false;
+        clearConnectTimer();
+        if (_eventsSeen) addToast(t('ntrip.stopped'), 'info');
       } else if (ev.event_type === 'ntrip_error') {
         connected = false;
         connecting = false;
-        addToast(ev.text, 'error');
+        clearConnectTimer();
+        if (_eventsSeen) addToast(ev.text, 'error');
       }
     }
     _lastEventSeq = app.events.length > 0 ? (app.events[app.events.length - 1].seq ?? 0) : 0;
+    _eventsSeen = true;
   });
 
   function rtkStatusLabel(): string {
@@ -55,23 +82,23 @@
   }
 
   async function toggleNtrip() {
-    if (connected) {
-      sendCommand('ntrip_stop');
-      addToast(t('ntrip.stopped'), 'info');
+    if (!app.wsConnected) {
+      addToast(t('toast.cmdNotSent'), 'error');
       return;
     }
+    // No success toast here: the backend may still fail DNS, authentication or
+    // the mountpoint. The toast comes from the connected/disconnected event.
     connecting = true;
-    sendCommand('ntrip_start', undefined, {
-      host,
-      port,
-      mountpoint,
-      username,
-      password,
-    });
-    addToast(t('ntrip.started'), 'info');
-    // connected flips true only when backend emits 'ntrip_connected' event;
-    // see the $effect above. If the caster rejects (bad auth, no mountpoint),
-    // we receive 'ntrip_error' instead and connecting clears back to false.
+    startConnectTimer();
+    if (connected) sendCommand('ntrip_stop');
+    else
+      sendCommand('ntrip_start', undefined, {
+        host,
+        port,
+        mountpoint,
+        username,
+        password,
+      });
   }
 
   function saveConfig() {
@@ -80,7 +107,8 @@
     } catch {}
   }
 
-  import { onMount } from 'svelte';
+  import { onDestroy, onMount } from 'svelte';
+  onDestroy(clearConnectTimer);
   onMount(() => {
     try {
       const saved = JSON.parse(localStorage.getItem('argus_ntrip') || '{}');

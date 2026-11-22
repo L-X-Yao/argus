@@ -5,6 +5,7 @@ IDs, have valid CRC, and carry realistic telemetry values.
 """
 
 import math
+import socket
 import struct
 import sys
 from pathlib import Path
@@ -14,7 +15,7 @@ import pytest
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from backend.mavlink_frame import mc
-from scripts.simulator import Simulator
+from scripts.simulator import Simulator, serve
 
 
 @pytest.fixture
@@ -263,3 +264,30 @@ class TestSimulatorState:
         initial = sim.remaining
         sim.tick(10.0)
         assert sim.remaining == initial
+
+
+class TestPortInUse:
+    def test_a_second_simulator_says_it_is_already_running(self, monkeypatch):
+        """The Start-menu shortcut after an auto-start must not print a traceback."""
+
+        class Out:
+            text = ""
+
+            def reconfigure(self, **_kwargs):
+                pass
+
+            def write(self, value):
+                self.text += value
+
+        out = Out()
+        monkeypatch.setattr(sys, "stdout", out)
+        held = socket.socket()
+        held.bind(("127.0.0.1", 0))
+        held.listen(1)
+        try:
+            with pytest.raises(SystemExit) as exc:
+                serve(held.getsockname()[1])
+        finally:
+            held.close()
+        assert exc.value.code == 1
+        assert "已经在运行" in out.text

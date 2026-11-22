@@ -1,7 +1,8 @@
 <script lang="ts">
   import { app, loadDownloadedMission, addToast } from '../../lib/stores.svelte';
   import { sendCommand, sendDisconnect } from '../../lib/ws';
-  import { isSerialConnected, serialDownloadMission, dispatch } from '../../lib/transport';
+  import { isSerialConnected, serialDownloadMission, dispatch, disconnectSerial } from '../../lib/transport';
+  import { resetSerialSession } from '../../lib/serialHandlers';
   import { t, i18nState, setLocale } from '../../lib/i18n.svelte';
   import { saveSettings, showSlide, showConfirm } from '../../lib/stores.svelte';
   import { paramState } from '../../lib/paramStore.svelte';
@@ -642,7 +643,18 @@
         label: t('conn.disconnect'),
         category: t('cmd.catConn'),
         icon: Power,
-        handler: () => sendDisconnect(),
+        handler: async () => {
+          // sendDisconnect only reaches the backend; USB direct owns the port
+          // in the page (ConnectionForm does the same split).
+          if (isSerialConnected()) {
+            app.activeTransport = 'none';
+            await disconnectSerial();
+            resetSerialSession();
+            addToast(t('conn.serialDisconnected'), 'info');
+          } else {
+            sendDisconnect();
+          }
+        },
         available: connected,
       },
       {
@@ -650,7 +662,9 @@
         label: t('fw.rebootNormal'),
         category: t('cmd.catConn'),
         icon: RotateCcw,
-        handler: () => dispatch('reboot'),
+        handler: async () => {
+          if (await showConfirm(t('fw.rebootNormal') + '?', false)) dispatch('reboot');
+        },
         available: connected,
       },
     ];

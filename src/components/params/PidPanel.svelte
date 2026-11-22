@@ -77,10 +77,21 @@
     values = v;
   });
 
-  /* ── Slider change handler — sends param_set immediately ── */
+  /* ── Slider change handler ── */
+
+  // Drag previews locally; the FC is written once on release (change), not for
+  // every intermediate value. ArduPilot applies rate gains as they arrive, and
+  // a dragged D gain in hover used to be streamed through every grid step.
+  function previewSlider(paramName: string, newVal: number) {
+    values = { ...values, [paramName]: newVal };
+  }
+
+  function commitSlider(paramName: string) {
+    dispatch('param_set', undefined, { name: paramName, value: values[paramName] });
+  }
 
   function onSliderChange(paramName: string, newVal: number) {
-    values[paramName] = newVal;
+    previewSlider(paramName, newVal);
     dispatch('param_set', undefined, { name: paramName, value: newVal });
   }
 
@@ -230,7 +241,8 @@ aria-label={t('pid.title')}
                   max={slider.max}
                   step={slider.step}
                   class="flex-1 h-2 accent-primary cursor-pointer"
-                  oninput={(e) => onSliderChange(paramName, parseFloat((e.target as HTMLInputElement).value))}
+                  oninput={(e) => previewSlider(paramName, parseFloat((e.target as HTMLInputElement).value))}
+                  onchange={() => commitSlider(paramName)}
                 />
                 <span class="text-[9px] text-muted-foreground font-mono w-8 shrink-0">{slider.max}</span>
               </div>

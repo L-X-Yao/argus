@@ -126,10 +126,11 @@
       {/if}
 
       <div class="flex gap-2">
-        <Button variant="default" class="flex-1" onclick={setRoi}>
+        <Button variant="default" class="flex-1" onclick={setRoi} disabled={!app.drone.connected}>
           {t('poi.set')}
         </Button>
-        <Button variant="outline" class="flex-1" onclick={clearRoi} disabled={!roiSet}>
+        <!-- The vehicle may still hold an ROI set before this panel opened. -->
+        <Button variant="outline" class="flex-1" onclick={clearRoi} disabled={!app.drone.connected}>
           {t('poi.clear')}
         </Button>
       </div>

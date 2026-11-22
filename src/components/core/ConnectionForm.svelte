@@ -151,6 +151,9 @@
         addToast(`${t('conn.simFailed')}: ${result.error}`, 'error', 8000);
         return;
       }
+      // The wait can be ten seconds: the operator may have chosen USB or SITL
+      // in the meantime. Do not overwrite or disconnect that session.
+      if (isSerialConnected() || app.drone.connected || connecting) return;
       toggle();
     } finally {
       simStarting = false;
@@ -310,6 +313,7 @@
       variant="outline"
       size="sm"
       class="text-[10px] px-2 opacity-60 hover:opacity-100"
+      disabled={simStarting}
       onclick={() => {
         port = 'udp:14550';
         toggle();
@@ -331,6 +335,7 @@
         class="text-[10px] px-2 gap-1 {serialConnecting ? 'animate-pulse' : ''} {isSerialConnected()
           ? 'border-success text-success'
           : 'opacity-60 hover:opacity-100'}"
+        disabled={simStarting}
         onclick={toggleSerial}
         title={t('conn.serialTitle')}
       >

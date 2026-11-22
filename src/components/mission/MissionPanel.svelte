@@ -10,6 +10,7 @@
     generateCircle,
     addToast,
     showConfirm,
+    showSlide,
   } from '../../lib/stores.svelte';
   import { t } from '../../lib/i18n.svelte';
   import { groundAboveHome, adjustWaypointsForTerrain, interpolateRoute, routeKey } from '../../lib/terrain';
@@ -70,6 +71,12 @@
         app.drone.home_lat !== 0 || app.drone.home_lon !== 0
           ? { lat: app.drone.home_lat, lon: app.drone.home_lon }
           : null;
+      // Relative altitude is above home. Without one, measuring from WP1 would
+      // write altitudes that are wrong by the difference between the two grounds.
+      if (!home) {
+        addToast(t('terrain.noHome'), 'error', 6000);
+        return;
+      }
       const asked = () => routeKey(app.waypoints, { lat: app.drone.home_lat, lon: app.drone.home_lon });
       const route = asked();
       const adjusted = await adjustWaypointsForTerrain(app.waypoints, app.defaultAlt, home);
@@ -145,17 +152,20 @@
   function applyAltAll() {
     pushUndo();
     app.waypoints.forEach((w) => (w.alt = app.defaultAlt));
+    saveWaypoints();
   }
   function reverseRoute() {
     if (!app.waypoints.length) return;
     pushUndo();
     app.waypoints.reverse();
+    saveWaypoints();
   }
   function moveWp(i: number, dir: number) {
     const j = i + dir;
     if (j < 0 || j >= app.waypoints.length) return;
     pushUndo();
     [app.waypoints[i], app.waypoints[j]] = [app.waypoints[j], app.waypoints[i]];
+    saveWaypoints();
   }
 
   let uploadTimer: ReturnType<typeof setTimeout> | null = null;
@@ -253,6 +263,7 @@
             const wps = withRoute(cleanWaypoints(d?.waypoints, alt ?? app.defaultAlt));
             pushUndo();
             app.waypoints = wps;
+            saveWaypoints();
             if (alt !== null) app.defaultAlt = alt;
           }
           fitAfterLoad();
@@ -313,6 +324,7 @@
   }
 
   async function deleteFromLibrary(id: string) {
+    if (!(await showConfirm(t('wp.deleteConfirm'), true))) return;
     await dbDelete(id);
     addToast(t('wp.deleted'), 'info');
     libraryList = await listMissions();
@@ -329,12 +341,14 @@
     const wps = withRoute(parseQgcWaypoints(text));
     pushUndo();
     app.waypoints = wps;
+    saveWaypoints();
   }
 
   function handleQgcPlan(text: string) {
     const wps = withRoute(parseQgcPlan(text));
     pushUndo();
     app.waypoints = wps;
+    saveWaypoints();
   }
 
   function exportKml() {
@@ -362,6 +376,7 @@
           if (!wps.length) throw new Error('No coordinates');
           pushUndo();
           app.waypoints = wps;
+          saveWaypoints();
           fitAfterLoad();
         } catch (err: unknown) {
           addToast('KML: ' + (err instanceof Error ? err.message : String(err)), 'error');
@@ -444,6 +459,7 @@
   }
 
   let profileCanvas: HTMLCanvasElement = $state(null!);
+  const homeKnown = $derived(app.drone.home_lat !== 0 || app.drone.home_lon !== 0);
 
   // Fetch terrain data whenever waypoints change (async, non-blocking)
   $effect(() => {
@@ -456,23 +472,27 @@
     }
     const wps = app.waypoints.map((w) => ({ lat: w.lat, lon: w.lon }));
     const pts = interpolateRoute(wps, 50);
-    // Capture a snapshot to detect staleness after await
+    // Capture a snapshot to detect staleness after await. Drop the previous
+    // answer first: a new home changes the reference, and the old WP1-based
+    // profile must not stay under the new label.
     terrainFailed = false;
+    terrainElevations = null;
+    terrainPoints = [];
     const snapshot = JSON.stringify(wps.map((w) => `${w.lat.toFixed(5)},${w.lon.toFixed(5)}`));
     terrainLoading = true;
     const ask = ++terrainAsk;
     groundAboveHome(pts, { lat: app.drone.home_lat, lon: app.drone.home_lon })
       .then((elevs) => {
-        // Only apply if waypoints haven't changed since we started
+        // Only apply if waypoints haven't changed since we started.
         const current = app.waypoints.map((w) => `${w.lat.toFixed(5)},${w.lon.toFixed(5)}`);
-        if (JSON.stringify(current) !== snapshot) return;
+        if (ask !== terrainAsk || JSON.stringify(current) !== snapshot) return;
         terrainPoints = pts;
         terrainElevations = elevs;
       })
       .catch(() => {
         // An answer about a route that has changed since says nothing about this one.
         const current = app.waypoints.map((w) => `${w.lat.toFixed(5)},${w.lon.toFixed(5)}`);
-        if (JSON.stringify(current) !== snapshot) return;
+        if (ask !== terrainAsk || JSON.stringify(current) !== snapshot) return;
         terrainElevations = null;
         terrainPoints = [];
         terrainFailed = true;
@@ -721,7 +741,10 @@
         {#if app.drone.armed}
           <button
             class="bg-transparent border-none text-warning cursor-pointer text-[9px] px-0.5 font-bold hover:text-foreground"
-            onclick={() => dispatch('mission_set_current', undefined, { wp_index: i })}
+            onclick={() =>
+              showSlide(`${t('wp.goto')} WP${i + 1}`, 'red', () =>
+                dispatch('mission_set_current', undefined, { wp_index: i }),
+              )}
             title={t('wp.goto')}>&raquo;</button
           >
         {/if}
@@ -753,6 +776,9 @@
   {/if}
   {#if app.waypoints.length >= 2}
     <div class="mt-1.5">
+      {#if !homeKnown}
+        <p class="text-[10px] text-warning">{t('terrain.wp1Ref')}</p>
+      {/if}
       <canvas bind:this={profileCanvas} height="50" class="w-full bg-background rounded-lg"></canvas>
       {#if terrainFailed}
         <p class="text-[10px] text-warning">{t('terrain.noData')}</p>

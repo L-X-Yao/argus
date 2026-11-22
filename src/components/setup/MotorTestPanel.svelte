@@ -16,17 +16,26 @@
   let timers: Record<number, ReturnType<typeof setInterval>> = {};
 
   let connected = $derived(app.drone.connected);
+  // A manually armed vehicle is not a firmware refusal (motor_test.cpp checks
+  // land_complete, RC calibration and compassmot), but spinning with the
+  // system armed is not something this panel should offer. During a test the
+  // FC sets the armed bit itself (motor_test.cpp:158-161), which must not lock
+  // the Stop button.
+  let armed = $derived(app.drone.armed);
   let isCopter = $derived(!isPlane());
 
   function spinMotor(index: number) {
-    if (!connected) return;
+    if (!connected || (armed && !anySpinning)) return;
+    // ArduPilot runs one motor test at a time: a second command replaces the
+    // first (ArduCopter/motor_test.cpp:144,175). Showing two countdowns would
+    // claim two motors are turning when only the latest one is.
+    clearSpinning();
     dispatch('motor_test', undefined, {
       motor: index,
       throttle: throttle,
       duration: duration,
     });
     /* Start countdown for this motor */
-    stopTimer(index);
     spinning[index] = duration;
     timers[index] = setInterval(() => {
       spinning[index] = Math.max(0, (spinning[index] ?? 0) - 0.1);
@@ -48,14 +57,16 @@
 
   let anySpinning = $derived(Object.keys(spinning).length > 0);
 
+  function clearSpinning() {
+    for (let i = 0; i < MOTOR_COUNT; i++) stopTimer(i);
+    spinning = {};
+  }
+
   function stopAll() {
     // Only with a test running: on an idle FC a stop is a test of its own, which arms the
     // motors for a moment (ArduCopter/motor_test.cpp mavlink_motor_test_start).
     if (anySpinning) dispatch('motor_test_stop');
-    for (let i = 0; i < MOTOR_COUNT; i++) {
-      stopTimer(i);
-    }
-    spinning = {};
+    clearSpinning();
   }
 
   function isSpinning(index: number): boolean {
@@ -138,7 +149,7 @@
               variant={active ? 'secondary' : 'default'}
               size="xs"
               class="w-full text-[10px]"
-              disabled={!connected}
+              disabled={!connected || (armed && !anySpinning)}
               onclick={() => spinMotor(i)}
             >
               {#if active}
@@ -213,6 +224,8 @@
 
       {#if !connected}
         <p class="mt-2 text-center text-[11px] text-muted-foreground">{t('cal.connectFirst')}</p>
+      {:else if armed && !anySpinning}
+        <p class="mt-2 text-center text-[11px] text-muted-foreground">{t('motor.disarmFirst')}</p>
       {/if}
     </div>
   </div>
