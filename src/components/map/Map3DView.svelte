@@ -386,8 +386,14 @@
   // as 2D, those go away only via the explicit Clear buttons / panel UI.
   function onKeyDown(e: KeyboardEvent) {
     if (e.key !== 'Escape') return;
-    // Recovery only: the POI panel owns the Esc path while it is mounted.
-    if (app.poiPick) app.poiPick = false;
+    // A POI pick owns Escape: only it is cancelled, and nothing else is
+    // cleaned up behind it — a measure or a draw left open must survive. The
+    // panel puts its own dialog back (this branch is recovery for a pick
+    // whose panel is already gone).
+    if (app.poiPick) {
+      app.poiPick = false;
+      return;
+    }
     if (measuring) clearMeasure();
     if (app.guidedMode) app.guidedMode = false;
     if (app.drawingFence) app.drawingFence = false;

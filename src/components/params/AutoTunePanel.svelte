@@ -45,11 +45,20 @@
     expect: number;
   }
   let pending = $state<PendingMode | null>(null);
+  // The last refusal: its ACK event, and when it happened. The FC's own
+  // sentence for a refused mode ("Mode change to %s failed: %s",
+  // ArduCopter/mode.cpp:175 mode_change_failed) often trails the COMMAND_ACK
+  // through the queued statustext path, so the shown reason upgrades when it
+  // lands — only for this refusal, only for a short while, and never over a
+  // newer attempt: beginPending and the success branch clear it first, so a
+  // fast retry that succeeds can never be relabelled by the old failure.
+  let refused = $state<{ ack: DroneEvent; at: number } | null>(null);
   let modeError = $state('');
   let pendingTimer: ReturnType<typeof setTimeout> | undefined;
 
   function beginPending(kind: 'start' | 'stop', expect: number) {
     pending = { kind, mark: app.events[app.events.length - 1], expect };
+    refused = null;
     modeError = '';
     // The links give up on a silent FC themselves after 3 tries (~3 s,
     // transport _trackCommand / backend _cmd_pending, both emitting a
@@ -91,25 +100,34 @@
     );
     if (!ack) return;
     if (ack.event_type === 'cmd_ack_fail') {
-      // The refusal's STATUSTEXT often trails the COMMAND_ACK through the FC's
-      // queued statustext path; give it a beat before showing the reason.
-      const mark = p.mark;
+      refused = { ack, at: Date.now() };
+      const said = [...newer].reverse().find((ev) => ev.event_type === 'statustext');
+      modeError = said?.text ?? ack.text;
       clearTimeout(pendingTimer);
       pending = null;
       pendingTimer = undefined;
-      setTimeout(() => {
-        const since = mark ? app.events.slice(Math.max(app.events.lastIndexOf(mark), -1) + 1) : app.events;
-        const said = [...since].reverse().find((ev) => ev.event_type === 'statustext');
-        modeError = said?.text ?? ack.text;
-      }, 600);
       return;
     }
     if (app.drone.mode_id !== p.expect) return; // acked; the heartbeat has not caught up yet
+    refused = null;
     clearTimeout(pendingTimer);
     pendingTimer = undefined;
     modeError = '';
     pending = null;
     addToast(p.kind === 'start' ? t('autotune.start') : t('autotune.stop'), 'success');
+  });
+
+  // The upgrade pass: only statustexts that arrive after this refusal's ACK,
+  // within a few seconds of it. A trimmed ACK means the refusal is ancient
+  // history; a newer attempt clears `refused` before this can run again.
+  $effect(() => {
+    const r = refused;
+    if (!r) return;
+    if (Date.now() - r.at > 3000) return;
+    const idx = app.events.lastIndexOf(r.ack);
+    if (idx < 0) return;
+    const said = [...app.events.slice(idx + 1)].reverse().find((ev) => ev.event_type === 'statustext');
+    if (said) modeError = said.text;
   });
 
   onDestroy(() => clearTimeout(pendingTimer));

@@ -126,28 +126,6 @@ test('Takeoff climbs to the height set, from whatever mode it was armed in', asy
   pilot = setInterval(() => probe.sticks([0, 0, 1500, 0, 0, 0, 0, 0]), 100);
 });
 
-test('AutoTune starts only after the FC confirms the mode, and Stop returns it', async () => {
-  // AutoTune can only be entered from some modes (mode_autotune.cpp
-  // allows_autotune), and GUIDED is not one: Pause puts it in LOITER first.
-  await button('ctrl.pauseMission').click();
-  await expect.poll(() => probe.mode).toBe(LOITER);
-  const dialog = await tool(page, 'tool-autotune', label('autotune.title'));
-  await expect(dialog.getByText(`AutoTune ${label('cal.active')}`)).toHaveCount(0);
-
-  await dialog.getByRole('button', { name: label('autotune.start'), exact: true }).click();
-  // Success is the ACK plus a heartbeat carrying the mode: the readback first,
-  // then the panel's own success toast.
-  await expect.poll(() => probe.mode, { timeout: 20000 }).toBe(15);
-  await expect(page.getByRole('complementary').getByText(label('autotune.start'))).toBeVisible();
-  await expect(dialog.getByText(`AutoTune ${label('cal.active')}`)).toBeVisible();
-
-  await dialog.getByRole('button', { name: label('autotune.stop'), exact: true }).click();
-  await expect.poll(() => probe.mode, { timeout: 20000 }).toBe(LOITER);
-  await expect(page.getByRole('complementary').getByText(label('autotune.stop'))).toBeVisible();
-  await expect(dialog.getByText(`AutoTune ${label('cal.active')}`)).toHaveCount(0);
-  await close(page, dialog);
-});
-
 test('a point of interest turns the vehicle, and clearing it lets go', async () => {
   const start = probe.position!;
   await expect.poll(speed).toBeLessThan(0.5);
@@ -236,9 +214,42 @@ test('Pause holds the vehicle where it is, and the mission resumes', async () =>
   await expect.poll(() => probe.missionSeq, { timeout: 60000 }).toBeGreaterThan(at);
 });
 
+test('AutoTune starts only after the FC confirms the mode, and Stop returns it', async () => {
+  // Late in the flight on purpose: nothing after this reads the heading, so
+  // the tuning twitches cannot disturb a test that does. AutoTune can only be
+  // entered from some modes (mode_autotune.cpp allows_autotune), and AUTO is
+  // not one: Pause puts it in LOITER first. The mission is flying, so the
+  // sidebar's button is the mission wording, 暂停任务.
+  await button('ctrl.pauseMission').click();
+  await expect.poll(() => probe.mode).toBe(LOITER);
+  const dialog = await tool(page, 'tool-autotune', label('autotune.title'));
+  await expect(dialog.getByText(`AutoTune ${label('cal.active')}`)).toHaveCount(0);
+
+  // Roll only: this test is about the ACK and the readback.
+  await dialog.getByRole('button', { name: label('autotune.rollOnly') }).click();
+  await dialog.getByRole('button', { name: label('autotune.start'), exact: true }).click();
+  // Success is the ACK plus a heartbeat carrying the mode: the readback first,
+  // then the panel's own success toast.
+  await expect.poll(() => probe.mode, { timeout: 20000 }).toBe(15);
+  await expect(page.getByRole('complementary').getByText(label('autotune.start'))).toBeVisible();
+  await expect(dialog.getByText(`AutoTune ${label('cal.active')}`)).toBeVisible();
+
+  await dialog.getByRole('button', { name: label('autotune.stop'), exact: true }).click();
+  await expect.poll(() => probe.mode, { timeout: 20000 }).toBe(LOITER);
+  await expect(page.getByRole('complementary').getByText(label('autotune.stop'))).toBeVisible();
+  await expect(dialog.getByText(`AutoTune ${label('cal.active')}`)).toHaveCount(0);
+  await close(page, dialog);
+});
+
 test('RTL brings it home and it lands', async () => {
   await expect.poll(() => probe.reached.length, { timeout: 60000 }).toBeGreaterThan(0);
-  await button('ctrl.abortRtl').click();
+  // The AutoTune test before this one paused the mission, so the sidebar is
+  // back in the flying phase and shows plain RTL (中止任务并返航 is the
+  // mission-phase button); the RTL mode button carries the same word, and the
+  // phase button comes first in the panel.
+  const abort = controls.getByRole('button', { name: label('ctrl.abortRtl'), exact: true });
+  const rtl = controls.getByRole('button', { name: label('ctrl.rtl'), exact: true }).first();
+  await ((await abort.isVisible()) ? abort : rtl).click();
   await slide();
   await expect.poll(() => probe.mode).toBe(RTL);
   await expect(controls.getByText(label('phase.returning'))).toBeVisible();

@@ -81,8 +81,14 @@
 </script>
 
 <svelte:window
-  onkeydown={(e) => {
-    if (picking && e.key === 'Escape') cancelPick();
+  onkeydowncapture={(e) => {
+    // Capture phase, and only while picking: the key is consumed here so a map
+    // view registered after this panel still never runs its Escape cleanup
+    // behind a pick. Anything else (the dialog's own Esc-to-close) passes.
+    if (!picking || e.key !== 'Escape') return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    cancelPick();
   }}
 />
 

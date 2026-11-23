@@ -447,12 +447,27 @@ test.describe('Terrain profile', () => {
 test.describe('Point of interest', () => {
   test('a pick on the map fills the panel, adds no waypoint, and Set ROI reaches the FC', async () => {
     await waypoints(0);
+    await page.locator('button.map-btn', { hasText: label('map.home') }).click();
+    const at = await vehicleOnMap(page);
+
+    // A survey draw left open is the state a pick must not disturb: its Esc
+    // belongs to the pick alone, and neither the draw nor its polygon moves.
+    const shapes = () => page.locator('.leaflet-overlay-pane path').count();
+    await page.locator('button.map-btn', { hasText: label('map.survey') }).click();
+    await page.getByRole('button', { name: label('survey.drawArea') }).click();
+    await page.mouse.click(at.x + 40, at.y - 20);
+    await page.mouse.click(at.x - 40, at.y + 20);
+    await page.mouse.click(at.x - 30, at.y - 50);
+    const drawn = await shapes();
+    expect(drawn).toBeGreaterThan(0);
+
     const dialog = await tool(page, 'tool-poi', label('poi.title'));
     await dialog.locator('#poi-lat').fill('-35.3612');
     await dialog.locator('#poi-lon').fill('149.1651');
 
     // Picked, then thought better of it: Esc brings the dialog back, typed
-    // values untouched, and the plan view has grown nothing.
+    // values untouched, the draw still on the map, and the plan view has
+    // grown nothing.
     await dialog.getByRole('button', { name: label('poi.pick') }).click();
     await expect(dialog).toHaveCount(0);
     const banner = page.getByText(label('poi.pickHint'));
@@ -464,37 +479,45 @@ test.describe('Point of interest', () => {
     await expect(back.locator('#poi-lat')).toHaveValue('-35.3612');
     await expect(back.locator('#poi-lon')).toHaveValue('149.1651');
     await waypoints(0);
+    await expect.poll(shapes).toBe(drawn);
 
     // This time the click lands: the fields hold the point that was clicked,
-    // read back against the map's own scale, and still no waypoint.
+    // read back against the map's own scale; the draw took nothing in (the
+    // pick claims the click) and there is still no waypoint. The map is
+    // placed while the dialog is away — opening the survey card re-centred
+    // it, so the offsets from before the draw are stale.
     await back.getByRole('button', { name: label('poi.pick') }).click();
     await expect(back).toHaveCount(0);
     await expect(banner).toBeVisible();
     await page.locator('button.map-btn', { hasText: label('map.home') }).click();
-    const at = await vehicleOnMap(page);
-    const scale = await metersPerPixel();
-    await page.mouse.click(at.x + 80, at.y - 40);
+    const picked = await vehicleOnMap(page);
+    const pickedScale = await metersPerPixel();
+    await page.mouse.click(picked.x + 80, picked.y - 40);
     await expect(back).toBeVisible();
     await expect(banner).toHaveCount(0);
     const lat = Number(await back.locator('#poi-lat').inputValue());
     const lon = Number(await back.locator('#poi-lon').inputValue());
     const origin = { lat: probe.position!.lat, lon: probe.position!.lon };
     const [east, north] = metersBetween(origin, { lat, lon });
-    expect(Math.abs(east - 80 * scale)).toBeLessThan(3 * scale);
-    expect(Math.abs(north - 40 * scale)).toBeLessThan(3 * scale);
+    expect(Math.abs(east - 80 * pickedScale)).toBeLessThan(3 * pickedScale);
+    expect(Math.abs(north - 40 * pickedScale)).toBeLessThan(3 * pickedScale);
     await waypoints(0);
+    await expect.poll(shapes).toBe(drawn);
 
-    // And the picked point reaches the FC as an ROI, then lets go again.
-    const mark = probe.acks.length;
+    // The picked point reaches the FC as an ROI. COMMAND_ACK travels on the
+    // link that asked, so the probe on its own port never sees this one: the
+    // page's own event log is the receipt, then the ROI lets go again.
     await back.getByRole('button', { name: label('poi.set'), exact: true }).click();
-    await expect
-      .poll(() => probe.acks.slice(mark).find((a) => a.command === SET_ROI)?.result, {
-        message: 'no COMMAND_ACK 201 after Set ROI',
-        timeout: 15000,
-      })
-      .toBe(0);
     await back.getByRole('button', { name: label('poi.clear'), exact: true }).click();
     await back.getByRole('button', { name: label('error.close') }).click();
     await expect(back).toHaveCount(0);
+    await page.getByRole('button', { name: label('survey.finishDraw') }).click();
+    await page.locator('nav button', { hasText: label('tab.fly') }).click();
+    await page
+      .locator('button', { hasText: label('event.title') })
+      .filter({ hasText: /\(/ })
+      .click();
+    const receipt = label('ack.text').replace('{cmd}', '201').replace('{result}', label('ack.result.accepted'));
+    await expect(page.getByText(receipt).first()).toBeVisible({ timeout: 15000 });
   });
 });
