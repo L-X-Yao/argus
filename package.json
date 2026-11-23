@@ -1,7 +1,7 @@
 {
   "name": "argus-gcs",
   "private": true,
-  "version": "3.16.5",
+  "version": "3.16.6",
   "description": "Web-based ground control station for ArduPilot vehicles",
   "author": "L-X-Yao",
   "license": "MIT",
