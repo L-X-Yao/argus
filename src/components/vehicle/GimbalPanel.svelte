@@ -62,9 +62,12 @@
   let ackError = $state('');
 
   function sendWithAck(cmd: number, name: string, data: Record<string, unknown> | undefined, success: string) {
-    // MAVLink ACK has no request id. Match only an ACK after this click, and
-    // replace an unanswered earlier request of the same command on a retry.
-    pendingAcks = pendingAcks.filter((p) => p.cmd !== cmd);
+    // MAVLink ACK has no request id. A second request for the same command
+    // before the first is answered could take the first ACK as its own, so wait.
+    if (pendingAcks.some((p) => p.cmd === cmd)) {
+      addToast(t('gimbal.busy'), 'warn', 2500);
+      return;
+    }
     pendingAcks.push({ cmd, mark: app.events[app.events.length - 1], success });
     ackError = '';
     dispatch(name, undefined, data);

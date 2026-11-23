@@ -932,6 +932,7 @@ const messages: Record<string, string> = {
   'gimbal.fromDrone': 'Drohnenposition verwenden',
   'gimbal.hint': 'Gimbal-Winkel, Kamerafoto/-video steuern und Blickpunkt setzen',
   'gimbal.sent': 'Befehl gesendet',
+  'gimbal.busy': 'Auf die Bestätigung des vorherigen Befehls warten',
   'camera.title': 'Kamerasteuerung',
   'camera.photo': 'Foto',
   'camera.videoStart': 'Aufnahme starten',

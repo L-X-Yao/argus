@@ -24,15 +24,25 @@ test.describe('Mission planning', () => {
   });
 
   test('a click in the fly view adds no waypoint', async ({ page }) => {
-    const count = page.locator('h2', { hasText: /航点|Waypoints/i }).locator('xpath=..').locator('span').first();
+    const count = page
+      .locator('h2', { hasText: /航点|Waypoints/i })
+      .locator('xpath=..')
+      .locator('span')
+      .first();
 
-    await page.locator('nav button', { hasText: /飞行|Fly/ }).first().click();
+    await page
+      .locator('nav button', { hasText: /飞行|Fly/ })
+      .first()
+      .click();
     await page.waitForTimeout(500);
     const flyBox = (await page.locator('.leaflet-container').first().boundingBox())!;
     await page.mouse.click(flyBox.x + flyBox.width / 2, flyBox.y + flyBox.height / 2);
     await page.waitForTimeout(500);
 
-    await page.locator('nav button', { hasText: /规划|Plan/ }).first().click();
+    await page
+      .locator('nav button', { hasText: /规划|Plan/ })
+      .first()
+      .click();
     await page.waitForTimeout(1000);
     await expect(count).toHaveText('(0)');
 
@@ -80,5 +90,32 @@ test.describe('Mission planning', () => {
       await page.waitForTimeout(300);
       await expect(page.locator('button', { hasText: /Gen|生成/ })).toBeVisible({ timeout: 3000 });
     }
+  });
+
+  test('terrain follow refuses to rewrite heights without home', async ({ page }) => {
+    await page.evaluate(() => {
+      localStorage.setItem(
+        'argus_waypoints',
+        JSON.stringify([
+          { lat: 34.1, lon: 108.8, alt: 50, drop: false, delay: 0, speed: 0, type: 'wp', loiter_param: 0 },
+          { lat: 34.12, lon: 108.82, alt: 60, drop: false, delay: 0, speed: 0, type: 'wp', loiter_param: 0 },
+        ]),
+      );
+    });
+    await page.reload();
+    await page
+      .locator('nav button', { hasText: /规划|Plan/ })
+      .first()
+      .click();
+    await page.waitForTimeout(1000);
+
+    await page.getByRole('button', { name: /地形跟随|Terrain Follow/ }).click();
+    await expect(page.locator('body')).toContainText(/未知 home|Home position unknown|Home unknown/, {
+      timeout: 5000,
+    });
+    const heights = await page.evaluate(() =>
+      JSON.parse(localStorage.getItem('argus_waypoints') || '[]').map((w: { alt: number }) => w.alt),
+    );
+    expect(heights).toEqual([50, 60]);
   });
 });

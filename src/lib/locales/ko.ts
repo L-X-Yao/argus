@@ -929,6 +929,7 @@ const messages: Record<string, string> = {
   'gimbal.fromDrone': '드론 위치 사용',
   'gimbal.hint': '짐벌 각도, 카메라 촬영/녹화, 관심 지점 제어',
   'gimbal.sent': '명령을 전송했습니다',
+  'gimbal.busy': '이전 명령의 응답을 기다리세요',
   'camera.title': '카메라 제어',
   'camera.photo': '촬영',
   'camera.videoStart': '녹화 시작',

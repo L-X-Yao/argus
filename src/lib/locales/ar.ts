@@ -927,6 +927,7 @@ const messages: Record<string, string> = {
   'gimbal.fromDrone': 'استخدام موقع الطائرة',
   'gimbal.hint': 'التحكم بزاوية المحور وتصوير/تسجيل الكاميرا ونقطة الاهتمام',
   'gimbal.sent': 'تم إرسال الأمر',
+  'gimbal.busy': 'انتظر تأكيد الأمر السابق',
   'camera.title': 'التحكم بالكاميرا',
   'camera.photo': 'صورة',
   'camera.videoStart': 'بدء التسجيل',

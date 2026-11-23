@@ -1004,6 +1004,7 @@ const messages: Record<string, string> = {
   'gimbal.fromDrone': '使用飞机位置',
   'gimbal.hint': '控制云台角度、相机拍照/录像、设置兴趣点',
   'gimbal.sent': '命令已发送',
+  'gimbal.busy': '等待上一条命令回执',
   'camera.title': '相机控制',
   'camera.photo': '拍照',
   'camera.videoStart': '开始录像',

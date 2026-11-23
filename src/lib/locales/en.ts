@@ -1015,6 +1015,7 @@ const messages: Record<string, string> = {
   'gimbal.fromDrone': 'Use drone position',
   'gimbal.hint': 'Control gimbal angle, camera photo/video, and set point of interest',
   'gimbal.sent': 'Command sent',
+  'gimbal.busy': 'Wait for the previous command to be acknowledged',
   'camera.title': 'Camera Control',
   'camera.photo': 'Photo',
   'camera.videoStart': 'Start Recording',

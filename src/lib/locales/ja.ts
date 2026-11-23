@@ -932,6 +932,7 @@ const messages: Record<string, string> = {
   'gimbal.fromDrone': 'ドローン位置を使用',
   'gimbal.hint': 'ジンバル角度、カメラ撮影/録画、注視点を制御',
   'gimbal.sent': 'コマンドを送信しました',
+  'gimbal.busy': '前のコマンドの応答を待っています',
   'camera.title': 'カメラ制御',
   'camera.photo': '撮影',
   'camera.videoStart': '録画開始',
