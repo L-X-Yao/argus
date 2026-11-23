@@ -354,6 +354,45 @@ test('log_cancel stops a download', async () => {
   expect(sitl.logDataFrames()).toBe(settled);
 });
 
+test('log_erase wipes the logs, and the next list holds nothing of them', async () => {
+  // A log to erase: one is written while armed and closed at disarm
+  // (LOG_DISARMED), LOG_BITMASK 65535 logs everything.
+  await send('param_set', undefined, { name: 'LOG_BITMASK', value: 65535 });
+  await send('param_set', undefined, { name: 'LOG_DISARMED', value: 1 });
+  await setMode(MODE.guided);
+  await armWhenReady();
+  expect(await ackOf(400, 'disarm')).toBe(ACCEPTED);
+  await expect.poll(() => drone<boolean>('armed'), { timeout: 15000 }).toBe(false);
+
+  const listed = await page.evaluate(async () => {
+    const url = '/src/lib/transport.ts';
+    const { serialLogList } = await import(/* @vite-ignore */ url);
+    return serialLogList();
+  });
+  expect(listed).toEqual({ ok: true });
+  expect(sitl.logIds.length).toBeGreaterThan(0);
+
+  // Continuous logging stays off, so the erase is not racing a fresh log.
+  await send('param_set', undefined, { name: 'LOG_DISARMED', value: 0 });
+
+  // LOG_ERASE (121) is a message, not a command: the FC answers nothing
+  // (AP_Logger_MAVLinkLogTransfer.cpp:163 handle_log_request_erase goes
+  // straight to EraseAll), so the proof is the list that follows it.
+  await send('log_erase');
+  const after = await page.evaluate(async () => {
+    const url = '/src/lib/transport.ts';
+    const { serialLogList } = await import(/* @vite-ignore */ url);
+    const r = await serialLogList();
+    await new Promise((res) => setTimeout(res, 1000));
+    const store = await import(/* @vite-ignore */ '/src/lib/logStore.svelte.ts');
+    return { r, sizes: store.logState.list.map((e: { size: number }) => e.size) };
+  });
+  expect(after.r).toEqual({ ok: true });
+  // A real FC lists nothing at all; SITL keeps a zero-length entry until it
+  // reboots. Both mean the logs are gone.
+  expect(after.sizes.length === 0 || after.sizes.every((s: number) => s === 0)).toBe(true);
+});
+
 test('reboot is accepted', async () => {
   expect(await ackOf(246, 'reboot')).toBe(ACCEPTED);
 });

@@ -1116,6 +1116,8 @@ const messages: Record<string, string> = {
   'pid.rateFF': 'Коэфф. FF',
   'poi.notSet': 'ROI: Не задан',
   'poi.dronePos': 'Позиция дрона',
+  'poi.pick': 'Выбрать на карте',
+  'poi.pickHint': 'Кликните по карте, чтобы выбрать точку — Esc отменяет',
   'wp.gen': 'Создать',
   'conn.serialLost': 'Последовательное соединение потеряно',
   'conn.unsupportedFc':

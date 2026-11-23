@@ -1116,6 +1116,8 @@ const messages: Record<string, string> = {
   'pid.rateFF': 'Rate-FF',
   'poi.notSet': 'ROI: Nicht gesetzt',
   'poi.dronePos': 'Drohnenposition',
+  'poi.pick': 'Auf der Karte wählen',
+  'poi.pickHint': 'Klicken Sie auf die Karte, um den Punkt zu wählen — Esc bricht ab',
   'wp.gen': 'Generieren',
   'conn.serialLost': 'Serielle Verbindung verloren',
   'conn.unsupportedFc': 'Kein ArduPilot-FC ({fc}): Befehle sind ArduPilot-spezifisch und wurden deaktiviert',

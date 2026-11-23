@@ -907,6 +907,8 @@ const messages: Record<string, string> = {
   'poi.hint': "Enter coordinates or use the vehicle's current position",
   'poi.notSet': 'ROI: Not set',
   'poi.dronePos': 'Drone Position',
+  'poi.pick': 'Pick on map',
+  'poi.pickHint': 'Click the map to pick the point — Esc cancels',
   'corridor.title': 'Corridor Planning',
   'corridor.width': 'Corridor Width (m)',
   'corridor.spacing': 'Line Spacing (m)',

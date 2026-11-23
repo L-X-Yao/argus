@@ -319,12 +319,19 @@
     });
 
     // Map click: same priority order as MapView.svelte:118-140 —
-    // measure → survey draw → fence draw → guided goto → addWaypoint.
+    // POI pick → measure → survey draw → fence draw → guided goto → addWaypoint.
     // Note the GCJ inverse-transform so China-tile providers don't store
     // shifted coordinates in app.waypoints / app.fencePolygon / surveyPolygon.
     map.on('click', (e) => {
       const { lat: mlat, lng: mlon } = e.lngLat;
       const [wlat, wlon] = fromMap(mlat, mlon);
+      // A POI pick claims the click before everything else: the panel handed
+      // the map over for exactly this click, and it must fill the panel.
+      if (app.poiPick) {
+        app.poiPickPos = { lat: wlat, lon: wlon };
+        app.poiPick = false;
+        return;
+      }
       if (measuring) {
         addMeasurePoint(wlat, wlon);
         return;
@@ -379,6 +386,14 @@
   // as 2D, those go away only via the explicit Clear buttons / panel UI.
   function onKeyDown(e: KeyboardEvent) {
     if (e.key !== 'Escape') return;
+    // A POI pick owns Escape: only it is cancelled, and nothing else is
+    // cleaned up behind it — a measure or a draw left open must survive. The
+    // panel puts its own dialog back (this branch is recovery for a pick
+    // whose panel is already gone).
+    if (app.poiPick) {
+      app.poiPick = false;
+      return;
+    }
     if (measuring) clearMeasure();
     if (app.guidedMode) app.guidedMode = false;
     if (app.drawingFence) app.drawingFence = false;

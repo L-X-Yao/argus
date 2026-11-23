@@ -53,6 +53,13 @@ class AppState {
   drawingRally: boolean = $state(false);
   kmlOverlay: { type: string; coords: [number, number][]; name: string }[] = $state([]);
   unitSystem: 'metric' | 'imperial' = $state('metric');
+  // POI map pick: the panel closes itself and hands the next map click over to
+  // it (MapView / Map3DView check poiPick before everything else, so the click
+  // fills poiPickPos instead of drawing). Esc or the banner's close puts the
+  // panel back with its own values; a landed click opens it with the picked
+  // ones. See PoiPanel.svelte.
+  poiPick: boolean = $state(false);
+  poiPickPos: { lat: number; lon: number } | null = $state(null);
 }
 
 export const app = new AppState();

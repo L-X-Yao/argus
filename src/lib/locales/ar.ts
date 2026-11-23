@@ -1110,6 +1110,8 @@ const messages: Record<string, string> = {
   'pid.rateFF': 'معدل FF',
   'poi.notSet': 'ROI: غير محدد',
   'poi.dronePos': 'موقع الطائرة',
+  'poi.pick': 'اختيار من الخريطة',
+  'poi.pickHint': 'انقر على الخريطة لاختيار النقطة — Esc يلغي',
   'wp.gen': 'إنشاء',
   'conn.serialLost': 'فُقد الاتصال التسلسلي',
   'conn.unsupportedFc': 'وحدة تحكم غير ArduPilot ({fc}): الأوامر خاصة بـ ArduPilot وتم تعطيلها',
