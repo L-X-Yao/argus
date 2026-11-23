@@ -27,7 +27,7 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 
 | Area | Items | Real FC | SITL | Simulator | Tests only | None | n/a |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Commands, backend | 55 | 21 | 28 | 0 | 6 | 0 | 0 |
+| Commands, backend | 55 | 22 | 27 | 0 | 6 | 0 | 0 |
 | Commands, WebSerial | 55 | 12 | 28 | 0 | 4 | 0 | 11 |
 | Messages, backend | 35 | 28 | 3 | 0 | 4 | 0 | 0 |
 | Messages, WebSerial | 35 | 17 | 13 | 0 | 4 | 0 | 1 |
@@ -52,8 +52,8 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 | `drop_stop` | Stop release | 停止投放 | SITL | SITL | CI on both links |
 | `do_set_roi` | Set region of interest | 设置兴趣点 | SITL | SITL | CI on both links |
 | `rc_override` | RC override | 遥控覆盖 | SITL | SITL | CI on both links |
-| `motor_test` | Motor test | 电机测试 | Real FC | SITL | Backend 2026-05; 2026-11-23 with v3.16.5 on a real FC, props removed: motor #1 at 5% for 1 s, command ack, heartbeat armed during the test and disarmed after "finished motor test". WebSerial CI |
-| `motor_test_stop` | Stop motor test | 停止电机测试 | SITL | SITL | CI on both links |
+| `motor_test` | Motor test | 电机测试 | Real FC | SITL | Backend 2026-05; 2026-11-23 with v3.16.5 on a real FC, props removed: motors #1-#4 each at 5% for 1 s, command ack, heartbeat armed during each test and disarmed after. WebSerial CI |
+| `motor_test_stop` | Stop motor test | 停止电机测试 | Real FC | SITL | 2026-11-23 v3.16.5 bench: started #1 for 5 s at 5%, stopped after about 1 s with an ack, heartbeat went disarmed. WebSerial CI |
 | `mission_upload` | Upload mission | 上传航线 | Real FC | Real FC | WebSerial 2026-11-05, backend 2026-05, CI. 2026-11-14 backend on a real FC: a 3-waypoint route, acknowledged, and read back by pymavlink as takeoff, speed, 3 waypoints and RTL |
 | `mission_download` | Download mission | 下载航线 | Real FC | Real FC | Both 2026-11-05. 2026-11-13: the rebuilt list maps every waypoint to its MAVLink seq, and keeps the camera, servo, ROI, yaw and VTOL items and p3/p4, which a download then upload used to delete (contract tests). 2026-11-14 on a real FC through the backend: download, upload that download again, download once more, the same 3 waypoints each time |
 | `mission_clear` | Clear mission | 清除航线 | Real FC | Real FC | WebSerial 2026-11-05, backend 2026-05, CI. 2026-11-14 backend on a real FC, acknowledged, read back empty |
