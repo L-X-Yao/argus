@@ -57,7 +57,9 @@ async function clickMap(offsets: [number, number][]) {
 
 async function clearList() {
   if (await panel().getByText('(0)', { exact: true }).isVisible()) return;
-  await panel().getByRole('button', { name: label('wp.clear'), exact: true }).click();
+  await panel()
+    .getByRole('button', { name: label('wp.clear'), exact: true })
+    .click();
   const confirm = page.getByRole('alertdialog');
   await expect(confirm).toBeVisible();
   await page.waitForTimeout(350); // resolveConfirm ignores a yes in its first 300 ms
@@ -238,7 +240,10 @@ test.describe('Survey', () => {
     expect(Math.min(...east)).toBeGreaterThan(-120 * scale - 3 * scale);
     expect(Math.max(...east)).toBeLessThan(120 * scale + 3 * scale);
 
-    await page.getByRole('button', { name: label('survey.clear') }).last().click();
+    await page
+      .getByRole('button', { name: label('survey.clear') })
+      .last()
+      .click();
     await page.locator('button.map-btn', { hasText: label('map.survey') }).click();
   });
 });
@@ -363,7 +368,9 @@ test.describe('Advanced commands', () => {
 test.describe('Rally points', () => {
   test('clicks on the map reach the FC, and the button clears them there', async () => {
     await page.locator('button.map-btn', { hasText: label('rally.title') }).click();
-    const rally = page.locator('div.bg-card').filter({ has: page.getByRole('heading', { name: label('rally.title') }) });
+    const rally = page
+      .locator('div.bg-card')
+      .filter({ has: page.getByRole('heading', { name: label('rally.title') }) });
     await rally.getByRole('button', { name: label('rally.add') }).click();
     await clickMap([
       [80, 40],
@@ -392,7 +399,10 @@ test.describe('Rally points', () => {
     await expect(rally.getByText(label('fence.notUploaded'))).toBeVisible();
     await expect.poll(async () => (await probe.store(RALLY)).length).toBe(0);
 
-    await rally.getByRole('button', { name: label('rally.clear'), exact: true }).last().click();
+    await rally
+      .getByRole('button', { name: label('rally.clear'), exact: true })
+      .last()
+      .click();
     await page.locator('button.map-btn', { hasText: label('rally.title') }).click();
   });
 });
@@ -404,7 +414,9 @@ test.describe('Terrain profile', () => {
       [120, -90],
     ]);
     await waypoints(2);
-    await panel().getByRole('button', { name: label('terrain.profile') }).click();
+    await panel()
+      .getByRole('button', { name: label('terrain.profile') })
+      .click();
     const dialog = dialogOf(page, label('terrain.profileTitle'));
     await expect(dialog).toBeVisible();
 
@@ -429,5 +441,60 @@ test.describe('Terrain profile', () => {
     const value = Number((await shown.textContent())!.match(/(-?\d+)m$/)![1]);
     expect(Math.abs(value - lowest)).toBeLessThan(5);
     await dialog.getByRole('button', { name: label('error.close') }).click();
+  });
+});
+
+test.describe('Point of interest', () => {
+  test('a pick on the map fills the panel, adds no waypoint, and Set ROI reaches the FC', async () => {
+    await waypoints(0);
+    const dialog = await tool(page, 'tool-poi', label('poi.title'));
+    await dialog.locator('#poi-lat').fill('-35.3612');
+    await dialog.locator('#poi-lon').fill('149.1651');
+
+    // Picked, then thought better of it: Esc brings the dialog back, typed
+    // values untouched, and the plan view has grown nothing.
+    await dialog.getByRole('button', { name: label('poi.pick') }).click();
+    await expect(dialog).toHaveCount(0);
+    const banner = page.getByText(label('poi.pickHint'));
+    await expect(banner).toBeVisible();
+    await page.keyboard.press('Escape');
+    const back = dialogOf(page, label('poi.title'));
+    await expect(back).toBeVisible();
+    await expect(banner).toHaveCount(0);
+    await expect(back.locator('#poi-lat')).toHaveValue('-35.3612');
+    await expect(back.locator('#poi-lon')).toHaveValue('149.1651');
+    await waypoints(0);
+
+    // This time the click lands: the fields hold the point that was clicked,
+    // read back against the map's own scale, and still no waypoint.
+    await back.getByRole('button', { name: label('poi.pick') }).click();
+    await expect(back).toHaveCount(0);
+    await expect(banner).toBeVisible();
+    await page.locator('button.map-btn', { hasText: label('map.home') }).click();
+    const at = await vehicleOnMap(page);
+    const scale = await metersPerPixel();
+    await page.mouse.click(at.x + 80, at.y - 40);
+    await expect(back).toBeVisible();
+    await expect(banner).toHaveCount(0);
+    const lat = Number(await back.locator('#poi-lat').inputValue());
+    const lon = Number(await back.locator('#poi-lon').inputValue());
+    const origin = { lat: probe.position!.lat, lon: probe.position!.lon };
+    const [east, north] = metersBetween(origin, { lat, lon });
+    expect(Math.abs(east - 80 * scale)).toBeLessThan(3 * scale);
+    expect(Math.abs(north - 40 * scale)).toBeLessThan(3 * scale);
+    await waypoints(0);
+
+    // And the picked point reaches the FC as an ROI, then lets go again.
+    const mark = probe.acks.length;
+    await back.getByRole('button', { name: label('poi.set'), exact: true }).click();
+    await expect
+      .poll(() => probe.acks.slice(mark).find((a) => a.command === SET_ROI)?.result, {
+        message: 'no COMMAND_ACK 201 after Set ROI',
+        timeout: 15000,
+      })
+      .toBe(0);
+    await back.getByRole('button', { name: label('poi.clear'), exact: true }).click();
+    await back.getByRole('button', { name: label('error.close') }).click();
+    await expect(back).toHaveCount(0);
   });
 });

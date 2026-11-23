@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte';
   import { app, addToast } from '../../lib/stores.svelte';
   import { dispatch } from '../../lib/transport';
   import { t } from '../../lib/i18n.svelte';
@@ -14,6 +15,38 @@
   let roiLat = $state(0);
   let roiLon = $state(0);
   let roiAlt = $state(0);
+
+  // While picking, the dialog gives way to a banner and the next map click is
+  // the pick (MapView / Map3DView check app.poiPick before they draw). The
+  // panel stays mounted, so what was typed is still here on either way back:
+  // a landed click fills lat/lon through poiPickPos, Esc or the banner's close
+  // restores the dialog untouched.
+  let picking = $state(false);
+
+  function pickOnMap() {
+    picking = true;
+    app.poiPick = true;
+  }
+
+  function cancelPick() {
+    picking = false;
+    app.poiPick = false;
+  }
+
+  $effect(() => {
+    const picked = app.poiPickPos;
+    if (!picked) return;
+    app.poiPickPos = null;
+    lat = picked.lat;
+    lon = picked.lon;
+    picking = false;
+  });
+
+  // The palette can close a hidden panel; the flag must not survive it, or the
+  // map would keep swallowing clicks.
+  onDestroy(() => {
+    if (picking) cancelPick();
+  });
 
   function setRoi() {
     if (lat === 0 && lon === 0) {
@@ -47,95 +80,115 @@
   }
 </script>
 
-<div
-  role="dialog"
-  aria-modal="true"
-  aria-label={t('poi.title')}
-  tabindex="-1"
-  class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center"
-  onclick={onclose}
+<svelte:window
   onkeydown={(e) => {
-    if (e.key === 'Escape') onclose();
+    if (picking && e.key === 'Escape') cancelPick();
   }}
->
+/>
+
+{#if picking}
   <div
-    role="presentation"
-    class="bg-card border border-border rounded-2xl overflow-hidden w-[350px] max-h-[80vh] shadow-2xl flex flex-col"
-    onclick={(e) => e.stopPropagation()}
-    onkeydown={(e) => e.stopPropagation()}
+    class="fixed top-14 left-1/2 -translate-x-1/2 z-[9999] flex items-center gap-2 bg-card/95 border border-primary rounded-lg pl-3 pr-1.5 py-1 shadow-lg backdrop-blur"
   >
-    <div class="bg-gradient-to-r from-primary/20 to-primary/5 px-5 py-3 flex items-center justify-between shrink-0">
-      <div class="flex items-center gap-2">
-        <Crosshair size={16} class="text-primary" />
-        <h3 class="text-base font-bold text-primary">{t('poi.title')}</h3>
+    <Crosshair size={14} class="text-primary shrink-0" />
+    <span class="text-xs text-foreground whitespace-nowrap">{t('poi.pickHint')}</span>
+    <button class="map-btn" onclick={cancelPick} aria-label={t('error.close')}><X size={13} /></button>
+  </div>
+{:else}
+  <div
+    role="dialog"
+    aria-modal="true"
+    aria-label={t('poi.title')}
+    tabindex="-1"
+    class="fixed inset-0 bg-black/60 backdrop-blur-sm z-[9999] flex items-center justify-center"
+    onclick={onclose}
+    onkeydown={(e) => {
+      if (e.key === 'Escape') onclose();
+    }}
+  >
+    <div
+      role="presentation"
+      class="bg-card border border-border rounded-2xl overflow-hidden w-[350px] max-h-[80vh] shadow-2xl flex flex-col"
+      onclick={(e) => e.stopPropagation()}
+      onkeydown={(e) => e.stopPropagation()}
+    >
+      <div class="bg-gradient-to-r from-primary/20 to-primary/5 px-5 py-3 flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-2">
+          <Crosshair size={16} class="text-primary" />
+          <h3 class="text-base font-bold text-primary">{t('poi.title')}</h3>
+        </div>
+        <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label={t('error.close')}><X size={16} /></Button>
       </div>
-      <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label={t('error.close')}><X size={16} /></Button>
-    </div>
 
-    <div class="overflow-y-auto px-5 py-3 space-y-4">
-      {#if roiSet}
-        <div class="bg-muted/30 rounded-lg p-2">
-          <div class="text-[11px] font-semibold text-primary uppercase tracking-wider mb-1">ROI</div>
-          <div class="text-xs text-foreground font-mono">
-            {roiLat.toFixed(6)}, {roiLon.toFixed(6)}
+      <div class="overflow-y-auto px-5 py-3 space-y-4">
+        {#if roiSet}
+          <div class="bg-muted/30 rounded-lg p-2">
+            <div class="text-[11px] font-semibold text-primary uppercase tracking-wider mb-1">ROI</div>
+            <div class="text-xs text-foreground font-mono">
+              {roiLat.toFixed(6)}, {roiLon.toFixed(6)}
+            </div>
+            <div class="text-xs text-muted-foreground">{roiAlt}m</div>
           </div>
-          <div class="text-xs text-muted-foreground">{roiAlt}m</div>
-        </div>
-      {:else}
-        <div class="text-xs text-muted-foreground italic">{t('poi.notSet')}</div>
-      {/if}
+        {:else}
+          <div class="text-xs text-muted-foreground italic">{t('poi.notSet')}</div>
+        {/if}
 
-      <div class="flex flex-col gap-2">
-        <div class="flex items-center gap-2">
-          <label for="poi-lat" class="text-xs text-muted-foreground w-10 shrink-0">Lat</label>
-          <input
-            id="poi-lat"
-            type="number"
-            step="0.000001"
-            bind:value={lat}
-            class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50"
-          />
+        <div class="flex flex-col gap-2">
+          <div class="flex items-center gap-2">
+            <label for="poi-lat" class="text-xs text-muted-foreground w-10 shrink-0">Lat</label>
+            <input
+              id="poi-lat"
+              type="number"
+              step="0.000001"
+              bind:value={lat}
+              class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50"
+            />
+          </div>
+          <div class="flex items-center gap-2">
+            <label for="poi-lon" class="text-xs text-muted-foreground w-10 shrink-0">Lon</label>
+            <input
+              id="poi-lon"
+              type="number"
+              step="0.000001"
+              bind:value={lon}
+              class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50"
+            />
+          </div>
+          <div class="flex items-center gap-2">
+            <label for="poi-alt" class="text-xs text-muted-foreground w-10 shrink-0">Alt</label>
+            <input
+              id="poi-alt"
+              type="number"
+              min="0"
+              max="500"
+              step="5"
+              bind:value={alt}
+              class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50"
+            />
+            <span class="text-xs text-muted-foreground">m</span>
+          </div>
         </div>
-        <div class="flex items-center gap-2">
-          <label for="poi-lon" class="text-xs text-muted-foreground w-10 shrink-0">Lon</label>
-          <input
-            id="poi-lon"
-            type="number"
-            step="0.000001"
-            bind:value={lon}
-            class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50"
-          />
-        </div>
-        <div class="flex items-center gap-2">
-          <label for="poi-alt" class="text-xs text-muted-foreground w-10 shrink-0">Alt</label>
-          <input
-            id="poi-alt"
-            type="number"
-            min="0"
-            max="500"
-            step="5"
-            bind:value={alt}
-            class="flex-1 h-7 px-2 text-xs bg-input border border-border rounded-md text-foreground focus:outline-none focus:ring-1 focus:ring-ring/50"
-          />
-          <span class="text-xs text-muted-foreground">m</span>
-        </div>
-      </div>
 
-      {#if app.drone.connected}
-        <Button variant="outline" size="sm" class="w-full" onclick={prefillFromDrone}>{t('poi.dronePos')}</Button>
-      {/if}
+        {#if app.drone.connected}
+          <Button variant="outline" size="sm" class="w-full" onclick={prefillFromDrone}>{t('poi.dronePos')}</Button>
+        {/if}
 
-      <div class="flex gap-2">
-        <Button variant="default" class="flex-1" onclick={setRoi} disabled={!app.drone.connected}>
-          {t('poi.set')}
+        <Button variant="outline" size="sm" class="w-full" onclick={pickOnMap}>
+          <Crosshair size={14} class="mr-1" />{t('poi.pick')}
         </Button>
-        <!-- The vehicle may still hold an ROI set before this panel opened. -->
-        <Button variant="outline" class="flex-1" onclick={clearRoi} disabled={!app.drone.connected}>
-          {t('poi.clear')}
-        </Button>
-      </div>
 
-      <p class="text-[11px] text-muted-foreground text-center">{t('poi.hint')}</p>
+        <div class="flex gap-2">
+          <Button variant="default" class="flex-1" onclick={setRoi} disabled={!app.drone.connected}>
+            {t('poi.set')}
+          </Button>
+          <!-- The vehicle may still hold an ROI set before this panel opened. -->
+          <Button variant="outline" class="flex-1" onclick={clearRoi} disabled={!app.drone.connected}>
+            {t('poi.clear')}
+          </Button>
+        </div>
+
+        <p class="text-[11px] text-muted-foreground text-center">{t('poi.hint')}</p>
+      </div>
     </div>
   </div>
-</div>
+{/if}

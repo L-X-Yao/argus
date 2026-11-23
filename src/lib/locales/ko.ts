@@ -1112,6 +1112,8 @@ const messages: Record<string, string> = {
   'pid.rateFF': '레이트 FF',
   'poi.notSet': 'ROI: 미설정',
   'poi.dronePos': '드론 위치',
+  'poi.pick': '지도에서 선택',
+  'poi.pickHint': '지도를 클릭하여 관심 지점을 선택하세요. Esc로 취소합니다',
   'wp.gen': '생성',
   'conn.serialLost': '시리얼 연결 끊김',
   'conn.unsupportedFc': 'ArduPilot이 아닌 FC({fc}): 명령은 ArduPilot 전용이므로 비활성화되었습니다',

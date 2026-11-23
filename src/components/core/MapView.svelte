@@ -189,6 +189,14 @@
 
   function onMapClick(e: L.LeafletMouseEvent) {
     const ll = e.latlng;
+    // A POI pick claims the click before everything else: the panel handed the
+    // map over for exactly this click, and it must fill the panel, not draw.
+    if (app.poiPick) {
+      const [wlat, wlon] = fromMap(ll.lat, ll.lng);
+      app.poiPickPos = { lat: wlat, lon: wlon };
+      app.poiPick = false;
+      return;
+    }
     if (measuring) {
       addMeasurePoint(ll);
       return;
@@ -254,6 +262,8 @@
 
   function onKeyDown(e: KeyboardEvent) {
     if (e.key === 'Escape') {
+      // Recovery only: the POI panel owns the Esc path while it is mounted.
+      if (app.poiPick) app.poiPick = false;
       if (measuring) clearMeasure();
       if (app.guidedMode) {
         app.guidedMode = false;

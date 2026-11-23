@@ -900,6 +900,8 @@ const messages: Record<string, string> = {
   'poi.hint': '请输入坐标，或使用飞行器当前位置',
   'poi.notSet': 'ROI: 未设置',
   'poi.dronePos': '无人机位置',
+  'poi.pick': '在地图上选点',
+  'poi.pickHint': '在地图上点击选择兴趣点，Esc 取消',
   'corridor.title': '走廊航线',
   'corridor.width': '走廊宽度 (m)',
   'corridor.spacing': '航线间距 (m)',
