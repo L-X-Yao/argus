@@ -28,7 +28,7 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 | Area | Items | Real FC | SITL | Simulator | Tests only | None | n/a |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | Commands, backend | 55 | 22 | 27 | 0 | 6 | 0 | 0 |
-| Commands, WebSerial | 55 | 12 | 28 | 0 | 4 | 0 | 11 |
+| Commands, WebSerial | 55 | 14 | 26 | 0 | 4 | 0 | 11 |
 | Messages, backend | 35 | 28 | 3 | 0 | 4 | 0 | 0 |
 | Messages, WebSerial | 35 | 17 | 13 | 0 | 4 | 0 | 1 |
 | REST routes | 33 | 6 | 5 | 18 | 4 | 0 | 0 |
@@ -39,8 +39,8 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 
 | Command | Purpose | 作用 | Backend | WebSerial | Evidence |
 | --- | --- | --- | --- | --- | --- |
-| `arm` | Arm | 解锁 | Real FC | SITL | 2026-11-23 with v3.16.5 on a real FC, props removed: the arm ack arrived, the heartbeat reported armed, then disarm. CI on both links |
-| `disarm` | Disarm | 上锁 | Real FC | SITL | Backend 2026-07-16 and 2026-11-23 (v3.16.5 bench, after arm), WebSerial CI |
+| `arm` | Arm | 解锁 | Real FC | Real FC | 2026-11-23 with v3.16.5 on a real FC, props removed: backend and WebSerial both reached arm, the heartbeat reported armed, then disarm. WebSerial needed `FENCE_AUTOENABLE=0` for this indoor session, restored to 3 afterwards. CI on both links |
+| `disarm` | Disarm | 上锁 | Real FC | Real FC | Backend 2026-07-16 and 2026-11-23 (v3.16.5 bench, after arm); WebSerial 2026-11-23 disarmed after the arm and the heartbeat confirmed it. CI on both links |
 | `force_disarm` | Force disarm | 强制上锁 | SITL | SITL | CI on both links |
 | `mode` | Change mode | 切换模式 | Real FC | Real FC | Both 2026-11-06 on Windows, the command the FC answers: in about 0.3 s, and Stabilize put back. 2026-11-23 v3.16.5 bench: Loiter then Stabilize. CI on both links |
 | `rtl` | Return to launch | 返航 | SITL | SITL | CI on both links |
