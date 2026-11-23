@@ -92,6 +92,55 @@ test.describe('Mission planning', () => {
     }
   });
 
+  test('editing a survey replaces its grid and keeps the existing route', async ({ page }) => {
+    const map = page.locator('.leaflet-container').first();
+    const readWaypoints = () =>
+      page.evaluate(
+        () =>
+          JSON.parse(localStorage.getItem('argus_waypoints') || '[]') as {
+            lat: number;
+            lon: number;
+            survey?: boolean;
+          }[],
+      );
+    const clickMap = async (points: [number, number][]) => {
+      const box = (await map.boundingBox())!;
+      for (const [x, y] of points) await page.mouse.click(box.x + box.width * x, box.y + box.height * y);
+    };
+
+    await clickMap([[0.2, 0.2]]);
+    await expect.poll(async () => (await readWaypoints()).length).toBe(1);
+    const manual = (await readWaypoints())[0];
+
+    await page.locator('button.map-btn', { hasText: /测绘|Survey/ }).click();
+    await page.getByRole('button', { name: /在地图上绘制区域|Draw area on map/ }).click();
+    await clickMap([
+      [0.3, 0.3],
+      [0.7, 0.3],
+      [0.7, 0.65],
+      [0.3, 0.65],
+    ]);
+    await page.getByRole('button', { name: /完成绘制|Finish Drawing/ }).click();
+    const preview = page.getByText(/预计生成|Estimated/).locator('b');
+    await expect.poll(async () => Number(await preview.textContent())).toBeGreaterThan(1);
+    const firstCount = Number(await preview.textContent());
+    await page.getByRole('button', { name: /生成航线|Generate Route/ }).click();
+    await expect.poll(async () => (await readWaypoints()).length).toBe(1 + firstCount);
+
+    await page.getByRole('button', { name: /添加顶点|Add vertices/ }).click();
+    await clickMap([[0.2, 0.65]]);
+    await page.getByRole('button', { name: /完成绘制|Finish Drawing/ }).click();
+    await page.locator('#sv-angle').fill('45');
+    const secondCount = Number(await preview.textContent());
+    expect(secondCount).toBeGreaterThan(1);
+    await page.getByRole('button', { name: /生成航线|Generate Route/ }).click();
+
+    await expect.poll(async () => (await readWaypoints()).length).toBe(1 + secondCount);
+    const regenerated = await readWaypoints();
+    expect(regenerated[0]).toEqual(manual);
+    expect(regenerated.slice(1).every((wp) => wp.survey === true)).toBe(true);
+  });
+
   test('terrain follow refuses to rewrite heights without home', async ({ page }) => {
     await page.evaluate(() => {
       localStorage.setItem(

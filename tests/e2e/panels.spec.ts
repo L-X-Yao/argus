@@ -70,6 +70,45 @@ test.describe('Tool panels', () => {
   }
 });
 
+test.describe('Video panel', () => {
+  test('dragging beyond the viewport keeps the panel reachable', async ({ page }) => {
+    await connectSimulator(page);
+    await openFromPalette(page, 'tool-video');
+    const panel = page.getByRole('region', { name: label('ui.video') });
+    const toolbar = panel.getByRole('toolbar', { name: label('ui.videoControls') });
+    await expect(panel).toBeVisible();
+    const viewport = page.viewportSize()!;
+
+    async function dragTo(x: number, y: number) {
+      const box = (await toolbar.boundingBox())!;
+      await page.mouse.move(box.x + 24, box.y + box.height / 2);
+      await page.mouse.down();
+      await page.mouse.move(x, y, { steps: 8 });
+      await page.mouse.up();
+    }
+
+    await dragTo(1, 1);
+    let box = (await panel.boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x).toBeLessThanOrEqual(1);
+    expect(box.y).toBeGreaterThanOrEqual(0);
+    expect(box.y).toBeLessThanOrEqual(1);
+
+    await dragTo(viewport.width - 1, viewport.height - 1);
+    box = (await panel.boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(0);
+    expect(box.x + box.width).toBeLessThanOrEqual(viewport.width + 1);
+    const bar = (await toolbar.boundingBox())!;
+    expect(bar.y).toBeGreaterThanOrEqual(0);
+    expect(bar.y + bar.height).toBeLessThanOrEqual(viewport.height);
+
+    await panel.getByRole('button', { name: label('video.resetPosition') }).click();
+    box = (await panel.boundingBox())!;
+    expect(box.y).toBeCloseTo(8, 0);
+    expect(box.x + box.width).toBeCloseTo(viewport.width - 16, 0);
+  });
+});
+
 test.describe('Flight mode panel', () => {
   test('shows the six slots the FC reports', async ({ page }) => {
     await connectSimulator(page);

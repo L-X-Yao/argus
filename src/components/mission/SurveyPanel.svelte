@@ -16,17 +16,24 @@
 
   function generate() {
     if (polyPts.length < 3) return;
-    const wps = generateSurveyGrid(polyPts, { angle, spacing: app.surveySpacing, alt: app.defaultAlt, overshoot });
+    const wps = generateSurveyGrid(polyPts, { angle, spacing: app.surveySpacing, alt: app.defaultAlt, overshoot }).map(
+      (wp) => ({ ...wp, survey: true }),
+    );
     if (wps.length === 0) {
       addToast(t('survey.genFail'), 'warn');
       return;
     }
-    if (app.waypoints.length + wps.length > 500) {
+    // Regeneration replaces only the grid this panel owns. A route that was
+    // already planned keeps its place, and a later manual waypoint survives.
+    const firstSurvey = app.waypoints.findIndex((wp) => wp.survey === true);
+    const kept = app.waypoints.filter((wp) => wp.survey !== true);
+    if (kept.length + wps.length > 500) {
       addToast(t('mission.err.tooLarge'), 'error', 6000);
       return;
     }
     pushUndo();
-    app.waypoints = [...app.waypoints, ...wps];
+    app.waypoints =
+      firstSurvey < 0 ? [...kept, ...wps] : [...kept.slice(0, firstSurvey), ...wps, ...kept.slice(firstSurvey)];
     saveWaypoints();
     addToast(t('survey.genDone').replace('{n}', String(wps.length)), 'success');
   }

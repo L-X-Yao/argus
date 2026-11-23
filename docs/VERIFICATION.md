@@ -349,6 +349,7 @@ Real FC here means the route was in use during a session with a real flight cont
 - Arming and fence terms in German, Arabic and Russian have not been checked by a native speaker.
 - The AI assistant reads and proposes only. Its tools cannot arm, take off, start a mission or change to a mode other than return, hold and land. A mission or parameter change is refused while the vehicle is armed, and a flight command while it is not. An AI client that can also run commands on the computer, as Claude Code can, is not held to the tools.
 - Firmware flashing needs an `.apj` whose board id matches the bootloader's. A board whose bootloader reports a different id from its running firmware needs an image built for the bootloader; Argus refuses the mismatch instead of forcing it.
+- MAVLink `COMMAND_ACK` carries no request id. For the camera and ROI commands tracked by GimbalPanel, a second identical command sent after the first ACK can still be matched to a late duplicate ACK. The pending guard on these commands holds a same-command request until the first ACK, which bounds the ambiguity but cannot eliminate it.
 - On a screen narrower than 768 px, such as a phone held upright, logs, calibration, the 2D/3D switch and video are not shown. While a vehicle is connected, RTL and hold sit above the tabs, and in the Fly view the button for the flight controls (arming, modes) too. Most phones turned on their side are wider than that and get the desktop layout.
 
 - 模式列表来自 Argus 内置的表，每种机型一张。固件编译时去掉的模式仍会显示，选择时由飞控拒绝。
@@ -357,6 +358,7 @@ Real FC here means the route was in use during a session with a real flight cont
 - 德语、阿拉伯语和俄语里的解锁与围栏术语没有经过母语者校对。
 - AI 助手只能读取和提议，它的工具不能解锁、起飞、开始任务，也不能切换到返航、悬停、降落以外的模式。飞行器解锁时拒绝航线和参数修改，未解锁时拒绝飞行指令。能在本机执行命令的 AI 客户端（例如 Claude Code）不受这些工具的限制。
 - 固件刷写要求 `.apj` 的板型编号与 bootloader 报告的一致。bootloader 与当前固件报告不同编号的板子，需要按 bootloader 编号编译的固件；Argus 会拒绝不一致，不会强制写入。
+- MAVLink `COMMAND_ACK` 不携带请求 ID。对于云台面板跟踪的相机和 ROI 命令，第一条相同命令收到 ACK 后再发第二条时，迟到的重复 ACK 仍可能被归为第二条的结果。这些命令的 pending 守卫会让相同命令等待首个 ACK，缩小但不能消除这个歧义窗口。
 - 屏幕宽度小于 768 px 时（例如竖着拿的手机），不显示日志、校准、2D/3D 切换和视频。连上飞行器后，返航和悬停按钮在底部标签的上方，飞行视图里还有飞行操控（解锁、切换模式）按钮。多数手机横过来宽于 768 px，会变成电脑版布局。
 
 ## Keeping this file honest / 维护规则

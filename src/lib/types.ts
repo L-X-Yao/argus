@@ -142,6 +142,8 @@ export interface Waypoint {
   type: 'wp' | 'loiter_turns' | 'loiter_time' | 'spline';
   loiter_param: number;
   altMode?: AltMode;
+  /** SurveyPanel owns these generated points and replaces them when the grid is regenerated. */
+  survey?: boolean;
   /** ArduPilot's per-item params 3 and 4 (radius, yaw), kept across a download and upload. */
   p3?: number;
   p4?: number;

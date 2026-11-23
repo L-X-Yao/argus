@@ -102,6 +102,7 @@ export function cleanWaypoints(raw: unknown, defaultAlt: number): Waypoint[] {
       loiter_param: optional(item.loiter_param, 0, 'loiter_param'),
     };
     if (typeof item.altMode === 'string' && ALT_MODES.has(item.altMode)) wp.altMode = item.altMode as AltMode;
+    if (item.survey === true) wp.survey = true;
     const servo = command(item.cmd_servo, ['num', 'pwm'], 'cmd_servo');
     if (servo) wp.cmd_servo = servo;
     const roi = command(item.cmd_roi, ['lat', 'lon', 'alt'], 'cmd_roi');

@@ -161,6 +161,12 @@ describe('cleanWaypoints', () => {
     expect(cleanWaypoints(JSON.parse(JSON.stringify([saved, saved])), 30)).toEqual([saved, saved]);
   });
 
+  it('keeps survey ownership through a storage round trip', () => {
+    const [wp] = cleanWaypoints(JSON.parse(JSON.stringify([{ ...saved, survey: true }])), 30);
+    expect(wp.survey).toBe(true);
+    expect(cleanWaypoints([{ ...saved, survey: 'yes' }], 30)[0].survey).toBeUndefined();
+  });
+
   it('fills in what a file may leave out', () => {
     expect(cleanWaypoints([{ lat: 1, lon: 2 }], 45)).toEqual([
       { lat: 1, lon: 2, alt: 45, drop: false, delay: 0, speed: 0, type: 'wp', loiter_param: 0 },
