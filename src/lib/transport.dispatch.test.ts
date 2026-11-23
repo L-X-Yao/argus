@@ -251,6 +251,15 @@ describe('_serialDispatch wire-byte semantics', () => {
     expect(cmd.p2).toBe(21196);
   });
 
+  // ── log_erase: LOG_ERASE (121) ───────────────────────────────────────
+  it('log_erase sends LOG_ERASE (121) to the vehicle', () => {
+    dispatch('log_erase');
+    const { msgId, payload } = decodeFrame(writes[0], 2);
+    expect(msgId).toBe(121);
+    // AP_Logger_MAVLinkLogTransfer.cpp:56,161-169: target_system, target_component.
+    expect(Array.from(payload.slice(0, 2))).toEqual([1, 1]);
+  });
+
   // ── rtl: Plane=11, Copter=6 ──────────────────────────────────────────
   it('rtl on Plane sends custom_mode=11 (RTL, NOT 21=QRTL)', () => {
     _isPlaneFlag = true;

@@ -27,7 +27,7 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 
 | Area | Items | Real FC | SITL | Simulator | Tests only | None | n/a |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Commands, backend | 55 | 23 | 26 | 0 | 6 | 0 | 0 |
+| Commands, backend | 55 | 24 | 25 | 0 | 6 | 0 | 0 |
 | Commands, WebSerial | 55 | 14 | 26 | 0 | 4 | 0 | 11 |
 | Messages, backend | 35 | 28 | 3 | 0 | 4 | 0 | 0 |
 | Messages, WebSerial | 35 | 17 | 13 | 0 | 4 | 0 | 1 |
@@ -76,7 +76,7 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 | `log_list` | List logs | 日志列表 | Real FC | Real FC | Both 2026-11-06 on Windows. 2026-11-13: a lost last LOG_ENTRY is asked for again (3 s, 3 tries) and then reported, where the request waited forever (unit test); an empty log store (AP's dummy id 0, last 0, size 0) shows an empty list instead of a "#0" whose download saved nothing (contract test). The WebSerial link does all three too (vitest, 2026-11-13) |
 | `log_download` | Download a log | 下载日志 | Real FC | Real FC | Both 2026-11-06 on Windows, same sha256 on both links. 2026-11-13: a link that drops mid-download reports it as incomplete, where the panel sat at the last percentage (unit test); the WebSerial link delivers the bytes it received, flagged, instead of discarding them (vitest) |
 | `log_cancel` | Cancel a download | 取消下载 | SITL | SITL | CI on both links |
-| `log_erase` | Erase every onboard log | 擦除全部机载日志 | SITL | Tests only | 2026-11-21 on ArduCopter SITL 4.7.2: a 22 MB log was erased to 0 B; the controller kept a zero-length entry until reboot. The WebSerial builder is not wire-tested; not yet on a real FC |
+| `log_erase` | Erase every onboard log | 擦除全部机载日志 | Real FC | Tests only | 2026-11-21 on ArduCopter SITL 4.7.2: a 22 MB log was erased to 0 B; the controller kept a zero-length entry until reboot. 2026-11-23 on a real FC through the backend link: 15 logs (largest 23.5 MB) erased, the next list showed none. The WebSerial builder is wire-tested (vitest, 2026-11-23) but has not run on hardware |
 | `reboot` | Reboot the FC | 重启飞控 | Real FC | Real FC | Both 2026-11-06 on Windows, disarmed. WebSerial comes back by the USB button, the backend by itself |
 | `reboot_bootloader` | Reboot to bootloader | 重启到 Bootloader | SITL | SITL | CI on both links |
 | `firmware_flash` | Write an .apj through the bootloader | 刷写固件 | Real FC | n/a | 2026-11-20 through the packaged Windows build on a real FC, disarmed: identified the bootloader, erased, programmed 1.29 MB, verified the CRC, rebooted and reconnected; the rebooted firmware reported the new git hash. Earlier the same day, an .apj for another board was refused before erasing, and the controller rebooted and reconnected |
