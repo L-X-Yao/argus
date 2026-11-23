@@ -115,6 +115,62 @@ test('a refused arm shows an error', async () => {
   await expect(page.getByText(/解锁\/锁定 — 失败|Arm\/Disarm — failed/).first()).toBeVisible();
 });
 
+test('log_erase wipes the logs, and the next list holds nothing of them', async () => {
+  // A log to erase: one is written while armed and closed at disarm
+  // (LOG_DISARMED), LOG_BITMASK 65535 logs everything. This runs before the
+  // flight on purpose: arming again after the command loops late in this
+  // session meets the compass-calibration state those leave, which is their
+  // business to test, not ours.
+  //
+  // The simulated pack's charge depends on how long earlier tests spent
+  // armed, so the arm is gated on nothing of it: BATT_ARM_VOLT 0 disables the
+  // arming voltage check (preflight.ts reads the same parameter), and the
+  // battery failsafes stay off for the rest of the session — a drained pack
+  // must not turn a later flight into an RTL of its own.
+  for (const [name, value] of [
+    ['BATT_ARM_VOLT', 0],
+    ['BATT_LOW_VOLT', 0],
+    ['BATT_CRT_VOLT', 0],
+    ['BATT_LOW_MAH', 0],
+  ] as const) {
+    await send('param_set', undefined, { name, value });
+  }
+  await send('param_set', undefined, { name: 'LOG_BITMASK', value: 65535 });
+  await send('param_set', undefined, { name: 'LOG_DISARMED', value: 1 });
+  await setMode(MODE.guided);
+  await armWhenReady();
+  expect(await ackOf(400, 'disarm')).toBe(ACCEPTED);
+  await expect.poll(() => drone<boolean>('armed'), { timeout: 15000 }).toBe(false);
+
+  const listed = await page.evaluate(async () => {
+    const url = '/src/lib/transport.ts';
+    const { serialLogList } = await import(/* @vite-ignore */ url);
+    return serialLogList();
+  });
+  expect(listed).toEqual({ ok: true });
+  expect(sitl.logIds.length).toBeGreaterThan(0);
+
+  // Continuous logging stays off, so the erase is not racing a fresh log.
+  await send('param_set', undefined, { name: 'LOG_DISARMED', value: 0 });
+
+  // LOG_ERASE (121) is a message, not a command: the FC answers nothing
+  // (AP_Logger_MAVLinkLogTransfer.cpp:163 handle_log_request_erase goes
+  // straight to EraseAll), so the proof is the list that follows it.
+  await send('log_erase');
+  const after = await page.evaluate(async () => {
+    const url = '/src/lib/transport.ts';
+    const { serialLogList } = await import(/* @vite-ignore */ url);
+    const r = await serialLogList();
+    await new Promise((res) => setTimeout(res, 1000));
+    const store = await import(/* @vite-ignore */ '/src/lib/logStore.svelte.ts');
+    return { r, sizes: store.logState.list.map((e: { size: number }) => e.size) };
+  });
+  expect(after.r).toEqual({ ok: true });
+  // A real FC lists nothing at all; SITL keeps a zero-length entry until it
+  // reboots. Both mean the logs are gone.
+  expect(after.sizes.length === 0 || after.sizes.every((s: number) => s === 0)).toBe(true);
+});
+
 test('arms, takes off and flies to a point', async () => {
   await setMode(MODE.guided);
   await armWhenReady();
@@ -352,45 +408,6 @@ test('log_cancel stops a download', async () => {
   const settled = sitl.logDataFrames();
   await page.waitForTimeout(1500);
   expect(sitl.logDataFrames()).toBe(settled);
-});
-
-test('log_erase wipes the logs, and the next list holds nothing of them', async () => {
-  // A log to erase: one is written while armed and closed at disarm
-  // (LOG_DISARMED), LOG_BITMASK 65535 logs everything.
-  await send('param_set', undefined, { name: 'LOG_BITMASK', value: 65535 });
-  await send('param_set', undefined, { name: 'LOG_DISARMED', value: 1 });
-  await setMode(MODE.guided);
-  await armWhenReady();
-  expect(await ackOf(400, 'disarm')).toBe(ACCEPTED);
-  await expect.poll(() => drone<boolean>('armed'), { timeout: 15000 }).toBe(false);
-
-  const listed = await page.evaluate(async () => {
-    const url = '/src/lib/transport.ts';
-    const { serialLogList } = await import(/* @vite-ignore */ url);
-    return serialLogList();
-  });
-  expect(listed).toEqual({ ok: true });
-  expect(sitl.logIds.length).toBeGreaterThan(0);
-
-  // Continuous logging stays off, so the erase is not racing a fresh log.
-  await send('param_set', undefined, { name: 'LOG_DISARMED', value: 0 });
-
-  // LOG_ERASE (121) is a message, not a command: the FC answers nothing
-  // (AP_Logger_MAVLinkLogTransfer.cpp:163 handle_log_request_erase goes
-  // straight to EraseAll), so the proof is the list that follows it.
-  await send('log_erase');
-  const after = await page.evaluate(async () => {
-    const url = '/src/lib/transport.ts';
-    const { serialLogList } = await import(/* @vite-ignore */ url);
-    const r = await serialLogList();
-    await new Promise((res) => setTimeout(res, 1000));
-    const store = await import(/* @vite-ignore */ '/src/lib/logStore.svelte.ts');
-    return { r, sizes: store.logState.list.map((e: { size: number }) => e.size) };
-  });
-  expect(after.r).toEqual({ ok: true });
-  // A real FC lists nothing at all; SITL keeps a zero-length entry until it
-  // reboots. Both mean the logs are gone.
-  expect(after.sizes.length === 0 || after.sizes.every((s: number) => s === 0)).toBe(true);
 });
 
 test('reboot is accepted', async () => {
