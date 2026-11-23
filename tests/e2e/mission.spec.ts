@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { connectSimulator, disconnectIfConnected, openPalette } from './helpers';
 
 test.describe('Mission planning', () => {
   test.beforeEach(async ({ page }) => {
@@ -117,5 +118,80 @@ test.describe('Mission planning', () => {
       JSON.parse(localStorage.getItem('argus_waypoints') || '[]').map((w: { alt: number }) => w.alt),
     );
     expect(heights).toEqual([50, 60]);
+  });
+
+  test('editing a survey replaces its grid and keeps the existing route after a download', async ({ page }) => {
+    const map = page.locator('.leaflet-container').first();
+    await connectSimulator(page);
+    await page
+      .locator('nav button', { hasText: /规划|Plan/ })
+      .first()
+      .click();
+    await expect(map).toBeVisible();
+    const readWaypoints = () =>
+      page.evaluate(
+        () =>
+          JSON.parse(localStorage.getItem('argus_waypoints') || '[]') as {
+            lat: number;
+            lon: number;
+            survey?: boolean;
+            p3?: number;
+          }[],
+      );
+    const clickMap = async (points: [number, number][]) => {
+      const box = (await map.boundingBox())!;
+      for (const [x, y] of points) await page.mouse.click(box.x + box.width * x, box.y + box.height * y);
+    };
+
+    await clickMap([[0.2, 0.2]]);
+    await expect.poll(async () => (await readWaypoints()).length).toBe(1);
+
+    await page.locator('button.map-btn', { hasText: /测绘|Survey/ }).click();
+    await page.getByRole('button', { name: /在地图上绘制区域|Draw area on map/ }).click();
+    await clickMap([
+      [0.3, 0.3],
+      [0.7, 0.3],
+      [0.7, 0.65],
+      [0.3, 0.65],
+    ]);
+    await page.getByRole('button', { name: /完成绘制|Finish Drawing/ }).click();
+    const preview = page.getByText(/预计生成|Estimated/).locator('b');
+    await expect.poll(async () => Number(await preview.textContent())).toBeGreaterThan(1);
+    const firstCount = Number(await preview.textContent());
+    await page.getByRole('button', { name: /生成航线|Generate Route/ }).click();
+    await expect.poll(async () => (await readWaypoints()).length).toBe(1 + firstCount);
+
+    // An upload/download round trip drops UI-only metadata. The download
+    // restores grid ownership from the local points, so Generate cannot append it.
+    const upload = page.getByRole('button', { name: /^上传$|^Upload$/ });
+    await upload.click();
+    await expect(upload).toBeEnabled({ timeout: 15000 });
+    const palette = await openPalette(page);
+    await palette.locator('input').fill('mission-download');
+    await page.waitForTimeout(300);
+    await page.keyboard.press('Enter');
+    await expect.poll(async () => (await readWaypoints()).every((wp) => wp.p3 !== undefined)).toBe(true);
+    const downloaded = await readWaypoints();
+    expect(downloaded).toHaveLength(1 + firstCount);
+    expect(downloaded[0].survey).toBeUndefined();
+    expect(downloaded.slice(1).every((wp) => wp.survey === true)).toBe(true);
+
+    await page.getByRole('button', { name: /添加顶点|Add vertices/ }).click();
+    await clickMap([[0.2, 0.65]]);
+    await page.getByRole('button', { name: /完成绘制|Finish Drawing/ }).click();
+    await page.locator('#sv-angle').fill('45');
+    const secondCount = Number(await preview.textContent());
+    expect(secondCount).toBeGreaterThan(1);
+    await page.getByRole('button', { name: /生成航线|Generate Route/ }).click();
+
+    await expect.poll(async () => (await readWaypoints()).length).toBe(1 + secondCount);
+    const regenerated = await readWaypoints();
+    expect(regenerated[0]).toEqual(downloaded[0]);
+    expect(regenerated.slice(1).every((wp) => wp.survey === true)).toBe(true);
+    await page
+      .locator('nav button', { hasText: /飞行|Fly/ })
+      .first()
+      .click();
+    await disconnectIfConnected(page);
   });
 });
