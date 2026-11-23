@@ -52,7 +52,7 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 | `drop_stop` | Stop release | 停止投放 | SITL | SITL | CI on both links |
 | `do_set_roi` | Set region of interest | 设置兴趣点 | SITL | SITL | CI on both links |
 | `rc_override` | RC override | 遥控覆盖 | SITL | SITL | CI on both links |
-| `motor_test` | Motor test | 电机测试 | Real FC | SITL | Backend 2026-05, WebSerial CI |
+| `motor_test` | Motor test | 电机测试 | Real FC | SITL | Backend 2026-05; 2026-11-23 with v3.16.5 on a real FC, props removed: motor #1 at 5% for 1 s, command ack, heartbeat armed during the test and disarmed after "finished motor test". WebSerial CI |
 | `motor_test_stop` | Stop motor test | 停止电机测试 | SITL | SITL | CI on both links |
 | `mission_upload` | Upload mission | 上传航线 | Real FC | Real FC | WebSerial 2026-11-05, backend 2026-05, CI. 2026-11-14 backend on a real FC: a 3-waypoint route, acknowledged, and read back by pymavlink as takeoff, speed, 3 waypoints and RTL |
 | `mission_download` | Download mission | 下载航线 | Real FC | Real FC | Both 2026-11-05. 2026-11-13: the rebuilt list maps every waypoint to its MAVLink seq, and keeps the camera, servo, ROI, yaw and VTOL items and p3/p4, which a download then upload used to delete (contract tests). 2026-11-14 on a real FC through the backend: download, upload that download again, download once more, the same 3 waypoints each time |
