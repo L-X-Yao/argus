@@ -19,15 +19,16 @@ One person may not fill every role on a first flight. Agree on the abort call be
 - Use one GCS at a time. Close other ground stations and MAVLink clients.
 - Props on only outdoors, with the pilot ready and the area clear.
 
-## Release check at v3.16.5
+## Release check at v3.16.6
 
 Before the first flight on this release, with the vehicle on the bench:
 
-1. Settings shows **3.16.5**. The parameter pack is `data-v2026.11.6`.
+1. Settings shows **3.16.6**. The parameter pack is `data-v2026.11.6`.
 2. Read all parameters. On the test Copter this is about 1,396 names; the panel should show Chinese descriptions for the flight parameters, not an `EN` fallback.
 3. Check two 4.7 renames resolve through aliases: `SR0_ADSB` and `CAM_RC_TYPE` should show the same descriptions as `MAV1_ADSB` and `CAM1_RC_TYPE`.
 4. Disconnect the network and reopen the parameter panel: the bundled descriptions must still appear.
-5. Logs: list and download one log before trying Erase All. Erase All is irreversible and is not part of the first flight.
+5. Calibration: run the gyro calibration from the panel. It must end by itself on the flight controller's answer, with no message and no Cancel; the barometer run then ends on "Barometer calibration complete".
+6. Logs: list and download one log before trying Erase All. Erase All is irreversible and is not part of the first flight.
 
 ## Bench check, props off
 
