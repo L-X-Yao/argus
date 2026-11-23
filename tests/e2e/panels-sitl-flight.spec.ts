@@ -104,6 +104,9 @@ test('AutoTune refuses on the ground, with the axes written', async () => {
   await page.waitForTimeout(1000);
   expect(probe.mode).not.toBe(15); // ArduCopter/mode_autotune.cpp:17: not while landed
   await expect(page.getByText(/模式 — 失败/).first()).toBeVisible();
+  // The FC's own sentence names the reason (ArduCopter/mode.cpp:175), and the
+  // panel shows it instead of a success toast.
+  await expect(dialog.getByText(/Mode change to .* failed/)).toBeVisible({ timeout: 10000 });
 
   await dialog.getByRole('button', { name: label('autotune.all') }).click();
   await dialog.getByRole('button', { name: label('autotune.start'), exact: true }).click();
@@ -121,6 +124,28 @@ test('Takeoff climbs to the height set, from whatever mode it was armed in', asy
   // A pilot's throttle sits in the middle in the air. SITL's sits at the bottom, which in
   // LOITER, the mode Pause uses, would bring the vehicle down.
   pilot = setInterval(() => probe.sticks([0, 0, 1500, 0, 0, 0, 0, 0]), 100);
+});
+
+test('AutoTune starts only after the FC confirms the mode, and Stop returns it', async () => {
+  // AutoTune can only be entered from some modes (mode_autotune.cpp
+  // allows_autotune), and GUIDED is not one: Pause puts it in LOITER first.
+  await button('ctrl.pauseMission').click();
+  await expect.poll(() => probe.mode).toBe(LOITER);
+  const dialog = await tool(page, 'tool-autotune', label('autotune.title'));
+  await expect(dialog.getByText(`AutoTune ${label('cal.active')}`)).toHaveCount(0);
+
+  await dialog.getByRole('button', { name: label('autotune.start'), exact: true }).click();
+  // Success is the ACK plus a heartbeat carrying the mode: the readback first,
+  // then the panel's own success toast.
+  await expect.poll(() => probe.mode, { timeout: 20000 }).toBe(15);
+  await expect(page.getByRole('complementary').getByText(label('autotune.start'))).toBeVisible();
+  await expect(dialog.getByText(`AutoTune ${label('cal.active')}`)).toBeVisible();
+
+  await dialog.getByRole('button', { name: label('autotune.stop'), exact: true }).click();
+  await expect.poll(() => probe.mode, { timeout: 20000 }).toBe(LOITER);
+  await expect(page.getByRole('complementary').getByText(label('autotune.stop'))).toBeVisible();
+  await expect(dialog.getByText(`AutoTune ${label('cal.active')}`)).toHaveCount(0);
+  await close(page, dialog);
 });
 
 test('a point of interest turns the vehicle, and clearing it lets go', async () => {
