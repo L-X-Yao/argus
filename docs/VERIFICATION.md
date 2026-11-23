@@ -33,7 +33,7 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 | Messages, WebSerial | 35 | 17 | 13 | 0 | 4 | 0 | 1 |
 | REST routes | 33 | 6 | 5 | 18 | 4 | 0 | 0 |
 | Panels | 78 | 14 | 34 | 19 | 11 | 0 | 0 |
-| Platform | 50 | 9 | 14 | 13 | 10 | 2 | 2 |
+| Platform | 50 | 10 | 13 | 13 | 10 | 2 | 2 |
 
 ## Commands / 飞控命令
 
@@ -285,7 +285,7 @@ Real FC here means the route was in use during a session with a real flight cont
 | PWA and offline use | PWA 和离线 | Simulator | e2e, and real Edge on Windows 2026-11-06 |
 | Several browser clients | 多浏览器客户端 | Simulator | Integration tests. 2026-11-13: a page without command authority can no longer connect or disconnect the shared vehicle link, a mission download's model goes to the page that asked for it only, and a value another tab saved is applied here instead of being written back over (unit tests). The backend text's language is the operator's: another page's locale is ignored, and two pages record one flight once (unit tests) |
 | A phone or tablet on the network | 局域网里的手机或平板 | Simulator | A phone-sized touch browser on a network address 2026-11-11: token login, live telemetry and a parameter read upright, a mode change on its side. e2e: a page the backend does not list is told so at the login; upright, RTL asks for the slide, hold sends the mode command, the flight controls open and close, and nothing lies over the events bar. No real phone |
-| AI assistant (MCP) | AI 助手（MCP） | SITL | Unit tests of the MCP server in both protocol eras, and through the real backend over its websocket; a .tlog summarised from frames the tests build, where a gimbal's heartbeat and a second aircraft on the link are not counted. 2026-11-20: the page's own preflight checks are read through get_preflight; unit tests cover the thresholds, a failed critical check, and a critical check the operator hid. Two test-built .tlogs are compared metric by metric, with second-minus-first deltas, battery start/end values, counts beyond the returned list caps, missing values, and path and size guards on both names. e2e: an MCP client starts the server, the page answers it, and an operator approves a mission and a parameter against the built-in simulator, declines one, and one is withdrawn. panels-sitl: the flight commands on ArduCopter SITL, refused on the ground, then hold, RTL and land in flight, each approved and slid, read back from the firmware's heartbeat. By hand 2026-11-13: Claude Code, a real MCP client, read the status, proposed a mission, had it approved in the page, and got done with 1 waypoint on the built-in simulator. No real FC |
+| AI assistant (MCP) | AI 助手（MCP） | Real FC | Unit tests of the MCP server in both protocol eras, and through the real backend over its websocket; a .tlog summarised from frames the tests build, where a gimbal's heartbeat and a second aircraft on the link are not counted. 2026-11-20: the page's own preflight checks are read through get_preflight; unit tests cover the thresholds, a failed critical check, and a critical check the operator hid. Two test-built .tlogs are compared metric by metric, with second-minus-first deltas, battery start/end values, counts beyond the returned list caps, missing values, and path and size guards on both names. e2e: an MCP client starts the server, the page answers it, and an operator approves a mission and a parameter against the built-in simulator, declines one, and one is withdrawn. panels-sitl: the flight commands on ArduCopter SITL, refused on the ground, then hold, RTL and land in flight, each approved and slid, read back from the firmware's heartbeat. By hand 2026-11-13: Claude Code, a real MCP client, read the status, proposed a mission, had it approved in the page, and got done with 1 waypoint on the built-in simulator. 2026-11-23 over the backend link on a real FC: get_status, get_preflight, a parameter read, two operator-approved parameter writes (WP_YAW_BEHAVIOR -1 to 2 and back), a flight command refused while disarmed, a mission proposal withdrawn before approval, and analyze_flight and compare_flights on real .tlog files. A flight command or an approved mission on a real FC remains untested |
 | Video and AR overlay | 视频和 AR 叠加 | Simulator | Integration tests, and real ffmpeg on an HTTP test stream 2026-11-10. 2026-11-14: a real RTSP server (MediaMTX), H.264 over TCP, moving 640x480 frames in the panel. No physical camera |
 | Token login | Token 登录 | Simulator | e2e, real Windows each release |
 | Windows package | Windows 发布包 | Simulator | CI builds and smoke-tests it on every push. The release workflow starts the zip it is about to publish on a Windows runner, and publishes nothing if that fails. Real Windows each release |
@@ -322,24 +322,24 @@ Real FC here means the route was in use during a session with a real flight cont
 ## Not verified yet, by risk / 未验证项（按风险排序）
 
 1. **Real flight.** Nothing has flown. Everything below is a bench or simulation result at best.
-2. **Arm, take off, RTL and mission start on a real FC.** These have only run in SITL. They need a battery, so they need a separate, deliberate session.
+2. **Take off, RTL and mission start on a real FC.** Arm and disarm ran on a real FC on 2026-11-23 (bench, props off); these three have only run in SITL. They need a battery and a pilot, so they need a separate, deliberate session.
 3. **A whole calibration on a real FC.** Compass start and cancel ran on both links 2026-11-06. A whole run needs the board turned by hand.
 4. **RTK, gimbal, camera and ADS-B.** These need hardware that has not been available.
 5. **Vehicles other than Copter on real hardware.** Plane, QuadPlane, Rover and Sub run whole missions in SITL in CI through the backend. None has been on a real board since the 2026-05 telemetry check.
 6. **Chrome itself on Windows.** Edge on Windows ran through the real port chooser 2026-11-06. Chrome was not on that machine.
 7. **Video from a real camera.** ffmpeg turned an HTTP test stream into frames 2026-11-10. 2026-11-14 a real RTSP server (MediaMTX, H.264 over TCP) played in the panel: 640x480, frames moving, no console errors. No physical camera has been on it, and neither UDP transport nor a vendor-specific stream has been tried.
 8. **A real phone or tablet.** A phone-sized touch browser opened Argus at a network address 2026-11-11. No real phone has, and neither Safari on iOS nor the browser inside a chat app has been tried.
-9. **The AI assistant with a real AI client and a real FC.** Its tests use a plain MCP client, the built-in simulator and ArduCopter SITL. Claude Code, a real MCP client, drove it by hand on 2026-11-13: status read, a proposed mission approved in the page and uploaded to the built-in simulator. Claude Desktop has not been tried, and no proposal has reached a real flight controller.
+9. **The AI assistant's flight command or mission on a real FC, and Claude Desktop.** Claude Code, a real MCP client, drove it by hand on 2026-11-13 against the built-in simulator (status read, a proposed mission approved in the page and uploaded) and on 2026-11-23 against a real FC over the backend link: status, preflight and a parameter read, two approved parameter writes, a flight command refused while disarmed, and a mission proposal withdrawn before approval. Claude Desktop has not been tried, and no flight command or approved mission has run on a real FC.
 
 1. **真实飞行。** 没有飞过。下面都只是台架或仿真结果。
-2. **真机上的解锁、起飞、返航、开始任务。** 只在 SITL 跑过。这些需要接电池，要单独安排。
+2. **真机上的起飞、返航、开始任务。** 解锁和上锁已于 2026-11-23 在真机台架（去桨）验证，这三项目前只在 SITL 跑过。需要接电池并有飞手，要单独安排。
 3. **真机上的完整校准。** 2026-11-06 两条链路都跑过罗盘的启动和取消，完整校准需要手动翻转板子。
 4. **RTK、云台、相机、ADS-B。** 缺硬件。
 5. **多旋翼以外机型上真机。** 固定翼、QuadPlane、地面车、水下机器人在 CI 里经后端跑完整任务（SITL）。除 2026-05 的遥测检查外，都没有接过真实飞控。
 6. **Windows 上的 Chrome 本身。** 2026-11-06 已用 Windows 上的 Edge 走真实端口弹窗，那台机器没有装 Chrome。
 7. **真实相机的视频。** 2026-11-10 用 ffmpeg 把一路 HTTP 测试流转成了画面。2026-11-14 用真实 RTSP 服务器（MediaMTX）推 H.264 over TCP 进页面：640x480、画面在动、无控制台错误。没有接过物理相机，UDP 传输和厂商私有流也都没试过。
 8. **真实的手机或平板。** 2026-11-11 用手机尺寸的触屏浏览器在局域网地址上打开过 Argus。没有用过真实手机，iOS 上的 Safari 和聊天软件内置的浏览器也都没有试过。
-9. **用真实飞控运行 AI 助手，以及用 Claude Desktop。** 测试用的是一个最简单的 MCP 客户端、内置模拟器和 ArduCopter SITL。2026-11-13 已用 Claude Code（真实 MCP 客户端）手工跑通一次：读取状态、在页面批准一条提议航线并上传到内置模拟器。Claude Desktop 尚未试过，提议也还没有到达过真实飞控。
+9. **AI 助手的飞行指令或航线在真实飞控上执行，以及 Claude Desktop。** 2026-11-13 用 Claude Code（真实 MCP 客户端）对内置模拟器手工跑通：读取状态、在页面批准一条提议航线并上传。2026-11-23 对真实飞控（后端链路）跑通：状态、预检、参数读取，两次页面批准的参数写入；未解锁时飞行指令被拒绝，一条航线提议在批准前撤回。Claude Desktop 尚未试过，飞行指令和已批准航线还没有在真实飞控上执行过。
 
 ## Known limits / 已知限制
 
