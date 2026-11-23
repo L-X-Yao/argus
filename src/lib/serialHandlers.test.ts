@@ -383,4 +383,15 @@ describe('no answer', () => {
     );
     expect(H.events.at(-1)).toMatchObject({ event_type: 'cmd_ack_ok', cmd: 176 });
   });
+
+  it('reports a successful calibration, whose ack is its completion', () => {
+    H.events.length = 0;
+    (buildSerialHandlers() as SerialHandlers).onCommandAck!(
+      { command: 241, result: 0 } as never,
+      {
+        payloadLen: 3,
+      } as MavFrame,
+    );
+    expect(H.events.at(-1)).toMatchObject({ event_type: 'cmd_ack_ok', cmd: 241 });
+  });
 });

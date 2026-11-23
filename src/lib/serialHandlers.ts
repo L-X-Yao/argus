@@ -53,7 +53,10 @@ const ACK_RESULTS: Record<number, string> = {
   7: 'ack.result.commandLongOnly',
   8: 'ack.result.commandIntOnly',
 };
-const ACK_QUIET_ON_SUCCESS = new Set([241, 42424, 42425, 42426]);
+// 241 is not quiet: gyro and level calibration answer ACCEPTED after the routine returns
+// and send no STATUSTEXT (ArduPilot GCS_Common.cpp:4895-4904), so the panel reads that ACK
+// as done. The compass commands answer at the start of their work.
+const ACK_QUIET_ON_SUCCESS = new Set([42424, 42425, 42426]);
 // The connect-time requests of requestStreams, as in backend handle_command_ack.
 const ACK_QUIET = new Set([511, 512]);
 

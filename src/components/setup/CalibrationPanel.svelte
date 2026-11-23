@@ -111,6 +111,14 @@
     if (!calRunStartTime) return false;
     return app.events.some((e) => e.time >= calRunStartTime && e.event_type === 'cmd_ack_fail');
   });
+  // Gyro and level (MAV_CMD_PREFLIGHT_CALIBRATION, 241) are answered ACCEPTED after the
+  // routine returns, and ArduPilot sends no STATUSTEXT for either (GCS_Common.cpp:4895-4904;
+  // level is AP_InertialSensor::calibrate_trim). eventInRun drops ack texts from the message
+  // log, so completion is read from the ack itself, as the failure ack already is.
+  let calAckDone = $derived.by(() => {
+    if (!calRunStartTime) return false;
+    return app.events.some((e) => e.time >= calRunStartTime && e.event_type === 'cmd_ack_ok' && e.cmd === 241);
+  });
 
   function eventInRun(ev: { time: string; text: string; event_type?: string }): boolean {
     if (!calRunStartTime) return false;
@@ -205,10 +213,10 @@
   let accelActive = $derived(accelParsed.active);
   let accelDoneCount = $derived(accelOrients.filter((o) => accelSteps[o.id] === 'done').length);
 
-  /* ── Gyro/level/baro: simple done detector. Skips the "开始" event itself. ── */
+  /* ── Gyro/level/baro: ACK or message. Skips the "开始" event itself. ── */
   let simpleCalDone = $derived.by(() => {
     if (selected === 'compass' || selected === 'accel') return { done: false, failed: false };
-    let done = false,
+    let done = calAckDone,
       failed = false;
     for (const ev of app.events) {
       if (!eventInRun(ev)) continue;

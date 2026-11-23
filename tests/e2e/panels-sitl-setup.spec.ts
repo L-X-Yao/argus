@@ -115,6 +115,19 @@ test.describe('Motor test panel', () => {
 });
 
 test.describe('Calibration', () => {
+  test('gyro calibration ends on the flight controller answer', async () => {
+    // ArduPilot answers 241 ACCEPTED after the gyro routine returns and sends no
+    // STATUSTEXT for it (GCS_Common.cpp:4895-4904): until the ack was read as done the
+    // panel stayed at "calibrating" and the operator had to press Cancel.
+    await page.getByRole('button', { name: label('nav.calibrate') }).click();
+    const calibration = dialogOf(page, label('cal.title'));
+    await calibration.getByRole('button', { name: label('cal.gyro') }).click();
+    await calibration.getByRole('button', { name: label('cal.start') }).click();
+    await expect(calibration.getByText(label('cal.inProgress'))).toHaveCount(0, { timeout: 20000 });
+    await expect(calibration.getByRole('button', { name: label('cal.start') })).toBeEnabled();
+    await close(page, calibration);
+  });
+
   test('opens with the same line twice in the log', async () => {
     // A start and a stop inside one second give two identical answers from the FC, and
     // the panel lists them. A keyed list threw on that and the panel never came up.

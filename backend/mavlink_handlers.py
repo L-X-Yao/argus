@@ -315,7 +315,12 @@ def handle_command_ack(p: bytes, pl: int, link: DroneLink) -> None:
     # (GCS_Common.cpp:1463 send_in_progress, :1468 conclude).
     if result == 5:
         return
-    if result == 0 and cmd_id in (241, 42424, 42425, 42426):
+    # A calibration (241) is the one command whose ACK is its only completion signal:
+    # ArduPilot answers gyro (param1=1) and level (param5=4) with ACCEPTED after the
+    # routine returns and sends no STATUSTEXT for either (GCS_Common.cpp:4895-4904;
+    # level is AP_InertialSensor::calibrate_trim). The CalibrationPanel reads this ACK
+    # as done. The compass commands answer at the start of their work and stay quiet.
+    if result == 0 and cmd_id in (42424, 42425, 42426):
         return
     # The connect-time requests of request_streams, which nobody clicked. A build
     # without terrain or a mount answers DENIED for those messages

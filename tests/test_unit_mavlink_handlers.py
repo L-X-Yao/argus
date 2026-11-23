@@ -505,17 +505,24 @@ class TestMagCalReport:
 
 
 # ---------------------------------------------------------------------------
-# Command ack: calibration suppression
+# Command ack: calibration
 # ---------------------------------------------------------------------------
 
 
 class TestCommandAckCalibrationSuppression:
-    def test_cal_success_suppressed(self):
-        """CMD 241 (cal) with result=0 (success) should NOT generate an event."""
+    def test_cal_success_reported_as_done(self):
+        """CMD 241 (cal) result=0 IS the completion of a gyro or level run.
+
+        ArduPilot answers 241 with ACCEPTED after the routine returns and sends no
+        STATUSTEXT for gyro or level (GCS_Common.cpp:4895-4904), so the CalibrationPanel
+        reads this ack as done.
+        """
         link = make_link()
         p = struct.pack("<HB", 241, 0)
         handle_command_ack(p, len(p), link)
-        assert len(link.events) == 0
+        assert len(link.events) == 1
+        assert link.events[0]["event_type"] == "cmd_ack_ok"
+        assert link.events[0]["cmd"] == 241
 
     def test_compass_cal_success_suppressed(self):
         """CMD 42424 (compass cal) with result=0 should NOT generate an event."""

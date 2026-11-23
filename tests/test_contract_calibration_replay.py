@@ -43,9 +43,12 @@ def _replay_capturing_events(path: str, started_here: bool = True):
     captured: list[dict] = []
     orig = link.add_event
 
-    def tap(text: str, event_type: str = "") -> None:
-        captured.append({"text": text, "event_type": event_type})
-        orig(text, event_type)
+    def tap(text: str, event_type: str = "", cmd: int | None = None) -> None:
+        entry = {"text": text, "event_type": event_type}
+        if cmd is not None:
+            entry["cmd"] = cmd
+        captured.append(entry)
+        orig(text, event_type, cmd=cmd)
 
     link.add_event = tap
     fed = replay_into(link, path)

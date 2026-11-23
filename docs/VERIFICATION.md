@@ -27,7 +27,7 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 
 | Area | Items | Real FC | SITL | Simulator | Tests only | None | n/a |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| Commands, backend | 55 | 22 | 27 | 0 | 6 | 0 | 0 |
+| Commands, backend | 55 | 23 | 26 | 0 | 6 | 0 | 0 |
 | Commands, WebSerial | 55 | 14 | 26 | 0 | 4 | 0 | 11 |
 | Messages, backend | 35 | 28 | 3 | 0 | 4 | 0 | 0 |
 | Messages, WebSerial | 35 | 17 | 13 | 0 | 4 | 0 | 1 |
@@ -65,9 +65,9 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 | `param_set` | Write a parameter | 写参数 | Real FC | Real FC | WebSerial 2026-11-05 with 4 types, backend 2026-05, CI |
 | `param_save` | Back up to a file | 备份参数到文件 | Real FC | n/a | Backend 2026-05, CI |
 | `param_load` | Restore from a file | 从文件恢复参数 | SITL | n/a | CI |
-| `cal_gyro` | Gyro calibration | 陀螺仪校准 | Real FC | SITL | Backend 2026-05, CI on both links |
-| `cal_level` | Level calibration | 水平校准 | SITL | SITL | CI on both links |
-| `cal_baro` | Barometer calibration | 气压计校准 | SITL | SITL | CI on both links |
+| `cal_gyro` | Gyro calibration | 陀螺仪校准 | Real FC | SITL | Backend 2026-05. 2026-11-23 through the panel on a real FC (backend link), 1.3 s: the run ends on the command ACK, since ArduPilot sends no STATUSTEXT for gyro (GCS_Common.cpp:4895-4904). CI on both links |
+| `cal_level` | Level calibration | 水平校准 | SITL | SITL | CI on both links. Completion likewise reads the command ACK (calibrate_trim), not yet on hardware |
+| `cal_baro` | Barometer calibration | 气压计校准 | Real FC | SITL | Backend 2026-11-23 through the panel on a real FC, 0.3 s, ended on the FC's own "Barometer calibration complete". CI on both links |
 | `cal_compass` | Compass calibration | 罗盘校准 | SITL | SITL | CI on both links. On a real FC 2026-11-06 it starts and cancels on both links; a whole run needs the board turned by hand |
 | `cal_compass_accept` | Accept compass result | 确认罗盘结果 | SITL | SITL | CI on both links. Backend on a real FC 2026-05, before the link took over accepting: worth a new hardware run |
 | `cal_accel` | Accelerometer calibration | 加速度计校准 | Real FC | SITL | Backend 2026-05, WebSerial CI, SITL recording replayed in CI |
@@ -228,7 +228,7 @@ Real FC here means the route was in use during a session with a real flight cont
 | `AnnotationPanel` | planning | 记录地图标注点 | Tests only | Browser test: opens, refuses an entry without a position, and leaves out one that was stored without it |
 | `CustomDashboard` | planning | 自定义仪表 | SITL | WebSerial CI, live values |
 | `OverlapCalcPanel` | planning | 计算相机重叠率 | Tests only | Browser test: opens without an error |
-| `CalibrationPanel` | setup | 校准传感器 | Real FC | 2026-11-06 on both links: compass start and cancel only, no whole run. e2e: connected-flow |
+| `CalibrationPanel` | setup | 校准传感器 | Real FC | 2026-11-06 on both links: compass start and cancel only, no whole run. 2026-11-23 on a real FC through the backend link: gyro and baro runs from the panel, both ended without Cancel. e2e: connected-flow; panels-sitl gyro completion |
 | `EscCalPanel` | setup | 校准电调 | SITL | CI by clicks on firmware: parameter and undo. The calibration itself needs a power cycle |
 | `FirmwarePanel` | setup | 上传固件并重启 | Simulator | e2e: settings, mobile |
 | `FrameSelectPanel` | setup | 选择机架类型 | SITL | CI by clicks on firmware: class and type written, layouts match the firmware |
