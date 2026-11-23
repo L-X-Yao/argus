@@ -386,6 +386,37 @@ describe('loadDownloadedMission', () => {
     expect(app.undoStack.length).toBeGreaterThan(0);
   });
 
+  it('restores survey ownership after an FC round trip, not from downloaded metadata', () => {
+    const local = {
+      lat: 34.2581234567,
+      lon: 108.9421234567,
+      alt: 45.67,
+      drop: false,
+      delay: 0,
+      speed: 0,
+      type: 'wp' as const,
+      loiter_param: 0,
+    };
+    addWaypoint({ ...local, survey: true });
+    addWaypoint({ ...local, lat: 35 });
+    const roundTrip = (w: typeof local, drift = 0) => ({
+      ...w,
+      lat: (Math.trunc(w.lat * 1e7) + drift) / 1e7,
+      lon: (Math.trunc(w.lon * 1e7) + drift) / 1e7,
+      alt: Math.fround(w.alt),
+    });
+
+    loadDownloadedMission([
+      { ...roundTrip(local, -1), survey: false },
+      { ...roundTrip({ ...local, lat: 35 }), survey: true },
+      { ...roundTrip(local), type: 'loiter_time' as const, survey: true },
+    ]);
+
+    expect(app.waypoints[0].survey).toBe(true);
+    expect(app.waypoints[1].survey).toBeUndefined();
+    expect(app.waypoints[2].survey).toBeUndefined();
+  });
+
   it('keeps what the download carried of a waypoint', () => {
     loadDownloadedMission([
       {

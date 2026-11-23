@@ -216,7 +216,7 @@ Real FC here means the route was in use during a session with a real flight cont
 | `MissionPanel` | mission | 编辑上传任务航点 | SITL | CI by clicks on firmware: upload and download match the FC store. 2026-11-13: contract tests of the download's seq map and of the per-waypoint commands it carries back into the upload |
 | `MissionProgress` | mission | 看任务执行进度 | SITL | CI by clicks on firmware: tracks the FC mission sequence |
 | `PoiPanel` | mission | 设置相机兴趣点 | SITL | CI by clicks on firmware: the vehicle turns, clear reaches the FC |
-| `SurveyPanel` | mission | 生成测绘网格航线 | SITL | CI by clicks on firmware: spacing and heading on the FC, and the grid flown |
+| `SurveyPanel` | mission | 生成测绘网格航线 | SITL | CI by clicks on firmware: spacing and heading on the FC, and the grid flown. 2026-11-23 browser e2e: after a mission upload and download, adding vertices regenerates the grid in place and preserves the existing route |
 | `TerrainProfilePanel` | mission | 查看航线地形剖面 | SITL | CI by clicks on firmware: clearance from home. Skips without the terrain server |
 | `AutoTunePanel` | params | 启动自动调参 | SITL | CI by clicks on firmware, on the ground only: refusal, axes written. Not run in the air |
 | `FailsafeConfigPanel` | params | 配置失控保护 | SITL | CI by clicks on firmware: every section written and read back |
@@ -262,7 +262,7 @@ Real FC here means the route was in use during a session with a real flight cont
 | `ReplayPanel` | tools | 加载并回放飞行日志 | Simulator | e2e: map3d, a file with rows that are not numbers included |
 | `FleetDashboard` | vehicle | 查看并切换多机 | Tests only | Logic: ws |
 | `GimbalPanel` | vehicle | 控制云台相机 | Simulator | e2e: command-palette. Opens; no gimbal |
-| `VideoOverlay` | vehicle | 观看视频流 | Simulator | e2e: memory. 2026-11-14: a real RTSP server's H.264 stream showed in the panel and kept moving. No physical camera |
+| `VideoOverlay` | vehicle | 观看视频流 | Simulator | e2e: memory. 2026-11-23 browser e2e: dragging beyond the viewport keeps the title bar reachable, and reset restores the panel. 2026-11-14: a real RTSP server's H.264 stream showed in the panel and kept moving. No physical camera |
 
 ## Platform / 平台与功能
 

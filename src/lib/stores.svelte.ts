@@ -288,7 +288,21 @@ export function generateCircle(centerLat: number, centerLon: number, radius: num
   saveWaypoints();
 }
 
+function sameSurveyMissionPoint(a: Waypoint, b: Waypoint): boolean {
+  if ((a.type || 'wp') !== (b.type || 'wp') || Math.fround(a.alt) !== Math.fround(b.alt)) return false;
+  // The wire carries int32 lat/lon (missionUpload.ts:69-70). Allow one step
+  // for a link that decodes and re-encodes them (scripts/simulator.py:732-739,
+  // :459-460); anything closer than that is the same point on the FC.
+  return (
+    Math.abs(Math.trunc(a.lat * 1e7) - Math.trunc(b.lat * 1e7)) <= 1 &&
+    Math.abs(Math.trunc(a.lon * 1e7) - Math.trunc(b.lon * 1e7)) <= 1
+  );
+}
+
 export function loadDownloadedMission(wps: Waypoint[]) {
+  // The FC does not carry Argus's UI ownership. Restore it only by matching
+  // the local grid, never by trusting a metadata field in downloaded data.
+  const surveyPoints = app.waypoints.filter((w) => w.survey === true);
   pushUndo();
   app.waypoints = wps.map((w) => ({
     lat: w.lat,
@@ -299,6 +313,7 @@ export function loadDownloadedMission(wps: Waypoint[]) {
     speed: w.speed || 0,
     type: w.type || 'wp',
     loiter_param: w.loiter_param || 0,
+    ...(surveyPoints.some((point) => sameSurveyMissionPoint(point, w)) ? { survey: true } : {}),
     // What a download preserved of the item, so the next upload sends it back: the camera,
     // servo, ROI and yaw commands, and ArduPilot's radius and yaw params.
     ...(w.p3 !== undefined ? { p3: w.p3 } : {}),
