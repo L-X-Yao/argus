@@ -553,7 +553,22 @@
   $effect(() => {
     if (!map) return;
     const d = app.drone;
-    if (!d.connected || d.lat === 0) return;
+    // A vehicle that is no longer linked leaves the map: its marker and its
+    // home's go with it. They used to stay for as long as the view lived, and
+    // sat on top of a fence or a route drawn afterwards. A link that is up but
+    // has no position yet keeps what it had.
+    if (!d.connected) {
+      if (droneMarker) {
+        droneMarker.remove();
+        droneMarker = null;
+      }
+      if (homeMarker) {
+        homeMarker.remove();
+        homeMarker = null;
+      }
+      return;
+    }
+    if (d.lat === 0) return;
 
     const [mlat, mlon] = toMap(d.lat, d.lon);
 
