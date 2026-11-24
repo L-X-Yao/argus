@@ -42,6 +42,9 @@
           log = parseDFLog(ev.target!.result as ArrayBuffer);
           addToast(`FFT: ${log.messages.length} messages`, 'success');
         } catch (err: unknown) {
+          log = null;
+          notchPeaks = [];
+          fftError = '';
           addToast('Parse error: ' + (err instanceof Error ? err.message : String(err)), 'error');
         }
       };
@@ -101,7 +104,6 @@
     // leave the previous source's plot and notch advice standing as if current.
     notchPeaks = [];
     fftError = '';
-    if (!log) return;
     const canvas = canvasEl;
     const blank = () => {
       const ctx = canvas.getContext('2d')!;
@@ -109,6 +111,10 @@
       ctx.fillStyle = '#0d1117';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
     };
+    if (!log) {
+      blank();
+      return;
+    }
     const [msgType, field] = source.split('.');
     const series = getTimeSeries(log, msgType, field);
     if (series.t.length < 64) {

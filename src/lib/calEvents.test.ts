@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isCalEvent } from './calEvents';
+import { calibrationAckFailed, isCalEvent } from './calEvents';
 
 describe('calibration events', () => {
   it('knows a compass event in any language by its type', () => {
@@ -31,5 +31,18 @@ describe('calibration events', () => {
   it('reads the whole text of anything that is not an ack', () => {
     expect(isCalEvent({ text: 'Calibration successful', event_type: 'statustext' })).toBe(true);
     expect(isCalEvent({ text: 'Place vehicle level — and press any key', event_type: 'statustext' })).toBe(true);
+  });
+
+  it('fails a run only for its own calibration commands, including a concurrent unrelated ACK', () => {
+    const events = [
+      { time: '12:00:01', event_type: 'cmd_ack_fail', cmd: 176 },
+      { time: '12:00:02', event_type: 'cmd_ack_fail', cmd: 400 },
+    ];
+    expect(events.some((ev) => calibrationAckFailed(ev, '12:00:00'))).toBe(false);
+    for (const cmd of [241, 42424, 42425, 42426]) {
+      expect(calibrationAckFailed({ time: '12:00:03', event_type: 'cmd_ack_fail', cmd }, '12:00:00')).toBe(true);
+    }
+    expect(calibrationAckFailed({ time: '11:59:59', event_type: 'cmd_ack_fail', cmd: 241 }, '12:00:00')).toBe(false);
+    expect(calibrationAckFailed({ time: '12:00:03', event_type: 'cmd_ack_ok', cmd: 241 }, '12:00:00')).toBe(false);
   });
 });

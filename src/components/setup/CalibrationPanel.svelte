@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { isCalEvent } from '../../lib/calEvents';
+  import { calibrationAckFailed, isCalEvent } from '../../lib/calEvents';
   import { app, showConfirm } from '../../lib/stores.svelte';
   import { dispatch } from '../../lib/transport';
   import { API_BASE } from '../../lib/backend';
@@ -109,7 +109,7 @@
   // saying it was calibrating after the FC had already refused.
   let calAckFailed = $derived.by(() => {
     if (!calRunStartTime) return false;
-    return app.events.some((e) => e.time >= calRunStartTime && e.event_type === 'cmd_ack_fail');
+    return app.events.some((e) => calibrationAckFailed(e, calRunStartTime));
   });
   // Gyro and level (MAV_CMD_PREFLIGHT_CALIBRATION, 241) are answered ACCEPTED after the
   // routine returns, and ArduPilot sends no STATUSTEXT for either (GCS_Common.cpp:4895-4904;

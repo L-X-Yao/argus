@@ -115,13 +115,18 @@ export function connectWs(): void {
               addToast(t('toast.disarmed'), 'success', 4000);
               break;
             case 'connected':
+              app.vehicleLinkLost = false;
               // Drop stale params from a previous vehicle so the new connection
               // starts with a clean slate.
               clearParams();
               addToast(msg.text, 'success');
               break;
             case 'disconnected':
+              app.vehicleLinkLost = false;
+              addToast(t('toast.disconnected'), 'info');
+              break;
             case 'link_lost':
+              app.vehicleLinkLost = true;
               addToast(t('toast.disconnected'), 'info');
               break;
             case 'mission_ack_ok':
