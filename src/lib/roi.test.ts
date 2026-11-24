@@ -31,4 +31,12 @@ describe('ROI input', () => {
     expect(repeated[0]).toBeCloseTo(direct[0], 12);
     expect(repeated[1]).toBeCloseTo(direct[1], 12);
   });
+
+  it('wraps the inverse output at the dateline as well as the raw map input', () => {
+    for (const lon of [-540, -180, 180, 540]) {
+      const [, resultLon] = inverseMapPoint(34.258, lon, toWgs);
+      expect(resultLon).toBeGreaterThanOrEqual(-180);
+      expect(resultLon).toBeLessThanOrEqual(180);
+    }
+  });
 });
