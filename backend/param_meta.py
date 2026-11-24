@@ -579,10 +579,7 @@ def _legacy_result(vehicle, locale, fw, locale_was_invalid):
         from_master = bool(raw)
     # Legacy XML is ArduPilot's, not an untrusted pack: skip entries it cannot
     # represent instead of returning nothing for the whole vehicle.
-    try:
-        merged = _normalise_entries(copy.deepcopy(raw), strict=False)
-    except _PackError:
-        merged = {}
+    merged = _normalise_entries(copy.deepcopy(raw), strict=False)
     total = len(merged)
     english = locale == "en" and not locale_was_invalid
     return {
