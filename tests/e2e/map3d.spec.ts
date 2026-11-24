@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { disconnectIfConnected } from './helpers';
 
 // The 3D view has no unit coverage, and maplibre v6 fails quietly when its
 // worker is miswired: the canvas still appears, but nothing loads into it.
@@ -15,6 +16,9 @@ async function open3d(page: Page) {
     document.addEventListener('securitypolicyviolation', (e) => seen.push(`${e.violatedDirective} ${e.blockedURI}`));
   });
   await page.goto('/');
+  // A leaked link from another spec's failed cleanup draws vehicle and home
+  // markers on top of the seeded ones and hides the welcome flow.
+  await disconnectIfConnected(page);
 }
 
 function seed(page: Page, key: string, value: unknown) {
