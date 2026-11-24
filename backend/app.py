@@ -3,6 +3,7 @@ from __future__ import annotations
 import glob
 import gzip
 import json
+import os
 import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -363,6 +364,9 @@ async def api_local_logs():
     entries = []
     if cfg.LOG_DIR.exists():
         for path in cfg.LOG_DIR.glob("*.tlog"):
+            if path.is_symlink():
+                # Not a session this program recorded, and the delete route refuses it.
+                continue
             try:
                 st = path.stat()
             except OSError:
@@ -389,33 +393,39 @@ async def api_local_logs_delete(request: Request):
         return {"ok": False, "error": "Invalid names"}
     active = _active_tlog_name()
     root = cfg.LOG_DIR.resolve()
-    deleted, refused = [], []
-    for name in names:
-        safe = Path(name).name
-        if safe != name or not safe.endswith(".tlog") or safe == active:
+    # By the folder's own entries, each matched by its name exactly as the folder spells it.
+    # No path is resolved and no link is followed: a link in the folder is refused (it is not
+    # a session this program recorded, and what it points at is not this route's to remove),
+    # and a name that differs only in case from a file's is not that file. So the active
+    # session keeps its file under every name for it.
+    entries: dict[str, os.DirEntry[str]] = {}
+    try:
+        with os.scandir(root) as listing:
+            entries = {entry.name: entry for entry in listing}
+    except OSError:
+        pass  # No folder: every name is refused below.
+    deleted, refused, csv_left = [], [], []
+    for name in dict.fromkeys(names):
+        entry = entries.get(name) if name.endswith(".tlog") and Path(name).name == name else None
+        if entry is None or name == active or not entry.is_file(follow_symlinks=False):
             refused.append(name)
             continue
         try:
-            path = (root / safe).resolve()
-            path.relative_to(root)
-            # is_file() stats the path: an overlong name raises here, not in resolve().
-            if not path.is_file():
-                refused.append(name)
-                continue
-        except (ValueError, OSError):
-            # A NUL byte, an overlong name, or a path that escapes the folder.
-            refused.append(name)
-            continue
-        try:
-            path.unlink()
-            # The CSV recorded beside a tlog describes the same session; keep them together.
-            csv_path = path.with_suffix(".csv")
-            if csv_path.is_file():
-                csv_path.unlink()
-            deleted.append(safe)
+            os.unlink(entry.path)
         except OSError:
             refused.append(name)
-    return {"ok": True, "deleted": deleted, "refused": refused}
+            continue
+        deleted.append(name)
+        # The CSV recorded beside a tlog describes the same session; keep them together.
+        try:
+            os.unlink(os.path.join(root, name[: -len(".tlog")] + ".csv"))
+        except FileNotFoundError:
+            pass
+        except OSError:
+            # The flight log is gone and its CSV stayed, held open by another program as a
+            # spreadsheet holds it on Windows. Said as such: the name is deleted, not refused.
+            csv_left.append(name)
+    return {"ok": True, "deleted": deleted, "refused": refused, "csv_left": csv_left}
 
 
 if DIST_DIR.exists():

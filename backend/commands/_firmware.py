@@ -97,6 +97,13 @@ def _reconnect(link: DroneLink, before: set[str]) -> bool:
     return False
 
 
+def _ports_before_reboot(link: DroneLink) -> set[str] | None:
+    """The serial ports from before this board was told to reboot into its bootloader, or None
+    when the link has none: a board put in its bootloader by hand, or a new session since."""
+    before = link.fw_ports_before
+    return set(before) if before else None
+
+
 def _flash_job(link: DroneLink, path: Path, stop: threading.Event) -> None:
     bootloader: Bootloader | None = None
     erased = False
@@ -109,19 +116,35 @@ def _flash_job(link: DroneLink, path: Path, stop: threading.Event) -> None:
         link.add_event(lt("flash_start", link.locale) % path.name, "flash")
 
         if link.connected:
+            # The ports from before the reboot are what tells the bootloader's port from the
+            # others when the board re-enumerates (firmware_flash.port_candidates). They
+            # stay on the link for a retry: see the other branch.
             before = _current_ports()
             hint = link._last_port or ""
-            # The FC reboots into its bootloader on this command; the ACK may never arrive.
-            # The write has completed when send_cmd returns, so the port can be closed at
-            # once: a paused link would otherwise arm its reconnect backoff under us.
-            send_cmd(link, FLASH_BOOTLOADER, p1=3)
+
+            def reboot_into_bootloader() -> None:
+                # The FC reboots into its bootloader on this command; the ACK may never
+                # arrive. pause_for_flash calls it once the link's own thread has stopped,
+                # so no heartbeat, stream request or command retry of the link's follows
+                # the command into the bootloader.
+                send_cmd(link, FLASH_BOOTLOADER, p1=3)
+
+            if not link.pause_for_flash(reboot_into_bootloader):
+                raise FlashError(
+                    "The link did not stop for flashing (reconnect in progress?). "
+                    "Nothing was sent to the flight controller."
+                )
+            link.fw_ports_before = frozenset(before)
         else:
-            # A retry: the failed run recorded the bootloader port. Only that port is ours;
-            # every other port that existed at the retry was there before and is not.
+            # A retry: the bootloader is where the failed run left it. The run recorded its
+            # port if it got that far. The ports from before the reboot, kept on the link,
+            # still say which ones are new; a snapshot taken now would count the
+            # bootloader's own port among the old ones, so a board that re-enumerated on
+            # another port would never be found again. Without one, only the known port is.
             hint = link.fw_flash.get("port") or link._last_port or ""
-            before = _current_ports() - {hint}
-        if not link.pause_for_flash():
-            raise FlashError("The link did not stop for flashing (reconnect in progress?).")
+            before = _ports_before_reboot(link) or (_current_ports() - {hint})
+            if not link.pause_for_flash():
+                raise FlashError("The link did not stop for flashing (reconnect in progress?).")
         paused = True
 
         _state(link, phase="waiting")

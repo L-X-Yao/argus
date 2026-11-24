@@ -405,12 +405,15 @@ class TestOrchestrationEdges:
     def test_a_pause_failure_is_reported(self, tmp_path, monkeypatch):
         link = FakeFlashLink()
         path = make_apj(tmp_path)
+        sent = []
         monkeypatch.setattr(cmd, "_current_ports", lambda: set())
-        monkeypatch.setattr(cmd, "send_cmd", lambda *args, **kwargs: None)
-        monkeypatch.setattr(link, "pause_for_flash", lambda: False)
+        monkeypatch.setattr(cmd, "send_cmd", lambda target, command, **kwargs: sent.append(command))
+        monkeypatch.setattr(link, "pause_for_flash", lambda *args, **kwargs: False)
         cmd._flash_job(link, path, threading.Event())
         assert link.fw_flash["phase"] == "failed"
         assert "did not stop" in link.fw_flash["error"]
+        # The pause was refused, so the reboot command never went out.
+        assert sent == []
 
     def test_a_discovery_failure_reconnects_the_app(self, tmp_path, monkeypatch):
         link = FakeFlashLink()
