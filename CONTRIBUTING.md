@@ -136,9 +136,23 @@ All user-visible strings use `t('key')` from `src/lib/i18n.svelte.ts`. Add new k
 
 ## Releases
 
-Versions are `MAJOR.MINOR.PATCH`: PATCH for fixes, MINOR for new features and for leaving behind a Python that has reached its end of life, MAJOR for other changes that break existing setups.
+### When a release is cut
+
+A release is cut for one of three reasons:
+
+- a security fix;
+- a defect in a version someone may have installed;
+- a group of features or fixes that can be described to a user in one note.
+
+Test-only, documentation, CI and internal refactor commits do not justify a release. They stay on `main` until the next one. Releases are batched, not put on a calendar, and are at least seven days apart; a security fix or a regression in the newest release may go out at once.
+
+Versions are `MAJOR.MINOR.PATCH`: PATCH for fixes, MINOR for a batch of features and for leaving behind a Python that has reached its end of life, MAJOR for other changes that break existing setups. Do not turn every commit into a PATCH release.
+
+Release notes are grouped from commit subjects by `scripts/changelog.sh`. Rewrite them for someone deciding whether to install: state what changes for the user, and leave out test, CI and internal entries. Tags without a Release stay in the repository, because the tag ruleset refuses deletion and movement: `v3.14.0`, `v3.14.3`, `v3.14.4`, `v3.16.4`. A release that fails after tagging gets the next PATCH number.
 
 Release from `main`, on a commit whose CI run is green. `scripts/make-release.sh` checks the branch, a clean tree and that `main` is where `origin/main` is, but not CI: the release workflow runs every check again on the tagged commit, and publishes nothing unless all of them pass.
+
+Before the tag, rehearse with `gh workflow run release.yml` from `main`: every job runs except the publishing. A tag cannot be moved, so the rehearsal is the only way to see the packaging jobs before that number is spent.
 
 1. Fetch the parameter data pack with `python scripts/fetch_param_i18n.py`; it verifies `param_i18n.lock` and extracts the GPL-3.0 pack into `param_i18n/`. Build the Windows package with `python scripts/build_package.py`, on Python 3.11 or newer. It writes a zip to `release/`. The package bundles the Python named by `PY_VER`: move it to a version python.org still builds for Windows when the current one stops getting them. The release workflow does the fetch itself from the pinned data release.
 2. On a real Windows machine, run `python scripts/smoke_package.py release/<zip>`. It extracts the zip and checks the license texts, the REST API, the WebSocket, that a request from another origin or under another host name is rejected, and token login. CI runs the same on a hosted runner, and also builds the installer from that zip with `scripts/build_installer.py` (Inno Setup 6) and runs `smoke_package.py` on it: it installs for the current user into a folder of its own, runs the same checks there, uninstalls, and checks what is left. It refuses to run where Argus is already installed for that user.
