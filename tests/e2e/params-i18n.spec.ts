@@ -79,7 +79,7 @@ test.describe('Parameter descriptions in the page language', () => {
     await disconnectIfConnected(page);
   });
 
-  test('shows the translated description, the machine badge and the English original', async ({ page }) => {
+  test('shows the translated description with the English original beside it', async ({ page }) => {
     await connectSimulator(page);
     await page
       .locator('nav button', { hasText: /参数|Params/ })
@@ -94,10 +94,37 @@ test.describe('Parameter descriptions in the page language', () => {
     await row(page, 'BATT_CAPACITY').click();
     await expect(page.getByText('电池容量', { exact: true }).first()).toBeVisible();
     await expect(page.getByText('机器翻译', { exact: true }).first()).toBeVisible();
+    // Both texts at once: the ArduPilot source stays readable beside a machine translation.
+    const original = page.locator('p', { hasText: 'Battery capacity' });
+    await expect(original).toBeVisible();
 
+    await page.getByRole('button', { name: '隐藏英文原文' }).click();
+    await expect(original).toHaveCount(0);
     await page.getByRole('button', { name: '显示英文原文' }).click();
-    await expect(page.locator('p', { hasText: 'Battery capacity' }).first()).toBeVisible();
-    await expect(page.getByRole('button', { name: '显示译文' })).toBeVisible();
+    await expect(original).toBeVisible();
+  });
+
+  test('shows value and bitmask labels with the English original beside them', async ({ page }) => {
+    await connectSimulator(page);
+    await page
+      .locator('nav button', { hasText: /参数|Params/ })
+      .first()
+      .click();
+    await page
+      .locator('button', { hasText: /读取|Read/ })
+      .first()
+      .click();
+    const search = page.getByPlaceholder('搜索参数...');
+    await expect(search).toBeVisible({ timeout: 15000 });
+
+    await search.fill('FLTMODE1');
+    await row(page, 'FLTMODE1').click();
+    await expect(page.getByText('0: 自稳 (Stabilize)').first()).toBeVisible();
+    await row(page, 'FLTMODE1').click();
+
+    await search.fill('LOG_BITMASK');
+    await row(page, 'LOG_BITMASK').click();
+    await expect(page.getByText('0: 快速姿态 (Fast Attitude)').first()).toBeVisible();
   });
 
   test('shows reviewed and generated labels, and falls back to English without a translation', async ({ page }) => {

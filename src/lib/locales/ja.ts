@@ -1241,7 +1241,7 @@ const messages: Record<string, string> = {
   'param.generated': '自動生成',
   'param.partial': '一部翻訳',
   'param.showEnglish': '英語原文を表示',
-  'param.hideEnglish': '翻訳を表示',
+  'param.hideEnglish': '英語原文を隠す',
   'param.coverage': '翻訳カバレッジ {n}%',
   'param.liveCoverage': '説明カバレッジ {n}%',
   'param.noMeta': '説明なし',

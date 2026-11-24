@@ -1247,7 +1247,7 @@ const messages: Record<string, string> = {
   'param.generated': 'Généré automatiquement',
   'param.partial': 'Traduction partielle',
   'param.showEnglish': 'Afficher l’original anglais',
-  'param.hideEnglish': 'Afficher la traduction',
+  'param.hideEnglish': 'Masquer l’original anglais',
   'param.coverage': 'Couverture de traduction {n}%',
   'param.liveCoverage': 'Couverture des descriptions {n} %',
   'param.noMeta': 'Aucune description',

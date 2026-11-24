@@ -52,8 +52,9 @@ The English source comes from ArduPilot's generated parameter metadata. Descript
 languages (zh, ar, de, es, fr, ja, ko, pt, ru) ship in the GPL-3.0 `param_i18n/` pack and work
 offline; all nine are machine translations unless marked reviewed, and a missing field falls back
 to English (with an EN marker). “Machine translation” means no person has reviewed that text;
-“Reviewed” means someone has. Expand the parameter and use “Show English original” to compare.
-A translated description is guidance, not flight procedure.
+“Reviewed” means someone has. Expand the parameter: the ArduPilot text sits under the
+translation, and “Hide English original” folds it away. A translated description is guidance,
+not flight procedure.
 
 **A parameter does not change.**
 The controller may round an integer parameter or clamp it to its range. Read it back; Argus shows the value the controller reports.

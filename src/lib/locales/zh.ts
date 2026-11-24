@@ -1225,7 +1225,7 @@ const messages: Record<string, string> = {
   'param.generated': '自动生成',
   'param.partial': '部分翻译',
   'param.showEnglish': '显示英文原文',
-  'param.hideEnglish': '显示译文',
+  'param.hideEnglish': '隐藏英文原文',
   'param.coverage': '翻译覆盖 {n}%',
   'param.liveCoverage': '说明覆盖 {n}%',
   'param.noMeta': '暂无说明',

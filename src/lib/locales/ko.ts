@@ -1237,7 +1237,7 @@ const messages: Record<string, string> = {
   'param.generated': '자동 생성',
   'param.partial': '부분 번역',
   'param.showEnglish': '영어 원문 보기',
-  'param.hideEnglish': '번역 보기',
+  'param.hideEnglish': '영어 원문 숨기기',
   'param.coverage': '번역 범위 {n}%',
   'param.liveCoverage': '설명 적용률 {n}%',
   'param.noMeta': '설명 없음',

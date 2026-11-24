@@ -1239,7 +1239,7 @@ const messages: Record<string, string> = {
   'param.generated': 'Auto-generated',
   'param.partial': 'Partial translation',
   'param.showEnglish': 'Show English original',
-  'param.hideEnglish': 'Show translation',
+  'param.hideEnglish': 'Hide English original',
   'param.coverage': 'Translation coverage {n}%',
   'param.liveCoverage': 'Description coverage {n}%',
   'param.noMeta': 'No description available',

@@ -72,7 +72,8 @@
     // Floor: one missing description must not round up to 100%.
     return Math.floor((hit / paramState.list.length) * 100);
   });
-  let showEnglishFor = $state<string | null>(null);
+  // The ArduPilot source is shown beside the translation; this only folds it away for a row.
+  let hideOriginalFor = $state<string | null>(null);
   let lastVehicle = '';
   let lastMetaKey = '';
   let lastRequestedSeries = '';
@@ -106,7 +107,7 @@
     if (vehicle !== lastVehicle) {
       lastVehicle = vehicle;
       metaSeries = '';
-      showEnglishFor = null;
+      hideOriginalFor = null;
     }
     const locale = getLocale();
     const fw = app.drone.fw_version || '';
@@ -121,7 +122,7 @@
       probingKey = '';
     }
     lastMetaKey = key;
-    showEnglishFor = null;
+    hideOriginalFor = null;
     void fetchMeta(vehicle, locale, fw, series, key);
   });
 
@@ -307,7 +308,7 @@
   function getBitmaskEntries(
     name: string,
     val: number,
-  ): { bit: number; label: string; set: boolean; translated: boolean }[] {
+  ): { bit: number; label: string; original: string; set: boolean; translated: boolean }[] {
     const bm = getMeta()[name]?.bitmask;
     if (!bm) return [];
     const tr = currentTranslation(name);
@@ -318,6 +319,7 @@
         return {
           bit,
           label: tr?.bitmask?.[k] || v,
+          original: v,
           set: (iv & (1 << bit)) !== 0,
           translated: !!tr?.bitmask?.[k],
         };
@@ -613,7 +615,7 @@
           {modified.has(p.name) ? 'bg-warning/5' : ''}">
             <div role="presentation" class="w-40 shrink-0 cursor-pointer" onclick={() => {
               expandedParam = isExpanded ? null : p.name;
-              showEnglishFor = null;
+              hideOriginalFor = null;
             }}>
         <div class="font-bold font-mono text-[11px] leading-tight flex items-center gap-1">
           {#if metaLoaded}<span class="text-[9px] text-muted-foreground/40">{isExpanded ? '▼' : '▶'}</span>{/if}
@@ -672,28 +674,32 @@
       <div class="px-3 py-2 bg-muted/30 border-b border-border/50 text-[11px] space-y-1.5">
         {#if description}
           <p class="text-muted-foreground leading-relaxed">
-            {#if showEnglishFor === p.name}
-              <span class="text-[9px] font-bold text-muted-foreground/60 mr-1 align-top">EN</span>
-              {getMeta()[p.name]?.desc}
-            {:else}
-              <!-- The source is ArduPilot's apm.pdef.xml. When only the English text is available,
-                   say so rather than let it look like a missing translation. -->
-              {#if descriptionEnglish && getLocale() !== 'en'}<span
-                  class="text-[9px] font-bold text-muted-foreground/60 mr-1 align-top">EN</span
-                >{/if}{description}
-            {/if}
+            <!-- The source is ArduPilot's apm.pdef.xml. When only the English text is available,
+                 say so rather than let it look like a missing translation. -->
+            {#if descriptionEnglish && getLocale() !== 'en'}<span
+                class="text-[9px] font-bold text-muted-foreground/60 mr-1 align-top">EN</span
+              >{/if}{description}
             {#if status}<span class="ml-1 text-[9px] font-semibold text-muted-foreground/70"
                 >{statusLabel(status)}</span
               >{/if}
           </p>
           {#if tr?.desc && getMeta()[p.name]?.desc && tr.desc !== getMeta()[p.name]!.desc}
+            <!-- Machine translations are not native-reviewed yet, so the ArduPilot text stays
+                 beside them: a parameter written from a misread description is not recoverable
+                 the way a misread label is. -->
+            {#if hideOriginalFor !== p.name}
+              <p class="text-[10px] text-muted-foreground/60 leading-relaxed">
+                <span class="text-[9px] font-bold text-muted-foreground/60 mr-1 align-top">EN</span>
+                {getMeta()[p.name]!.desc}
+              </p>
+            {/if}
             <button
               type="button"
               class="text-[10px] text-primary hover:underline cursor-pointer bg-transparent border-none p-0"
-              aria-pressed={showEnglishFor === p.name}
-              onclick={() => showEnglishFor = showEnglishFor === p.name ? null : p.name}
+              aria-expanded={hideOriginalFor !== p.name}
+              onclick={() => hideOriginalFor = hideOriginalFor === p.name ? null : p.name}
             >
-              {showEnglishFor === p.name ? t('param.hideEnglish') : t('param.showEnglish')}
+              {hideOriginalFor === p.name ? t('param.showEnglish') : t('param.hideEnglish')}
             </button>
           {/if}
         {/if}
@@ -707,9 +713,12 @@
         {#if getMeta()[p.name]?.values}
           <div class="flex flex-wrap gap-1">
             {#each Object.entries(getMeta()[p.name]!.values!) as [code, label]}
+              {@const translated = tr?.values?.[code]}
               <span class="px-1.5 py-0.5 rounded text-[10px] border
                 {String(Math.round(p.value)) === code ? 'bg-primary/20 text-primary border-primary/50' : 'bg-muted text-muted-foreground border-border/50'}">
-                {code}: {tr?.values?.[code] || label}{#if getLocale() !== 'en' && !tr?.values?.[code]}<span
+                {code}: {translated || label}{#if getLocale() !== 'en' && translated && translated !== label}{' '}<span
+                    class="text-muted-foreground/60">({label})</span
+                  >{/if}{#if getLocale() !== 'en' && !translated}<span
                     class="ml-0.5 text-[8px] font-bold text-muted-foreground/50 align-top">EN</span
                   >{/if}
               </span>
@@ -724,7 +733,9 @@
                 <button class="px-1.5 py-0.5 rounded text-[10px] border cursor-pointer transition-colors
                   {bm.set ? 'bg-green-500/20 text-green-400 border-green-500/50' : 'bg-muted text-muted-foreground border-border/50 hover:border-primary/50'}"
                         onclick={() => toggleBitmaskBit(p.name, p.value, bm.bit)}>
-                  {bm.bit}: {bm.label}{#if getLocale() !== 'en' && !bm.translated}<span
+                  {bm.bit}: {bm.label}{#if getLocale() !== 'en' && bm.translated && bm.label !== bm.original}{' '}<span
+                      class="text-muted-foreground/60">({bm.original})</span
+                    >{/if}{#if getLocale() !== 'en' && !bm.translated}<span
                       class="ml-0.5 text-[8px] font-bold text-muted-foreground/50 align-top">EN</span
                     >{/if}
                   {bm.set ? '✓' : ''}

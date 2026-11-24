@@ -1243,7 +1243,7 @@ const messages: Record<string, string> = {
   'param.generated': 'Generado automáticamente',
   'param.partial': 'Traducción parcial',
   'param.showEnglish': 'Mostrar original en inglés',
-  'param.hideEnglish': 'Mostrar traducción',
+  'param.hideEnglish': 'Ocultar original en inglés',
   'param.coverage': 'Cobertura de traducción {n}%',
   'param.liveCoverage': 'Cobertura de descripciones {n} %',
   'param.noMeta': 'Sin descripción',
