@@ -52,4 +52,4 @@ Argus GCS is a ground control station that runs on a local network. Security con
 | Version | Supported |
 |---------|-----------|
 | Latest release | Yes |
-| Older releases | Best effort |
+| Older releases | No. They stay published for rollback and as a record; only the newest release receives fixes, and security fixes are not backported. |

@@ -148,7 +148,7 @@ Test-only, documentation, CI and internal refactor commits do not justify a rele
 
 Versions are `MAJOR.MINOR.PATCH`: PATCH for fixes, MINOR for a batch of features and for leaving behind a Python that has reached its end of life, MAJOR for other changes that break existing setups. Do not turn every commit into a PATCH release.
 
-Release notes are grouped from commit subjects by `scripts/changelog.sh`. Rewrite them for someone deciding whether to install: state what changes for the user, and leave out test, CI and internal entries. Tags without a Release stay in the repository, because the tag ruleset refuses deletion and movement: `v3.14.0`, `v3.14.3`, `v3.14.4`, `v3.16.4`. A release that fails after tagging gets the next PATCH number.
+Release notes are grouped from commit subjects by `scripts/changelog.sh`. Rewrite them for someone deciding whether to install: state what changes for the user, and leave out test, CI and internal entries. Releases and their assets are never deleted: an old package is the rollback path and a record of what shipped, and the README points only at the latest. Tags without a Release stay in the repository, because the tag ruleset refuses deletion and movement: `v3.14.0`, `v3.14.3`, `v3.14.4`, `v3.16.4`. A release that fails after tagging gets the next PATCH number.
 
 Release from `main`, on a commit whose CI run is green. `scripts/make-release.sh` checks the branch, a clean tree and that `main` is where `origin/main` is, but not CI: the release workflow runs every check again on the tagged commit, and publishes nothing unless all of them pass.
 
