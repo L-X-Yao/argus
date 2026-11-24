@@ -2,7 +2,7 @@
   import { onMount, untrack } from 'svelte';
   import { app, addWaypoint, addToast, saveFence, saveRally, showConfirm } from '../../lib/stores.svelte';
   import { dispatch } from '../../lib/transport';
-  import { normalizePickedPoint } from '../../lib/roi';
+  import { inverseMapPoint, normalizePickedPoint } from '../../lib/roi';
   import { fmtDist } from '../../lib/units';
   import { toGcj, toWgs } from '../../lib/gcj02';
   import { isOfflineSource, tileUrl } from '../../lib/backend';
@@ -117,7 +117,7 @@
     return useGcj ? toGcj(lat, lon) : [lat, lon];
   }
   function fromMap(mlat: number, mlon: number): [number, number] {
-    return useGcj ? toWgs(mlat, mlon) : [mlat, mlon];
+    return inverseMapPoint(mlat, mlon, useGcj ? toWgs : (lat, lon) => [lat, lon]);
   }
 
   function tileLayer(style: string): L.TileLayer {

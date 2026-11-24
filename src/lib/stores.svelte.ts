@@ -94,6 +94,21 @@ export function shouldRemoveDisconnectedMarkers(connected: boolean, unexpectedLo
   return !connected && !unexpectedLoss;
 }
 
+export function homeMarkerPosition({
+  connected,
+  unexpectedLoss,
+  homeLat,
+  homeLon,
+}: {
+  connected: boolean;
+  unexpectedLoss: boolean;
+  homeLat: number;
+  homeLon: number;
+}): { lat: number; lon: number } | null {
+  if ((!connected && !unexpectedLoss) || homeLat === 0) return null;
+  return { lat: homeLat, lon: homeLon };
+}
+
 const PLANE_VTYPE_RAW = new Set([1, 19, 20, 21, 22, 23, 24, 25]);
 
 export function isPlane(): boolean {
@@ -307,16 +322,37 @@ function sameSurveyMissionPoint(a: Waypoint, b: Waypoint): boolean {
   );
 }
 
+function surveyMatchCost(a: Waypoint, b: Waypoint): number {
+  return (
+    Math.abs((a.speed || 0) - (b.speed || 0)) +
+    Math.abs((a.delay || 0) - (b.delay || 0)) +
+    (a.drop === b.drop ? 0 : 1) +
+    Math.abs((a.loiter_param || 0) - (b.loiter_param || 0))
+  );
+}
+
 export function loadDownloadedMission(wps: Waypoint[]) {
-  // The FC does not carry Argus's UI ownership. Restore it only by matching
-  // the local grid, never by trusting a metadata field in downloaded data.
-  const unmatchedSurvey = app.waypoints.filter((w) => w.survey === true);
+  // The FC does not carry Argus's UI ownership. Pair each local grid point with
+  // one downloaded point, globally preferring the closest attributes over order.
+  const surveyPoints = app.waypoints.filter((w) => w.survey === true);
+  const candidates: { local: number; downloaded: number; cost: number }[] = [];
+  for (let local = 0; local < surveyPoints.length; local++) {
+    for (let downloaded = 0; downloaded < wps.length; downloaded++) {
+      if (sameSurveyMissionPoint(surveyPoints[local], wps[downloaded])) {
+        candidates.push({ local, downloaded, cost: surveyMatchCost(surveyPoints[local], wps[downloaded]) });
+      }
+    }
+  }
+  candidates.sort((a, b) => a.cost - b.cost || a.local - b.local || a.downloaded - b.downloaded);
+  const owned = new Set<number>();
+  const paired = new Set<number>();
+  for (const candidate of candidates) {
+    if (paired.has(candidate.local) || owned.has(candidate.downloaded)) continue;
+    paired.add(candidate.local);
+    owned.add(candidate.downloaded);
+  }
   pushUndo();
-  app.waypoints = wps.map((w) => {
-    const surveyIndex = unmatchedSurvey.findIndex((point) => sameSurveyMissionPoint(point, w));
-    // One local grid point owns at most one downloaded point. A coincident manual
-    // waypoint must not become Survey-owned and disappear on the next Generate.
-    if (surveyIndex >= 0) unmatchedSurvey.splice(surveyIndex, 1);
+  app.waypoints = wps.map((w, index) => {
     return {
       lat: w.lat,
       lon: w.lon,
@@ -326,7 +362,7 @@ export function loadDownloadedMission(wps: Waypoint[]) {
       speed: w.speed || 0,
       type: w.type || 'wp',
       loiter_param: w.loiter_param || 0,
-      ...(surveyIndex >= 0 ? { survey: true } : {}),
+      ...(owned.has(index) ? { survey: true } : {}),
       // What a download preserved of the item, so the next upload sends it back: the camera,
       // servo, ROI and yaw commands, and ArduPilot's radius and yaw params.
       ...(w.p3 !== undefined ? { p3: w.p3 } : {}),

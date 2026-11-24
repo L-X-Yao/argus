@@ -1,4 +1,5 @@
 export interface OfflineDownloadResult {
+  total: number;
   downloaded: number;
   skipped: number;
   truncated?: boolean;
@@ -7,8 +8,8 @@ export interface OfflineDownloadResult {
 export type OfflineDownloadOutcome = 'done' | 'incomplete' | 'none';
 
 export function offlineDownloadOutcome(data: OfflineDownloadResult): OfflineDownloadOutcome {
-  // Cached tiles are a successful offline result too, even when nothing new was fetched.
-  if (data.downloaded === 0 && data.skipped === 0) return 'none';
+  if (data.total === 0 && data.downloaded === 0 && data.skipped === 0) return 'none';
   if (data.truncated) return 'incomplete';
-  return 'done';
+  // Cached tiles count as coverage; a partial cache hit is not a completed region.
+  return data.downloaded + data.skipped >= data.total ? 'done' : 'incomplete';
 }
