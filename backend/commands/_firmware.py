@@ -99,16 +99,21 @@ def _reconnect(link: DroneLink, before: set[str]) -> bool:
 
 def _ports_before_reboot(link: DroneLink) -> set[str] | None:
     """The serial ports from before this board was told to reboot into its bootloader, or None
-    when the link has none: a board put in its bootloader by hand, or a new session since."""
+    when the link has none: a board put in its bootloader by hand, or a new session since.
+    An empty list is a list: no port was there before the reboot."""
     before = link.fw_ports_before
-    return set(before) if before else None
+    return None if before is None else set(before)
 
 
 def _flash_job(link: DroneLink, path: Path, stop: threading.Event) -> None:
     bootloader: Bootloader | None = None
     erased = False
     paused = False
+    # Two lists of ports, for two questions. ``before``: what was there before the board
+    # left its firmware, so what else is its bootloader. ``reconnect_before``: what was
+    # there before this run, so where else the firmware may have come back.
     before: set[str] = set()
+    reconnect_before: set[str] = set()
     hint = link._last_port or ""
     try:
         apj: Apj = load_apj(path)
@@ -135,14 +140,21 @@ def _flash_job(link: DroneLink, path: Path, stop: threading.Event) -> None:
                     "Nothing was sent to the flight controller."
                 )
             link.fw_ports_before = frozenset(before)
+            reconnect_before = before
         else:
             # A retry: the bootloader is where the failed run left it. The run recorded its
-            # port if it got that far. The ports from before the reboot, kept on the link,
-            # still say which ones are new; a snapshot taken now would count the
+            # port if it got that far. For finding it, the ports from before the reboot, kept
+            # on the link, still say which ones are new; a list taken now would count the
             # bootloader's own port among the old ones, so a board that re-enumerated on
             # another port would never be found again. Without one, only the known port is.
             hint = link.fw_flash.get("port") or link._last_port or ""
-            before = _ports_before_reboot(link) or (_current_ports() - {hint})
+            at_retry = _current_ports()
+            recorded = _ports_before_reboot(link)
+            before = at_retry - {hint} if recorded is None else recorded
+            # For coming back afterwards, a port that is present now was there before this
+            # run, whatever the first run saw. It may be another vehicle plugged in since,
+            # and a link to it would send the next command there.
+            reconnect_before = at_retry - {hint}
             if not link.pause_for_flash():
                 raise FlashError("The link did not stop for flashing (reconnect in progress?).")
         paused = True
@@ -150,6 +162,8 @@ def _flash_job(link: DroneLink, path: Path, stop: threading.Event) -> None:
         _state(link, phase="waiting")
         bootloader = discover_bootloader(hint, before)
         _state(link, port=bootloader.port_name)
+        # The firmware comes back on the bootloader's port or on the original one.
+        reconnect_before = reconnect_before - {bootloader.port_name}
         bootloader.identify()
         check_apj(apj, bootloader)
 
@@ -177,7 +191,7 @@ def _flash_job(link: DroneLink, path: Path, stop: threading.Event) -> None:
         bootloader = None
 
         _state(link, phase="reconnecting")
-        if not _reconnect(link, before):
+        if not _reconnect(link, reconnect_before):
             raise FlashError("Flashed, but the flight controller did not come back on a serial port.")
         _state(link, active=False, phase="done", done=apj.image_size, total=apj.image_size, error="")
         link.add_event(lt("flash_done", link.locale), "flash")
@@ -192,7 +206,7 @@ def _flash_job(link: DroneLink, path: Path, stop: threading.Event) -> None:
                     pass
             bootloader.close()
         if paused and not erased:
-            _reconnect(link, before)
+            _reconnect(link, reconnect_before)
     except Exception as exc:  # a bad file, a closed port, a bug: never leave the page silent
         _fail(link, f"Unexpected error: {exc}")
         if bootloader is not None:
@@ -204,7 +218,7 @@ def _flash_job(link: DroneLink, path: Path, stop: threading.Event) -> None:
                     pass
             bootloader.close()
         if paused and not erased:
-            _reconnect(link, before)
+            _reconnect(link, reconnect_before)
     finally:
         with link._state_lock:
             if link.fw_thread is threading.current_thread():
