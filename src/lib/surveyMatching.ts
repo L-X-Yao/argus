@@ -7,15 +7,6 @@ export interface SurveyMatchResult {
   cost: number;
 }
 
-interface FlowEdge {
-  to: number;
-  rev: number;
-  cap: number;
-  cost: number;
-  local?: number;
-  download?: number;
-}
-
 function sameSurveyMissionPoint(a: Waypoint, b: Waypoint): boolean {
   if ((a.type || 'wp') !== (b.type || 'wp') || Math.fround(a.alt) !== Math.fround(b.alt)) return false;
   // The wire carries int32 lat/lon (missionUpload.ts:69-70). Allow one step
@@ -36,14 +27,7 @@ function surveyMatchCost(a: Waypoint, b: Waypoint): number {
   );
 }
 
-function addEdge(graph: FlowEdge[][], from: number, to: number, cost: number, local?: number, download?: number) {
-  const forward: FlowEdge = { to, rev: graph[to].length, cap: 1, cost, local, download };
-  const backward: FlowEdge = { to: from, rev: graph[from].length, cap: 0, cost: -cost };
-  graph[from].push(forward);
-  graph[to].push(backward);
-}
-
-/** Exact min-cost maximum matching for one candidate-connected component (SPFA augmentation). */
+/** Exact min-cost maximum matching for one component, in O(max(locals, downloads)^3). */
 function matchComponent(
   locals: number[],
   downloads: number[],
@@ -54,71 +38,84 @@ function matchComponent(
   // Deterministic order for equal-cost assignments.
   locals.sort((a, b) => a - b);
   downloads.sort((a, b) => a - b);
-  const source = 0;
-  const firstDownload = locals.length + 1;
-  const sink = firstDownload + downloads.length;
-  const graph: FlowEdge[][] = Array.from({ length: sink + 1 }, () => []);
-  for (let i = 0; i < locals.length; i++) addEdge(graph, source, i + 1, 0);
-  for (let i = 0; i < downloads.length; i++) addEdge(graph, firstDownload + i, sink, 0);
-  const downloadNodes = new Map(downloads.map((downloaded, index) => [downloaded, firstDownload + index]));
+  const size = Math.max(locals.length, downloads.length);
+  const allowed = Array.from({ length: locals.length }, () => Array<boolean>(downloads.length).fill(false));
+  const costs = Array.from({ length: locals.length }, () => Array<number>(size).fill(0));
+  let maxCost = 0;
   for (let i = 0; i < locals.length; i++) {
-    const local = locals[i];
-    for (const downloaded of downloads) {
-      if (sameSurveyMissionPoint(survey[local], wps[downloaded])) {
-        addEdge(
-          graph,
-          i + 1,
-          downloadNodes.get(downloaded)!,
-          surveyMatchCost(survey[local], wps[downloaded]),
-          local,
-          downloaded,
-        );
-      }
+    for (let j = 0; j < downloads.length; j++) {
+      if (!sameSurveyMissionPoint(survey[locals[i]], wps[downloads[j]])) continue;
+      allowed[i][j] = true;
+      const cost = surveyMatchCost(survey[locals[i]], wps[downloads[j]]);
+      costs[i][j] = cost;
+      if (cost > maxCost) maxCost = cost;
     }
   }
+  // One extra real pair is worth more than every allowed edge's cost combined.
+  // Forbidden edges and unmatched local Survey points therefore lose cardinality first.
+  const blocked = (maxCost + 1) * (Math.min(locals.length, downloads.length) + 1);
+  for (let i = 0; i < locals.length; i++) {
+    for (let j = 0; j < size; j++) {
+      if (j >= downloads.length || !allowed[i][j]) costs[i][j] = blocked;
+    }
+  }
+  const costAt = (i: number, j: number): number => (i >= locals.length ? 0 : costs[i][j]);
 
-  let totalCost = 0;
-  for (;;) {
-    const dist = Array<number>(graph.length).fill(Infinity);
-    const parentNode = Array<number>(graph.length).fill(-1);
-    const parentEdge = Array<number>(graph.length).fill(-1);
-    const inQueue = Array<boolean>(graph.length).fill(false);
-    const queue = [source];
-    dist[source] = 0;
-    inQueue[source] = true;
-    for (let head = 0; head < queue.length; head++) {
-      const from = queue[head];
-      inQueue[from] = false;
-      for (let i = 0; i < graph[from].length; i++) {
-        const edge = graph[from][i];
-        if (edge.cap <= 0) continue;
-        const next = dist[from] + edge.cost;
-        if (next + 1e-12 >= dist[edge.to]) continue;
-        dist[edge.to] = next;
-        parentNode[edge.to] = from;
-        parentEdge[edge.to] = i;
-        if (!inQueue[edge.to]) {
-          inQueue[edge.to] = true;
-          queue.push(edge.to);
+  // Hungarian assignment, 1-indexed. Dummy rows leave downloaded points unmatched
+  // for free; dummy columns charge the same cardinality penalty as a forbidden edge.
+  const u = new Float64Array(size + 1);
+  const v = new Float64Array(size + 1);
+  const p = new Int32Array(size + 1);
+  const way = new Int32Array(size + 1);
+  const minv = new Float64Array(size + 1);
+  const used = new Uint8Array(size + 1);
+  for (let i = 1; i <= size; i++) {
+    p[0] = i;
+    let j0 = 0;
+    minv.fill(Infinity);
+    used.fill(0);
+    do {
+      used[j0] = 1;
+      const i0 = p[j0];
+      let delta = Infinity;
+      let j1 = 0;
+      for (let j = 1; j <= size; j++) {
+        if (used[j]) continue;
+        const cur = costAt(i0 - 1, j - 1) - u[i0] - v[j];
+        if (cur < minv[j]) {
+          minv[j] = cur;
+          way[j] = j0;
+        }
+        if (minv[j] < delta) {
+          delta = minv[j];
+          j1 = j;
         }
       }
-    }
-    if (parentNode[sink] < 0) break;
-    totalCost += dist[sink];
-    for (let at = sink; at !== source; at = parentNode[at]) {
-      const from = parentNode[at];
-      const edge = graph[from][parentEdge[at]];
-      edge.cap -= 1;
-      graph[at][edge.rev].cap += 1;
-    }
+      for (let j = 0; j <= size; j++) {
+        if (used[j]) {
+          u[p[j]] += delta;
+          v[j] -= delta;
+        } else {
+          minv[j] -= delta;
+        }
+      }
+      j0 = j1;
+    } while (p[j0] !== 0);
+    do {
+      const j1 = way[j0];
+      p[j0] = p[j1];
+      j0 = j1;
+    } while (j0 !== 0);
   }
 
-  for (let node = 1; node < firstDownload; node++) {
-    for (const edge of graph[node]) {
-      if (edge.local !== undefined && edge.download !== undefined && edge.cap === 0) {
-        pairs.set(edge.local, edge.download);
-      }
-    }
+  const assignment = new Int32Array(size + 1);
+  for (let j = 1; j <= size; j++) assignment[p[j]] = j;
+  let totalCost = 0;
+  for (let i = 1; i <= locals.length; i++) {
+    const j = assignment[i];
+    if (j < 1 || j > downloads.length || !allowed[i - 1][j - 1]) continue;
+    pairs.set(locals[i - 1], downloads[j - 1]);
+    totalCost += costs[i - 1][j - 1];
   }
   return totalCost;
 }
