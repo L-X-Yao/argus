@@ -243,10 +243,28 @@ test.describe('3D map', () => {
         return type === 'webgl2' ? null : (real as (...a: unknown[]) => unknown).call(this, type, ...rest);
       } as typeof real;
     });
+    // The fallback notice is a toast that lives a few seconds. On the hosted Windows
+    // runner the page's load event has outlived it, so record the text when it appears
+    // instead of racing it (release workflow 45368719278).
+    await page.addInitScript(() => {
+      const w = window as unknown as { __webgl2Toast?: string };
+      let recorded = false;
+      new MutationObserver(() => {
+        if (recorded) return;
+        const text = document.body?.textContent || '';
+        const at = text.indexOf('WebGL2');
+        if (at >= 0) {
+          w.__webgl2Toast = text.slice(Math.max(0, at - 40), at + 40);
+          recorded = true;
+        }
+      }).observe(document, { childList: true, subtree: true, characterData: true });
+    });
 
     await open3d(page);
 
-    await expect(page.locator('body')).toContainText('WebGL2', { timeout: 15000 });
+    await expect
+      .poll(() => page.evaluate(() => (window as unknown as { __webgl2Toast?: string }).__webgl2Toast ?? ''))
+      .toContain('WebGL2');
     await expect(page.locator('.leaflet-container')).toBeVisible();
     await expect(page.locator('canvas.maplibregl-canvas')).toHaveCount(0);
   });
