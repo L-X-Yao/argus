@@ -338,13 +338,24 @@ def _clean_entry(entry: dict) -> dict:
     return clean
 
 
-def _normalise_entries(data: dict) -> dict:
+def _normalise_entries(data: dict, *, strict: bool = True) -> dict:
+    """Normalise a metadata map.
+
+    A pack is untrusted: one bad entry refuses the whole pack. The legacy XML is
+    fetched from ArduPilot and can carry a name longer than MAVLink allows (4.5.7
+    and 4.6.3 have SIM_PLD_* names of 17 and 18 characters); there, skip the entry
+    rather than throwing away every description for the vehicle.
+    """
     if not isinstance(data, dict):
-        raise _PackError("parameter metadata is not an object")
+        if strict:
+            raise _PackError("parameter metadata is not an object")
+        return {}
     normalised = {}
     for raw_name, raw_entry in data.items():
         if not isinstance(raw_name, str):
-            raise _PackError("parameter name is not a string")
+            if strict:
+                raise _PackError("parameter name is not a string")
+            continue
         name = raw_name
         prefixed = False
         for prefix in _PREFIXES:
@@ -353,11 +364,17 @@ def _normalise_entries(data: dict) -> dict:
                 prefixed = True
                 break
         if name == "_meta" or not _NAME_RE.fullmatch(name):
-            raise _PackError("parameter name is invalid")
+            if strict:
+                raise _PackError("parameter name is invalid")
+            continue
         # The generator promises this, but an untrusted pack must get the same result.
         if prefixed and name in data:
             continue
-        normalised[name] = _clean_entry(raw_entry)
+        try:
+            normalised[name] = _clean_entry(raw_entry)
+        except _PackError:
+            if strict:
+                raise
     return normalised
 
 
@@ -553,8 +570,13 @@ def _request_result(result: dict, selection: str, locale_was_invalid: bool) -> d
 def _legacy_result(vehicle, locale, fw, locale_was_invalid):
     fw_series = _fw_series(fw)
     raw = _get_versioned_metadata(vehicle, fw_series) if fw_series else get_metadata(vehicle)
+    if not raw and fw_series:
+        # A firmware newer than the versioned folders, or a URL that failed.
+        raw = get_metadata(vehicle)
+    # Legacy XML is ArduPilot's, not an untrusted pack: skip entries it cannot
+    # represent instead of returning nothing for the whole vehicle.
     try:
-        merged = _normalise_entries(copy.deepcopy(raw))
+        merged = _normalise_entries(copy.deepcopy(raw), strict=False)
     except _PackError:
         merged = {}
     total = len(merged)

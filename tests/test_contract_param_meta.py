@@ -351,6 +351,32 @@ def test_versioned_and_master_fallbacks(tmp_path):
     assert result["P"]["desc"] == "English"
 
 
+def test_legacy_fallback_skips_a_name_it_cannot_read(tmp_path):
+    # 4.5.7 and 4.6.3 carry SIM_PLD_ALT_LIMIT (17) and SIM_PLD_DIST_LIMIT (18).
+    legacy = {
+        "SIM_PLD_ALT_LIMIT": {"desc": "simulator"},
+        "RTL_ALT": {"desc": "return"},
+    }
+    with (
+        patch.object(pm, "PACK_DIR", tmp_path / "missing"),
+        patch.object(pm, "get_metadata", return_value=legacy),
+    ):
+        result = pm.get_param_metadata("copter")
+    assert result["RTL_ALT"]["desc"] == "return"
+    assert result["_meta"]["total"] == 1
+
+
+def test_legacy_versioned_empty_falls_back_to_master(tmp_path):
+    with (
+        patch.object(pm, "PACK_DIR", tmp_path / "missing"),
+        patch.object(pm, "_get_versioned_metadata", return_value={}),
+        patch.object(pm, "get_metadata", return_value={"P": {"desc": "English"}}),
+    ):
+        result = pm.get_param_metadata("copter", fw="v4.6.3")
+    assert result["P"]["desc"] == "English"
+    assert result["_meta"]["total"] == 1
+
+
 def test_vehicle_without_pack_sources_uses_english_fallback(tmp_path):
     pack = tmp_path / "pack"
     copytree(FIXTURE, pack)

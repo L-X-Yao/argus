@@ -54,9 +54,12 @@ def vfr_hud(speed=5.0, seq=0):
     return fc_frame(74, payload, seq)
 
 
-def ekf(variance=0.25, seq=0):
-    payload = bytearray(34)
-    struct.pack_into("<f", payload, 16, variance)
+def ekf(pos_horiz=0.25, terrain=0.0, seq=0):
+    # EKF_STATUS_REPORT in MAVLink 2 wire order: velocity@0, pos_horiz@4,
+    # pos_vert@8, compass@12, terrain@16, flags@20.
+    payload = bytearray(22)
+    struct.pack_into("<f", payload, 4, pos_horiz)
+    struct.pack_into("<f", payload, 16, terrain)
     return fc_frame(193, payload, seq)
 
 
@@ -64,6 +67,10 @@ def mission_item(item_seq=0, seq=0):
     payload = bytearray(37)
     struct.pack_into("<H", payload, 28, item_seq)
     return fc_frame(73, payload, seq)
+
+
+def mission_current(item_seq=0, seq=0):
+    return fc_frame(42, struct.pack("<H", item_seq), seq)
 
 
 def statustext(text=b"Failsafe", severity=4, seq=0):
@@ -111,6 +118,27 @@ def test_a_flight_is_summarised(tmp_path):
     assert summary["messages_by_type"]["HEARTBEAT"] == 2
 
 
+def test_ekf_reads_the_horizontal_position_variance(tmp_path):
+    # The terrain variance at offset 16 is 0.01; only the field at offset 4 is the metric.
+    write_tlog(tmp_path / "argus_ekf.tlog", [heartbeat(armed=False, seq=0), ekf(pos_horiz=0.7, terrain=0.01, seq=1)])
+    with mock.patch.object(cfg, "LOG_DIR", tmp_path):
+        summary = flight_log.analyze("argus_ekf.tlog")
+    assert summary["ekf_max_pos_horiz_variance"] == 0.7
+
+
+def test_event_and_mission_lists_are_capped_while_counting(tmp_path):
+    frames = [heartbeat(armed=False, seq=0)]
+    frames += [statustext(text=f"warning {i}".encode(), seq=i + 1) for i in range(60)]
+    frames += [mission_current(item_seq=i, seq=i + 61) for i in range(12)]
+    write_tlog(tmp_path / "argus_long.tlog", frames)
+    with mock.patch.object(cfg, "LOG_DIR", tmp_path):
+        summary = flight_log.analyze("argus_long.tlog")
+    assert len(summary["events"]) == flight_log.MAX_EVENTS
+    assert summary["events_left_out"] == 10
+    assert len(summary["mission"]["current_seqs"]) == 10
+    assert summary["mission"]["current_seqs"][-1]["seq"] == 11
+
+
 def test_the_newest_log_with_content_is_used(tmp_path):
     empty, older = tmp_path / "argus_empty.tlog", tmp_path / "argus_flight.tlog"
     empty.write_bytes(b"")
@@ -149,6 +177,11 @@ def test_a_still_vehicle_does_not_clock_up_distance(tmp_path):
 def test_only_a_file_name_in_the_logs_folder_is_taken(tmp_path, name):
     with mock.patch.object(cfg, "LOG_DIR", tmp_path), pytest.raises(flight_log.LogRefused):
         flight_log.path_of(name)
+
+
+def test_a_nul_in_a_file_name_is_refused(tmp_path):
+    with mock.patch.object(cfg, "LOG_DIR", tmp_path), pytest.raises(flight_log.LogRefused):
+        flight_log.path_of("a\x00b.tlog")
 
 
 def test_an_empty_logs_folder_is_refused(tmp_path):
@@ -207,7 +240,7 @@ def comparison_flights(tmp_path):
         gps_raw(seq=3),
         vibration(seq=4),
         vfr_hud(speed=4.0, seq=5),
-        ekf(variance=0.2, seq=6),
+        ekf(pos_horiz=0.2, seq=6),
         mission_item(seq=7),
         statustext(text=b"one", seq=8),
         heartbeat(mode=4, armed=False, seq=9),
@@ -219,7 +252,7 @@ def comparison_flights(tmp_path):
         gps_raw(seq=3, fix=4, sats=12),
         vibration(seq=4, level=2.5),
         vfr_hud(speed=6.5, seq=5),
-        ekf(variance=0.5, seq=6),
+        ekf(pos_horiz=0.5, seq=6),
         mission_item(item_seq=0, seq=7),
         mission_item(item_seq=1, seq=8),
         statustext(text=b"one", seq=9),
