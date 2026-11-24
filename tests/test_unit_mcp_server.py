@@ -751,6 +751,13 @@ class TestThroughTheBackend:
         identified = [e for e in lines if e["event"] == "identified"]
         assert identified and identified[0]["client"] == {"name": "t", "version": "1"}
 
+    def test_a_later_request_without_a_name_keeps_the_known_identity(self):
+        backend = mock.Mock()
+        server = Server(backend, lambda msg: None)
+        server._identify({"name": "Claude Code", "version": "2.0"})
+        server._identify({"version": "2.1"})
+        backend.identify.assert_called_once_with("Claude Code", "2.0")
+
     def test_no_argus_at_the_address(self):
         with pytest.raises(Unreachable, match="No Argus at ws://127.0.0.1:"):
             Backend(f"ws://127.0.0.1:{free_port()}/ws").ask("status", {})

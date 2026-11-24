@@ -711,13 +711,16 @@ class Server:
                 event.set()
 
     def _identify(self, client: dict) -> None:
-        """The client's own name, from its initialize, for the page to record."""
+        """The client's own name, from its initialize or request metadata, for the page to record.
+
+        A later request without a usable name must not erase a name already learned from
+        an earlier handshake.
+        """
         name = client.get("name")
+        if not isinstance(name, str) or not name.strip():
+            return
         version = client.get("version")
-        self.backend.identify(
-            name[:100] if isinstance(name, str) and name.strip() else "unknown client",
-            version[:40] if isinstance(version, str) else "",
-        )
+        self.backend.identify(name[:100], version[:40] if isinstance(version, str) else "")
 
     def _request(self, rid, method: str, params: dict) -> None:
         meta = params.get("_meta") if isinstance(params.get("_meta"), dict) else {}
