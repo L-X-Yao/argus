@@ -28,6 +28,7 @@ import {
   saveWaypoints,
   shouldRemoveDisconnectedMarkers,
   homeMarkerPosition,
+  matchSurveyOwnership,
 } from './stores.svelte';
 
 function makeStorage(): Storage {
@@ -432,6 +433,45 @@ describe('loadDownloadedMission', () => {
 
     expect(app.waypoints.map((w) => w.survey)).toEqual([undefined, true]);
     expect(app.waypoints.filter((w) => w.survey !== true)).toHaveLength(1);
+  });
+
+  it.each([
+    { speeds: [4, 20], minimum: 19 },
+    { speeds: [4, 100], minimum: 99 },
+  ])('finds the exact minimum-cost Survey assignment instead of the greedy $minimum one', ({ speeds, minimum }) => {
+    const point = {
+      lat: 34.258,
+      lon: 108.942,
+      alt: 45,
+      drop: false,
+      delay: 0,
+      speed: 0,
+      type: 'wp' as const,
+      loiter_param: 0,
+    };
+    const survey = [
+      { ...point, speed: 0, survey: true },
+      { ...point, speed: 5, survey: true },
+    ];
+    const downloaded = [...speeds.map((speed) => ({ ...point, speed })), { ...point, lat: 35, speed: 50 }];
+
+    const result = matchSurveyOwnership(survey, downloaded);
+
+    expect(result.cost).toBe(minimum);
+    expect(result.pairs.get(0)).toBe(0);
+    expect(result.pairs.get(1)).toBe(1);
+    expect(result.owned.has(2)).toBe(false);
+  });
+
+  it('solves 500 independent Survey pairs', () => {
+    const point = { lon: 108.942, alt: 45, drop: false, delay: 0, speed: 0, type: 'wp' as const, loiter_param: 0 };
+    const survey = Array.from({ length: 500 }, (_, i) => ({ ...point, lat: 34 + i * 0.001, survey: true }));
+    const downloaded = survey.map(({ lat, ...rest }) => ({ ...point, lat, ...rest }));
+
+    const result = matchSurveyOwnership(survey, downloaded);
+    expect(result.cost).toBe(0);
+    expect(result.pairs.size).toBe(500);
+    expect(result.owned.size).toBe(500);
   });
 
   it('restores survey ownership after an FC round trip, not from downloaded metadata', () => {

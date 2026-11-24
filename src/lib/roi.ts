@@ -20,7 +20,8 @@ export function inverseMapPoint(
   lon: number,
   inverse: (lat: number, lon: number) => [number, number],
 ): [number, number] {
-  return inverse(lat, wrapLongitude(lon));
+  const [inverseLat, inverseLon] = inverse(lat, wrapLongitude(lon));
+  return [inverseLat, wrapLongitude(inverseLon)];
 }
 
 /** Leaflet and MapLibre can pick on a repeated copy of the world. */

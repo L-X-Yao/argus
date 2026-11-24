@@ -1,6 +1,8 @@
 import type { DroneState, DroneEvent, FlightSummary, FwFlash, Waypoint, Toast, RallyPoint } from './types';
 import { defaultState } from './types';
 import { cleanPositions, cleanRallyPoints, cleanWaypoints, finiteNumber } from './missionIO';
+import { matchSurveyOwnership } from './surveyMatching';
+export { matchSurveyOwnership } from './surveyMatching';
 import { t } from './i18n.svelte';
 
 class AppState {
@@ -311,46 +313,11 @@ export function generateCircle(centerLat: number, centerLon: number, radius: num
   saveWaypoints();
 }
 
-function sameSurveyMissionPoint(a: Waypoint, b: Waypoint): boolean {
-  if ((a.type || 'wp') !== (b.type || 'wp') || Math.fround(a.alt) !== Math.fround(b.alt)) return false;
-  // The wire carries int32 lat/lon (missionUpload.ts:69-70). Allow one step
-  // for a link that decodes and re-encodes them (scripts/simulator.py:732-739,
-  // :459-460); anything closer than that is the same point on the FC.
-  return (
-    Math.abs(Math.trunc(a.lat * 1e7) - Math.trunc(b.lat * 1e7)) <= 1 &&
-    Math.abs(Math.trunc(a.lon * 1e7) - Math.trunc(b.lon * 1e7)) <= 1
-  );
-}
-
-function surveyMatchCost(a: Waypoint, b: Waypoint): number {
-  return (
-    Math.abs((a.speed || 0) - (b.speed || 0)) +
-    Math.abs((a.delay || 0) - (b.delay || 0)) +
-    (a.drop === b.drop ? 0 : 1) +
-    Math.abs((a.loiter_param || 0) - (b.loiter_param || 0))
-  );
-}
-
 export function loadDownloadedMission(wps: Waypoint[]) {
-  // The FC does not carry Argus's UI ownership. Pair each local grid point with
-  // one downloaded point, globally preferring the closest attributes over order.
+  // The FC does not carry Argus's UI ownership. Exact minimum-cost pairing keeps
+  // ownership with the most similar downloaded points, never with download order.
   const surveyPoints = app.waypoints.filter((w) => w.survey === true);
-  const candidates: { local: number; downloaded: number; cost: number }[] = [];
-  for (let local = 0; local < surveyPoints.length; local++) {
-    for (let downloaded = 0; downloaded < wps.length; downloaded++) {
-      if (sameSurveyMissionPoint(surveyPoints[local], wps[downloaded])) {
-        candidates.push({ local, downloaded, cost: surveyMatchCost(surveyPoints[local], wps[downloaded]) });
-      }
-    }
-  }
-  candidates.sort((a, b) => a.cost - b.cost || a.local - b.local || a.downloaded - b.downloaded);
-  const owned = new Set<number>();
-  const paired = new Set<number>();
-  for (const candidate of candidates) {
-    if (paired.has(candidate.local) || owned.has(candidate.downloaded)) continue;
-    paired.add(candidate.local);
-    owned.add(candidate.downloaded);
-  }
+  const { owned } = matchSurveyOwnership(surveyPoints, wps);
   pushUndo();
   app.waypoints = wps.map((w, index) => {
     return {
