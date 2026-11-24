@@ -10,6 +10,12 @@ test.describe('Mission planning', () => {
     await page.waitForTimeout(1000);
   });
 
+  test.afterEach(async ({ page }) => {
+    // The survey test cleans up inline; a failed assertion skips that, and
+    // its leaked backend link breaks every later spec of the group.
+    await disconnectIfConnected(page);
+  });
+
   test('plan view shows map and mission panel', async ({ page }) => {
     await expect(page.locator('.leaflet-container')).toBeVisible({ timeout: 5000 });
   });
@@ -94,6 +100,13 @@ test.describe('Mission planning', () => {
   });
 
   test('terrain follow refuses to rewrite heights without home', async ({ page }) => {
+    // The refusal only exists without a home, and the page must be truly
+    // homeless: the backend hands every new page the state it remembers, and
+    // a leaked link — which it then auto-reconnects on its own — puts a home
+    // in that state within seconds. Cutting the page's websocket makes this
+    // exactly the unlinked flow it means to test, whatever the shared
+    // backend has seen.
+    await page.routeWebSocket(/\/ws$/, () => {});
     await page.evaluate(() => {
       localStorage.setItem(
         'argus_waypoints',

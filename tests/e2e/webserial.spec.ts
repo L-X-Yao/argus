@@ -1,4 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
+import { disconnectIfConnected } from './helpers';
 
 // A real MAVLink 2 HEARTBEAT: quadrotor, ArduPilot, disarmed, sysid 1.
 const HEARTBEAT = [253, 9, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 2, 3, 81, 3, 3, 226, 146];
@@ -64,6 +65,8 @@ test.describe('WebSerial session', () => {
   test.beforeEach(async ({ page }) => {
     await fakeSerialPort(page);
     await page.goto('/');
+    // A leaked backend link renders Disconnect instead of the USB button.
+    await disconnectIfConnected(page);
     await usbButton(page).click();
     await expect(disconnectButton(page)).toBeVisible({ timeout: 10000 });
   });

@@ -29,10 +29,22 @@ export async function connectSimulator(page: Page) {
 }
 
 export async function disconnectIfConnected(page: Page) {
+  // The backend link is global and shared by every spec of the no-backend
+  // group; a prior spec whose cleanup was skipped by a failed assertion
+  // leaves the page showing a vehicle. Whoever needs the disconnected
+  // welcome flow clears that first. The header first: a cold goto may still
+  // be mounting. The button is waited for, not probed: the page can take a
+  // beat to render the form; the click is only confirmed done when the
+  // button is gone, so the link is truly released.
+  await expect(page.locator('header').first()).toBeVisible({ timeout: 15000 });
   const disconnectBtn = page.locator('button', { hasText: /^断开$|^Disconnect$/ });
-  if (await disconnectBtn.isVisible({ timeout: 1000 }).catch(() => false)) {
+  const visible = await disconnectBtn
+    .waitFor({ state: 'visible', timeout: 3000 })
+    .then(() => true)
+    .catch(() => false);
+  if (visible) {
     await disconnectBtn.click();
-    await page.waitForTimeout(2000);
+    await expect(disconnectBtn).toBeHidden({ timeout: 10000 });
   }
 }
 
