@@ -172,6 +172,12 @@ class DroneLink:
         }
         self.fw_thread: threading.Thread | None = None
         self.fw_stop: threading.Event | None = None
+        # The serial ports present just before this board was last told to reboot into its
+        # bootloader (commands/_firmware.py). A retry after a failed flash tells the
+        # bootloader's port by it, so it is link state and not in fw_flash, which every page
+        # receives. A new session drops it: it says nothing about another board, or this one
+        # back in its firmware.
+        self.fw_ports_before: frozenset[str] | None = None
         self.param_mgr = ParamManager(self)
 
         self.attitude = AttitudeState()
@@ -294,6 +300,7 @@ class DroneLink:
         self._cmd_pending.clear()
         self._last_port = port
         self._last_baud = baudrate
+        self.fw_ports_before = None
         self._reconnect_enabled = True
         # Fresh manual connect cancels any auto-reconnect left over from a
         # prior session and resets the backoff counter.
@@ -431,24 +438,47 @@ class DroneLink:
         self._stop_log()
         self.add_event(lt("disconnected", self.locale), "disconnected")
 
-    def pause_for_flash(self) -> bool:
+    def pause_for_flash(self, before_close=None) -> bool:
         """Stop the link and leave the serial port closed for the bootloader protocol.
 
         The flashing worker owns the port until it calls connect() again. Refuses while the
         link is in reconnect backoff, where the thread can sleep up to 60 s, and refuses when
         the thread cannot be joined, so the worker never races it for the port.
+
+        ``before_close`` is where the caller sends the reboot into the bootloader. It runs
+        after the link's own thread has stopped and before the port is closed, so no
+        heartbeat, stream request or command retry of the link's can follow that command
+        into the bootloader, where a byte of a MAVLink frame reads as a bootloader command.
+        A refusal comes before it runs: nothing has been sent to the flight controller.
         """
         if self._reconnecting:
             return False
+        # Only this flag changes until the thread has stopped. If it does not, the link is
+        # as it was, its reconnect too.
         self._running = False
-        self._reconnect_enabled = False
         if self._thread and self._thread.is_alive():
             self._thread.join(timeout=3)
             if self._thread.is_alive():
-                # The thread may be in a reconnect-backoff sleep and would reopen the port
-                # after the FC is already a bootloader. Leave the link stopped: a port that
-                # comes back later is for the operator to connect, not for a blind retry.
+                # Nothing was sent: the link goes on when whatever holds the thread returns.
+                self._running = True
+                if not self._thread.is_alive():
+                    # It ended in the meantime: the link stays stopped, as a paused one is,
+                    # and the operator's next Disconnect or Connect takes it from there.
+                    self._running = False
                 return False
+        self._reconnect_enabled = False
+        if before_close is not None:
+            # NTRIP and the RTCM injector write through send() from threads of their own.
+            if self.ntrip_stop is not None:
+                self.ntrip_stop.set()
+            if self.rtcm_inject_stop is not None:
+                self.rtcm_inject_stop.set()
+            try:
+                before_close()
+            except Exception:  # noqa: BLE001
+                # The link stays stopped and the port still closes; the caller's next
+                # step (finding the bootloader) fails and brings the link back.
+                logger.warning("the reboot into the bootloader could not be sent", exc_info=True)
         with self._lock:
             try:
                 if self._ser:
