@@ -333,7 +333,9 @@ class TestPauseForFlash:
         assert link._running is True and link._reconnect_enabled is True
         link._ser.close.assert_not_called()
 
-    def test_a_loop_that_ends_while_the_pause_waits_for_it_leaves_the_link_stopped(self):
+    def test_a_loop_that_ends_while_the_pause_waits_for_it_lets_the_pause_go_on(self):
+        # The thread ends right after the join timed out. It has stopped, so the command
+        # goes out and the port closes: no state is left between running and paused.
         link = DroneLink()
         checks = []
         link._thread = SimpleNamespace(
@@ -342,9 +344,9 @@ class TestPauseForFlash:
         )
         link._ser = mock.MagicMock()
         sent = []
-        assert link.pause_for_flash(lambda: sent.append(1)) is False
-        assert sent == []
-        assert link._running is False
+        assert link.pause_for_flash(lambda: sent.append(1)) is True
+        assert sent == [1]
+        assert link._ser is None and link._running is False
 
     def test_nothing_of_the_links_is_written_after_the_command_by_a_running_loop(self):
         # The link's own thread, running: its heartbeat is on the port, then the command
@@ -407,6 +409,27 @@ class TestPauseForFlash:
 
         assert link.pause_for_flash(command) is True
         assert seen == {"ntrip": True, "rtcm": True}
+
+    def test_a_stop_event_cleared_by_its_thread_while_the_pause_runs_is_no_error(self, monkeypatch):
+        # The NTRIP thread clears ntrip_stop when it ends. A check of the attribute and a
+        # second read of it for set() can trip over that.
+        link = DroneLink()
+        link._ser = mock.MagicMock()
+        link._thread = None
+        stop = threading.Event()
+        reads = []
+
+        def cleared_after_the_first_read():
+            reads.append(1)
+            return stop if len(reads) == 1 else None
+
+        monkeypatch.setattr(
+            DroneLink, "ntrip_stop", mock.PropertyMock(side_effect=cleared_after_the_first_read), raising=False
+        )
+        sent = []
+        assert link.pause_for_flash(lambda: sent.append(1)) is True
+        assert sent == [1] and stop.is_set()
+        assert link._ser is None
 
     def test_a_new_session_drops_the_ports_from_before_the_reboot(self, monkeypatch):
         link = DroneLink()
@@ -623,7 +646,7 @@ WORLD = SimpleNamespace(present={"COM1"}, bootloader="COM2", answering=False, op
 class TestRetryAfterADiscoveryFailure:
     """The real _flash_job, discover_bootloader and port_candidates; the ports are faked."""
 
-    def patch(self, monkeypatch):
+    def patch(self, monkeypatch, reconnect=True):
         import serial.tools.list_ports as list_ports
 
         # The Windows branch of port_candidates and of _current_ports.
@@ -639,7 +662,69 @@ class TestRetryAfterADiscoveryFailure:
             cmd, "discover_bootloader", lambda original, before=None: real_discover(original, before, 0.05)
         )
         monkeypatch.setattr(cmd, "check_apj", lambda apj, bootloader: None)
-        monkeypatch.setattr(cmd, "_reconnect", lambda link, before: True)
+        if reconnect:
+            monkeypatch.setattr(cmd, "_reconnect", lambda link, before: True)
+
+    def retry_with_another_vehicle_plugged_in(self, tmp_path, monkeypatch, refuse):
+        """Run 1 fails in its discovery. COM7, another vehicle with a heartbeat, is plugged in
+        before run 2. Run 2 flashes and brings the link back; this board is slow to boot."""
+        real_reconnect = cmd._reconnect
+        WORLD.present, WORLD.bootloader, WORLD.answering, WORLD.opened = {"COM1"}, "COM2", False, []
+        self.patch(monkeypatch, reconnect=False)
+        link = FakeFlashLink()
+
+        def reboot(target, command, **kwargs):
+            WORLD.present = {"COM2"}
+
+        monkeypatch.setattr(cmd, "send_cmd", reboot)
+        monkeypatch.setattr(cmd, "_reconnect", lambda link, before: False)
+        path = make_apj(tmp_path)
+        cmd._flash_job(link, path, threading.Event())
+        assert link.fw_flash["phase"] == "failed"
+
+        WORLD.answering, WORLD.present = True, {"COM2", "COM7"}
+        if refuse:
+            wrong_board = lambda apj, bootloader: (_ for _ in ()).throw(fw.FlashError("wrong board"))  # noqa: E731
+            monkeypatch.setattr(cmd, "check_apj", wrong_board)
+        monkeypatch.setattr(FakeBootloaderPort, "reboot", lambda self: setattr(WORLD, "present", {"COM1", "COM7"}))
+        probed = []
+
+        def heartbeat(port, baud):
+            probed.append(port)
+            return port == "COM7" or probed.count("COM1") >= 3
+
+        monkeypatch.setattr(cmd, "probe_mavlink_heartbeat", heartbeat)
+        monkeypatch.setattr(cmd, "time", SimpleNamespace(monotonic=time.monotonic, sleep=lambda seconds: None))
+        monkeypatch.setattr(cmd, "_reconnect", real_reconnect)
+        cmd._flash_job(link, path, threading.Event())
+        return link, probed
+
+    def test_a_retry_does_not_link_to_a_vehicle_plugged_in_before_it(self, tmp_path, monkeypatch):
+        # The list from before the reboot finds the bootloader (COM2 is new to it), but it
+        # must not also decide where the link comes back: COM7 was there when the retry
+        # began, and a link to it would send the next command to that vehicle.
+        link, probed = self.retry_with_another_vehicle_plugged_in(tmp_path, monkeypatch, refuse=False)
+        assert link.fw_flash["phase"] == "done", link.fw_flash["error"]
+        assert [port for port, _baud in link.reconnected_to] == ["COM1"]
+        assert "COM7" not in probed
+
+    def test_a_retry_refused_before_erase_does_not_link_to_that_vehicle_either(self, tmp_path, monkeypatch):
+        link, probed = self.retry_with_another_vehicle_plugged_in(tmp_path, monkeypatch, refuse=True)
+        assert link.fw_flash["phase"] == "failed"
+        assert [port for port, _baud in link.reconnected_to] == ["COM1"]
+        assert "COM7" not in probed
+
+    def test_an_empty_recorded_list_is_still_the_list_from_before_the_reboot(self, tmp_path, monkeypatch):
+        # No port could be listed before the reboot (the port list failed then). That is the
+        # "nothing was there" the first run worked from, not "no list".
+        WORLD.present, WORLD.bootloader, WORLD.answering, WORLD.opened = {"COM1", "COM2"}, "COM2", True, []
+        self.patch(monkeypatch)
+        link = FakeFlashLink()
+        link.connected = False
+        link.fw_ports_before = frozenset()
+        cmd._flash_job(link, make_apj(tmp_path), threading.Event())
+        assert link.fw_flash["phase"] == "done", link.fw_flash["error"]
+        assert link.fw_flash["port"] == "COM2"
 
     def test_a_retry_finds_a_bootloader_that_came_up_on_another_port(self, tmp_path, monkeypatch):
         # The board leaves COM1 for its bootloader's COM2 and is not answering there yet when

@@ -461,18 +461,17 @@ class DroneLink:
             if self._thread.is_alive():
                 # Nothing was sent: the link goes on when whatever holds the thread returns.
                 self._running = True
-                if not self._thread.is_alive():
-                    # It ended in the meantime: the link stays stopped, as a paused one is,
-                    # and the operator's next Disconnect or Connect takes it from there.
-                    self._running = False
-                return False
+                if self._thread.is_alive():
+                    return False
+                # It ended in the meantime: it has stopped, so the pause goes on.
+                self._running = False
         self._reconnect_enabled = False
         if before_close is not None:
-            # NTRIP and the RTCM injector write through send() from threads of their own.
-            if self.ntrip_stop is not None:
-                self.ntrip_stop.set()
-            if self.rtcm_inject_stop is not None:
-                self.rtcm_inject_stop.set()
+            # NTRIP and the RTCM injector write through send() from threads of their own,
+            # and clear these attributes when they end: each is read once.
+            for stop in (self.ntrip_stop, self.rtcm_inject_stop):
+                if stop is not None:
+                    stop.set()
             try:
                 before_close()
             except Exception:  # noqa: BLE001
