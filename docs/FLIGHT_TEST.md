@@ -1,5 +1,7 @@
 # Flight test protocol
 
+> 中文: [FLIGHT_TEST.zh.md](FLIGHT_TEST.zh.md)
+
 Argus has been tested on the bench and in SITL, not in the air. This is a conservative first-flight protocol for an ArduCopter vehicle. It is a starting point: follow the law and the airspace rules where you fly, and the procedures of the people responsible for the aircraft.
 
 ## Roles

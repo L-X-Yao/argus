@@ -1,5 +1,7 @@
 # Troubleshooting and FAQ
 
+> 中文: [FAQ.zh.md](FAQ.zh.md)
+
 Start with [VERIFICATION.md](VERIFICATION.md) for what has been tested, and [SECURITY.md](../SECURITY.md) before exposing Argus to a network.
 
 ## Connection and access

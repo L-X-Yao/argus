@@ -1,5 +1,7 @@
 # Recovering from a failed firmware flash
 
+> 中文: [RECOVERY.zh.md](RECOVERY.zh.md)
+
 Argus writes an `.apj` through the ArduPilot bootloader over a direct USB serial port. It checks the board id and image size before erasing, verifies the image before rebooting, and does not reboot after a failed erase, program or verify. A failure after erase therefore leaves the controller in its bootloader, never running a partial image. A failure before erase leaves the old firmware running. A reconnect failure after a successful write, verify and reboot leaves the new firmware running while the GCS is disconnected.
 
 ## The panel says the flash failed

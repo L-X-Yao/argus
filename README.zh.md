@@ -288,9 +288,9 @@ npm run test:e2e -- --project=chromium
 - [`docs/VERIFICATION.md`](docs/VERIFICATION.md) — 每项功能验证到什么程度
 - [`docs/PARAM_I18N.md`](docs/PARAM_I18N.md) — 参数元数据与翻译数据包契约
 - [`SECURITY.md`](SECURITY.md) — 如何安全地运行，如何报告漏洞
-- [`docs/FAQ.md`](docs/FAQ.md) — 常见连接、地图、日志与固件问题
-- [`docs/RECOVERY.md`](docs/RECOVERY.md) — 固件刷写失败后的恢复步骤
-- [`docs/FLIGHT_TEST.md`](docs/FLIGHT_TEST.md) — 保守的首次飞行测试流程
+- [`docs/FAQ.zh.md`](docs/FAQ.zh.md) — 常见连接、地图、日志与固件问题（[English](docs/FAQ.md)）
+- [`docs/RECOVERY.zh.md`](docs/RECOVERY.zh.md) — 固件刷写失败后的恢复步骤（[English](docs/RECOVERY.md)）
+- [`docs/FLIGHT_TEST.zh.md`](docs/FLIGHT_TEST.zh.md) — 保守的首次飞行测试流程（[English](docs/FLIGHT_TEST.md)）
 - [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) — 仓库和发布包里的第三方成果，以及 Argus 读取的服务器
 - [`docs/FEATURE_CHECKLIST.md`](docs/FEATURE_CHECKLIST.md) — v3.4 功能快照，已冻结
 - [`docs/protocol_design.md`](docs/protocol_design.md) — 承重设计决策
