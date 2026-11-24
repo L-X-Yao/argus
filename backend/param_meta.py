@@ -263,7 +263,7 @@ def _read_json(path: Path):
         return value
     except _PackError:
         raise
-    except (OSError, UnicodeError, ValueError, json.JSONDecodeError) as exc:
+    except (OSError, UnicodeError, ValueError, RecursionError, json.JSONDecodeError) as exc:
         raise _PackError("cannot read parameter pack") from exc
 
 

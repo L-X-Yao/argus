@@ -539,3 +539,11 @@ class TestPackValidation:
         import backend.param_meta as pm
 
         assert pm._fw_series(None) == ""
+
+    def test_deeply_nested_pack_json_is_refused(self, tmp_path):
+        import backend.param_meta as pm
+
+        deep = tmp_path / "deep.json"
+        deep.write_text("[" * 2000 + "]" * 2000)
+        with patch.object(pm, "PACK_DIR", tmp_path), pytest.raises(pm._PackError):
+            pm._read_json(deep)
