@@ -474,6 +474,52 @@ describe('loadDownloadedMission', () => {
     expect(result.owned.size).toBe(500);
   });
 
+  it('matches exhaustive assignments on random small complete graphs', () => {
+    const point = { lat: 34.258, lon: 108.942, alt: 45, drop: false, delay: 0, type: 'wp' as const, loiter_param: 0 };
+    let seed = 0x51a7;
+    const random = () => {
+      seed = (seed * 1664525 + 1013904223) >>> 0;
+      return seed;
+    };
+    for (let run = 0; run < 50; run++) {
+      const localSpeeds = Array.from({ length: 1 + (random() % 4) }, () => random() % 21);
+      const downloadSpeeds = Array.from({ length: 1 + (random() % 4) }, () => random() % 21);
+      const survey = localSpeeds.map((speed) => ({ ...point, speed, survey: true }));
+      const downloaded = downloadSpeeds.map((speed) => ({ ...point, speed }));
+      let bestCount = -1;
+      let bestCost = Infinity;
+      function visit(i: number, used: number, count: number, cost: number) {
+        if (i === localSpeeds.length) {
+          if (count > bestCount || (count === bestCount && cost < bestCost)) {
+            bestCount = count;
+            bestCost = cost;
+          }
+          return;
+        }
+        visit(i + 1, used, count, cost);
+        for (let j = 0; j < downloadSpeeds.length; j++) {
+          if (used & (1 << j)) continue;
+          visit(i + 1, used | (1 << j), count + 1, cost + Math.abs(localSpeeds[i] - downloadSpeeds[j]));
+        }
+      }
+      visit(0, 0, 0, 0);
+
+      const result = matchSurveyOwnership(survey, downloaded);
+      expect(result.pairs.size).toBe(bestCount);
+      expect(result.cost).toBe(bestCost);
+    }
+  });
+
+  it('solves a fully connected 500 by 500 Survey component', () => {
+    const point = { lat: 34.258, lon: 108.942, alt: 45, drop: false, delay: 0, type: 'wp' as const, loiter_param: 0 };
+    const survey = Array.from({ length: 500 }, (_, i) => ({ ...point, speed: (i * 37) % 100, survey: true }));
+    const downloaded = Array.from({ length: 500 }, (_, i) => ({ ...point, speed: (i * 61) % 100 }));
+
+    const result = matchSurveyOwnership(survey, downloaded);
+    expect(result.pairs.size).toBe(500);
+    expect(result.owned.size).toBe(500);
+  });
+
   it('restores survey ownership after an FC round trip, not from downloaded metadata', () => {
     const local = {
       lat: 34.2581234567,
