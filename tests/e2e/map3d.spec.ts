@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { disconnectIfConnected } from './helpers';
+import { connectSimulator, disconnectIfConnected } from './helpers';
 
 // The 3D view has no unit coverage, and maplibre v6 fails quietly when its
 // worker is miswired: the canvas still appears, but nothing loads into it.
@@ -141,6 +141,40 @@ test.describe('3D map', () => {
 
     await overlaysReady(page);
     await expect(page.locator('.maplibregl-marker')).toHaveCount(3);
+  });
+
+  test('the vehicle and its home leave the 3D map when the link is closed', async ({ page }) => {
+    // Needs a live vehicle: a link another spec left behind serves, and when
+    // there is none this one makes it. The shared backend link is closed at
+    // the end, whichever way the test goes.
+    test.setTimeout(120000);
+    await open3d(page);
+    await overlaysReady(page);
+    const disconnect = page.locator('button', { hasText: /^断开$|^Disconnect$/ });
+    if (!(await disconnect.isVisible().catch(() => false))) {
+      await connectSimulator(page);
+    }
+    await seed(page, 'argus_fence', [
+      { lat: 34.258, lon: 108.942 },
+      { lat: 34.262, lon: 108.95 },
+      { lat: 34.254, lon: 108.955 },
+    ]);
+    try {
+      await page.reload();
+      await overlaysReady(page);
+      // The fence's three vertices, the vehicle and its home.
+      await expect(page.locator('.maplibregl-marker')).toHaveCount(5);
+
+      await page.locator('button', { hasText: /^断开$|^Disconnect$/ }).click();
+      await expect(page.locator('button', { hasText: /^断开$|^Disconnect$/ })).toBeHidden({
+        timeout: 10000,
+      });
+      // A vehicle that is no longer linked has no place on the map. Its marker
+      // and its home's used to stay for as long as the view lived.
+      await expect(page.locator('.maplibregl-marker')).toHaveCount(3);
+    } finally {
+      await disconnectIfConnected(page);
+    }
   });
 
   test('draws a survey polygon', async ({ page }) => {
