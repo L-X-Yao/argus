@@ -27,6 +27,7 @@ import {
   saveFence,
   saveWaypoints,
   shouldRemoveDisconnectedMarkers,
+  homeMarkerPosition,
 } from './stores.svelte';
 
 function makeStorage(): Storage {
@@ -408,6 +409,31 @@ describe('loadDownloadedMission', () => {
     expect(keptForNextGrid[0].survey).toBeUndefined();
   });
 
+  it('pairs Survey ownership globally by similarity, not by download order', () => {
+    const point = {
+      lat: 34.258,
+      lon: 108.942,
+      alt: 45,
+      drop: false,
+      delay: 0,
+      speed: 0,
+      type: 'wp' as const,
+      loiter_param: 0,
+    };
+    app.waypoints = [
+      { ...point, speed: 5 },
+      { ...point, survey: true },
+    ];
+
+    loadDownloadedMission([
+      { ...point, speed: 5 },
+      { ...point, speed: 0 },
+    ]);
+
+    expect(app.waypoints.map((w) => w.survey)).toEqual([undefined, true]);
+    expect(app.waypoints.filter((w) => w.survey !== true)).toHaveLength(1);
+  });
+
   it('restores survey ownership after an FC round trip, not from downloaded metadata', () => {
     const local = {
       lat: 34.2581234567,
@@ -498,6 +524,15 @@ describe('stored values that are zero', () => {
 });
 
 describe('disconnected map markers', () => {
+  it('restores Home after an unexpected loss even without a vehicle latitude', () => {
+    expect(homeMarkerPosition({ connected: false, unexpectedLoss: true, homeLat: 34.2, homeLon: 108.9 })).toEqual({
+      lat: 34.2,
+      lon: 108.9,
+    });
+    expect(homeMarkerPosition({ connected: false, unexpectedLoss: false, homeLat: 34.2, homeLon: 108.9 })).toBeNull();
+    expect(homeMarkerPosition({ connected: true, unexpectedLoss: false, homeLat: 0, homeLon: 108.9 })).toBeNull();
+  });
+
   it('removes them only for an operator disconnect, not an unexpected loss', () => {
     expect(shouldRemoveDisconnectedMarkers(false, false)).toBe(true);
     expect(shouldRemoveDisconnectedMarkers(false, true)).toBe(false);

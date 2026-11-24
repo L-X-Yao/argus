@@ -9,9 +9,10 @@
     addToast,
     showConfirm,
     shouldRemoveDisconnectedMarkers,
+    homeMarkerPosition,
   } from '../../lib/stores.svelte';
   import { dispatch } from '../../lib/transport';
-  import { normalizePickedPoint } from '../../lib/roi';
+  import { inverseMapPoint, normalizePickedPoint } from '../../lib/roi';
   import { toGcj, toWgs } from '../../lib/gcj02';
   import { t } from '../../lib/i18n.svelte';
   import { isOfflineSource, tileUrl } from '../../lib/backend';
@@ -83,7 +84,7 @@
     return useGcj ? toGcj(lat, lon) : [lat, lon];
   }
   function fromMap(mlat: number, mlon: number): [number, number] {
-    return useGcj ? toWgs(mlat, mlon) : [mlat, mlon];
+    return inverseMapPoint(mlat, mlon, useGcj ? toWgs : (lat, lon) => [lat, lon]);
   }
 
   // Per-waypoint maplibre Markers — replaces the static GeoJSON circle layer
@@ -568,6 +569,26 @@
       }
       return;
     }
+    // Home is independent of the vehicle's current fix: after state arrives before
+    // link_lost, it is the one marker that can be restored even when drone.lat is 0.
+    const home = homeMarkerPosition({
+      connected: d.connected,
+      unexpectedLoss: app.vehicleLinkLost || app.serialLinkLost,
+      homeLat: d.home_lat,
+      homeLon: d.home_lon,
+    });
+    if (home && homeMarker) {
+      const [hlat, hlon] = toMap(home.lat, home.lon);
+      homeMarker.setLngLat([hlon, hlat]);
+    } else if (home) {
+      const [hlat, hlon] = toMap(home.lat, home.lon);
+      const hel = document.createElement('div');
+      const hsvg = createSvgElement(
+        '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="#4caf50" stroke="#fff" stroke-width="2"/><text x="10" y="14" text-anchor="middle" fill="white" font-size="10" font-weight="bold">H</text></svg>',
+      );
+      hel.appendChild(hsvg);
+      homeMarker = new maplibregl.Marker({ element: hel }).setLngLat([hlon, hlat]).addTo(map!);
+    }
     if (d.lat === 0) return;
 
     const [mlat, mlon] = toMap(d.lat, d.lon);
@@ -606,20 +627,6 @@
           properties: {},
         });
       }
-    }
-
-    // Home can move: the first fix stands in until HOME_POSITION arrives.
-    if (d.home_lat !== 0 && homeMarker) {
-      const [hlat, hlon] = toMap(d.home_lat, d.home_lon);
-      homeMarker.setLngLat([hlon, hlat]);
-    } else if (d.home_lat !== 0) {
-      const [hlat, hlon] = toMap(d.home_lat, d.home_lon);
-      const hel = document.createElement('div');
-      const hsvg = createSvgElement(
-        '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="8" fill="#4caf50" stroke="#fff" stroke-width="2"/><text x="10" y="14" text-anchor="middle" fill="white" font-size="10" font-weight="bold">H</text></svg>',
-      );
-      hel.appendChild(hsvg);
-      homeMarker = new maplibregl.Marker({ element: hel }).setLngLat([hlon, hlat]).addTo(map!);
     }
   });
 

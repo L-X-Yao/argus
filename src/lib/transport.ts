@@ -138,10 +138,7 @@ export async function connectSerial(baudRate: number, handlers: SerialHandlers):
     serial.conn = await openSerial(baudRate);
     serial.handlers = handlers;
     serial.running = true;
-    app.serialLinkLost = false;
-    app.vehicleLinkLost = false;
-    // The board may have been swapped, even after a USB drop, and the backend link does
-    // the same on every connection: the 'connected' case in ws.ts.
+    // Keep the last known position until the first vehicle heartbeat arrives.
     clearParams();
     serial.seq = 0;
     serial.buf = new Uint8Array(0);
@@ -185,6 +182,8 @@ export async function connectSerial(baudRate: number, handlers: SerialHandlers):
           frame.msgId === 0 &&
           isVehicleHeartbeat(decodeHeartbeat(_padView(frame.payload, 9)))
         ) {
+          app.serialLinkLost = false;
+          app.vehicleLinkLost = false;
           const wrongTarget = frame.sysId !== 1;
           serial.targetLatched = true;
           serial.targetSysId = frame.sysId;

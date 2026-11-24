@@ -203,6 +203,8 @@ beforeEach(async () => {
   readLoopOnChunk = null;
   readLoopResolve = null;
   _seq = 0;
+  app.serialLinkLost = false;
+  app.vehicleLinkLost = false;
   await connectSerial(115200, {});
   app.drone.connected = true; // as the first heartbeat does
   // connectSerial issues an immediate heartbeat + a batch of REQUEST_DATA_STREAM
@@ -1383,8 +1385,12 @@ describe('serial link health', () => {
     expect(app.drone).toMatchObject({ connected: false, armed: true, link_age: -1 });
     expect(app.serialLinkLost).toBe(true);
     await connectSerial(115200, {});
+    expect(app.serialLinkLost).toBe(true);
+    expect(app.vehicleLinkLost).toBe(true);
+    inject(encodeFrame(0, encodeHeartbeat(2, 3), 1, 1, 0));
     app.drone.connected = true; // as the first heartbeat does
     expect(app.serialLinkLost).toBe(false);
+    expect(app.vehicleLinkLost).toBe(false);
     expect(app.drone.armed).toBe(true); // reconnecting is no reason to show it disarmed
   });
 

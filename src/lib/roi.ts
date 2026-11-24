@@ -14,6 +14,15 @@ export function validRoiInput(lat: unknown, lon: unknown, alt: unknown): boolean
   );
 }
 
+/** Normalize the raw map longitude BEFORE a nonlinear inverse transform such as GCJ-02. */
+export function inverseMapPoint(
+  lat: number,
+  lon: number,
+  inverse: (lat: number, lon: number) => [number, number],
+): [number, number] {
+  return inverse(lat, wrapLongitude(lon));
+}
+
 /** Leaflet and MapLibre can pick on a repeated copy of the world. */
 export function normalizePickedPoint(lat: number, lon: number): { lat: number; lon: number } {
   return { lat, lon: wrapLongitude(lon) };
