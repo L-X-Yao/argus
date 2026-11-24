@@ -375,6 +375,9 @@ def test_legacy_versioned_empty_falls_back_to_master(tmp_path):
         result = pm.get_param_metadata("copter", fw="v4.6.3")
     assert result["P"]["desc"] == "English"
     assert result["_meta"]["total"] == 1
+    # The content is master, not 4.6.3: do not label it with the firmware's series.
+    assert result["_meta"]["series"] == ""
+    assert result["_meta"]["available_series"] == []
 
 
 def test_vehicle_without_pack_sources_uses_english_fallback(tmp_path):

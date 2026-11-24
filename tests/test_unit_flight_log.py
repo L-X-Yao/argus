@@ -119,11 +119,12 @@ def test_a_flight_is_summarised(tmp_path):
 
 
 def test_ekf_reads_the_horizontal_position_variance(tmp_path):
-    # The terrain variance at offset 16 is 0.01; only the field at offset 4 is the metric.
-    write_tlog(tmp_path / "argus_ekf.tlog", [heartbeat(armed=False, seq=0), ekf(pos_horiz=0.7, terrain=0.01, seq=1)])
+    # The terrain variance at offset 16 is 0.01; only the field at offset 4 is the metric,
+    # and it is kept to four decimals.
+    write_tlog(tmp_path / "argus_ekf.tlog", [heartbeat(armed=False, seq=0), ekf(pos_horiz=0.0123, terrain=0.01, seq=1)])
     with mock.patch.object(cfg, "LOG_DIR", tmp_path):
         summary = flight_log.analyze("argus_ekf.tlog")
-    assert summary["ekf_max_pos_horiz_variance"] == 0.7
+    assert summary["ekf_max_pos_horiz_variance"] == 0.0123
 
 
 def test_event_and_mission_lists_are_capped_while_counting(tmp_path):

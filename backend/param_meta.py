@@ -570,9 +570,13 @@ def _request_result(result: dict, selection: str, locale_was_invalid: bool) -> d
 def _legacy_result(vehicle, locale, fw, locale_was_invalid):
     fw_series = _fw_series(fw)
     raw = _get_versioned_metadata(vehicle, fw_series) if fw_series else get_metadata(vehicle)
+    from_master = False
     if not raw and fw_series:
-        # A firmware newer than the versioned folders, or a URL that failed.
+        # A firmware newer than the versioned folders, or a URL that failed. The
+        # content is the master metadata, so it must not be labelled with the
+        # firmware's series.
         raw = get_metadata(vehicle)
+        from_master = bool(raw)
     # Legacy XML is ArduPilot's, not an untrusted pack: skip entries it cannot
     # represent instead of returning nothing for the whole vehicle.
     try:
@@ -584,13 +588,13 @@ def _legacy_result(vehicle, locale, fw, locale_was_invalid):
     return {
         "_meta": {
             "vehicle": vehicle,
-            "series": fw_series,
+            "series": "" if from_master else fw_series,
             "locale": locale,
             "selection": "fw",
             "translation": "reviewed" if english else "unavailable",
             "translated": total if english else 0,
             "total": total,
-            "available_series": [fw_series] if fw_series else [],
+            "available_series": [] if from_master else ([fw_series] if fw_series else []),
             "data_version": "",
             "schema": 1,
         },

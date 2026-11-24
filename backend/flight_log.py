@@ -349,7 +349,8 @@ def analyze(name: str | None = None, cancelled=None) -> dict | None:
         },
         "gps": {"max_fix": max_fix or None, "max_satellites": max_sats or None},
         "vibration_max": round(max_vibration, 2) if max_vibration else None,
-        "ekf_max_pos_horiz_variance": round(max_ekf, 2) if max_ekf else None,
+        # The variance is a small number: two decimals turn 0.025-0.035 into 0.03.
+        "ekf_max_pos_horiz_variance": round(max_ekf, 4) if max_ekf else None,
         "mission": {"items_seen": len(mission_seqs), "current_seqs": current_seqs},
         "parameters_read": parameters,
         "events": events,
