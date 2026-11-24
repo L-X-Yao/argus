@@ -6,7 +6,7 @@ import logging
 import math
 import time
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from fastapi import WebSocket, WebSocketDisconnect
 
@@ -101,6 +101,9 @@ class _Asked:
     page: WebSocket
     kind: str = ""
     running: bool = False
+    # The client as it identified itself when it asked. Kept here so the answer is
+    # still attributed to it after the assistant disconnects mid-run.
+    client: dict = field(default_factory=dict)
 
 
 def sanitize_baud(baud) -> int:
@@ -240,7 +243,7 @@ class WSManager:
                     "page_closed",
                     id=key,
                     kind=asked.kind,
-                    client=self._assistants.get(asked.assistant, {}),
+                    client=asked.client or self._assistants.get(asked.assistant, {}),
                     running=asked.running,
                 )
                 await self._send(
@@ -313,7 +316,7 @@ class WSManager:
             return
         self._asked_total += 1
         key = f"{self._session}-{self._asked_total}"
-        self._asked[key] = _Asked(ws, rid, page, kind)
+        self._asked[key] = _Asked(ws, rid, page, kind, client=client)
         assistant_audit.record("asked", id=key, request=rid, client=client, kind=kind, args=args)
         await self._send(page, {"type": "assistant_request", "id": key, "kind": kind, "args": args})
 
@@ -340,7 +343,7 @@ class WSManager:
             "answered",
             id=key,
             kind=asked.kind,
-            client=self._assistants.get(asked.assistant, {}),
+            client=asked.client or self._assistants.get(asked.assistant, {}),
             ok=reply["ok"],
             outcome=outcome[:100] if isinstance(outcome, str) else None,
             error=reply.get("error"),
@@ -356,7 +359,9 @@ class WSManager:
             return
         key, asked = found
         if state == "running" and not asked.running:
-            assistant_audit.record("running", id=key, kind=asked.kind, client=self._assistants.get(asked.assistant, {}))
+            assistant_audit.record(
+                "running", id=key, kind=asked.kind, client=asked.client or self._assistants.get(asked.assistant, {})
+            )
         if state == "running":
             asked.running = True
         await self._send(asked.assistant, {"type": "assistant_state", "id": asked.rid, "state": state})

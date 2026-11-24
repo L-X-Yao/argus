@@ -394,6 +394,8 @@ class TestAudit:
         assert "withdrawn" not in events
         assert "abandoned" in events
         assert events[-1] == "answered" and lines[-1]["ok"] is True
+        # The assistant that asked is gone; the answer still carries its identity.
+        assert lines[-1]["client"]["name"] == "unknown assistant"
 
     async def test_no_page_refuses_and_records(self, mgr, audit_log):
         ai = await assistant(mgr)

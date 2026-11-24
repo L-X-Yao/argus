@@ -28,6 +28,7 @@ from .replay import MAX_TLOG_SIZE, read_tlog
 
 MAX_EVENTS = 50
 MAX_MODES = 30
+MAX_CURRENT_SEQS = 10
 # MAV_SEVERITY_WARNING: what the controller says is a problem, not a note.
 WARNING = 4
 PLANE_TYPES = (1, 19, 20, 21, 22, 23, 24, 25)
@@ -116,7 +117,11 @@ def path_of(name: str | None) -> Path:
             raise LogRefused("file: a .tlog file name in the Argus logs folder, not a path.")
         if not name.lower().endswith(".tlog"):
             raise LogRefused("file: a .tlog file name.")
-        chosen = (folder / name).resolve()
+        try:
+            chosen = (folder / name).resolve()
+        except (OSError, ValueError) as exc:
+            # A NUL byte or an overlong name is not a path this tool will open.
+            raise LogRefused(f"file: {name!r} is not a .tlog file name in the Argus logs folder.") from exc
         if chosen.parent != folder.resolve():
             raise LogRefused("file: a .tlog file name in the Argus logs folder, not a path.")
         if not chosen.is_file():
@@ -148,6 +153,7 @@ def analyze(name: str | None = None, cancelled=None) -> dict | None:
 
     counts: dict[int, int] = {}
     events: list[dict] = []
+    events_total = 0
     modes: list[dict] = []
     current_seqs: list[dict] = []
     mission_seqs: set[int] = set()
@@ -285,15 +291,20 @@ def analyze(name: str | None = None, cancelled=None) -> dict | None:
 
         elif mid == 193:  # EKF_STATUS_REPORT
             p = _pad(payload, 34)
-            variance = struct.unpack_from("<f", p, 16)[0]
+            # MAVLink 2 wire order (largest fields first, extension last): velocity@0,
+            # pos_horiz@4, pos_vert@8, compass@12, terrain@16, flags@20
+            # (ardupilotmega.xml message 193).
+            variance = struct.unpack_from("<f", p, 4)[0]
             if math.isfinite(variance):
                 max_ekf = max(max_ekf, variance)
 
         elif mid == 253:  # STATUSTEXT
             p = _pad(payload, 51)
             if p[0] <= WARNING:
-                text = p[1:51].split(b"\x00")[0].decode("utf-8", "replace").strip()
-                events.append({"t": t, "severity": p[0], "text": text})
+                events_total += 1
+                if len(events) < MAX_EVENTS:
+                    text = p[1:51].split(b"\x00")[0].decode("utf-8", "replace").strip()
+                    events.append({"t": t, "severity": p[0], "text": text})
 
         elif mid in (38, 73):  # MISSION_ITEM, MISSION_ITEM_INT
             p = _pad(payload, 37)
@@ -304,6 +315,8 @@ def analyze(name: str | None = None, cancelled=None) -> dict | None:
             seq = struct.unpack_from("<H", p, 0)[0]
             if not current_seqs or current_seqs[-1]["seq"] != seq:
                 current_seqs.append({"t": t, "seq": seq})
+                if len(current_seqs) > MAX_CURRENT_SEQS:
+                    current_seqs.pop(0)
 
         elif mid == 22:  # PARAM_VALUE
             parameters += 1
@@ -336,11 +349,12 @@ def analyze(name: str | None = None, cancelled=None) -> dict | None:
         },
         "gps": {"max_fix": max_fix or None, "max_satellites": max_sats or None},
         "vibration_max": round(max_vibration, 2) if max_vibration else None,
-        "ekf_max_pos_horiz_variance": round(max_ekf, 2) if max_ekf else None,
-        "mission": {"items_seen": len(mission_seqs), "current_seqs": current_seqs[-10:]},
+        # The variance is a small number: two decimals turn 0.025-0.035 into 0.03.
+        "ekf_max_pos_horiz_variance": round(max_ekf, 4) if max_ekf else None,
+        "mission": {"items_seen": len(mission_seqs), "current_seqs": current_seqs},
         "parameters_read": parameters,
-        "events": events[:MAX_EVENTS],
-        "events_left_out": max(0, len(events) - MAX_EVENTS),
+        "events": events,
+        "events_left_out": max(0, events_total - len(events)),
         "messages_by_type": {
             MESSAGE_NAMES.get(mid, f"MSG_{mid}"): count
             for mid, count in sorted(counts.items(), key=lambda kv: kv[1], reverse=True)[:10]

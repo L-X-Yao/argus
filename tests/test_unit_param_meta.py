@@ -368,6 +368,21 @@ class TestPackValidation:
         with pytest.raises(pm._PackError):
             pm._normalise_entries(data)
 
+    def test_lenient_metadata_skips_what_it_cannot_use(self):
+        import backend.param_meta as pm
+
+        assert pm._normalise_entries([], strict=False) == {}
+        result = pm._normalise_entries(
+            {
+                1: {"desc": "non-string key"},
+                "BAD-NAME": {"desc": "not a MAVLink name"},
+                "BROKEN": "not an entry",
+                "GOOD": {"desc": "kept"},
+            },
+            strict=False,
+        )
+        assert result == {"GOOD": {"desc": "kept"}}
+
     def test_prefixes_are_removed_and_bare_entry_wins(self):
         import backend.param_meta as pm
 
@@ -524,3 +539,11 @@ class TestPackValidation:
         import backend.param_meta as pm
 
         assert pm._fw_series(None) == ""
+
+    def test_deeply_nested_pack_json_is_refused(self, tmp_path):
+        import backend.param_meta as pm
+
+        deep = tmp_path / "deep.json"
+        deep.write_text("[" * 2000 + "]" * 2000)
+        with patch.object(pm, "PACK_DIR", tmp_path), pytest.raises(pm._PackError):
+            pm._read_json(deep)
