@@ -139,6 +139,7 @@ export async function connectSerial(baudRate: number, handlers: SerialHandlers):
     serial.handlers = handlers;
     serial.running = true;
     app.serialLinkLost = false;
+    app.vehicleLinkLost = false;
     // The board may have been swapped, even after a USB drop, and the backend link does
     // the same on every connection: the 'connected' case in ws.ts.
     clearParams();
@@ -260,6 +261,7 @@ export async function connectSerial(baudRate: number, handlers: SerialHandlers):
         if (wasRunning) {
           _clearSerialLink();
           app.serialLinkLost = true;
+          app.vehicleLinkLost = true;
           // Left set, the next connect would treat it as a live session and disconnect
           // it, clearing armed on a vehicle that may still be flying.
           void serial.conn?.close().catch(() => {});
@@ -323,6 +325,7 @@ function _clearSerialLink(): void {
 
 export async function disconnectSerial(): Promise<void> {
   serial.running = false;
+  app.vehicleLinkLost = false;
   _clearSerialLink();
   // Only here: on a lost link the vehicle may well still be armed, and the
   // backend keeps armed in that case too.

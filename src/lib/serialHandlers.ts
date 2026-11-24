@@ -107,6 +107,7 @@ let session = newSession();
 export function resetSerialSession(): void {
   session = newSession();
   app.serialLinkLost = false;
+  app.vehicleLinkLost = false;
   const {
     vtol_state,
     landed,

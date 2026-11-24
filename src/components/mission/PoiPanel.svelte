@@ -2,6 +2,7 @@
   import { onDestroy } from 'svelte';
   import { app, addToast } from '../../lib/stores.svelte';
   import { dispatch } from '../../lib/transport';
+  import { validRoiInput } from '../../lib/roi';
   import { t } from '../../lib/i18n.svelte';
   import { X, Crosshair } from '@lucide/svelte';
   import Button from '$lib/components/ui/button/button.svelte';
@@ -49,7 +50,7 @@
   });
 
   function setRoi() {
-    if (lat === 0 && lon === 0) {
+    if ((lat === 0 && lon === 0) || !validRoiInput(lat, lon, alt)) {
       addToast(t('poi.hint'), 'warn');
       return;
     }

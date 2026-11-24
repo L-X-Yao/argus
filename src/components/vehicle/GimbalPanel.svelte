@@ -3,6 +3,8 @@
   import { dispatch } from '../../lib/transport';
   import { t } from '../../lib/i18n.svelte';
   import type { DroneEvent } from '../../lib/types';
+  import { CameraRecordingTracker } from '../../lib/gimbal';
+  import { validRoiInput } from '../../lib/roi';
 
   // All gimbal/camera/ROI commands go through dispatch(): its table carries
   // the WebSerial-native handlers (with backend-parity validation) and falls
@@ -44,13 +46,16 @@
   let livePitch = $derived(app.drone.gimbal_pitch ?? null);
   let liveYaw = $derived(app.drone.gimbal_yaw ?? null);
 
-  // Camera recording state follows the FC's ack, not the click.
+  const recordingTracker = new CameraRecordingTracker(app.events, {
+    sysid: app.drone.sysid,
+    connected: app.drone.connected,
+  });
+  // Only ACKs after this mount and this vehicle/link generation may set recording state.
   $effect(() => {
-    for (const ev of app.events) {
-      if (ev.event_type !== 'cmd_ack_ok') continue;
-      if (ev.cmd === 2500) recording = true;
-      else if (ev.cmd === 2501) recording = false;
-    }
+    recording = recordingTracker.sync(app.events, {
+      sysid: app.drone.sysid,
+      connected: app.drone.connected,
+    });
   });
 
   interface PendingAck {
@@ -165,7 +170,7 @@
   /* ── ROI ── */
   function setRoi() {
     if (!requireLink()) return;
-    if (roiLat === 0 && roiLon === 0) {
+    if ((roiLat === 0 && roiLon === 0) || !validRoiInput(roiLat, roiLon, roiAlt)) {
       addToast(t('gimbal.roiHint'), 'warn');
       return;
     }

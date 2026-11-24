@@ -2,6 +2,7 @@
   import { onMount } from 'svelte';
   import { app, addToast } from '../../lib/stores.svelte';
   import { apiUrl } from '../../lib/backend';
+  import { offlineDownloadOutcome } from '../../lib/offlineDownload';
   import { t } from '../../lib/i18n.svelte';
   import Button from '$lib/components/ui/button/button.svelte';
   import { X, Download, HardDrive } from '@lucide/svelte';
@@ -67,9 +68,10 @@
       if (!r.ok) throw new Error(t('fw.downloadFailed'));
       const data: { total: number; downloaded: number; skipped: number; truncated?: boolean } = await r.json();
       result = data;
-      if (data.downloaded === 0) {
+      const outcome = offlineDownloadOutcome(data);
+      if (outcome === 'none') {
         addToast(t('offmap.none'), 'error', 6000);
-      } else if (data.truncated) {
+      } else if (outcome === 'incomplete') {
         addToast(t('offmap.incomplete').replace('{n}', String(data.downloaded)), 'warn', 6000);
       } else {
         addToast(t('offmap.done'), 'success');

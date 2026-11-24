@@ -16,6 +16,8 @@ class AppState {
   activeTransport: 'none' | 'ws' | 'serial' = $state('none');
   // The USB link dropped and the session has not ended: see updateState.
   serialLinkLost: boolean = $state(false);
+  // Either transport lost its link unexpectedly; an operator Disconnect leaves this false.
+  vehicleLinkLost: boolean = $state(false);
   waypoints: Waypoint[] = $state([]);
   undoStack: Waypoint[][] = $state([]);
   defaultAlt: number = $state(30);
@@ -80,10 +82,16 @@ export function updateState(s: Partial<DroneState>) {
     app.serialLinkLost = false;
   }
   Object.assign(app.drone, s);
+  if (s.connected) app.vehicleLinkLost = false;
   // FC link gone — release the lock so the user can switch transports.
   if (app.activeTransport === 'ws' && s.connected === false) {
     app.activeTransport = 'none';
   }
+}
+
+export function shouldRemoveDisconnectedMarkers(connected: boolean, unexpectedLoss: boolean): boolean {
+  // An unexpected loss keeps the last known position, as the 2D map does.
+  return !connected && !unexpectedLoss;
 }
 
 const PLANE_VTYPE_RAW = new Set([1, 19, 20, 21, 22, 23, 24, 25]);
@@ -302,28 +310,34 @@ function sameSurveyMissionPoint(a: Waypoint, b: Waypoint): boolean {
 export function loadDownloadedMission(wps: Waypoint[]) {
   // The FC does not carry Argus's UI ownership. Restore it only by matching
   // the local grid, never by trusting a metadata field in downloaded data.
-  const surveyPoints = app.waypoints.filter((w) => w.survey === true);
+  const unmatchedSurvey = app.waypoints.filter((w) => w.survey === true);
   pushUndo();
-  app.waypoints = wps.map((w) => ({
-    lat: w.lat,
-    lon: w.lon,
-    alt: w.alt,
-    drop: w.drop || false,
-    delay: w.delay || 0,
-    speed: w.speed || 0,
-    type: w.type || 'wp',
-    loiter_param: w.loiter_param || 0,
-    ...(surveyPoints.some((point) => sameSurveyMissionPoint(point, w)) ? { survey: true } : {}),
-    // What a download preserved of the item, so the next upload sends it back: the camera,
-    // servo, ROI and yaw commands, and ArduPilot's radius and yaw params.
-    ...(w.p3 !== undefined ? { p3: w.p3 } : {}),
-    ...(w.p4 !== undefined ? { p4: w.p4 } : {}),
-    ...(w.cmd_servo ? { cmd_servo: w.cmd_servo } : {}),
-    ...(w.cmd_roi ? { cmd_roi: w.cmd_roi } : {}),
-    ...(w.cmd_cam_trig ? { cmd_cam_trig: w.cmd_cam_trig } : {}),
-    ...(w.cmd_yaw ? { cmd_yaw: w.cmd_yaw } : {}),
-    ...(w.cmd_vtol ? { cmd_vtol: w.cmd_vtol } : {}),
-  }));
+  app.waypoints = wps.map((w) => {
+    const surveyIndex = unmatchedSurvey.findIndex((point) => sameSurveyMissionPoint(point, w));
+    // One local grid point owns at most one downloaded point. A coincident manual
+    // waypoint must not become Survey-owned and disappear on the next Generate.
+    if (surveyIndex >= 0) unmatchedSurvey.splice(surveyIndex, 1);
+    return {
+      lat: w.lat,
+      lon: w.lon,
+      alt: w.alt,
+      drop: w.drop || false,
+      delay: w.delay || 0,
+      speed: w.speed || 0,
+      type: w.type || 'wp',
+      loiter_param: w.loiter_param || 0,
+      ...(surveyIndex >= 0 ? { survey: true } : {}),
+      // What a download preserved of the item, so the next upload sends it back: the camera,
+      // servo, ROI and yaw commands, and ArduPilot's radius and yaw params.
+      ...(w.p3 !== undefined ? { p3: w.p3 } : {}),
+      ...(w.p4 !== undefined ? { p4: w.p4 } : {}),
+      ...(w.cmd_servo ? { cmd_servo: w.cmd_servo } : {}),
+      ...(w.cmd_roi ? { cmd_roi: w.cmd_roi } : {}),
+      ...(w.cmd_cam_trig ? { cmd_cam_trig: w.cmd_cam_trig } : {}),
+      ...(w.cmd_yaw ? { cmd_yaw: w.cmd_yaw } : {}),
+      ...(w.cmd_vtol ? { cmd_vtol: w.cmd_vtol } : {}),
+    };
+  });
   saveWaypoints();
   requestAnimationFrame(() => app.fitRouteFlag++);
 }

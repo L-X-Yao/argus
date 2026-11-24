@@ -26,6 +26,7 @@ import {
   reloadFromStorage,
   saveFence,
   saveWaypoints,
+  shouldRemoveDisconnectedMarkers,
 } from './stores.svelte';
 
 function makeStorage(): Storage {
@@ -386,6 +387,27 @@ describe('loadDownloadedMission', () => {
     expect(app.undoStack.length).toBeGreaterThan(0);
   });
 
+  it('consumes each survey match once so a coincident manual waypoint survives regeneration', () => {
+    const point = {
+      lat: 34.258,
+      lon: 108.942,
+      alt: 45,
+      drop: false,
+      delay: 0,
+      speed: 0,
+      type: 'wp' as const,
+      loiter_param: 0,
+    };
+    app.waypoints = [{ ...point, survey: true }, { ...point }];
+
+    loadDownloadedMission([{ ...point }, { ...point }]);
+
+    expect(app.waypoints.map((w) => w.survey)).toEqual([true, undefined]);
+    const keptForNextGrid = app.waypoints.filter((w) => w.survey !== true);
+    expect(keptForNextGrid).toHaveLength(1);
+    expect(keptForNextGrid[0].survey).toBeUndefined();
+  });
+
   it('restores survey ownership after an FC round trip, not from downloaded metadata', () => {
     const local = {
       lat: 34.2581234567,
@@ -472,6 +494,15 @@ describe('stored values that are zero', () => {
     loadSettings();
     expect(app.defaultAlt).toBe(0);
     expect(app.geoRadius).toBe(0);
+  });
+});
+
+describe('disconnected map markers', () => {
+  it('removes them only for an operator disconnect, not an unexpected loss', () => {
+    expect(shouldRemoveDisconnectedMarkers(false, false)).toBe(true);
+    expect(shouldRemoveDisconnectedMarkers(false, true)).toBe(false);
+    expect(shouldRemoveDisconnectedMarkers(true, false)).toBe(false);
+    expect(shouldRemoveDisconnectedMarkers(true, true)).toBe(false);
   });
 });
 

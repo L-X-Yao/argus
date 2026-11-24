@@ -181,6 +181,15 @@ describe('message handling', () => {
     expect(addEvent).toHaveBeenCalled();
   });
 
+  it('distinguishes an unexpected link loss from an operator disconnect', async () => {
+    const { app } = await import('./stores.svelte');
+    app.vehicleLinkLost = false;
+    await fire({ type: 'event', text: 'lost', event_type: 'link_lost', time: '00:00:00' });
+    expect(app.vehicleLinkLost).toBe(true);
+    await fire({ type: 'event', text: 'closed', event_type: 'disconnected', time: '00:00:01' });
+    expect(app.vehicleLinkLost).toBe(false);
+  });
+
   it('dispatches armed event with toast', async () => {
     await fire({ type: 'event', text: 'Armed', event_type: 'armed', time: '00:00:00' });
     const { addToast } = await import('./stores.svelte');

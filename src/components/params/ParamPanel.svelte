@@ -5,6 +5,7 @@
   import { getLocale, t } from '../../lib/i18n.svelte';
   import { paramLine, parseParamNumber } from '../../lib/paramText';
   import { apiUrl } from '../../lib/backend';
+  import { metadataWriteAllowed, shouldFetchMeta } from '../../lib/paramMeta';
   import type { Param } from '../../lib/types';
   import Button from '$lib/components/ui/button/button.svelte';
   import Badge from '$lib/components/ui/badge/badge.svelte';
@@ -76,6 +77,8 @@
   let hideOriginalFor = $state<string | null>(null);
   let lastVehicle = '';
   let lastMetaKey = '';
+  let appliedMetaKey = '';
+  let metaFailedKey = '';
   let lastRequestedSeries = '';
   let lastProbeKey = '';
   let probingKey = '';
@@ -113,7 +116,16 @@
     const fw = app.drone.fw_version || '';
     const series = metaSeries;
     const key = `${vehicle}|${locale}|${fw}|${series}`;
-    if (key === lastMetaKey) return;
+    if (
+      !shouldFetchMeta({
+        key,
+        lastKey: lastMetaKey,
+        failedKey: metaFailedKey,
+        fetching: paramState.fetching,
+        inFlight: metaAbort !== null,
+      })
+    )
+      return;
     if (series !== lastRequestedSeries) {
       lastRequestedSeries = series;
       // Manual -> Auto must be allowed to probe again; the cached Auto answer may be the
@@ -156,11 +168,18 @@
     return { raw, info };
   }
 
-  function applyMeta(result: MetaResult) {
+  function applyMeta(result: MetaResult, key: string) {
     _metaRaw = result.raw;
     _metaInfo = result.info;
+    appliedMetaKey = key;
+    metaFailedKey = '';
     _metaVersion++;
     metaLoaded = true;
+  }
+
+  function metaWritable(): boolean {
+    void _metaVersion;
+    return metadataWriteAllowed(appliedMetaKey, lastMetaKey, metaLoading);
   }
 
   async function fetchMeta(vehicle: string, locale: string, fw: string, series: string, key: string) {
@@ -171,7 +190,7 @@
     if (cached) {
       metaAbort = null;
       metaLoading = false;
-      applyMeta(cached);
+      applyMeta(cached, key);
       return;
     }
     const ctrl = new AbortController();
@@ -181,10 +200,11 @@
       const result = await requestMeta(vehicle, locale, fw, series, ctrl.signal);
       if (ctrl.signal.aborted) return;
       cacheMeta(key, result);
-      applyMeta(result);
+      applyMeta(result, key);
       void maybeImproveSeries(vehicle, locale, fw, result, key);
     } catch {
-      // Keep the previous language's metadata rather than blanking the panel.
+      // Previous text can stay visible, but it cannot drive writes under this key.
+      if (!ctrl.signal.aborted && lastMetaKey === key) metaFailedKey = key;
     } finally {
       if (metaAbort === ctrl) {
         metaAbort = null;
@@ -238,7 +258,7 @@
         }
       }
       if (bestCoverage > base + 0.01 && getLocale() === locale && lastMetaKey === key) {
-        applyMeta(best);
+        applyMeta(best, key);
         cacheMeta(`${vehicle}|${locale}|${fw}|${best.info?.series ?? ''}`, best);
       }
     } finally {
@@ -293,6 +313,7 @@
   }
 
   function getRangeStr(name: string): string {
+    if (!metaWritable()) return '';
     const r = getMeta()[name]?.range;
     if (!r) return '';
     return `${r[0]} ~ ${r[1]}`;
@@ -309,6 +330,7 @@
     name: string,
     val: number,
   ): { bit: number; label: string; original: string; set: boolean; translated: boolean }[] {
+    if (!metaWritable()) return [];
     const bm = getMeta()[name]?.bitmask;
     if (!bm) return [];
     const tr = currentTranslation(name);
@@ -366,6 +388,7 @@
   let compareActive = $derived(compareMap.size > 0);
 
   function hasDefaultDiff(name: string, value: number): boolean {
+    if (!metaWritable()) return false;
     const m = getMeta()[name];
     if (!m || m.default === undefined) return false;
     return Math.abs(value - m.default!) > 1e-6;
@@ -447,7 +470,7 @@
     // As the operator's locale writes it: "1,5" is 1.5, not 1 (which parseFloat read it as).
     const val = parseParamNumber(editValue);
     if (isNaN(val)) { addToast(t('param.invalidNum'), 'error'); return; }
-    const r = getMeta()[editName]?.range;
+    const r = metaWritable() ? getMeta()[editName]?.range : undefined;
     if (r && (val < r[0] || val > r[1])) {
       addToast(`${t('param.outOfRange')} ${r[0]} ~ ${r[1]}`, 'warn');
     }
@@ -504,6 +527,7 @@
   }
 
   function toggleBitmaskBit(name: string, currentVal: number, bit: number) {
+    if (!metaWritable()) return;
     const newVal = currentVal ^ (1 << bit);
     dispatch('param_set', undefined, { name, value: newVal });
     modified.add(name);
@@ -655,7 +679,7 @@
           {/if}
           {#if hasDefaultDiff(p.name, p.value)}
             <button class="text-[9px] text-muted-foreground/60 hover:text-warning px-0.5 cursor-pointer bg-transparent border-none"
-                    onclick={() => { dispatch('param_set', undefined, { name: p.name, value: getMeta()[p.name]!.default! }); modified.add(p.name); modified = new Set(modified); }}
+                    onclick={() => { if (!metaWritable()) return; dispatch('param_set', undefined, { name: p.name, value: getMeta()[p.name]!.default! }); modified.add(p.name); modified = new Set(modified); }}
                     title={t('tip.resetDefault').replace('{v}', String(getMeta()[p.name]!.default))}>↩</button>
           {/if}
           {#if compareActive}

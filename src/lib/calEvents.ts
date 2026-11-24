@@ -10,3 +10,19 @@ export function isCalEvent(ev: { text: string; event_type?: string }): boolean {
   const isAck = ev.event_type === 'cmd_ack_ok' || ev.event_type === 'cmd_ack_fail';
   return CAL_TEXT.test(isAck ? ev.text.split(' — ')[0] : ev.text);
 }
+
+const CALIBRATION_COMMANDS = new Set([241, 42424, 42425, 42426]);
+
+/** Only a refusal of a calibration command can end this run; a concurrent unrelated ACK cannot. */
+export function calibrationAckFailed(
+  ev: { time: string; event_type?: string; cmd?: number },
+  runStartTime: string,
+): boolean {
+  return (
+    runStartTime !== '' &&
+    ev.time >= runStartTime &&
+    ev.event_type === 'cmd_ack_fail' &&
+    ev.cmd !== undefined &&
+    CALIBRATION_COMMANDS.has(ev.cmd)
+  );
+}

@@ -8,8 +8,10 @@
     saveWaypoints,
     addToast,
     showConfirm,
+    shouldRemoveDisconnectedMarkers,
   } from '../../lib/stores.svelte';
   import { dispatch } from '../../lib/transport';
+  import { normalizePickedPoint } from '../../lib/roi';
   import { toGcj, toWgs } from '../../lib/gcj02';
   import { t } from '../../lib/i18n.svelte';
   import { isOfflineSource, tileUrl } from '../../lib/backend';
@@ -328,7 +330,7 @@
       // A POI pick claims the click before everything else: the panel handed
       // the map over for exactly this click, and it must fill the panel.
       if (app.poiPick) {
-        app.poiPickPos = { lat: wlat, lon: wlon };
+        app.poiPickPos = normalizePickedPoint(wlat, wlon);
         app.poiPick = false;
         return;
       }
@@ -553,11 +555,9 @@
   $effect(() => {
     if (!map) return;
     const d = app.drone;
-    // A vehicle that is no longer linked leaves the map: its marker and its
-    // home's go with it. They used to stay for as long as the view lived, and
-    // sat on top of a fence or a route drawn afterwards. A link that is up but
-    // has no position yet keeps what it had.
-    if (!d.connected) {
+    // Only an operator Disconnect removes the last known position. An unexpected
+    // loss keeps it, matching the 2D map; a later reconnect replaces it live.
+    if (shouldRemoveDisconnectedMarkers(d.connected, app.vehicleLinkLost || app.serialLinkLost)) {
       if (droneMarker) {
         droneMarker.remove();
         droneMarker = null;

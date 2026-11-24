@@ -2,6 +2,7 @@
   import { onMount, untrack } from 'svelte';
   import { app, addWaypoint, addToast, saveFence, saveRally, showConfirm } from '../../lib/stores.svelte';
   import { dispatch } from '../../lib/transport';
+  import { normalizePickedPoint } from '../../lib/roi';
   import { fmtDist } from '../../lib/units';
   import { toGcj, toWgs } from '../../lib/gcj02';
   import { isOfflineSource, tileUrl } from '../../lib/backend';
@@ -193,7 +194,7 @@
     // map over for exactly this click, and it must fill the panel, not draw.
     if (app.poiPick) {
       const [wlat, wlon] = fromMap(ll.lat, ll.lng);
-      app.poiPickPos = { lat: wlat, lon: wlon };
+      app.poiPickPos = normalizePickedPoint(wlat, wlon);
       app.poiPick = false;
       return;
     }
