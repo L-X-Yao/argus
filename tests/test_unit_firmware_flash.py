@@ -585,6 +585,37 @@ class TestFlashJob:
         assert "reboot" in boot.calls
         assert link.reconnected_to
 
+    def test_an_armed_vehicle_refuses_before_the_port_list(self, tmp_path, monkeypatch):
+        link = FakeFlashLink()
+        link.vehicle.armed = True
+        sent = []
+        monkeypatch.setattr(cmd, "load_apj", fw.load_apj)
+        monkeypatch.setattr(cmd, "send_cmd", lambda *args, **kwargs: sent.append(args))
+        monkeypatch.setattr(cmd, "_current_ports", lambda: (_ for _ in ()).throw(AssertionError("port list read")))
+        cmd._flash_job(link, make_apj(tmp_path), threading.Event())
+        assert link.fw_flash["phase"] == "failed"
+        assert "armed" in link.fw_flash["error"]
+        assert sent == [] and link.paused is False
+
+    def test_an_arm_after_the_queue_refuses_before_the_reboot_command(self, tmp_path, monkeypatch):
+        link = FakeFlashLink()
+        sent = []
+        monkeypatch.setattr(cmd, "load_apj", fw.load_apj)
+        monkeypatch.setattr(cmd, "send_cmd", lambda target, command, **kwargs: sent.append(command))
+        monkeypatch.setattr(cmd, "_current_ports", lambda: set())
+        monkeypatch.setattr(cmd, "_reconnect", lambda target, before: None)
+
+        def armed_pause(before_close=None):
+            link.vehicle.armed = True
+            before_close()
+            return True
+
+        monkeypatch.setattr(link, "pause_for_flash", armed_pause)
+        cmd._flash_job(link, make_apj(tmp_path), threading.Event())
+        assert link.fw_flash["phase"] == "failed"
+        assert "armed" in link.fw_flash["error"]
+        assert sent == []
+
     def test_a_link_that_begins_reconnecting_sends_no_reboot_command(self, tmp_path, monkeypatch):
         # Reading the port list takes a moment on Windows. If the link's own loop marks the
         # link lost in that moment the pause is refused. Before, the reboot command had gone

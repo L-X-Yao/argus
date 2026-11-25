@@ -121,6 +121,10 @@ def _flash_job(link: DroneLink, path: Path, stop: threading.Event) -> None:
         link.add_event(lt("flash_start", link.locale) % path.name, "flash")
 
         if link.connected:
+            # The command handler checked this when it queued the worker; the vehicle may
+            # have armed since, and a flash is refused while it is armed.
+            if link.vehicle.armed:
+                raise FlashError("The vehicle is armed; flashing refused.")
             # The ports from before the reboot are what tells the bootloader's port from the
             # others when the board re-enumerates (firmware_flash.port_candidates). They
             # stay on the link for a retry: see the other branch.
@@ -128,6 +132,10 @@ def _flash_job(link: DroneLink, path: Path, stop: threading.Event) -> None:
             hint = link._last_port or ""
 
             def reboot_into_bootloader() -> None:
+                # The last check before the command leaves: an arm between the queue and
+                # here must not put a running vehicle into its bootloader.
+                if link.vehicle.armed:
+                    raise FlashError("The vehicle is armed; flashing refused.")
                 # The FC reboots into its bootloader on this command; the ACK may never
                 # arrive. pause_for_flash calls it once the link's own thread has stopped,
                 # so no heartbeat, stream request or command retry of the link's follows
