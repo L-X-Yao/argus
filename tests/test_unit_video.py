@@ -451,8 +451,11 @@ class TestVideoStreamJpegExtraction:
 
 class TestFfmpegCommand:
     def test_rtsp_goes_over_tcp(self):
-        args = _ffmpeg_args("rtsp://192.168.144.25:8554/main.264")
-        assert args[:4] == ["-rtsp_transport", "tcp", "-i", "rtsp://192.168.144.25:8554/main.264"]
+        url = "rtsp://192.168.144.25:8554/main.264"
+        args = _ffmpeg_args(url)
+        assert args[:2] == ["-rtsp_transport", "tcp"]
+        assert args[2:4] == ["-protocol_whitelist", "rtsp,rtp,srtp,tcp,udp"]
+        assert args[4:6] == ["-i", url]
 
     @pytest.mark.parametrize(
         "url", ["http://cam.example/live.mjpg", "https://cam.example/live.m3u8", "rtmp://cam.example/app/key"]
@@ -461,7 +464,24 @@ class TestFfmpegCommand:
         """ffmpeg refuses an input given an option its reader does not have."""
         args = _ffmpeg_args(url)
         assert "-rtsp_transport" not in args
-        assert args[:2] == ["-i", url]
+        assert args[0] == "-protocol_whitelist"
+        assert args[2:4] == ["-i", url]
+
+    @pytest.mark.parametrize(
+        ("url", "allowed"),
+        [
+            ("rtsp://cam/live", {"rtsp", "rtp", "tcp", "udp"}),
+            ("rtmp://cam/app/key", {"rtmp", "rtmpt", "tcp"}),
+            ("http://cam/live.m3u8", {"http", "https", "tcp", "tls", "crypto"}),
+            ("https://cam/live.m3u8", {"http", "https", "tcp", "tls", "crypto"}),
+        ],
+    )
+    def test_protocol_whitelist_follows_the_input_scheme(self, url, allowed):
+        args = _ffmpeg_args(url)
+        whitelist = set(args[args.index("-protocol_whitelist") + 1].split(","))
+        assert allowed <= whitelist
+        # Neither a local file nor an inline data resource may be reached by a playlist.
+        assert "file" not in whitelist and "data" not in whitelist
 
     def test_real_ffmpeg_turns_an_http_stream_into_jpeg_frames(self, tmp_path):
         """With every Popen mocked, nothing noticed that only rtsp:// URLs could ever play."""
