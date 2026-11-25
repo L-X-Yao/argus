@@ -506,6 +506,24 @@ class TestDroneLinkReconnect:
             link.reconnect()
         old_ser.close.assert_called_once()
 
+    def test_a_port_that_opens_after_the_link_stopped_is_closed(self):
+        link = DroneLink()
+        link._running = True
+        link._reconnecting = True
+        link._last_port = "tcp:localhost:5770"
+        link._last_baud = 57600
+        opened = MagicMock(in_waiting=0)
+
+        def open_port(port, baud):
+            link._running = False  # a Disconnect while the open was in flight
+            return opened
+
+        link._open_port = open_port
+        link._loop()
+        opened.close.assert_called_once()
+        assert link._ser is None
+        assert link._reconnecting is True  # nothing installed this handle
+
     def test_reconnect_does_not_start_a_second_loop_when_the_old_one_will_not_stop(self):
         link = DroneLink()
         link._running = True
@@ -1536,7 +1554,12 @@ class TestLoop:
         old_ser.read.side_effect = OSError("closed")
         link._ser = old_ser
         new_ser = MagicMock(in_waiting=0)
-        new_ser.read.return_value = b""
+
+        def read_and_stop(n):
+            link._running = False
+            return b""
+
+        new_ser.read.side_effect = read_and_stop
 
         opens = {"n": 0}
 
@@ -1544,7 +1567,6 @@ class TestLoop:
             opens["n"] += 1
             if opens["n"] < 3:
                 raise OSError("still down")
-            link._running = False  # one pass after the recovery is enough
             return new_ser
 
         with (

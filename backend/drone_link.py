@@ -909,7 +909,16 @@ class DroneLink:
                 self._buf = b""
                 self._unknown_left = 0
                 try:
-                    self._ser = self._open_port(self._last_port, self._last_baud)
+                    opened = self._open_port(self._last_port, self._last_baud)
+                    if not self._running:
+                        # A Disconnect or a manual reconnect happened while the port was
+                        # opening. Its handle is not this link's to keep.
+                        try:
+                            opened.close()
+                        except OSError:
+                            pass
+                        continue
+                    self._ser = opened
                     self.sq = 0
                     self._reconnect_attempts = 0
                     self._reconnecting = False
