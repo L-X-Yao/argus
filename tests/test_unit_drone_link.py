@@ -541,6 +541,19 @@ class TestDroneLinkReconnect:
         opened.close.assert_called_once()
         assert link._ser is None
 
+    def test_disconnect_does_not_join_a_thread_before_it_starts(self):
+        link = DroneLink()
+        link._thread = threading.Thread(target=lambda: None)  # created, not started
+        link.disconnect()  # join() would raise RuntimeError before this guard
+
+    def test_reconnect_does_not_join_a_thread_before_it_starts(self):
+        link = DroneLink()
+        link._thread = threading.Thread(target=lambda: None)  # created, not started
+        link._last_port = "tcp:localhost:5770"
+        link._open_port = MagicMock(return_value=MagicMock(in_waiting=0))
+        with patch.object(threading.Thread, "start"):
+            assert link.reconnect() is True
+
     def test_a_connect_that_finishes_after_another_is_closed(self):
         link = DroneLink()
         first, second = MagicMock(in_waiting=0), MagicMock(in_waiting=0)

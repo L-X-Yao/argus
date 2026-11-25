@@ -458,7 +458,9 @@ class DroneLink:
         # is a daemon with a 2s recv timeout, it will tear down on its own.
         if self.ntrip_stop is not None:
             self.ntrip_stop.set()
-        if self._thread:
+        # A Connect creates the Thread before start(); joining it in that window raises
+        # RuntimeError: cannot join thread before it is started.
+        if self._thread and self._thread.is_alive():
             self._thread.join(timeout=3)
         with self._lock:
             try:
@@ -526,7 +528,7 @@ class DroneLink:
         self._running = False
         # A backoff sleep gives way at once; a loop busy elsewhere gets the 3 s.
         self._wake.set()
-        if self._thread:
+        if self._thread and self._thread.is_alive():
             self._thread.join(timeout=3)
             if self._thread.is_alive():
                 # Starting a second loop now would leave two readers on one port.
