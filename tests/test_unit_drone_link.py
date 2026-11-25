@@ -541,6 +541,40 @@ class TestDroneLinkReconnect:
         opened.close.assert_called_once()
         assert link._ser is None
 
+    def test_a_connect_that_finishes_after_another_is_closed(self):
+        link = DroneLink()
+        first, second = MagicMock(in_waiting=0), MagicMock(in_waiting=0)
+
+        def open_port(port, baud):
+            if port == "A":
+                assert link.connect("B") is True  # a second connect wins while A opens
+                return first
+            return second
+
+        link._open_port = open_port
+        link._loop = MagicMock()
+        with patch.object(threading.Thread, "start") as start:
+            assert link.connect("A") is False
+        first.close.assert_called_once()
+        assert link._ser is second
+        assert link._running is True
+        start.assert_called_once()  # only B's loop was started
+
+    def test_a_connect_whose_session_ends_as_its_loop_starts_is_closed(self):
+        link = DroneLink()
+        opened = MagicMock(in_waiting=0)
+        link._open_port = lambda port, baud: opened
+        link._loop = MagicMock()
+
+        def start_and_lose_the_session():
+            link._session_gen += 1  # Disconnect lands as the loop starts
+
+        with patch.object(threading.Thread, "start", side_effect=start_and_lose_the_session):
+            assert link.connect("A") is False
+        opened.close.assert_called_once()
+        assert link._ser is None
+        assert link._running is False
+
     def test_reconnect_does_not_start_a_second_loop_when_the_old_one_will_not_stop(self):
         link = DroneLink()
         link._running = True

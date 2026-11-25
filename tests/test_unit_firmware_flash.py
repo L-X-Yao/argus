@@ -437,7 +437,7 @@ class TestPauseForFlash:
         monkeypatch.setattr(link, "_open_port", lambda port, baud: mock.MagicMock())
         monkeypatch.setattr(link, "_start_log", lambda: None)
         monkeypatch.setattr(link, "_stop_log", lambda: None)
-        monkeypatch.setattr(link, "_loop", lambda: None)
+        monkeypatch.setattr(link, "_loop", lambda *args: None)
         try:
             assert link.connect("COM1") is True
             assert link.fw_ports_before is None

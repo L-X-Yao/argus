@@ -268,15 +268,24 @@ class DroneLink:
         if self._running:
             self.disconnect()
         self._session_gen += 1
+        generation = self._session_gen
         try:
-            self._ser = self._open_port(port, baudrate)
-            if port.startswith("udp:"):
-                self.add_event(lt("udp", self.locale) % port[4:], "udp")
-            elif port.startswith("tcp:"):
-                self.add_event(lt("tcp", self.locale) % port[4:], "tcp")
+            opened = self._open_port(port, baudrate)
         except OSError as e:
             self.add_event(lt("connect_fail", self.locale) % e, "connect_fail")
             return False
+        if generation != self._session_gen:
+            # Another connect/reconnect/disconnect took over while this port was opening.
+            try:
+                opened.close()
+            except OSError:
+                pass
+            return False
+        self._ser = opened
+        if port.startswith("udp:"):
+            self.add_event(lt("udp", self.locale) % port[4:], "udp")
+        elif port.startswith("tcp:"):
+            self.add_event(lt("tcp", self.locale) % port[4:], "tcp")
         self._running = True
         with self._state_lock:
             self.connected = False
@@ -320,8 +329,20 @@ class DroneLink:
         # a looping replay would otherwise mint duplicate log assets forever.
         if not port.startswith("replay:"):
             self._start_log()
-        self._thread = threading.Thread(target=self._loop, daemon=True)
+        self._thread = threading.Thread(target=self._loop, args=(generation,), daemon=True)
         self._thread.start()
+        if generation != self._session_gen:
+            # A Disconnect or a newer Connect landed between the check and the start.
+            # Close only the handle this call opened; a newer session owns its own.
+            with self._lock:
+                if self._ser is opened:
+                    try:
+                        opened.close()
+                    except OSError:
+                        pass
+                    self._ser = None
+                    self._running = False
+            return False
         return True
 
     def _reset_session_state(self) -> None:
@@ -514,6 +535,7 @@ class DroneLink:
                 return False
         self._wake.clear()
         self._session_gen += 1
+        generation = self._session_gen
         with self._lock:
             try:
                 if self._ser:
@@ -528,15 +550,32 @@ class DroneLink:
         self._buf = b""
         self._unknown_left = 0
         try:
-            self._ser = self._open_port(self._last_port, self._last_baud)
+            opened = self._open_port(self._last_port, self._last_baud)
         except OSError as e:
             self.add_event(lt("reconnect_err", self.locale) % e, "reconnect_err")
             return False
+        if generation != self._session_gen:
+            try:
+                opened.close()
+            except OSError:
+                pass
+            return False
+        self._ser = opened
         self._running = True
         self.sq = 0
         self.add_event(lt("reconnected", self.locale), "reconnected")
-        self._thread = threading.Thread(target=self._loop, daemon=True)
+        self._thread = threading.Thread(target=self._loop, args=(generation,), daemon=True)
         self._thread.start()
+        if generation != self._session_gen:
+            with self._lock:
+                if self._ser is opened:
+                    try:
+                        opened.close()
+                    except OSError:
+                        pass
+                    self._ser = None
+                    self._running = False
+            return False
         return True
 
     def _get_vehicle_info(self) -> tuple[dict, list, str]:
