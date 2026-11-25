@@ -524,6 +524,23 @@ class TestDroneLinkReconnect:
         assert link._ser is None
         assert link._reconnecting is True  # nothing installed this handle
 
+    def test_a_port_opened_for_an_old_session_is_closed_after_a_new_connect(self):
+        link = DroneLink()
+        link._running = True
+        link._reconnecting = True
+        link._last_port = "tcp:localhost:5770"
+        link._last_baud = 57600
+        opened = MagicMock(in_waiting=0)
+
+        def open_port(port, baud):
+            link._session_gen += 1  # a new connect began while this one was in flight
+            return opened
+
+        link._open_port = open_port
+        link._loop()
+        opened.close.assert_called_once()
+        assert link._ser is None
+
     def test_reconnect_does_not_start_a_second_loop_when_the_old_one_will_not_stop(self):
         link = DroneLink()
         link._running = True

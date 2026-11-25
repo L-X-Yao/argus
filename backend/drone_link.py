@@ -111,6 +111,10 @@ class DroneLink:
         # Connect joins for 3 s, gives up, and starts a second loop while the first
         # is still asleep (up to 60 s), so two loops own the same link.
         self._wake = threading.Event()
+        # Which connection the loop belongs to. A loop that finishes opening a port
+        # after a Disconnect or a new Connect must close it, not install it over the
+        # new session's handle.
+        self._session_gen = 0
         self._lock = threading.Lock()  # protects _ser.write() only
         self._state_lock = threading.RLock()  # protects all state reads/writes (handlers + get_state)
         reset_mag_cal(self)
@@ -263,6 +267,7 @@ class DroneLink:
     def connect(self, port: str, baudrate: int = 57600) -> bool:
         if self._running:
             self.disconnect()
+        self._session_gen += 1
         try:
             self._ser = self._open_port(port, baudrate)
             if port.startswith("udp:"):
@@ -423,6 +428,7 @@ class DroneLink:
     def disconnect(self) -> None:
         with self._state_lock:
             self.ntrip_generation += 1
+        self._session_gen += 1
         self._running = False
         self._wake.set()
         self._reconnect_enabled = False
@@ -507,6 +513,7 @@ class DroneLink:
                 self.add_event(lt("reconnect_err", self.locale) % "the link did not stop", "reconnect_err")
                 return False
         self._wake.clear()
+        self._session_gen += 1
         with self._lock:
             try:
                 if self._ser:
@@ -860,9 +867,11 @@ class DroneLink:
                 break
         return frames
 
-    def _loop(self) -> None:
+    def _loop(self, generation: int | None = None) -> None:
         last_hb = 0.0
-        while self._running:
+        if generation is None:
+            generation = self._session_gen
+        while self._running and generation == self._session_gen:
             now = time.time()
             if now - last_hb >= cfg.HEARTBEAT_INTERVAL:
                 cmd_module.send_heartbeat(self)
@@ -910,7 +919,7 @@ class DroneLink:
                 self._unknown_left = 0
                 try:
                     opened = self._open_port(self._last_port, self._last_baud)
-                    if not self._running:
+                    if not self._running or generation != self._session_gen:
                         # A Disconnect or a manual reconnect happened while the port was
                         # opening. Its handle is not this link's to keep.
                         try:
