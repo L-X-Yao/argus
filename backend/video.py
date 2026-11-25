@@ -69,12 +69,39 @@ def _ffmpeg_available() -> bool:
     return shutil.which("ffmpeg") is not None
 
 
+# Which protocols an input may use, by its scheme. Nested resources (HLS segments and
+# keys, RTSP media) must be named too, or ffmpeg refuses them. `file` is deliberately
+# absent: a playlist that names a local file must not read it (audit 2026-11-24 L2).
+_PROTOCOL_WHITELISTS = {
+    "rtsp": "rtsp,rtp,srtp,tcp,udp",
+    "rtmp": "rtmp,rtmpt,ffrtmphttp,tcp,tls,crypto",
+    "http": "http,https,httpproxy,tcp,tls,crypto",
+    "https": "http,https,httpproxy,tcp,tls,crypto",
+}
+
+
 def _ffmpeg_args(url: str) -> list[str]:
     """What ffmpeg is told to read the stream at url and write MJPEG to its stdout."""
     # An option of the RTSP reader alone. Given it with any other input, ffmpeg stops at
     # "Option rtsp_transport not found": http, https and rtmp streams never played.
-    transport = ["-rtsp_transport", "tcp"] if urlparse(url).scheme == "rtsp" else []
-    return [*transport, "-i", url, "-f", "mjpeg", "-q:v", "5", "-r", "15", "-an", "pipe:1"]
+    scheme = urlparse(url).scheme
+    transport = ["-rtsp_transport", "tcp"] if scheme == "rtsp" else []
+    whitelist = _PROTOCOL_WHITELISTS.get(scheme, "rtsp,rtp,srtp,tcp,udp")
+    return [
+        *transport,
+        "-protocol_whitelist",
+        whitelist,
+        "-i",
+        url,
+        "-f",
+        "mjpeg",
+        "-q:v",
+        "5",
+        "-r",
+        "15",
+        "-an",
+        "pipe:1",
+    ]
 
 
 @router.get("/api/video")

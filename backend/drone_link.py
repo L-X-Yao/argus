@@ -107,6 +107,10 @@ class DroneLink:
         self._ser = None
         self._running = False
         self._thread = None
+        # Wakes the link thread out of a reconnect backoff. Without it a manual
+        # Connect joins for 3 s, gives up, and starts a second loop while the first
+        # is still asleep (up to 60 s), so two loops own the same link.
+        self._wake = threading.Event()
         self._lock = threading.Lock()  # protects _ser.write() only
         self._state_lock = threading.RLock()  # protects all state reads/writes (handlers + get_state)
         reset_mag_cal(self)
@@ -306,6 +310,7 @@ class DroneLink:
         # prior session and resets the backoff counter.
         self._reconnecting = False
         self._reconnect_attempts = 0
+        self._wake.clear()
         # Replaying a recorded session must not re-record it (or spam CSV):
         # a looping replay would otherwise mint duplicate log assets forever.
         if not port.startswith("replay:"):
@@ -419,6 +424,7 @@ class DroneLink:
         with self._state_lock:
             self.ntrip_generation += 1
         self._running = False
+        self._wake.set()
         self._reconnect_enabled = False
         self._reconnecting = False
         # Signal NTRIP thread to exit (if running). Don't join — the thread
@@ -491,8 +497,16 @@ class DroneLink:
 
     def reconnect(self) -> bool:
         self._running = False
+        # A backoff sleep gives way at once; a loop busy elsewhere gets the 3 s.
+        self._wake.set()
         if self._thread:
             self._thread.join(timeout=3)
+            if self._thread.is_alive():
+                # Starting a second loop now would leave two readers on one port.
+                self._wake.clear()
+                self.add_event(lt("reconnect_err", self.locale) % "the link did not stop", "reconnect_err")
+                return False
+        self._wake.clear()
         with self._lock:
             try:
                 if self._ser:
@@ -904,7 +918,8 @@ class DroneLink:
                     self._reconnect_attempts += 1
                     delay = min(cfg.RECONNECT_DELAY * (2 ** min(self._reconnect_attempts, 5)), 60.0)
                     self.add_event(lt("reconnect_fail", self.locale), "reconnect_fail")
-                    time.sleep(delay)
+                    if self._wake.wait(delay):
+                        self._wake.clear()
                 continue
             try:
                 ser = self._ser

@@ -506,6 +506,43 @@ class TestDroneLinkReconnect:
             link.reconnect()
         old_ser.close.assert_called_once()
 
+    def test_reconnect_does_not_start_a_second_loop_when_the_old_one_will_not_stop(self):
+        link = DroneLink()
+        link._running = True
+        link._thread = type("Old", (), {"is_alive": lambda self: True, "join": lambda self, timeout=None: None})()
+        with patch.object(threading.Thread, "start") as start:
+            assert link.reconnect() is False
+        start.assert_not_called()
+        assert link._wake.is_set() is False
+
+    def test_a_manual_reconnect_wakes_the_backoff_and_the_old_loop_exits(self):
+        link = DroneLink()
+        link._running = True
+        link._reconnecting = True
+        link._last_port = "tcp:localhost:5770"
+        link._last_baud = 57600
+        entered = threading.Event()
+        calls = {"n": 0}
+
+        def open_port(port, baud):
+            calls["n"] += 1
+            if calls["n"] == 1:
+                entered.set()
+                raise OSError("down")
+            return MagicMock(in_waiting=0)
+
+        link._open_port = open_port
+        old_loop = link._loop
+        old_thread = threading.Thread(target=old_loop, daemon=True)
+        link._thread = old_thread
+        link._loop = MagicMock()  # the replacement thread must not run a real loop
+        old_thread.start()
+        assert entered.wait(2), "the old loop did not enter its backoff"
+        assert link.reconnect() is True
+        old_thread.join(2)
+        assert not old_thread.is_alive(), "the backoff sleep outlived the manual reconnect"
+        assert link._reconnecting is False and link._wake.is_set() is False
+
 
 # ---------------------------------------------------------------------------
 # TestDroneLinkSend
@@ -1441,7 +1478,7 @@ class TestLoop:
             patch.object(link, "_open_port", side_effect=OSError("fail")),
             patch("backend.drone_link.cmd_module.send_heartbeat"),
             patch("backend.drone_link.cmd_module.request_streams"),
-            patch("backend.drone_link.time.sleep", side_effect=stop_sleep),
+            patch.object(link._wake, "wait", side_effect=stop_sleep),
         ):
             link._loop()
         fail_events = [e for e in link.events if e["event_type"] == "reconnect_fail"]
@@ -1475,7 +1512,7 @@ class TestLoop:
             patch.object(link, "_open_port", side_effect=OSError("down")) as mock_open,
             patch("backend.drone_link.cmd_module.send_heartbeat"),
             patch("backend.drone_link.cmd_module.request_streams"),
-            patch("backend.drone_link.time.sleep", side_effect=stop_sleep),
+            patch.object(link._wake, "wait", side_effect=stop_sleep),
         ):
             link._loop()
         assert mock_open.call_count >= 3, "reconnect must retry, not single-shot"
@@ -1507,20 +1544,14 @@ class TestLoop:
             opens["n"] += 1
             if opens["n"] < 3:
                 raise OSError("still down")
+            link._running = False  # one pass after the recovery is enough
             return new_ser
-
-        sleeps = {"n": 0}
-
-        def stop_sleep(*a, **kw):
-            sleeps["n"] += 1
-            if sleeps["n"] > 6:
-                link._running = False
 
         with (
             patch.object(link, "_open_port", side_effect=open_side_effect),
             patch("backend.drone_link.cmd_module.send_heartbeat"),
             patch("backend.drone_link.cmd_module.request_streams"),
-            patch("backend.drone_link.time.sleep", side_effect=stop_sleep),
+            patch.object(link._wake, "wait", return_value=False),
         ):
             link._loop()
         assert link._reconnecting is False
