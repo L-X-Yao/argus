@@ -130,12 +130,17 @@ def _flash_job(link: DroneLink, path: Path, stop: threading.Event) -> None:
             # stay on the link for a retry: see the other branch.
             before = _current_ports()
             hint = link._last_port or ""
+            armed_before_reboot = False
 
             def reboot_into_bootloader() -> None:
+                nonlocal armed_before_reboot
                 # The last check before the command leaves: an arm between the queue and
-                # here must not put a running vehicle into its bootloader.
+                # here must not put a running vehicle into its bootloader. pause_for_flash
+                # swallows a callback exception, so record it and refuse below, where the
+                # operator gets the real reason.
                 if link.vehicle.armed:
-                    raise FlashError("The vehicle is armed; flashing refused.")
+                    armed_before_reboot = True
+                    return
                 # The FC reboots into its bootloader on this command; the ACK may never
                 # arrive. pause_for_flash calls it once the link's own thread has stopped,
                 # so no heartbeat, stream request or command retry of the link's follows
@@ -149,6 +154,9 @@ def _flash_job(link: DroneLink, path: Path, stop: threading.Event) -> None:
                 )
             link.fw_ports_before = frozenset(before)
             reconnect_before = before
+            paused = True
+            if armed_before_reboot:
+                raise FlashError("The vehicle is armed; flashing refused.")
         else:
             # A retry: the bootloader is where the failed run left it. The run recorded its
             # port if it got that far. For finding it, the ports from before the reboot, kept

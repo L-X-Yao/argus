@@ -603,11 +603,16 @@ class TestFlashJob:
         monkeypatch.setattr(cmd, "load_apj", fw.load_apj)
         monkeypatch.setattr(cmd, "send_cmd", lambda target, command, **kwargs: sent.append(command))
         monkeypatch.setattr(cmd, "_current_ports", lambda: set())
-        monkeypatch.setattr(cmd, "_reconnect", lambda target, before: None)
+        monkeypatch.setattr(cmd, "_reconnect", lambda target, before: target.reconnected_to.append("reconnect"))
 
         def armed_pause(before_close=None):
+            # As the real pause_for_flash: a callback exception is swallowed, and the
+            # pause still returns True. The worker, not the callback, must report arming.
             link.vehicle.armed = True
-            before_close()
+            try:
+                before_close()
+            except Exception:
+                pass
             return True
 
         monkeypatch.setattr(link, "pause_for_flash", armed_pause)
@@ -615,6 +620,7 @@ class TestFlashJob:
         assert link.fw_flash["phase"] == "failed"
         assert "armed" in link.fw_flash["error"]
         assert sent == []
+        assert link.reconnected_to == ["reconnect"]
 
     def test_a_link_that_begins_reconnecting_sends_no_reboot_command(self, tmp_path, monkeypatch):
         # Reading the port list takes a moment on Windows. If the link's own loop marks the
