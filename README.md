@@ -291,6 +291,7 @@ npm run test:e2e -- --project=chromium
 - [`docs/FAQ.md`](docs/FAQ.md) — common connection, map, log and firmware problems
 - [`docs/RECOVERY.md`](docs/RECOVERY.md) — what to do when a firmware flash fails
 - [`docs/FLIGHT_TEST.md`](docs/FLIGHT_TEST.md) — a conservative first-flight protocol
+- [`docs/FIELD_SESSION_PLAN.md`](docs/FIELD_SESSION_PLAN.md) — the plan around the first flight: ground calibration, the flight, and the release decision
 - [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) — work of others in the repository and the package, and the servers Argus reads
 - [`docs/FEATURE_CHECKLIST.md`](docs/FEATURE_CHECKLIST.md) — feature snapshot from v3.4, frozen
 - [`docs/protocol_design.md`](docs/protocol_design.md) — load-bearing design decisions

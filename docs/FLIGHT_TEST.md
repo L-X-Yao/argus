@@ -43,6 +43,23 @@ Before the first flight on this release, with the vehicle on the bench:
 
 A bench arm is not a flight. It does not change the "Real flight" row in [VERIFICATION.md](VERIFICATION.md) from None.
 
+## Ground calibration session
+
+Run this as a session of its own, before the flight day, with the props off. Do not combine it with the first flight, a new firmware, a new airframe or a new radio: a first flight with freshly calibrated sensors adds a variable nobody can interpret. Leave at least one power cycle between the last calibration and the first flight.
+
+Calibrate in this order, from the Calibration panel:
+
+1. **Gyro.** Start with the vehicle still. The run ends on the controller's acknowledgement of command 241; ArduPilot sends no text for it.
+2. **Accelerometer.** Place the vehicle in each of the six positions the panel shows, hold it still and confirm each placement. The run ends on "Calibration successful".
+3. **Level.** Put the airframe on a level surface at its true level attitude, then start. The run ends on the acknowledgement of 241; no text follows (`AP_InertialSensor::calibrate_trim`).
+4. **Compass.** Outdoors, away from steel, rebar, cars, speakers and magnets. Start and rotate the vehicle slowly through all orientations until every compass reports success. Argus accepts the result itself and asks for a reboot; reboot the controller and wait for the link to return.
+5. **Barometer.** The run ends on "Barometer calibration complete".
+6. **RC**, only when a receiver is fitted: the RC calibration panel records the stick centres, then the full travel of every channel, and writes `RCn_MIN`, `RCn_MAX` and `RCn_TRIM`.
+
+Then read all parameters and back them up to a file. Record the results and update the calibration rows in [VERIFICATION.md](VERIFICATION.md).
+
+Stop on a refused start, a failed run, or a compass that reports a bad orientation. Check the site for steel and rebar, the compass mounts and the controller's firmware before trying again. Do not fly a vehicle whose calibration failed.
+
 ## First field flight
 
 Fly at a site with room for a return and a landing, away from people and property. The pilot keeps the transmitter in hand throughout.
