@@ -8,9 +8,6 @@ __pycache__/
 test-results/
 playwright-report/
 .svelte-kit/
-src-tauri/target/
-src-tauri/binaries/
-src-tauri/gen/
 build/
 param_cache/
 # Generated/downloaded parameter translation pack; tests/fixtures/param_i18n stays tracked.
@@ -40,4 +37,3 @@ RELEASE_NOTES.md
 Thumbs.db
 *.swp
 *~
-mbtiles/

@@ -37,16 +37,6 @@ def _extract_versions() -> dict[str, str]:
     versions["package-lock.json"] = lock["version"]
     versions["package-lock.json root package"] = lock["packages"][""]["version"]
 
-    versions["src-tauri/Cargo.toml"] = re.search(
-        r'^version = "([^"]+)"',
-        _read("src-tauri/Cargo.toml"),
-        re.MULTILINE,
-    ).group(1)
-
-    versions["src-tauri/tauri.conf.json"] = json.loads(
-        _read("src-tauri/tauri.conf.json"),
-    )["version"]
-
     m = re.search(r"argus-gcs-v([\d.]+)", _read("public/sw.js"))
     if m:
         versions["public/sw.js"] = m.group(1)
