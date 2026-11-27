@@ -153,8 +153,10 @@
       <button
         class="flex-1 py-2.5 bg-transparent border-2 border-dashed border-destructive/50 rounded-lg cursor-pointer
                       text-sm font-bold text-destructive hover:bg-destructive/5 transition-colors"
-        onclick={startDraw}>{t('fence.draw')}</button
+        onclick={startDraw}
       >
+        {t('fence.draw')}
+      </button>
       <Button variant="outline" size="sm" onclick={loadFence}>{t('fence.load')}</Button>
     </div>
     <div class="text-[11px] text-muted-foreground mt-1 text-center">{t('fence.drawHint')}</div>

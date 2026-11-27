@@ -455,9 +455,9 @@
           {parsing ? t('logview.parsing') : t('logview.open')}
         </Button>
         {#if log}
-          <Button variant="outline" size="sm" onclick={exportCsv}
-            ><Download size={13} class="mr-1" />{t('logview.export')}</Button
-          >
+          <Button variant="outline" size="sm" onclick={exportCsv}>
+            <Download size={13} class="mr-1" />{t('logview.export')}
+          </Button>
         {/if}
         <Button variant="ghost" size="icon-xs" onclick={onclose} aria-label={t('error.close')}><X size={16} /></Button>
       </div>
@@ -484,8 +484,10 @@
               {selectedTypes.has(tp)
                 ? 'bg-primary text-primary-foreground border-primary'
                 : 'text-muted-foreground border-border hover:text-foreground'}"
-              onclick={() => toggleType(tp)}>{tp}</button
+              onclick={() => toggleType(tp)}
             >
+              {tp}
+            </button>
           {/each}
         </div>
 

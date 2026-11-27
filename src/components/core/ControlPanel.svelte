@@ -226,8 +226,10 @@
         size="xs"
         class="px-1.5"
         aria-label={`${t('ctrl.altitude')} +5 m`}
-        onclick={() => adjustAlt(5)}><ChevronUp size={12} /></Button
+        onclick={() => adjustAlt(5)}
       >
+        <ChevronUp size={12} />
+      </Button>
     </div>
     <div class="text-[11px] text-muted-foreground font-semibold mt-1 tracking-wide uppercase">{t('ctrl.payload')}</div>
     <div class="flex gap-1.5">

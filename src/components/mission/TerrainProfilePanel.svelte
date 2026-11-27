@@ -397,8 +397,10 @@
             data-testid="terrain-lowest-clearance"
             class="text-[11px] font-mono {lowestClearance < minClearance
               ? 'text-destructive'
-              : 'text-muted-foreground'}">{t('terrain.lowest')}: {lowestClearance.toFixed(0)}m</span
+              : 'text-muted-foreground'}"
           >
+            {t('terrain.lowest')}: {lowestClearance.toFixed(0)}m
+          </span>
         {/if}
         {#if loading}
           <span class="text-[11px] text-amber-500 ml-auto">{t('terrain.loading')}</span>
@@ -423,17 +425,18 @@
 
       <!-- Legend -->
       <div class="flex items-center gap-4 px-5 pb-3 text-[10px] text-muted-foreground">
-        <span class="flex items-center gap-1"
-          ><span class="w-3 h-2 rounded-sm bg-[rgba(141,110,68,0.5)]"></span>{t('terrain.groundElev')}</span
-        >
-        <span class="flex items-center gap-1"><span class="w-3 h-0.5 bg-[#1565c0]"></span>{t('terrain.flightAlt')}</span
-        >
-        <span class="flex items-center gap-1"
-          ><span class="w-3 h-2 rounded-sm bg-[rgba(76,175,80,0.3)]"></span>{t('terrain.clearance')}</span
-        >
-        <span class="flex items-center gap-1"
-          ><span class="w-3 h-2 rounded-sm bg-[rgba(244,67,54,0.35)]"></span>{t('terrain.belowMin')}</span
-        >
+        <span class="flex items-center gap-1">
+          <span class="w-3 h-2 rounded-sm bg-[rgba(141,110,68,0.5)]"></span>{t('terrain.groundElev')}
+        </span>
+        <span class="flex items-center gap-1">
+          <span class="w-3 h-0.5 bg-[#1565c0]"></span>{t('terrain.flightAlt')}
+        </span>
+        <span class="flex items-center gap-1">
+          <span class="w-3 h-2 rounded-sm bg-[rgba(76,175,80,0.3)]"></span>{t('terrain.clearance')}
+        </span>
+        <span class="flex items-center gap-1">
+          <span class="w-3 h-2 rounded-sm bg-[rgba(244,67,54,0.35)]"></span>{t('terrain.belowMin')}
+        </span>
         <span class="ml-auto text-[10px]">{t('terrain.hoverTip')}</span>
       </div>
     {/if}

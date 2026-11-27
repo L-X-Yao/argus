@@ -85,18 +85,18 @@
     {#each sm as m}
       {#if m.maj}
         <line x1="37" y1={m.y} x2="52" y2={m.y} stroke="white" stroke-width="0.8" opacity="0.6" />
-        <text x="35" y={m.y + 3.5} text-anchor="end" fill="white" font-size="9" opacity="0.8" font-family="monospace"
-          >{m.v}</text
-        >
+        <text x="35" y={m.y + 3.5} text-anchor="end" fill="white" font-size="9" opacity="0.8" font-family="monospace">
+          {m.v}
+        </text>
       {:else}
         <line x1="45" y1={m.y} x2="52" y2={m.y} stroke="white" stroke-width="0.4" opacity="0.25" />
       {/if}
     {/each}
   </g>
   <rect x="3" y={TC - 11} width="46" height="22" rx="2" fill="rgba(0,0,0,0.92)" stroke="#4caf50" stroke-width="1.5" />
-  <text x="26" y={TC + 5} text-anchor="middle" fill="#4caf50" font-size="13" font-weight="bold" font-family="monospace"
-    >{d.gs.toFixed(1)}</text
-  >
+  <text x="26" y={TC + 5} text-anchor="middle" fill="#4caf50" font-size="13" font-weight="bold" font-family="monospace">
+    {d.gs.toFixed(1)}
+  </text>
   <polygon points="50,{TC - 4} 55,{TC} 50,{TC + 4}" fill="#4caf50" />
   <text x="26" y={TT - 1} text-anchor="middle" fill="#555" font-size="7">{t('telem.speed')} m/s</text>
 
@@ -178,8 +178,10 @@
             font-size="8"
             font-weight="bold"
             fill={deg === 0 ? '#f44336' : '#aaa'}
-            transform="rotate({-deg},{CX},{CY - COMP_R + 13})">{CC[deg]}</text
+            transform="rotate({-deg},{CX},{CY - COMP_R + 13})"
           >
+            {CC[deg]}
+          </text>
         {/if}
       </g>
     {/each}
@@ -205,18 +207,34 @@
     {#each am as m}
       {#if m.maj}
         <line x1="248" y1={m.y} x2="263" y2={m.y} stroke="white" stroke-width="0.8" opacity="0.6" />
-        <text x="265" y={m.y + 3.5} text-anchor="start" fill="white" font-size="9" opacity="0.8" font-family="monospace"
-          >{m.v}</text
+        <text
+          x="265"
+          y={m.y + 3.5}
+          text-anchor="start"
+          fill="white"
+          font-size="9"
+          opacity="0.8"
+          font-family="monospace"
         >
+          {m.v}
+        </text>
       {:else}
         <line x1="248" y1={m.y} x2="255" y2={m.y} stroke="white" stroke-width="0.4" opacity="0.25" />
       {/if}
     {/each}
   </g>
   <rect x="249" y={TC - 11} width="48" height="22" rx="2" fill="rgba(0,0,0,0.92)" stroke="#42a5f5" stroke-width="1.5" />
-  <text x="273" y={TC + 5} text-anchor="middle" fill="#42a5f5" font-size="13" font-weight="bold" font-family="monospace"
-    >{d.alt_rel.toFixed(1)}</text
+  <text
+    x="273"
+    y={TC + 5}
+    text-anchor="middle"
+    fill="#42a5f5"
+    font-size="13"
+    font-weight="bold"
+    font-family="monospace"
   >
+    {d.alt_rel.toFixed(1)}
+  </text>
   <polygon points="249,{TC - 4} 244,{TC} 249,{TC + 4}" fill="#42a5f5" />
   <text x="273" y={TT - 1} text-anchor="middle" fill="#555" font-size="7">{t('telem.alt')} m</text>
 
@@ -255,9 +273,9 @@
   </text>
 
   <!-- Heading Readout -->
-  <text x={CX} y="182" text-anchor="middle" fill="white" font-size="13" font-weight="bold" font-family="monospace"
-    >{d.hdg.toFixed(0)}&deg;</text
-  >
+  <text x={CX} y="182" text-anchor="middle" fill="white" font-size="13" font-weight="bold" font-family="monospace">
+    {d.hdg.toFixed(0)}&deg;
+  </text>
   <text x={CX} y="192" text-anchor="middle" fill="#777" font-size="8">{cardinal(d.hdg)}</text>
 
   <!-- Wind Indicator (bottom-right) -->
@@ -268,9 +286,9 @@
         <line x1="0" y1="8" x2="0" y2="-8" stroke="#69f0ae" stroke-width="1.5" />
         <polygon points="0,-9 -3,-4 3,-4" fill="#69f0ae" />
       </g>
-      <text x="0" y="18" text-anchor="middle" fill="#69f0ae" font-size="7" font-family="monospace"
-        >{d.wind_speed.toFixed(1)}</text
-      >
+      <text x="0" y="18" text-anchor="middle" fill="#69f0ae" font-size="7" font-family="monospace">
+        {d.wind_speed.toFixed(1)}
+      </text>
     </g>
   {/if}
 </svg>

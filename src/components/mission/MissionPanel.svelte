@@ -687,8 +687,10 @@
         <button
           class="w-5 text-center text-primary font-bold text-[11px] hover:underline cursor-pointer bg-transparent border-none p-0"
           onclick={() => (app.focusWp = i)}
-          title={t('tip.focusWp')}>{i + 1}</button
+          title={t('tip.focusWp')}
         >
+          {i + 1}
+        </button>
         <button
           class="px-1 py-px rounded text-[9px] font-bold border-none text-white cursor-pointer whitespace-nowrap"
           style="background:{typeColor(wp.type || 'wp')}"
@@ -719,8 +721,8 @@
             title={wp.type === 'loiter_turns' ? t('tip.turns') : t('tip.seconds')}
           />
         {/if}
-        <span class="flex-1 text-muted-foreground text-[10px] overflow-hidden whitespace-nowrap"
-          >{wp.lat.toFixed(5)},{wp.lon.toFixed(5)}
+        <span class="flex-1 text-muted-foreground text-[10px] overflow-hidden whitespace-nowrap">
+          {wp.lat.toFixed(5)},{wp.lon.toFixed(5)}
           {#if i > 0}<span class="text-muted-foreground/60 text-[9px] ml-0.5">{fmtSegDist(i)}</span>{/if}
         </span>
         <input
@@ -745,21 +747,29 @@
               showSlide(`${t('wp.goto')} WP${i + 1}`, 'red', () =>
                 dispatch('mission_set_current', undefined, { wp_index: i }),
               )}
-            title={t('wp.goto')}>&raquo;</button
+            title={t('wp.goto')}
           >
+            &raquo;
+          </button>
         {/if}
         <button
           class="bg-transparent border-none text-muted-foreground cursor-pointer text-xs px-px"
-          onclick={() => moveWp(i, -1)}>&uarr;</button
+          onclick={() => moveWp(i, -1)}
         >
+          &uarr;
+        </button>
         <button
           class="bg-transparent border-none text-muted-foreground cursor-pointer text-xs px-px"
-          onclick={() => moveWp(i, 1)}>&darr;</button
+          onclick={() => moveWp(i, 1)}
         >
+          &darr;
+        </button>
         <button
           class="bg-transparent border-none text-destructive cursor-pointer text-base px-0.5 leading-none"
-          onclick={() => deleteWaypoint(i)}>&times;</button
+          onclick={() => deleteWaypoint(i)}
         >
+          &times;
+        </button>
       </div>
     {:else}
       <div class="text-muted-foreground text-xs py-4 text-center">{t('wp.clickToAdd')}</div>
@@ -807,39 +817,46 @@
         onclick={() => {
           app.defaultAlt = a;
           saveSettings();
-        }}>{a}</button
+        }}
       >
+        {a}
+      </button>
     {/each}
     <Button variant="outline" size="xs" onclick={applyAltAll}>{t('cat.all')}</Button>
-    <Button variant="outline" size="xs" onclick={validateMission} disabled={app.waypoints.length === 0}
-      >{t('wp.validate')}</Button
-    >
+    <Button variant="outline" size="xs" onclick={validateMission} disabled={app.waypoints.length === 0}>
+      {t('wp.validate')}
+    </Button>
     <Button
       variant="outline"
       size="xs"
       onclick={applyTerrainFollow}
       disabled={terrainLoading || app.waypoints.length < 1}
-      >{terrainLoading ? t('terrain.loading') : t('terrain.follow')}</Button
     >
+      {terrainLoading ? t('terrain.loading') : t('terrain.follow')}
+    </Button>
     <Button
       variant="outline"
       size="xs"
       onclick={() => panels.open('terrainProfile')}
-      disabled={app.waypoints.length < 2}>{t('terrain.profile')}</Button
+      disabled={app.waypoints.length < 2}
     >
+      {t('terrain.profile')}
+    </Button>
     <Button
       size="xs"
       class="bg-orange-700 hover:bg-orange-800 text-white font-bold"
       onclick={uploadMission}
-      disabled={uploading || app.waypoints.length === 0}>{uploading ? t('toast.uploading') : t('wp.upload')}</Button
+      disabled={uploading || app.waypoints.length === 0}
     >
+      {uploading ? t('toast.uploading') : t('wp.upload')}
+    </Button>
   </div>
   <div class="flex gap-1 mt-1.5 items-center flex-wrap">
     <Button variant="secondary" size="xs" onclick={saveMission}>{t('wp.save')}</Button>
     <Button variant="secondary" size="xs" onclick={loadMission}>{t('wp.load')}</Button>
-    <Button variant="secondary" size="xs" class="gap-1" onclick={toggleLibrary}
-      ><BookOpen size={12} />{t('wp.library')}</Button
-    >
+    <Button variant="secondary" size="xs" class="gap-1" onclick={toggleLibrary}>
+      <BookOpen size={12} />{t('wp.library')}
+    </Button>
     <Button variant="secondary" size="xs" onclick={exportKml}>{t('wp.export')}</Button>
     <Button variant="secondary" size="xs" onclick={importKml}>{t('wp.import')}</Button>
     <Button variant="secondary" size="xs" onclick={reverseRoute}>{t('wp.reverse')}</Button>
@@ -854,8 +871,10 @@
           (await showConfirm(t('confirm.clearWps').replace('{n}', String(app.waypoints.length))))
         )
           clearWaypoints();
-      }}>{t('wp.clear')}</Button
+      }}
     >
+      {t('wp.clear')}
+    </Button>
   </div>
   {#if showCircleGen}
     <div class="flex gap-1 items-center mt-1.5 p-1.5 bg-muted rounded-lg flex-wrap">
@@ -908,9 +927,9 @@
                 <span class="font-medium text-foreground">{m.name}</span>
                 <span class="text-muted-foreground ml-1">({m.waypoints.length} WP)</span>
               </button>
-              <span class="text-[10px] text-muted-foreground shrink-0"
-                >{new Date(m.createdAt).toLocaleDateString()}</span
-              >
+              <span class="text-[10px] text-muted-foreground shrink-0">
+                {new Date(m.createdAt).toLocaleDateString()}
+              </span>
               <button
                 class="shrink-0 text-muted-foreground hover:text-destructive cursor-pointer p-0.5"
                 onclick={() => deleteFromLibrary(m.id)}

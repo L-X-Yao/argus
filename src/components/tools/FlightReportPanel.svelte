@@ -133,8 +133,9 @@
       <div class="space-y-3">
         <!-- Pilot name -->
         <div class="space-y-1">
-          <span class="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{t('report.pilot')}</span
-          >
+          <span class="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+            {t('report.pilot')}
+          </span>
           <input
             bind:value={pilotName}
             onblur={savePilot}
@@ -157,9 +158,9 @@
 
         <!-- Vehicle (read-only) -->
         <div class="space-y-1">
-          <span class="text-[11px] font-medium text-muted-foreground uppercase tracking-wider"
-            >{t('report.vehicle')}</span
-          >
+          <span class="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+            {t('report.vehicle')}
+          </span>
           <div
             class="w-full h-8 px-3 flex items-center bg-muted/50 border border-border rounded-md text-xs text-foreground"
           >
@@ -169,9 +170,9 @@
 
         <!-- Weather -->
         <div class="space-y-1">
-          <span class="text-[11px] font-medium text-muted-foreground uppercase tracking-wider"
-            >{t('report.weather')}</span
-          >
+          <span class="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+            {t('report.weather')}
+          </span>
           <input
             bind:value={weather}
             placeholder={t('report.weather')}
@@ -182,8 +183,9 @@
 
         <!-- Notes -->
         <div class="space-y-1">
-          <span class="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">{t('report.notes')}</span
-          >
+          <span class="text-[11px] font-medium text-muted-foreground uppercase tracking-wider">
+            {t('report.notes')}
+          </span>
           <textarea
             bind:value={notes}
             placeholder={t('report.notes')}

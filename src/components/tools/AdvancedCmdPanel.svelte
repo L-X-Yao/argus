@@ -122,9 +122,9 @@
         {#if selected === 'servo'}
           <div class="flex flex-col gap-2.5">
             <div class="flex items-center gap-2">
-              <label for="ac-servo-num" class="text-xs text-muted-foreground w-20 shrink-0"
-                >{t('advcmd.servoNum')}</label
-              >
+              <label for="ac-servo-num" class="text-xs text-muted-foreground w-20 shrink-0">
+                {t('advcmd.servoNum')}
+              </label>
               <input
                 id="ac-servo-num"
                 type="number"
@@ -137,9 +137,9 @@
               <span class="text-[10px] text-muted-foreground">1-16</span>
             </div>
             <div class="flex items-center gap-2">
-              <label for="ac-servo-pwm" class="text-xs text-muted-foreground w-20 shrink-0"
-                >{t('advcmd.servoPwm')}</label
-              >
+              <label for="ac-servo-pwm" class="text-xs text-muted-foreground w-20 shrink-0">
+                {t('advcmd.servoPwm')}
+              </label>
               <input
                 id="ac-servo-pwm"
                 type="number"
@@ -241,15 +241,19 @@
                   {yawDir === 'cw'
                   ? 'bg-primary text-primary-foreground'
                   : 'bg-secondary text-secondary-foreground hover:bg-muted'}"
-                onclick={() => (yawDir = 'cw')}>{t('label.cw')}</button
+                onclick={() => (yawDir = 'cw')}
               >
+                {t('label.cw')}
+              </button>
               <button
                 class="px-3 py-1 text-xs rounded-md transition-all
                   {yawDir === 'ccw'
                   ? 'bg-primary text-primary-foreground'
                   : 'bg-secondary text-secondary-foreground hover:bg-muted'}"
-                onclick={() => (yawDir = 'ccw')}>{t('label.ccw')}</button
+                onclick={() => (yawDir = 'ccw')}
               >
+                {t('label.ccw')}
+              </button>
             </div>
           </div>
         {:else if selected === 'vtol_transition'}
@@ -260,15 +264,19 @@
                 {vtolMode === 'hover'
                 ? 'bg-primary text-primary-foreground'
                 : 'bg-secondary text-secondary-foreground hover:bg-muted'}"
-              onclick={() => (vtolMode = 'hover')}>{t('label.hover')}</button
+              onclick={() => (vtolMode = 'hover')}
             >
+              {t('label.hover')}
+            </button>
             <button
               class="px-3 py-1.5 text-xs font-semibold rounded-md transition-all
                 {vtolMode === 'plane'
                 ? 'bg-primary text-primary-foreground'
                 : 'bg-secondary text-secondary-foreground hover:bg-muted'}"
-              onclick={() => (vtolMode = 'plane')}>{t('label.plane')}</button
+              onclick={() => (vtolMode = 'plane')}
             >
+              {t('label.plane')}
+            </button>
           </div>
         {/if}
       </div>

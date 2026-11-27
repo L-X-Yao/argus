@@ -264,9 +264,9 @@
     <div class="flex items-center gap-2 mb-2">
       <span class="text-xs font-bold text-primary flex-1 truncate">{fileName}</span>
       <span class="text-[11px] text-muted-foreground">{rows.length} frames | {fmtTime(duration)}</span>
-      <button class="text-destructive leading-none bg-transparent border-none cursor-pointer px-0.5" onclick={close}
-        ><X size={14} /></button
-      >
+      <button class="text-destructive leading-none bg-transparent border-none cursor-pointer px-0.5" onclick={close}>
+        <X size={14} />
+      </button>
     </div>
     <div class="flex items-center gap-2">
       <Button
@@ -317,8 +317,10 @@
         <button
           class="px-2 py-0.5 text-[10px] rounded border cursor-pointer transition-colors
           {speed === s ? 'text-primary border-primary' : 'text-muted-foreground border-border hover:text-foreground'}"
-          onclick={() => setSpeed(s)}>{s}x</button
+          onclick={() => setSpeed(s)}
         >
+          {s}x
+        </button>
       {/each}
     </div>
     {#if current}

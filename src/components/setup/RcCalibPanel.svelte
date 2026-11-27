@@ -197,8 +197,10 @@
               </div>
               <span
                 class="w-10 text-right font-mono text-[10px] shrink-0
-                {range > 300 ? 'text-green-400' : 'text-muted-foreground'}">{val}</span
+                {range > 300 ? 'text-green-400' : 'text-muted-foreground'}"
               >
+                {val}
+              </span>
               <span class="w-20 text-right font-mono text-[9px] text-muted-foreground shrink-0">
                 {t('rccal.min')}:{minValues[i]}
                 {t('rccal.max')}:{maxValues[i]}

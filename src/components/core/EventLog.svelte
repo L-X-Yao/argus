@@ -96,12 +96,14 @@
         <button
           class="px-1.5 py-px rounded text-[10px] font-semibold transition-all
           {sevFilter === key ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:text-foreground'}"
-          onclick={() => (sevFilter = key as typeof sevFilter)}>{label}</button
+          onclick={() => (sevFilter = key as typeof sevFilter)}
         >
+          {label}
+        </button>
       {/each}
-      <Button variant="ghost" size="xs" onclick={() => clearEvents()} disabled={app.events.length === 0}
-        >{t('event.clear')}</Button
-      >
+      <Button variant="ghost" size="xs" onclick={() => clearEvents()} disabled={app.events.length === 0}>
+        {t('event.clear')}
+      </Button>
       <Button variant="outline" size="xs" onclick={exportLog}>{t('event.export')}</Button>
       <input
         bind:value={filter}
