@@ -2,7 +2,7 @@
 
 > **A snapshot of 2026-07-13, not kept up to date.** The counts, the list of panels and what is
 > said about tests have changed since. The current status of every panel, and which four cannot
-> be opened, is in [VERIFICATION.md](VERIFICATION.md).
+> be opened, is in [VERIFICATION.md](../VERIFICATION.md).
 
 Every component under `src/components/` cross-referenced against the backend
 ws command set (52 commands), REST routes (27), the WebSerial transport
