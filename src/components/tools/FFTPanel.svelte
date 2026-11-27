@@ -344,8 +344,10 @@
               {source === src.key
                 ? 'bg-primary text-primary-foreground border-primary'
                 : 'text-muted-foreground border-border hover:text-foreground'}"
-              onclick={() => (source = src.key)}>{t(src.label)}</button
+              onclick={() => (source = src.key)}
             >
+              {t(src.label)}
+            </button>
           {/each}
         </div>
 
@@ -356,22 +358,28 @@
             {useHanning
               ? 'bg-primary text-primary-foreground border-primary'
               : 'text-muted-foreground border-border hover:text-foreground'}"
-            onclick={() => (useHanning = !useHanning)}>{t('fft.hanning')}</button
+            onclick={() => (useHanning = !useHanning)}
           >
+            {t('fft.hanning')}
+          </button>
           <button
             class="px-2 py-0.5 text-[10px] rounded border cursor-pointer transition-all
             {useWelch
               ? 'bg-primary text-primary-foreground border-primary'
               : 'text-muted-foreground border-border hover:text-foreground'}"
-            onclick={() => (useWelch = !useWelch)}>{t('fft.welch')}</button
+            onclick={() => (useWelch = !useWelch)}
           >
+            {t('fft.welch')}
+          </button>
           <button
             class="px-2 py-0.5 text-[10px] rounded border cursor-pointer transition-all
             {logScale
               ? 'bg-primary text-primary-foreground border-primary'
               : 'text-muted-foreground border-border hover:text-foreground'}"
-            onclick={() => (logScale = !logScale)}>{t('fft.logScale')}</button
+            onclick={() => (logScale = !logScale)}
           >
+            {t('fft.logScale')}
+          </button>
           <span class="text-[10px] text-muted-foreground ml-2">{t('fft.rpmBase')}:</span>
           <input
             type="text"
@@ -395,9 +403,9 @@
             <div class="space-y-1.5">
               {#each notchPeaks as peak, i}
                 <div class="flex items-center gap-3 text-[10px]">
-                  <span class="text-muted-foreground font-semibold w-14"
-                    >{t('fft.peakN').replace('{n}', String(i + 1))}</span
-                  >
+                  <span class="text-muted-foreground font-semibold w-14">
+                    {t('fft.peakN').replace('{n}', String(i + 1))}
+                  </span>
                   <span class="font-mono text-foreground">{peak.freq.toFixed(1)} Hz</span>
                   <span class="text-muted-foreground">{t('fft.notchBw')}:</span>
                   <span class="font-mono text-foreground">{peak.bw.toFixed(1)} Hz</span>
@@ -409,21 +417,21 @@
                 <p class="text-[10px] font-semibold text-muted-foreground mb-1">{t('fft.notchParam')}:</p>
                 <div class="grid grid-cols-2 gap-x-4 gap-y-0.5 text-[10px] font-mono">
                   <span class="text-muted-foreground">INS_HNTCH_ENABLE</span><span class="text-foreground">1</span>
-                  <span class="text-muted-foreground">INS_HNTCH_FREQ</span><span class="text-foreground"
-                    >{notchPeaks[0].freq.toFixed(0)}</span
-                  >
-                  <span class="text-muted-foreground">INS_HNTCH_BW</span><span class="text-foreground"
-                    >{notchPeaks[0].bw.toFixed(0)}</span
-                  >
+                  <span class="text-muted-foreground">INS_HNTCH_FREQ</span><span class="text-foreground">
+                    {notchPeaks[0].freq.toFixed(0)}
+                  </span>
+                  <span class="text-muted-foreground">INS_HNTCH_BW</span><span class="text-foreground">
+                    {notchPeaks[0].bw.toFixed(0)}
+                  </span>
                   <span class="text-muted-foreground">INS_HNTCH_MODE</span><span class="text-foreground">0</span>
                   {#if notchPeaks.length > 1}
                     <span class="text-muted-foreground">INS_HNTC2_ENABLE</span><span class="text-foreground">1</span>
-                    <span class="text-muted-foreground">INS_HNTC2_FREQ</span><span class="text-foreground"
-                      >{notchPeaks[1].freq.toFixed(0)}</span
-                    >
-                    <span class="text-muted-foreground">INS_HNTC2_BW</span><span class="text-foreground"
-                      >{notchPeaks[1].bw.toFixed(0)}</span
-                    >
+                    <span class="text-muted-foreground">INS_HNTC2_FREQ</span><span class="text-foreground">
+                      {notchPeaks[1].freq.toFixed(0)}
+                    </span>
+                    <span class="text-muted-foreground">INS_HNTC2_BW</span><span class="text-foreground">
+                      {notchPeaks[1].bw.toFixed(0)}
+                    </span>
                   {/if}
                 </div>
               </div>

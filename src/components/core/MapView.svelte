@@ -593,9 +593,17 @@
     <div class="absolute top-12 right-3 z-[1000]" title="{t('telem.hdg')} {app.drone.hdg.toFixed(0)}°">
       <svg width="42" height="42" viewBox="0 0 42 42" class="drop-shadow-lg">
         <circle cx="21" cy="21" r="19" fill="rgba(0,0,0,0.65)" stroke="rgba(255,255,255,0.15)" stroke-width="0.5" />
-        <text x="21" y="10" text-anchor="middle" fill="#f44336" font-size="9" font-weight="bold" font-family="monospace"
-          >N</text
+        <text
+          x="21"
+          y="10"
+          text-anchor="middle"
+          fill="#f44336"
+          font-size="9"
+          font-weight="bold"
+          font-family="monospace"
         >
+          N
+        </text>
         <text x="21" y="37" text-anchor="middle" fill="#666" font-size="7" font-family="monospace">S</text>
         <text x="5" y="24" text-anchor="middle" fill="#666" font-size="7" font-family="monospace">W</text>
         <text x="37" y="24" text-anchor="middle" fill="#666" font-size="7" font-family="monospace">E</text>
@@ -614,8 +622,10 @@
         addToast(t('toast.coordCopied'), 'success', 1500);
       }
     }}
-    title={t('tip.copyCoord')}>{mouseCoord || '---'}</button
+    title={t('tip.copyCoord')}
   >
+    {mouseCoord || '---'}
+  </button>
   <MapControls />
 
   {#if showHud && app.drone.connected}

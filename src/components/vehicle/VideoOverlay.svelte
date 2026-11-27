@@ -326,15 +326,19 @@
         size="icon-xs"
         onclick={takeScreenshot}
         title={t('tip.screenshot')}
-        aria-label={t('tip.screenshot')}><Camera size={14} /></Button
+        aria-label={t('tip.screenshot')}
       >
+        <Camera size={14} />
+      </Button>
       <Button
         variant={arEnabled ? 'default' : 'ghost'}
         size="icon-xs"
         onclick={() => (arEnabled = !arEnabled)}
         title={t('ar.overlay')}
-        aria-label={t('ar.overlay')}><Crosshair size={14} /></Button
+        aria-label={t('ar.overlay')}
       >
+        <Crosshair size={14} />
+      </Button>
       {#if arEnabled}
         <input
           type="number"
@@ -348,9 +352,9 @@
       {/if}
       <Button variant="destructive" size="sm" onclick={stopStream}>{t('video.disconnect')}</Button>
     {:else}
-      <Button size="sm" onclick={startStream} disabled={starting}
-        >{starting ? t('conn.connecting') : t('video.connect')}</Button
-      >
+      <Button size="sm" onclick={startStream} disabled={starting}>
+        {starting ? t('conn.connecting') : t('video.connect')}
+      </Button>
     {/if}
   </div>
 

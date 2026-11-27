@@ -169,8 +169,9 @@
 
       <!-- Airport list header -->
       <div class="flex items-center gap-2">
-        <span class="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{t('airspace.airport')}</span
-        >
+        <span class="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+          {t('airspace.airport')}
+        </span>
         <span class="text-[10px] text-muted-foreground">({AIRPORTS.length})</span>
       </div>
 

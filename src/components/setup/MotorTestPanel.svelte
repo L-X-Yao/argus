@@ -183,9 +183,9 @@
       <div class="space-y-3 mb-4">
         <!-- Throttle slider -->
         <div class="flex items-center gap-3">
-          <label for="motor-throttle" class="text-[11px] font-medium text-foreground w-16 shrink-0"
-            >{t('motor.throttle')}</label
-          >
+          <label for="motor-throttle" class="text-[11px] font-medium text-foreground w-16 shrink-0">
+            {t('motor.throttle')}
+          </label>
           <input
             id="motor-throttle"
             type="range"
@@ -200,9 +200,9 @@
 
         <!-- Duration slider -->
         <div class="flex items-center gap-3">
-          <label for="motor-duration" class="text-[11px] font-medium text-foreground w-16 shrink-0"
-            >{t('motor.duration')}</label
-          >
+          <label for="motor-duration" class="text-[11px] font-medium text-foreground w-16 shrink-0">
+            {t('motor.duration')}
+          </label>
           <input
             id="motor-duration"
             type="range"

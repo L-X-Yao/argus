@@ -236,8 +236,10 @@
                 <button
                   class="px-1.5 opacity-0 group-hover:opacity-60 hover:!opacity-100 text-destructive transition-opacity"
                   onmousedown={() => deleteProfile(prof.name)}
-                  title={t('label.delete')}>×</button
+                  title={t('label.delete')}
                 >
+                  ×
+                </button>
               </div>
             {/each}
             <div class="border-t border-border/50"></div>
@@ -248,8 +250,10 @@
               onmousedown={() => {
                 port = p;
                 showHistory = false;
-              }}>{p}</button
+              }}
             >
+              {p}
+            </button>
           {/each}
           <div class="border-t border-border/50">
             <button
@@ -257,8 +261,10 @@
               onmousedown={() => {
                 showProfileSave = true;
                 showHistory = false;
-              }}>+ {t('conn.saveProfile')}</button
+              }}
             >
+              + {t('conn.saveProfile')}
+            </button>
           </div>
         </div>
       {/if}
@@ -273,12 +279,16 @@
           />
           <button
             class="px-2 h-6 text-xs bg-primary text-primary-foreground rounded hover:bg-primary/90"
-            onclick={saveProfile}>{t('conn.saveProfile')}</button
+            onclick={saveProfile}
           >
+            {t('conn.saveProfile')}
+          </button>
           <button
             class="px-1.5 h-6 text-xs text-muted-foreground hover:text-foreground"
-            onclick={() => (showProfileSave = false)}>×</button
+            onclick={() => (showProfileSave = false)}
           >
+            ×
+          </button>
         </div>
       {/if}
     </div>
@@ -318,16 +328,20 @@
         port = 'udp:14550';
         toggle();
       }}
-      title={t('tip.sitl')}>SITL</Button
+      title={t('tip.sitl')}
     >
+      SITL
+    </Button>
     <Button
       variant="outline"
       size="sm"
       class="text-[10px] px-2 opacity-60 hover:opacity-100 {simStarting ? 'animate-pulse' : ''}"
       disabled={simStarting}
       onclick={connectSimulator}
-      title={simStarting ? t('conn.simStarting') : t('tip.sim')}>{simStarting ? '...' : 'SIM'}</Button
+      title={simStarting ? t('conn.simStarting') : t('tip.sim')}
     >
+      {simStarting ? '...' : 'SIM'}
+    </Button>
     {#if webSerialAvailable()}
       <Button
         variant="outline"

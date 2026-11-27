@@ -62,9 +62,13 @@
       </div>
       <div class="flex justify-end gap-2">
         <Button variant="outline" size="sm" onclick={() => resolveConfirm(false)}>{t('map.cancel')}</Button>
-        <Button variant={confirmState.danger ? 'destructive' : 'default'} size="sm" onclick={() => resolveConfirm(true)}
-          >{t('summary.confirm')}</Button
+        <Button
+          variant={confirmState.danger ? 'destructive' : 'default'}
+          size="sm"
+          onclick={() => resolveConfirm(true)}
         >
+          {t('summary.confirm')}
+        </Button>
       </div>
     </div>
   </div>

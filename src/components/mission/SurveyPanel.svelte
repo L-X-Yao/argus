@@ -68,9 +68,9 @@
     <div class="flex items-center gap-2 text-sm">
       <span>{t('survey.vertexCount').replace('{n}', String(polyPts.length))}</span>
       {#if polyPts.length >= 3}
-        <Button variant="default" size="xs" onclick={() => (app.drawingPolygon = false)}
-          >{t('survey.finishDraw')}</Button
-        >
+        <Button variant="default" size="xs" onclick={() => (app.drawingPolygon = false)}>
+          {t('survey.finishDraw')}
+        </Button>
       {/if}
       <Button variant="ghost" size="xs" onclick={clearPoly}>{t('map.cancel')}</Button>
     </div>

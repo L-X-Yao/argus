@@ -72,9 +72,9 @@
           <p class="text-sm font-bold text-warning">{t('esccal.armed')}</p>
           <Button variant="outline" class="w-full" onclick={() => setCal(ESCCAL_NONE)}>{t('esccal.disarm')}</Button>
         {:else}
-          <Button variant="destructive" class="w-full" onclick={() => setCal(ESCCAL_AUTO)} disabled={app.drone.armed}
-            >{t('esccal.arm')}</Button
-          >
+          <Button variant="destructive" class="w-full" onclick={() => setCal(ESCCAL_AUTO)} disabled={app.drone.armed}>
+            {t('esccal.arm')}
+          </Button>
         {/if}
       {/if}
     </div>

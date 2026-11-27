@@ -42,42 +42,44 @@
   px-4 py-1 shadow-lg pointer-events-auto"
 >
   <div class="flex flex-col items-center px-2.5 min-w-[40px]">
-    <span class="text-base font-bold text-foreground leading-tight tabular-nums"
-      >{d.alt_rel.toFixed(1)}<span class="text-[10px] text-muted-foreground ml-0.5">m</span>{#if altTrend}<span
-          class="text-[10px] ml-0.5 {altTrendColor}">{altTrend}</span
-        >{/if}</span
-    >
+    <span class="text-base font-bold text-foreground leading-tight tabular-nums">
+      {d.alt_rel.toFixed(1)}<span class="text-[10px] text-muted-foreground ml-0.5">m</span>{#if altTrend}<span
+          class="text-[10px] ml-0.5 {altTrendColor}"
+        >
+          {altTrend}
+        </span>{/if}
+    </span>
     <span class="text-[9px] text-muted-foreground tracking-wider">{t('telem.alt')}</span>
   </div>
   <div class="w-px h-6 bg-border"></div>
   <div class="flex flex-col items-center px-2.5 min-w-[40px]">
-    <span class="text-base font-bold text-foreground leading-tight tabular-nums"
-      >{d.alt_msl.toFixed(0)}<span class="text-[10px] text-muted-foreground ml-0.5">m</span></span
-    >
+    <span class="text-base font-bold text-foreground leading-tight tabular-nums">
+      {d.alt_msl.toFixed(0)}<span class="text-[10px] text-muted-foreground ml-0.5">m</span>
+    </span>
     <span class="text-[9px] text-muted-foreground tracking-wider">{t('telem.msl')}</span>
   </div>
   {#if d.terrain_alt >= 0}
     <div class="w-px h-6 bg-border"></div>
     <div class="flex flex-col items-center px-2.5 min-w-[40px]">
-      <span class="text-base font-bold leading-tight tabular-nums {aglColor}"
-        >{d.terrain_alt.toFixed(1)}<span class="text-[10px] text-muted-foreground ml-0.5">m</span></span
-      >
+      <span class="text-base font-bold leading-tight tabular-nums {aglColor}">
+        {d.terrain_alt.toFixed(1)}<span class="text-[10px] text-muted-foreground ml-0.5">m</span>
+      </span>
       <span class="text-[9px] text-muted-foreground tracking-wider">{t('telem.agl')}</span>
     </div>
   {/if}
   <div class="w-px h-6 bg-border"></div>
   <div class="flex flex-col items-center px-2.5 min-w-[40px]">
-    <span class="text-base font-bold text-foreground leading-tight tabular-nums"
-      >{d.gs.toFixed(1)}<span class="text-[10px] text-muted-foreground ml-0.5">m/s</span></span
-    >
+    <span class="text-base font-bold text-foreground leading-tight tabular-nums">
+      {d.gs.toFixed(1)}<span class="text-[10px] text-muted-foreground ml-0.5">m/s</span>
+    </span>
     <span class="text-[9px] text-muted-foreground tracking-wider">{t('telem.speed')}</span>
   </div>
   {#if d.airspeed > 0.5}
     <div class="w-px h-6 bg-border"></div>
     <div class="flex flex-col items-center px-2.5 min-w-[40px]">
-      <span class="text-base font-bold text-foreground leading-tight tabular-nums"
-        >{d.airspeed.toFixed(1)}<span class="text-[10px] text-muted-foreground ml-0.5">m/s</span></span
-      >
+      <span class="text-base font-bold text-foreground leading-tight tabular-nums">
+        {d.airspeed.toFixed(1)}<span class="text-[10px] text-muted-foreground ml-0.5">m/s</span>
+      </span>
       <span class="text-[9px] text-muted-foreground tracking-wider">{t('telem.aspd')}</span>
     </div>
   {/if}
@@ -86,26 +88,29 @@
     <span
       class="text-base font-bold leading-tight tabular-nums
       {d.vz > 0.3 ? 'text-success' : d.vz < -0.3 ? 'text-destructive' : 'text-foreground'}"
-      >{d.vz.toFixed(1)}<span class="text-[10px] text-muted-foreground ml-0.5">m/s</span></span
     >
+      {d.vz.toFixed(1)}<span class="text-[10px] text-muted-foreground ml-0.5">m/s</span>
+    </span>
     <span class="text-[9px] text-muted-foreground tracking-wider">{t('telem.vs')}</span>
   </div>
   {#if d.armed}
     <div class="w-px h-6 bg-border"></div>
     <div class="flex flex-col items-center px-2.5 min-w-[40px]">
-      <span class="text-base font-bold text-foreground leading-tight tabular-nums"
-        >{d.throttle}<span class="text-[10px] text-muted-foreground ml-0.5">%</span></span
-      >
+      <span class="text-base font-bold text-foreground leading-tight tabular-nums">
+        {d.throttle}<span class="text-[10px] text-muted-foreground ml-0.5">%</span>
+      </span>
       <span class="text-[9px] text-muted-foreground tracking-wider">{t('telem.thr')}</span>
     </div>
   {/if}
   <div class="w-px h-6 bg-border"></div>
   <div class="flex flex-col items-center px-2.5 min-w-[40px]">
-    <span class="text-base font-bold text-foreground leading-tight tabular-nums"
-      >{d.dist_home.toFixed(0)}<span class="text-[10px] text-muted-foreground ml-0.5">m</span>{#if distTrend}<span
-          class="text-[10px] ml-0.5 {distTrendColor}">{distTrend}</span
-        >{/if}</span
-    >
+    <span class="text-base font-bold text-foreground leading-tight tabular-nums">
+      {d.dist_home.toFixed(0)}<span class="text-[10px] text-muted-foreground ml-0.5">m</span>{#if distTrend}<span
+          class="text-[10px] ml-0.5 {distTrendColor}"
+        >
+          {distTrend}
+        </span>{/if}
+    </span>
     <span class="text-[9px] text-muted-foreground tracking-wider">{t('telem.dist')}</span>
   </div>
   <div class="w-px h-6 bg-border"></div>

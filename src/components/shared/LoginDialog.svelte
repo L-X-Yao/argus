@@ -62,9 +62,9 @@
         <p class="text-xs text-muted-foreground">{t('app.name')}</p>
       </div>
     </div>
-    <label for="auth-token-input" class="block text-xs font-medium text-muted-foreground mb-1.5"
-      >{t('auth.tokenLabel')}</label
-    >
+    <label for="auth-token-input" class="block text-xs font-medium text-muted-foreground mb-1.5">
+      {t('auth.tokenLabel')}
+    </label>
     <input
       id="auth-token-input"
       bind:this={inputEl}

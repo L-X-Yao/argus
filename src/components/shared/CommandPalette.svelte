@@ -813,8 +813,9 @@
               {#if item.shortcut}
                 <kbd
                   class="text-[10px] text-muted-foreground/50 border border-border rounded px-1.5 py-0.5 font-mono shrink-0"
-                  >{item.shortcut}</kbd
                 >
+                  {item.shortcut}
+                </kbd>
               {/if}
               <ChevronRight size={12} class="opacity-30 shrink-0" />
             </div>

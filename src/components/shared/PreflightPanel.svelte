@@ -95,9 +95,9 @@
   {#if showEditor}
     <div class="mb-3 p-2.5 rounded-lg border border-border bg-muted/20">
       <div class="flex items-center justify-between mb-2">
-        <span class="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider"
-          >{t('preflight.customizeTitle')}</span
-        >
+        <span class="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">
+          {t('preflight.customizeTitle')}
+        </span>
       </div>
       <div class="grid grid-cols-2 gap-x-3 gap-y-1 max-sm:grid-cols-1">
         {#each allChecks as c}

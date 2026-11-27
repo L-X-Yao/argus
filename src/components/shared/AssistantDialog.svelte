@@ -71,9 +71,9 @@
       <Bot size={18} class="text-primary shrink-0" />
       <h2 id="assistant-title" class="text-sm font-bold text-foreground">{t('assistant.title')}</h2>
       {#if assistant.queue.length > 1}
-        <span class="ml-auto text-[11px] text-muted-foreground"
-          >{t('assistant.more').replace('{n}', String(assistant.queue.length - 1))}</span
-        >
+        <span class="ml-auto text-[11px] text-muted-foreground">
+          {t('assistant.more').replace('{n}', String(assistant.queue.length - 1))}
+        </span>
       {/if}
     </div>
 
@@ -83,11 +83,13 @@
         <p class="text-muted-foreground">{summary(current)} {t('assistant.onMap')}</p>
         <table class="w-full font-mono text-[11px]">
           <thead class="text-muted-foreground">
-            <tr
-              ><th class="text-left">#</th><th class="text-left">lat</th><th class="text-left">lon</th><th
-                class="text-right">m</th
-              ><th class="text-left"></th></tr
-            >
+            <tr>
+              <th class="text-left">#</th><th class="text-left">lat</th><th class="text-left">lon</th><th
+                class="text-right"
+              >
+                m
+              </th><th class="text-left"></th>
+            </tr>
           </thead>
           <tbody>
             {#each current.waypoints as wp, i (i)}
@@ -115,20 +117,22 @@
         <p class="font-semibold text-foreground">{t('assistant.paramsTitle')}</p>
         <table class="w-full font-mono text-[11px]">
           <thead class="text-muted-foreground">
-            <tr
-              ><th class="text-left">{t('assistant.param')}</th><th class="text-right">{t('assistant.now')}</th><th
-                class="text-right">{t('assistant.new')}</th
-              ></tr
-            >
+            <tr>
+              <th class="text-left">{t('assistant.param')}</th><th class="text-right">{t('assistant.now')}</th><th
+                class="text-right"
+              >
+                {t('assistant.new')}
+              </th>
+            </tr>
           </thead>
           <tbody>
             {#each current.changes as change (change.name)}
               <tr>
                 <td>{change.name}</td>
                 <td class="text-right">{change.from}</td>
-                <td class="text-right font-bold {change.from === change.to ? 'text-muted-foreground' : 'text-warning'}"
-                  >{change.from === change.to ? t('assistant.unchanged') : change.to}</td
-                >
+                <td class="text-right font-bold {change.from === change.to ? 'text-muted-foreground' : 'text-warning'}">
+                  {change.from === change.to ? t('assistant.unchanged') : change.to}
+                </td>
               </tr>
             {/each}
           </tbody>
@@ -155,15 +159,19 @@
         class="flex-1"
         disabled={assistant.running}
         onclick={() => decline(current!.id)}
-        data-testid="assistant-decline">{t('assistant.decline')}</Button
+        data-testid="assistant-decline"
       >
+        {t('assistant.decline')}
+      </Button>
       <Button
         size="sm"
         class="flex-1"
         disabled={!readable || assistant.running || blocked}
         onclick={() => approve(current!.id)}
-        data-testid="assistant-approve">{assistant.running ? t('assistant.running') : t('assistant.approve')}</Button
+        data-testid="assistant-approve"
       >
+        {assistant.running ? t('assistant.running') : t('assistant.approve')}
+      </Button>
     </div>
   </div>
 {/if}
