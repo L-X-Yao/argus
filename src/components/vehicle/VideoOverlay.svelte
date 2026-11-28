@@ -4,6 +4,7 @@
   import { apiUrl } from '../../lib/backend';
   import { t } from '../../lib/i18n.svelte';
   import { wrapPi } from '../../lib/worst';
+  import { videoErrorKey } from '../../lib/videoError';
   import { X, VideoOff, Camera, Crosshair, RotateCcw } from '@lucide/svelte';
   import Button from '$lib/components/ui/button/button.svelte';
 
@@ -21,6 +22,9 @@
   });
   let streaming = $state(false);
   let starting = $state(false);
+  // Names this page's stream: /api/video/last_error answers only for its own id, so a
+  // second page watching at the same time cannot read this one's failure.
+  let streamId = $state('');
   let preflight: AbortController | null = null;
   let size = $state<'sm' | 'md' | 'lg'>('md');
   let error = $state('');
@@ -49,7 +53,20 @@
     lg: { w: 640, h: 480, labelKey: 'video.sizeLarge' },
   } as const;
 
-  let imgSrc = $derived(streaming ? apiUrl(`/api/video?url=${encodeURIComponent(videoUrl)}`) : '');
+  let imgSrc = $derived(
+    streaming ? apiUrl(`/api/video?url=${encodeURIComponent(videoUrl)}&stream=${encodeURIComponent(streamId)}`) : '',
+  );
+
+  /** Why ffmpeg ended this page's stream, or null when it has no record of it. */
+  async function lastVideoError(id: string): Promise<{ code?: string; detail?: string } | null> {
+    try {
+      const r = await fetch(apiUrl(`/api/video/last_error?stream=${encodeURIComponent(id)}`));
+      const d = await r.json();
+      return d?.error ?? null;
+    } catch {
+      return null;
+    }
+  }
 
   async function startStream() {
     if (starting) return;
@@ -90,6 +107,10 @@
         }
         return;
       }
+      streamId =
+        typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+          ? crypto.randomUUID()
+          : Math.random().toString(36).slice(2);
       streaming = true;
       try {
         localStorage.setItem('argus_video_url', url);
@@ -291,9 +312,11 @@
         alt={t('video.alt')}
         class="w-full h-full object-contain"
         crossorigin="anonymous"
-        onerror={() => {
-          error = t('video.loadFail');
+        onerror={async () => {
           streaming = false;
+          // ffmpeg knows why it stopped; the reason stands in for the generic message.
+          const last = await lastVideoError(streamId);
+          error = last ? `${t(videoErrorKey(last.code))}${last.detail ? `: ${last.detail}` : ''}` : t('video.loadFail');
         }}
       />
       {#if arEnabled}
