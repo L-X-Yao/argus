@@ -38,47 +38,6 @@ describe('backend URL resolver', () => {
     expect(getWsUrl()).toBe('ws://localhost:8100/ws');
   });
 
-  it('getWsUrl keeps the query token only in Tauri mode', async () => {
-    // Residual: the webview origin is tauri://localhost, a cross-origin
-    // fetch cannot carry the login cookie.
-    vi.stubGlobal('window', {
-      __TAURI_INTERNALS__: {},
-      location: { protocol: 'https:', host: 'tauri.localhost' },
-    });
-    vi.stubGlobal('localStorage', {
-      getItem: (key: string) => (key === 'argus_auth_token' ? 'secret_token_value' : null),
-    });
-    const { getWsUrl } = await import('./backend');
-    expect(getWsUrl()).toBe('ws://127.0.0.1:8100/ws?token=secret_token_value');
-  });
-
-  it('detects Tauri mode via __TAURI_INTERNALS__', async () => {
-    vi.stubGlobal('window', {
-      __TAURI_INTERNALS__: {},
-      location: { protocol: 'https:', host: 'tauri.localhost' },
-    });
-    const { isTauri, API_BASE, getWsUrl } = await import('./backend');
-    expect(isTauri).toBe(true);
-    expect(API_BASE).toBe('http://127.0.0.1:8100');
-    expect(getWsUrl()).toBe('ws://127.0.0.1:8100/ws');
-  });
-
-  it('apiUrl resolves full URL in Tauri mode', async () => {
-    vi.stubGlobal('window', {
-      __TAURI_INTERNALS__: {},
-      location: { protocol: 'https:', host: 'tauri.localhost' },
-    });
-    const { apiUrl } = await import('./backend');
-    expect(apiUrl('/api/ports')).toBe('http://127.0.0.1:8100/api/ports');
-    expect(apiUrl('/api/connect')).toBe('http://127.0.0.1:8100/api/connect');
-  });
-
-  it('isTauri is false when __TAURI_INTERNALS__ absent', async () => {
-    vi.stubGlobal('window', { location: { protocol: 'http:', host: 'localhost:8100' } });
-    const { isTauri } = await import('./backend');
-    expect(isTauri).toBe(false);
-  });
-
   it('getWsUrl with non-standard port', async () => {
     vi.stubGlobal('window', { location: { protocol: 'http:', host: 'myhost:8100' } });
     const { getWsUrl } = await import('./backend');

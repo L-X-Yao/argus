@@ -1,41 +1,21 @@
 /**
  * Backend URL resolver.
  *
- * In browser mode (vite dev / python run.py), the backend is on the same
- * origin, so relative paths like "/api/ports" work directly.
- *
- * In Tauri desktop mode, the webview is served from a custom protocol
- * (tauri://localhost or https://tauri.localhost), but the Python backend
- * runs on http://127.0.0.1:8100.  All API / WebSocket URLs must be
- * resolved to that address.
+ * The page is always served by the backend itself, or by the Vite dev server,
+ * which proxies /api and /ws to it. Every backend URL is same-origin, so
+ * relative paths like "/api/ports" work directly.
  */
 
-/** True when running inside a Tauri webview. */
-export const isTauri: boolean = '__TAURI_INTERNALS__' in window;
-
 /** Base URL for HTTP API calls (no trailing slash). */
-export const API_BASE: string = isTauri ? 'http://127.0.0.1:8100' : '';
+export const API_BASE: string = '';
 
 /** WebSocket URL for the drone link. */
 export function getWsUrl(): string {
-  let base: string;
-  let tokenInQuery = false;
-  if (isTauri) {
-    base = 'ws://127.0.0.1:8100/ws';
-    // The webview's origin is tauri://localhost: a fetch to the backend is
-    // cross-origin and cannot carry the login cookie, so the handshake keeps
-    // the token in the query (audit 2026-11-16 L15 residual).
-    tokenInQuery = true;
-  } else {
-    // Same origin (served page) or the dev proxy: the handshake rides on the
-    // HttpOnly login cookie. A token in a URL leaks into access logs and
-    // proxies, so it goes only where a cookie cannot reach.
-    const loc = window.location;
-    const proto = loc.protocol === 'https:' ? 'wss:' : 'ws:';
-    base = `${proto}//${loc.host}/ws`;
-  }
-  const token = tokenInQuery && typeof localStorage !== 'undefined' ? localStorage.getItem('argus_auth_token') : null;
-  return token ? `${base}?token=${encodeURIComponent(token)}` : base;
+  // Same origin: the handshake rides on the HttpOnly login cookie. A token in a
+  // URL would leak into access logs and proxies.
+  const loc = window.location;
+  const proto = loc.protocol === 'https:' ? 'wss:' : 'ws:';
+  return `${proto}//${loc.host}/ws`;
 }
 
 /** Resolve a relative API path (e.g. "/api/ports") to a full URL. */

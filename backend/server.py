@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Standalone entry point for Argus GCS backend (used by Tauri sidecar).
+"""Standalone entry point for the Argus GCS backend.
 
-When packaged with PyInstaller, this becomes the single-file executable that
-Tauri spawns as a sidecar process.  It starts the FastAPI/uvicorn server on
-the given port (default 8100) and serves both the REST API and the WebSocket
-endpoint that the Tauri webview connects to.
+The Windows package and the installer start this file (`python backend\\server.py
+--port 8100`); it runs the FastAPI/uvicorn server on the given port (default
+8100), serving both the REST API and the WebSocket endpoint, and the built page
+in dist/.
 """
 
 import argparse

@@ -177,7 +177,6 @@ describe('i18n completeness', () => {
       'SNR',
       'Bootloader',
       'FFT',
-      'Tauri',
       'ArduPilot',
       'PX4',
       'SRTM',

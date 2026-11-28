@@ -365,7 +365,7 @@ Argus 建立在以下项目之上：
 - [ArduPilot](https://ardupilot.org/) — 定义了本 GCS 所对接协议语义的飞控固件
 - [pymavlink](https://github.com/ArduPilot/pymavlink) — 用于验证我们纯 TS 实现的参考 MAVLink 编解码器
 - [MAVLink](https://mavlink.io/) — 通信协议本身
-- [Svelte](https://svelte.dev/)、[FastAPI](https://fastapi.tiangolo.com/)、[Leaflet](https://leafletjs.com/)、[MapLibre GL](https://maplibre.org/)、[Tauri](https://tauri.app/) — 应用技术栈
+- [Svelte](https://svelte.dev/)、[FastAPI](https://fastapi.tiangolo.com/)、[Leaflet](https://leafletjs.com/)、[MapLibre GL](https://maplibre.org/) — 应用技术栈
 - [QGroundControl](https://github.com/mavlink/qgroundcontrol) — 6 张校准示意图来自该项目（Apache-2.0）
 - QGroundControl、Mission Planner、MAVProxy — 前辈 GCS，展示了可能性
 

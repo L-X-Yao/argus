@@ -365,7 +365,7 @@ Argus stands on the shoulders of:
 - [ArduPilot](https://ardupilot.org/) — the flight controller firmware that defines the protocol semantics this GCS targets
 - [pymavlink](https://github.com/ArduPilot/pymavlink) — reference MAVLink codec used to validate our pure-TS implementation
 - [MAVLink](https://mavlink.io/) — the messaging protocol itself
-- [Svelte](https://svelte.dev/), [FastAPI](https://fastapi.tiangolo.com/), [Leaflet](https://leafletjs.com/), [MapLibre GL](https://maplibre.org/), [Tauri](https://tauri.app/) — the application stack
+- [Svelte](https://svelte.dev/), [FastAPI](https://fastapi.tiangolo.com/), [Leaflet](https://leafletjs.com/), [MapLibre GL](https://maplibre.org/) — the application stack
 - [QGroundControl](https://github.com/mavlink/qgroundcontrol) — the six calibration pictures come from it (Apache-2.0)
 - QGroundControl, Mission Planner, MAVProxy — for showing what's possible
 

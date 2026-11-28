@@ -33,7 +33,7 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 | Messages, WebSerial | 35 | 17 | 13 | 0 | 4 | 0 | 1 |
 | REST routes | 34 | 6 | 5 | 18 | 5 | 0 | 0 |
 | Panels | 78 | 14 | 34 | 19 | 11 | 0 | 0 |
-| Platform | 50 | 10 | 13 | 13 | 10 | 2 | 2 |
+| Platform | 50 | 10 | 13 | 13 | 10 | 1 | 3 |
 
 ## Commands / 飞控命令
 
@@ -315,7 +315,7 @@ Real FC here means the route was in use during a session with a real flight cont
 | Real flight | 真实飞行 | None | Never properly flown |
 | Right-to-left layout | 阿拉伯语从右到左布局 | Tests only | Browser test: page turns around and stays inside the window |
 | macOS | macOS | Simulator | CI: unit and contract tests, then the app in a browser on macos-latest. No SITL there |
-| Desktop app (Tauri) | 桌面版（Tauri） | None | Not built |
+| Desktop app (Tauri) | 桌面版（Tauri） | n/a | Removed 2026-11-27 with the unused `src-tauri` path; the Windows installer is the desktop distribution |
 | Firmware flashing | 固件刷写 | Real FC | Backend serial only. 2026-11-20 through the packaged Windows build on a real FC, disarmed: erase, program 1.29 MB, CRC verify, reboot and reconnect; the rebooted firmware reported the new git hash. A wrong-board .apj was refused before erasing earlier the same day |
 | PX4 | PX4 | n/a | Refused on connect, not implemented |
 | White-label branding | 白标定制 | n/a | Code exists but is not wired in |
