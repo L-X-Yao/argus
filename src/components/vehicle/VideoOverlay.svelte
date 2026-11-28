@@ -82,6 +82,9 @@
       return;
     }
     error = '';
+    // Before the first await: a previous stream's error response that arrives while
+    // this attempt is validating must not land on the stream about to start.
+    streamGen += 1;
     starting = true;
     const url = videoUrl;
     const controller = new AbortController();
@@ -110,7 +113,6 @@
         }
         return;
       }
-      streamGen += 1;
       streamId =
         typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
           ? crypto.randomUUID()

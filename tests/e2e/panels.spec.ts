@@ -107,6 +107,56 @@ test.describe('Video panel', () => {
     expect(box.y).toBeCloseTo(8, 0);
     expect(box.x + box.width).toBeCloseTo(viewport.width - 16, 0);
   });
+
+  test('a previous stream failure does not follow the next stream', async ({ page }) => {
+    // Hold each answer by hand: the old stream's error must come back while the new
+    // attempt is still validating, which is exactly the window the guard closes.
+    await page.route(/\/api\/video\/capabilities/, (route) =>
+      route.fulfill({ json: { mjpeg: true, webrtc: false, protocols: ['rtsp'] } }),
+    );
+    let validates = 0;
+    let releaseSecond: () => void = () => {};
+    const secondHeld = new Promise<void>((resolve) => (releaseSecond = resolve));
+    await page.route(/\/api\/video\/validate\?/, async (route) => {
+      validates += 1;
+      if (validates === 1) return route.fulfill({ json: { ok: true } });
+      await secondHeld;
+      return route.fulfill({ json: { ok: true } });
+    });
+    // No frame ever arrives; aborting the request is the panel's error path.
+    await page.route(/\/api\/video\?url=/, (route) => route.abort());
+    let asked: () => void = () => {};
+    const firstAsked = new Promise<void>((resolve) => (asked = resolve));
+    let lastErrors = 0;
+    let releaseFirst: () => void = () => {};
+    const firstHeld = new Promise<void>((resolve) => (releaseFirst = resolve));
+    await page.route(/\/api\/video\/last_error\?/, async (route) => {
+      lastErrors += 1;
+      if (lastErrors === 1) {
+        asked();
+        await firstHeld;
+        return route.fulfill({ json: { ok: true, error: { code: 'refused', detail: 'STALE-A' } } });
+      }
+      return route.fulfill({ json: { ok: true, error: null } });
+    });
+
+    await page.goto('/');
+    await openFromPalette(page, 'tool-video');
+    const panel = page.getByRole('region', { name: label('ui.video') });
+    await panel.locator('input[type="text"]').fill('rtsp://cam.example/live');
+
+    await panel.getByRole('button', { name: label('video.connect') }).click();
+    await firstAsked;
+    // The operator tries again while the first answer is still on its way.
+    await panel.getByRole('button', { name: label('video.connect') }).click();
+
+    const answered = page.waitForResponse(/\/api\/video\/last_error\?/);
+    releaseFirst();
+    await answered;
+    await page.waitForTimeout(100);
+    await expect(panel.getByText('STALE-A')).toHaveCount(0);
+    releaseSecond();
+  });
 });
 
 test.describe('Flight mode panel', () => {

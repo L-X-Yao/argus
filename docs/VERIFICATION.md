@@ -263,7 +263,7 @@ Real FC here means the route was in use during a session with a real flight cont
 | `ReplayPanel` | tools | 加载并回放飞行日志 | Simulator | e2e: map3d, a file with rows that are not numbers included |
 | `FleetDashboard` | vehicle | 查看并切换多机 | Tests only | Logic: ws |
 | `GimbalPanel` | vehicle | 控制云台相机 | Simulator | e2e: command-palette. Opens; no gimbal |
-| `VideoOverlay` | vehicle | 观看视频流 | Simulator | e2e: memory. 2026-11-23 browser e2e: dragging beyond the viewport keeps the title bar reachable, and reset restores the panel. 2026-11-14: a real RTSP server's H.264 stream showed in the panel and kept moving. 2026-11-28: when a stream fails, the panel asks `/api/video/last_error` for the reason ffmpeg gave and shows it instead of a generic failure. No physical camera |
+| `VideoOverlay` | vehicle | 观看视频流 | Simulator | e2e: memory. 2026-11-23 browser e2e: dragging beyond the viewport keeps the title bar reachable, and reset restores the panel. 2026-11-14: a real RTSP server's H.264 stream showed in the panel and kept moving. 2026-11-28: when a stream fails, the panel asks `/api/video/last_error` for the reason ffmpeg gave and shows it instead of a generic failure; an e2e holds both answers and shows a previous stream's failure is dropped when a new attempt starts. No physical camera |
 
 ## Platform / 平台与功能
 
