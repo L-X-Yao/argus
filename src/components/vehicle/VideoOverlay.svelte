@@ -25,6 +25,9 @@
   // Names this page's stream: /api/video/last_error answers only for its own id, so a
   // second page watching at the same time cannot read this one's failure.
   let streamId = $state('');
+  // Bumped whenever the stream starts or stops, so an old stream's error response
+  // cannot land on a stream the operator has already replaced or closed.
+  let streamGen = 0;
   let preflight: AbortController | null = null;
   let size = $state<'sm' | 'md' | 'lg'>('md');
   let error = $state('');
@@ -107,6 +110,7 @@
         }
         return;
       }
+      streamGen += 1;
       streamId =
         typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
           ? crypto.randomUUID()
@@ -129,6 +133,7 @@
   }
 
   async function stopStream() {
+    streamGen += 1;
     streaming = false;
     try {
       await fetch(apiUrl('/api/video/stop'));
@@ -313,9 +318,13 @@
         class="w-full h-full object-contain"
         crossorigin="anonymous"
         onerror={async () => {
+          const gen = streamGen;
+          const id = streamId;
           streaming = false;
           // ffmpeg knows why it stopped; the reason stands in for the generic message.
-          const last = await lastVideoError(streamId);
+          const last = await lastVideoError(id);
+          // A new stream or a Stop while this was in flight owns the panel now.
+          if (gen !== streamGen) return;
           error = last ? `${t(videoErrorKey(last.code))}${last.detail ? `: ${last.detail}` : ''}` : t('video.loadFail');
         }}
       />

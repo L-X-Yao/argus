@@ -10,6 +10,7 @@ import socket
 import subprocess
 import sys
 import threading
+import time
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
@@ -573,13 +574,21 @@ class TestFfmpegErrorClassification:
             ("Server returned 500 Internal Server Error", "server"),
             ("Protocol not found", "protocol"),
             ("Invalid data found when processing input", "protocol"),
-            ("Exiting normally, received signal 9.", "stopped"),
-            ("Exiting normally", "stopped"),
+            ("http://8.8.8.8/live?timeout=1\nServer returned 404 Not Found", "notfound"),
+            ("frame= 10 fps\rframe= 11 fps\r", "other"),
             ("something else entirely", "other"),
         ],
     )
     def test_code(self, text, code):
         assert _classify_ffmpeg_error(text)[0] == code
+
+    def test_the_url_is_masked_before_matching(self):
+        # "timeout" in the query string is not the reason; the 404 after it is.
+        assert _classify_ffmpeg_error("http://8.8.8.8/live?timeout=1\nServer returned 404 Not Found")[0] == "notfound"
+
+    def test_the_last_segment_with_a_reason_decides(self):
+        text = "frame= 10 fps\rframe= 11 fps\nOpening the stream failed\r\nServer returned 404 Not Found\n"
+        assert _classify_ffmpeg_error(text)[0] == "notfound"
 
     def test_detail_is_the_last_line_with_credentials_removed(self):
         text = "[rtsp @ 0x1] rtsp://admin:secret@10.0.0.5/live: Connection refused\n"
@@ -594,13 +603,65 @@ class TestFfmpegErrorClassification:
         assert code == "other"
         assert len(detail) == 300
 
-    def test_stopped_has_no_detail(self):
-        assert _classify_ffmpeg_error("Exiting normally, received signal 9.") == ("stopped", "")
+    def test_progress_gives_the_last_segment_as_detail(self):
+        assert _classify_ffmpeg_error("frame= 1\rframe= 2\r") == ("other", "frame= 2")
+
+
+class TestStderrTail:
+    def test_cr_only_data_reaches_the_tail_before_eof(self):
+        # ffmpeg's progress statistics are \r-terminated. readline() would hold them
+        # all until a newline or EOF, so the tail stayed empty while the stream ran.
+        class Feed:
+            def __init__(self):
+                self.sent = False
+                self.gate = threading.Event()
+
+            def read1(self, _n):
+                if not self.sent:
+                    self.sent = True
+                    return b"frame= 12 fps\r"
+                self.gate.wait(2)
+                return b""
+
+            def close(self):
+                pass
+
+        stream = Feed()
+        tail = video_module._StderrTail(stream)
+        tail.start()
+        try:
+            for _ in range(100):
+                if "frame= 12" in tail.tail():
+                    break
+                time.sleep(0.01)
+            assert "frame= 12" in tail.tail()
+        finally:
+            stream.gate.set()
+            tail.join(timeout=2)
+
+    def test_the_tail_is_capped(self):
+        class Once:
+            def __init__(self):
+                self.done = False
+
+            def read1(self, _n):
+                if self.done:
+                    return b""
+                self.done = True
+                return b"x" * 20000
+
+            def close(self):
+                pass
+
+        tail = video_module._StderrTail(Once())
+        tail.start()
+        tail.join(timeout=2)
+        assert len(tail.tail()) == video_module._STDERR_TAIL
 
 
 class TestLastErrorRoute:
     def test_no_error_yet(self, client):
-        assert client.get("/api/video/last_error").json() == {"ok": True, "error": None}
+        assert client.get("/api/video/last_error", params={"stream": "a"}).json() == {"ok": True, "error": None}
 
     def test_the_stream_id_must_match(self, client):
         with video_module._last_error_lock:
@@ -611,20 +672,22 @@ class TestLastErrorRoute:
             "detail": "d",
         }
 
-    def test_an_empty_stream_answers_with_the_latest(self, client):
+    def test_an_empty_stream_gets_nothing(self, client):
+        # The detail can name the stream's host and path; an anonymous caller gets none.
         with video_module._last_error_lock:
             video_module._last_error = {"at": 1.0, "stream": "a", "code": "timeout", "detail": "d"}
-        assert client.get("/api/video/last_error").json()["error"]["code"] == "timeout"
+        assert client.get("/api/video/last_error").json()["error"] is None
 
 
 class TestStreamErrorIsRecorded:
     @staticmethod
-    def _proc(stderr: bytes) -> MagicMock:
+    def _proc(stderr: bytes, rc: int = 1) -> MagicMock:
         proc = MagicMock()
         proc.stdout.read = MagicMock(return_value=b"")
         proc.stderr = io.BytesIO(stderr)
         proc.kill = MagicMock()
-        proc.wait = MagicMock()
+        proc.wait = MagicMock(return_value=rc)
+        proc._argus_stopped = False
         return proc
 
     @patch("backend.video._ffmpeg_available", return_value=True)
@@ -637,10 +700,30 @@ class TestStreamErrorIsRecorded:
 
     @patch("backend.video._ffmpeg_available", return_value=True)
     def test_a_stopped_stream_is_not_an_error(self, _ff, client):
-        with patch("subprocess.Popen", return_value=self._proc(b"Exiting normally, received signal 9.\n")):
+        # Stop kills ffmpeg without a last word; the flag, not stderr, says why.
+        proc = self._proc(b"frame= 10 fps\r")
+        proc._argus_stopped = True
+        with patch("subprocess.Popen", return_value=proc):
             response = client.get("/api/video?url=http://8.8.8.8/live&stream=abc")
             response.read()
         assert client.get("/api/video/last_error", params={"stream": "abc"}).json()["error"] is None
+
+    @patch("backend.video._ffmpeg_available", return_value=True)
+    def test_a_clean_exit_is_not_an_error(self, _ff, client):
+        proc = self._proc(b"frame= 10 fps\r", rc=0)
+        with patch("subprocess.Popen", return_value=proc):
+            response = client.get("/api/video?url=http://8.8.8.8/live&stream=abc")
+            response.read()
+        assert client.get("/api/video/last_error", params={"stream": "abc"}).json()["error"] is None
+
+    def test_the_stop_route_marks_the_process(self, client):
+        proc = MagicMock()
+        proc.kill = MagicMock()
+        proc.wait = MagicMock()
+        with _proc_lock:
+            video_module._active_proc = proc
+        client.get("/api/video/stop")
+        assert proc._argus_stopped is True
 
     @patch("backend.video._ffmpeg_available", return_value=True)
     def test_a_failure_after_frames_is_still_recorded(self, _ff, client):
