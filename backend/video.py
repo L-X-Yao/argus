@@ -4,9 +4,11 @@ from __future__ import annotations
 
 import asyncio
 import ipaddress
+import re
 import shutil
 import subprocess
 import threading
+import time
 from urllib.parse import urlparse
 
 from fastapi import APIRouter
@@ -64,6 +66,106 @@ def _validate_video_url(url: str) -> str | None:
 _active_proc: subprocess.Popen | None = None
 _proc_lock = threading.Lock()
 
+# Why the last stream ended, for the page to show instead of "load failed". Keyed by
+# the stream id the page generated: two pages can watch at once, and an error belongs
+# to the page that asked for that stream.
+_last_error: dict | None = None
+_last_error_lock = threading.Lock()
+
+_STDERR_TAIL = 8192
+
+# ffmpeg answers a failed input on stderr with one of these. The order matters:
+# "Server returned 404 Not Found" must read as not-found, "Exiting normally,
+# received signal 9" as a stream its page stopped.
+_ERROR_CODES = (
+    ("refused", re.compile(r"connection refused", re.I)),
+    ("timeout", re.compile(r"(connection|operation) timed out|timeout|operation too slow", re.I)),
+    ("auth", re.compile(r"unauthorized|forbidden|authentication", re.I)),
+    # Before "not found": ffmpeg says "Protocol not found" and "moov atom not found".
+    (
+        "protocol",
+        re.compile(
+            r"protocol not found|unknown input format|invalid data found when processing input"
+            r"|moov atom not found|error while opening",
+            re.I,
+        ),
+    ),
+    ("notfound", re.compile(r"not found|\b404\b", re.I)),
+    (
+        "unreachable",
+        re.compile(
+            r"network is unreachable|no route to host|could not resolve|failed to resolve"
+            r"|name or service not known|temporary failure in name resolution",
+            re.I,
+        ),
+    ),
+    ("server", re.compile(r"server returned 5", re.I)),
+)
+
+# A URL typed with user:pass is echoed by ffmpeg on failure; the page must not show it.
+_URL_CREDENTIALS = re.compile(r"(://)[^/@\s]+@")
+# ffmpeg echoes the input URL in its error lines, and a query string can carry the
+# words a classifier looks for ("?timeout=1"). Classification sees <url> instead.
+_URL_IN_TEXT = re.compile(r"[A-Za-z][A-Za-z0-9+.-]*://\S+")
+# ffmpeg's progress statistics end in \r, not \n; the tail and the classifier both
+# treat \r and \n as separators.
+_SEGMENT_SPLIT = re.compile(r"[\r\n]+")
+
+
+class _StderrTail(threading.Thread):
+    """Reads ffmpeg's stderr to the end, keeping its tail.
+
+    The stream writes MJPEG to stdout and logs to stderr; a pipe that nobody
+    drains fills up and stops ffmpeg, so this runs beside the read loop.
+    """
+
+    def __init__(self, stream) -> None:
+        super().__init__(daemon=True)
+        self._stream = stream
+        self._lock = threading.Lock()
+        self._text = ""
+
+    def run(self) -> None:
+        try:
+            while True:
+                # read1, not readline: ffmpeg's progress statistics are \r-terminated
+                # and readline() would hold all of them until a newline or EOF, so the
+                # "tail" would grow with the stream instead of staying 8 KB.
+                reader = getattr(self._stream, "read1", None) or self._stream.read
+                chunk = reader(4096)
+                if not chunk or not isinstance(chunk, (bytes, str)):
+                    break
+                text = chunk.decode("utf-8", "replace") if isinstance(chunk, bytes) else chunk
+                with self._lock:
+                    self._text = (self._text + text)[-_STDERR_TAIL:]
+        except Exception:
+            pass
+        finally:
+            try:
+                self._stream.close()
+            except Exception:
+                pass
+
+    def tail(self) -> str:
+        with self._lock:
+            return self._text
+
+
+def _classify_ffmpeg_error(text: str) -> tuple[str, str]:
+    """Map ffmpeg's stderr tail to (code, detail). Code "other" keeps the detail.
+
+    The last meaningful segment decides: the URL is masked before matching, or a
+    query string like "?timeout=1" would name the reason itself.
+    """
+    segments = [segment.strip() for segment in _SEGMENT_SPLIT.split(text) if segment.strip()]
+    for segment in reversed(segments):
+        cleaned = _URL_IN_TEXT.sub("<url>", segment)
+        for name, pattern in _ERROR_CODES:
+            if pattern.search(cleaned):
+                return name, _URL_CREDENTIALS.sub(r"\1***@", segment)[:300]
+    detail = _URL_CREDENTIALS.sub(r"\1***@", segments[-1])[:300] if segments else ""
+    return "other", detail
+
 
 def _ffmpeg_available() -> bool:
     return shutil.which("ffmpeg") is not None
@@ -105,7 +207,7 @@ def _ffmpeg_args(url: str) -> list[str]:
 
 
 @router.get("/api/video")
-async def video_stream(url: str = ""):
+async def video_stream(url: str = "", stream: str = ""):
     """Proxy RTSP/video stream as MJPEG for browser display."""
     if not url:
         return {"error": "No video URL provided"}
@@ -128,21 +230,26 @@ async def video_stream(url: str = ""):
     with _proc_lock:
         if _active_proc is not None:
             try:
+                # A deliberate stop, not a failure: the generator reads this flag.
+                _active_proc._argus_stopped = True  # type: ignore[attr-defined]
                 _active_proc.kill()
                 _active_proc.wait(timeout=3)
             except OSError:
                 pass
 
     async def generate():
-        global _active_proc  # noqa: PLW0603
+        global _active_proc, _last_error  # noqa: PLW0603
         proc = subprocess.Popen(
             # The program is named here, where a reader and CodeQL can see that no request sets it.
             ["ffmpeg", *_ffmpeg_args(url)],
             # Its own, or it reads the keys typed into the console the server runs in.
             stdin=subprocess.DEVNULL,
             stdout=subprocess.PIPE,
-            stderr=subprocess.DEVNULL,
+            stderr=subprocess.PIPE,
         )
+        tail = _StderrTail(proc.stderr) if proc.stderr is not None else None
+        if tail is not None:
+            tail.start()
         with _proc_lock:
             _active_proc = proc
         loop = asyncio.get_running_loop()
@@ -180,7 +287,26 @@ async def video_stream(url: str = ""):
                 proc.kill()
             except OSError:
                 pass
-            proc.wait()
+            rc = proc.wait()
+            intentional = bool(getattr(proc, "_argus_stopped", False))
+            if tail is not None:
+                # The reader may still be draining the pipe; its tail is the reason.
+                tail.join(timeout=2)
+                # Only a process that ended on its own with a failure code has a reason
+                # to report. A page's Stop kills ffmpeg without letting it say anything,
+                # and a stream that ended cleanly is not a failure either.
+                if not intentional and rc not in (0, None):
+                    code, detail = _classify_ffmpeg_error(tail.tail())
+                    # "other" without a line says nothing; an empty message would read
+                    # as a failure with no reason.
+                    if code != "other" or detail:
+                        with _last_error_lock:
+                            _last_error = {
+                                "at": time.time(),
+                                "stream": stream,
+                                "code": code,
+                                "detail": detail,
+                            }
             with _proc_lock:
                 if _active_proc is proc:
                     _active_proc = None
@@ -198,6 +324,7 @@ async def video_stop():
     with _proc_lock:
         if _active_proc is not None:
             try:
+                _active_proc._argus_stopped = True  # type: ignore[attr-defined]
                 _active_proc.kill()
                 _active_proc.wait(timeout=3)
             except OSError:
@@ -222,6 +349,21 @@ async def video_validate(url: str = ""):
     if not _ffmpeg_available():
         return {"ok": False, "error": "ffmpeg not installed on server"}
     return {"ok": True}
+
+
+@router.get("/api/video/last_error")
+async def video_last_error(stream: str = ""):
+    """Why the last stream ended, for the panel to say more than "load failed".
+
+    Keyed by the id the panel put on its stream: an error belongs to the page that
+    started it, and an id is required. The detail can name the stream's host and
+    path, so an empty id must not hand it to whoever asks.
+    """
+    with _last_error_lock:
+        err = dict(_last_error) if _last_error else None
+    if err is None or not stream or err.get("stream") != stream:
+        return {"ok": True, "error": None}
+    return {"ok": True, "error": {"code": err["code"], "detail": err["detail"]}}
 
 
 @router.get("/api/video/capabilities")

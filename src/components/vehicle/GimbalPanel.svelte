@@ -59,12 +59,15 @@
   });
 
   interface PendingAck {
+    id: number;
     cmd: number;
     mark: DroneEvent | undefined;
     success: string;
   }
   let pendingAcks = $state<PendingAck[]>([]);
   let ackError = $state('');
+  let nextAckId = 0;
+  const ACK_TIMEOUT_MS = 12000;
 
   function sendWithAck(cmd: number, name: string, data: Record<string, unknown> | undefined, success: string) {
     // MAVLink ACK has no request id. A second request for the same command
@@ -73,8 +76,18 @@
       addToast(t('gimbal.busy'), 'warn', 2500);
       return;
     }
-    pendingAcks.push({ cmd, mark: app.events[app.events.length - 1], success });
+    const entry: PendingAck = { id: nextAckId++, cmd, mark: app.events[app.events.length - 1], success };
+    pendingAcks.push(entry);
     ackError = '';
+    // A command the FC never answers must not leave its button busy for the rest of
+    // the session. A late ACK can still be read as the next request's (MAVLink carries
+    // no request id), which is why the message says "no answer", not "failed".
+    setTimeout(() => {
+      const i = pendingAcks.findIndex((p) => p.id === entry.id);
+      if (i < 0) return;
+      pendingAcks.splice(i, 1);
+      addToast(t('gimbal.noAck'), 'warn', 3000);
+    }, ACK_TIMEOUT_MS);
     dispatch(name, undefined, data);
     // Silence is not a failure: without an ACK the only honest message is sent.
     addToast(t('gimbal.sent'), 'info', 2000);

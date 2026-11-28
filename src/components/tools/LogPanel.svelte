@@ -129,6 +129,11 @@
       } else if (data.refused.length) {
         addToast(t('log.deleteRefused'), 'error');
       }
+      // The tlog is gone but its companion CSV stayed, held open by another program
+      // (a spreadsheet on Windows). The API names them; say so instead of dropping it.
+      if (Array.isArray(data.csv_left) && data.csv_left.length) {
+        addToast(t('log.csvLeft').replace('{n}', String(data.csv_left.length)), 'warn', 4000);
+      }
       selectedLocal = {};
       await loadLocal();
     } catch {

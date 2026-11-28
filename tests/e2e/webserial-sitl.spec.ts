@@ -85,6 +85,20 @@ test('the position source panel shows a healthy GPS and EKF', async () => {
   await page.mouse.click(5, 5);
 });
 
+test('the console and inspector send the operator to the backend link', async () => {
+  // Both tools read the backend's own link. Over WebSerial they can only say so;
+  // saying it is the whole guard, and nothing tested it before.
+  await openFromPalette('MAVLink 控制台');
+  const consolePanel = page.getByRole('dialog').filter({ hasText: 'MAVLink 控制台' });
+  await expect(consolePanel.getByText(/控制台需要后端链路/)).toBeVisible();
+  await page.mouse.click(5, 5);
+
+  await openFromPalette('MAVLink 检查器');
+  const inspectorPanel = page.getByRole('dialog').filter({ hasText: 'MAVLink 检查器' });
+  await expect(inspectorPanel.getByText(/检查器读取后端链路/)).toBeVisible();
+  await page.mouse.click(5, 5);
+});
+
 test('the custom dashboard shows live values', async () => {
   await openFromPalette('自定义仪表盘');
   const dashboard = page.getByRole('dialog').filter({ hasText: '自定义仪表盘' });

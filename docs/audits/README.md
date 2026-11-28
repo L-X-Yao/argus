@@ -52,7 +52,8 @@ NTRIP has since been implemented.
   write can hold the state lock up to 1 s; roles remain a courtesy.
 - 2026-11-24: a video URL that redirects to loopback is still followed; a manual
   edit of the parameter pack needs a restart; a log removed during analysis
-  returns an internal error; `csv_left` is API-only.
+  returns an internal error. (`csv_left` left the list on 2026-11-28: the log
+  panel shows it.)
 
 ## The discipline this enforces
 

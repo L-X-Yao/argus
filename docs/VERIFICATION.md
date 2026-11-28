@@ -31,7 +31,7 @@ Each row shows the highest level reached. Dates are in the Evidence column; an o
 | Commands, WebSerial | 55 | 14 | 27 | 0 | 3 | 0 | 11 |
 | Messages, backend | 35 | 28 | 3 | 0 | 4 | 0 | 0 |
 | Messages, WebSerial | 35 | 17 | 13 | 0 | 4 | 0 | 1 |
-| REST routes | 33 | 6 | 5 | 18 | 4 | 0 | 0 |
+| REST routes | 34 | 6 | 5 | 18 | 5 | 0 | 0 |
 | Panels | 78 | 14 | 34 | 19 | 11 | 0 | 0 |
 | Platform | 50 | 10 | 13 | 13 | 10 | 2 | 2 |
 
@@ -169,6 +169,7 @@ Real FC here means the route was in use during a session with a real flight cont
 | `GET /api/tile_sources` | Map sources | 地图源列表 | Simulator | Integration tests |
 | `GET /api/video` | Video stream | 视频流 | Simulator | Integration tests. 2026-11-10: real ffmpeg, an HTTP test stream at a private address came out as MJPEG. 2026-11-14: a real RTSP server (MediaMTX) with H.264 over TCP played into the page, 88 frames of 640x480 in 8 s, none repeated. No physical camera |
 | `GET /api/video/validate` | Validate a video URL | 校验视频地址 | Tests only | Unit tests: missing URL, loopback refusal, missing ffmpeg, valid URL without starting a process |
+| `GET /api/video/last_error` | Why the last stream ended | 最近一次视频失败原因 | Tests only | Unit tests: ffmpeg's stderr is read in bounded chunks (`\\r` progress included) and classified (refused, timeout, auth, not found, unreachable, server, protocol); the URL is masked before matching and its credentials are redacted; a stream id is required, and an empty one gets nothing. A failure after frames is recorded; a clean exit or a stream the page stopped is not, because the stop path marks the process instead of reading a last message ffmpeg never gets to print |
 | `GET /api/video/stop` | Stop video | 停止视频 | Simulator | Integration tests, no real camera |
 | `POST /api/auth/generate` | Generate a token | 生成 Token | Simulator | Integration tests |
 | `POST /api/tile_bulk_download` | Download tiles for offline use | 批量下载瓦片 | Simulator | Integration tests: counts tiles, and refuses OpenStreetMap, whose server forbids bulk download. Whether a map server answers is up to it |
@@ -262,7 +263,7 @@ Real FC here means the route was in use during a session with a real flight cont
 | `ReplayPanel` | tools | 加载并回放飞行日志 | Simulator | e2e: map3d, a file with rows that are not numbers included |
 | `FleetDashboard` | vehicle | 查看并切换多机 | Tests only | Logic: ws |
 | `GimbalPanel` | vehicle | 控制云台相机 | Simulator | e2e: command-palette. Opens; no gimbal |
-| `VideoOverlay` | vehicle | 观看视频流 | Simulator | e2e: memory. 2026-11-23 browser e2e: dragging beyond the viewport keeps the title bar reachable, and reset restores the panel. 2026-11-14: a real RTSP server's H.264 stream showed in the panel and kept moving. No physical camera |
+| `VideoOverlay` | vehicle | 观看视频流 | Simulator | e2e: memory. 2026-11-23 browser e2e: dragging beyond the viewport keeps the title bar reachable, and reset restores the panel. 2026-11-14: a real RTSP server's H.264 stream showed in the panel and kept moving. 2026-11-28: when a stream fails, the panel asks `/api/video/last_error` for the reason ffmpeg gave and shows it instead of a generic failure; an e2e holds both answers and shows a previous stream's failure is dropped when a new attempt starts. No physical camera |
 
 ## Platform / 平台与功能
 
